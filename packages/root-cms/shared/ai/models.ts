@@ -219,6 +219,29 @@ export function resolveImageModel(model: AiModelConfig): ImageModel {
   }
 }
 
+/**
+ * Returns whether an image model can edit an existing image, i.e. accept one
+ * or more source images alongside the text prompt (image-to-image), rather
+ * than only generating from scratch (text-to-image).
+ *
+ * Support is provider- and model-specific:
+ * - `openai`: the `/images/edits` endpoint backs `gpt-image-*` and `dall-e-2`.
+ *   `dall-e-3` is generation-only.
+ * - `google`: only the Gemini image models accept source images. Imagen models
+ *   are generation-only on the Gemini API.
+ */
+export function testSupportsImageEditing(model: AiModelConfig): boolean {
+  const modelId = model.modelId || model.id;
+  switch (model.provider) {
+    case 'openai':
+      return !modelId.startsWith('dall-e-3');
+    case 'google':
+      return modelId.startsWith('gemini-');
+    default:
+      return false;
+  }
+}
+
 export function normalizeExecutionMode(value: unknown): AiExecutionMode {
   if (value === 'read' || value === 'approve' || value === 'auto') {
     return value;

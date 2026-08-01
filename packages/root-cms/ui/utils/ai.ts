@@ -18,3 +18,39 @@ export function testAiImageGenerationEnabled(): boolean {
     window.__ROOT_CTX.experiments?.ai
   );
 }
+
+/** An image model that can edit an existing image, as shown in the UI. */
+export interface AiImageEditingModel {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+/**
+ * Returns the configured image models that support image-to-image editing,
+ * with the project's default image model first when it qualifies.
+ */
+export function getAiImageEditingModels(): AiImageEditingModel[] {
+  const ai = window.__ROOT_CTX.ai;
+  const models = (ai?.imageModels || [])
+    .filter((model) => model.editing)
+    .map((model) => ({
+      id: model.id,
+      label: model.label,
+      description: model.description,
+    }));
+  const defaultIndex = models.findIndex((m) => m.id === ai?.defaultImageModel);
+  if (defaultIndex > 0) {
+    const [defaultModel] = models.splice(defaultIndex, 1);
+    models.unshift(defaultModel);
+  }
+  return models;
+}
+
+/**
+ * Returns whether AI image editing is available, i.e. the project configures
+ * at least one `imageModels` entry that accepts a source image.
+ */
+export function testAiImageEditingEnabled(): boolean {
+  return getAiImageEditingModels().length > 0;
+}

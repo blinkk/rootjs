@@ -1,0 +1,73 @@
+.AiImageEditorDialog__Canvas {
+  align-items: center;
+  background: #333;
+  display: flex;
+  height: 400px;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.AiImageEditorDialog__Canvas__Image {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.AiImageEditorDialog__Versions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* Each thumbnail is wrapped by a Tooltip, so pin the wrapper's size too. */
+.AiImageEditorDialog__Versions > * {
+  flex: none;
+}
+
+.AiImageEditorDialog__Versions__Item {
+  background: #333;
+  border: 2px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  flex: none;
+  height: 64px;
+  padding: 0;
+  position: relative;
+  width: 64px;
+}
+
+.AiImageEditorDialog__Versions__Item:disabled {
+  cursor: default;
+}
+
+.AiImageEditorDialog__Versions__Item--selected {
+  border-color: #228be6;
+}
+
+.AiImageEditorDialog__Versions__Item img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.AiImageEditorDialog__Versions__Item__Label {
+  background: rgba(0, 0, 0, 0.65);
+  bottom: 0;
+  color: #fff;
+  font-size: 10px;
+  left: 0;
+  line-height: 14px;
+  overflow: hidden;
+  padding: 0 3px;
+  position: absolute;
+  right: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AiImageEditorDialog__ModelSelect {
+  max-width: 240px;
+}

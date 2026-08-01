@@ -45,7 +45,7 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
-import {testAiEnabled} from '../../../utils/ai.js';
+import {testAiEnabled, testAiImageEditingEnabled} from '../../../utils/ai.js';
 import {
   buildAssetFieldValue,
   getAsset,
@@ -104,6 +104,7 @@ interface FileFieldContextValue {
   requestGenerateAltText: () => void;
   requestPlaceholderModalOpen: () => void;
   requestImageEditorOpen: () => void;
+  requestAiImageEditorOpen: () => void;
   /** Whether the asset picker is available (requires a ModalsProvider). */
   assetPickerEnabled: boolean;
   requestAssetPicker: () => void;
@@ -120,6 +121,12 @@ const FileFieldContext = createContext<FileFieldContextValue | null>(null);
 
 const ImageEditorDialog = lazy(() =>
   import('./ImageEditorDialog.js').then((m) => ({default: m.ImageEditorDialog}))
+);
+
+const AiImageEditorDialog = lazy(() =>
+  import('./AiImageEditorDialog.js').then((m) => ({
+    default: m.AiImageEditorDialog,
+  }))
 );
 
 function useFileField() {
@@ -158,6 +165,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [imageEditorOpened, setImageEditorOpened] = useState(false);
+  const [aiImageEditorOpened, setAiImageEditorOpened] = useState(false);
   const gapiClient = useGapiClient();
   const assetPickerModal = useAssetPickerModal();
   const allowEditing = props.allowEditing !== false;
@@ -420,6 +428,10 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
     setImageEditorOpened(true);
   }
 
+  function requestAiImageEditorOpen() {
+    setAiImageEditorOpened(true);
+  }
+
   /**
    * Opens the asset picker modal for selecting a file from the asset library.
    * The selected asset's file data is copied into the doc along with an
@@ -523,6 +535,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         requestFileDownload: requestFileDownload,
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         requestImageEditorOpen: requestImageEditorOpen,
+        requestAiImageEditorOpen: requestAiImageEditorOpen,
         assetPickerEnabled: assetPickerModal.enabled,
         requestAssetPicker: requestAssetPicker,
         unlinkAsset: unlinkAsset,
@@ -600,6 +613,21 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
             onSave={(file) => {
               uploadFile(file, value.originalSrc || value.src);
               setImageEditorOpened(false);
+            }}
+          />
+        </Suspense>
+      )}
+      {aiImageEditorOpened && value?.src && (
+        <Suspense fallback={null}>
+          <AiImageEditorDialog
+            key={value.src}
+            opened={aiImageEditorOpened}
+            onClose={() => setAiImageEditorOpened(false)}
+            src={value.src}
+            filename={value.filename}
+            onSave={(file) => {
+              uploadFile(file, value.originalSrc || value.src);
+              setAiImageEditorOpened(false);
             }}
           />
         </Suspense>
@@ -774,6 +802,7 @@ FileField.Preview = () => {
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const aiEnabled = testAiEnabled();
+  const aiImageEditingEnabled = testAiImageEditingEnabled();
 
   // Videos and images are the only files that get the canvas preview.
   // Other types just show the info panel. Videos with zero dimensions
@@ -876,16 +905,30 @@ FileField.Preview = () => {
               )}
               {testIsImageFile(ctx.value?.src) &&
                 !ctx.value?.src?.endsWith('.svg') && (
-                  <Menu.Item
-                    disabled={!ctx.value?.src}
-                    icon={<IconCrop size={16} />}
-                    closeMenuOnClick
-                    onClick={() => {
-                      ctx.requestImageEditorOpen();
-                    }}
-                  >
-                    Edit image
-                  </Menu.Item>
+                  <>
+                    <Menu.Item
+                      disabled={!ctx.value?.src}
+                      icon={<IconCrop size={16} />}
+                      closeMenuOnClick
+                      onClick={() => {
+                        ctx.requestImageEditorOpen();
+                      }}
+                    >
+                      Edit image
+                    </Menu.Item>
+                    {aiImageEditingEnabled && (
+                      <Menu.Item
+                        disabled={!ctx.value?.src}
+                        icon={<IconSparkles size={16} />}
+                        closeMenuOnClick
+                        onClick={() => {
+                          ctx.requestAiImageEditorOpen();
+                        }}
+                      >
+                        Edit with AI
+                      </Menu.Item>
+                    )}
+                  </>
                 )}
               <Divider />
             </>

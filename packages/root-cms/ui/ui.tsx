@@ -224,6 +224,7 @@ declare global {
       ai?: {
         defaultModel?: string;
         imageGenerationEnabled?: boolean;
+        defaultImageModel?: string;
         models: Array<{
           id: string;
           label: string;
@@ -234,6 +235,14 @@ declare global {
             reasoning: boolean;
             attachments: boolean;
           };
+        }>;
+        imageModels?: Array<{
+          id: string;
+          label: string;
+          description?: string;
+          provider: string;
+          /** Whether the model accepts a source image (image-to-image editing). */
+          editing: boolean;
         }>;
       } | null;
       preview: {

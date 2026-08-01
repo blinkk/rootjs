@@ -17,6 +17,7 @@ import {
   sanitizeGeneratedTitle,
   serializeAiConfig,
   stripUndefined,
+  testSupportsImageEditing,
 } from './ai.js';
 
 describe('ai', () => {
@@ -73,6 +74,93 @@ describe('ai', () => {
       });
       expect((gpt as any).apiKey).toBeUndefined();
       expect((gpt as any).baseURL).toBeUndefined();
+    });
+
+    it('reports no image models when none are configured', () => {
+      const result = serializeAiConfig(config);
+      expect(result.imageGenerationEnabled).toBe(false);
+      expect(result.imageModels).toEqual([]);
+      expect(result.defaultImageModel).toBeUndefined();
+    });
+
+    it('serializes image models with their editing support', () => {
+      const result = serializeAiConfig({
+        ...config,
+        imageModels: [
+          {
+            id: 'imagen',
+            provider: 'google',
+            modelId: 'imagen-4.0-generate-001',
+          },
+          {
+            id: 'nano-banana',
+            label: 'Nano Banana',
+            provider: 'google',
+            modelId: 'gemini-3-pro-image-preview',
+            apiKey: 'test-key',
+          },
+        ],
+        defaultImageModel: 'nano-banana',
+      });
+      expect(result.imageGenerationEnabled).toBe(true);
+      expect(result.defaultImageModel).toBe('nano-banana');
+      expect(result.imageModels).toEqual([
+        {
+          id: 'imagen',
+          label: 'imagen',
+          description: undefined,
+          provider: 'google',
+          editing: false,
+        },
+        {
+          id: 'nano-banana',
+          label: 'Nano Banana',
+          description: undefined,
+          provider: 'google',
+          editing: true,
+        },
+      ]);
+      expect((result.imageModels[1] as any).apiKey).toBeUndefined();
+    });
+  });
+
+  describe('testSupportsImageEditing', () => {
+    it('accepts gemini image models but not imagen', () => {
+      expect(
+        testSupportsImageEditing({id: 'gemini-3-pro-image', provider: 'google'})
+      ).toBe(true);
+      expect(
+        testSupportsImageEditing({
+          id: 'img',
+          provider: 'google',
+          modelId: 'imagen-4.0-generate-001',
+        })
+      ).toBe(false);
+    });
+
+    it('accepts openai image models except dall-e-3', () => {
+      expect(
+        testSupportsImageEditing({id: 'gpt-image-1', provider: 'openai'})
+      ).toBe(true);
+      expect(
+        testSupportsImageEditing({id: 'dall-e-2', provider: 'openai'})
+      ).toBe(true);
+      expect(
+        testSupportsImageEditing({id: 'dall-e-3', provider: 'openai'})
+      ).toBe(false);
+    });
+
+    it('rejects providers without image support', () => {
+      expect(
+        testSupportsImageEditing({id: 'claude-opus', provider: 'anthropic'})
+      ).toBe(false);
+      expect(
+        testSupportsImageEditing({
+          id: 'local',
+          provider: 'openai-compatible',
+          baseURL: 'http://localhost:11434/v1',
+        })
+      ).toBe(false);
     });
   });
 

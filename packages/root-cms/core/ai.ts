@@ -33,6 +33,7 @@ import {
   normalizeExecutionMode,
   resolveImageModel,
   resolveLanguageModel,
+  testSupportsImageEditing,
 } from '../shared/ai/models.js';
 import {
   buildTitlePrompt,
@@ -58,6 +59,7 @@ export {
   normalizeExecutionMode,
   resolveImageModel,
   resolveLanguageModel,
+  testSupportsImageEditing,
   withBrowserHeaders,
 } from '../shared/ai/models.js';
 export {
@@ -92,6 +94,7 @@ export const DEFAULT_CHAT_SYSTEM_PROMPT = [
  * separately (and only for the selected model) via `serializeAiClientModel`.
  */
 export function serializeAiConfig(config: AiConfig) {
+  const imageModels = config.imageModels || [];
   return {
     defaultModel: config.defaultModel || config.models[0]?.id,
     models: config.models.map((m) => ({
@@ -105,7 +108,16 @@ export function serializeAiConfig(config: AiConfig) {
         attachments: m.capabilities?.attachments ?? false,
       },
     })),
-    imageGenerationEnabled: !!config.imageModels?.length,
+    imageGenerationEnabled: imageModels.length > 0,
+    defaultImageModel: config.defaultImageModel || imageModels[0]?.id,
+    imageModels: imageModels.map((m) => ({
+      id: m.id,
+      label: m.label || m.id,
+      description: m.description,
+      provider: m.provider,
+      /** Whether the model accepts a source image (image-to-image editing). */
+      editing: testSupportsImageEditing(m),
+    })),
   };
 }
 
@@ -777,4 +789,111 @@ export async function generateImage(
   }
   const mediaType = result.image.mediaType || 'image/png';
   return {imageUrl: `data:${mediaType};base64,${result.image.base64}`};
+}
+
+/** Maximum size of a source image accepted by `editImage()`. */
+const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
+
+export interface EditImageOptions {
+  /**
+   * The image to edit, as an absolute `https:` URL or a `data:image/...` URL.
+   * Callers passing a URL from user input must validate it against SSRF first
+   * (see `assertPublicHttpUrl`).
+   */
+  imageUrl: string;
+  /** Instructions describing the edit to apply, e.g. "make the sky purple". */
+  prompt: string;
+  /** Specific image model id from `AiConfig.imageModels`. */
+  modelId?: string;
+  /**
+   * Aspect ratio of the result. Omit to let the model follow the source
+   * image. Ignored by providers that only accept an explicit size.
+   */
+  aspectRatio?: AspectRatio;
+}
+
+export interface EditImageResult {
+  /** Edited image as a `data:image/...` URL. */
+  imageUrl: string;
+}
+
+/**
+ * Edits an existing image from a natural language instruction using the
+ * configured `imageModels`, and returns the result as a base64-encoded data
+ * URL. The source image is passed to the model alongside the prompt, so
+ * repeated calls can be chained to iterate on a previous result.
+ *
+ * Throws if the configured/selected image model cannot accept a source image
+ * (see `testSupportsImageEditing`).
+ */
+export async function editImage(
+  rootConfig: RootConfig,
+  options: EditImageOptions
+): Promise<EditImageResult> {
+  const config = getAiConfig(rootConfig);
+  if (!config) {
+    throw new Error('AI is not configured. Set `ai` on the cmsPlugin config.');
+  }
+  const imageModelConfig = findImageModel(config, options.modelId);
+  if (!imageModelConfig) {
+    throw new Error(
+      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+    );
+  }
+  if (!testSupportsImageEditing(imageModelConfig)) {
+    throw new Error(
+      `image model "${imageModelConfig.id}" does not support image editing`
+    );
+  }
+
+  // Inline the source image as bytes rather than handing the provider a URL:
+  // the OpenAI and Google image APIs differ in whether (and how) they accept
+  // remote URLs, and a data URL works the same for both.
+  const sourceImage = await fetchImageAsDataUrl(options.imageUrl);
+
+  const imageModel = resolveImageModel(imageModelConfig);
+  const result = await generateImageSdk({
+    model: imageModel,
+    prompt: {images: [sourceImage], text: options.prompt},
+    aspectRatio: options.aspectRatio,
+  });
+
+  if (!result.image) {
+    throw new Error('No image generated');
+  }
+  const mediaType = result.image.mediaType || 'image/png';
+  return {imageUrl: `data:${mediaType};base64,${result.image.base64}`};
+}
+
+/**
+ * Downloads `imageUrl` and returns it as a `data:image/...` URL. Data URLs are
+ * returned as-is. Rejects non-image responses and anything larger than
+ * `MAX_SOURCE_IMAGE_BYTES`.
+ */
+async function fetchImageAsDataUrl(imageUrl: string): Promise<string> {
+  if (imageUrl.startsWith('data:')) {
+    if (!imageUrl.startsWith('data:image/')) {
+      throw new Error('source image must be an image data URL');
+    }
+    if (imageUrl.length > MAX_SOURCE_IMAGE_BYTES) {
+      throw new Error('source image is too large');
+    }
+    return imageUrl;
+  }
+  const res = await fetch(imageUrl, {redirect: 'error'});
+  if (!res.ok) {
+    throw new Error(`failed to fetch source image: ${res.status}`);
+  }
+  const mediaType = (res.headers.get('content-type') || '')
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+  if (!mediaType.startsWith('image/')) {
+    throw new Error(`source image is not an image: ${mediaType || 'unknown'}`);
+  }
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.byteLength > MAX_SOURCE_IMAGE_BYTES) {
+    throw new Error('source image is too large');
+  }
+  return `data:${mediaType};base64,${buffer.toString('base64')}`;
 }
