@@ -83,7 +83,7 @@ export function createClientChatTransport(
 
       const result = streamText({
         model: languageModel,
-        system: turn.system,
+        instructions: turn.system,
         messages: modelMessages,
         tools,
         stopWhen: stepCountIs(turn.maxSteps),
