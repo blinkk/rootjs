@@ -2,6 +2,7 @@ import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {adminPublishNotifications} from './plugins/admin-publish-notifications.js';
 import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
 import {exampleToolPod} from './plugins/example-tools-pod.js';
@@ -106,6 +107,7 @@ export default defineConfig({
         }),
         deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],
+      notifications: [adminPublishNotifications()],
       checks: [
         {
           id: 'custom/green-check',
