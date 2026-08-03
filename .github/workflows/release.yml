@@ -38,6 +38,14 @@ jobs:
         with:
           run_install: false
 
+      # The root-cms unit tests run inside the Firestore emulator, which needs a
+      # JDK. firebase-tools >= 15 requires Java 21 or above.
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: Install dependencies
         run: pnpm install
 
