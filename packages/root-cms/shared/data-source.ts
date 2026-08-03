@@ -16,9 +16,8 @@
  *   `[{header1: 'foo', header2: 'bar'}]`.
  * - `grid`: an array of arrays of strings, including the header row, e.g.
  *   `[['header1', 'header2'], ['foo', 'bar']]`.
- * - `array`: deprecated alias for `grid`.
  */
-export type GsheetDataFormat = 'map' | 'grid' | 'array';
+export type GsheetDataFormat = 'map' | 'grid';
 
 /**
  * A single row of `grid` data as stored in Firestore. Rows are wrapped in a map
@@ -26,24 +25,6 @@ export type GsheetDataFormat = 'map' | 'grid' | 'array';
  */
 export interface DataSourceGridRow {
   cells: string[];
-}
-
-/**
- * Returns true if the data format stores data as an array of arrays of strings.
- */
-export function isGridDataFormat(dataFormat?: string): boolean {
-  return dataFormat === 'grid' || dataFormat === 'array';
-}
-
-/**
- * Normalizes a data format, converting the deprecated `array` alias to `grid`
- * and defaulting to `map`.
- */
-export function normalizeDataFormat(dataFormat?: string): GsheetDataFormat {
-  if (isGridDataFormat(dataFormat)) {
-    return 'grid';
-  }
-  return 'map';
 }
 
 /**
@@ -95,7 +76,7 @@ export function marshalDataSourceData(
   dataFormat: string | undefined,
   data: any
 ) {
-  if (!isGridDataFormat(dataFormat) || !Array.isArray(data)) {
+  if (dataFormat !== 'grid' || !Array.isArray(data)) {
     return data;
   }
   return marshalGridData(data);
@@ -109,7 +90,7 @@ export function unmarshalDataSourceData(
   dataFormat: string | undefined,
   data: any
 ) {
-  if (!isGridDataFormat(dataFormat) || !Array.isArray(data)) {
+  if (dataFormat !== 'grid' || !Array.isArray(data)) {
     return data;
   }
   return unmarshalGridData(data);

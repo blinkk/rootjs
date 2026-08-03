@@ -13,7 +13,6 @@ import {
 } from 'firebase/firestore';
 import {
   GsheetDataFormat,
-  isGridDataFormat,
   marshalDataSourceData,
   unmarshalDataSourceData,
 } from '../../shared/data-source.js';
@@ -71,8 +70,7 @@ export interface DataSource {
   /**
    * Currently only used by gsheet. `map` returns the sheet as an array of
    * objects keyed by the header row, `grid` returns the sheet as an array of
-   * arrays of strings (including the header row). `array` is a deprecated
-   * alias for `grid`.
+   * arrays of strings (including the header row).
    */
   dataFormat?: GsheetDataFormat;
   /**
@@ -524,7 +522,7 @@ async function fetchGsheetData(dataSource: DataSource): Promise<FetchedData> {
   if (headers.length === 0 && rows.length === 0) {
     return {data: [], headers: []};
   }
-  if (isGridDataFormat(dataSource.dataFormat)) {
+  if (dataSource.dataFormat === 'grid') {
     // Grid data includes the header row so that the data mirrors the sheet.
     return {data: [headers, ...rows], headers};
   }

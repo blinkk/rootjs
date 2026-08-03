@@ -158,25 +158,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(res!.data).toEqual(GRID);
     });
 
-    it('stores the deprecated "array" format as a grid', async () => {
-      const id = 'array-sync';
-      const client = createTestClient(db, projectId);
-      await seedDataSource(db, client, projectId, id, 'array', {
-        data: GRID,
-        headers: GRID[0],
-      });
-
-      await client.syncDataSource(id, {syncedBy: 'tester@example.com'});
-
-      const stored = await db
-        .doc(`Projects/${projectId}/DataSources/${id}/Data/draft`)
-        .get();
-      expect(stored.data()!.data).toEqual(STORED_GRID);
-
-      const res = await client.getFromDataSource(id, {mode: 'draft'});
-      expect(res!.data).toEqual(GRID);
-    });
-
     it('leaves map data unchanged', async () => {
       const id = 'map-sync';
       const client = createTestClient(db, projectId);

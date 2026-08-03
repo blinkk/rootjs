@@ -11,7 +11,6 @@ import {
 import {IconSettings, IconTable} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
-import {isGridDataFormat} from '../../../shared/data-source.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Surface} from '../../components/Surface/Surface.js';
@@ -165,7 +164,7 @@ DataSourcePage.DataSection = (props: {
   if (dataSource.type === 'gsheet') {
     let headers: string[] | undefined = storedHeaders;
     let rows: any[] = [];
-    if (isGridDataFormat(dataSource.dataFormat)) {
+    if (dataSource.dataFormat === 'grid') {
       // The first row of a grid contains the column headers.
       const grid = (data as string[][]) || [];
       headers = storedHeaders || grid[0] || [];

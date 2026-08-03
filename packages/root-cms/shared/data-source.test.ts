@@ -1,36 +1,10 @@
 import {describe, it, expect} from 'vitest';
 import {
-  isGridDataFormat,
   marshalDataSourceData,
   marshalGridData,
-  normalizeDataFormat,
   unmarshalDataSourceData,
   unmarshalGridData,
 } from './data-source.js';
-
-describe('isGridDataFormat', () => {
-  it('returns true for grid formats', () => {
-    expect(isGridDataFormat('grid')).toBe(true);
-    expect(isGridDataFormat('array')).toBe(true);
-  });
-
-  it('returns false for other formats', () => {
-    expect(isGridDataFormat('map')).toBe(false);
-    expect(isGridDataFormat(undefined)).toBe(false);
-  });
-});
-
-describe('normalizeDataFormat', () => {
-  it('converts the deprecated array alias to grid', () => {
-    expect(normalizeDataFormat('array')).toBe('grid');
-    expect(normalizeDataFormat('grid')).toBe('grid');
-  });
-
-  it('defaults to map', () => {
-    expect(normalizeDataFormat('map')).toBe('map');
-    expect(normalizeDataFormat(undefined)).toBe('map');
-  });
-});
 
 describe('marshalGridData', () => {
   it('converts a 2d array into firestore-safe maps', () => {
@@ -121,14 +95,15 @@ describe('unmarshalGridData', () => {
 });
 
 describe('marshalDataSourceData', () => {
-  it('marshals grid formats', () => {
+  it('marshals the grid format', () => {
     const grid = [
       ['header1', 'header2'],
       ['foo', 'bar'],
     ];
-    const stored = [{cells: ['header1', 'header2']}, {cells: ['foo', 'bar']}];
-    expect(marshalDataSourceData('grid', grid)).toEqual(stored);
-    expect(marshalDataSourceData('array', grid)).toEqual(stored);
+    expect(marshalDataSourceData('grid', grid)).toEqual([
+      {cells: ['header1', 'header2']},
+      {cells: ['foo', 'bar']},
+    ]);
   });
 
   it('returns other formats as-is', () => {
@@ -144,14 +119,12 @@ describe('marshalDataSourceData', () => {
 });
 
 describe('unmarshalDataSourceData', () => {
-  it('unmarshals grid formats', () => {
+  it('unmarshals the grid format', () => {
     const stored = [{cells: ['header1', 'header2']}, {cells: ['foo', 'bar']}];
-    const grid = [
+    expect(unmarshalDataSourceData('grid', stored)).toEqual([
       ['header1', 'header2'],
       ['foo', 'bar'],
-    ];
-    expect(unmarshalDataSourceData('grid', stored)).toEqual(grid);
-    expect(unmarshalDataSourceData('array', stored)).toEqual(grid);
+    ]);
   });
 
   it('returns other formats as-is', () => {
