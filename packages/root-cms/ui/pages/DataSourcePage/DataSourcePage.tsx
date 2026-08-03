@@ -11,6 +11,7 @@ import {
 import {IconSettings, IconTable} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
+import {isGridDataFormat} from '../../../shared/data-source.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Surface} from '../../components/Surface/Surface.js';
@@ -161,13 +162,15 @@ DataSourcePage.DataSection = (props: {
     return null;
   }
 
-  const dataFormat = dataSource.dataFormat || 'map';
   if (dataSource.type === 'gsheet') {
     let headers: string[] | undefined = storedHeaders;
     let rows: any[] = [];
-    if (dataFormat === 'array') {
-      rows = data as string[][];
-    } else if (dataFormat === 'map') {
+    if (isGridDataFormat(dataSource.dataFormat)) {
+      // The first row of a grid contains the column headers.
+      const grid = (data as string[][]) || [];
+      headers = storedHeaders || grid[0] || [];
+      rows = grid.slice(1);
+    } else {
       const items = data as any[];
       if (!headers) {
         // Reformat Array<Record<string, string>> to string[][]. Preserve key order

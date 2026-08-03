@@ -11,6 +11,10 @@ import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isValidCronExpression} from '../../../core/cron-schedule.js';
+import {
+  isGridDataFormat,
+  normalizeDataFormat,
+} from '../../../shared/data-source.js';
 import {isSlugValid} from '../../../shared/slug.js';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
@@ -75,7 +79,8 @@ export function DataSourceForm(props: DataSourceFormProps) {
       const dataSource = await getDataSource(id);
       setDataSource(dataSource);
       setDataSourceType(dataSource?.type || 'http');
-      setDataFormat(dataSource?.dataFormat || 'map');
+      // Normalize the deprecated `array` format to `grid`.
+      setDataFormat(normalizeDataFormat(dataSource?.dataFormat));
       if (dataSource?.cron) {
         const cron = dataSource.cron;
         const schedule = cron.schedule || 'interval';
@@ -179,7 +184,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
         return;
       }
 
-      dataSource.dataFormat = (dataFormat || 'map') as any;
+      dataSource.dataFormat = dataFormat || 'map';
     }
 
     const cron: DataSourceCron = {
@@ -347,9 +352,8 @@ export function DataSourceForm(props: DataSourceFormProps) {
             name="dataFormat"
             label="Data Format"
             data={[
-              // NOTE(stevenle): firestore doesn't support nested arrays.
-              // {value: 'array', label: 'array'},
               {value: 'map', label: 'map'},
+              {value: 'grid', label: 'grid'},
             ]}
             value={dataFormat}
             onChange={(e: GsheetDataFormat) => setDataFormat(e)}
@@ -358,13 +362,14 @@ export function DataSourceForm(props: DataSourceFormProps) {
             // Due to issues with preact/compat, use a div for the dropdown el.
             dropdownComponent="div"
           />
-          {dataFormat === 'array' && (
+          {isGridDataFormat(dataFormat) && (
             <div className="DataSourceForm__input__example">
-              Data is stored as an array of arrays, e.g.
+              Data is stored as an array of arrays, including the header row,
+              e.g.
               <code>[[header1, header2], [foo, bar]]</code>
             </div>
           )}
-          {dataFormat === 'map' && (
+          {!isGridDataFormat(dataFormat) && (
             <div className="DataSourceForm__input__example">
               Data is stored as an array of maps, e.g.
               <code>

@@ -11,6 +11,12 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import {
+  GsheetDataFormat,
+  isGridDataFormat,
+  marshalDataSourceData,
+  unmarshalDataSourceData,
+} from '../../shared/data-source.js';
 import {logAction} from './actions.js';
 import {MultiBatch} from './batch.js';
 import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
@@ -19,7 +25,7 @@ export type DataSourceType = 'http' | 'gsheet';
 
 export type HttpMethod = 'GET' | 'POST';
 
-export type GsheetDataFormat = 'array' | 'map';
+export type {GsheetDataFormat};
 
 export type CronUnit = 'minutes' | 'hours' | 'days';
 
@@ -63,8 +69,10 @@ export interface DataSource {
   type: 'http' | 'gsheet';
   url: string;
   /**
-   * Currently only used by gsheet. `array` returns the sheet as an array of
-   * arrays, `map` returns the sheet as an array of objects.
+   * Currently only used by gsheet. `map` returns the sheet as an array of
+   * objects keyed by the header row, `grid` returns the sheet as an array of
+   * arrays of strings (including the header row). `array` is a deprecated
+   * alias for `grid`.
    */
   dataFormat?: GsheetDataFormat;
   /**
@@ -92,6 +100,20 @@ export interface DataSourceData<T = any> {
   data: T;
   /** Optional list of column headers (for gsheet sources). */
   headers?: string[];
+}
+
+/**
+ * Converts data from the format stored in the db. `grid` data is stored as an
+ * array of `{cells}` maps since Firestore doesn't allow nested arrays.
+ */
+function unmarshalData(dataSourceData: DataSourceData): DataSourceData {
+  return {
+    ...dataSourceData,
+    data: unmarshalDataSourceData(
+      dataSourceData.dataSource?.dataFormat,
+      dataSourceData.data
+    ),
+  };
 }
 
 export async function addDataSource(
@@ -161,7 +183,9 @@ export async function getFromDataSource<T = any>(
   );
   const snapshot = await getDoc(dataDocRef);
   if (snapshot.exists()) {
-    return snapshot.data() as DataSourceData<T>;
+    return unmarshalData(
+      snapshot.data() as DataSourceData
+    ) as DataSourceData<T>;
   }
   return null;
 }
@@ -250,7 +274,7 @@ export async function syncDataSource(id: string) {
     const batch = writeBatch(db);
     batch.set(dataDocRef, {
       dataSource: updatedDataSource,
-      data: data,
+      data: marshalDataSourceData(dataSource.dataFormat, data),
       ...(headers ? {headers} : {}),
     });
     batch.update(dataSourceDocRef, {
@@ -306,7 +330,7 @@ export async function publishDataSource(id: string) {
   const batch = writeBatch(db);
   batch.set(dataDocRefPublished, {
     dataSource: updatedDataSource,
-    data: dataRes?.data || null,
+    data: marshalDataSourceData(dataSource.dataFormat, dataRes?.data ?? null),
     ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
   });
   batch.update(dataDocRefDraft, {
@@ -422,7 +446,7 @@ export async function cmsPublishDataSources(
     };
     batch.set(dataDocRefPublished, {
       dataSource: updatedDataSource,
-      data: dataRes?.data || null,
+      data: marshalDataSourceData(dataSource.dataFormat, dataRes?.data ?? null),
       ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
     });
     batch.update(dataDocRefDraft, {dataSource: updatedDataSource});
@@ -496,10 +520,13 @@ async function fetchGsheetData(dataSource: DataSource): Promise<FetchedData> {
     throw new Error(`could not find sheet: ${dataSource.url}`);
   }
 
-  const dataFormat = dataSource.dataFormat || 'map';
   const [headers, rows] = await gsheet.getValues();
-  if (dataFormat === 'array') {
-    return {data: [headers, rows], headers};
+  if (headers.length === 0 && rows.length === 0) {
+    return {data: [], headers: []};
+  }
+  if (isGridDataFormat(dataSource.dataFormat)) {
+    // Grid data includes the header row so that the data mirrors the sheet.
+    return {data: [headers, ...rows], headers};
   }
   const mapData = rows.map((row) => {
     const item: Record<string, string> = {};
