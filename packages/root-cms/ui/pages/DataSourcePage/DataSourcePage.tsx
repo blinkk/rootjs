@@ -161,13 +161,15 @@ DataSourcePage.DataSection = (props: {
     return null;
   }
 
-  const dataFormat = dataSource.dataFormat || 'map';
   if (dataSource.type === 'gsheet') {
     let headers: string[] | undefined = storedHeaders;
     let rows: any[] = [];
-    if (dataFormat === 'array') {
-      rows = data as string[][];
-    } else if (dataFormat === 'map') {
+    if (dataSource.dataFormat === 'grid') {
+      // The first row of a grid contains the column headers.
+      const grid = (data as string[][]) || [];
+      headers = storedHeaders || grid[0] || [];
+      rows = grid.slice(1);
+    } else {
       const items = data as any[];
       if (!headers) {
         // Reformat Array<Record<string, string>> to string[][]. Preserve key order

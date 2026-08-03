@@ -8,6 +8,11 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {
+  GsheetDataFormat,
+  marshalDataSourceData,
+  unmarshalDataSourceData,
+} from '../shared/data-source.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {isCronDue} from './cron-schedule.js';
@@ -127,16 +132,22 @@ export interface DataSourceCron {
   autoPublish?: boolean;
 }
 
+export type {
+  DataSourceGridRow,
+  GsheetDataFormat,
+} from '../shared/data-source.js';
+
 export interface DataSource {
   id: string;
   description?: string;
   type: 'http' | 'gsheet';
   url: string;
   /**
-   * Currently only used by gsheet. `array` returns the sheet as an array of
-   * arrays, `map` returns the sheet as an array of objects.
+   * Currently only used by gsheet. `map` returns the sheet as an array of
+   * objects keyed by the header row, `grid` returns the sheet as an array of
+   * arrays of strings (including the header row).
    */
-  dataFormat?: 'array' | 'map';
+  dataFormat?: GsheetDataFormat;
   /**
    * Options for HTTP requests.
    */
@@ -1634,7 +1645,7 @@ export class RootCMSClient {
     const batch = this.db.batch();
     batch.set(dataDocRef, {
       dataSource: updatedDataSource,
-      data: result.data,
+      data: marshalDataSourceData(dataSource.dataFormat, result.data),
       ...(result.headers ? {headers: result.headers} : {}),
     });
     batch.update(dataSourceDocRef, {
@@ -1662,12 +1673,12 @@ export class RootCMSClient {
     const dataSourceDocRef = this.db.doc(
       `Projects/${this.projectId}/DataSources/${dataSourceId}`
     );
-    const dataDocRefDraft = this.db.doc(
-      `Projects/${this.projectId}/DataSources/${dataSourceId}/draft`
-    );
-    const dataDocRefPublished = this.db.doc(
-      `Projects/${this.projectId}/DataSources/${dataSourceId}/published`
-    );
+    const dataDocRefDraft = this.dbDataSourceDataRef(dataSourceId, {
+      mode: 'draft',
+    });
+    const dataDocRefPublished = this.dbDataSourceDataRef(dataSourceId, {
+      mode: 'published',
+    });
 
     const dataRes = await this.getFromDataSource(dataSourceId, {mode: 'draft'});
 
@@ -1682,7 +1693,7 @@ export class RootCMSClient {
     const batch = this.db.batch();
     batch.set(dataDocRefPublished, {
       dataSource: updatedDataSource,
-      data: dataRes?.data || null,
+      data: marshalDataSourceData(dataSource.dataFormat, dataRes?.data ?? null),
       ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
     });
     batch.update(dataDocRefDraft, {
@@ -1755,12 +1766,10 @@ export class RootCMSClient {
       const dataSourceDocRef = this.db.doc(
         `Projects/${this.projectId}/DataSources/${id}`
       );
-      const dataDocRefDraft = this.db.doc(
-        `Projects/${this.projectId}/DataSources/${id}/draft`
-      );
-      const dataDocRefPublished = this.db.doc(
-        `Projects/${this.projectId}/DataSources/${id}/published`
-      );
+      const dataDocRefDraft = this.dbDataSourceDataRef(id, {mode: 'draft'});
+      const dataDocRefPublished = this.dbDataSourceDataRef(id, {
+        mode: 'published',
+      });
       const dataRes = await this.getFromDataSource(id, {mode: 'draft'});
       const updatedDataSource = {
         ...dataSource,
@@ -1769,7 +1778,10 @@ export class RootCMSClient {
       };
       batch.set(dataDocRefPublished, {
         dataSource: updatedDataSource,
-        data: dataRes?.data || null,
+        data: marshalDataSourceData(
+          dataSource.dataFormat,
+          dataRes?.data ?? null
+        ),
         ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
       });
       batch.update(dataDocRefDraft, {dataSource: updatedDataSource});
@@ -1906,8 +1918,8 @@ export class RootCMSClient {
     const headers = values[0];
     const rows = values.slice(1);
 
-    const dataFormat = dataSource.dataFormat || 'map';
-    if (dataFormat === 'array') {
+    if (dataSource.dataFormat === 'grid') {
+      // Grid data includes the header row so that the data mirrors the sheet.
       return {data: [headers, ...rows], headers};
     }
 
@@ -1951,7 +1963,15 @@ export class RootCMSClient {
             (archivedBy ? ` (archived by ${archivedBy})` : '')
         );
       }
-      return dataSourceData;
+      // `grid` data is stored as an array of `{cells}` maps since Firestore
+      // doesn't allow nested arrays.
+      return {
+        ...dataSourceData,
+        data: unmarshalDataSourceData(
+          dataSourceData.dataSource?.dataFormat,
+          dataSourceData.data
+        ),
+      };
     }
     return null;
   }
