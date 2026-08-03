@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 3.4.1
+
+### Patch Changes
+
+- 4166a8d: feat: add `modulePreload` option for auto-injecting modulepreload tags
+- a74901c: feat: add `useAssetUrl()` hook for resolving compiled asset URLs
+- 8c85921: chore: update major third-party dependencies
+
 ## 3.3.1
 
 ### Patch Changes

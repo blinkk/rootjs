@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.4.1
+
+### Patch Changes
+
+- 8ef8320: fix: cache and bound schema pattern resolution to prevent dev server OOMs
+- f50e276: feat: add "edit with ai" for image fields
+- dde79be: feat: support folder uploads in the asset library
+- 693e63e: feat: add `grid` data format for csv-style data source sync
+- 8c85921: chore: update major third-party dependencies
+- Updated dependencies [4166a8d]
+- Updated dependencies [a74901c]
+- Updated dependencies [8c85921]
+  - @blinkk/root@3.4.1
+
 ## 3.3.1
 
 ### Patch Changes
