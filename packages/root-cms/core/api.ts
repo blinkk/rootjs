@@ -6,6 +6,7 @@ import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
   buildEditSystemPrompt,
+  editImage,
   findModel,
   generateAltText,
   generateImage,
@@ -905,6 +906,77 @@ export function api(server: Server, options: ApiOptions) {
       }
     }
   );
+
+  /**
+   * Edits an existing image from a natural language instruction using the
+   * configured image model. The image returned here can be sent back as
+   * `imageUrl` to iterate on a previous result.
+   *
+   * ```
+   * POST /cms/api/ai.edit_image
+   * {"imageUrl": "https://...", "prompt": "Make the sky purple"}
+   * ```
+   */
+  server.use('/cms/api/ai.edit_image', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    const imageUrl =
+      typeof reqBody.imageUrl === 'string' ? reqBody.imageUrl.trim() : '';
+    const prompt =
+      typeof reqBody.prompt === 'string' ? reqBody.prompt.trim() : '';
+    if (!imageUrl || !prompt) {
+      res.status(400).json({
+        success: false,
+        error: 'MISSING_REQUIRED_FIELD',
+        field: imageUrl ? 'prompt' : 'imageUrl',
+      });
+      return;
+    }
+
+    // Validate against SSRF: the source image is fetched server-side before
+    // it's forwarded to the provider, so an attacker-supplied URL pointed at a
+    // private/metadata address would be fetched from the CMS host's network.
+    // Data URLs carry their own bytes and need no network access.
+    if (!imageUrl.startsWith('data:')) {
+      try {
+        await assertPublicHttpUrl(imageUrl);
+      } catch (err) {
+        if (err instanceof UnsafeUrlError) {
+          res.status(400).json({success: false, error: 'INVALID_IMAGE_URL'});
+          return;
+        }
+        throw err;
+      }
+    }
+
+    try {
+      const result = await editImage(req.rootConfig!, {
+        imageUrl,
+        prompt,
+        modelId:
+          typeof reqBody.modelId === 'string' ? reqBody.modelId : undefined,
+        aspectRatio:
+          typeof reqBody.aspectRatio === 'string'
+            ? reqBody.aspectRatio
+            : undefined,
+      });
+      res.status(200).json({success: true, image: result.imageUrl});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  });
 
   /**
    * Generates a concise publish message describing changes since the last

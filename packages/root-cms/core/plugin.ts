@@ -1035,6 +1035,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         ['/cms/api/ai.chat.prepare', '/cms/api/ai.edit.prepare'],
         bodyParser.json({limit: '4mb'})
       );
+      // Image editing iterates on its own output, so the request body can
+      // carry a full generated image as a data URL. Allow enough headroom for
+      // a base64-encoded PNG (`editImage()` caps the decoded source at 20MB).
+      server.use('/cms/api/ai.edit_image', bodyParser.json({limit: '12mb'}));
       server.use(bodyParser.json());
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.

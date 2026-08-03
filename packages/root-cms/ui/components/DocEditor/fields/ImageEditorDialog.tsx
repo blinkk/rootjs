@@ -250,14 +250,15 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
               Restore Original
             </Button>
           )}
-          <Group>
-            <Button variant="default" onClick={props.onClose} disabled={saving}>
+          <Group gap={12}>
+            <Button variant="default" size="xs" onClick={props.onClose} disabled={saving}>
               Discard
             </Button>
             <Button
+              size="xs"
               onClick={handleSave}
               loading={saving}
-              leftIcon={<IconCheck />}
+              leftIcon={<IconCheck size={20} />}
             >
               Save
             </Button>
