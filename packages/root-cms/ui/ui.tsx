@@ -43,6 +43,7 @@ import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
+import {installGlobalErrorHandlers} from './utils/global-errors.js';
 import {lazyRoute} from './utils/lazy-route.js';
 import {installNavigationGuards} from './utils/navigation-guard.js';
 
@@ -484,6 +485,10 @@ function registerDevServerRedirectShortcut() {
 }
 
 registerDevServerRedirectShortcut();
+
+// Surface uncaught errors and unhandled rejections to the user instead of
+// letting them disappear into the devtools console.
+installGlobalErrorHandlers();
 
 // Install the unsaved-changes navigation guards before the app renders so
 // the guard listeners run ahead of preact-iso's click/popstate listeners.

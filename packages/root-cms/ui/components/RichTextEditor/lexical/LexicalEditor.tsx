@@ -33,6 +33,7 @@ import {
   OpenRichTextInlineEventDetail,
 } from '../../../utils/doc-search.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
+import {showErrorNotification} from '../../../utils/notifications.js';
 import {cloneData} from '../../../utils/objects.js';
 import {autokey} from '../../../utils/rand.js';
 import {BlockComponentsProvider} from './hooks/useBlockComponents.js';
@@ -86,9 +87,12 @@ const INITIAL_CONFIG: InitialConfigType = {
     InlineComponentNode,
     SpecialCharacterNode,
   ],
+  // Lexical routes errors it catches while updating, reconciling, or parsing
+  // here. Report them instead of rethrowing: rethrowing from this callback
+  // aborts lexical's own recovery (which restores the last good editor state to
+  // the DOM) and turns a recoverable error into an uncaught one.
   onError: (err: Error) => {
-    console.error('[LexicalEditor] error:', err);
-    throw err;
+    showErrorNotification(err, {title: 'Rich text editor error'});
   },
 };
 
