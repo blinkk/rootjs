@@ -13,10 +13,13 @@ export interface FilePreviewProps {
   withPlaceholder?: boolean;
   className?: string;
   alt?: string;
+  /** How the file fills its box: "cover" (default) crops, "contain" doesn't. */
+  fit?: 'cover' | 'contain';
 }
 
 export function FilePreview(props: FilePreviewProps) {
   const {file, width, height, withPlaceholder, className, alt} = props;
+  const fit = props.fit || 'cover';
   const src = typeof file === 'string' ? file : file?.src;
 
   if (isMp4File(file)) {
@@ -26,6 +29,7 @@ export function FilePreview(props: FilePreviewProps) {
         src={src!}
         width={width}
         height={height}
+        fit={fit}
       />
     );
   }
@@ -36,6 +40,7 @@ export function FilePreview(props: FilePreviewProps) {
       src={src}
       width={width}
       height={height}
+      fit={fit}
       withPlaceholder={withPlaceholder}
       alt={alt}
     />
@@ -67,6 +72,7 @@ function VideoPreview(props: {
   src: string;
   width: number;
   height: number;
+  fit?: 'cover' | 'contain';
 }) {
   return (
     <video
@@ -81,7 +87,7 @@ function VideoPreview(props: {
         width: `${props.width}px`,
         height: `${props.height}px`,
         backgroundColor: '#f1f3f5',
-        objectFit: 'cover',
+        objectFit: props.fit || 'cover',
         display: 'block',
       }}
     />
