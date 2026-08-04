@@ -438,9 +438,14 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
   }, [editor, $updateToolbar, setActiveEditor]);
 
   useEffect(() => {
-    activeEditor.getEditorState().read(() => {
-      $updateToolbar();
-    });
+    // The `{editor}` option is required so that lexical helpers that read from
+    // the DOM (e.g. `$isParentElementRTL()`) can resolve the active editor.
+    activeEditor.getEditorState().read(
+      () => {
+        $updateToolbar();
+      },
+      {editor: activeEditor}
+    );
   }, [activeEditor, $updateToolbar]);
 
   useEffect(() => {
@@ -449,9 +454,12 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         setIsEditable(editable);
       }),
       activeEditor.registerUpdateListener(({editorState}) => {
-        editorState.read(() => {
-          $updateToolbar();
-        });
+        editorState.read(
+          () => {
+            $updateToolbar();
+          },
+          {editor: activeEditor}
+        );
       }),
       activeEditor.registerCommand<boolean>(
         CAN_UNDO_COMMAND,

@@ -45,76 +45,81 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
       return;
     }
 
-    editor.getEditorState().read(() => {
-      try {
-        const tableNode = $getTableNodeFromLexicalNodeOrThrow(tableCellNode);
-        const rows = tableNode.getChildren();
+    editor.getEditorState().read(
+      () => {
+        try {
+          const tableNode = $getTableNodeFromLexicalNodeOrThrow(tableCellNode);
+          const rows = tableNode.getChildren();
 
-        // Check if entire row is header
-        let targetRowIndex = -1;
-        for (let i = 0; i < rows.length; i++) {
-          const rowNode = rows[i];
-          if (!$isTableRowNode(rowNode)) continue;
-          const cells = (rowNode as TableRowNode).getChildren();
-          if (
-            cells.some((cell: any) => cell.getKey() === tableCellNode.getKey())
-          ) {
-            targetRowIndex = i;
-            break;
-          }
-        }
-
-        if (targetRowIndex !== -1) {
-          const targetRow = rows[targetRowIndex];
-          if ($isTableRowNode(targetRow)) {
-            const cellsInRow = (targetRow as TableRowNode).getChildren();
-            const firstCell = cellsInRow[0];
-            if ($isTableCellNode(firstCell)) {
-              const headerState = firstCell.getHeaderStyles();
-              setIsRowHeader(
-                (headerState & TableCellHeaderStates.ROW) ===
-                  TableCellHeaderStates.ROW
-              );
-            }
-          }
-        }
-
-        // Check if entire column is header
-        let targetColIndex = -1;
-        for (let i = 0; i < rows.length; i++) {
-          const rowNode = rows[i];
-          if (!$isTableRowNode(rowNode)) continue;
-          const cells = (rowNode as TableRowNode).getChildren();
-          for (let j = 0; j < cells.length; j++) {
-            const cell: any = cells[j];
-            if (cell.getKey() === tableCellNode.getKey()) {
-              targetColIndex = j;
+          // Check if entire row is header
+          let targetRowIndex = -1;
+          for (let i = 0; i < rows.length; i++) {
+            const rowNode = rows[i];
+            if (!$isTableRowNode(rowNode)) continue;
+            const cells = (rowNode as TableRowNode).getChildren();
+            if (
+              cells.some(
+                (cell: any) => cell.getKey() === tableCellNode.getKey()
+              )
+            ) {
+              targetRowIndex = i;
               break;
             }
           }
-          if (targetColIndex !== -1) break;
-        }
 
-        if (targetColIndex !== -1) {
-          const firstRow = rows[0];
-          if ($isTableRowNode(firstRow)) {
-            const firstRowCells = (firstRow as TableRowNode).getChildren();
-            const firstCell = firstRowCells[targetColIndex];
-            if ($isTableCellNode(firstCell)) {
-              const headerState = firstCell.getHeaderStyles();
-              setIsColumnHeader(
-                (headerState & TableCellHeaderStates.COLUMN) ===
-                  TableCellHeaderStates.COLUMN
-              );
+          if (targetRowIndex !== -1) {
+            const targetRow = rows[targetRowIndex];
+            if ($isTableRowNode(targetRow)) {
+              const cellsInRow = (targetRow as TableRowNode).getChildren();
+              const firstCell = cellsInRow[0];
+              if ($isTableCellNode(firstCell)) {
+                const headerState = firstCell.getHeaderStyles();
+                setIsRowHeader(
+                  (headerState & TableCellHeaderStates.ROW) ===
+                    TableCellHeaderStates.ROW
+                );
+              }
             }
           }
+
+          // Check if entire column is header
+          let targetColIndex = -1;
+          for (let i = 0; i < rows.length; i++) {
+            const rowNode = rows[i];
+            if (!$isTableRowNode(rowNode)) continue;
+            const cells = (rowNode as TableRowNode).getChildren();
+            for (let j = 0; j < cells.length; j++) {
+              const cell: any = cells[j];
+              if (cell.getKey() === tableCellNode.getKey()) {
+                targetColIndex = j;
+                break;
+              }
+            }
+            if (targetColIndex !== -1) break;
+          }
+
+          if (targetColIndex !== -1) {
+            const firstRow = rows[0];
+            if ($isTableRowNode(firstRow)) {
+              const firstRowCells = (firstRow as TableRowNode).getChildren();
+              const firstCell = firstRowCells[targetColIndex];
+              if ($isTableCellNode(firstCell)) {
+                const headerState = firstCell.getHeaderStyles();
+                setIsColumnHeader(
+                  (headerState & TableCellHeaderStates.COLUMN) ===
+                    TableCellHeaderStates.COLUMN
+                );
+              }
+            }
+          }
+        } catch {
+          // Handle case where table node is no longer valid
+          setIsRowHeader(false);
+          setIsColumnHeader(false);
         }
-      } catch {
-        // Handle case where table node is no longer valid
-        setIsRowHeader(false);
-        setIsColumnHeader(false);
-      }
-    });
+      },
+      {editor}
+    );
   }, [editor, tableCellNode]);
 
   // Update header states when menu opens or cell changes

@@ -333,38 +333,44 @@ function Editor(props: EditorProps) {
       // serialized `RichTextData.blocks` array, so we can map by index.
       let targetNodeKey: NodeKey | null = null;
       let targetData: Record<string, any> | null = null;
-      editor.getEditorState().read(() => {
-        const root = $getRoot();
-        let blockIdx = -1;
-        for (const child of root.getChildren()) {
-          if ($isBlockComponentNode(child)) {
-            blockIdx += 1;
-            const childBlockName = (child as BlockComponentNode).getBlockName();
-            if (
-              blockIdx === detail.blockIndex &&
-              childBlockName === detail.blockName
-            ) {
-              targetNodeKey = child.getKey();
-              targetData = (child as BlockComponentNode).getBlockData();
-              break;
-            }
-          }
-        }
-        // Fallback: if the absolute index didn't match (e.g. document mutated),
-        // pick the first block with the same blockName.
-        if (!targetNodeKey) {
+      editor.getEditorState().read(
+        () => {
+          const root = $getRoot();
+          let blockIdx = -1;
           for (const child of root.getChildren()) {
-            if (
-              $isBlockComponentNode(child) &&
-              (child as BlockComponentNode).getBlockName() === detail.blockName
-            ) {
-              targetNodeKey = child.getKey();
-              targetData = (child as BlockComponentNode).getBlockData();
-              break;
+            if ($isBlockComponentNode(child)) {
+              blockIdx += 1;
+              const childBlockName = (
+                child as BlockComponentNode
+              ).getBlockName();
+              if (
+                blockIdx === detail.blockIndex &&
+                childBlockName === detail.blockName
+              ) {
+                targetNodeKey = child.getKey();
+                targetData = (child as BlockComponentNode).getBlockData();
+                break;
+              }
             }
           }
-        }
-      });
+          // Fallback: if the absolute index didn't match (e.g. document
+          // mutated), pick the first block with the same blockName.
+          if (!targetNodeKey) {
+            for (const child of root.getChildren()) {
+              if (
+                $isBlockComponentNode(child) &&
+                (child as BlockComponentNode).getBlockName() ===
+                  detail.blockName
+              ) {
+                targetNodeKey = child.getKey();
+                targetData = (child as BlockComponentNode).getBlockData();
+                break;
+              }
+            }
+          }
+        },
+        {editor}
+      );
       if (!targetNodeKey) {
         return;
       }
@@ -398,22 +404,25 @@ function Editor(props: EditorProps) {
       let targetNodeKey: NodeKey | null = null;
       let targetData: Record<string, any> | null = null;
       let targetComponentName: string | null = null;
-      editor.getEditorState().read(() => {
-        for (const {node} of $dfs()) {
-          if (
-            $isInlineComponentNode(node) &&
-            (node as InlineComponentNode).getComponentId() ===
-              detail.componentId
-          ) {
-            targetNodeKey = node.getKey();
-            targetData = (node as InlineComponentNode).getComponentData();
-            targetComponentName = (
-              node as InlineComponentNode
-            ).getComponentName();
-            break;
+      editor.getEditorState().read(
+        () => {
+          for (const {node} of $dfs()) {
+            if (
+              $isInlineComponentNode(node) &&
+              (node as InlineComponentNode).getComponentId() ===
+                detail.componentId
+            ) {
+              targetNodeKey = node.getKey();
+              targetData = (node as InlineComponentNode).getComponentData();
+              targetComponentName = (
+                node as InlineComponentNode
+              ).getComponentName();
+              break;
+            }
           }
-        }
-      });
+        },
+        {editor}
+      );
       if (!targetNodeKey) {
         return;
       }
