@@ -147,9 +147,12 @@ function FloatingToolbar(props: FloatingToolbarProps) {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
-      editor.getEditorState().read(() => {
-        $updateTextFormatFloatingToolbar();
-      });
+      editor.getEditorState().read(
+        () => {
+          $updateTextFormatFloatingToolbar();
+        },
+        {editor}
+      );
     };
 
     window.addEventListener('resize', update);
@@ -166,14 +169,20 @@ function FloatingToolbar(props: FloatingToolbarProps) {
   }, [editor, $updateTextFormatFloatingToolbar, anchorElem]);
 
   useEffect(() => {
-    editor.getEditorState().read(() => {
-      $updateTextFormatFloatingToolbar();
-    });
+    editor.getEditorState().read(
+      () => {
+        $updateTextFormatFloatingToolbar();
+      },
+      {editor}
+    );
     return mergeRegister(
       editor.registerUpdateListener(({editorState}) => {
-        editorState.read(() => {
-          $updateTextFormatFloatingToolbar();
-        });
+        editorState.read(
+          () => {
+            $updateTextFormatFloatingToolbar();
+          },
+          {editor}
+        );
       }),
 
       editor.registerCommand(
@@ -303,63 +312,66 @@ function useFloatingTextFormatToolbar(
   const [isSuperscript, setIsSuperscript] = useState(false);
 
   const updatePopup = useCallback(() => {
-    editor.getEditorState().read(() => {
-      // Should not to pop up the floating toolbar when using IME input.
-      if (editor.isComposing()) {
-        return;
-      }
-      const selection = $getSelection();
-      const nativeSelection = getDOMSelection(editor._window);
-      const rootElement = editor.getRootElement();
+    editor.getEditorState().read(
+      () => {
+        // Should not to pop up the floating toolbar when using IME input.
+        if (editor.isComposing()) {
+          return;
+        }
+        const selection = $getSelection();
+        const nativeSelection = getDOMSelection(editor._window);
+        const rootElement = editor.getRootElement();
 
-      if (
-        nativeSelection !== null &&
-        (!$isRangeSelection(selection) ||
-          rootElement === null ||
-          !rootElement.contains(nativeSelection.anchorNode))
-      ) {
-        setIsText(false);
-        return;
-      }
+        if (
+          nativeSelection !== null &&
+          (!$isRangeSelection(selection) ||
+            rootElement === null ||
+            !rootElement.contains(nativeSelection.anchorNode))
+        ) {
+          setIsText(false);
+          return;
+        }
 
-      if (!$isRangeSelection(selection)) {
-        return;
-      }
+        if (!$isRangeSelection(selection)) {
+          return;
+        }
 
-      const node = getSelectedNode(selection);
+        const node = getSelectedNode(selection);
 
-      // Update text format
-      setIsBold(selection.hasFormat('bold'));
-      setIsCode(selection.hasFormat('code'));
-      setIsItalic(selection.hasFormat('italic'));
-      setIsUnderline(selection.hasFormat('underline'));
-      setIsStrikethrough(selection.hasFormat('strikethrough'));
-      setIsSubscript(selection.hasFormat('subscript'));
-      setIsSuperscript(selection.hasFormat('superscript'));
+        // Update text format
+        setIsBold(selection.hasFormat('bold'));
+        setIsCode(selection.hasFormat('code'));
+        setIsItalic(selection.hasFormat('italic'));
+        setIsUnderline(selection.hasFormat('underline'));
+        setIsStrikethrough(selection.hasFormat('strikethrough'));
+        setIsSubscript(selection.hasFormat('subscript'));
+        setIsSuperscript(selection.hasFormat('superscript'));
 
-      // Update links
-      const parent = node.getParent();
-      if ($isLinkNode(parent) || $isLinkNode(node)) {
-        setIsLink(true);
-      } else {
-        setIsLink(false);
-      }
+        // Update links
+        const parent = node.getParent();
+        if ($isLinkNode(parent) || $isLinkNode(node)) {
+          setIsLink(true);
+        } else {
+          setIsLink(false);
+        }
 
-      if (
-        !$isCodeHighlightNode(selection.anchor.getNode()) &&
-        selection.getTextContent() !== ''
-      ) {
-        setIsText($isTextNode(node) || $isParagraphNode(node));
-      } else {
-        setIsText(false);
-      }
+        if (
+          !$isCodeHighlightNode(selection.anchor.getNode()) &&
+          selection.getTextContent() !== ''
+        ) {
+          setIsText($isTextNode(node) || $isParagraphNode(node));
+        } else {
+          setIsText(false);
+        }
 
-      const rawTextContent = selection.getTextContent().replace(/\n/g, '');
-      if (!selection.isCollapsed() && rawTextContent === '') {
-        setIsText(false);
-        return;
-      }
-    });
+        const rawTextContent = selection.getTextContent().replace(/\n/g, '');
+        if (!selection.isCollapsed() && rawTextContent === '') {
+          setIsText(false);
+          return;
+        }
+      },
+      {editor}
+    );
   }, [editor]);
 
   useEffect(() => {

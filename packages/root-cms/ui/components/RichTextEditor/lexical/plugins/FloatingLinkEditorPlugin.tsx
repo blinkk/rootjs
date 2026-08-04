@@ -165,9 +165,12 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
-      editor.getEditorState().read(() => {
-        $updateLinkEditor();
-      });
+      editor.getEditorState().read(
+        () => {
+          $updateLinkEditor();
+        },
+        {editor}
+      );
     };
 
     window.addEventListener('resize', update);
@@ -188,9 +191,12 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({editorState}) => {
-        editorState.read(() => {
-          $updateLinkEditor();
-        });
+        editorState.read(
+          () => {
+            $updateLinkEditor();
+          },
+          {editor}
+        );
       }),
 
       editor.registerCommand(
@@ -217,16 +223,22 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   }, [editor, $updateLinkEditor, setIsLink, isLink]);
 
   useEffect(() => {
-    editor.getEditorState().read(() => {
-      $updateLinkEditor();
-    });
+    editor.getEditorState().read(
+      () => {
+        $updateLinkEditor();
+      },
+      {editor}
+    );
   }, [editor, $updateLinkEditor]);
 
   useEffect(() => {
     if (isLink) {
-      editor.getEditorState().read(() => {
-        $updateLinkEditor();
-      });
+      editor.getEditorState().read(
+        () => {
+          $updateLinkEditor();
+        },
+        {editor}
+      );
     }
   }, [isLink, editor, $updateLinkEditor]);
 
@@ -538,9 +550,12 @@ function useFloatingLinkEditorToolbar(
     }
     return mergeRegister(
       editor.registerUpdateListener(({editorState}) => {
-        editorState.read(() => {
-          $updateToolbar();
-        });
+        editorState.read(
+          () => {
+            $updateToolbar();
+          },
+          {editor}
+        );
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
