@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 3.4.2
+
+### Patch Changes
+
+- 4b48b99: fix: default `listDocs()` ordering to slug instead of `sys.sortKey`
+- a344071: feat: add a preview image fit option to collections
+- 9105a2f: fix: pass the editor context to lexical editor state reads
+- 30a700b: fix: surface uncaught errors in the UI as notifications
+  - @blinkk/root@3.4.2
+
 ## 3.4.1
 
 ### Patch Changes
