@@ -895,6 +895,7 @@ CollectionPage.DocsList = (props: {
                   file={previewImage}
                   width={40}
                   height={30}
+                  fit={rootCollection.preview?.fit}
                   withPlaceholder={!previewImage?.src}
                 />
               </a>
@@ -974,6 +975,7 @@ CollectionPage.DocsList = (props: {
                   file={previewImage}
                   width={120}
                   height={90}
+                  fit={rootCollection.preview?.fit}
                   withPlaceholder={!previewImage?.src}
                 />
               </a>

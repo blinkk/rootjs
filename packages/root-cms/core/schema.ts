@@ -561,6 +561,8 @@ export type Collection = SchemaWithTypes & {
     defaultImage?: {
       src: string;
     };
+    /** How the image fills its box: "cover" (default) crops, "contain" doesn't. */
+    fit?: 'cover' | 'contain';
   };
   /**
    * Regular expression used to validate document slugs. Should be provided as a
