@@ -217,11 +217,9 @@ export interface ListDocsOptions {
   offset?: number;
   limit?: number;
   /**
-   * DB field path to order results by, e.g. `sys.createdAt`.
-   *
-   * For collections with the `customSorting` option, when `orderBy` and
-   * `query` are both unset, results default to the custom order (i.e.
-   * `orderBy: 'sys.sortKey'`). Pass an explicit `orderBy` to override.
+   * DB field path to order results by, e.g. `sys.createdAt`. Defaults to
+   * `slug`. The default is skipped when a `query` fn is provided, since the
+   * query fn may supply its own ordering.
    */
   orderBy?: string;
   orderByDirection?: 'asc' | 'desc';
@@ -354,8 +352,6 @@ export class RootCMSClient {
   readonly projectId: string;
   readonly app: App;
   readonly db: Firestore;
-  /** Memoized `customSorting` collection option, see `hasCustomSorting()`. */
-  private _customSortingCache = new Map<string, boolean>();
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
@@ -476,26 +472,6 @@ export class RootCMSClient {
     // when the client is initialized (the project module loads all schema files).
     const project = await import('./project.js');
     return await project.getCollectionSchema(collectionId);
-  }
-
-  /**
-   * Returns whether a collection has the `customSorting` option enabled.
-   * The result is memoized per collection since this is called on the
-   * `listDocs()` hot path. Returns false when the collection schema cannot
-   * be loaded (e.g. in standalone scripts outside the vite server).
-   */
-  private async hasCustomSorting(collectionId: string): Promise<boolean> {
-    let customSorting = this._customSortingCache.get(collectionId);
-    if (customSorting === undefined) {
-      try {
-        const collection = await this.getCollection(collectionId);
-        customSorting = Boolean(collection?.customSorting);
-      } catch {
-        customSorting = false;
-      }
-      this._customSortingCache.set(collectionId, customSorting);
-    }
-    return customSorting;
   }
 
   /**
@@ -713,18 +689,17 @@ export class RootCMSClient {
     if (options.offset) {
       query = query.offset(options.offset);
     }
-    let orderBy = options.orderBy;
-    // Collections with `customSorting` default to the custom order. The
-    // default is skipped when a `query` fn is provided, since adding an
-    // orderBy to a filtered query may require a composite index (and would
-    // exclude docs that don't have a `sys.sortKey`).
-    if (
-      !orderBy &&
-      !options.query &&
-      (await this.hasCustomSorting(collectionId))
-    ) {
-      orderBy = 'sys.sortKey';
-    }
+    // Default to ordering by slug. The default is skipped when a `query` fn is
+    // provided, since the fn is applied after this orderBy (which would take
+    // precedence over any ordering the fn adds) and since adding an orderBy to
+    // a filtered query may require a composite index.
+    //
+    // NOTE: don't default to `sys.sortKey` for collections using the
+    // `customSorting` option. A firestore `orderBy('sys.sortKey')` query
+    // silently excludes docs that don't have a sort key yet (e.g. docs created
+    // before the option was enabled). Callers that want the custom order should
+    // pass `orderBy: 'sys.sortKey'` explicitly.
+    const orderBy = options.orderBy || (options.query ? '' : 'slug');
     if (orderBy) {
       query = query.orderBy(orderBy, options.orderByDirection);
     }
