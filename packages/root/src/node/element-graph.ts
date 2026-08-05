@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import glob from 'tiny-glob';
 import {searchForWorkspaceRoot} from 'vite';
-import {RootConfig} from '../core/config.js';
+import {ElementTagNameMatcher, RootConfig} from '../core/config.js';
 import {isValidTagName, parseTagNames} from '../utils/elements.js';
 import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils.js';
 import type {ResolvedPod} from './pod-collector.js';
@@ -89,10 +89,33 @@ export class ElementGraph {
 
 export interface GetElementsOptions {
   /**
-   * Whether the element graph is being built for the `root build` command. When
-   * true, elements matching `build.excludeElements` are left out of the graph.
+   * Whether the element graph is being built for the SSG phase of
+   * `root build`. When true, elements matching `build.excludeElements` are left
+   * out of the graph. The dev server and `root build --ssr-only` leave this
+   * unset, since both render pages on demand and should keep serving
+   * preview-only elements.
    */
-  isBuild?: boolean;
+  isSsgBuild?: boolean;
+}
+
+/**
+ * Returns true if a tag name matches an `ElementTagNameMatcher`. Strings are
+ * matched exactly, RegEx patterns are tested against the tag name, and a
+ * function is called with the tag name.
+ */
+function matchesTagName(
+  tagName: string,
+  matcher: ElementTagNameMatcher
+): boolean {
+  if (typeof matcher === 'function') {
+    return matcher(tagName);
+  }
+  return matcher.some((pattern) => {
+    if (typeof pattern === 'string') {
+      return pattern === tagName;
+    }
+    return Boolean(tagName.match(pattern));
+  });
 }
 
 /**
@@ -112,14 +135,16 @@ export async function getElements(
   };
 
   // `build.excludeElements` matches tag names and only applies to the SSG
-  // build, which keeps preview-only elements working in the dev server.
-  const excludeTagNamePatterns = options?.isBuild
-    ? rootConfig.build?.excludeElements || []
-    : [];
+  // build, which keeps preview-only elements working anywhere pages are
+  // rendered on demand (the dev server, `--ssr-only` builds).
+  const excludeElements = options?.isSsgBuild
+    ? rootConfig.build?.excludeElements
+    : undefined;
   const excludeTagName = (tagName: string) => {
-    return excludeTagNamePatterns.some((pattern) =>
-      Boolean(tagName.match(pattern))
-    );
+    if (!excludeElements) {
+      return false;
+    }
+    return matchesTagName(tagName, excludeElements);
   };
 
   const elementFilePaths: {[tagName: string]: ElementSourceFile} = {};

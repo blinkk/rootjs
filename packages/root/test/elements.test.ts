@@ -1,7 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
-import {fileExists} from '../src/utils/fsutils.js';
+import {fileExists, loadJson} from '../src/utils/fsutils.js';
 import {Fixture, loadFixture} from './testutils.js';
 
 let fixture: Fixture;
@@ -94,6 +94,21 @@ test('exclude elements from the ssg build', async () => {
     </html>
     "
   `);
+});
+
+test('keep excluded elements in an --ssr-only build', async () => {
+  await fixture.build({ssrOnly: true});
+  // `--ssr-only` generates the pre-built files for SSR mode, where pages are
+  // rendered on demand, so preview-only elements are kept.
+  assert.isTrue(
+    await fileExists(
+      path.join(fixture.distDir, 'html/assets/debug-panel.min.js')
+    )
+  );
+  const elementGraph = await loadJson<{sourceFiles: Record<string, unknown>}>(
+    path.join(fixture.distDir, '.root/elements.json')
+  );
+  assert.isTrue('debug-panel' in elementGraph.sourceFiles);
 });
 
 test('exclude elements matching a certain pattern', async () => {
