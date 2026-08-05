@@ -63,11 +63,11 @@ test('use custom elements from another directory', async () => {
   `);
 });
 
-test('exclude elements from the ssg build', async () => {
+test('exclude elements from the ssg output', async () => {
   await fixture.build();
   const htmlPath = path.join(
     fixture.distDir,
-    'html/exclude-build-elements/index.html'
+    'html/exclude-from-ssg/index.html'
   );
   assert.isTrue(await fileExists(htmlPath));
   const html = await fs.readFile(htmlPath, 'utf-8');
@@ -96,10 +96,10 @@ test('exclude elements from the ssg build', async () => {
   `);
 });
 
-test('keep excluded elements in an --ssr-only build', async () => {
+test('keep elements excluded from ssg in an --ssr-only build', async () => {
   await fixture.build({ssrOnly: true});
   // `--ssr-only` generates the pre-built files for SSR mode, where pages are
-  // rendered on demand, so preview-only elements are kept.
+  // rendered on demand, so the excluded elements are kept.
   assert.isTrue(
     await fileExists(
       path.join(fixture.distDir, 'html/assets/debug-panel.min.js')

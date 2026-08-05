@@ -1,6 +1,6 @@
-// This file is meant to represent a preview-only element, which should be
-// excluded from the SSG build through a root.config.ts `build.excludeElements`
-// pattern.
+// This file is meant to represent an element that only makes sense when a page
+// is rendered on demand, which should be excluded from the SSG output through a
+// root.config.ts `elements.excludeFromSsg` pattern.
 
 class DebugPanel extends HTMLElement {
   connectedCallback() {
