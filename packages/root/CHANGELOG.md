@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.4.3
+
+### Patch Changes
+
+- c3f5733: feat: add a `build.excludeElements` option for preview-only elements
+
 ## 3.4.2
 
 ## 3.4.1
