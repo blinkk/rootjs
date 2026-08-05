@@ -18,6 +18,7 @@ import {render} from 'preact';
 import {LocationProvider, Router, Route} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
+import {clearAutoSignInAttempt, setLastSignIn} from '../shared/auth-hints.js';
 import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {AppErrorBoundary} from './components/AppErrorBoundary/AppErrorBoundary.js';
@@ -503,6 +504,9 @@ const root = document.getElementById('root')!;
  */
 const AUTH_STATE_TIMEOUT_MS = 15 * 1000;
 
+/** The last ID token successfully exchanged for a session cookie. */
+let lastSyncedIdToken = '';
+
 function getStartupErrorMessage(err: any): string {
   const code = err?.code || '';
   if (code === 'auth/invalid-api-key') {
@@ -569,6 +573,18 @@ try {
       )
     );
   }, AUTH_STATE_TIMEOUT_MS);
+  // Keep the server session in sync with the Firebase ID token. The listener
+  // fires with the current token and again whenever the SDK refreshes it
+  // (roughly hourly), which pushes out the session cookie's expiration so
+  // long-lived tabs don't get bounced to the sign-in page mid-edit.
+  auth.onIdTokenChanged((user) => {
+    if (!user) {
+      return;
+    }
+    updateSession(user).catch((err) => {
+      console.error('failed to update login session:', err);
+    });
+  });
   auth.onAuthStateChanged(
     (user) => {
       window.clearTimeout(authWatchdog);
@@ -580,9 +596,13 @@ try {
       root.innerHTML = '';
       render(<App />, root);
 
-      updateSession(user).catch((err) => {
-        console.error('failed to update login session:', err);
-      });
+      // The app booted, which proves the session cookie works. Remember the
+      // account so the sign-in page can restore this session automatically the
+      // next time it expires.
+      clearAutoSignInAttempt();
+      if (user.email) {
+        setLastSignIn(user.email);
+      }
       saveUserProfile(user, db);
     },
     (err) => {
@@ -594,8 +614,15 @@ try {
   showStartupError(err);
 }
 
+/**
+ * Exchanges the user's current Firebase ID token for a fresh CMS session
+ * cookie. No-ops when the session was already updated with the same token.
+ */
 async function updateSession(user: User) {
   const idToken = await user.getIdToken();
+  if (idToken === lastSyncedIdToken) {
+    return;
+  }
   const res = await fetch('/cms/login', {
     method: 'PUT',
     headers: {
@@ -614,6 +641,7 @@ async function updateSession(user: User) {
     console.log(res);
     return;
   }
+  lastSyncedIdToken = idToken;
 }
 
 /**

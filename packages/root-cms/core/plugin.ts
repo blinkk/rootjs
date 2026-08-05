@@ -29,6 +29,12 @@ import {api} from './api.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
+import {
+  clearDevAuthCookie,
+  getDevAuthCookie,
+  isDevSharedAuthEnabled,
+  setDevAuthCookie,
+} from './dev-session.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {type CMSTranslationService} from './translations.js';
@@ -819,7 +825,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * email is verified to have access to Root CMS, otherwise returns `null`.
    */
   async function getCurrentUser(req: Request): Promise<CMSUser | null> {
-    const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
+    let sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
+    if (!sessionCookie && isDevSharedAuthEnabled()) {
+      // Fall back to the login shared between local Root projects so that
+      // switching sites during development doesn't require signing in again.
+      sessionCookie = getDevAuthCookie(req);
+    }
     if (!sessionCookie) {
       if (logLevel === 'debug') {
         console.log('no login session cookie');
@@ -1100,6 +1111,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             let sessionCookie: string;
             if (process.env.NODE_ENV === 'development') {
               sessionCookie = idToken;
+              // Also save the login to the cookie shared by every local Root
+              // project so switching sites doesn't require signing in again.
+              setDevAuthCookie(res, idToken);
             } else {
               sessionCookie = await auth.createSessionCookie(idToken, {
                 expiresIn,
@@ -1139,7 +1153,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server.use('/cms/logout', async (req: Request, res: Response) => {
         res.session.removeItem(SESSION_COOKIE_AUTH);
         res.saveSession();
-        res.redirect('/cms/login');
+        clearDevAuthCookie(res);
+        // The `signedOut` param tells the sign-in page not to automatically
+        // sign the user back in with the credentials the Firebase SDK persists
+        // in the browser.
+        res.redirect('/cms/login?signedOut=1');
       });
 
       // Serve the CMS UI's static assets before any auth middleware runs.

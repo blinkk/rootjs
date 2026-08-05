@@ -26,6 +26,7 @@ import {useCallback, useContext, useMemo} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
+import {clearLastSignIn} from '../../shared/auth-hints.js';
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
 import {useLocalStorage} from '../hooks/useLocalStorage.js';
@@ -192,8 +193,11 @@ Layout.Side = () => {
   const experiments = window.__ROOT_CTX.experiments || {};
 
   const onSignOut = async () => {
+    clearLastSignIn();
     await window.firebase.auth.signOut();
-    window.location.href = '/cms/login';
+    // Go through the logout handler so the server session cookie is cleared
+    // too, otherwise the session would stay valid until it expires.
+    window.location.href = '/cms/logout';
   };
 
   return (
