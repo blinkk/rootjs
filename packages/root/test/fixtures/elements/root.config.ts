@@ -8,9 +8,7 @@ export default defineConfig({
   elements: {
     include: [path.resolve(rootDir, 'designsystem')],
     exclude: [/\.stories\.tsx$/],
-  },
-  build: {
-    excludeElements: [/^debug-/],
+    excludeFromSsg: [/^debug-/],
   },
   vite: {
     build: {

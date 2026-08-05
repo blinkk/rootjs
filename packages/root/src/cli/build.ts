@@ -105,8 +105,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     }
   }
 
-  // `build.excludeElements` drops preview-only elements from the SSG output.
-  // An `--ssr-only` build renders pages on demand, so it keeps them.
+  // `elements.excludeFromSsg` drops elements from the SSG output. An
+  // `--ssr-only` build renders pages on demand, so it keeps them.
   const elementGraph = await getElements(rootConfig, pods, {
     isSsgBuild: !ssrOnly,
   });

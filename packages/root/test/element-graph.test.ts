@@ -5,32 +5,32 @@ import {getElements} from '../src/node/element-graph.js';
 
 const rootDir = path.resolve(__dirname, './fixtures/elements');
 
-function testConfig(excludeElements?: ElementTagNameMatcher) {
+function testConfig(excludeFromSsg?: ElementTagNameMatcher) {
   return {
     rootDir,
     elements: {
       exclude: [/\.stories\.tsx$/],
+      excludeFromSsg,
     },
-    build: {excludeElements},
   } as RootConfig;
 }
 
 /** Returns the tag names in the graph built for the SSG phase of a build. */
-async function ssgTagNames(excludeElements: ElementTagNameMatcher) {
-  const graph = await getElements(testConfig(excludeElements), undefined, {
+async function ssgTagNames(excludeFromSsg: ElementTagNameMatcher) {
+  const graph = await getElements(testConfig(excludeFromSsg), undefined, {
     isSsgBuild: true,
   });
   return Object.keys(graph.sourceFiles).sort();
 }
 
-test('build.excludeElements matches RegEx patterns', async () => {
+test('elements.excludeFromSsg matches RegEx patterns', async () => {
   expect(await ssgTagNames([/^debug-/])).toEqual([
     'root-counter',
     'root-label',
   ]);
 });
 
-test('build.excludeElements matches strings exactly', async () => {
+test('elements.excludeFromSsg matches strings exactly', async () => {
   expect(await ssgTagNames(['debug-panel'])).toEqual([
     'root-counter',
     'root-label',
@@ -47,17 +47,17 @@ test('build.excludeElements matches strings exactly', async () => {
   ]);
 });
 
-test('build.excludeElements matches a predicate function', async () => {
-  const previewOnly = new Set(['debug-panel', 'root-label']);
-  expect(await ssgTagNames((tagName) => previewOnly.has(tagName))).toEqual([
+test('elements.excludeFromSsg matches a predicate function', async () => {
+  const ssrOnly = new Set(['debug-panel', 'root-label']);
+  expect(await ssgTagNames((tagName) => ssrOnly.has(tagName))).toEqual([
     'root-counter',
   ]);
 });
 
-test('build.excludeElements only applies to the ssg build', async () => {
+test('elements.excludeFromSsg only applies to the ssg build', async () => {
   const rootConfig = testConfig([/^debug-/]);
-  // The dev server and `--ssr-only` builds pass no `isSsgBuild`, so
-  // preview-only elements remain in the graph and are still auto-injected.
+  // The dev server and `--ssr-only` builds pass no `isSsgBuild`, so the
+  // excluded elements remain in the graph and are still auto-injected.
   const graph = await getElements(rootConfig);
   expect(Object.keys(graph.sourceFiles).sort()).toEqual([
     'debug-panel',

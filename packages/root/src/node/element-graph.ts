@@ -90,10 +90,10 @@ export class ElementGraph {
 export interface GetElementsOptions {
   /**
    * Whether the element graph is being built for the SSG phase of
-   * `root build`. When true, elements matching `build.excludeElements` are left
-   * out of the graph. The dev server and `root build --ssr-only` leave this
-   * unset, since both render pages on demand and should keep serving
-   * preview-only elements.
+   * `root build`. When true, elements matching `elements.excludeFromSsg` are
+   * left out of the graph. The dev server and `root build --ssr-only` leave
+   * this unset, since both render pages on demand and should keep serving the
+   * excluded elements.
    */
   isSsgBuild?: boolean;
 }
@@ -134,17 +134,17 @@ export async function getElements(
     return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
   };
 
-  // `build.excludeElements` matches tag names and only applies to the SSG
-  // build, which keeps preview-only elements working anywhere pages are
+  // `elements.excludeFromSsg` matches tag names and only applies to the SSG
+  // output, which keeps the excluded elements working anywhere pages are
   // rendered on demand (the dev server, `--ssr-only` builds).
-  const excludeElements = options?.isSsgBuild
-    ? rootConfig.build?.excludeElements
+  const excludeFromSsg = options?.isSsgBuild
+    ? rootConfig.elements?.excludeFromSsg
     : undefined;
   const excludeTagName = (tagName: string) => {
-    if (!excludeElements) {
+    if (!excludeFromSsg) {
       return false;
     }
-    return matchesTagName(tagName, excludeElements);
+    return matchesTagName(tagName, excludeFromSsg);
   };
 
   const elementFilePaths: {[tagName: string]: ElementSourceFile} = {};
