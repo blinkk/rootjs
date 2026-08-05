@@ -264,6 +264,35 @@ export interface RootBuildConfig {
    * Excludes the `/intl/{defaultLocale}/...` path from the SSG build.
    */
   excludeDefaultLocaleFromIntlPaths?: boolean;
+
+  /**
+   * A list of RegEx patterns of custom element tag names to exclude from the
+   * SSG build. Matching elements are not bundled, their assets are not emitted
+   * to `dist/html`, and their `<script>` and `<link rel="stylesheet">` tags are
+   * not auto-injected into rendered pages.
+   *
+   * This only applies to `root build`. The dev server continues to serve and
+   * auto-inject the excluded elements, which makes this useful for
+   * preview-only elements (help overlays, internal tools, etc.) that shouldn't
+   * ship to production.
+   *
+   * Note that this excludes the element's assets, not its HTML. A
+   * `<debug-panel>` tag rendered by a route or template is still present in the
+   * build output, it just never upgrades into a custom element.
+   *
+   * Unlike `elements.exclude`, which matches file paths and applies to every
+   * command, the patterns here are matched against the element's tag name.
+   *
+   * @example
+   * ```ts
+   * export default defineConfig({
+   *   build: {
+   *     excludeElements: [/^debug-/],
+   *   },
+   * });
+   * ```
+   */
+  excludeElements?: RegExp[];
 }
 
 export interface RootRedirectConfig {

@@ -105,7 +105,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     }
   }
 
-  const elementGraph = await getElements(rootConfig, pods);
+  const elementGraph = await getElements(rootConfig, pods, {isBuild: true});
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.filePath;
   });

@@ -87,12 +87,21 @@ export class ElementGraph {
   }
 }
 
+export interface GetElementsOptions {
+  /**
+   * Whether the element graph is being built for the `root build` command. When
+   * true, elements matching `build.excludeElements` are left out of the graph.
+   */
+  isBuild?: boolean;
+}
+
 /**
  * Returns a map of all the element file definitions in the project.
  */
 export async function getElements(
   rootConfig: RootConfig,
-  pods?: ResolvedPod[]
+  pods?: ResolvedPod[],
+  options?: GetElementsOptions
 ): Promise<ElementGraph> {
   const rootDir = rootConfig.rootDir;
 
@@ -100,6 +109,17 @@ export async function getElements(
   const excludePatterns = rootConfig.elements?.exclude || [];
   const excludeElement = (moduleId: string) => {
     return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
+  };
+
+  // `build.excludeElements` matches tag names and only applies to the SSG
+  // build, which keeps preview-only elements working in the dev server.
+  const excludeTagNamePatterns = options?.isBuild
+    ? rootConfig.build?.excludeElements || []
+    : [];
+  const excludeTagName = (tagName: string) => {
+    return excludeTagNamePatterns.some((pattern) =>
+      Boolean(tagName.match(pattern))
+    );
   };
 
   const elementFilePaths: {[tagName: string]: ElementSourceFile} = {};
@@ -112,7 +132,7 @@ export async function getElements(
           const tagName = parts.name;
           const filePath = path.join(dirPath, file);
           const relPath = path.relative(rootDir, filePath);
-          if (!excludeElement(relPath)) {
+          if (!excludeElement(relPath) && !excludeTagName(tagName)) {
             elementFilePaths[tagName] = {filePath, relPath};
           }
         }

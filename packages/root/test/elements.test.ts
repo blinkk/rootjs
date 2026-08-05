@@ -63,6 +63,39 @@ test('use custom elements from another directory', async () => {
   `);
 });
 
+test('exclude elements from the ssg build', async () => {
+  await fixture.build();
+  const htmlPath = path.join(
+    fixture.distDir,
+    'html/exclude-build-elements/index.html'
+  );
+  assert.isTrue(await fileExists(htmlPath));
+  const html = await fs.readFile(htmlPath, 'utf-8');
+  // The element's asset should not be emitted to the build output.
+  assert.isFalse(
+    await fileExists(
+      path.join(fixture.distDir, 'html/assets/debug-panel.min.js')
+    )
+  );
+  expect(html).toMatchInlineSnapshot(`
+    "<!doctype html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <script type="module" src="/assets/root-counter.min.js"></script>
+    <script type="module" src="/assets/root-label.min.js"></script>
+    </head>
+    <body>
+    <h1>Counter</h1>
+    <root-counter start="3"></root-counter>
+    <h1>The following element deps should not be auto-injected:</h1>
+    <debug-panel></debug-panel>
+    </body>
+    </html>
+    "
+  `);
+});
+
 test('exclude elements matching a certain pattern', async () => {
   await fixture.build();
   const htmlPath = path.join(
