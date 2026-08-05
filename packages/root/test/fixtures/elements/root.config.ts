@@ -9,6 +9,9 @@ export default defineConfig({
     include: [path.resolve(rootDir, 'designsystem')],
     exclude: [/\.stories\.tsx$/],
   },
+  build: {
+    excludeElements: [/^debug-/],
+  },
   vite: {
     build: {
       rolldownOptions: {
@@ -23,6 +26,6 @@ export default defineConfig({
   },
   jsxRenderer: {
     mode: 'pretty',
-    blockElements: ['root-counter', 'root-exclude'],
+    blockElements: ['root-counter', 'root-exclude', 'debug-panel'],
   },
 });

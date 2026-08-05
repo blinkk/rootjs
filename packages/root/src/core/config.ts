@@ -264,7 +264,54 @@ export interface RootBuildConfig {
    * Excludes the `/intl/{defaultLocale}/...` path from the SSG build.
    */
   excludeDefaultLocaleFromIntlPaths?: boolean;
+
+  /**
+   * Custom elements to exclude from the SSG build. Matching elements are not
+   * bundled, their assets are not emitted to `dist/html`, and their `<script>`
+   * and `<link rel="stylesheet">` tags are not auto-injected into rendered
+   * pages.
+   *
+   * This only applies to the SSG phase of `root build`. The dev server and
+   * `root build --ssr-only` continue to serve and auto-inject the excluded
+   * elements, which makes this useful for preview-only elements (help
+   * overlays, internal tools, etc.) that shouldn't ship to a static site.
+   *
+   * Note that this excludes the element's assets, not its HTML. A
+   * `<debug-panel>` tag rendered by a route or template is still present in the
+   * build output, it just never upgrades into a custom element.
+   *
+   * Unlike `elements.exclude`, which matches file paths and applies to every
+   * command, this is matched against the element's tag name.
+   *
+   * @example
+   * ```ts
+   * export default defineConfig({
+   *   build: {
+   *     excludeElements: ['help-overlay', /^debug-/],
+   *   },
+   * });
+   * ```
+   */
+  excludeElements?: ElementTagNameMatcher;
 }
+
+/**
+ * Matches custom elements by tag name (e.g. `debug-panel`).
+ *
+ * Accepts a list of strings (matched exactly) and RegEx patterns (tested
+ * against the tag name), or a predicate function that receives the tag name
+ * and returns true to match. The function form is useful for logic that a
+ * pattern can't express, e.g. allowlisting a known set of elements.
+ *
+ * @example
+ * ```ts
+ * const previewOnly = new Set(['help-overlay', 'debug-panel']);
+ * const matcher: ElementTagNameMatcher = (tagName) => previewOnly.has(tagName);
+ * ```
+ */
+export type ElementTagNameMatcher =
+  | Array<string | RegExp>
+  | ((tagName: string) => boolean);
 
 export interface RootRedirectConfig {
   /**
