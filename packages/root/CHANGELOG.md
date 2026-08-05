@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.4.4
+
+### Patch Changes
+
+- 34f23d7: feat: rename `build.excludeElements` to `elements.excludeFromSsg`
+
 ## 3.4.3
 
 ### Patch Changes
