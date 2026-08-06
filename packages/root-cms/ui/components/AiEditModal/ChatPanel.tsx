@@ -37,6 +37,10 @@ import {Markdown} from '../Markdown/Markdown.js';
 import '../RootAIChat/RootAIChat.css';
 import {createClientChatTransport} from '../RootAIChat/clientChatTransport.js';
 import {createReadOnlyClientCmsTools} from '../RootAIChat/clientCmsTools.js';
+import {
+  createClientGoogleTools,
+  maybeAuthorizeGoogle,
+} from '../RootAIChat/clientGoogleTools.js';
 import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
 import {prettyToolName, prettyToolState} from '../RootAIChat/toolLabels.js';
 
@@ -192,7 +196,9 @@ function ChatPanelInner(props: {
           };
         },
         buildTools: (model) =>
-          model.capabilities.tools ? createReadOnlyClientCmsTools() : {},
+          model.capabilities.tools
+            ? {...createReadOnlyClientCmsTools(), ...createClientGoogleTools()}
+            : {},
       }),
     [props.model.id]
   );
@@ -273,7 +279,7 @@ function ChatPanelInner(props: {
         canAttach={props.model.capabilities.attachments}
         isStreaming={isStreaming}
         onStop={stop}
-        onSend={(text, attachments) => {
+        onSend={async (text, attachments) => {
           if (!text && attachments.length === 0) {
             return;
           }
@@ -281,6 +287,9 @@ function ChatPanelInner(props: {
           const messageText = [text, preparedAttachments.text]
             .filter(Boolean)
             .join('\n\n');
+          // Grant Google access while the send click still counts as a user
+          // gesture, so the Google read tools have a token mid-turn.
+          await maybeAuthorizeGoogle([messageText]);
           sendMessage({
             text: messageText,
             files: preparedAttachments.files.map((a) => ({

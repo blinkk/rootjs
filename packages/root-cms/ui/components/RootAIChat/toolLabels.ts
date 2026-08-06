@@ -41,6 +41,12 @@ export function prettyToolName(toolName: string, input: any): string {
       return `Create release ${input?.releaseId || ''}`.trim();
     case 'release_update':
       return `Update release ${input?.releaseId || ''}`.trim();
+    case 'gdoc_get':
+      return 'Read Google Doc';
+    case 'gsheet_get':
+      return `Read Google Sheet${input?.sheet ? ` (${input.sheet})` : ''}`;
+    case 'gdrive_getFile':
+      return 'Read Google Drive file';
     default:
       return toolName;
   }

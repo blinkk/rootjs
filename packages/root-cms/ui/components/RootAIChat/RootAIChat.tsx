@@ -60,6 +60,10 @@ import {
   createClientCmsTools,
   createReadOnlyClientCmsTools,
 } from './clientCmsTools.js';
+import {
+  createClientGoogleTools,
+  maybeAuthorizeGoogle,
+} from './clientGoogleTools.js';
 import type {CmsToolPreview} from './cmsToolHandlers.js';
 import {
   executeCmsTool,
@@ -884,9 +888,13 @@ function ChatPane(props: {
           if (!model.capabilities.tools) {
             return {};
           }
-          return effectiveModeRef.current === 'read'
-            ? createReadOnlyClientCmsTools()
-            : createClientCmsTools();
+          const cmsTools =
+            effectiveModeRef.current === 'read'
+              ? createReadOnlyClientCmsTools()
+              : createClientCmsTools();
+          // The Google tools are read-only, so they're offered in every
+          // execution mode (and are empty unless `gapi` is configured).
+          return {...cmsTools, ...createClientGoogleTools()};
         },
         onFinish: persistChat,
       }),
@@ -947,7 +955,7 @@ function ChatPane(props: {
             onSelectExecutionMode={props.onSelectExecutionMode}
           />
         }
-        onSend={(text, attachments) => {
+        onSend={async (text, attachments) => {
           if (!text && attachments.length === 0) {
             return;
           }
@@ -955,6 +963,13 @@ function ChatPane(props: {
           const messageText = [text, preparedAttachments.text]
             .filter(Boolean)
             .join('\n\n');
+          // Grant Google access up front (while the send click still counts as
+          // a user gesture) when the chat references a Drive/Docs/Sheets link,
+          // so the Google read tools have a token mid-turn.
+          await maybeAuthorizeGoogle([
+            messageText,
+            ...messages.map(getMessageText),
+          ]);
           sendMessage({
             text: messageText,
             files: preparedAttachments.files.map((a) => ({
@@ -1021,6 +1036,14 @@ function ChatTranscript(props: {
       </div>
     </div>
   );
+}
+
+/** Concatenates the text parts of a message (ignores files and tool calls). */
+function getMessageText(message: UIMessage): string {
+  return (message.parts || [])
+    .filter((part: any) => part.type === 'text' && part.text)
+    .map((part: any) => part.text)
+    .join('\n\n');
 }
 
 function MessageView(props: {
