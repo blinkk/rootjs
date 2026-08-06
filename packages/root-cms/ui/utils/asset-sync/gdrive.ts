@@ -2,10 +2,11 @@
  * @fileoverview Google Drive sync provider.
  *
  * Syncs the files of a Google Drive folder into an asset-library folder.
- * Auth uses the same Google OAuth (GIS) flow as the rest of the CMS
- * (`useGapiClient`), with the read-only Drive scope added -- the signed-in
- * user's own access decides which folders they can sync. Requires the
- * project to configure `gapi: {apiKey, clientId}` in the cmsPlugin options.
+ * Auth uses the shared Google OAuth (GIS) helper (`ui/utils/google-auth.ts`),
+ * which requests the read-only Drive scope alongside the base scopes used by
+ * `useGapiClient` -- the signed-in user's own access decides which folders
+ * they can sync. Requires the project to configure `gapi: {apiKey, clientId}`
+ * in the cmsPlugin options.
  *
  * Unlike Figma, Drive reports a per-file `md5Checksum` during enumeration,
  * so unchanged files are skipped without downloading. Drive has no cheap
@@ -19,7 +20,11 @@
  * PDF/XLSX is a possible future option).
  */
 
-import {loadGisScript} from '../../hooks/useGapiClient.js';
+import {
+  clearGoogleAccessToken,
+  getGoogleAccessToken,
+  requestGoogleAccessToken,
+} from '../google-auth.js';
 import {sanitizeAssetName} from './names.js';
 import {
   AssetSyncProvider,
@@ -34,19 +39,6 @@ import {
 } from './types.js';
 
 const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
-
-const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-
-/**
- * Scopes requested at sign-in. Includes the same base scopes as
- * `useGapiClient` so a single consent covers both the asset sync and the
- * existing Drive/Sheets features (the consent cache is shared).
- */
-const LOGIN_SCOPES = [
-  'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/spreadsheets',
-  DRIVE_READONLY_SCOPE,
-];
 
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
@@ -67,109 +59,20 @@ interface DriveAssetRef {
   mimeType?: string;
 }
 
-// The GIS access token is held in memory only (like the gapi client's own
-// token handling) and expires after ~1 hour; a new sync after expiry
-// re-runs the (usually promptless) sign-in.
-let cachedToken: {accessToken: string; expiresAt: number} | null = null;
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-function getCachedAccessToken(): string | null {
-  if (cachedToken && nowSeconds() < cachedToken.expiresAt - 30) {
-    return cachedToken.accessToken;
-  }
-  return null;
-}
-
 /**
- * The user's Google consent record, shared with `useGapiClient` (which
- * writes the same localStorage key via Mantine's useLocalStorage) so that
- * consenting once covers both features.
- */
-interface GapiUserConsent {
-  clientId?: string;
-  scopes?: string[];
-  at?: number;
-}
-
-function getConsentStorageKey(): string {
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  return `root-cms::${projectId}::gapi-user-consent`;
-}
-
-function readUserConsent(): GapiUserConsent | null {
-  try {
-    const raw = localStorage.getItem(getConsentStorageKey());
-    return raw ? (JSON.parse(raw) as GapiUserConsent) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeUserConsent(consent: GapiUserConsent) {
-  try {
-    localStorage.setItem(getConsentStorageKey(), JSON.stringify(consent));
-  } catch {
-    // localStorage may be unavailable; consent is simply not remembered.
-  }
-}
-
-/**
- * Interactively signs the user in with Google (GIS token flow) and caches
- * the access token in memory. Skips the consent dialog when the user has
- * previously consented to the requested scopes. Must be called from a user
- * gesture so the popup isn't blocked.
+ * Interactively signs the user in with Google (GIS token flow) and caches the
+ * access token in memory (see `ui/utils/google-auth.ts`, which shares the
+ * token and consent record with the CMS's other Google features). Must be
+ * called from a user gesture so the popup isn't blocked.
  */
 async function driveInteractiveLogin(): Promise<void> {
-  const clientId = window.__ROOT_CTX.gapi?.clientId;
-  if (!clientId) {
-    throw new Error(
-      'Google Drive sync requires the CMS Google API config. Add `gapi: {apiKey, clientId}` to the cmsPlugin options in root.config.ts.'
-    );
-  }
-  await loadGisScript();
-  await new Promise<void>((resolve, reject) => {
-    const tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: LOGIN_SCOPES.join(' '),
-      callback: (token: any) => {
-        if (!token || token.error) {
-          reject(
-            new Error(
-              `Google sign-in failed${token?.error ? `: ${token.error}` : '.'}`
-            )
-          );
-          return;
-        }
-        cachedToken = {
-          accessToken: token.access_token,
-          expiresAt: nowSeconds() + Number(token.expires_in || 3600),
-        };
-        writeUserConsent({
-          at: nowSeconds(),
-          clientId: clientId,
-          scopes: LOGIN_SCOPES,
-        });
-        resolve();
-      },
-      error_callback: (err: any) => {
-        reject(new Error(err?.message || 'Google sign-in was cancelled.'));
-      },
-    });
-    const consent = readUserConsent();
-    const promptless =
-      consent?.clientId === clientId &&
-      LOGIN_SCOPES.every((scope) => consent?.scopes?.includes(scope));
-    tokenClient.requestAccessToken({prompt: promptless ? '' : 'consent'});
-  });
+  await requestGoogleAccessToken({interactive: true});
 }
 
 function createAuthContext(): SyncAuthContext {
   return {
     async getToken() {
-      const token = getCachedAccessToken();
+      const token = getGoogleAccessToken();
       if (!token) {
         throw new SyncTokenRequiredError(
           'gdrive',
@@ -179,7 +82,7 @@ function createAuthContext(): SyncAuthContext {
       return token;
     },
     invalidateToken() {
-      cachedToken = null;
+      clearGoogleAccessToken();
     },
   };
 }
@@ -275,7 +178,7 @@ async function driveFetch(
       continue;
     }
     if (res.status === 401) {
-      cachedToken = null;
+      clearGoogleAccessToken();
       throw new SyncTokenRequiredError(
         'gdrive',
         'Your Google session expired. Sign in again to continue.'
