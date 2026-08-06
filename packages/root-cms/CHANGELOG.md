@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.4.5
+
+### Patch Changes
+
+- 38e50ce: fix: update assets in place when a synced file is replaced at the source
+- 813d75f: feat: sign users back in automatically instead of showing the sign-in screen
+- 45497ad: feat: add AI tools for reading Google Docs and Sheets
+  - @blinkk/root@3.4.5
+
 ## 3.4.4
 
 ### Patch Changes
