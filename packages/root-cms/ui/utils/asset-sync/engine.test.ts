@@ -84,11 +84,16 @@ function makeProvider(options: {version?: string; remote: FakeRemote[]}) {
   return {provider, downloaded, prepared};
 }
 
-/** Builds a previously-synced local asset whose bytes were `contents`. */
+/**
+ * Builds a previously-synced local asset whose bytes were `contents`.
+ * `overrides` patches the asset's `source`; `assetOverrides` patches the
+ * asset itself (e.g. its `name`).
+ */
 function makeSyncedAsset(
   remoteId: string,
   contents: string,
-  overrides: Record<string, any> = {}
+  overrides: Record<string, any> = {},
+  assetOverrides: Record<string, any> = {}
 ): AssetFile {
   return {
     id: `asset-${remoteId}`,
@@ -107,6 +112,7 @@ function makeSyncedAsset(
     createdBy: 'a@example.com',
     modifiedAt: ts(),
     modifiedBy: 'a@example.com',
+    ...assetOverrides,
   } as AssetFile;
 }
 
@@ -154,6 +160,7 @@ function makeDeps(options: {
     setFolderSyncState: vi.fn(async () => {}),
     finalizeFolderSync: vi.fn(async () => {}),
     updateAssetSourceMissing: vi.fn(async () => {}),
+    updateAssetSource: vi.fn(async () => {}),
     sha1: vi.fn(async (file: File) => `sha1:${await readFileText(file)}`),
     now: () => ts(),
     logAction: vi.fn(),
@@ -339,6 +346,195 @@ describe('syncFolder', () => {
       'asset-file:1:0',
       true
     );
+  });
+
+  it('updates the asset in place when a file is replaced at the source', async () => {
+    // Drive has no "replace file" operation: users delete the old file and
+    // upload a new one, which gets a new remote id. That must update the
+    // existing asset (and its docs), not import a `logo (2).png` duplicate.
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      remote: [
+        {
+          remoteId: 'drive-2',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'new',
+        },
+      ],
+    });
+    const existing = makeSyncedAsset(
+      'drive-1',
+      'old',
+      {remoteName: 'logo.png'},
+      {name: 'logo.png'}
+    );
+    const deps = makeDeps({folder, localAssets: [existing]});
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(summary.updated).toEqual(1);
+    expect(summary.added).toEqual(0);
+    expect(summary.missing).toEqual(0);
+    expect(deps.createAssetFile).not.toHaveBeenCalled();
+    expect(deps.updateAssetSourceMissing).not.toHaveBeenCalled();
+    // The asset is updated in place and rebound to the new remote id.
+    const [replacedAsset, , replaceOptions] = (deps.replaceAssetFile as any)
+      .mock.calls[0];
+    expect(replacedAsset.id).toEqual('asset-drive-1');
+    expect(replaceOptions.source.remoteId).toEqual('drive-2');
+    expect(replaceOptions.source.contentHash).toEqual('sha1:new');
+    // Docs embedding the asset pick up the replacement.
+    expect(deps.syncAssetToDocs).toHaveBeenCalledTimes(1);
+    expect((deps.syncAssetToDocs as any).mock.calls[0][1]).toEqual({
+      previousFile: existing.file,
+    });
+  });
+
+  it('rebinds a replacement with identical bytes without touching the file', async () => {
+    // Re-uploading the same bytes still produces a new remote id; record it
+    // so the next sync doesn't flag the asset missing all over again.
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      remote: [
+        {
+          remoteId: 'drive-2',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'same',
+          contentHash: 'md5-new',
+        },
+      ],
+    });
+    const existing = makeSyncedAsset(
+      'drive-1',
+      'same',
+      {remoteName: 'logo.png', remoteHash: 'md5-old'},
+      {name: 'logo.png'}
+    );
+    const deps = makeDeps({folder, localAssets: [existing]});
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(summary.unchanged).toEqual(1);
+    expect(summary.added).toEqual(0);
+    expect(summary.missing).toEqual(0);
+    expect(deps.updateAssetSource).toHaveBeenCalledTimes(1);
+    const [assetId, source] = (deps.updateAssetSource as any).mock.calls[0];
+    expect(assetId).toEqual('asset-drive-1');
+    expect(source.remoteId).toEqual('drive-2');
+    expect(source.remoteHash).toEqual('md5-new');
+    // The file itself is untouched, so no upload and no fan-out.
+    expect(deps.uploadFile).not.toHaveBeenCalled();
+    expect(deps.createAssetFile).not.toHaveBeenCalled();
+    expect(deps.replaceAssetFile).not.toHaveBeenCalled();
+    expect(deps.syncAssetToDocs).not.toHaveBeenCalled();
+  });
+
+  it('matches replacements by remote name when the asset was renamed', async () => {
+    // Renames in the CMS stick, so the remote name recorded at the last sync
+    // is what identifies the replaced file.
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      remote: [
+        {
+          remoteId: 'drive-2',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'new',
+        },
+      ],
+    });
+    const existing = makeSyncedAsset(
+      'drive-1',
+      'old',
+      {remoteName: 'logo.png'},
+      {name: 'brand-logo.png'}
+    );
+    const deps = makeDeps({folder, localAssets: [existing]});
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(summary.updated).toEqual(1);
+    expect(summary.added).toEqual(0);
+    expect(deps.createAssetFile).not.toHaveBeenCalled();
+    expect((deps.replaceAssetFile as any).mock.calls[0][0].id).toEqual(
+      'asset-drive-1'
+    );
+  });
+
+  it('imports a same-named file as a copy while the original still exists', async () => {
+    // Nothing was replaced here -- both files exist at the source -- so the
+    // second one de-dupes as usual.
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      remote: [
+        {
+          remoteId: 'drive-1',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'old',
+        },
+        {
+          remoteId: 'drive-2',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'new',
+        },
+      ],
+    });
+    const existing = makeSyncedAsset(
+      'drive-1',
+      'old',
+      {remoteName: 'logo.png'},
+      {name: 'logo.png'}
+    );
+    const deps = makeDeps({folder, localAssets: [existing]});
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(summary.added).toEqual(1);
+    expect(summary.updated).toEqual(0);
+    expect(summary.unchanged).toEqual(1);
+    expect(deps.replaceAssetFile).not.toHaveBeenCalled();
+    expect((deps.createAssetFile as any).mock.calls[0][0].name).toEqual(
+      'logo (2).png'
+    );
+  });
+
+  it('claims each replaced asset at most once', async () => {
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      remote: [
+        {
+          remoteId: 'drive-2',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'new',
+        },
+        {
+          remoteId: 'drive-3',
+          name: 'logo.png',
+          filename: 'logo.png',
+          contents: 'other',
+        },
+      ],
+    });
+    const existing = makeSyncedAsset(
+      'drive-1',
+      'old',
+      {remoteName: 'logo.png'},
+      {name: 'logo.png'}
+    );
+    const deps = makeDeps({folder, localAssets: [existing]});
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    // The first (by remote id) replaces the asset; the other is a new file.
+    expect(summary.updated).toEqual(1);
+    expect(summary.added).toEqual(1);
+    expect(summary.missing).toEqual(0);
+    expect(
+      (deps.replaceAssetFile as any).mock.calls[0][2].source.remoteId
+    ).toEqual('drive-2');
+    const created = (deps.createAssetFile as any).mock.calls[0][0];
+    expect(created.source.remoteId).toEqual('drive-3');
+    expect(created.name).toEqual('logo (2).png');
   });
 
   it('de-dupes filename collisions deterministically', async () => {

@@ -435,6 +435,9 @@ export async function syncFolder(
      `source.missingSince` (once). **Never auto-delete** — published docs
      may embed the asset; deletion stays a deliberate human action,
      consistent with `deleteAsset()`'s philosophy of leaving GCS blobs.
+     Unless the item was *replaced* rather than removed — a new remote
+     item with the same name takes over the existing asset instead (see
+     §6.2).
 5. **Finalize.** Update the folder doc: `lastSyncedAt/By`,
    `lastSyncResult` counts, clear `state`. Log via
    `logAction('asset.sync_source', {...})` for the audit trail.
@@ -451,6 +454,33 @@ display name), renames in the CMS stick, and moving an asset *out* of
 the folder simply causes the next sync to import a fresh copy into the
 folder (the moved asset keeps working, now unmanaged — its `source`
 could be cleared on move as a refinement).
+
+**Exception — replaced files (`matchReplacements()` in `engine.ts`).**
+Not every source has a "replace this file" operation. In Google Drive,
+updating a file usually means deleting the old one and uploading a new
+one, which produces a *different* file id. On remote id alone that reads
+as "one item removed, one unrelated item added", so the replacement would
+import as a duplicate (`logo (2).png`) next to a copy flagged missing,
+and docs embedding the asset would keep the stale file — the opposite of
+what the user meant. So before importing, the engine matches each new
+remote item against the assets whose remote item disappeared *in this
+same sync*, by name, and rebinds a match onto the existing asset:
+`replaceAssetFile` + `syncAssetToDocs` with the new `remoteId`, keeping
+the asset's own name, id, and alt text.
+
+The matching is deliberately narrow:
+
+- Only assets missing as of this sync are eligible, so a same-named file
+  added *alongside* an existing one still de-dupes to ` (2)`.
+- `source.remoteName` (the remote name at the last sync) is matched
+  before the asset's own name, so assets renamed in the CMS still rebind.
+- Each asset is claimed by at most one remote item; leftovers import
+  normally. Candidates are ordered by asset id and remote id so
+  concurrent syncs converge on the same result.
+- When the replacement's bytes are identical, the asset's `source` is
+  rebound to the new remote id (via `updateAssetSource()`) with no
+  upload, no `modifiedAt` bump, and no fan-out — without that write the
+  next sync would flag the asset missing and re-import all over again.
 
 ### 6.3 Change detection — unchanged files cause zero writes and zero fan-out
 

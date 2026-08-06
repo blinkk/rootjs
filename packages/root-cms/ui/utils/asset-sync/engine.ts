@@ -9,12 +9,16 @@
  * assets in place: changed files go through `replaceAssetFile()` +
  * `syncAssetToDocs()` (fanning the new file out to docs that embed the
  * asset), new files are created, and files removed at the source are
- * flagged (never auto-deleted, since published docs may embed them).
+ * flagged (never auto-deleted, since published docs may embed them). A
+ * removal paired with a same-named addition is treated as a replacement of
+ * the existing asset rather than a duplicate import (see
+ * `matchReplacements()`).
  *
  * INVARIANT: a file whose exported bytes are unchanged since the last sync
  * produces no side effects -- no GCS upload, no asset doc write, and no
- * `syncAssetToDocs` fan-out. This is enforced by three tiers of checks
- * (cheapest first):
+ * `syncAssetToDocs` fan-out. (A replacement whose bytes happen to match
+ * still records its new remote id, but touches nothing else.) This is
+ * enforced by three tiers of checks (cheapest first):
  *
  *   1. Source-version fast path: when the provider's source version equals
  *      the folder's `sync.lastRemoteVersion`, the whole sync finishes
@@ -42,6 +46,7 @@ import {
   replaceAssetFile,
   setFolderSyncState,
   syncAssetToDocs,
+  updateAssetSource,
   updateAssetSourceMissing,
 } from '../assets.js';
 import {UploadedFile, sha1, uploadFileToGCS} from '../gcs.js';
@@ -100,6 +105,7 @@ export interface SyncEngineDeps {
     options?: {remoteVersion?: string}
   ): Promise<void>;
   updateAssetSourceMissing(assetId: string, missing: boolean): Promise<void>;
+  updateAssetSource(assetId: string, source: AssetSource): Promise<void>;
   sha1(file: File): Promise<string>;
   now(): Timestamp;
   logAction(action: string, options?: {metadata?: any}): void;
@@ -119,6 +125,7 @@ function defaultDeps(): SyncEngineDeps {
     setFolderSyncState: setFolderSyncState,
     finalizeFolderSync: finalizeFolderSync,
     updateAssetSourceMissing: updateAssetSourceMissing,
+    updateAssetSource: updateAssetSource,
     sha1: sha1,
     now: () => Timestamp.now(),
     logAction: logAction,
@@ -293,7 +300,17 @@ export async function syncFolder(
     const newImports = candidates
       .filter((a) => !syncedByRemoteId.has(a.remoteId))
       .sort((a, b) => a.remoteId.localeCompare(b.remoteId));
+    // Files replaced at the source arrive with a new remote id, so match
+    // them onto the asset they replaced (see `matchReplacements`). Those
+    // update in place and keep their existing name.
+    const replacements = matchReplacements(newImports, missingAssets);
+    const replacedAssetIds = new Set(
+      Array.from(replacements.values(), (asset) => asset.id)
+    );
     for (const remoteAsset of newImports) {
+      if (replacements.has(remoteAsset.remoteId)) {
+        continue;
+      }
       const name = buildUniqueAssetName(
         sanitizeAssetName(remoteAsset.filename),
         usedNames
@@ -342,7 +359,8 @@ export async function syncFolder(
     }
 
     async function syncItem(remoteAsset: RemoteAsset) {
-      const existing = syncedByRemoteId.get(remoteAsset.remoteId);
+      const replaced = replacements.get(remoteAsset.remoteId);
+      const existing = syncedByRemoteId.get(remoteAsset.remoteId) ?? replaced;
       const file = await provider!.download(
         remoteAsset,
         sync!,
@@ -350,14 +368,6 @@ export async function syncFolder(
         providerCtx
       );
       const contentHash = await deps.sha1(file);
-      // Unchanged bytes: strict no-op (no upload, no db write, no fan-out).
-      if (existing && existing.source?.contentHash === contentHash) {
-        summary.unchanged += 1;
-        if (existing.source?.missingSince) {
-          await deps.updateAssetSourceMissing(existing.id, false);
-        }
-        return;
-      }
       const source: AssetSource = {
         provider: provider!.id,
         remoteId: remoteAsset.remoteId,
@@ -370,6 +380,20 @@ export async function syncFolder(
       }
       if (remoteVersion) {
         source.remoteVersion = remoteVersion;
+      }
+      // Unchanged bytes: strict no-op (no upload, no db write, no fan-out).
+      if (existing && existing.source?.contentHash === contentHash) {
+        summary.unchanged += 1;
+        if (replaced) {
+          // Same bytes, but the item behind them is a different file now, so
+          // record the new provenance -- otherwise the next sync would flag
+          // the asset missing and re-import the replacement all over again.
+          // The file itself is untouched: no upload and no fan-out.
+          await deps.updateAssetSource(replaced.id, source);
+        } else if (existing.source?.missingSince) {
+          await deps.updateAssetSourceMissing(existing.id, false);
+        }
+        return;
       }
       const uploadedFile = await deps.uploadFile(file);
       if (existing) {
@@ -400,6 +424,11 @@ export async function syncFolder(
     // Flag synced assets whose remote item is gone. Never auto-deleted --
     // docs may embed them; deletion stays a deliberate user action.
     for (const asset of missingAssets) {
+      // Assets whose item was replaced rather than removed were updated in
+      // place above, so they aren't missing.
+      if (replacedAssetIds.has(asset.id)) {
+        continue;
+      }
       if (!asset.source?.missingSince) {
         try {
           await deps.updateAssetSourceMissing(asset.id, true);
@@ -451,6 +480,104 @@ export async function syncFolder(
     }
   }
   return summary;
+}
+
+/**
+ * Matches new remote items against previously-synced assets whose remote
+ * item is gone, returning a map of remote id -> the asset it replaces.
+ *
+ * Sources without a "replace file" operation (Google Drive being the common
+ * case) force users to delete the old file and upload a new one, which comes
+ * back with a *different* remote id. Keyed on remote id alone that reads as
+ * "one item removed, one unrelated item added", so the replacement would
+ * import as a duplicate (`logo (2).png`) beside a version flagged missing,
+ * and docs embedding the asset would keep the stale file. Matching those by
+ * name instead updates the asset in place, which is what the user meant.
+ *
+ * Matching is conservative: only assets whose remote item disappeared in
+ * this same sync are eligible, so a same-named file added *alongside* an
+ * existing one still de-dupes to ` (2)`. The remote name recorded at the
+ * last sync is preferred over the asset's own name so assets renamed in the
+ * CMS still match, and each asset is claimed at most once.
+ */
+function matchReplacements(
+  newImports: RemoteAsset[],
+  missingAssets: AssetFile[]
+): Map<string, AssetFile> {
+  const replacements = new Map<string, AssetFile>();
+  if (newImports.length === 0 || missingAssets.length === 0) {
+    return replacements;
+  }
+  // Sorted by asset id so several same-named candidates resolve the same way
+  // for every client.
+  const sorted = [...missingAssets].sort((a, b) => a.id.localeCompare(b.id));
+  const byRemoteName = new Map<string, AssetFile[]>();
+  const byAssetName = new Map<string, AssetFile[]>();
+  for (const asset of sorted) {
+    if (asset.source?.remoteName) {
+      addToNameIndex(byRemoteName, asset.source.remoteName, asset);
+    }
+    if (asset.name) {
+      addToNameIndex(byAssetName, asset.name, asset);
+    }
+  }
+  const claimed = new Set<string>();
+  // Two passes so remote-name matches win globally, regardless of the order
+  // items are visited in.
+  for (const remoteAsset of newImports) {
+    const match = takeFromNameIndex(byRemoteName, remoteAsset.name, claimed);
+    if (match) {
+      replacements.set(remoteAsset.remoteId, match);
+    }
+  }
+  for (const remoteAsset of newImports) {
+    if (replacements.has(remoteAsset.remoteId)) {
+      continue;
+    }
+    const match = takeFromNameIndex(byAssetName, remoteAsset.filename, claimed);
+    if (match) {
+      replacements.set(remoteAsset.remoteId, match);
+    }
+  }
+  return replacements;
+}
+
+/** Normalizes a name for comparison between local assets and remote items. */
+function nameKey(name: string): string {
+  return sanitizeAssetName(name).toLowerCase();
+}
+
+function addToNameIndex(
+  index: Map<string, AssetFile[]>,
+  name: string,
+  asset: AssetFile
+) {
+  const key = nameKey(name);
+  const assets = index.get(key);
+  if (assets) {
+    assets.push(asset);
+  } else {
+    index.set(key, [asset]);
+  }
+}
+
+/** Claims the first unclaimed asset indexed under `name`, if any. */
+function takeFromNameIndex(
+  index: Map<string, AssetFile[]>,
+  name: string,
+  claimed: Set<string>
+): AssetFile | null {
+  const assets = index.get(nameKey(name));
+  if (!assets) {
+    return null;
+  }
+  for (const asset of assets) {
+    if (!claimed.has(asset.id)) {
+      claimed.add(asset.id);
+      return asset;
+    }
+  }
+  return null;
 }
 
 /** Runs `fn` over `items` with at most `concurrency` in flight. */
