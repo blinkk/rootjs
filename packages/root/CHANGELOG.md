@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 3.4.5
+
 ## 3.4.4
 
 ### Patch Changes
