@@ -789,6 +789,17 @@ export async function updateAssetSourceMissing(
 }
 
 /**
+ * Rebinds a synced asset's provenance, replacing the `source` map wholesale
+ * (so stale fields like `missingSince` are cleared). Used by the sync engine
+ * when an item is replaced at the source under a new remote id but its bytes
+ * are unchanged. Does not bump `modifiedAt` (the file itself is untouched).
+ */
+export async function updateAssetSource(assetId: string, source: AssetSource) {
+  const docRef = doc(getAssetsDbCollection(), assetId);
+  await updateDoc(docRef, {source: removeUndefinedValues(source)});
+}
+
+/**
  * Replaces the file of an asset (e.g. uploading a new version). Preserves the
  * existing alt text when the new upload doesn't define one. Returns the
  * updated asset; callers should follow up with {@link syncAssetToDocs} to fan
