@@ -232,9 +232,26 @@ export function validateAssetName(name: string): string {
   return trimmed;
 }
 
-/** Joins a parent folder path and a name into a folder path. */
+/**
+ * Joins a parent folder path and a name into a folder path. An empty `name`
+ * resolves to the parent path itself, e.g. the destination of a file uploaded
+ * directly into a folder rather than into a subfolder of it.
+ */
 export function joinFolderPath(parent: string, name: string): string {
+  if (!name) {
+    return parent || '';
+  }
   return parent ? `${parent}/${name}` : name;
+}
+
+/**
+ * Normalizes a stored `parent` path. Files uploaded into a folder by an
+ * earlier version of the folder upload flow were stored with a trailing slash
+ * (e.g. `marketing/` instead of `marketing`), which hid them from the folder
+ * listing. See {@link listAssets}.
+ */
+function normalizeParentPath(parent: string): string {
+  return (parent || '').replace(/\/+$/, '');
 }
 
 /** Splits a folder path into its segments, e.g. `'a/b'` -> `['a', 'b']`. */
@@ -278,11 +295,20 @@ function isValidAsset(data: any): data is Asset {
 
 /**
  * Lists the assets (folders first, then files) within a folder.
+ *
+ * Assets stored with a trailing slash on their `parent` by an earlier version
+ * of the folder upload flow are folded into the listing and repaired in place,
+ * so the extra query can be dropped once projects have been repaired.
  */
 export async function listAssets(folderPath: string): Promise<Asset[]> {
   const colRef = getAssetsDbCollection();
-  const q = query(colRef, where('parent', '==', folderPath || ''));
-  const snapshot = await getDocs(q);
+  const parent = normalizeParentPath(folderPath);
+  const [snapshot, straySnapshot] = await Promise.all([
+    getDocs(query(colRef, where('parent', '==', parent))),
+    parent
+      ? getDocs(query(colRef, where('parent', '==', `${parent}/`)))
+      : Promise.resolve(null),
+  ]);
   const assets: Asset[] = [];
   snapshot.forEach((snap) => {
     const data = snap.data();
@@ -290,7 +316,41 @@ export async function listAssets(folderPath: string): Promise<Asset[]> {
       assets.push(data);
     }
   });
+  const strays: Asset[] = [];
+  straySnapshot?.forEach((snap) => {
+    const data = snap.data();
+    if (isValidAsset(data)) {
+      strays.push({...data, parent: parent});
+    }
+  });
+  if (strays.length > 0) {
+    repairAssetParents(strays, parent);
+    assets.push(...strays);
+  }
   return sortAssets(assets);
+}
+
+/**
+ * Max asset parent paths repaired per listing. Bounds the batch size; any
+ * remaining assets are repaired the next time the folder is listed.
+ */
+const MAX_PARENT_REPAIRS = 400;
+
+/**
+ * Best-effort repair of the malformed `parent` values described in
+ * {@link listAssets}. Runs in the background and swallows failures (e.g.
+ * read-only users) since the listing normalizes the value in memory anyway.
+ * The repair doesn't bump `modifiedAt` -- the assets themselves are unchanged.
+ */
+function repairAssetParents(assets: Asset[], parent: string) {
+  const colRef = getAssetsDbCollection();
+  const batch = writeBatch(window.firebase.db);
+  for (const asset of assets.slice(0, MAX_PARENT_REPAIRS)) {
+    batch.update(doc(colRef, asset.id), {parent: parent});
+  }
+  batch.commit().catch((err) => {
+    console.warn('failed to repair asset parent paths:', err);
+  });
 }
 
 /**
@@ -330,8 +390,9 @@ export async function listAssetsRecursive(
     if (!isValidAsset(data)) {
       return;
     }
-    if (!folderPath || isDescendantPath(data.parent, folderPath)) {
-      assets.push(data);
+    const asset = {...data, parent: normalizeParentPath(data.parent)};
+    if (!folderPath || isDescendantPath(asset.parent, folderPath)) {
+      assets.push(asset);
     }
   });
   return sortAssets(assets);
@@ -376,13 +437,14 @@ export async function createAssetFolder(
   name: string
 ): Promise<AssetFolder> {
   const folderName = validateAssetName(name);
-  const folderPath = joinFolderPath(parent, folderName);
+  const parentPath = normalizeParentPath(parent);
+  const folderPath = joinFolderPath(parentPath, folderName);
   const folderId = getFolderId(folderPath);
   const docRef = doc(getAssetsDbCollection(), folderId);
   const folder = {
     id: folderId,
     type: 'folder',
-    parent: parent || '',
+    parent: parentPath,
     name: folderName,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email,
@@ -425,7 +487,7 @@ export async function createAssetFolderPaths(
   // requires `a` and `a/b`.
   const paths = new Set<string>();
   for (const relativePath of relativePaths) {
-    let current = parent || '';
+    let current = normalizeParentPath(parent);
     for (const segment of parseFolderPath(relativePath)) {
       current = joinFolderPath(current, validateAssetName(segment));
       paths.add(current);
@@ -501,7 +563,7 @@ export async function createAssetFile(options: {
   await setDoc(docRef, {
     id: assetId,
     type: 'file',
-    parent: options.parent || '',
+    parent: normalizeParentPath(options.parent),
     name: name,
     file: file,
     ...(options.source ? {source: removeUndefinedValues(options.source)} : {}),
@@ -546,7 +608,7 @@ export async function renameAsset(asset: Asset, newName: string) {
  * Moves an asset into a different folder.
  */
 export async function moveAsset(asset: Asset, toFolder: string) {
-  const newParent = toFolder || '';
+  const newParent = normalizeParentPath(toFolder);
   if (newParent === asset.parent) {
     return;
   }
@@ -602,8 +664,9 @@ async function moveFolder(
   const descendants: Asset[] = [];
   snapshot.forEach((snap) => {
     const data = snap.data() as Asset;
-    if (isDescendantPath(data.parent, oldPath)) {
-      descendants.push(data);
+    const descendant = {...data, parent: normalizeParentPath(data.parent)};
+    if (isDescendantPath(descendant.parent, oldPath)) {
+      descendants.push(descendant);
     }
   });
 

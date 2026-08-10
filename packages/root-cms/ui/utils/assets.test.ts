@@ -60,6 +60,14 @@ describe('folder paths', () => {
     expect(joinFolderPath('foo', 'bar')).toEqual('foo/bar');
   });
 
+  it('resolves an empty name to the parent path', () => {
+    // Uploading a file directly into a folder joins the folder path with an
+    // empty relative path; a trailing slash would hide it from the listing.
+    expect(joinFolderPath('foo', '')).toEqual('foo');
+    expect(joinFolderPath('foo/bar', '')).toEqual('foo/bar');
+    expect(joinFolderPath('', '')).toEqual('');
+  });
+
   it('parses folder paths into segments', () => {
     expect(parseFolderPath('')).toEqual([]);
     expect(parseFolderPath('foo')).toEqual(['foo']);
