@@ -730,6 +730,8 @@ CollectionPage.DocsList = (props: {
       e.action === 'copy' ||
       e.action === 'unarchive' ||
       e.action === 'delete' ||
+      e.action === 'publish' ||
+      e.action === 'schedule' ||
       e.action === 'unpublish' ||
       e.action === 'locked' ||
       e.action === 'unlocked'
@@ -934,6 +936,7 @@ CollectionPage.DocsList = (props: {
                           )
                       : undefined
                   }
+                  showPublish
                 />
               </div>
             </ReorderableRow>
@@ -1013,6 +1016,7 @@ CollectionPage.DocsList = (props: {
                         )
                     : undefined
                 }
+                showPublish
               />
             </div>
           </ReorderableRow>
