@@ -271,16 +271,57 @@ export function getFolderId(folderPath: string): string {
   return `folder-${encodeURIComponent(folderPath)}`;
 }
 
-function sortAssets(assets: Asset[]): Asset[] {
-  return assets.sort((a, b) => {
+/** Column an asset listing can be sorted by. */
+export type AssetSortField = 'name' | 'modified';
+
+export type AssetSortDir = 'asc' | 'desc';
+
+/** Sort order of an asset listing. */
+export interface AssetSort {
+  field: AssetSortField;
+  dir: AssetSortDir;
+}
+
+/** Assets are listed alphabetically by default. */
+export const DEFAULT_ASSET_SORT: AssetSort = {field: 'name', dir: 'asc'};
+
+/** Returns the timestamp an asset is sorted by in the `modified` column. */
+function getAssetModifiedMillis(asset: Asset): number {
+  const ts = asset.modifiedAt || asset.createdAt;
+  return ts && typeof ts.toMillis === 'function' ? ts.toMillis() : 0;
+}
+
+function compareAssetNames(a: Asset, b: Asset): number {
+  return (a.name || '').localeCompare(b.name || '', undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+/**
+ * Returns a sorted copy of an asset listing. Folders are always listed before
+ * files (Drive-style); within each group the assets are ordered by the
+ * requested column, using the name as a tiebreaker so that assets sharing a
+ * timestamp keep a stable order.
+ */
+export function sortAssets(
+  assets: Asset[],
+  sort: AssetSort = DEFAULT_ASSET_SORT
+): Asset[] {
+  const dir = sort.dir === 'desc' ? -1 : 1;
+  return [...assets].sort((a, b) => {
     // Folders are listed before files.
     if (a.type !== b.type) {
       return a.type === 'folder' ? -1 : 1;
     }
-    return (a.name || '').localeCompare(b.name || '', undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    });
+    if (sort.field === 'modified') {
+      const delta = getAssetModifiedMillis(a) - getAssetModifiedMillis(b);
+      if (delta !== 0) {
+        return dir * delta;
+      }
+      return compareAssetNames(a, b);
+    }
+    return dir * compareAssetNames(a, b);
   });
 }
 

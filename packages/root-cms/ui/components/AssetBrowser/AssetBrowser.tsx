@@ -17,7 +17,9 @@ import {
 } from '@mantine/notifications';
 import {
   IconAlertTriangle,
+  IconChevronDown,
   IconChevronRight,
+  IconChevronUp,
   IconCloudDownload,
   IconCopy,
   IconDotsVertical,
@@ -37,6 +39,7 @@ import {
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePagination} from '../../hooks/usePagination.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {getSyncProvider} from '../../utils/asset-sync/registry.js';
@@ -44,6 +47,10 @@ import {
   Asset,
   AssetFile,
   AssetFolder,
+  AssetSort,
+  AssetSortDir,
+  AssetSortField,
+  DEFAULT_ASSET_SORT,
   createAssetFile,
   createAssetFolder,
   createAssetFolderPaths,
@@ -58,6 +65,7 @@ import {
   moveAsset,
   parseFolderPath,
   renameAsset,
+  sortAssets,
   syncAssetToDocs,
   updateAssetAltDisabled,
   validateFolderPath,
@@ -122,6 +130,9 @@ export interface AssetBrowserProps {
 /** Number of assets to display per page. */
 const PAGE_SIZE = 100;
 
+/** localStorage key the user's preferred sort order is remembered under. */
+const SORT_STORAGE_KEY = 'root::AssetBrowser:sort';
+
 /**
  * A Drive-like file browser for the project's asset library. Lists the
  * contents of a folder with breadcrumb navigation and supports uploading,
@@ -135,6 +146,19 @@ export function AssetBrowser(props: AssetBrowserProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  // Sort order of the listing, remembered across sessions. The persisted value
+  // is normalized so an unrecognized one falls back to the default order.
+  const [storedSort, setSort] = useLocalStorage<AssetSort>(
+    SORT_STORAGE_KEY,
+    DEFAULT_ASSET_SORT
+  );
+  const sort = useMemo<AssetSort>(
+    () => ({
+      field: storedSort?.field === 'modified' ? 'modified' : 'name',
+      dir: storedSort?.dir === 'desc' ? 'desc' : 'asc',
+    }),
+    [storedSort]
+  );
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   // Recursive listing of the current folder's descendants, lazily fetched the
@@ -256,14 +280,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
     if (needle) {
       res = res.filter((asset) => asset.name.toLowerCase().includes(needle));
     }
-    return res;
-  }, [assets, searchIndex, filter, props.mode, props.accept]);
+    return sortAssets(res, sort);
+  }, [assets, searchIndex, filter, sort, props.mode, props.accept]);
 
-  // Paginate the listing, resetting to the first page when the folder or the
-  // search filter changes.
+  // Paginate the listing, resetting to the first page when the folder, the
+  // search filter or the sort order changes.
   const pagination = usePagination(filteredAssets, {
     pageSize: PAGE_SIZE,
-    resetDeps: [folder, filter],
+    resetDeps: [folder, filter, sort.field, sort.dir],
   });
   const pageItems = pagination.pageItems;
 
@@ -683,8 +707,19 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     />
                   </th>
                 )}
-                <th>name</th>
-                <th className="AssetBrowser__table__modifiedCol">modified</th>
+                <AssetSortHeader
+                  field="name"
+                  label="name"
+                  sort={sort}
+                  onSort={setSort}
+                />
+                <AssetSortHeader
+                  className="AssetBrowser__table__modifiedCol"
+                  field="modified"
+                  label="modified"
+                  sort={sort}
+                  onSort={setSort}
+                />
                 <th className="AssetBrowser__table__actionsCol"></th>
               </tr>
             </thead>
@@ -1025,6 +1060,63 @@ function AssetSyncBar(props: {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Direction applied when a sort header is clicked. Activating a column uses
+ * its default direction (A-Z for names, most recent first for dates);
+ * clicking the already-active column toggles the direction.
+ */
+function nextSortDir(
+  field: AssetSortField,
+  activeDir: AssetSortDir | null
+): AssetSortDir {
+  if (activeDir === 'asc') {
+    return 'desc';
+  }
+  if (activeDir === 'desc') {
+    return 'asc';
+  }
+  return field === 'modified' ? 'desc' : 'asc';
+}
+
+/** A clickable table header cell that sorts the listing by its column. */
+function AssetSortHeader(props: {
+  className?: string;
+  field: AssetSortField;
+  label: string;
+  sort: AssetSort;
+  onSort: (sort: AssetSort) => void;
+}) {
+  const active = props.sort.field === props.field;
+  const dir = active ? props.sort.dir : null;
+  return (
+    <th
+      className={props.className}
+      aria-sort={
+        dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'
+      }
+    >
+      <button
+        type="button"
+        className={joinClassNames(
+          'AssetBrowser__table__sortHeader',
+          active && 'active'
+        )}
+        aria-label={`Sort by ${props.label}`}
+        onClick={() =>
+          props.onSort({field: props.field, dir: nextSortDir(props.field, dir)})
+        }
+      >
+        <span>{props.label}</span>
+        {dir === 'asc' ? (
+          <IconChevronUp size={12} stroke={2.5} />
+        ) : dir === 'desc' ? (
+          <IconChevronDown size={12} stroke={2.5} />
+        ) : null}
+      </button>
+    </th>
   );
 }
 
