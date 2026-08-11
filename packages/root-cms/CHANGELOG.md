@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 3.4.6
+
+### Patch Changes
+
+- ad22b0e: fix: show files uploaded into an asset library folder
+- 0cf3c4b: fix: navigate to the new doc after "copy doc"
+- 6a23fa8: feat: sort the asset library by name or modified date
+- 2582577: feat: add a "Publish" action to the collection list
+  - @blinkk/root@3.4.6
+
 ## 3.4.5
 
 ### Patch Changes
