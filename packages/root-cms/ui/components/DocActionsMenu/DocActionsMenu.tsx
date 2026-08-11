@@ -15,6 +15,7 @@ import {
   IconLock,
   IconLockOpen,
   IconPackage,
+  IconRocket,
   IconTrash,
 } from '@tabler/icons-preact';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -36,6 +37,7 @@ import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
+import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
@@ -46,7 +48,9 @@ export interface DocActionEvent {
     | 'archive'
     | 'copy'
     | 'delete'
+    | 'publish'
     | 'revert-draft'
+    | 'schedule'
     | 'unarchive'
     | 'unpublish'
     | 'unschedule'
@@ -66,6 +70,12 @@ export interface DocActionsMenuProps {
    * requested position.
    */
   onMoveTo?: (position: 'top' | 'bottom') => void;
+  /**
+   * Renders a "Publish" menu item. Enabled in contexts that have no dedicated
+   * publish button of their own (e.g. the collection list); the doc editor has
+   * its own publish button in the status bar.
+   */
+  showPublish?: boolean;
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
@@ -91,6 +101,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const versionHistoryModal = useVersionHistoryModal({docId});
   const lockPublishingModal = useLockPublishingModal({docId});
   const addToReleaseModal = useAddToReleaseModal({docIds: [docId]});
+  const publishDocModal = usePublishDocModal({
+    docId,
+    onSuccess: (event) => {
+      if (props.onAction) {
+        props.onAction({
+          action: event.publishType === 'scheduled' ? 'schedule' : 'publish',
+        });
+      }
+    },
+  });
 
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
@@ -390,6 +410,19 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           disabled={!canEdit}
         >
           Move to bottom
+        </Menu.Item>
+      )}
+      {props.showPublish && !isArchived && (
+        <Menu.Item
+          icon={<IconRocket size={20} />}
+          onClick={() => publishDocModal.open()}
+          // A doc with a pending scheduled publish or a publishing lock can't
+          // be published until it's unscheduled or unlocked.
+          disabled={
+            !canPublish || testIsScheduled(data) || testPublishingLocked(data)
+          }
+        >
+          Publish
         </Menu.Item>
       )}
       {!isArchived && (

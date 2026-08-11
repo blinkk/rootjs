@@ -30,6 +30,8 @@ export type PublishType = 'now' | 'scheduled' | '';
 export interface PublishDocModalProps {
   [key: string]: unknown;
   docId: string;
+  /** Called after the doc is successfully published or scheduled. */
+  onSuccess?: (event: {publishType: 'now' | 'scheduled'}) => void;
 }
 
 export function usePublishDocModal(props: PublishDocModalProps) {
@@ -73,12 +75,12 @@ export function PublishDocModal(
       await cmsPublishDoc(props.docId, {
         publishMessage: publishMessage.trim() || undefined,
       });
-      setLoading(false);
       showNotification({
         title: 'Published!',
         message: `Succesfully published ${props.docId}.`,
         autoClose: 10000,
       });
+      props.onSuccess?.({publishType: 'now'});
       modals.closeAll();
     } catch (err) {
       console.error(err);
@@ -89,6 +91,8 @@ export function PublishDocModal(
         color: 'red',
         autoClose: false,
       });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -99,12 +103,12 @@ export function PublishDocModal(
       await cmsScheduleDoc(props.docId, millis, {
         publishMessage: publishMessage.trim() || undefined,
       });
-      setLoading(false);
       showNotification({
         title: 'Scheduled!',
         message: `${props.docId} will go live ${scheduledDate}.`,
         autoClose: 10000,
       });
+      props.onSuccess?.({publishType: 'scheduled'});
       modals.closeAll();
     } catch (err) {
       console.error(err);
@@ -115,6 +119,8 @@ export function PublishDocModal(
         color: 'red',
         autoClose: false,
       });
+    } finally {
+      setLoading(false);
     }
   }
 
