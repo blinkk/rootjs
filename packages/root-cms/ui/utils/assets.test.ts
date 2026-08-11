@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  Asset,
   AssetFile,
   AssetNameError,
   buildAssetFieldValue,
@@ -11,6 +12,7 @@ import {
   joinFolderPath,
   parseFolderPath,
   replaceFileExt,
+  sortAssets,
   validateAssetName,
   validateFolderPath,
 } from './assets.js';
@@ -279,5 +281,93 @@ describe('buildSyncedFieldValue', () => {
     };
     const value = buildSyncedFieldValue(testAsset(), existing, previousFile);
     expect(value.canvasBgColor).toEqual('dark');
+  });
+});
+
+describe('sortAssets', () => {
+  function testEntry(
+    type: 'file' | 'folder',
+    name: string,
+    modifiedMillis?: number
+  ): Asset {
+    return {
+      id: `${type}-${name}`,
+      type: type,
+      parent: '',
+      name: name,
+      ...(modifiedMillis === undefined
+        ? {}
+        : {modifiedAt: {toMillis: () => modifiedMillis}}),
+    } as Asset;
+  }
+
+  const assets: Asset[] = [
+    testEntry('file', 'banner.png', 300),
+    testEntry('folder', 'zebra', 100),
+    testEntry('file', 'apple.png', 200),
+    testEntry('folder', 'alpha', 400),
+  ];
+
+  function names(sorted: Asset[]): string[] {
+    return sorted.map((asset) => asset.name);
+  }
+
+  it('sorts by name with folders first', () => {
+    expect(names(sortAssets(assets))).toEqual([
+      'alpha',
+      'zebra',
+      'apple.png',
+      'banner.png',
+    ]);
+    expect(names(sortAssets(assets, {field: 'name', dir: 'desc'}))).toEqual([
+      'zebra',
+      'alpha',
+      'banner.png',
+      'apple.png',
+    ]);
+  });
+
+  it('sorts by modified date with folders first', () => {
+    expect(names(sortAssets(assets, {field: 'modified', dir: 'desc'}))).toEqual(
+      ['alpha', 'zebra', 'banner.png', 'apple.png']
+    );
+    expect(names(sortAssets(assets, {field: 'modified', dir: 'asc'}))).toEqual([
+      'zebra',
+      'alpha',
+      'apple.png',
+      'banner.png',
+    ]);
+  });
+
+  it('sorts names numerically and case-insensitively', () => {
+    const files = [
+      testEntry('file', 'img10.png'),
+      testEntry('file', 'IMG2.png'),
+      testEntry('file', 'img1.png'),
+    ];
+    expect(names(sortAssets(files))).toEqual([
+      'img1.png',
+      'IMG2.png',
+      'img10.png',
+    ]);
+  });
+
+  it('falls back to the name for assets without a timestamp', () => {
+    const files = [
+      testEntry('file', 'b.png'),
+      testEntry('file', 'a.png'),
+      testEntry('file', 'c.png', 500),
+    ];
+    expect(names(sortAssets(files, {field: 'modified', dir: 'desc'}))).toEqual([
+      'c.png',
+      'a.png',
+      'b.png',
+    ]);
+  });
+
+  it('returns a sorted copy without mutating the input', () => {
+    const input = [...assets];
+    sortAssets(input, {field: 'modified', dir: 'desc'});
+    expect(names(input)).toEqual(names(assets));
   });
 });

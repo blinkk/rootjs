@@ -149,6 +149,26 @@
   white-space: nowrap;
 }
 
+.AssetBrowser__table__sortHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* Reset button styles so the header matches the other table headers. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.AssetBrowser__table__sortHeader:hover,
+.AssetBrowser__table__sortHeader.active {
+  color: var(--color-text-default);
+}
+
 .AssetBrowser__row {
   cursor: pointer;
 }
