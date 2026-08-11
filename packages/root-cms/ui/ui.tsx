@@ -343,29 +343,37 @@ function App() {
             <SiteSettingsProvider>
               <PendingReleasesProvider>
                 <UserPreferencesProvider>
-                  <ModalsProvider
-                    modals={{
-                      [AddToReleaseModal.id]: AddToReleaseModal,
-                      [AiEditModal.id]: AiEditModal,
-                      [AssetPickerModal.id]: AssetPickerModal,
-                      [CompareDraftModal.id]: CompareDraftModal,
-                      [ComponentPickerModal.id]: ComponentPickerModal,
-                      [CopyDocModal.id]: CopyDocModal,
-                      [DocPickerModal.id]: DocPickerModal,
-                      [DataSourceSelectModal.id]: DataSourceSelectModal,
-                      [EditJsonModal.id]: EditJsonModal,
-                      [EditTranslationsModal.id]: EditTranslationsModal,
-                      [ExportSheetModal.id]: ExportSheetModal,
-                      [LocalizationModal.id]: LocalizationModal,
-                      [LockPublishingModal.id]: LockPublishingModal,
-                      [PruneTranslationsModal.id]: PruneTranslationsModal,
-                      [PublishDocModal.id]: PublishDocModal,
-                      [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
-                      [ScheduleReleaseModal.id]: ScheduleReleaseModal,
-                      [VersionHistoryModal.id]: VersionHistoryModal,
-                    }}
-                  >
-                    <LocationProvider>
+                  {/*
+                    NOTE: <LocationProvider> must wrap <ModalsProvider>. The
+                    modals provider renders the currently open modal as a
+                    sibling of its children, so any modal that uses the router
+                    (e.g. `useLocation().route`) only sees the location context
+                    if the location provider is the outer one.
+                  */}
+                  <LocationProvider>
+                    <ModalsProvider
+                      modals={{
+                        [AddToReleaseModal.id]: AddToReleaseModal,
+                        [AiEditModal.id]: AiEditModal,
+                        [AssetPickerModal.id]: AssetPickerModal,
+                        [CompareDraftModal.id]: CompareDraftModal,
+                        [ComponentPickerModal.id]: ComponentPickerModal,
+                        [CopyDocModal.id]: CopyDocModal,
+                        [DocPickerModal.id]: DocPickerModal,
+                        [DataSourceSelectModal.id]: DataSourceSelectModal,
+                        [EditJsonModal.id]: EditJsonModal,
+                        [EditTranslationsModal.id]: EditTranslationsModal,
+                        [ExportSheetModal.id]: ExportSheetModal,
+                        [LocalizationModal.id]: LocalizationModal,
+                        [LockPublishingModal.id]: LockPublishingModal,
+                        [PruneTranslationsModal.id]: PruneTranslationsModal,
+                        [PublishDocModal.id]: PublishDocModal,
+                        [ReferenceFieldEditorModal.id]:
+                          ReferenceFieldEditorModal,
+                        [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                        [VersionHistoryModal.id]: VersionHistoryModal,
+                      }}
+                    >
                       <GlobalSearch>
                         <AppErrorBoundary>
                           <Router>
@@ -441,8 +449,8 @@ function App() {
                           </Router>
                         </AppErrorBoundary>
                       </GlobalSearch>
-                    </LocationProvider>
-                  </ModalsProvider>
+                    </ModalsProvider>
+                  </LocationProvider>
                 </UserPreferencesProvider>
               </PendingReleasesProvider>
             </SiteSettingsProvider>
