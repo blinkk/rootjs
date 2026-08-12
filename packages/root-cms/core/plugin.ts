@@ -26,6 +26,7 @@ import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type AiConfig} from './ai.js';
 import {api} from './api.js';
+import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
@@ -759,7 +760,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     req: Request
   ): Promise<{authorized: boolean; reason?: string}> {
     const idToken = req.body?.idToken;
-    if (!idToken) {
+    if (typeof idToken !== 'string' || !idToken) {
       console.log('login failed: no id token');
       return {authorized: false, reason: 'no token'};
     }
@@ -774,7 +775,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     try {
       if (process.env.NODE_ENV === 'development') {
         const jwt = jsonwebtoken.decode(idToken) as jsonwebtoken.JwtPayload;
-        if (!jwt.email || !jwt.email_verified) {
+        if (!jwt?.email || !jwt?.email_verified) {
           console.log('login failed: email unverified');
           return {authorized: false, reason: 'login failed'};
         }
@@ -811,6 +812,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         return {authorized: false, reason: 'not authorized'};
       }
     } catch (err) {
+      // A rejected token is a normal sign-in failure (and a common one, since
+      // bots probe this endpoint with junk payloads), so log it without
+      // reporting it as a server error.
+      const invalidTokenCode = getInvalidTokenErrorCode(err);
+      if (invalidTokenCode) {
+        console.log(`login failed: invalid id token (${invalidTokenCode})`);
+        return {authorized: false, reason: 'login failed'};
+      }
       console.error('failed to verify jwt token');
       console.error(err);
       return {authorized: false, reason: 'unknown error'};
@@ -874,6 +883,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // instead of bouncing an authenticated user to the login page.
       jwt = await auth.verifySessionCookie(sessionCookie, true);
     } catch (err) {
+      const invalidTokenCode = getInvalidTokenErrorCode(err);
+      if (invalidTokenCode) {
+        console.log(`session failed: invalid cookie (${invalidTokenCode})`);
+        return null;
+      }
       console.error('failed to verify jwt token');
       console.error(err);
       return null;
