@@ -1,3 +1,37 @@
 .DocActionsMenu__confirmText {
   text-wrap: pretty;
 }
+
+.DocActionsMenu__referenceGuard {
+  margin-top: 16px;
+}
+
+.DocActionsMenu__referenceGuard__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #868e96;
+  margin-bottom: 8px;
+}
+
+.DocActionsMenu__referenceGuard__list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+}
+
+.DocActionsMenu__referenceGuard__list > * {
+  padding: 8px 12px;
+}
+
+.DocActionsMenu__referenceGuard__list > *:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocActionsMenu__referenceGuard__more,
+.DocActionsMenu__referenceGuard__caveat {
+  font-size: 11px;
+  color: #868e96;
+  margin-top: 8px;
+}

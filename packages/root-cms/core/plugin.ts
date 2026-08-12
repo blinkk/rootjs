@@ -291,6 +291,19 @@ export interface CMSDependencyGraphConfig {
    * `includeCollections`.
    */
   excludeCollections?: string[];
+
+  /**
+   * Enables the reference guard: when an editor deletes or unpublishes a doc,
+   * the CMS UI checks the dependency graph for other docs that reference it.
+   * `'warn'` lists the referencing docs but allows the action to proceed;
+   * `'block'` prevents confirming until the references are removed. Pass
+   * `true` as shorthand for `'warn'`. Disabled by default.
+   *
+   * Note the guard only covers reference fields tracked by the dependency
+   * graph (`schema.reference()` / `schema.references()`); hardcoded links
+   * (e.g. URLs in text fields) are not detected.
+   */
+  referenceGuard?: boolean | 'warn' | 'block';
 }
 
 export interface CMSSidebarTool {
@@ -632,12 +645,13 @@ export type CMSPluginOptions = {
    * referenced docs that need to be fetched when fetching one or more docs.
    *
    * Disabled by default. Pass `true` to enable with default options, or a
-   * config object to scope the graph to specific collections.
+   * config object to scope the graph to specific collections or enable the
+   * reference guard (see `CMSDependencyGraphConfig`).
    *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   dependencyGraph: true,
+   *   dependencyGraph: {referenceGuard: 'warn'},
    * });
    * ```
    */

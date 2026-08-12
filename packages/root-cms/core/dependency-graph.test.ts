@@ -19,6 +19,7 @@ import {
   isCollectionTracked,
   resolveDependencyGraphConfig,
   resolveDependencyGraphFilters,
+  resolveReferenceGuardMode,
 } from './dependency-graph.js';
 
 describe('resolveDependencyGraphConfig', () => {
@@ -34,6 +35,28 @@ describe('resolveDependencyGraphConfig', () => {
   it('treats unset/false as disabled', () => {
     expect(resolveDependencyGraphConfig(undefined)).toBe(null);
     expect(resolveDependencyGraphConfig(false)).toBe(null);
+  });
+});
+
+describe('resolveReferenceGuardMode', () => {
+  it('is disabled by default', () => {
+    expect(resolveReferenceGuardMode(undefined)).toBe(null);
+    expect(resolveReferenceGuardMode(true)).toBe(null);
+    expect(resolveReferenceGuardMode({})).toBe(null);
+    expect(resolveReferenceGuardMode({referenceGuard: false})).toBe(null);
+  });
+
+  it('treats `true` as warn', () => {
+    expect(resolveReferenceGuardMode({referenceGuard: true})).toBe('warn');
+  });
+
+  it('accepts explicit modes', () => {
+    expect(resolveReferenceGuardMode({referenceGuard: 'warn'})).toBe('warn');
+    expect(resolveReferenceGuardMode({referenceGuard: 'block'})).toBe('block');
+  });
+
+  it('requires the dependency graph itself to be enabled', () => {
+    expect(resolveReferenceGuardMode(false)).toBe(null);
   });
 });
 

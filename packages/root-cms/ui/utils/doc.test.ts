@@ -1,11 +1,13 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
   cmsAssignSortKeys,
+  cmsCheckReferenceGuard,
   cmsCopyDoc,
   cmsCreateDoc,
   cmsPublishDocs,
   cmsSetDocSortKey,
   getDraftDocs,
+  getReferenceGuardMode,
 } from './doc.js';
 
 const mocks = vi.hoisted(() => ({
@@ -503,5 +505,110 @@ describe('cmsPublishDocs', () => {
     await expect(
       cmsPublishDocs(['pages/exists', 'pages/missing'])
     ).rejects.toThrow('doc does not exist: pages/missing');
+  });
+});
+
+describe('cmsCheckReferenceGuard', () => {
+  const mockFetch = vi.fn();
+
+  function jsonResponse(deps: string[]) {
+    return {
+      status: 200,
+      json: async () => ({success: true, deps}),
+      text: async () => '',
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', mockFetch);
+    window.__ROOT_CTX = {
+      rootConfig: {
+        projectId: 'test-project',
+      },
+      dependencyGraphEnabled: true,
+      dependencyGraphReferenceGuard: 'warn',
+    } as any;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns null without fetching when the guard is disabled', async () => {
+    window.__ROOT_CTX.dependencyGraphReferenceGuard = undefined;
+    expect(getReferenceGuardMode()).toBe(null);
+    expect(await cmsCheckReferenceGuard('pages/foo', 'delete')).toBe(null);
+
+    window.__ROOT_CTX.dependencyGraphReferenceGuard = 'warn';
+    window.__ROOT_CTX.dependencyGraphEnabled = false;
+    expect(getReferenceGuardMode()).toBe(null);
+    expect(await cmsCheckReferenceGuard('pages/foo', 'delete')).toBe(null);
+
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('queries published dependents for unpublish', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse(['pages/bar']));
+
+    const result = await cmsCheckReferenceGuard('pages/foo', 'unpublish');
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/cms/api/dependency_graph.query',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          docIds: ['pages/foo'],
+          mode: 'published',
+          direction: 'dependents',
+          transitive: false,
+        }),
+      })
+    );
+    expect(result).toEqual({mode: 'warn', dependents: ['pages/bar']});
+  });
+
+  it('unions draft and published dependents for delete', async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(['pages/c', 'pages/a']))
+      .mockResolvedValueOnce(jsonResponse(['pages/b', 'pages/a']));
+
+    const result = await cmsCheckReferenceGuard('pages/foo', 'delete');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const modes = mockFetch.mock.calls.map(
+      (call) => JSON.parse(call[1].body).mode
+    );
+    expect(modes.sort()).toEqual(['draft', 'published']);
+    expect(result).toEqual({
+      mode: 'warn',
+      dependents: ['pages/a', 'pages/b', 'pages/c'],
+    });
+  });
+
+  it('returns null when no docs reference the doc', async () => {
+    mockFetch.mockResolvedValue(jsonResponse([]));
+    expect(await cmsCheckReferenceGuard('pages/foo', 'delete')).toBe(null);
+  });
+
+  it('fails open when the query fails', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('network error'));
+    expect(await cmsCheckReferenceGuard('pages/foo', 'unpublish')).toBe(null);
+
+    mockFetch.mockResolvedValueOnce({
+      status: 500,
+      json: async () => ({success: false}),
+      text: async () => 'UNKNOWN',
+    });
+    expect(await cmsCheckReferenceGuard('pages/foo', 'unpublish')).toBe(null);
+  });
+
+  it('passes through block mode', async () => {
+    window.__ROOT_CTX.dependencyGraphReferenceGuard = 'block';
+    mockFetch.mockResolvedValueOnce(jsonResponse(['pages/bar']));
+
+    const result = await cmsCheckReferenceGuard('pages/foo', 'unpublish');
+    expect(result).toEqual({mode: 'block', dependents: ['pages/bar']});
   });
 });

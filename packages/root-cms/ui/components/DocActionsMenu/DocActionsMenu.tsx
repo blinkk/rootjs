@@ -22,7 +22,9 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   CMSDoc,
+  ReferenceGuardResult,
   cmsArchiveDoc,
+  cmsCheckReferenceGuard,
   cmsDeleteDoc,
   cmsRevertDraft,
   cmsUnarchiveDoc,
@@ -36,6 +38,7 @@ import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
 import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
+import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
@@ -162,7 +165,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
     });
   };
 
-  const onUnpublishDoc = () => {
+  const onUnpublishDoc = async () => {
+    const guard = await cmsCheckReferenceGuard(docId, 'unpublish');
+    const blocked = guard?.mode === 'block';
     const notificationId = `unpublish-doc-${docId}`;
     const modalId = modals.openConfirmModal({
       ...modalTheme,
@@ -174,18 +179,33 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
             weight="semi-bold"
             className="DocActionsMenu__confirmText"
           >
-            Are you sure you want to unpublish the following doc? There is no
-            undo.
+            {blocked
+              ? 'This doc cannot be unpublished because other published docs reference it.'
+              : 'Are you sure you want to unpublish the following doc? There is no undo.'}
           </Text>
           <DocIdBadge docId={docId} />
+          {guard && (
+            <ReferenceGuardWarning
+              label={
+                blocked
+                  ? `To unpublish this doc, first remove the references from these published docs (${guard.dependents.length}):`
+                  : `Published docs that reference this doc and may break if it is unpublished (${guard.dependents.length}):`
+              }
+              guard={guard}
+            />
+          )}
         </>
       ),
       labels: {confirm: 'Unpublish', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs', disabled: blocked},
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: false,
       onConfirm: async () => {
+        if (blocked) {
+          // Defensive; the confirm button is disabled.
+          return;
+        }
         showNotification({
           id: notificationId,
           title: 'Unpublishing doc',
@@ -335,7 +355,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
     }
   };
 
-  const onDeleteDoc = () => {
+  const onDeleteDoc = async () => {
+    const guard = await cmsCheckReferenceGuard(docId, 'delete');
+    const blocked = guard?.mode === 'block';
     const notificationId = `delete-doc-${docId}`;
     const modalId = modals.openConfirmModal({
       ...modalTheme,
@@ -347,17 +369,33 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
             weight="semi-bold"
             className="DocActionsMenu__confirmText"
           >
-            Are you sure you want to delete the following doc? There is no undo.
+            {blocked
+              ? 'This doc cannot be deleted because other docs reference it.'
+              : 'Are you sure you want to delete the following doc? There is no undo.'}
           </Text>
           <DocIdBadge docId={docId} />
+          {guard && (
+            <ReferenceGuardWarning
+              label={
+                blocked
+                  ? `To delete this doc, first remove the references from these docs (${guard.dependents.length}):`
+                  : `Docs that reference this doc and may break if it is deleted (${guard.dependents.length}):`
+              }
+              guard={guard}
+            />
+          )}
         </>
       ),
       labels: {confirm: 'Delete', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs', disabled: blocked},
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: false,
       onConfirm: async () => {
+        if (blocked) {
+          // Defensive; the confirm button is disabled.
+          return;
+        }
         showNotification({
           id: notificationId,
           title: 'Deleting doc',
@@ -528,5 +566,46 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         Delete
       </Menu.Item>
     </Menu>
+  );
+}
+
+const REFERENCE_GUARD_MAX_LISTED = 10;
+
+/**
+ * Renders the docs that reference a doc being deleted or unpublished. Shown
+ * in the confirm modal when the `dependencyGraph.referenceGuard` cmsPlugin
+ * option is enabled.
+ */
+function ReferenceGuardWarning(props: {
+  label: string;
+  guard: ReferenceGuardResult;
+}) {
+  const listed = props.guard.dependents.slice(0, REFERENCE_GUARD_MAX_LISTED);
+  const numHidden = props.guard.dependents.length - listed.length;
+  return (
+    <div className="DocActionsMenu__referenceGuard">
+      <div className="DocActionsMenu__referenceGuard__label">{props.label}</div>
+      <div className="DocActionsMenu__referenceGuard__list">
+        {listed.map((depId) => (
+          <DocPreviewCard
+            key={depId}
+            docId={depId}
+            variant="compact"
+            statusBadges
+            clickable
+          />
+        ))}
+      </div>
+      {numHidden > 0 && (
+        <div className="DocActionsMenu__referenceGuard__more">
+          +{numHidden} more
+        </div>
+      )}
+      <div className="DocActionsMenu__referenceGuard__caveat">
+        Only doc reference fields are checked — hardcoded links are not
+        detected, and recent edits may not be reflected until the next reference
+        scan.
+      </div>
+    </div>
   );
 }

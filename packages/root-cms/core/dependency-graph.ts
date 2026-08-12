@@ -175,6 +175,30 @@ export function resolveDependencyGraphConfig(
   return null;
 }
 
+/** Behavior of the reference guard when a doc is deleted or unpublished. */
+export type ReferenceGuardMode = 'warn' | 'block';
+
+/**
+ * Normalizes the `referenceGuard` option nested in the `dependencyGraph`
+ * cmsPlugin option. Returns the guard mode, or `null` when disabled
+ * (including when the dependency graph itself is disabled).
+ */
+export function resolveReferenceGuardMode(
+  option?: boolean | CMSDependencyGraphConfig
+): ReferenceGuardMode | null {
+  const config = resolveDependencyGraphConfig(option);
+  if (!config) {
+    return null;
+  }
+  if (config.referenceGuard === true || config.referenceGuard === 'warn') {
+    return 'warn';
+  }
+  if (config.referenceGuard === 'block') {
+    return 'block';
+  }
+  return null;
+}
+
 function toSetOrNull(values: string[] | undefined): Set<string> | null {
   if (!values || values.length === 0) {
     return null;
