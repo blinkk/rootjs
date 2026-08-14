@@ -50,6 +50,13 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {
+  CollectionPublishingOptions,
+  PublishCheckConfig,
+  PublishCheckLevel,
+  PublishCheckResult,
+  PublishCheckStatus,
+} from '../shared/publish-checks.js';
 export type {CMSService, CMSServiceContext} from './services.js';
 export type {
   CMSNotificationService,

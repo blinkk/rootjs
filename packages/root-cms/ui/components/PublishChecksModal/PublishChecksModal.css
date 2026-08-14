@@ -1,0 +1,33 @@
+.PublishChecksModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.PublishChecksModal__intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.PublishChecksModal__intro__icon {
+  display: flex;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.PublishChecksModal__results {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.PublishChecksModal__buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.PublishChecksModal__buttons__bypass {
+  margin-right: auto;
+}

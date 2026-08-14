@@ -1,18 +1,29 @@
 import './PublishDocModal.css';
 
-import {Accordion, Button, Loader, Tooltip} from '@mantine/core';
+import {Accordion, Button, Checkbox, Loader, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconGitCompare, IconPackage, IconSparkles} from '@tabler/icons-preact';
+import {
+  IconChecklist,
+  IconGitCompare,
+  IconPackage,
+  IconSparkles,
+} from '@tabler/icons-preact';
+import {ChangeEvent} from 'preact/compat';
 import {useState, useRef, useEffect} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {
+  usePublishChecks,
+  type PublishChecksDecision,
+} from '../../hooks/usePublishChecks.js';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
+import {getCollectionPublishChecks} from '../../utils/publish-checks.js';
 import {extractReferenceDocIds} from '../../utils/references.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
@@ -58,6 +69,8 @@ export function PublishDocModal(
   const [loading, setLoading] = useState(false);
   const [publishMessage, setPublishMessage] = useState('');
   const [generatingMessage, setGeneratingMessage] = useState(false);
+  const [skipChecks, setSkipChecks] = useState(false);
+  const [checksRunning, setChecksRunning] = useState(false);
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
@@ -67,13 +80,19 @@ export function PublishDocModal(
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
 
+  const publishChecks = usePublishChecks();
+  const collectionId = props.docId.split('/')[0];
+  const configuredChecks = getCollectionPublishChecks(collectionId);
+  const hasChecks = configuredChecks.length > 0;
+
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
 
-  async function publish() {
+  async function publish(decision: PublishChecksDecision) {
     try {
       setLoading(true);
       await cmsPublishDoc(props.docId, {
         publishMessage: publishMessage.trim() || undefined,
+        checksAudit: decision.audit || undefined,
       });
       showNotification({
         title: 'Published!',
@@ -82,6 +101,9 @@ export function PublishDocModal(
       });
       props.onSuccess?.({publishType: 'now'});
       modals.closeAll();
+      // Opened after `closeAll()` so the warnings aren't closed along with the
+      // publish modal.
+      publishChecks.showWarnings(decision.results, {actionLabel: 'Publish'});
     } catch (err) {
       console.error(err);
       const detail = errorMessage(err);
@@ -96,12 +118,13 @@ export function PublishDocModal(
     }
   }
 
-  async function schedule() {
+  async function schedule(decision: PublishChecksDecision) {
     try {
       setLoading(true);
       const millis = Math.floor(new Date(scheduledDate).getTime());
       await cmsScheduleDoc(props.docId, millis, {
         publishMessage: publishMessage.trim() || undefined,
+        checksAudit: decision.audit || undefined,
       });
       showNotification({
         title: 'Scheduled!',
@@ -110,6 +133,9 @@ export function PublishDocModal(
       });
       props.onSuccess?.({publishType: 'scheduled'});
       modals.closeAll();
+      // Opened after `closeAll()` so the warnings aren't closed along with the
+      // publish modal.
+      publishChecks.showWarnings(decision.results, {actionLabel: 'Schedule'});
     } catch (err) {
       console.error(err);
       const detail = errorMessage(err);
@@ -156,7 +182,39 @@ export function PublishDocModal(
     }
   }
 
-  function onSubmit() {
+  /**
+   * Runs the collection's publishing checks and, if publishing isn't halted,
+   * asks the user to confirm.
+   */
+  async function onSubmit() {
+    let decision: PublishChecksDecision;
+    try {
+      setChecksRunning(true);
+      decision = await publishChecks.run({
+        docIds: [props.docId],
+        actionLabel: buttonLabel,
+        skip: skipChecks,
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Checks failed',
+        message: `Failed to run publishing checks: ${errorMessage(err)}`,
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    } finally {
+      setChecksRunning(false);
+    }
+    // Publishing was halted by a failed required check.
+    if (!decision.proceed) {
+      return;
+    }
+    openConfirmModal(decision);
+  }
+
+  function openConfirmModal(decision: PublishChecksDecision) {
     modals.openConfirmModal({
       ...modalTheme,
       title: `${buttonLabel} ${props.docId}`,
@@ -171,6 +229,17 @@ export function PublishDocModal(
             live {publishType === 'now' ? 'now' : `at ${scheduledDate}`}.
           </Text>
           <DocIdBadge docId={props.docId} />
+          {(decision.skipped || decision.bypassed) && (
+            <Text
+              size="body-sm"
+              color="red"
+              className="PublishDocModal__confirmText"
+            >
+              {decision.skipped
+                ? 'Publishing checks will be skipped.'
+                : 'Failed required checks will be bypassed.'}
+            </Text>
+          )}
         </>
       ),
       labels: {confirm: buttonLabel, cancel: 'Cancel'},
@@ -180,9 +249,9 @@ export function PublishDocModal(
       closeOnConfirm: true,
       onConfirm: () => {
         if (publishType === 'now') {
-          publish();
+          publish(decision);
         } else if (publishType === 'scheduled') {
-          schedule();
+          schedule(decision);
         }
       },
     });
@@ -287,6 +356,29 @@ export function PublishDocModal(
             </div>
           )}
 
+          {hasChecks && (
+            <div className="PublishDocModal__form__checks">
+              <div className="PublishDocModal__form__checks__note">
+                <IconChecklist size={16} stroke={1.5} />
+                <Text size="body-sm" color="gray">
+                  {configuredChecks.length} publishing check
+                  {configuredChecks.length === 1 ? '' : 's'} will run first:{' '}
+                  {configuredChecks.map((check) => check.label).join(', ')}.
+                </Text>
+              </div>
+              {publishChecks.isAdmin && (
+                <Checkbox
+                  label="Skip publishing checks (admins only)"
+                  size="xs"
+                  checked={skipChecks}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    setSkipChecks(e.currentTarget.checked);
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           <div className="PublishDocModal__form__publishMessage">
             <div className="PublishDocModal__form__publishMessage__wrapper">
               <textarea
@@ -339,10 +431,10 @@ export function PublishDocModal(
               size="xs"
               color="dark"
               disabled={disabled}
-              loading={loading}
+              loading={loading || checksRunning}
               type="submit"
             >
-              {buttonLabel}
+              {checksRunning ? 'Running checks' : buttonLabel}
             </Button>
           </div>
         </form>
