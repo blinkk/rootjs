@@ -2,6 +2,11 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {
+  normalizePublishChecks,
+  type PublishCheckLevel,
+  type PublishCheckResult,
+} from '../shared/publish-checks.js';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
@@ -26,11 +31,44 @@ import {
   DependencyGraphService,
   DependencyGraphRebuildResult,
 } from './dependency-graph.js';
+import * as schema from './schema.js';
 import {SearchIndexService, RebuildResult} from './search-index.js';
 import {type CMSTranslationService} from './translations.js';
 import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
 
 type AppModule = typeof import('./app.js');
+
+/**
+ * Maximum number of docs a single `checks.run` request may cover. Releases can
+ * contain an unbounded number of docs; this bounds the work a single request
+ * can queue up.
+ */
+const MAX_CHECKS_RUN_DOCS = 500;
+
+/** Number of checks to run in parallel within a `checks.run` request. */
+const CHECKS_RUN_CONCURRENCY = 5;
+
+/** Runs `fn` over `items` with at most `concurrency` in flight. */
+async function runPool<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  const queue = [...items];
+  const workers: Promise<void>[] = [];
+  const numWorkers = Math.max(1, Math.min(concurrency, queue.length));
+  for (let i = 0; i < numWorkers; i++) {
+    workers.push(
+      (async () => {
+        while (queue.length > 0) {
+          const item = queue.shift()!;
+          await fn(item);
+        }
+      })()
+    );
+  }
+  await Promise.all(workers);
+}
 
 function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
@@ -1367,6 +1405,166 @@ export function api(server: Server, options: ApiOptions) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
+  });
+
+  /**
+   * Runs the publishing checks configured on each doc's collection.
+   *
+   * Used to gate the publish and schedule flows in the CMS UI. Checks are
+   * opted into per collection via the `publishing.checks` schema config; docs
+   * in collections without any configured checks are skipped.
+   *
+   * ```
+   * POST /cms/api/checks.run
+   * {"docIds": ["Pages/index", "Pages/about"]}
+   * ```
+   */
+  server.use('/cms/api/checks.run', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    const docIds: string[] = Array.isArray(reqBody.docIds)
+      ? Array.from(
+          new Set(
+            reqBody.docIds
+              .map((docId: any) => String(docId || '').trim())
+              .filter(Boolean)
+          )
+        )
+      : [];
+    if (docIds.length === 0) {
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      return;
+    }
+    if (docIds.length > MAX_CHECKS_RUN_DOCS) {
+      res.status(400).json({
+        success: false,
+        error: 'TOO_MANY_DOCS',
+        maxDocs: MAX_CHECKS_RUN_DOCS,
+      });
+      return;
+    }
+
+    const registeredChecks = options.checks || [];
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+
+    // Collection schemas are shared by every doc in a collection, so resolve
+    // each one at most once per request.
+    const collectionSchemas = new Map<
+      string,
+      Promise<schema.Collection | null>
+    >();
+    function loadCollectionSchema(collectionId: string) {
+      let promise = collectionSchemas.get(collectionId);
+      if (!promise) {
+        promise = getCollectionSchema(req, collectionId).catch(() => null);
+        collectionSchemas.set(collectionId, promise);
+      }
+      return promise;
+    }
+
+    // Expand the requested docs into the individual check runs configured on
+    // each doc's collection.
+    const runs: Array<{
+      docId: string;
+      collectionId: string;
+      slug: string;
+      collectionSchema: schema.Collection | null;
+      check: CMSCheck;
+      level: PublishCheckLevel;
+    }> = [];
+    for (const docId of docIds) {
+      let collectionId: string;
+      let slug: string;
+      try {
+        ({collection: collectionId, slug} = parseDocId(docId));
+      } catch {
+        // Ignore malformed doc ids; there are no checks to run for them.
+        continue;
+      }
+      const collectionSchema = await loadCollectionSchema(collectionId);
+      const configuredChecks = normalizePublishChecks(
+        collectionSchema?.publishing?.checks
+      );
+      for (const configuredCheck of configuredChecks) {
+        const check = registeredChecks.find((c) => c.id === configuredCheck.id);
+        // Skip checks that aren't registered or that are restricted to other
+        // collections. A collection referencing an unknown check shouldn't
+        // block publishing, since that would make a config typo unrecoverable
+        // for non-admins.
+        if (!check) {
+          console.warn(
+            `check not registered: "${configuredCheck.id}" (configured on collection "${collectionId}")`
+          );
+          continue;
+        }
+        if (check.collections && !check.collections.includes(collectionId)) {
+          continue;
+        }
+        runs.push({
+          docId,
+          collectionId,
+          slug,
+          collectionSchema,
+          check,
+          level: configuredCheck.level,
+        });
+      }
+    }
+
+    const results: PublishCheckResult[] = [];
+    await runPool(runs, CHECKS_RUN_CONCURRENCY, async (run) => {
+      const base = {
+        docId: run.docId,
+        checkId: run.check.id,
+        label: run.check.label,
+        level: run.level,
+      };
+      try {
+        const result = await run.check.run({
+          rootConfig: req.rootConfig!,
+          cmsClient,
+          docId: run.docId,
+          collectionId: run.collectionId,
+          slug: run.slug,
+          collectionSchema: run.collectionSchema,
+        });
+        results.push({
+          ...base,
+          status: result.status,
+          message: result.message,
+          metadata: result.metadata,
+        });
+      } catch (err: any) {
+        // A check that throws is reported as an `error` result rather than
+        // failing the whole request, so one broken check doesn't hide the
+        // results of the others.
+        console.error(err.stack || err);
+        results.push({
+          ...base,
+          status: 'error',
+          message: `Check failed to run: ${err.message || 'UNKNOWN'}`,
+        });
+      }
+    });
+
+    // Sort for a stable presentation order in the UI, since results are
+    // pushed in completion order.
+    results.sort(
+      (a, b) =>
+        a.docId.localeCompare(b.docId) || a.checkId.localeCompare(b.checkId)
+    );
+    res.status(200).json({success: true, data: {results}});
   });
 
   /**

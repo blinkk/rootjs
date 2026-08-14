@@ -17,6 +17,7 @@ import {logAction} from './actions.js';
 import {MultiBatch} from './batch.js';
 import {cmsPublishDataSources} from './data-source.js';
 import {cmsPublishDocs, cmsSyncDependencyGraph} from './doc.js';
+import {type PublishChecksAuditMetadata} from './publish-checks.js';
 
 export interface Release {
   id: string;
@@ -120,7 +121,10 @@ export async function unarchiveRelease(id: string) {
   logAction('release.unarchive', {metadata: {releaseId: id}});
 }
 
-export async function publishRelease(id: string) {
+export async function publishRelease(
+  id: string,
+  options?: {checksAudit?: PublishChecksAuditMetadata}
+) {
   const release = await getRelease(id);
   if (!release) {
     throw new Error(`release not found: ${id}`);
@@ -151,6 +155,7 @@ export async function publishRelease(id: string) {
     batch,
     releaseId: id,
     publishMessage: release.description,
+    checksAudit: options?.checksAudit,
   });
   // Update the release's publishedAt. This write is intentionally added last
   // so that if any of the previous batches fails to commit, the release is
@@ -174,6 +179,9 @@ export async function publishRelease(id: string) {
   if (release.description) {
     metadata.publishMessage = release.description;
   }
+  if (options?.checksAudit) {
+    metadata.checks = options.checksAudit;
+  }
   logAction('release.publish', {
     metadata,
   });
@@ -181,7 +189,8 @@ export async function publishRelease(id: string) {
 
 export async function scheduleRelease(
   id: string,
-  timestamp: Timestamp | number
+  timestamp: Timestamp | number,
+  options?: {checksAudit?: PublishChecksAuditMetadata}
 ) {
   const release = await getRelease(id);
   if (!release) {
@@ -204,9 +213,14 @@ export async function scheduleRelease(
     scheduledAt: timestamp,
     scheduledBy: window.firebase.user.email,
   });
-  logAction('release.publish', {
-    metadata: {releaseId: id, scheduledAt: timestamp.toMillis()},
-  });
+  const metadata: Record<string, unknown> = {
+    releaseId: id,
+    scheduledAt: timestamp.toMillis(),
+  };
+  if (options?.checksAudit) {
+    metadata.checks = options.checksAudit;
+  }
+  logAction('release.publish', {metadata});
 }
 
 /** Generates a release ID like `20260318-golden-meadow`. */

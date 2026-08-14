@@ -4,6 +4,7 @@ import {
   ActionIcon,
   Breadcrumbs,
   Button,
+  Checkbox,
   Loader,
   Table,
   Tooltip,
@@ -11,6 +12,7 @@ import {
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconSettings} from '@tabler/icons-preact';
+import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
@@ -24,10 +26,15 @@ import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {
+  usePublishChecks,
+  type PublishChecksDecision,
+} from '../../hooks/usePublishChecks.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, getDataSource} from '../../utils/data-source.js';
-import {notifyErrors} from '../../utils/notifications.js';
+import {errorMessage, notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
+import {testHasPublishChecks} from '../../utils/publish-checks.js';
 import {
   Release,
   cancelScheduledRelease,
@@ -137,17 +144,27 @@ ReleasePage.PublishStatus = (props: {
 
   const release = props.release;
   const [publishLoading, setPublishLoading] = useState(false);
+  const [checksRunning, setChecksRunning] = useState(false);
+  const [skipChecks, setSkipChecks] = useState(false);
 
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const publishChecks = usePublishChecks();
+  const releaseHasChecks = testHasPublishChecks(release.docIds || []);
   const scheduleReleaseModal = useScheduleReleaseModal({
     releaseId: release.id,
+    docIds: release.docIds || [],
+    skipChecks: skipChecks,
     onScheduled: () => {
       props.onAction('scheduled');
     },
   });
 
-  function onPublishClicked() {
+  /**
+   * Runs the publishing checks for every doc in the release and, if publishing
+   * isn't halted, asks the user to confirm.
+   */
+  async function onPublishClicked() {
     const docIds = release.docIds || [];
     const dataSourceIds = release.dataSourceIds || [];
     const total = docIds.length + dataSourceIds.length;
@@ -161,14 +178,48 @@ ReleasePage.PublishStatus = (props: {
       return;
     }
 
+    let decision: PublishChecksDecision;
+    try {
+      setChecksRunning(true);
+      decision = await publishChecks.run({
+        docIds: docIds,
+        actionLabel: 'Publish',
+        skip: skipChecks,
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Checks failed',
+        message: `Failed to run publishing checks: ${errorMessage(err)}`,
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    } finally {
+      setChecksRunning(false);
+    }
+    // Publishing was halted by a failed required check.
+    if (!decision.proceed) {
+      return;
+    }
+
     modals.openConfirmModal({
       ...modalTheme,
       title: `Publish release: ${release.id}`,
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to publish this release? The {total} items in
-          the release will go live immediately.
-        </Text>
+        <>
+          <Text size="body-sm" weight="semi-bold">
+            Are you sure you want to publish this release? The {total} items in
+            the release will go live immediately.
+          </Text>
+          {(decision.skipped || decision.bypassed) && (
+            <Text size="body-sm" color="red">
+              {decision.skipped
+                ? 'Publishing checks will be skipped.'
+                : 'Failed required checks will be bypassed.'}
+            </Text>
+          )}
+        </>
       ),
       labels: {confirm: 'Publish', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
@@ -176,12 +227,12 @@ ReleasePage.PublishStatus = (props: {
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: true,
       onConfirm: () => {
-        publish();
+        publish(decision);
       },
     });
   }
 
-  async function publish() {
+  async function publish(decision: PublishChecksDecision) {
     setPublishLoading(true);
     await notifyErrors(async () => {
       const notificationId = `publish-release-${release.id}`;
@@ -195,8 +246,9 @@ ReleasePage.PublishStatus = (props: {
         loading: true,
         autoClose: false,
       });
-      // await cmsPublishDocs(release.docIds || []);
-      await publishRelease(release.id);
+      await publishRelease(release.id, {
+        checksAudit: decision.audit || undefined,
+      });
       updateNotification({
         id: notificationId,
         title: 'Published release!',
@@ -207,6 +259,7 @@ ReleasePage.PublishStatus = (props: {
       if (props.onAction) {
         props.onAction('publish');
       }
+      publishChecks.showWarnings(decision.results, {actionLabel: 'Publish'});
     });
     setPublishLoading(false);
   }
@@ -259,10 +312,14 @@ ReleasePage.PublishStatus = (props: {
                           size="xs"
                           compact
                           onClick={() => onPublishClicked()}
-                          loading={publishLoading}
+                          loading={publishLoading || checksRunning}
                           disabled={!canPublish}
                         >
-                          {release.publishedAt ? 'Re-publish' : 'Publish'}
+                          {checksRunning
+                            ? 'Running checks'
+                            : release.publishedAt
+                              ? 'Re-publish'
+                              : 'Publish'}
                         </Button>
                       </Tooltip>
                     </ConditionalTooltip>
@@ -316,6 +373,19 @@ ReleasePage.PublishStatus = (props: {
                       </ConditionalTooltip>
                     ))}
                 </div>
+                {!release.archivedAt &&
+                  releaseHasChecks &&
+                  publishChecks.isAdmin && (
+                    <Checkbox
+                      className="ReleasePage__PublishStatus__skipChecks"
+                      label="Skip publishing checks (admins only)"
+                      size="xs"
+                      checked={skipChecks}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        setSkipChecks(e.currentTarget.checked);
+                      }}
+                    />
+                  )}
               </td>
             </tr>
           </tbody>

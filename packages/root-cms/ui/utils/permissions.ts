@@ -36,6 +36,19 @@ export function testCanPublish(
 }
 
 /**
+ * Returns true if the user is a project admin.
+ *
+ * Admins can skip publishing checks entirely and publish over failed
+ * required checks.
+ */
+export function testIsAdmin(
+  roles: Record<string, UserRole>,
+  email: string
+): boolean {
+  return getRole(roles, email) === 'ADMIN';
+}
+
+/**
  * Returns true if the user has permission to edit content (save drafts).
  *
  * Users with ADMIN, EDITOR, or CONTRIBUTOR roles can edit.
