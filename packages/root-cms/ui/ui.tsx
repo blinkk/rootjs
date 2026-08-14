@@ -35,6 +35,7 @@ import {GlobalSearch} from './components/GlobalSearch/GlobalSearch.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
+import {PublishChecksModal} from './components/PublishChecksModal/PublishChecksModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
@@ -367,6 +368,7 @@ function App() {
                         [LocalizationModal.id]: LocalizationModal,
                         [LockPublishingModal.id]: LockPublishingModal,
                         [PruneTranslationsModal.id]: PruneTranslationsModal,
+                        [PublishChecksModal.id]: PublishChecksModal,
                         [PublishDocModal.id]: PublishDocModal,
                         [ReferenceFieldEditorModal.id]:
                           ReferenceFieldEditorModal,

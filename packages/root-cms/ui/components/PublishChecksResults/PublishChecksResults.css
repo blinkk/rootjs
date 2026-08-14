@@ -1,0 +1,97 @@
+.PublishChecksResults {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.PublishChecksResults__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.PublishChecksResults__group__docId {
+  display: flex;
+}
+
+.PublishChecksResults__group__results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.PublishChecksResults__result {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.PublishChecksResults__result--success {
+  background-color: #d3f9d8;
+  border-color: #8ce99a;
+}
+
+.PublishChecksResults__result--warning {
+  background-color: #fff3bf;
+  border-color: #ffe066;
+}
+
+.PublishChecksResults__result--error {
+  background-color: #ffe3e3;
+  border-color: #ffa8a8;
+}
+
+.PublishChecksResults__result__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.PublishChecksResults__result__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.PublishChecksResults__result__badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.PublishChecksResults__result__message {
+  margin-top: 6px;
+}
+
+.PublishChecksResults__result__message .Markdown {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.PublishChecksResults__result__message .Markdown p {
+  margin: 0 0 6px;
+}
+
+.PublishChecksResults__result__message .Markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.PublishChecksResults__result__message .Markdown code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.PublishChecksResults__result__message .Markdown ul,
+.PublishChecksResults__result__message .Markdown ol {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+.PublishChecksResults__result__message .Markdown ul:last-child,
+.PublishChecksResults__result__message .Markdown ol:last-child {
+  margin-bottom: 0;
+}

@@ -1,14 +1,10 @@
 import './ChecksPanel.css';
 
-import {Badge, Button} from '@mantine/core';
-import {
-  IconAlertTriangle,
-  IconCheck,
-  IconPlayerPlay,
-  IconX,
-} from '@tabler/icons-preact';
+import {Button} from '@mantine/core';
+import {IconPlayerPlay} from '@tabler/icons-preact';
 import {useCallback, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
+import {CheckStatusBadge} from '../CheckStatusBadge/CheckStatusBadge.js';
 import {Markdown} from '../Markdown/Markdown.js';
 
 /** Status result from a check run. */
@@ -159,7 +155,12 @@ function CheckItem(props: CheckItemProps) {
       <div className="ChecksPanel__check__header">
         <div className="ChecksPanel__check__label">
           {check.label}
-          {state?.result && <StatusBadge status={state.result.status} />}
+          {state?.result && (
+            <CheckStatusBadge
+              className="ChecksPanel__statusBadge"
+              status={state.result.status}
+            />
+          )}
         </div>
         <Button
           className="ChecksPanel__check__runButton"
@@ -191,34 +192,5 @@ function CheckItem(props: CheckItemProps) {
         <div className="ChecksPanel__check__error">{state.error}</div>
       )}
     </div>
-  );
-}
-
-const STATUS_COLORS: Record<CheckStatus, string> = {
-  success: 'green',
-  warning: 'yellow',
-  error: 'red',
-};
-
-const STATUS_ICONS: Record<CheckStatus, any> = {
-  success: IconCheck,
-  warning: IconAlertTriangle,
-  error: IconX,
-};
-
-function StatusBadge(props: {status: CheckStatus}) {
-  const color = STATUS_COLORS[props.status];
-  const Icon = STATUS_ICONS[props.status];
-  const label = props.status.charAt(0).toUpperCase() + props.status.slice(1);
-  return (
-    <Badge
-      className="ChecksPanel__statusBadge"
-      color={color}
-      size="sm"
-      variant="filled"
-      leftSection={<Icon size={10} />}
-    >
-      {label}
-    </Badge>
   );
 }

@@ -36,6 +36,7 @@ import {
   normalizeString,
   sourceHash,
 } from './l10n.js';
+import {type PublishChecksAuditMetadata} from './publish-checks.js';
 import {
   TranslationsLocaleDocWithRef,
   addDeleteTranslationsOpsToBatch,
@@ -157,7 +158,7 @@ export async function cmsDeleteDoc(docId: string) {
 
 export async function cmsPublishDoc(
   docId: string,
-  options?: {publishMessage?: string}
+  options?: {publishMessage?: string; checksAudit?: PublishChecksAuditMetadata}
 ) {
   await cmsPublishDocs([docId], options);
 }
@@ -178,6 +179,8 @@ export async function cmsPublishDocs(
     commitBatch?: boolean;
     releaseId?: string;
     publishMessage?: string;
+    /** Outcome of the publishing checks, recorded in the action log. */
+    checksAudit?: PublishChecksAuditMetadata;
   }
 ) {
   if (docIds.length === 0) {
@@ -237,6 +240,9 @@ export async function cmsPublishDocs(
     const metadata: Record<string, unknown> = {docId};
     if (options?.publishMessage) {
       metadata.publishMessage = options.publishMessage;
+    }
+    if (options?.checksAudit) {
+      metadata.checks = options.checksAudit;
     }
     logAction('doc.publish', {metadata});
   }
@@ -393,7 +399,7 @@ export async function cmsSyncDependencyGraph(docIds: string[]) {
 export async function cmsScheduleDoc(
   docId: string,
   millis: number,
-  options?: {publishMessage?: string}
+  options?: {publishMessage?: string; checksAudit?: PublishChecksAuditMetadata}
 ) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -443,6 +449,9 @@ export async function cmsScheduleDoc(
   const metadata: Record<string, unknown> = {docId, scheduledAt: millis};
   if (options?.publishMessage) {
     metadata.publishMessage = options.publishMessage;
+  }
+  if (options?.checksAudit) {
+    metadata.checks = options.checksAudit;
   }
   logAction('doc.schedule', {metadata});
 }

@@ -67,6 +67,10 @@
   gap: 8px;
 }
 
+.ReleasePage__PublishStatus__skipChecks {
+  margin-top: 8px;
+}
+
 .ReleasePage__PublishStatus__table {
   border: none;
 }

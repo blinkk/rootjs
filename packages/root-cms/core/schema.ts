@@ -1,3 +1,11 @@
+import {type CollectionPublishingOptions} from '../shared/publish-checks.js';
+
+export type {
+  CollectionPublishingOptions,
+  PublishCheckConfig,
+  PublishCheckLevel,
+} from '../shared/publish-checks.js';
+
 export interface CommonFieldProps {
   /** The type that defines the structure of the field and its UI component. */
   type: string;
@@ -663,6 +671,23 @@ export type Collection = SchemaWithTypes & {
      */
     compact?: boolean;
   };
+  /**
+   * Options that control how docs in this collection are published.
+   *
+   * Example:
+   * ```ts
+   * publishing: {
+   *   checks: [
+   *     {id: 'root-cms/translations', level: 'required'},
+   *     {id: 'seo-meta', level: 'warning'},
+   *   ],
+   * }
+   * ```
+   *
+   * NOTE: The checks feature is considered a "beta" feature, its interface
+   * may change from version to version as we add new features.
+   */
+  publishing?: CollectionPublishingOptions;
 };
 
 export function defineCollection(
