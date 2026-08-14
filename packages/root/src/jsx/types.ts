@@ -253,6 +253,7 @@ export interface HTMLAttributes<T = HTMLElement>
   icon?: string;
   id?: string;
   importance?: 'auto' | 'high' | 'low';
+  inert?: boolean;
   inputMode?: string;
   integrity?: string;
   is?: string;

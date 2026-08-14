@@ -52,6 +52,17 @@ test('renders disablePictureInPicture as a boolean attribute', () => {
   expect(output).toBe('<video disablepictureinpicture></video>');
 });
 
+test('renders inert as a boolean attribute', () => {
+  // `<div inert />` minimizes to a bare `inert` attribute.
+  expect(renderJsxToString(<div inert />, {mode: 'minimal'})).toBe(
+    '<div inert></div>'
+  );
+  // `inert={false}` removes the attribute.
+  expect(renderJsxToString(<div inert={false} />, {mode: 'minimal'})).toBe(
+    '<div></div>'
+  );
+});
+
 test('renders popover as a boolean attribute', () => {
   // `<div popover />` should minimize to `popover` (treated as "auto" by the
   // browser) rather than rendering an invalid `popover="true"` value.
