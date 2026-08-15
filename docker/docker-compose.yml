@@ -31,9 +31,6 @@ services:
     working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
     ports:
       - '${PORT:-4007}:4007'
-    environment:
-      # Picked up by gcloud as the active project.
-      CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
     env_file:
       - path: ${ROOT_PROJECT_DIR:-..}/.env
         required: false
@@ -63,8 +60,6 @@ services:
       # A dev server started by Claude inside the container, on a different
       # host port so it can run alongside the `root` service.
       - '${CLAUDE_PORT:-4008}:4007'
-    environment:
-      CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
     env_file:
       - path: ${ROOT_PROJECT_DIR:-..}/.env
         required: false
