@@ -90,6 +90,11 @@ RUN set -eux; \
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV HOME=/home/${USERNAME}
+# Re-exported so images built `FROM` this one can refer to the runtime user
+# without hardcoding the values the base was built with.
+ENV ROOTJS_USER=${USERNAME}
+ENV ROOTJS_UID=${UID}
+ENV ROOTJS_GID=${GID}
 # Global pnpm binaries and the content-addressable store both live under $HOME
 # so they can be persisted with a volume.
 ENV PNPM_HOME=/home/${USERNAME}/.local/share/pnpm

@@ -7,6 +7,13 @@
 #   docker compose -f docker/docker-compose.yml run --rm root-cms \
 #     gcloud auth application-default login --no-launch-browser
 #   docker compose -f docker/docker-compose.yml up
+#
+# The `claude` service builds FROM the `root-cms` image, so build that one
+# first. It sits behind a profile, so `up` never starts an agent by surprise:
+#
+#   docker compose -f docker/docker-compose.yml build root-cms
+#   docker compose -f docker/docker-compose.yml build claude
+#   docker compose -f docker/docker-compose.yml run --rm claude
 
 name: root-cms
 
@@ -38,6 +45,38 @@ services:
       # Persists the pnpm content-addressable store between runs.
       - pnpm-store:/home/rootjs/.pnpm-store
 
+  # Claude Code with Remote Control, running against the same project. Started
+  # explicitly (`run --rm claude`), never by `docker compose up`.
+  claude:
+    profiles: ['claude']
+    build:
+      context: .
+      dockerfile: Dockerfile.claude
+      args:
+        BASE_IMAGE: root-cms
+    image: root-cms-claude
+    init: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
+    ports:
+      # A dev server started by Claude inside the container, on a different
+      # host port so it can run alongside the `root-cms` service.
+      - '${CLAUDE_PORT:-4008}:4007'
+    environment:
+      CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+    env_file:
+      - path: ${ROOT_PROJECT_DIR:-..}/.env
+        required: false
+    volumes:
+      - ${ROOT_PROJECT_DIR:-..}:/workspace
+      # Persists the claude.ai login, settings and history. Separate from the
+      # gcloud volume so each can be granted independently.
+      - claude-config:/home/rootjs/.claude
+      - gcloud-config:/home/rootjs/.config/gcloud
+      - pnpm-store:/home/rootjs/.pnpm-store
+
 volumes:
+  claude-config:
   gcloud-config:
   pnpm-store:

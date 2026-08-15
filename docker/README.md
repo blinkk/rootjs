@@ -13,6 +13,9 @@ The project is **not** baked into the image — you mount it at `/workspace`. Th
 container runs as a non-root user (uid/gid `1000` by default) so files it
 writes into the mounted project stay owned by you.
 
+`Dockerfile.claude` builds on top of it to add the Claude Code CLI — see
+[Running Claude Code against the project](#running-claude-code-against-the-project).
+
 ## How auth works
 
 Root CMS connects to Firestore with the Firebase Admin SDK, which uses
@@ -153,6 +156,88 @@ that `root.config.ts` reads from the environment (`GAPI_API_KEY`,
 `GAPI_CLIENT_ID`, `COOKIE_SECRET`, and any translation/AI provider keys). Pass
 them with `--env-file .env` or compose's `env_file`.
 
+## Running Claude Code against the project
+
+`Dockerfile.claude` builds a child image (`FROM root-cms`) that adds the Claude
+Code CLI, so an agent session runs with the same Node, pnpm, gcloud and project
+files as the dev server. Its default command is `claude remote-control`, which
+[drives the session from claude.ai or the Claude app][remote-control] while
+execution stays in the container.
+
+It's deliberately a separate image rather than a flag on the base one: the base
+image is also the base for deployable images (see below), and the agent image
+carries a second credential surface — a claude.ai token — on top of the
+project's Google Cloud credentials.
+
+```bash
+# 1. Build the base image first, then the child.
+docker build -t root-cms docker/
+docker build -t root-cms-claude -f docker/Dockerfile.claude docker/
+
+docker volume create root-cms-claude-config
+
+# 2. Sign in and accept the workspace trust prompt. Remote Control needs a
+#    claude.ai login (Pro, Max, Team or Enterprise) — API keys don't work.
+#    If the browser callback can't reach the container, paste the code shown in
+#    the browser at the "Paste code here if prompted" prompt.
+docker run --rm -it \
+  -v "$PWD:/workspace" \
+  -v root-cms-claude-config:/home/rootjs/.claude \
+  root-cms-claude claude
+
+# 3. Start Remote Control. It prints a session URL; press space for a QR code.
+docker run --rm -it --init \
+  -p 4008:4007 \
+  -v "$PWD:/workspace" \
+  -v root-cms-claude-config:/home/rootjs/.claude \
+  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
+  -v root-cms-pnpm-store:/home/rootjs/.pnpm-store \
+  --env-file .env \
+  root-cms-claude
+```
+
+Or with compose, where the service sits behind a `claude` profile so
+`docker compose up` never starts an agent by surprise:
+
+```bash
+docker compose -f docker/docker-compose.yml build root-cms
+docker compose -f docker/docker-compose.yml build claude
+docker compose -f docker/docker-compose.yml run --rm claude
+```
+
+Port 4008 maps to the container's 4007, so a dev server Claude starts inside the
+container is at <http://localhost:4008/cms/> — on a different host port than the
+`root-cms` service, so both can run at once.
+
+Other useful commands: `claude` for a plain local session, `claude
+--remote-control` for one that is both local and remote, and `claude
+remote-control --spawn worktree` to give each remote session its own git
+worktree.
+
+### Notes
+
+- **Credentials the agent inherits.** Mounting the gcloud volume gives Claude
+  write access to your CMS's Firestore data. For anything beyond a scratch
+  project, point the agent container at a volume signed in to a non-production
+  project, or leave the gcloud mount off entirely and let it work on code only.
+  This is also why `--dangerously-skip-permissions` deserves care here, even
+  though the container runs as a non-root user (the CLI rejects that flag as
+  root).
+- **Don't disable non-essential traffic.** `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`,
+  `DISABLE_TELEMETRY`, `DO_NOT_TRACK` and `DISABLE_GROWTHBOOK` each turn off the
+  feature-flag lookup Remote Control depends on. Likewise, Remote Control is
+  disabled when `ANTHROPIC_BASE_URL` points anywhere other than
+  `api.anthropic.com` — worth knowing if your project's `.env` sets it.
+- **The session lives as long as the container.** Remote Control is a local
+  process; stopping the container takes the session offline. Re-running
+  `claude remote-control` in the same directory brings its sessions back for
+  about four hours.
+- **Updates.** Claude Code self-updates into the container's writable layer, so
+  a `--rm` run starts from the version baked into the image. Rebuild
+  periodically (`docker build --no-cache -f docker/Dockerfile.claude ...`), or
+  pin with `--build-arg CLAUDE_CODE_VERSION=X.Y.Z` plus
+  `-e DISABLE_AUTOUPDATER=1`.
+
 ## Baking a project into an image
 
 For a deployable image, use this one as a base:
@@ -186,4 +271,9 @@ above.
 - **Port already in use** — `root dev` reads `PORT` (default `4007`), so
   `-e PORT=5000 -p 5000:5000` moves it.
 
+- **`claude remote-control` exits immediately** — it checks eligibility before
+  anything else. Run `claude` in the container and use `/login`; the volume at
+  `/home/rootjs/.claude` has to be mounted for that login to stick.
+
 [adc]: https://cloud.google.com/docs/authentication/application-default-credentials
+[remote-control]: https://code.claude.com/docs/en/remote-control

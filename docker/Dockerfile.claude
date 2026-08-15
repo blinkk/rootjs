@@ -1,0 +1,41 @@
+# Adds the Claude Code CLI to the Root CMS image so an agent session can run
+# against the project — including Remote Control, which drives a session running
+# in this container from claude.ai or the Claude mobile app.
+#
+# Build the base image first:
+#   docker build -t root-cms docker/
+#   docker build -t root-cms-claude -f docker/Dockerfile.claude docker/
+#
+# See ./README.md for the sign-in steps and the security tradeoffs of giving an
+# agent container the project's Google Cloud credentials.
+
+ARG BASE_IMAGE=root-cms
+FROM ${BASE_IMAGE}
+
+ARG CLAUDE_CODE_VERSION=latest
+
+# Claude Code stores its auth token, settings and history under ~/.claude, but
+# keeps the OAuth account, MCP servers and per-project trust in ~/.claude.json,
+# outside that directory. CLAUDE_CONFIG_DIR moves that file inside it so a
+# single volume mounted at ~/.claude persists the whole login.
+ENV CLAUDE_CONFIG_DIR=${HOME}/.claude
+
+# Installed into a user-owned npm prefix (rather than /usr/local as root) so
+# Claude Code's self-updater can write to it. Updates land in the container's
+# writable layer, so rebuild this image now and then to bake them in — or set
+# DISABLE_AUTOUPDATER=1 to pin CLAUDE_CODE_VERSION.
+ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global
+ENV PATH=${HOME}/.npm-global/bin:${PATH}
+
+USER ${ROOTJS_UID}:${ROOTJS_GID}
+RUN set -eux; \
+    mkdir -p "${NPM_CONFIG_PREFIX}" "${CLAUDE_CONFIG_DIR}"; \
+    npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"; \
+    claude --version
+
+WORKDIR /workspace
+
+# Server mode: stays running, prints a session URL, and accepts connections from
+# claude.ai or the Claude app. Override with `claude` for a local interactive
+# session, or `claude --remote-control` for both at once.
+CMD ["claude", "remote-control"]
