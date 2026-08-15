@@ -1,0 +1,43 @@
+# Convenience wrapper around ./Dockerfile. Set ROOT_PROJECT_DIR to the Root.js
+# project you want to run (defaults to this repo). See ./README.md.
+#
+# `UID`/`GID` are not exported by the shell, so pass them explicitly if your
+# host user isn't 1000: `UID=$(id -u) GID=$(id -g) docker compose ... build`.
+#
+#   docker compose -f docker/docker-compose.yml run --rm root-cms \
+#     gcloud auth application-default login --no-launch-browser
+#   docker compose -f docker/docker-compose.yml up
+
+name: root-cms
+
+services:
+  root-cms:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: root-cms
+    init: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
+    ports:
+      - '${PORT:-4007}:4007'
+    environment:
+      # Picked up by gcloud as the active project.
+      CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+    env_file:
+      - path: ${ROOT_PROJECT_DIR:-..}/.env
+        required: false
+    volumes:
+      - ${ROOT_PROJECT_DIR:-..}:/workspace
+      # Persists `gcloud auth login` and `gcloud auth application-default
+      # login` between runs.
+      - gcloud-config:/home/rootjs/.config/gcloud
+      # Persists the pnpm content-addressable store between runs.
+      - pnpm-store:/home/rootjs/.pnpm-store
+
+volumes:
+  gcloud-config:
+  pnpm-store:
