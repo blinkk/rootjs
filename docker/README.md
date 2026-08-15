@@ -40,15 +40,13 @@ docker build -t root docker/
 # 2. Create the volume that will hold your gcloud credentials.
 docker volume create root-gcloud
 
-# 3. Sign in — once. Follow the printed URL, paste the code back in.
-#    Replace MY_GCP_PROJECT with your Firebase/GCP project id.
+# 3. Sign in — once. Follow the printed URL, paste the code back in. You will be
+# asked to sign in twice.
 docker run --rm -it \
   -v root-gcloud:/home/rootjs/.config/gcloud \
   root bash -lc '
     gcloud auth login --no-launch-browser &&
-    gcloud auth application-default login --no-launch-browser &&
-    gcloud config set project MY_GCP_PROJECT &&
-    gcloud auth application-default set-quota-project MY_GCP_PROJECT'
+    gcloud auth application-default login --no-launch-browser'
 
 # 4. Run the project. Dependencies install automatically on first start.
 docker run --rm -it --init \
@@ -77,12 +75,10 @@ docker run --rm -it \
 
 ```bash
 export ROOT_PROJECT_DIR=/path/to/my-project
-export GOOGLE_CLOUD_PROJECT=my-gcp-project
 
 docker compose -f docker/docker-compose.yml run --rm root bash -lc '
   gcloud auth login --no-launch-browser &&
-  gcloud auth application-default login --no-launch-browser &&
-  gcloud auth application-default set-quota-project $CLOUDSDK_CORE_PROJECT'
+  gcloud auth application-default login --no-launch-browser'
 
 docker compose -f docker/docker-compose.yml up
 ```
@@ -261,16 +257,12 @@ above.
   mounted, or is mounted at the wrong path. It must be
   `/home/rootjs/.config/gcloud` (or `/home/<USERNAME>/...` if you overrode the
   `USERNAME` build arg).
-- **`Your application is authenticating by using local Application Default
-  Credentials... quota project`** — run `gcloud auth application-default
-  set-quota-project MY_GCP_PROJECT`.
 - **`reauthentication is needed`** — user ADC expires. Re-run
   `gcloud auth application-default login` with the volume mounted.
 - **Permission errors on files in the mounted project** — rebuild with
   `--build-arg UID="$(id -u)" --build-arg GID="$(id -g)"`.
 - **Port already in use** — `root dev` reads `PORT` (default `4007`), so
   `-e PORT=5000 -p 5000:5000` moves it.
-
 - **`claude remote-control` exits immediately** — it checks eligibility before
   anything else. Run `claude` in the container and use `/login`; the volume at
   `/home/rootjs/.claude` has to be mounted for that login to stick.
