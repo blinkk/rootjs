@@ -1,15 +1,15 @@
-# Adds the Claude Code CLI to the Root CMS image so an agent session can run
+# Adds the Claude Code CLI to the `root` image so an agent session can run
 # against the project — including Remote Control, which drives a session running
 # in this container from claude.ai or the Claude mobile app.
 #
 # Build the base image first:
-#   docker build -t root-cms docker/
-#   docker build -t root-cms-claude -f docker/Dockerfile.claude docker/
+#   docker build -t root docker/
+#   docker build -t root-ai-claude -f docker/Dockerfile.claude docker/
 #
 # See ./README.md for the sign-in steps and the security tradeoffs of giving an
 # agent container the project's Google Cloud credentials.
 
-ARG BASE_IMAGE=root-cms
+ARG BASE_IMAGE=root
 FROM ${BASE_IMAGE}
 
 ARG CLAUDE_CODE_VERSION=latest

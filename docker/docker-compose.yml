@@ -4,27 +4,27 @@
 # `UID`/`GID` are not exported by the shell, so pass them explicitly if your
 # host user isn't 1000: `UID=$(id -u) GID=$(id -g) docker compose ... build`.
 #
-#   docker compose -f docker/docker-compose.yml run --rm root-cms \
+#   docker compose -f docker/docker-compose.yml run --rm root \
 #     gcloud auth application-default login --no-launch-browser
 #   docker compose -f docker/docker-compose.yml up
 #
-# The `claude` service builds FROM the `root-cms` image, so build that one
-# first. It sits behind a profile, so `up` never starts an agent by surprise:
+# The `claude` service builds FROM the `root` image, so build that one first. It
+# sits behind a profile, so `up` never starts an agent by surprise:
 #
-#   docker compose -f docker/docker-compose.yml build root-cms
+#   docker compose -f docker/docker-compose.yml build root
 #   docker compose -f docker/docker-compose.yml build claude
 #   docker compose -f docker/docker-compose.yml run --rm claude
 
-name: root-cms
+name: root
 
 services:
-  root-cms:
+  root:
     build:
       context: .
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    image: root-cms
+    image: root
     init: true
     stdin_open: true
     tty: true
@@ -53,15 +53,15 @@ services:
       context: .
       dockerfile: Dockerfile.claude
       args:
-        BASE_IMAGE: root-cms
-    image: root-cms-claude
+        BASE_IMAGE: root
+    image: root-ai-claude
     init: true
     stdin_open: true
     tty: true
     working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
     ports:
       # A dev server started by Claude inside the container, on a different
-      # host port so it can run alongside the `root-cms` service.
+      # host port so it can run alongside the `root` service.
       - '${CLAUDE_PORT:-4008}:4007'
     environment:
       CLOUDSDK_CORE_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}

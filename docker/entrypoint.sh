@@ -24,7 +24,7 @@ is_setup_command() {
 check_credentials() {
   if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
     if [[ ! -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]]; then
-      echo "[root-cms docker] GOOGLE_APPLICATION_CREDENTIALS is set to" \
+      echo "[root docker] GOOGLE_APPLICATION_CREDENTIALS is set to" \
         "'${GOOGLE_APPLICATION_CREDENTIALS}' but no file exists there." >&2
     fi
     return 0
@@ -35,15 +35,15 @@ check_credentials() {
   fi
 
   cat >&2 <<EOF
-[root-cms docker] No application default credentials (ADC) found at
+[root docker] No application default credentials (ADC) found at
 ${ADC_FILE}
 
 Root CMS reads and writes Firestore using ADC, so those requests will fail
 until you sign in. Run this once, with the same gcloud volume mounted:
 
   docker run --rm -it \\
-    -v root-cms-gcloud:${HOME}/.config/gcloud \\
-    root-cms gcloud auth application-default login --no-launch-browser
+    -v root-gcloud:${HOME}/.config/gcloud \\
+    root gcloud auth application-default login --no-launch-browser
 
 EOF
 }
@@ -58,7 +58,7 @@ maybe_install_deps() {
   if [[ "${mode}" == 'auto' ]] && [[ -d node_modules ]]; then
     return 0
   fi
-  echo '[root-cms docker] Installing dependencies with pnpm...' >&2
+  echo '[root docker] Installing dependencies with pnpm...' >&2
   pnpm install
 }
 

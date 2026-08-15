@@ -35,16 +35,16 @@ Both are written to `$HOME/.config/gcloud` inside the container
 
 ```bash
 # 1. Build the image.
-docker build -t root-cms docker/
+docker build -t root docker/
 
 # 2. Create the volume that will hold your gcloud credentials.
-docker volume create root-cms-gcloud
+docker volume create root-gcloud
 
 # 3. Sign in — once. Follow the printed URL, paste the code back in.
 #    Replace MY_GCP_PROJECT with your Firebase/GCP project id.
 docker run --rm -it \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  root-cms bash -lc '
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  root bash -lc '
     gcloud auth login --no-launch-browser &&
     gcloud auth application-default login --no-launch-browser &&
     gcloud config set project MY_GCP_PROJECT &&
@@ -54,10 +54,10 @@ docker run --rm -it \
 docker run --rm -it --init \
   -p 4007:4007 \
   -v "$PWD:/workspace" \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  -v root-cms-pnpm-store:/home/rootjs/.pnpm-store \
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  -v root-pnpm-store:/home/rootjs/.pnpm-store \
   --env-file .env \
-  root-cms
+  root
 ```
 
 The CMS is then at <http://localhost:4007/cms/>.
@@ -67,8 +67,8 @@ is deleted. To verify a volume already holds credentials:
 
 ```bash
 docker run --rm -it \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  root-cms gcloud auth list
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  root gcloud auth list
 ```
 
 ### Using docker compose instead
@@ -79,7 +79,7 @@ docker run --rm -it \
 export ROOT_PROJECT_DIR=/path/to/my-project
 export GOOGLE_CLOUD_PROJECT=my-gcp-project
 
-docker compose -f docker/docker-compose.yml run --rm root-cms bash -lc '
+docker compose -f docker/docker-compose.yml run --rm root bash -lc '
   gcloud auth login --no-launch-browser &&
   gcloud auth application-default login --no-launch-browser &&
   gcloud auth application-default set-quota-project $CLOUDSDK_CORE_PROJECT'
@@ -105,17 +105,17 @@ as the `docker run` command:
 ```bash
 # A shell.
 docker run --rm -it -v "$PWD:/workspace" \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud root-cms bash
+  -v root-gcloud:/home/rootjs/.config/gcloud root bash
 
 # The Root CMS CLI.
 docker run --rm -it -v "$PWD:/workspace" \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  root-cms pnpm exec root-cms client.methods --json
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  root pnpm exec root-cms client.methods --json
 
 # A production build + server.
 docker run --rm -it -p 4007:4007 -v "$PWD:/workspace" \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  root-cms bash -lc 'pnpm exec root build && pnpm exec root start --host 0.0.0.0'
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  root bash -lc 'pnpm exec root build && pnpm exec root start --host 0.0.0.0'
 ```
 
 Dependency installation is controlled by `ROOT_DOCKER_INSTALL`: `auto` (the
@@ -128,11 +128,11 @@ bind-mount the config directory instead of using a named volume. Ownership has
 to line up, so build with your own uid/gid if it isn't `1000`:
 
 ```bash
-docker build -t root-cms --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" docker/
+docker build -t root --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" docker/
 docker run --rm -it -p 4007:4007 \
   -v "$PWD:/workspace" \
   -v "$HOME/.config/gcloud:/home/rootjs/.config/gcloud" \
-  root-cms
+  root
 ```
 
 **Service account key**, for CI or a shared server:
@@ -142,7 +142,7 @@ docker run --rm -it -p 4007:4007 \
   -v "$PWD:/workspace" \
   -v /path/to/key.json:/secrets/key.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/key.json \
-  root-cms
+  root
 ```
 
 **Workload identity / metadata server.** On GCE, Cloud Run, or GKE, ADC is
@@ -158,7 +158,7 @@ them with `--env-file .env` or compose's `env_file`.
 
 ## Running Claude Code against the project
 
-`Dockerfile.claude` builds a child image (`FROM root-cms`) that adds the Claude
+`Dockerfile.claude` builds a child image (`FROM root`) that adds the Claude
 Code CLI, so an agent session runs with the same Node, pnpm, gcloud and project
 files as the dev server. Its default command is `claude remote-control`, which
 [drives the session from claude.ai or the Claude app][remote-control] while
@@ -171,10 +171,10 @@ project's Google Cloud credentials.
 
 ```bash
 # 1. Build the base image first, then the child.
-docker build -t root-cms docker/
-docker build -t root-cms-claude -f docker/Dockerfile.claude docker/
+docker build -t root docker/
+docker build -t root-ai-claude -f docker/Dockerfile.claude docker/
 
-docker volume create root-cms-claude-config
+docker volume create root-ai-claude-config
 
 # 2. Sign in and accept the workspace trust prompt. Remote Control needs a
 #    claude.ai login (Pro, Max, Team or Enterprise) — API keys don't work.
@@ -182,32 +182,32 @@ docker volume create root-cms-claude-config
 #    the browser at the "Paste code here if prompted" prompt.
 docker run --rm -it \
   -v "$PWD:/workspace" \
-  -v root-cms-claude-config:/home/rootjs/.claude \
-  root-cms-claude claude
+  -v root-ai-claude-config:/home/rootjs/.claude \
+  root-ai-claude claude
 
 # 3. Start Remote Control. It prints a session URL; press space for a QR code.
 docker run --rm -it --init \
   -p 4008:4007 \
   -v "$PWD:/workspace" \
-  -v root-cms-claude-config:/home/rootjs/.claude \
-  -v root-cms-gcloud:/home/rootjs/.config/gcloud \
-  -v root-cms-pnpm-store:/home/rootjs/.pnpm-store \
+  -v root-ai-claude-config:/home/rootjs/.claude \
+  -v root-gcloud:/home/rootjs/.config/gcloud \
+  -v root-pnpm-store:/home/rootjs/.pnpm-store \
   --env-file .env \
-  root-cms-claude
+  root-ai-claude
 ```
 
 Or with compose, where the service sits behind a `claude` profile so
 `docker compose up` never starts an agent by surprise:
 
 ```bash
-docker compose -f docker/docker-compose.yml build root-cms
+docker compose -f docker/docker-compose.yml build root
 docker compose -f docker/docker-compose.yml build claude
 docker compose -f docker/docker-compose.yml run --rm claude
 ```
 
 Port 4008 maps to the container's 4007, so a dev server Claude starts inside the
 container is at <http://localhost:4008/cms/> — on a different host port than the
-`root-cms` service, so both can run at once.
+`root` service, so both can run at once.
 
 Other useful commands: `claude` for a plain local session, `claude
 --remote-control` for one that is both local and remote, and `claude
@@ -243,7 +243,7 @@ worktree.
 For a deployable image, use this one as a base:
 
 ```dockerfile
-FROM root-cms
+FROM root
 
 COPY --chown=1000:1000 . /workspace
 RUN pnpm install --frozen-lockfile && pnpm exec root build
