@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Container entrypoint. Sets up the git committer identity, installs the mounted
-# project's dependencies when they are missing, reports whether Google Cloud
-# credentials are available, then execs the requested command.
+# Container entrypoint. Sets up the git committer identity and push credentials,
+# installs the mounted project's dependencies when they are missing, reports
+# whether Google Cloud credentials are available, then execs the requested
+# command.
 
 set -euo pipefail
 
@@ -84,6 +85,51 @@ warn_missing_git_identity() {
     "${HOME}/.gitconfig." >&2
 }
 
+# Points git at `gh` for credentials, so `git push` and `gh pr create` work with
+# a token from the environment (GH_TOKEN / GITHUB_TOKEN) or with a `gh auth
+# login` persisted in a volume at ~/.config/gh. A no-op when gh isn't installed
+# (the base image) or when there is nothing to authenticate with.
+#
+# The config is written to the container's own ~/.gitconfig, which lives in the
+# writable layer, so nothing is left behind on the host and no token is
+# persisted to a volume.
+configure_git_credentials() {
+  local name
+  for name in GH_TOKEN GITHUB_TOKEN GH_HOST; do
+    if [[ -z "${!name:-}" ]]; then
+      unset "${name}"
+    fi
+  done
+
+  command -v gh >/dev/null 2>&1 || return 0
+
+  local host="${GH_HOST:-github.com}"
+  local token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  # Checking the config file rather than `gh auth status` keeps startup offline
+  # and fast — `gh auth status` validates the token over the network.
+  local gh_hosts="${GH_CONFIG_DIR:-${HOME}/.config/gh}/hosts.yml"
+  if [[ -z "${token}" ]] && [[ ! -s "${gh_hosts}" ]]; then
+    return 0
+  fi
+
+  # `gh auth setup-git` is the supported path, but some versions refuse when the
+  # only credential is an environment token. The helper it would have written
+  # works either way, so fall back to writing it directly.
+  if ! gh auth setup-git --hostname "${host}" >/dev/null 2>&1; then
+    if ! git config --global "credential.https://${host}.helper" '!gh auth git-credential'; then
+      echo "[root docker] Could not configure the git credential helper —" \
+        "${HOME}/.gitconfig is not writable. Pushing will fail." >&2
+      return 0
+    fi
+  fi
+
+  # A token only authenticates https remotes, so rewrite ssh remotes. Without
+  # this, a repository cloned over ssh still fails to push with no key present.
+  if [[ -n "${token}" ]]; then
+    git config --global "url.https://${host}/.insteadOf" "git@${host}:" || true
+  fi
+}
+
 # Installs dependencies when /workspace looks like an uninstalled npm project.
 # Set ROOT_DOCKER_INSTALL=always to reinstall on every start, or =never to skip.
 maybe_install_deps() {
@@ -99,6 +145,7 @@ maybe_install_deps() {
 }
 
 export_git_identity
+configure_git_credentials
 
 if ! is_setup_command "${1:-}"; then
   check_credentials

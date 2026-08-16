@@ -43,7 +43,7 @@ ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global
 ENV PATH=${HOME}/.npm-global/bin:${PATH}
 
 RUN set -eux; \
-    mkdir -p "${NPM_CONFIG_PREFIX}" "${CLAUDE_CONFIG_DIR}"; \
+    mkdir -p "${NPM_CONFIG_PREFIX}" "${CLAUDE_CONFIG_DIR}" "${HOME}/.config/gh"; \
     npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"; \
     claude --version; \
     chown -R "${ROOTJS_UID}:0" "${HOME}"; \

@@ -195,7 +195,7 @@ docker run --rm -it --init \
   -v root-ai-claude-config:/home/rootjs/.claude \
   -v root-gcloud:/home/rootjs/.config/gcloud \
   -v root-pnpm-store:/home/rootjs/.pnpm-store \
-  -e GIT_AUTHOR_NAME -e GIT_AUTHOR_EMAIL \
+  -e GIT_AUTHOR_NAME -e GIT_AUTHOR_EMAIL -e GH_TOKEN \
   --env-file .env \
   root-ai-claude claude remote-control --spawn worktree
 ```
@@ -271,21 +271,47 @@ config that references signing keys or credential helpers the container lacks
 will fail in confusing ways. Without either, the entrypoint warns at startup that
 commits will fail.
 
-**Pushing is not set up yet.** There are no SSH keys, no token and no credential
-helper in the image, so `git push` fails on authentication and Claude can create
-branches locally but not publish them. A fine-grained token scoped to the one
-repository, passed as `GH_TOKEN` with `gh auth setup-git`, is the approach I'd
-suggest — mounting `~/.ssh` gives an agent container push access to every
-repository you can reach. This also affects worktrees indirectly: their default
-base is the remote's default branch, and when that fetch fails they silently fall
-back to your local `HEAD`.
+**Pushing** uses `gh` as git's credential helper. The entrypoint runs
+`gh auth setup-git` when it finds a credential, so `git push`, `git fetch` and
+`gh pr create` all work. There are two ways to supply one:
+
+```bash
+# A token in the environment. Compose forwards GH_TOKEN and GH_HOST when set.
+docker run --rm -it -e GH_TOKEN ... root-ai-claude
+
+# Or sign in once and keep it in a volume, like the gcloud login.
+docker run --rm -it -v root-ai-gh-config:/home/rootjs/.config/gh \
+  root-ai-claude gh auth login
+```
+
+Use a **fine-grained token scoped to this repository only** — `Contents:
+read and write` to push, plus `Pull requests: read and write` if Claude should
+open PRs. Mounting `~/.ssh` instead would give the agent container push access to
+every repository you can reach, which is the thing worth avoiding. Note that
+compose forwards whatever `GH_TOKEN` is already exported in your shell, so check
+it isn't a broad-scope one you set for something else.
+
+Two details the wiring handles for you:
+
+- Token auth only applies to **https remotes**, so when a token is present the
+  entrypoint adds an `insteadOf` rewrite for `git@<host>:`. A checkout cloned
+  over ssh would otherwise still fail to push, with no key in the container.
+- The credential config is written to the container's own `~/.gitconfig`, in the
+  writable layer — not to a volume and not to your host — so no token outlives
+  the container.
+
+Without a credential, worktrees are affected too: their default base is the
+remote's default branch, and when that fetch fails they fall back silently to
+your local `HEAD`.
 
 ### Notes
 
 - **Credentials the agent inherits.** Mounting the gcloud volume gives Claude
-  write access to your CMS's Firestore data. For anything beyond a scratch
-  project, point the agent container at a volume signed in to a non-production
-  project, or leave the gcloud mount off entirely and let it work on code only.
+  write access to your CMS's Firestore data, and `GH_TOKEN` gives it whatever
+  the token grants. For anything beyond a scratch project, point the agent
+  container at a volume signed in to a non-production project and scope the
+  token to a single repository, or leave the gcloud mount off entirely and let
+  it work on code only.
   This is also why `--dangerously-skip-permissions` deserves care here, even
   though the container runs as a non-root user (the CLI rejects that flag as
   root).

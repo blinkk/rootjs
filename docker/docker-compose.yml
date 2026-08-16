@@ -78,6 +78,10 @@ services:
       - GIT_AUTHOR_EMAIL
       - GIT_COMMITTER_NAME
       - GIT_COMMITTER_EMAIL
+      # Lets the container push and open pull requests. Prefer a fine-grained
+      # token scoped to this repository; see README.md.
+      - GH_TOKEN
+      - GH_HOST
     env_file:
       - path: ${ROOT_PROJECT_DIR:-..}/.env
         required: false
@@ -86,10 +90,13 @@ services:
       # Persists the claude.ai login, settings and history. Separate from the
       # gcloud volume so each can be granted independently.
       - claude-config:/home/rootjs/.claude
+      # Persists an interactive `gh auth login`, as an alternative to GH_TOKEN.
+      - gh-config:/home/rootjs/.config/gh
       - gcloud-config:/home/rootjs/.config/gcloud
       - pnpm-store:/home/rootjs/.pnpm-store
 
 volumes:
   claude-config:
   gcloud-config:
+  gh-config:
   pnpm-store:
