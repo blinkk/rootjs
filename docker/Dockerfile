@@ -87,6 +87,21 @@ RUN set -eux; \
              /workspace; \
     chown -R "${UID}:${GID}" "/home/${USERNAME}" /workspace
 
+# Group-own $HOME and the workspace by root (gid 0) with the same permissions
+# the owner has, so the image also works when the host user isn't ${UID}:
+# `docker run --user "$(id -u):0"` can still write the gcloud, pnpm and Claude
+# Code config under $HOME.
+RUN set -eux; \
+    chgrp -R 0 "/home/${USERNAME}" /workspace; \
+    chmod -R g=u "/home/${USERNAME}" /workspace
+
+# A bind-mounted repo is owned by the host user, which git rejects as "dubious
+# ownership" whenever that uid differs from the one running in the container —
+# refusing every command, not just writes. The container is single-tenant and
+# the mount is the caller's own checkout, so the check has nothing to protect
+# here.
+RUN git config --system --add safe.directory '*'
+
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENV HOME=/home/${USERNAME}

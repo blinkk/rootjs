@@ -31,6 +31,13 @@ services:
     working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
     ports:
       - '${PORT:-4007}:4007'
+    environment:
+      # Passed through only when set on the host, so git never sees an empty
+      # identity (which it rejects more loudly than a missing one).
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - GIT_COMMITTER_NAME
+      - GIT_COMMITTER_EMAIL
     env_file:
       - path: ${ROOT_PROJECT_DIR:-..}/.env
         required: false
@@ -56,10 +63,21 @@ services:
     stdin_open: true
     tty: true
     working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
+    # Each session gets its own git worktree under .claude/worktrees/, which is
+    # inside the bind mount, so the work survives the container. Without this,
+    # every session edits the same files in /workspace.
+    command: ['claude', 'remote-control', '--spawn', 'worktree']
     ports:
-      # A dev server started by Claude inside the container, on a different
-      # host port so it can run alongside the `root` service.
-      - '${CLAUDE_PORT:-4008}:4007'
+      # A range, not a single port: `root dev` scans upward from 4007 for a free
+      # port, so a second concurrent session's dev server lands on 4008 inside
+      # the container and would otherwise be unreachable. Host ports are offset
+      # by one so they don't collide with the `root` service.
+      - '4008-4013:4007-4012'
+    environment:
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - GIT_COMMITTER_NAME
+      - GIT_COMMITTER_EMAIL
     env_file:
       - path: ${ROOT_PROJECT_DIR:-..}/.env
         required: false

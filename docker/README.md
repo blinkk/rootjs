@@ -121,15 +121,22 @@ default — install only when `node_modules` is missing), `always`, or `never`.
 
 **Reuse the host's gcloud config.** If you're already signed in on the host,
 bind-mount the config directory instead of using a named volume. Ownership has
-to line up, so build with your own uid/gid if it isn't `1000`:
+to line up, so run as your own uid if it isn't `1000`:
 
 ```bash
-docker build -t root --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" docker/
 docker run --rm -it -p 4007:4007 \
+  --user "$(id -u):0" \
   -v "$PWD:/workspace" \
   -v "$HOME/.config/gcloud:/home/rootjs/.config/gcloud" \
   root
 ```
+
+`$HOME` inside the image is group-owned by root (gid `0`) with the owner's
+permissions, so any uid that runs with group `0` can still write the gcloud,
+pnpm and Claude Code config. Building with
+`--build-arg UID="$(id -u)" --build-arg GID="$(id -g)"` also works and is
+tidier if you're building locally anyway, but `--user` is the option that works
+against a pulled image.
 
 **Service account key**, for CI or a shared server:
 
@@ -183,13 +190,14 @@ docker run --rm -it \
 
 # 3. Start Remote Control. It prints a session URL; press space for a QR code.
 docker run --rm -it --init \
-  -p 4008:4007 \
+  -p 4008-4013:4007-4012 \
   -v "$PWD:/workspace" \
   -v root-ai-claude-config:/home/rootjs/.claude \
   -v root-gcloud:/home/rootjs/.config/gcloud \
   -v root-pnpm-store:/home/rootjs/.pnpm-store \
+  -e GIT_AUTHOR_NAME -e GIT_AUTHOR_EMAIL \
   --env-file .env \
-  root-ai-claude
+  root-ai-claude claude remote-control --spawn worktree
 ```
 
 Or with compose, where the service sits behind a `claude` profile so
@@ -201,14 +209,76 @@ docker compose -f docker/docker-compose.yml build claude
 docker compose -f docker/docker-compose.yml run --rm claude
 ```
 
-Port 4008 maps to the container's 4007, so a dev server Claude starts inside the
-container is at <http://localhost:4008/cms/> — on a different host port than the
-`root` service, so both can run at once.
+Other useful commands: `claude` for a plain local session and
+`claude --remote-control` for one that is both local and remote.
 
-Other useful commands: `claude` for a plain local session, `claude
---remote-control` for one that is both local and remote, and `claude
-remote-control --spawn worktree` to give each remote session its own git
-worktree.
+### Parallel sessions
+
+Server mode (`claude remote-control`, the image's default) serves multiple
+concurrent sessions from one process — up to `--capacity`, which defaults to 32.
+`claude --remote-control` does not; it's one remote session per process.
+
+Two things make that work in a container:
+
+- **`--spawn worktree`.** The default spawn mode is `same-dir`, where every
+  session edits the same files in `/workspace` and they collide. With
+  `--spawn worktree`, each on-demand session gets its own git worktree. Press
+  `w` at runtime to toggle. The compose service passes this flag already.
+- **A port range, not a single port.** `root dev` scans upward from 4007 for a
+  free port, so a second session's dev server binds 4008 *inside* the container.
+  Publishing `4008-4013:4007-4012` keeps them reachable — the first session's
+  server is at <http://localhost:4008/cms/>, the second at `:4009`, and so on.
+
+What every session shares: one CPU/memory budget, one pnpm store, and one set of
+Google Cloud credentials — so N parallel agents write to the same Firestore
+project as the same identity.
+
+### Git access
+
+`git` is in the base image and `gh` is in the Claude image, and `/workspace` is a
+bind mount that includes `.git`, so branches and commits land in your real
+repository on the host.
+
+Worktrees work well here because Claude Code creates them under
+`.claude/worktrees/<name>/` **at the repository root** — inside the bind mount,
+so they survive `docker rm` and are visible on the host. (This repo's
+`.gitignore` already covers `.claude/`; add `.claude/worktrees/` to your own
+project's if it doesn't.) Two consequences worth planning for:
+
+- A worktree is a fresh checkout with **no `node_modules`**. The entrypoint only
+  auto-installs for the directory the container started in, so each worktree
+  needs its own `pnpm install`. The shared pnpm store makes that cheap.
+- A worktree has none of your gitignored files either, including `.env`. Add a
+  [`.worktreeinclude`][worktreeinclude] to the project root to copy them in
+  automatically:
+
+  ```text
+  .env
+  .env.local
+  ```
+
+**Committing** needs an identity. Pass one through, and the entrypoint mirrors it
+to the committer fields:
+
+```bash
+-e GIT_AUTHOR_NAME="Your Name" -e GIT_AUTHOR_EMAIL="you@example.com"
+```
+
+Compose forwards `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL` and the `GIT_COMMITTER_*`
+pair from your shell when they're set. Mounting a gitconfig
+(`-v "$HOME/.gitconfig:/home/rootjs/.gitconfig:ro"`) also works, though a host
+config that references signing keys or credential helpers the container lacks
+will fail in confusing ways. Without either, the entrypoint warns at startup that
+commits will fail.
+
+**Pushing is not set up yet.** There are no SSH keys, no token and no credential
+helper in the image, so `git push` fails on authentication and Claude can create
+branches locally but not publish them. A fine-grained token scoped to the one
+repository, passed as `GH_TOKEN` with `gh auth setup-git`, is the approach I'd
+suggest — mounting `~/.ssh` gives an agent container push access to every
+repository you can reach. This also affects worktrees indirectly: their default
+base is the remote's default branch, and when that fetch fails they silently fall
+back to your local `HEAD`.
 
 ### Notes
 
@@ -259,8 +329,14 @@ above.
   `USERNAME` build arg).
 - **`reauthentication is needed`** — user ADC expires. Re-run
   `gcloud auth application-default login` with the volume mounted.
-- **Permission errors on files in the mounted project** — rebuild with
-  `--build-arg UID="$(id -u)" --build-arg GID="$(id -g)"`.
+- **Permission errors on files in the mounted project**, or git failing with
+  `detected dubious ownership` — run with `--user "$(id -u):0"`, or rebuild with
+  `--build-arg UID="$(id -u)" --build-arg GID="$(id -g)"`. (The image sets
+  `safe.directory=*` system-wide, so the ownership check itself is off; what's
+  left is real filesystem permissions.)
+- **`git commit` fails with `empty ident name`** — an identity variable was
+  passed through empty. The entrypoint drops empty `GIT_*` values, so this means
+  something set them after startup.
 - **Port already in use** — `root dev` reads `PORT` (default `4007`), so
   `-e PORT=5000 -p 5000:5000` moves it.
 - **`claude remote-control` exits immediately** — it checks eligibility before
@@ -269,3 +345,4 @@ above.
 
 [adc]: https://cloud.google.com/docs/authentication/application-default-credentials
 [remote-control]: https://code.claude.com/docs/en/remote-control
+[worktreeinclude]: https://code.claude.com/docs/en/worktrees#copy-gitignored-files-into-worktrees

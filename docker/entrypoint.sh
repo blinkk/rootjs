@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Container entrypoint. Installs the mounted project's dependencies when they
-# are missing, reports whether Google Cloud credentials are available, then
-# execs the requested command.
+# Container entrypoint. Sets up the git committer identity, installs the mounted
+# project's dependencies when they are missing, reports whether Google Cloud
+# credentials are available, then execs the requested command.
 
 set -euo pipefail
 
@@ -48,6 +48,42 @@ until you sign in. Run this once, with the same gcloud volume mounted:
 EOF
 }
 
+# Git refuses to commit without a committer identity, and an exported-but-empty
+# GIT_* variable fails harder than an unset one ("empty ident name not allowed"),
+# so drop the empties. GIT_AUTHOR_* is mirrored to GIT_COMMITTER_* so callers
+# only have to pass one pair.
+export_git_identity() {
+  local name
+  for name in GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; do
+    if [[ -z "${!name:-}" ]]; then
+      unset "${name}"
+    fi
+  done
+  if [[ -n "${GIT_AUTHOR_NAME:-}" ]] && [[ -z "${GIT_COMMITTER_NAME:-}" ]]; then
+    export GIT_COMMITTER_NAME="${GIT_AUTHOR_NAME}"
+  fi
+  if [[ -n "${GIT_AUTHOR_EMAIL:-}" ]] && [[ -z "${GIT_COMMITTER_EMAIL:-}" ]]; then
+    export GIT_COMMITTER_EMAIL="${GIT_AUTHOR_EMAIL}"
+  fi
+}
+
+# Warns when a commit would fail for lack of an identity. Only meaningful inside
+# a repository, so non-git workspaces stay quiet.
+warn_missing_git_identity() {
+  if [[ -n "${GIT_AUTHOR_EMAIL:-}" ]]; then
+    return 0
+  fi
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ -n "$(git config --get user.email 2>/dev/null || true)" ]]; then
+    return 0
+  fi
+  echo "[root docker] No git identity configured — commits will fail. Pass" \
+    "-e GIT_AUTHOR_NAME -e GIT_AUTHOR_EMAIL, or mount a gitconfig at" \
+    "${HOME}/.gitconfig." >&2
+}
+
 # Installs dependencies when /workspace looks like an uninstalled npm project.
 # Set ROOT_DOCKER_INSTALL=always to reinstall on every start, or =never to skip.
 maybe_install_deps() {
@@ -62,8 +98,11 @@ maybe_install_deps() {
   pnpm install
 }
 
+export_git_identity
+
 if ! is_setup_command "${1:-}"; then
   check_credentials
+  warn_missing_git_identity
   maybe_install_deps
 fi
 

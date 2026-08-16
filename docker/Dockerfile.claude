@@ -14,6 +14,21 @@ FROM ${BASE_IMAGE}
 
 ARG CLAUDE_CODE_VERSION=latest
 
+# The GitHub CLI, from the official apt repo. Claude reaches for `gh` to open
+# pull requests and read CI results, and `gh auth setup-git` is one way to give
+# the container push credentials.
+USER root
+RUN set -eux; \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /usr/share/keyrings/githubcli-archive-keyring.gpg; \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg; \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends gh; \
+    rm -rf /var/lib/apt/lists/*; \
+    gh --version
+
 # Claude Code stores its auth token, settings and history under ~/.claude, but
 # keeps the OAuth account, MCP servers and per-project trust in ~/.claude.json,
 # outside that directory. CLAUDE_CONFIG_DIR moves that file inside it so a
@@ -27,12 +42,14 @@ ENV CLAUDE_CONFIG_DIR=${HOME}/.claude
 ENV NPM_CONFIG_PREFIX=${HOME}/.npm-global
 ENV PATH=${HOME}/.npm-global/bin:${PATH}
 
-USER ${ROOTJS_UID}:${ROOTJS_GID}
 RUN set -eux; \
     mkdir -p "${NPM_CONFIG_PREFIX}" "${CLAUDE_CONFIG_DIR}"; \
     npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"; \
-    claude --version
+    claude --version; \
+    chown -R "${ROOTJS_UID}:0" "${HOME}"; \
+    chmod -R g=u "${HOME}"
 
+USER ${ROOTJS_UID}:${ROOTJS_GID}
 WORKDIR /workspace
 
 # Server mode: stays running, prints a session URL, and accepts connections from
