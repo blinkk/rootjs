@@ -16,8 +16,14 @@
 }
 
 .ShareBox__user {
-  grid-template-columns: 24px minmax(0, 1fr) 120px;
+  grid-template-columns: 24px minmax(0, 1fr) 24px 120px;
   padding: 6px 16px;
+}
+
+.ShareBox__user__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .ShareBox__user:hover {

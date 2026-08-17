@@ -1,5 +1,6 @@
 import './SettingsPage.css';
 import {Button, LoadingOverlay, Switch, Textarea} from '@mantine/core';
+import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconCheck} from '@tabler/icons-preact';
 import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
@@ -11,6 +12,7 @@ import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {useSearchIndexStatus} from '../../hooks/useGlobalSearch.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
@@ -23,6 +25,7 @@ import {
   PermissionGroup,
   derivedRolesFromGroups,
 } from '../../utils/permissionGroups.js';
+import {resetUserSignIn} from '../../utils/users.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 
 function formatRelative(ts: number | null): string {
@@ -242,6 +245,8 @@ function ShareSection() {
   );
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId);
+  const modals = useModals();
+  const modalTheme = useModalTheme();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -303,6 +308,49 @@ function ShareSection() {
 
   function setGroups(permissionGroups: PermissionGroup[]) {
     setDraft((prev) => ({...prev, permissionGroups}));
+  }
+
+  /**
+   * Clears the stale Google link on a user's account so that they can sign in
+   * again. Their role and content are untouched; the account re-links itself
+   * on their next sign-in.
+   */
+  function resetSignIn(email: string) {
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: 'Reset sign-in',
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          <p>
+            Use this when {email} can't sign in and sees an error about their
+            Google account no longer being linked. It unlinks the Google account
+            from their sign-in record so the next sign-in links it again.
+          </p>
+          <p>
+            Their role and content are not affected, and they stay signed in
+            wherever they already are.
+          </p>
+        </Text>
+      ),
+      labels: {confirm: 'Reset sign-in', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        await notifyErrors(async () => {
+          const reset = await resetUserSignIn(email);
+          showNotification({
+            title: reset ? 'Sign-in reset' : 'Nothing to reset',
+            message: reset
+              ? `${email} can sign in again.`
+              : `${email} has no Google sign-in link to reset. They may be signing in with a different address.`,
+            color: reset ? 'green' : 'yellow',
+            autoClose: 5000,
+          });
+        });
+        modals.closeModal(modalId);
+      },
+    });
   }
 
   function discard() {
@@ -405,6 +453,11 @@ function ShareSection() {
             Use <strong>groups</strong> to manage many users at once and
             optionally scope a role to specific collections.
           </p>
+          <p>
+            If a user is blocked at sign-in because their Google account is no
+            longer linked, use <strong>Reset sign-in</strong> next to their
+            name.
+          </p>
         </Text>
       </div>
       <Surface className="SettingsPage__section__right">
@@ -422,6 +475,7 @@ function ShareSection() {
               roles={draft.globalRoles}
               onChange={setRoles}
               currentUserIsAdmin={currentUserIsAdmin}
+              onResetSignIn={resetSignIn}
             />
           </div>
           <div className="SettingsPage__share__subsection">

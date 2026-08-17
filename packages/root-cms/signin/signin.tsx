@@ -16,6 +16,7 @@ import {
   markAutoSignInAttempt,
   setLastSignIn,
 } from '../shared/auth-hints.js';
+import {getSignInErrorMessage} from '../shared/sign-in-errors.js';
 import './styles/global.css';
 import './styles/signin.css';
 
@@ -289,11 +290,7 @@ SignIn.Button = (props: ButtonProps) => {
         return;
       }
       console.error(err);
-      updateError(
-        code === 'auth/network-request-failed'
-          ? 'Network error. Please check your connection and try again.'
-          : `Sign in failed: ${err?.message || 'unknown error'}`
-      );
+      updateError(getSignInErrorMessage(err));
       updateStatus('idle');
       return;
     }

@@ -2,6 +2,7 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {getAuth} from 'firebase-admin/auth';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
@@ -51,6 +52,9 @@ const SYNC_PROXY_ALLOWED_HOSTS: RegExp[] = [
 
 /** Max response size the asset sync relay will forward (100MB). */
 const SYNC_PROXY_MAX_BYTES = 100 * 1024 * 1024;
+
+/** The only sign-in provider the CMS uses. */
+const GOOGLE_PROVIDER_ID = 'google.com';
 
 type DocVersion = 'draft' | 'published';
 
@@ -798,6 +802,96 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
+
+  /**
+   * Unlinks the Google provider from a user's Firebase Auth record so their
+   * next sign-in re-links it. ADMIN-only.
+   *
+   * Identity Platform attaches a federated identity to the account that
+   * already exists for an email address, and rejects the attach with
+   * `auth/provider-already-linked` when that account carries a `google.com`
+   * provider with a different federated id. The address alone still resolves
+   * to the same person — the CMS keys access off the email, not the Firebase
+   * uid — so dropping the stale provider lets the user back in without
+   * touching their role or any of their content. Nothing else on the account
+   * record is modified, and the account is left untouched when it has no
+   * Google provider to drop.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/users.reset_sign_in
+   * {"email": "grogu@example.com"}
+   * ```
+   */
+  server.use(
+    '/cms/api/users.reset_sign_in',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const email = String(req.body?.email || '')
+        .trim()
+        .toLowerCase();
+      if (!email || !email.includes('@') || email.startsWith('*@')) {
+        res.status(400).json({
+          success: false,
+          error: 'INVALID_EMAIL',
+        });
+        return;
+      }
+
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      try {
+        const role = await cmsClient.getUserRole(req.user.email);
+        if (role !== 'ADMIN') {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+        return;
+      }
+
+      try {
+        const auth = getAuth(cmsClient.app);
+        const user = await auth.getUserByEmail(email).catch((err) => {
+          if (err?.code === 'auth/user-not-found') {
+            return null;
+          }
+          throw err;
+        });
+        const hasGoogleProvider = !!user?.providerData?.some(
+          (provider) => provider.providerId === GOOGLE_PROVIDER_ID
+        );
+        if (!user || !hasGoogleProvider) {
+          // Nothing to reset. The next sign-in creates or links the record.
+          res.status(200).json({success: true, reset: false});
+          return;
+        }
+        await auth.updateUser(user.uid, {
+          providersToUnlink: [GOOGLE_PROVIDER_ID],
+        });
+        await cmsClient.logAction('user.reset_sign_in', {
+          by: req.user.email,
+          metadata: {email: email},
+        });
+        res.status(200).json({success: true, reset: true});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
 
   // ===========================================================================
   // One-shot AI tasks. These wrap the Vercel AI SDK helpers in `ai.ts`

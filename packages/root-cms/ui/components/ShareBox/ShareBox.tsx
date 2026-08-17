@@ -1,4 +1,5 @@
-import {Button, Select, TextInput} from '@mantine/core';
+import {ActionIcon, Button, Select, TextInput, Tooltip} from '@mantine/core';
+import {IconKeyOff} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../core/client.js';
 import {useUserProfiles} from '../../hooks/useUserProfile.js';
@@ -14,10 +15,14 @@ export interface ShareBoxProps {
   roles: Record<string, UserRole>;
   onChange: (roles: Record<string, UserRole>) => void;
   currentUserIsAdmin: boolean;
+  /**
+   * Called when an admin resets a user's sign-in. Omit to hide the action.
+   */
+  onResetSignIn?: (email: string) => void;
 }
 
 export function ShareBox(props: ShareBoxProps) {
-  const {roles, onChange, currentUserIsAdmin} = props;
+  const {roles, onChange, currentUserIsAdmin, onResetSignIn} = props;
   const [emailInput, setEmailInput] = useState('');
   const profileEmails = Object.keys(roles).filter(
     (email) => !isOrgEmail(email)
@@ -92,6 +97,7 @@ export function ShareBox(props: ShareBoxProps) {
             currentUserIsAdmin={currentUserIsAdmin}
             onRoleChange={setRole}
             onRemove={removeUser}
+            onResetSignIn={onResetSignIn}
           />
         ))}
       </div>
@@ -106,10 +112,17 @@ export interface ShareBoxUserProps {
   currentUserIsAdmin: boolean;
   onRoleChange: (email: string, newRole: UserRole) => void;
   onRemove: (email: string) => void;
+  onResetSignIn?: (email: string) => void;
 }
 
 ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
+  // Domain-wide entries (`*@example.com`) don't map to an account, so there's
+  // nothing to reset for them.
+  const canResetSignIn =
+    !!props.onResetSignIn &&
+    props.currentUserIsAdmin &&
+    !isOrgEmail(props.email);
   return (
     <div className="ShareBox__user">
       <EmailAvatar
@@ -127,6 +140,28 @@ ShareBox.User = (props: ShareBoxUserProps) => {
         {props.email}
         {isCurrentUser && ' (you)'}
       </Text>
+      <div className="ShareBox__user__actions">
+        {canResetSignIn && (
+          <Tooltip
+            label="Reset sign-in"
+            withArrow
+            transition="pop"
+            position="left"
+          >
+            <ActionIcon
+              className="ShareBox__user__resetSignIn"
+              size="sm"
+              radius={0}
+              variant="subtle"
+              color="dark"
+              aria-label={`Reset sign-in for ${props.email}`}
+              onClick={() => props.onResetSignIn!(props.email)}
+            >
+              <IconKeyOff size={16} strokeWidth={1.75} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </div>
       <div className="ShareBox__user__roleSelect">
         <Select
           data={[
