@@ -26,6 +26,19 @@
   justify-content: flex-end;
 }
 
+/* Kept out of the way until the row is hovered or the button is tabbed to.
+ * The grid column is reserved either way so rows don't shift. */
+.ShareBox__user__resetSignIn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ShareBox__user:hover .ShareBox__user__resetSignIn,
+.ShareBox__user:focus-within .ShareBox__user__resetSignIn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .ShareBox__user:hover {
   background-color: rgb(248, 249, 250);
 }

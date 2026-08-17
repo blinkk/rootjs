@@ -22,6 +22,41 @@ export async function getAllEditors(): Promise<string[]> {
   return editors;
 }
 
+/** Whether an email has a Google sign-in link that could be reset. */
+export interface SignInStatus {
+  /** True if a Firebase Auth account exists for the email. */
+  exists: boolean;
+  /** True if that account has a Google provider linked to it. */
+  hasGoogleLink: boolean;
+}
+
+/**
+ * Looks up which of the given emails have a Google sign-in link, so that the
+ * "reset sign-in" action can be hidden for the users it can't help. Requires
+ * the ADMIN role. Results are keyed by lower-cased email.
+ */
+export async function getSignInStatuses(
+  emails: string[]
+): Promise<Map<string, SignInStatus>> {
+  const statuses = new Map<string, SignInStatus>();
+  if (emails.length === 0) {
+    return statuses;
+  }
+  const res = await fetch('/cms/api/users.sign_in_status', {
+    method: 'POST',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({emails: emails}),
+  });
+  if (res.status !== 200) {
+    throw new Error(`failed to fetch sign-in statuses (${res.status})`);
+  }
+  const data = await res.json();
+  Object.entries(data.users || {}).forEach(([email, status]) => {
+    statuses.set(email.toLowerCase(), status as SignInStatus);
+  });
+  return statuses;
+}
+
 /**
  * Resets a user's Google sign-in link.
  *

@@ -2,6 +2,7 @@ import {ActionIcon, Button, Select, TextInput, Tooltip} from '@mantine/core';
 import {IconKeyOff} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../core/client.js';
+import {useSignInStatuses} from '../../hooks/useSignInStatus.js';
 import {useUserProfiles} from '../../hooks/useUserProfile.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {sortByKey} from '../../utils/objects.js';
@@ -28,6 +29,11 @@ export function ShareBox(props: ShareBoxProps) {
     (email) => !isOrgEmail(email)
   );
   const {profiles} = useUserProfiles(profileEmails);
+  // Only admins can reset a sign-in, and only accounts that actually have a
+  // Google link have anything to reset.
+  const {statuses} = useSignInStatuses(profileEmails, {
+    enabled: currentUserIsAdmin && !!onResetSignIn,
+  });
 
   function setRole(email: string, role: UserRole) {
     onChange({...roles, [email]: role});
@@ -54,6 +60,7 @@ export function ShareBox(props: ShareBoxProps) {
         email,
         role: roles[email],
         profile: profiles.get(email.toLowerCase()) || null,
+        hasGoogleLink: !!statuses.get(email.toLowerCase())?.hasGoogleLink,
       };
     }),
     'email'
@@ -110,6 +117,8 @@ export interface ShareBoxUserProps {
   role: UserRole;
   profile?: UserProfile | null;
   currentUserIsAdmin: boolean;
+  /** True if the user has a Google sign-in link that could be reset. */
+  hasGoogleLink?: boolean;
   onRoleChange: (email: string, newRole: UserRole) => void;
   onRemove: (email: string) => void;
   onResetSignIn?: (email: string) => void;
@@ -117,12 +126,13 @@ export interface ShareBoxUserProps {
 
 ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
-  // Domain-wide entries (`*@example.com`) don't map to an account, so there's
-  // nothing to reset for them.
+  // Hidden unless there's a Google link to unlink. Domain-wide entries
+  // (`*@example.com`) and users who have never signed in don't have one.
   const canResetSignIn =
     !!props.onResetSignIn &&
     props.currentUserIsAdmin &&
-    !isOrgEmail(props.email);
+    !isOrgEmail(props.email) &&
+    !!props.hasGoogleLink;
   return (
     <div className="ShareBox__user">
       <EmailAvatar

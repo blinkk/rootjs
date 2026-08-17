@@ -455,8 +455,8 @@ function ShareSection() {
           </p>
           <p>
             If a user is blocked at sign-in because their Google account is no
-            longer linked, use <strong>Reset sign-in</strong> next to their
-            name.
+            longer linked, hover their row and use{' '}
+            <strong>Reset sign-in</strong>.
           </p>
         </Text>
       </div>
