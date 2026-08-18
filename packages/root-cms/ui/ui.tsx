@@ -38,6 +38,7 @@ import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneT
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
+import {TaskFieldsModal} from './components/TaskFieldsModal/TaskFieldsModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
@@ -371,6 +372,7 @@ function App() {
                         [ReferenceFieldEditorModal.id]:
                           ReferenceFieldEditorModal,
                         [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                        [TaskFieldsModal.id]: TaskFieldsModal,
                         [VersionHistoryModal.id]: VersionHistoryModal,
                       }}
                     >

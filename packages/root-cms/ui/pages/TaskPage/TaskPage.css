@@ -608,3 +608,162 @@
     align-self: flex-end;
   }
 }
+
+.TaskPage__sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--chip-background);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-text-gray);
+  text-decoration: none;
+}
+
+.TaskPage__sourceBadge--link:hover {
+  color: var(--color-text-default);
+}
+
+.TaskPage__blockedBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #e0b400;
+  border-radius: var(--surface-border-radius);
+  background: #fff6d6;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #7a5c00;
+}
+
+.TaskPage__blockedBanner a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.TaskPage__subtasks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.TaskPage__subtasks__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.TaskPage__subtasks__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-gray);
+}
+
+.TaskPage__subtasks__progress {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.TaskPage__subtasks__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.TaskPage__subtasks__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.TaskPage__subtasks__check {
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-gray);
+}
+
+.TaskPage__subtasks__check--done {
+  border-color: #1f8a4c;
+  background: #1f8a4c;
+  color: #fff;
+}
+
+.TaskPage__subtasks__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--color-text-default);
+  text-decoration: none;
+}
+
+.TaskPage__subtasks__title:hover {
+  text-decoration: underline;
+}
+
+.TaskPage__subtasks__title--done {
+  color: var(--color-text-gray);
+  text-decoration: line-through;
+}
+
+.TaskPage__subtasks__assignee {
+  flex-shrink: 0;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-text-gray);
+}
+
+.TaskPage__subtasks__form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.TaskPage__subtasks__form > *:first-child {
+  flex: 1 1 auto;
+}
+
+.TaskPage__comment__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.TaskPage__comment__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--chip-background);
+  font-size: 11px;
+}
+
+.TaskPage__comment__attachment a {
+  color: var(--color-text-default);
+  text-decoration: none;
+}
+
+.TaskPage__comment__attachment a:hover {
+  text-decoration: underline;
+}

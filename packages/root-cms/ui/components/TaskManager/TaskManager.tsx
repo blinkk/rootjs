@@ -1,6 +1,7 @@
 import './TaskManager.css';
 
 import {
+  ActionIcon,
   Button,
   Loader,
   Menu,
@@ -8,14 +9,21 @@ import {
   SegmentedControl,
   Table,
   TextInput,
+  Tooltip,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconArrowRight,
   IconCalendar,
+  IconCheck,
   IconChevronDown,
   IconColumns3,
   IconFlag,
+  IconSearch,
+  IconSelector,
+  IconSortAscending,
+  IconSortDescending,
   IconTable,
   IconUserPlus,
 } from '@tabler/icons-preact';
@@ -26,14 +34,26 @@ import {joinClassNames} from '../../utils/classes.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {
   createTask,
+  getSubtaskProgress,
+  getTaskDueDate,
   isOpenTaskStatus,
+  isTaskBlocked,
+  isTaskOverdue,
   normalizeTaskStatus,
+  searchTasks,
+  sortTasks,
   subscribeOpenTasks,
+  subscribeTaskFieldDefs,
   subscribeTasks,
   Task,
+  TaskFieldDef,
   TaskPriority,
+  TaskSortDirection,
+  TaskSortKey,
+  updateTaskStatus,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
+import {TaskFieldValueDisplay} from '../TaskFieldInput/TaskFieldInput.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 
 type TaskFilter =
@@ -107,7 +127,17 @@ export function TaskManager(props: TaskManagerProps) {
   const variant = props.variant || 'compact';
   const showPageLayout = variant === 'page';
   const {tasks, loading, error} = useTasks(showPageLayout ? 'all' : 'open');
+  const fieldDefs = useTaskFieldDefs();
   const [filter, setFilter] = useState<TaskFilter>('open');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<{
+    key: TaskSortKey;
+    direction: TaskSortDirection;
+  }>({key: 'created', direction: 'desc'});
+  const [showSubtasks, setShowSubtasks] = useLocalStorage<boolean>(
+    'root-cms-task-manager-show-subtasks',
+    false
+  );
   const [layout, setLayout] = useLocalStorage<TaskLayout>(
     'root-cms-task-manager-layout-v2',
     'table'
@@ -124,8 +154,15 @@ export function TaskManager(props: TaskManagerProps) {
     ? TASK_PAGE_FILTER_OPTIONS
     : TASK_COMPACT_FILTER_OPTIONS;
   const visibleTasks = useMemo(() => {
-    return filterTasks(tasks, filter, currentUserEmail);
-  }, [tasks, filter, currentUserEmail]);
+    let nextTasks = filterTasks(tasks, filter, currentUserEmail);
+    // Subtasks are listed on their parent's page; showing them here too
+    // double-counts the work, so they're hidden unless asked for.
+    if (!showSubtasks) {
+      nextTasks = nextTasks.filter((task) => !task.parentId);
+    }
+    nextTasks = searchTasks(nextTasks, query);
+    return sortTasks(nextTasks, sort.key, sort.direction);
+  }, [tasks, filter, currentUserEmail, showSubtasks, query, sort]);
   const taskCount = visibleTasks.length;
   const taskCountLabel = showPageLayout
     ? `${taskCount} shown`
@@ -146,7 +183,7 @@ export function TaskManager(props: TaskManagerProps) {
         description: taskDraft.description,
         assignee: assigneeEmail.trim() || undefined,
         priority,
-        targetLaunchDate: parseTargetLaunchDate(targetLaunchDate),
+        dueDate: parseTargetLaunchDate(targetLaunchDate),
       });
       setDraft('');
       setAssigneeEmail('');
@@ -313,14 +350,14 @@ export function TaskManager(props: TaskManagerProps) {
                     <span>
                       {targetLaunchDate
                         ? formatTargetLaunchDateLabel(targetLaunchDate)
-                        : 'target launch date'}
+                        : 'due date'}
                     </span>
                   </button>
                 }
               >
                 <div className="TaskManager__composer__popover">
                   <label className="TaskManager__composer__dateLabel">
-                    Target launch date
+                    Due date
                     <input
                       type="date"
                       value={targetLaunchDate}
@@ -390,6 +427,28 @@ export function TaskManager(props: TaskManagerProps) {
           </div>
         </div>
         <div className="TaskManager__listHeader__actions">
+          <TextInput
+            className="TaskManager__search"
+            size="xs"
+            type="search"
+            value={query}
+            placeholder="Search tasks..."
+            aria-label="Search tasks"
+            icon={<IconSearch size={14} strokeWidth="1.8" />}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setQuery(e.currentTarget.value)
+            }
+          />
+          {showPageLayout && (
+            <Button
+              compact
+              size="xs"
+              variant={showSubtasks ? 'light' : 'default'}
+              onClick={() => setShowSubtasks(!showSubtasks)}
+            >
+              {showSubtasks ? 'Hide subtasks' : 'Show subtasks'}
+            </Button>
+          )}
           {showPageLayout ? (
             <SegmentedControl
               className="TaskManager__layoutToggle"
@@ -413,27 +472,43 @@ export function TaskManager(props: TaskManagerProps) {
       </div>
 
       <TaskListContent
+        allTasks={tasks}
         error={error}
+        fieldDefs={fieldDefs}
         filter={filter}
         layout={showPageLayout ? layout : 'compact'}
         loading={loading}
+        query={query}
+        sort={sort}
         tasks={visibleTasks}
+        onSortChange={setSort}
       />
     </div>
   );
 }
 
+interface TaskSortState {
+  key: TaskSortKey;
+  direction: TaskSortDirection;
+}
+
 interface TaskListContentProps {
+  /** Every task, used for subtask rollups and blocker resolution. */
+  allTasks: Task[];
   error: string;
+  fieldDefs: TaskFieldDef[];
   filter: TaskFilter;
   layout: TaskListLayout;
   loading: boolean;
+  query: string;
+  sort: TaskSortState;
   tasks: Task[];
+  onSortChange: (sort: TaskSortState) => void;
 }
 
 /** Renders the current task list view and shared loading states. */
 function TaskListContent(props: TaskListContentProps) {
-  const {error, filter, layout, loading, tasks} = props;
+  const {allTasks, error, fieldDefs, filter, layout, loading, tasks} = props;
   if (loading) {
     return (
       <Surface className="TaskManager__list">
@@ -454,28 +529,178 @@ function TaskListContent(props: TaskListContentProps) {
     return (
       <Surface className="TaskManager__list">
         <div className="TaskManager__list__state">
-          {getEmptyTaskMessage(filter, layout)}
+          {props.query
+            ? `No tasks match "${props.query}".`
+            : getEmptyTaskMessage(filter, layout)}
         </div>
       </Surface>
     );
   }
   if (layout === 'board') {
-    return <TaskBoard filter={filter} tasks={tasks} />;
+    return <TaskBoard allTasks={allTasks} filter={filter} tasks={tasks} />;
   }
   if (layout === 'table') {
-    return <TaskTable tasks={tasks} />;
+    return (
+      <TaskTable
+        allTasks={allTasks}
+        fieldDefs={fieldDefs}
+        sort={props.sort}
+        tasks={tasks}
+        onSortChange={props.onSortChange}
+      />
+    );
   }
   return (
     <Surface className="TaskManager__list">
       {tasks.map((task) => (
-        <TaskRow key={task.id} task={task} />
+        <TaskRow key={task.id} allTasks={allTasks} task={task} />
       ))}
     </Surface>
   );
 }
 
+/**
+ * Toggles a task between its current status and closed, so the list has
+ * the same one-click completion an Asana-style tracker does.
+ */
+async function toggleTaskComplete(task: Task) {
+  try {
+    await updateTaskStatus(
+      task.id,
+      isOpenTaskStatus(task.status) ? 'closed' : 'new'
+    );
+  } catch (err) {
+    showNotification({
+      title: 'Could not update task',
+      message: errorMessage(err),
+      color: 'red',
+      autoClose: false,
+    });
+  }
+}
+
+/** One-click completion toggle shared by the list and table views. */
+function TaskCompleteToggle(props: {task: Task}) {
+  const {task} = props;
+  const done = !isOpenTaskStatus(task.status);
+  return (
+    <Tooltip label={done ? 'Reopen task' : 'Mark complete'}>
+      <ActionIcon
+        className={joinClassNames(
+          'TaskManager__completeToggle',
+          done && 'TaskManager__completeToggle--done'
+        )}
+        size="sm"
+        aria-label={done ? 'Reopen task' : 'Mark complete'}
+        onClick={(e: MouseEvent) => {
+          // The toggle sits inside the row's <a>; don't navigate.
+          e.preventDefault();
+          e.stopPropagation();
+          toggleTaskComplete(task);
+        }}
+      >
+        <IconCheck size={14} strokeWidth="2.2" />
+      </ActionIcon>
+    </Tooltip>
+  );
+}
+
+/** Badges derived from other tasks: blocked state and subtask progress. */
+function TaskRollupBadges(props: {task: Task; allTasks: Task[]}) {
+  const {task, allTasks} = props;
+  const blocked = isTaskBlocked(task, allTasks);
+  const progress = getSubtaskProgress(allTasks, task.id);
+  const overdue = isTaskOverdue(task);
+  if (!blocked && progress.total === 0 && !overdue) {
+    return null;
+  }
+  return (
+    <>
+      {blocked && (
+        <span className="TaskManager__badge TaskManager__badge--blocked">
+          <IconAlertTriangle size={11} strokeWidth="2" />
+          blocked
+        </span>
+      )}
+      {overdue && (
+        <span className="TaskManager__badge TaskManager__badge--overdue">
+          overdue
+        </span>
+      )}
+      {progress.total > 0 && (
+        <span className="TaskManager__badge">
+          {progress.completed}/{progress.total} subtasks
+        </span>
+      )}
+    </>
+  );
+}
+
+/** A sortable table column header. */
+function TaskSortHeader(props: {
+  label: string;
+  sortKey: TaskSortKey;
+  sort: TaskSortState;
+  onSortChange: (sort: TaskSortState) => void;
+}) {
+  const {label, sortKey, sort, onSortChange} = props;
+  const active = sort.key === sortKey;
+  return (
+    <th>
+      <button
+        className={joinClassNames(
+          'TaskManager__sortHeader',
+          active && 'TaskManager__sortHeader--active'
+        )}
+        type="button"
+        aria-sort={
+          active
+            ? sort.direction === 'asc'
+              ? 'ascending'
+              : 'descending'
+            : 'none'
+        }
+        onClick={() =>
+          onSortChange({
+            key: sortKey,
+            // Re-clicking the active column flips it; a new column starts
+            // in the direction that reads as "most relevant first".
+            direction:
+              active && sort.direction === 'desc'
+                ? 'asc'
+                : active
+                  ? 'desc'
+                  : 'asc',
+          })
+        }
+      >
+        {label}
+        {active ? (
+          sort.direction === 'asc' ? (
+            <IconSortAscending size={12} strokeWidth="1.8" />
+          ) : (
+            <IconSortDescending size={12} strokeWidth="1.8" />
+          )
+        ) : (
+          <IconSelector size={12} strokeWidth="1.8" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 /** Renders tasks in a tabular layout. */
-function TaskTable(props: {tasks: Task[]}) {
+function TaskTable(props: {
+  allTasks: Task[];
+  fieldDefs: TaskFieldDef[];
+  sort: TaskSortState;
+  tasks: Task[];
+  onSortChange: (sort: TaskSortState) => void;
+}) {
+  const {allTasks, sort, onSortChange} = props;
+  const listFieldDefs = props.fieldDefs.filter(
+    (fieldDef) => fieldDef.showInList
+  );
   return (
     <Surface className="TaskManager__tableSurface">
       <Table
@@ -487,19 +712,59 @@ function TaskTable(props: {tasks: Task[]}) {
       >
         <thead>
           <tr>
-            <th>task</th>
-            <th>status</th>
-            <th>priority</th>
-            <th>assignee</th>
-            <th>target</th>
-            <th>opened</th>
+            <th className="TaskManager__table__completeCol">
+              <span className="TaskManager__srOnly">Complete</span>
+            </th>
+            <TaskSortHeader
+              label="task"
+              sortKey="title"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <TaskSortHeader
+              label="status"
+              sortKey="status"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <TaskSortHeader
+              label="priority"
+              sortKey="priority"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <TaskSortHeader
+              label="assignee"
+              sortKey="assignee"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <TaskSortHeader
+              label="due"
+              sortKey="dueDate"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            {listFieldDefs.map((fieldDef) => (
+              <th key={fieldDef.id}>{fieldDef.label.toLowerCase()}</th>
+            ))}
+            <TaskSortHeader
+              label="opened"
+              sortKey="created"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
           </tr>
         </thead>
         <tbody>
           {props.tasks.map((task) => {
             const createdBy = task.createdBy || 'unknown';
+            const dueDate = getTaskDueDate(task);
             return (
               <tr key={task.id}>
+                <td className="TaskManager__table__completeCol">
+                  <TaskCompleteToggle task={task} />
+                </td>
                 <td>
                   <a
                     className="TaskManager__tableTask"
@@ -516,6 +781,17 @@ function TaskTable(props: {tasks: Task[]}) {
                       </span>
                       <span className="TaskManager__tableTask__meta">
                         #{task.id} by {formatTaskUser(createdBy)}
+                        {task.parentId && (
+                          <span> · subtask of #{task.parentId}</span>
+                        )}
+                      </span>
+                      <span className="TaskManager__tableTask__badges">
+                        <TaskRollupBadges task={task} allTasks={allTasks} />
+                        {(task.tags || []).map((tag) => (
+                          <span className="TaskManager__badge" key={tag}>
+                            {tag}
+                          </span>
+                        ))}
                       </span>
                     </span>
                   </a>
@@ -538,11 +814,21 @@ function TaskTable(props: {tasks: Task[]}) {
                 <td>
                   {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
                 </td>
-                <td>
-                  {task.targetLaunchDate
-                    ? formatTaskDate(task.targetLaunchDate)
-                    : 'None'}
+                <td
+                  className={joinClassNames(
+                    isTaskOverdue(task) && 'TaskManager__table__overdue'
+                  )}
+                >
+                  {dueDate ? formatTaskDate(dueDate) : 'None'}
                 </td>
+                {listFieldDefs.map((fieldDef) => (
+                  <td key={fieldDef.id}>
+                    <TaskFieldValueDisplay
+                      fieldDef={fieldDef}
+                      value={task.fields?.[fieldDef.id] ?? null}
+                    />
+                  </td>
+                ))}
                 <td>{formatTaskDate(task.createdAt)}</td>
               </tr>
             );
@@ -554,7 +840,11 @@ function TaskTable(props: {tasks: Task[]}) {
 }
 
 /** Renders tasks grouped by status in a board. */
-function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
+function TaskBoard(props: {
+  allTasks: Task[];
+  filter: TaskFilter;
+  tasks: Task[];
+}) {
   const columns = getTaskStatusColumns(props.tasks, props.filter);
   return (
     <div className="TaskManager__board">
@@ -573,7 +863,11 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
                 <div className="TaskManager__boardColumn__empty">No tasks</div>
               )}
               {columnTasks.map((task) => (
-                <TaskBoardCard key={task.id} task={task} />
+                <TaskBoardCard
+                  key={task.id}
+                  allTasks={props.allTasks}
+                  task={task}
+                />
               ))}
             </div>
           </section>
@@ -584,12 +878,16 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
 }
 
 /** Renders a single task card for the board. */
-function TaskBoardCard(props: {task: Task}) {
+function TaskBoardCard(props: {allTasks: Task[]; task: Task}) {
   const {task} = props;
   const createdBy = task.createdBy || 'unknown';
+  const dueDate = getTaskDueDate(task);
   return (
     <a className="TaskManager__boardCard" href={`/cms/tasks/${task.id}`}>
-      <div className="TaskManager__boardCard__title">{task.title}</div>
+      <div className="TaskManager__boardCard__header">
+        <TaskCompleteToggle task={task} />
+        <div className="TaskManager__boardCard__title">{task.title}</div>
+      </div>
       {task.description && (
         <div className="TaskManager__boardCard__description">
           {task.description}
@@ -610,11 +908,17 @@ function TaskBoardCard(props: {task: Task}) {
         <span className="TaskManager__boardCard__badge">
           {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
         </span>
-        {task.targetLaunchDate && (
-          <span className="TaskManager__boardCard__badge">
-            target {formatTaskDate(task.targetLaunchDate)}
+        {dueDate && (
+          <span
+            className={joinClassNames(
+              'TaskManager__boardCard__badge',
+              isTaskOverdue(task) && 'TaskManager__badge--overdue'
+            )}
+          >
+            due {formatTaskDate(dueDate)}
           </span>
         )}
+        <TaskRollupBadges task={task} allTasks={props.allTasks} />
       </div>
     </a>
   );
@@ -634,11 +938,13 @@ function parseTaskDraft(content: string) {
   };
 }
 
-function TaskRow(props: {task: Task}) {
+function TaskRow(props: {allTasks: Task[]; task: Task}) {
   const {task} = props;
   const createdBy = task.createdBy || 'unknown';
+  const dueDate = getTaskDueDate(task);
   return (
     <a className="TaskManager__taskRow" href={`/cms/tasks/${task.id}`}>
+      <TaskCompleteToggle task={task} />
       <div className="TaskManager__taskRow__avatar">
         {task.assignee && <UserAvatar email={task.assignee} size={28} />}
       </div>
@@ -649,6 +955,7 @@ function TaskRow(props: {task: Task}) {
         </div>
       </div>
       <div className="TaskManager__taskRow__badges">
+        <TaskRollupBadges task={task} allTasks={props.allTasks} />
         <div className="TaskManager__taskRow__status">
           <span></span>
           {formatTaskStatus(task.status)}
@@ -660,9 +967,14 @@ function TaskRow(props: {task: Task}) {
         >
           {formatTaskPriority(task.priority)}
         </div>
-        {task.targetLaunchDate && (
-          <div className="TaskManager__taskRow__date">
-            target {formatTaskDate(task.targetLaunchDate)}
+        {dueDate && (
+          <div
+            className={joinClassNames(
+              'TaskManager__taskRow__date',
+              isTaskOverdue(task) && 'TaskManager__badge--overdue'
+            )}
+          >
+            due {formatTaskDate(dueDate)}
           </div>
         )}
       </div>
@@ -693,6 +1005,19 @@ function useTasks(scope: TaskScope) {
   }, [scope]);
 
   return {tasks, loading, error};
+}
+
+/** Subscribes to the project's custom task field definitions. */
+function useTaskFieldDefs() {
+  const [fieldDefs, setFieldDefs] = useState<TaskFieldDef[]>([]);
+  useEffect(() => {
+    const unsubscribe = subscribeTaskFieldDefs(
+      (nextFieldDefs) => setFieldDefs(nextFieldDefs),
+      (err) => console.error('failed to load task fields:', err)
+    );
+    return () => unsubscribe();
+  }, []);
+  return fieldDefs;
 }
 
 function filterTasks(
@@ -793,7 +1118,7 @@ function parseTargetLaunchDate(value: string) {
 function formatTargetLaunchDateLabel(value: string) {
   const date = parseTargetLaunchDate(value);
   if (!date) {
-    return 'target launch date';
+    return 'due date';
   }
   return date.toLocaleDateString('en', {
     month: 'short',
