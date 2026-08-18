@@ -2,6 +2,7 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {getAuth} from 'firebase-admin/auth';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
@@ -51,6 +52,67 @@ const SYNC_PROXY_ALLOWED_HOSTS: RegExp[] = [
 
 /** Max response size the asset sync relay will forward (100MB). */
 const SYNC_PROXY_MAX_BYTES = 100 * 1024 * 1024;
+
+/** The only sign-in provider the CMS uses. */
+const GOOGLE_PROVIDER_ID = 'google.com';
+
+/** Max identifiers accepted by a single `auth.getUsers()` call. */
+const GET_USERS_BATCH_SIZE = 100;
+
+/** Max emails `users.sign_in_status` will look up in one request. */
+const MAX_SIGN_IN_STATUS_EMAILS = 500;
+
+/** Whether an email has a Google sign-in link that could be reset. */
+interface SignInStatus {
+  /** True if a Firebase Auth account exists for the email. */
+  exists: boolean;
+  /** True if that account has a Google provider linked to it. */
+  hasGoogleLink: boolean;
+}
+
+/**
+ * Normalizes an email from a request body. Returns null when the value isn't a
+ * usable address, including the `*@example.com` wildcards used to share a
+ * project with a whole domain -- those map to no account at all.
+ */
+function normalizeUserEmail(value: unknown): string | null {
+  const email = String(value || '')
+    .trim()
+    .toLowerCase();
+  if (!email || !email.includes('@') || email.startsWith('*@')) {
+    return null;
+  }
+  return email;
+}
+
+/**
+ * Verifies that the request comes from a signed-in project ADMIN, responding
+ * with the appropriate status when it doesn't. Returns the admin's email when
+ * the caller may proceed, or null when a response has already been sent.
+ */
+async function verifyAdminRequest(
+  req: Request,
+  res: Response,
+  cmsClient: RootCMSClient
+): Promise<string | null> {
+  const email = req.user?.email;
+  if (!email) {
+    res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+    return null;
+  }
+  try {
+    const role = await cmsClient.getUserRole(email);
+    if (role !== 'ADMIN') {
+      res.status(403).json({success: false, error: 'FORBIDDEN'});
+      return null;
+    }
+  } catch (err) {
+    console.error(err.stack || err);
+    res.status(500).json({success: false, error: 'UNKNOWN'});
+    return null;
+  }
+  return email;
+}
 
 type DocVersion = 'draft' | 'published';
 
@@ -798,6 +860,169 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
+
+  /**
+   * Unlinks the Google provider from a user's Firebase Auth record so their
+   * next sign-in re-links it. ADMIN-only.
+   *
+   * Identity Platform attaches a federated identity to the account that
+   * already exists for an email address, and rejects the attach with
+   * `auth/provider-already-linked` when that account carries a `google.com`
+   * provider with a different federated id. The address alone still resolves
+   * to the same person — the CMS keys access off the email, not the Firebase
+   * uid — so dropping the stale provider lets the user back in without
+   * touching their role or any of their content. Nothing else on the account
+   * record is modified, and the account is left untouched when it has no
+   * Google provider to drop.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/users.reset_sign_in
+   * {"email": "grogu@example.com"}
+   * ```
+   */
+  server.use(
+    '/cms/api/users.reset_sign_in',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const adminEmail = await verifyAdminRequest(req, res, cmsClient);
+      if (!adminEmail) {
+        return;
+      }
+      const email = normalizeUserEmail(req.body?.email);
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          error: 'INVALID_EMAIL',
+        });
+        return;
+      }
+
+      try {
+        const auth = getAuth(cmsClient.app);
+        const user = await auth.getUserByEmail(email).catch((err) => {
+          if (err?.code === 'auth/user-not-found') {
+            return null;
+          }
+          throw err;
+        });
+        const hasGoogleProvider = !!user?.providerData?.some(
+          (provider) => provider.providerId === GOOGLE_PROVIDER_ID
+        );
+        if (!user || !hasGoogleProvider) {
+          // Nothing to reset. The next sign-in creates or links the record.
+          res.status(200).json({success: true, reset: false});
+          return;
+        }
+        await auth.updateUser(user.uid, {
+          providersToUnlink: [GOOGLE_PROVIDER_ID],
+        });
+        await cmsClient.logAction('user.reset_sign_in', {
+          by: adminEmail,
+          metadata: {email: email},
+        });
+        res.status(200).json({success: true, reset: true});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Reports whether the given emails have a Google sign-in link that could be
+   * reset by `users.reset_sign_in`. ADMIN-only.
+   *
+   * Used to keep the "reset sign-in" action out of the way for users it can't
+   * do anything for, e.g. someone who was granted access but has never signed
+   * in. Whether an existing link is stale can't be known here -- that only
+   * surfaces when the user tries to sign in.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/users.sign_in_status
+   * {"emails": ["grogu@example.com"]}
+   * ```
+   *
+   * =>
+   *
+   * ```
+   * {
+   *   "success": true,
+   *   "users": {"grogu@example.com": {"exists": true, "hasGoogleLink": true}}
+   * }
+   * ```
+   */
+  server.use(
+    '/cms/api/users.sign_in_status',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      if (!(await verifyAdminRequest(req, res, cmsClient))) {
+        return;
+      }
+      const requested: string[] = Array.isArray(req.body?.emails)
+        ? req.body.emails
+        : [];
+      const emails = Array.from(
+        new Set(
+          requested
+            .map((email) => normalizeUserEmail(email))
+            .filter((email): email is string => !!email)
+        )
+      ).slice(0, MAX_SIGN_IN_STATUS_EMAILS);
+      if (emails.length === 0) {
+        res.status(200).json({success: true, users: {}});
+        return;
+      }
+
+      try {
+        const auth = getAuth(cmsClient.app);
+        const users: Record<string, SignInStatus> = {};
+        emails.forEach((email) => {
+          users[email] = {exists: false, hasGoogleLink: false};
+        });
+        // `getUsers()` accepts at most 100 identifiers per call.
+        for (let i = 0; i < emails.length; i += GET_USERS_BATCH_SIZE) {
+          const batch = emails.slice(i, i + GET_USERS_BATCH_SIZE);
+          const result = await auth.getUsers(
+            batch.map((email) => ({email: email}))
+          );
+          result.users.forEach((user) => {
+            const email = String(user.email || '').toLowerCase();
+            if (!(email in users)) {
+              return;
+            }
+            users[email] = {
+              exists: true,
+              hasGoogleLink: user.providerData.some(
+                (provider) => provider.providerId === GOOGLE_PROVIDER_ID
+              ),
+            };
+          });
+        }
+        res.status(200).json({success: true, users: users});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
 
   // ===========================================================================
   // One-shot AI tasks. These wrap the Vercel AI SDK helpers in `ai.ts`
