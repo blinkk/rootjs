@@ -3,6 +3,7 @@ import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {getAuth} from 'firebase-admin/auth';
+import {MAX_CSV_IMPORT_BYTES} from '../shared/csv.js';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
@@ -672,6 +673,11 @@ export function api(server: Server, options: ApiOptions) {
    * Imports a CSV file and returns a JSON array of objects representing the
    * CSV.
    *
+   * Accepts the CSV as a raw `text/plain` body or as a `multipart/form-data`
+   * upload with a `file` field. The CMS UI sends `text/plain` since some
+   * deployments sit behind WAFs that block multipart requests; multipart is
+   * kept for backwards compatibility.
+   *
    * Sample response:
    *
    * ```json
@@ -686,16 +692,26 @@ export function api(server: Server, options: ApiOptions) {
    */
   server.use(
     '/cms/api/csv.import',
-    multipartMiddleware(),
+    multipartMiddleware({maxFileSize: MAX_CSV_IMPORT_BYTES}),
     (req: Request, res: Response) => {
-      if (req.method !== 'POST' || !req.files || !req.files.file) {
+      if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }
 
       try {
-        const file = req.files.file;
-        const csvString = file.buffer.toString('utf8');
+        let csvString: string;
+        if (req.files?.file) {
+          // The original `multipart/form-data` upload, still supported for
+          // backwards compatibility with existing API consumers.
+          csvString = req.files.file.buffer.toString('utf8');
+        } else if (typeof req.body === 'string' && req.body) {
+          // The `text/plain` body sent by the CMS UI.
+          csvString = req.body;
+        } else {
+          res.status(400).json({success: false, error: 'BAD_REQUEST'});
+          return;
+        }
         const rows = csvToArray(csvString);
         res.status(200).json({success: true, data: rows});
       } catch (err) {
