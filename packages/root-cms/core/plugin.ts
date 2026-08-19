@@ -23,6 +23,7 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import {MAX_CSV_IMPORT_BYTES} from '../shared/csv.js';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type AiConfig} from './ai.js';
 import {api} from './api.js';
@@ -1053,22 +1054,28 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
 
       // The AI "prepare" routes can carry a moderately large body (the edit
-      // flow sends the JSON object being edited), and csv.import receives the
-      // full CSV text as JSON. Use a larger limit for those routes only;
-      // body-parser short-circuits when `req._body` is already set, so the
-      // global parser below is a no-op for them.
+      // flow sends the JSON object being edited). Use a larger limit for those
+      // routes only; body-parser short-circuits when `req._body` is already
+      // set, so the global parser below is a no-op for them.
       server.use(
-        [
-          '/cms/api/ai.chat.prepare',
-          '/cms/api/ai.edit.prepare',
-          '/cms/api/csv.import',
-        ],
+        ['/cms/api/ai.chat.prepare', '/cms/api/ai.edit.prepare'],
         bodyParser.json({limit: '4mb'})
       );
       // Image editing iterates on its own output, so the request body can
       // carry a full generated image as a data URL. Allow enough headroom for
       // a base64-encoded PNG (`editImage()` caps the decoded source at 20MB).
       server.use('/cms/api/ai.edit_image', bodyParser.json({limit: '12mb'}));
+      // csv.import receives the full CSV as the request body. The UI sends it
+      // as `text/plain`, which keeps the request the same size as the file on
+      // disk; JSON is also accepted for backwards compatibility, though its
+      // escaping inflates the body well past the file size.
+      server.use('/cms/api/csv.import', [
+        bodyParser.text({
+          limit: MAX_CSV_IMPORT_BYTES,
+          type: ['text/plain', 'text/csv'],
+        }),
+        bodyParser.json({limit: MAX_CSV_IMPORT_BYTES}),
+      ]);
       server.use(bodyParser.json());
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.

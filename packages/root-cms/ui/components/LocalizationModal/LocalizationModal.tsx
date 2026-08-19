@@ -38,6 +38,10 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
+import {
+  MAX_CSV_IMPORT_BYTES,
+  MAX_CSV_IMPORT_LABEL,
+} from '../../../shared/csv.js';
 import {DraftDocController} from '../../hooks/useDraftDoc.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -711,14 +715,25 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0];
       if (file) {
+        if (file.size > MAX_CSV_IMPORT_BYTES) {
+          showNotification({
+            title: 'Failed to import CSV',
+            message: `The maximum file size for a CSV is ${MAX_CSV_IMPORT_LABEL}. Please reduce the size of the file and retry.`,
+            color: 'red',
+            autoClose: false,
+          });
+          return;
+        }
         try {
-          // Send the CSV as JSON rather than multipart/form-data; some
-          // deployments sit behind WAFs that block multipart requests.
+          // Send the CSV as a plain-text body rather than multipart/form-data;
+          // some deployments sit behind WAFs that block multipart requests.
+          // Plain text also keeps the request the same size as the file, which
+          // JSON escaping would not.
           const csv = await file.text();
           const res = await fetch('/cms/api/csv.import', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({csv}),
+            headers: {'Content-Type': 'text/plain'},
+            body: csv,
           });
           if (res.status !== 200) {
             const errorText = await res.text();

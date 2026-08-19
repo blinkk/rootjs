@@ -3,6 +3,7 @@ import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {getAuth} from 'firebase-admin/auth';
+import {MAX_CSV_IMPORT_BYTES} from '../shared/csv.js';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   buildChatSystemPrompt,
@@ -672,10 +673,11 @@ export function api(server: Server, options: ApiOptions) {
    * Imports a CSV file and returns a JSON array of objects representing the
    * CSV.
    *
-   * Accepts either a JSON body (`{"csv": "<csv text>"}`) or a
-   * `multipart/form-data` upload with a `file` field. The CMS UI sends JSON
-   * since some deployments sit behind WAFs that block multipart requests;
-   * multipart is kept for backwards compatibility.
+   * Accepts the CSV as a raw `text/plain` body, a JSON body
+   * (`{"csv": "<csv text>"}`), or a `multipart/form-data` upload with a `file`
+   * field. The CMS UI sends `text/plain` since some deployments sit behind
+   * WAFs that block multipart requests; JSON and multipart are kept for
+   * backwards compatibility.
    *
    * Sample response:
    *
@@ -691,7 +693,7 @@ export function api(server: Server, options: ApiOptions) {
    */
   server.use(
     '/cms/api/csv.import',
-    multipartMiddleware(),
+    multipartMiddleware({maxFileSize: MAX_CSV_IMPORT_BYTES}),
     (req: Request, res: Response) => {
       if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
@@ -702,6 +704,8 @@ export function api(server: Server, options: ApiOptions) {
         let csvString: string;
         if (req.files?.file) {
           csvString = req.files.file.buffer.toString('utf8');
+        } else if (typeof req.body === 'string' && req.body) {
+          csvString = req.body;
         } else if (typeof req.body?.csv === 'string') {
           csvString = req.body.csv;
         } else {
