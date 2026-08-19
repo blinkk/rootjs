@@ -1065,17 +1065,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // carry a full generated image as a data URL. Allow enough headroom for
       // a base64-encoded PNG (`editImage()` caps the decoded source at 20MB).
       server.use('/cms/api/ai.edit_image', bodyParser.json({limit: '12mb'}));
-      // csv.import receives the full CSV as the request body. The UI sends it
-      // as `text/plain`, which keeps the request the same size as the file on
-      // disk; JSON is also accepted for backwards compatibility, though its
-      // escaping inflates the body well past the file size.
-      server.use('/cms/api/csv.import', [
+      // csv.import receives the full CSV as a `text/plain` request body, which
+      // keeps the request the same size as the file on disk.
+      server.use(
+        '/cms/api/csv.import',
         bodyParser.text({
           limit: MAX_CSV_IMPORT_BYTES,
           type: ['text/plain', 'text/csv'],
-        }),
-        bodyParser.json({limit: MAX_CSV_IMPORT_BYTES}),
-      ]);
+        })
+      );
       server.use(bodyParser.json());
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.

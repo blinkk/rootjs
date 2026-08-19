@@ -673,11 +673,10 @@ export function api(server: Server, options: ApiOptions) {
    * Imports a CSV file and returns a JSON array of objects representing the
    * CSV.
    *
-   * Accepts the CSV as a raw `text/plain` body, a JSON body
-   * (`{"csv": "<csv text>"}`), or a `multipart/form-data` upload with a `file`
-   * field. The CMS UI sends `text/plain` since some deployments sit behind
-   * WAFs that block multipart requests; JSON and multipart are kept for
-   * backwards compatibility.
+   * Accepts the CSV as a raw `text/plain` body or as a `multipart/form-data`
+   * upload with a `file` field. The CMS UI sends `text/plain` since some
+   * deployments sit behind WAFs that block multipart requests; multipart is
+   * kept for backwards compatibility.
    *
    * Sample response:
    *
@@ -706,8 +705,6 @@ export function api(server: Server, options: ApiOptions) {
           csvString = req.files.file.buffer.toString('utf8');
         } else if (typeof req.body === 'string' && req.body) {
           csvString = req.body;
-        } else if (typeof req.body?.csv === 'string') {
-          csvString = req.body.csv;
         } else {
           res.status(400).json({success: false, error: 'BAD_REQUEST'});
           return;
