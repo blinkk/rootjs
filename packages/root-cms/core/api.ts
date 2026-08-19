@@ -702,8 +702,11 @@ export function api(server: Server, options: ApiOptions) {
       try {
         let csvString: string;
         if (req.files?.file) {
+          // The original `multipart/form-data` upload, still supported for
+          // backwards compatibility with existing API consumers.
           csvString = req.files.file.buffer.toString('utf8');
         } else if (typeof req.body === 'string' && req.body) {
+          // The `text/plain` body sent by the CMS UI.
           csvString = req.body;
         } else {
           res.status(400).json({success: false, error: 'BAD_REQUEST'});
