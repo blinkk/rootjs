@@ -89,9 +89,48 @@ describe('sortObjectKeysDeep', () => {
       z: 1,
     });
   });
+
+  it('sorts metadata keys immediately after their parent key', () => {
+    const data = {
+      '@title': {translate: false},
+      title: 'foo',
+      body: {
+        '@text': {translate: false},
+        text: 'bar',
+      },
+      '@image': {alt: 'baz'},
+    };
+
+    // A metadata key without a parent key sorts in its parent's position.
+    expect(Object.keys(sortObjectKeysDeep(data))).toEqual([
+      'body',
+      '@image',
+      'title',
+      '@title',
+    ]);
+    expect(Object.keys(sortObjectKeysDeep(data).body)).toEqual([
+      'text',
+      '@text',
+    ]);
+  });
 });
 
 describe('stableJsonStringify', () => {
+  it('serializes metadata keys immediately after their parent key', () => {
+    const data = {'@title': {translate: false}, title: 'foo'};
+
+    expect(stableJsonStringify(data)).toBe(
+      [
+        '{',
+        '  "title": "foo",',
+        '  "@title": {',
+        '    "translate": false',
+        '  }',
+        '}',
+      ].join('\n')
+    );
+  });
+
   it('returns the same string for different key insertion orders', () => {
     const before = {
       block: {

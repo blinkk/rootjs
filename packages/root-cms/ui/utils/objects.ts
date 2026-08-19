@@ -191,7 +191,26 @@ export function cloneData<T>(data: T): T {
 }
 
 /**
- * Returns a deep-cloned value with object keys sorted alphabetically.
+ * Compares two object keys, sorting alphabetically but keeping metadata keys
+ * (e.g. `@title`) immediately after the key they describe (e.g. `title`).
+ */
+function compareObjectKeys(a: string, b: string): number {
+  const aIsMeta = a.startsWith('@');
+  const bIsMeta = b.startsWith('@');
+  const aBase = aIsMeta ? a.slice(1) : a;
+  const bBase = bIsMeta ? b.slice(1) : b;
+  if (aBase !== bBase) {
+    return aBase.localeCompare(bBase);
+  }
+  if (aIsMeta === bIsMeta) {
+    return 0;
+  }
+  return aIsMeta ? 1 : -1;
+}
+
+/**
+ * Returns a deep-cloned value with object keys sorted alphabetically. Metadata
+ * keys (e.g. `@title`) are sorted immediately after their parent key.
  */
 export function sortObjectKeysDeep<T>(data: T): T {
   if (Array.isArray(data)) {
@@ -200,8 +219,8 @@ export function sortObjectKeysDeep<T>(data: T): T {
 
   if (isObject(data)) {
     const sortedData: Record<string, unknown> = {};
-    const keys = Object.keys(data as Record<string, unknown>).sort((a, b) =>
-      a.localeCompare(b)
+    const keys = Object.keys(data as Record<string, unknown>).sort(
+      compareObjectKeys
     );
     for (const key of keys) {
       sortedData[key] = sortObjectKeysDeep(
