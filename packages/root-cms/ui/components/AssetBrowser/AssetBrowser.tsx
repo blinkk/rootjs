@@ -47,10 +47,12 @@ import {
   Asset,
   AssetFile,
   AssetFolder,
+  AssetFolderContents,
   AssetSort,
   AssetSortDir,
   AssetSortField,
   DEFAULT_ASSET_SORT,
+  countFolderContents,
   createAssetFile,
   createAssetFolder,
   createAssetFolderPaths,
@@ -1486,17 +1488,54 @@ function MoveAssetModal(props: {
  */
 const MAX_USAGE_LOOKUPS = 20;
 
+/**
+ * Max folders whose contents are counted before deleting. Each count is a
+ * query, so very large selections skip the check and fall back to a generic
+ * warning.
+ */
+const MAX_FOLDER_LOOKUPS = 20;
+
+/**
+ * Formats a recursive folder content count for the delete warning, e.g.
+ * `3 file(s) and 1 folder(s)`.
+ */
+function formatFolderContents(contents: AssetFolderContents): string {
+  const parts: string[] = [];
+  if (contents.files > 0) {
+    parts.push(`${contents.files} file(s)`);
+  }
+  if (contents.folders > 0) {
+    parts.push(`${contents.folders} folder(s)`);
+  }
+  return parts.join(' and ');
+}
+
+/**
+ * Confirmation modal for deleting assets. Selected folders are checked for
+ * contents first so that deleting a non-empty folder warns about the nested
+ * assets it removes instead of failing.
+ */
 function DeleteAssetModal(props: {
   assets: Asset[];
   onClose: () => void;
   onDeleted: () => void;
 }) {
   const assets = props.assets;
+  const files = assets.filter((asset) => asset.type === 'file');
+  const folders = assets.filter(
+    (asset) => asset.type === 'folder'
+  ) as AssetFolder[];
+  const assetIds = assets.map((asset) => asset.id).join(',');
+
   const [loading, setLoading] = useState(false);
   const [usageCount, setUsageCount] = useState<number | null>(null);
-
-  const files = assets.filter((asset) => asset.type === 'file');
-  const hasFolders = assets.some((asset) => asset.type === 'folder');
+  const [folderContents, setFolderContents] =
+    useState<AssetFolderContents | null>(null);
+  // Initialized to the value the effect below uses so the first render already
+  // shows the pending check instead of flashing the unknown-contents warning.
+  const [checkingFolders, setCheckingFolders] = useState(
+    folders.length > 0 && folders.length <= MAX_FOLDER_LOOKUPS
+  );
 
   useEffect(() => {
     if (files.length === 0 || files.length > MAX_USAGE_LOOKUPS) {
@@ -1508,7 +1547,32 @@ function DeleteAssetModal(props: {
         setUsageCount(docIds.size);
       })
       .catch(() => setUsageCount(null));
-  }, [assets.map((asset) => asset.id).join(',')]);
+  }, [assetIds]);
+
+  useEffect(() => {
+    if (folders.length === 0 || folders.length > MAX_FOLDER_LOOKUPS) {
+      return;
+    }
+    setCheckingFolders(true);
+    Promise.all(folders.map((folder) => countFolderContents(folder)))
+      .then((results) => {
+        setFolderContents({
+          files: results.reduce((total, res) => total + res.files, 0),
+          folders: results.reduce((total, res) => total + res.folders, 0),
+          total: results.reduce((total, res) => total + res.total, 0),
+        });
+      })
+      .catch((err) => {
+        console.error('failed to count folder contents:', err);
+        setFolderContents(null);
+      })
+      .finally(() => setCheckingFolders(false));
+  }, [assetIds]);
+
+  // Folders are only known to be empty once the check above succeeds; an
+  // unknown count still warns since the delete removes nested assets.
+  const deletesFolderContents =
+    folders.length > 0 && (!folderContents || folderContents.total > 0);
 
   async function onDelete() {
     setLoading(true);
@@ -1516,7 +1580,7 @@ function DeleteAssetModal(props: {
     let numDeleted = 0;
     for (const asset of assets) {
       try {
-        await deleteAsset(asset);
+        await deleteAsset(asset, {recursive: true});
         numDeleted += 1;
       } catch (err) {
         console.error(`failed to delete ${asset.name}:`, err);
@@ -1527,7 +1591,7 @@ function DeleteAssetModal(props: {
     if (failed.length > 0) {
       showNotification({
         title: 'Delete failed',
-        message: `Failed to delete: ${failed.join(', ')}. Note that folders must be empty before they can be deleted.`,
+        message: `Failed to delete: ${failed.join(', ')}.`,
         color: 'red',
         autoClose: false,
       });
@@ -1572,10 +1636,24 @@ function DeleteAssetModal(props: {
               currently use the assets keep their copy of the files.
             </>
           )}
-          {hasFolders && (
-            <> Folders must be empty before they can be deleted.</>
-          )}
         </div>
+        {checkingFolders && (
+          <div className="AssetBrowser__deleteModal__checking">
+            <Loader size="xs" />
+            <span>Checking folder contents...</span>
+          </div>
+        )}
+        {!checkingFolders && deletesFolderContents && (
+          <div className="AssetBrowser__deleteModal__warning">
+            {folders.length === 1 ? 'This folder is' : 'These folders are'} not
+            empty.{' '}
+            {folderContents
+              ? `Deleting also permanently removes the ${formatFolderContents(
+                  folderContents
+                )} nested inside.`
+              : 'Deleting also permanently removes everything nested inside.'}
+          </div>
+        )}
         {usageCount !== null && usageCount > 0 && (
           <div className="AssetBrowser__deleteModal__warning">
             {assets.length === 1 ? 'This asset is' : 'These assets are'}{' '}
@@ -1587,8 +1665,13 @@ function DeleteAssetModal(props: {
           <Button variant="default" onClick={props.onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button color="red" loading={loading} onClick={() => onDelete()}>
-            Delete
+          <Button
+            color="red"
+            loading={loading}
+            disabled={checkingFolders}
+            onClick={() => onDelete()}
+          >
+            {deletesFolderContents ? 'Delete all' : 'Delete'}
           </Button>
         </div>
       </div>

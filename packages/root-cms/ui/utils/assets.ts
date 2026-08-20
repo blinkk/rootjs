@@ -172,6 +172,13 @@ export interface AssetSyncResult {
 
 export class AssetNameError extends Error {}
 
+/**
+ * Thrown when deleting a folder that still contains assets. Callers can
+ * re-run the delete with `recursive: true` to remove the folder's contents
+ * along with it (see {@link deleteAsset}).
+ */
+export class FolderNotEmptyError extends Error {}
+
 const MAX_NAME_LENGTH = 200;
 
 /** Folder and file names must not contain slashes or control chars. */
@@ -680,6 +687,32 @@ function isDescendantPath(path: string, parentPath: string) {
 }
 
 /**
+ * Fetches every asset nested below a folder, at any depth. Because folders
+ * are stored as `parent` path strings, all descendants are fetched with a
+ * single auto-indexed range query on the path prefix.
+ */
+async function listFolderDescendants(folderPath: string): Promise<Asset[]> {
+  const colRef = getAssetsDbCollection();
+  // The range query matches by string prefix, e.g. querying `foo` also
+  // matches `foobar`, so exact descendants are filtered below.
+  const q = query(
+    colRef,
+    where('parent', '>=', folderPath),
+    where('parent', '<=', `${folderPath}\uf8ff`)
+  );
+  const snapshot = await getDocs(q);
+  const descendants: Asset[] = [];
+  snapshot.forEach((snap) => {
+    const data = snap.data() as Asset;
+    const descendant = {...data, parent: normalizeParentPath(data.parent)};
+    if (isDescendantPath(descendant.parent, folderPath)) {
+      descendants.push(descendant);
+    }
+  });
+  return descendants;
+}
+
+/**
  * Moves/renames a folder. Folder ids are derived from their path, so this
  * creates a new folder doc, re-parents all descendants and removes the old
  * folder doc. Writes are batched (max 500 ops per batch).
@@ -694,22 +727,7 @@ async function moveFolder(
   const colRef = getAssetsDbCollection();
   const db = window.firebase.db;
 
-  // Fetch all descendants. `parent` range query matches `oldPath` prefixes,
-  // e.g. querying `foo` also matches `foobar`, so filter exact matches below.
-  const q = query(
-    colRef,
-    where('parent', '>=', oldPath),
-    where('parent', '<=', `${oldPath}\uf8ff`)
-  );
-  const snapshot = await getDocs(q);
-  const descendants: Asset[] = [];
-  snapshot.forEach((snap) => {
-    const data = snap.data() as Asset;
-    const descendant = {...data, parent: normalizeParentPath(data.parent)};
-    if (isDescendantPath(descendant.parent, oldPath)) {
-      descendants.push(descendant);
-    }
-  });
+  const descendants = await listFolderDescendants(oldPath);
 
   let batch = writeBatch(db);
   let numOps = 0;
@@ -778,23 +796,78 @@ async function moveFolder(
   }
 }
 
+/** Number of assets nested below a folder, by type. */
+export interface AssetFolderContents {
+  files: number;
+  folders: number;
+  /** Total number of nested assets, i.e. `files` + `folders`. */
+  total: number;
+}
+
 /**
- * Deletes an asset from the asset library. Folders must be empty. The
- * underlying GCS file is left untouched since published docs may still
- * reference it.
+ * Counts the assets nested below a folder, at any depth. Used to warn users
+ * about what a recursive delete removes before they confirm it.
  */
-export async function deleteAsset(asset: Asset) {
+export async function countFolderContents(
+  folder: AssetFolder
+): Promise<AssetFolderContents> {
+  const folderPath = joinFolderPath(folder.parent, folder.name);
+  const descendants = await listFolderDescendants(folderPath);
+  const numFolders = descendants.filter(
+    (asset) => asset.type === 'folder'
+  ).length;
+  return {
+    files: descendants.length - numFolders,
+    folders: numFolders,
+    total: descendants.length,
+  };
+}
+
+/** Deletes asset docs in batches (max 500 ops per batch). */
+async function deleteAssetDocs(assets: Asset[]) {
+  const colRef = getAssetsDbCollection();
+  let batch = writeBatch(window.firebase.db);
+  let numOps = 0;
+  for (const asset of assets) {
+    batch.delete(doc(colRef, asset.id));
+    numOps += 1;
+    if (numOps >= 400) {
+      await batch.commit();
+      batch = writeBatch(window.firebase.db);
+      numOps = 0;
+    }
+  }
+  if (numOps > 0) {
+    await batch.commit();
+  }
+}
+
+/**
+ * Deletes an asset from the asset library. Deleting a folder that still has
+ * contents throws a {@link FolderNotEmptyError} unless `recursive` is set, in
+ * which case everything nested below the folder is deleted along with it. The
+ * underlying GCS files are left untouched since published docs may still
+ * reference them.
+ */
+export async function deleteAsset(
+  asset: Asset,
+  options?: {recursive?: boolean}
+) {
+  const metadata: Record<string, any> = {assetId: asset.id, name: asset.name};
   if (asset.type === 'folder') {
     const folderPath = joinFolderPath(asset.parent, asset.name);
-    const children = await listAssets(folderPath);
-    if (children.length > 0) {
-      throw new Error('Folder is not empty.');
+    const descendants = await listFolderDescendants(folderPath);
+    if (descendants.length > 0) {
+      if (!options?.recursive) {
+        throw new FolderNotEmptyError('Folder is not empty.');
+      }
+      await deleteAssetDocs(descendants);
+      metadata.folder = folderPath;
+      metadata.numDescendants = descendants.length;
     }
   }
   await deleteDoc(doc(getAssetsDbCollection(), asset.id));
-  logAction('asset.delete', {
-    metadata: {assetId: asset.id, name: asset.name},
-  });
+  logAction('asset.delete', {metadata: metadata});
 }
 
 /**
