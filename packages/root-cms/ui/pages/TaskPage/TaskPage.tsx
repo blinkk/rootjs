@@ -6,20 +6,23 @@ import {
   Button,
   Loader,
   Select,
-  Textarea,
   TextInput,
   Tooltip,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconCalendar,
   IconCheck,
   IconCornerDownRight,
   IconExternalLink,
   IconFlag,
+  IconListCheck,
   IconMessageCircle,
   IconPaperclip,
   IconPencil,
+  IconPlus,
+  IconTag,
   IconTrash,
   IconUser,
   IconX,
@@ -36,7 +39,9 @@ import {sanitizeInlineHtml} from '../../../shared/sanitize.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
+import {TaskChipInput} from '../../components/TaskChipInput/TaskChipInput.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
+import {TaskFieldInput} from '../../components/TaskFieldInput/TaskFieldInput.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -45,25 +50,43 @@ import {errorMessage} from '../../utils/notifications.js';
 import {
   addTaskComment,
   addTaskAttachment,
+  addTaskCommentAttachment,
+  createTask,
   deleteTaskComment,
   editTaskComment,
+  getBlockingTasks,
+  getSubtasks,
+  getTaskDueDate,
+  isOpenTaskStatus,
   normalizeTaskStatus,
+  parseTaskCustomFieldKey,
   removeTaskAttachment,
+  removeTaskCommentAttachment,
   subscribeTask,
   subscribeTaskComments,
   subscribeTaskEvents,
+  subscribeTaskFieldDefs,
+  subscribeTasks,
   Task,
   TaskAttachment,
   TaskComment,
   TaskEvent,
+  TaskEventValue,
+  TaskFieldDef,
+  TaskFieldValue,
   TaskMetadataField,
   TaskPriority,
   updateTaskTitle,
+  updateTaskBlockedBy,
   updateTaskDescription,
   updateTaskAssignee,
+  updateTaskDueDate,
+  updateTaskFieldValue,
+  updateTaskFollowers,
   updateTaskPriority,
+  updateTaskStartDate,
   updateTaskStatus,
-  updateTaskTargetLaunchDate,
+  updateTaskTags,
 } from '../../utils/tasks.js';
 
 const TASK_STATUS_OPTIONS = [
@@ -90,6 +113,10 @@ export function TaskPage(props: {id: string}) {
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [events, setEvents] = useState<TaskEvent[]>([]);
+  // The full task list backs subtask rollups and "blocked by" resolution,
+  // which would otherwise cost one read per related task.
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [fieldDefs, setFieldDefs] = useState<TaskFieldDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -120,6 +147,14 @@ export function TaskPage(props: {id: string}) {
         (nextEvents) => setEvents(nextEvents),
         (err) => setError(errorMessage(err))
       ),
+      subscribeTasks(
+        (nextTasks) => setTasks(nextTasks),
+        (err) => setError(errorMessage(err))
+      ),
+      subscribeTaskFieldDefs(
+        (nextFieldDefs) => setFieldDefs(nextFieldDefs),
+        (err) => setError(errorMessage(err))
+      ),
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [taskId]);
@@ -130,6 +165,9 @@ export function TaskPage(props: {id: string}) {
         <div className="TaskPage__header">
           <Breadcrumbs className="TaskPage__header__breadcrumbs">
             <a href="/cms/tasks">Tasks</a>
+            {task?.parentId ? (
+              <a href={`/cms/tasks/${task.parentId}`}>#{task.parentId}</a>
+            ) : null}
             <div>{taskId}</div>
           </Breadcrumbs>
           <div className="TaskPage__header__titleWrap">
@@ -144,6 +182,7 @@ export function TaskPage(props: {id: string}) {
                 {formatTaskStatus(task.status)}
               </span>
             )}
+            {task?.source && <TaskSourceLink source={task.source} />}
           </div>
         </div>
 
@@ -159,13 +198,24 @@ export function TaskPage(props: {id: string}) {
         {!loading && !error && task && (
           <div className="TaskPage__body">
             <main className="TaskPage__main">
+              <TaskBlockedBanner task={task} tasks={tasks} />
               <TaskDescription task={task} />
+              <TaskSubtasks task={task} tasks={tasks} />
               <TaskAttachments task={task} />
-              <TaskTimeline task={task} comments={comments} events={events} />
+              <TaskTimeline
+                task={task}
+                comments={comments}
+                events={events}
+                fieldDefs={fieldDefs}
+              />
               <TaskCommentComposer taskId={task.id} />
             </main>
             <aside className="TaskPage__side">
-              <TaskMetadataPanel task={task} />
+              <TaskMetadataPanel
+                task={task}
+                tasks={tasks}
+                fieldDefs={fieldDefs}
+              />
             </aside>
           </div>
         )}
@@ -289,23 +339,196 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
   );
 }
 
+/** Links back to the task's record in the tracker it was imported from. */
+function TaskSourceLink(props: {source: NonNullable<Task['source']>}) {
+  const {source} = props;
+  const label = `View in ${formatTaskProvider(source.provider)}`;
+  if (!source.url) {
+    return <span className="TaskPage__sourceBadge">{label}</span>;
+  }
+  return (
+    <a
+      className="TaskPage__sourceBadge TaskPage__sourceBadge--link"
+      href={source.url}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {label}
+      <IconExternalLink size={13} strokeWidth="1.8" />
+    </a>
+  );
+}
+
+/** Warns when unresolved tasks are blocking this one. */
+function TaskBlockedBanner(props: {task: Task; tasks: Task[]}) {
+  const blockers = getBlockingTasks(props.task, props.tasks);
+  if (blockers.length === 0) {
+    return null;
+  }
+  return (
+    <div className="TaskPage__blockedBanner">
+      <IconAlertTriangle size={16} strokeWidth="1.8" />
+      <div>
+        Blocked by{' '}
+        {blockers.map((blocker, index) => (
+          <span key={blocker.id}>
+            {index > 0 && ', '}
+            <a href={`/cms/tasks/${blocker.id}`}>
+              #{blocker.id} {blocker.title}
+            </a>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Lists the task's subtasks and creates new ones inline. */
+function TaskSubtasks(props: {task: Task; tasks: Task[]}) {
+  const {task} = props;
+  const subtasks = getSubtasks(props.tasks, task.id);
+  const completed = subtasks.filter((s) => !isOpenTaskStatus(s.status)).length;
+  const [draft, setDraft] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  async function onSubmit(e: Event) {
+    e.preventDefault();
+    const title = draft.trim();
+    if (!title) {
+      return;
+    }
+    setCreating(true);
+    try {
+      await createTask({title, parentId: task.id, assignee: task.assignee});
+      setDraft('');
+    } catch (err) {
+      showNotification({
+        title: 'Could not create subtask',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function toggleSubtask(subtask: Task) {
+    try {
+      await updateTaskStatus(
+        subtask.id,
+        isOpenTaskStatus(subtask.status) ? 'closed' : 'new'
+      );
+    } catch (err) {
+      showNotification({
+        title: 'Could not update subtask',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+  }
+
+  return (
+    <section className="TaskPage__subtasks">
+      <div className="TaskPage__subtasks__top">
+        <div className="TaskPage__subtasks__label">
+          <IconListCheck size={15} strokeWidth="1.8" />
+          Subtasks
+        </div>
+        {subtasks.length > 0 && (
+          <span className="TaskPage__subtasks__progress">
+            {completed}/{subtasks.length}
+          </span>
+        )}
+      </div>
+      {subtasks.length > 0 && (
+        <div className="TaskPage__subtasks__list">
+          {subtasks.map((subtask) => {
+            const done = !isOpenTaskStatus(subtask.status);
+            return (
+              <div className="TaskPage__subtasks__item" key={subtask.id}>
+                <Tooltip label={done ? 'Reopen' : 'Mark complete'}>
+                  <ActionIcon
+                    className={joinClassNames(
+                      'TaskPage__subtasks__check',
+                      done && 'TaskPage__subtasks__check--done'
+                    )}
+                    size="sm"
+                    aria-label={done ? 'Reopen subtask' : 'Complete subtask'}
+                    onClick={() => toggleSubtask(subtask)}
+                  >
+                    <IconCheck size={14} strokeWidth="2.2" />
+                  </ActionIcon>
+                </Tooltip>
+                <a
+                  className={joinClassNames(
+                    'TaskPage__subtasks__title',
+                    done && 'TaskPage__subtasks__title--done'
+                  )}
+                  href={`/cms/tasks/${subtask.id}`}
+                >
+                  {subtask.title}
+                </a>
+                {subtask.assignee && (
+                  <span className="TaskPage__subtasks__assignee">
+                    {formatTaskUser(subtask.assignee)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <form className="TaskPage__subtasks__form" onSubmit={onSubmit}>
+        <TextInput
+          size="xs"
+          value={draft}
+          placeholder="Add a subtask..."
+          disabled={creating}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setDraft(e.currentTarget.value)
+          }
+        />
+        <Button
+          compact
+          size="xs"
+          color="dark"
+          type="submit"
+          loading={creating}
+          disabled={!draft.trim()}
+          leftIcon={<IconPlus size={14} strokeWidth="1.8" />}
+        >
+          Add
+        </Button>
+      </form>
+    </section>
+  );
+}
+
 /** Renders the editable task description. */
 function TaskDescription(props: {task: Task}) {
   const {task} = props;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(task.description || '');
+  // Descriptions written before rich text existed are plain strings; lift
+  // them into rich text so editing one doesn't discard its line breaks.
+  const [draft, setDraft] = useState<RichTextData | null>(
+    task.descriptionBody || richTextFromPlainText(task.description || '')
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!editing) {
-      setDraft(task.description || '');
+      setDraft(
+        task.descriptionBody || richTextFromPlainText(task.description || '')
+      );
     }
-  }, [task.description, editing]);
+  }, [task.descriptionBody, task.description, editing]);
 
   async function saveDescription() {
     setSaving(true);
     try {
-      await updateTaskDescription(task.id, draft.trim());
+      await updateTaskDescription(task.id, draft || '');
       setEditing(false);
     } catch (err) {
       showNotification({
@@ -331,15 +554,11 @@ function TaskDescription(props: {task: Task}) {
       </div>
       {editing ? (
         <div className="TaskPage__description__edit">
-          <Textarea
-            autosize
+          <TaskCommentEditor
             autoFocus
-            minRows={4}
             value={draft}
             placeholder="Add task details, scope, and acceptance criteria."
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-              setDraft(e.currentTarget.value)
-            }
+            onChange={setDraft}
           />
           <div className="TaskPage__description__editActions">
             <Button
@@ -349,7 +568,10 @@ function TaskDescription(props: {task: Task}) {
               leftIcon={<IconX size={14} strokeWidth="1.8" />}
               onClick={() => {
                 setEditing(false);
-                setDraft(task.description || '');
+                setDraft(
+                  task.descriptionBody ||
+                    richTextFromPlainText(task.description || '')
+                );
               }}
             >
               Cancel
@@ -370,10 +592,19 @@ function TaskDescription(props: {task: Task}) {
         <div
           className={joinClassNames(
             'TaskPage__description__content',
-            !task.description && 'TaskPage__description__content--empty'
+            !task.description &&
+              !task.descriptionBody &&
+              'TaskPage__description__content--empty'
           )}
         >
-          {task.description || 'No description provided.'}
+          {task.descriptionBody ? (
+            <TaskRichText
+              className="TaskPage__description__richText"
+              data={task.descriptionBody}
+            />
+          ) : (
+            task.description || 'No description provided.'
+          )}
         </div>
       )}
     </Surface>
@@ -525,18 +756,26 @@ function TaskAttachments(props: {task: Task}) {
 }
 
 /** Renders editable task metadata and writes changes to history. */
-function TaskMetadataPanel(props: {task: Task}) {
-  const {task} = props;
+function TaskMetadataPanel(props: {
+  task: Task;
+  tasks: Task[];
+  fieldDefs: TaskFieldDef[];
+}) {
+  const {task, tasks, fieldDefs} = props;
   const [assignee, setAssignee] = useState(task.assignee || '');
-  const [targetLaunchDate, setTargetLaunchDate] = useState(
-    formatDateInputValue(task.targetLaunchDate)
+  const [startDate, setStartDate] = useState(
+    formatDateInputValue(task.startDate)
+  );
+  const [dueDate, setDueDate] = useState(
+    formatDateTimeInputValue(getTaskDueDate(task))
   );
   const [savingField, setSavingField] = useState<TaskMetadataField | ''>('');
 
   useEffect(() => {
     setAssignee(task.assignee || '');
-    setTargetLaunchDate(formatDateInputValue(task.targetLaunchDate));
-  }, [task.assignee, task.targetLaunchDate]);
+    setStartDate(formatDateInputValue(task.startDate));
+    setDueDate(formatDateTimeInputValue(getTaskDueDate(task)));
+  }, [task.assignee, task.startDate, task.dueDate, task.targetLaunchDate]);
 
   async function saveMetadata(
     field: TaskMetadataField,
@@ -567,13 +806,23 @@ function TaskMetadataPanel(props: {task: Task}) {
     );
   }
 
-  function saveTargetLaunchDate(value: string) {
-    setTargetLaunchDate(value);
-    if (formatDateInputValue(task.targetLaunchDate) === value) {
+  function saveStartDate(value: string) {
+    setStartDate(value);
+    if (formatDateInputValue(task.startDate) === value) {
       return;
     }
-    saveMetadata('targetLaunchDate', () =>
-      updateTaskTargetLaunchDate(task.id, parseTargetLaunchDate(value))
+    saveMetadata('startDate', () =>
+      updateTaskStartDate(task.id, parseDateInputValue(value))
+    );
+  }
+
+  function saveDueDate(value: string) {
+    setDueDate(value);
+    if (formatDateTimeInputValue(getTaskDueDate(task)) === value) {
+      return;
+    }
+    saveMetadata('dueDate', () =>
+      updateTaskDueDate(task.id, parseDateTimeInputValue(value))
     );
   }
 
@@ -614,6 +863,21 @@ function TaskMetadataPanel(props: {task: Task}) {
         </div>
       </div>
       <div className="TaskPage__metadata__field">
+        <label>Followers</label>
+        <TaskChipInput
+          values={task.followers || []}
+          placeholder="teammate@example.com"
+          disabled={savingField === 'followers'}
+          formatValue={formatTaskUser}
+          normalizeValue={(value) => value.trim().toLowerCase() || null}
+          onChange={(followers) =>
+            saveMetadata('followers', () =>
+              updateTaskFollowers(task.id, followers)
+            )
+          }
+        />
+      </div>
+      <div className="TaskPage__metadata__field">
         <label>Priority</label>
         <Select
           size="xs"
@@ -629,20 +893,86 @@ function TaskMetadataPanel(props: {task: Task}) {
         />
       </div>
       <div className="TaskPage__metadata__field">
-        <label>Target launch date</label>
+        <label>Tags</label>
+        <TaskChipInput
+          values={task.tags || []}
+          placeholder="Add a tag..."
+          disabled={savingField === 'tags'}
+          onChange={(tags) =>
+            saveMetadata('tags', () => updateTaskTags(task.id, tags))
+          }
+        />
+      </div>
+      <div className="TaskPage__metadata__field">
+        <label>Start date</label>
         <div className="TaskPage__metadata__date">
           <input
             type="date"
-            value={targetLaunchDate}
-            disabled={savingField === 'targetLaunchDate'}
+            value={startDate}
+            disabled={savingField === 'startDate'}
             onInput={(e) =>
-              saveTargetLaunchDate((e.currentTarget as HTMLInputElement).value)
+              saveStartDate((e.currentTarget as HTMLInputElement).value)
             }
           />
         </div>
       </div>
+      <div className="TaskPage__metadata__field">
+        <label>Due date</label>
+        <div className="TaskPage__metadata__date">
+          <input
+            type="datetime-local"
+            value={dueDate}
+            disabled={savingField === 'dueDate'}
+            onInput={(e) =>
+              saveDueDate((e.currentTarget as HTMLInputElement).value)
+            }
+          />
+        </div>
+      </div>
+      <div className="TaskPage__metadata__field">
+        <label>Blocked by</label>
+        <TaskChipInput
+          values={task.blockedBy || []}
+          placeholder="Task id, e.g. 12"
+          disabled={savingField === 'blockedBy'}
+          formatValue={(id) => formatBlockerLabel(id, tasks)}
+          normalizeValue={(value) => {
+            const id = value.replace(/^#/, '').trim();
+            if (!id || id === task.id) {
+              return null;
+            }
+            return id;
+          }}
+          onChange={(blockedBy) =>
+            saveMetadata('blockedBy', () =>
+              updateTaskBlockedBy(task.id, blockedBy)
+            )
+          }
+        />
+      </div>
+      {fieldDefs.map((fieldDef) => (
+        <div className="TaskPage__metadata__field" key={fieldDef.id}>
+          <label>{fieldDef.label}</label>
+          <TaskFieldInput
+            fieldDef={fieldDef}
+            value={task.fields?.[fieldDef.id] ?? null}
+            disabled={savingField === `field:${fieldDef.id}`}
+            onChange={(value: TaskFieldValue) =>
+              saveMetadata(`field:${fieldDef.id}`, () =>
+                updateTaskFieldValue(task.id, fieldDef.id, value)
+              )
+            }
+          />
+        </div>
+      ))}
     </Surface>
   );
+}
+
+/** Labels a blocker chip with its title when the task is loaded. */
+function formatBlockerLabel(id: string, tasks: Task[]) {
+  const blocker = tasks.find((task) => task.id === id);
+  return blocker ? `#${id} ${blocker.title}` : `#${id}`;
 }
 
 /** Combines task comments and metadata changes into a single timeline. */
@@ -650,8 +980,9 @@ function TaskTimeline(props: {
   task: Task;
   comments: TaskComment[];
   events: TaskEvent[];
+  fieldDefs: TaskFieldDef[];
 }) {
-  const {task, comments, events} = props;
+  const {task, comments, events, fieldDefs} = props;
   const repliesByParentId = useMemo(() => {
     const replies = new Map<string, TaskComment[]>();
     comments
@@ -697,7 +1028,13 @@ function TaskTimeline(props: {
           return <TaskOpenedTimelineItem key={item.id} task={task} />;
         }
         if (item.kind === 'event') {
-          return <TaskEventTimelineItem key={item.id} event={item.event} />;
+          return (
+            <TaskEventTimelineItem
+              key={item.id}
+              event={item.event}
+              fieldDefs={fieldDefs}
+            />
+          );
         }
         return (
           <TaskCommentCard
@@ -721,7 +1058,7 @@ function TaskOpenedTimelineItem(props: {task: Task}) {
         <IconCheck size={15} strokeWidth="2" />
       </div>
       <div className="TaskPage__timelineItem__content">
-        <b>{formatTaskUser(task.createdBy || 'unknown')}</b> opened this task{' '}
+        <b>{formatTaskAuthor(task)}</b> opened this task{' '}
         {formatTaskDateTime(task.createdAt)}.
       </div>
     </div>
@@ -729,18 +1066,27 @@ function TaskOpenedTimelineItem(props: {task: Task}) {
 }
 
 /** Renders one metadata mutation as a GitHub-style timeline event. */
-function TaskEventTimelineItem(props: {event: TaskEvent}) {
-  const {event} = props;
+function TaskEventTimelineItem(props: {
+  event: TaskEvent;
+  fieldDefs: TaskFieldDef[];
+}) {
+  const {event, fieldDefs} = props;
   return (
     <div className="TaskPage__timelineItem TaskPage__timelineItem--event">
       <div className="TaskPage__timelineItem__marker">
         {event.field === 'title' ? (
           <IconPencil size={15} strokeWidth="2" />
-        ) : event.field === 'assignee' ? (
+        ) : event.field === 'assignee' || event.field === 'followers' ? (
           <IconUser size={15} strokeWidth="2" />
         ) : event.field === 'priority' ? (
           <IconFlag size={15} strokeWidth="2" />
-        ) : event.field === 'targetLaunchDate' ? (
+        ) : event.field === 'tags' ? (
+          <IconTag size={15} strokeWidth="2" />
+        ) : event.field === 'blockedBy' ? (
+          <IconAlertTriangle size={15} strokeWidth="2" />
+        ) : event.field === 'parentId' ? (
+          <IconListCheck size={15} strokeWidth="2" />
+        ) : isTaskDateField(event.field) ? (
           <IconCalendar size={15} strokeWidth="2" />
         ) : (
           <IconCheck size={15} strokeWidth="2" />
@@ -748,13 +1094,13 @@ function TaskEventTimelineItem(props: {event: TaskEvent}) {
       </div>
       <div className="TaskPage__timelineItem__content">
         <b>{formatTaskUser(event.createdBy || 'unknown')}</b> changed{' '}
-        {formatTaskField(event.field)} from{' '}
+        {formatTaskField(event.field, fieldDefs)} from{' '}
         <span className="TaskPage__timelineValue">
-          {formatTaskEventValue(event.field, event.oldValue)}
+          {formatTaskEventValue(event.field, event.oldValue, fieldDefs)}
         </span>{' '}
         to{' '}
         <span className="TaskPage__timelineValue">
-          {formatTaskEventValue(event.field, event.newValue)}
+          {formatTaskEventValue(event.field, event.newValue, fieldDefs)}
         </span>{' '}
         {formatTaskDateTime(event.createdAt)}.
       </div>
@@ -840,7 +1186,7 @@ function TaskCommentCard(props: {
         <Surface className="TaskPage__comment">
           <div className="TaskPage__comment__header">
             <div>
-              <b>{formatTaskUser(comment.createdBy || 'unknown')}</b>{' '}
+              <b>{formatTaskAuthor(comment)}</b>{' '}
               <span>{formatTaskDateTime(comment.createdAt)}</span>
               {comment.updatedAt && !comment.isDeleted && (
                 <span> edited {formatTaskDateTime(comment.updatedAt)}</span>
@@ -927,6 +1273,9 @@ function TaskCommentCard(props: {
               )}
             </div>
           )}
+          {!comment.isDeleted && (
+            <TaskCommentAttachments comment={comment} canModify={canModify} />
+          )}
         </Surface>
         {replying && (
           <TaskCommentComposer
@@ -950,6 +1299,118 @@ function TaskCommentCard(props: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Lists a comment's attachments, with upload/remove for its author. */
+function TaskCommentAttachments(props: {
+  comment: TaskComment;
+  canModify?: boolean;
+}) {
+  const {comment} = props;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const attachments = comment.attachments || [];
+
+  async function uploadFiles(files: FileList | File[]) {
+    const selectedFiles = Array.from(files);
+    if (selectedFiles.length === 0) {
+      return;
+    }
+    setUploading(true);
+    try {
+      for (const file of selectedFiles) {
+        const uploadedFile = await uploadFileToGCS(file);
+        await addTaskCommentAttachment(comment.taskId, comment.id, {
+          ...uploadedFile,
+          filename: uploadedFile.filename || file.name,
+          contentType: file.type || undefined,
+          size: file.size,
+        });
+      }
+    } catch (err) {
+      showNotification({
+        title: 'Could not attach file',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setUploading(false);
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
+    }
+  }
+
+  async function removeAttachment(attachment: TaskAttachment) {
+    if (!window.confirm(`Remove ${formatTaskAttachmentName(attachment)}?`)) {
+      return;
+    }
+    try {
+      await removeTaskCommentAttachment(
+        comment.taskId,
+        comment.id,
+        attachment.id
+      );
+    } catch (err) {
+      showNotification({
+        title: 'Could not remove attachment',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+  }
+
+  if (attachments.length === 0 && !props.canModify) {
+    return null;
+  }
+
+  return (
+    <div className="TaskPage__comment__attachments">
+      {attachments.map((attachment) => (
+        <span className="TaskPage__comment__attachment" key={attachment.id}>
+          <IconPaperclip size={13} strokeWidth="1.8" />
+          <a href={attachment.src} target="_blank" rel="noreferrer">
+            {formatTaskAttachmentName(attachment)}
+          </a>
+          {props.canModify && (
+            <ActionIcon
+              size="xs"
+              aria-label="Remove attachment"
+              onClick={() => removeAttachment(attachment)}
+            >
+              <IconX size={12} strokeWidth="2" />
+            </ActionIcon>
+          )}
+        </span>
+      ))}
+      {props.canModify && (
+        <>
+          <Button
+            compact
+            size="xs"
+            variant="subtle"
+            type="button"
+            loading={uploading}
+            leftIcon={<IconPaperclip size={13} strokeWidth="1.8" />}
+            onClick={() => inputRef.current?.click()}
+          >
+            Attach
+          </Button>
+          <input
+            ref={inputRef}
+            className="TaskPage__attachments__input"
+            type="file"
+            multiple
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              uploadFiles(e.currentTarget.files || [])
+            }
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -1225,25 +1686,65 @@ function formatTaskStatus(status?: string) {
   return normalizeTaskStatus(status).replace(/[-_]/g, ' ');
 }
 
-function formatTaskField(field: TaskMetadataField) {
+function formatTaskField(
+  field: TaskMetadataField,
+  fieldDefs: TaskFieldDef[] = []
+) {
+  const customFieldId = parseTaskCustomFieldKey(field);
+  if (customFieldId) {
+    const fieldDef = fieldDefs.find((def) => def.id === customFieldId);
+    return fieldDef?.label.toLowerCase() || customFieldId;
+  }
   return field.replace(/([A-Z])/g, ' $1').toLowerCase();
 }
 
 function formatTaskEventValue(
   field: TaskMetadataField,
-  value: string | Timestamp | null
-) {
-  if (!value) {
+  value: TaskEventValue,
+  fieldDefs: TaskFieldDef[] = []
+): string {
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return 'none';
+    }
+    return value
+      .map((item) =>
+        field === 'followers'
+          ? formatTaskUser(item)
+          : field === 'blockedBy'
+            ? `#${item}`
+            : item
+      )
+      .join(', ');
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'yes' : 'no';
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  if (value === null || value === '') {
     return 'none';
   }
   if (value instanceof Timestamp) {
-    return formatTaskDate(value);
+    return field === 'dueDate'
+      ? formatTaskDateTime(value)
+      : formatTaskDate(value);
+  }
+  const customFieldId = parseTaskCustomFieldKey(field);
+  if (customFieldId) {
+    const fieldDef = fieldDefs.find((def) => def.id === customFieldId);
+    const option = fieldDef?.options?.find((item) => item.value === value);
+    return option?.label || value;
   }
   if (field === 'assignee') {
     return formatTaskUser(value);
   }
   if (field === 'title') {
     return value;
+  }
+  if (field === 'parentId') {
+    return `#${value}`;
   }
   return value.replace(/[-_]/g, ' ');
 }
@@ -1265,7 +1766,7 @@ function formatDateInputValue(value?: Timestamp | null) {
   return `${year}-${month}-${day}`;
 }
 
-function parseTargetLaunchDate(value: string) {
+function parseDateInputValue(value: string) {
   if (!value) {
     return null;
   }
@@ -1274,4 +1775,56 @@ function parseTargetLaunchDate(value: string) {
     return null;
   }
   return new Date(year, month - 1, day);
+}
+
+/** Formats a timestamp for an `<input type="datetime-local">`. */
+function formatDateTimeInputValue(value?: Timestamp | null) {
+  if (!value?.toMillis) {
+    return '';
+  }
+  const date = new Date(value.toMillis());
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function parseDateTimeInputValue(value: string) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isTaskDateField(field: TaskMetadataField) {
+  return (
+    field === 'dueDate' || field === 'startDate' || field === 'targetLaunchDate'
+  );
+}
+
+function formatTaskProvider(provider: string) {
+  if (!provider) {
+    return 'source';
+  }
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+/**
+ * Names the comment's author. Imported comments show the original author
+ * with their source, since `createdBy` records the importing account.
+ */
+function formatTaskAuthor(item: {
+  createdBy?: string;
+  importedAuthor?: string | null;
+  source?: Task['source'];
+}) {
+  if (item.importedAuthor) {
+    const provider = item.source?.provider;
+    return provider
+      ? `${item.importedAuthor} · via ${formatTaskProvider(provider)}`
+      : item.importedAuthor;
+  }
+  return formatTaskUser(item.createdBy || 'unknown');
 }

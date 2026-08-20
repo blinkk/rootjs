@@ -264,7 +264,7 @@
   color: inherit;
   display: grid;
   gap: 16px;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 24px 28px minmax(0, 1fr) auto;
   min-height: 64px;
   padding: 12px 18px;
   text-decoration: none;
@@ -605,12 +605,114 @@
 
   .TaskManager__taskRow {
     align-items: start;
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 24px 28px minmax(0, 1fr);
   }
 
   .TaskManager__taskRow__badges {
-    grid-column: 2;
+    grid-column: 3;
     justify-content: flex-start;
     justify-self: start;
   }
+
+  .TaskManager__search {
+    flex: 1 1 100%;
+  }
+}
+
+.TaskManager__search {
+  width: 220px;
+}
+
+.TaskManager__srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.TaskManager__sortHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.TaskManager__sortHeader svg {
+  opacity: 0.4;
+}
+
+.TaskManager__sortHeader--active svg {
+  opacity: 1;
+}
+
+.TaskManager__completeToggle {
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-gray);
+}
+
+.TaskManager__completeToggle--done {
+  border-color: #1f8a4c;
+  background: #1f8a4c;
+  color: #fff;
+}
+
+.TaskManager__table__completeCol {
+  width: 36px;
+}
+
+.TaskManager__table__overdue {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.TaskManager__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--chip-background);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.TaskManager__badge--blocked {
+  border-color: #e0b400;
+  background: #fff6d6;
+  color: #7a5c00;
+}
+
+.TaskManager__badge--overdue {
+  border-color: #c0392b;
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.TaskManager__tableTask__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.TaskManager__tableTask__badges:empty {
+  display: none;
+}
+
+.TaskManager__boardCard__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }

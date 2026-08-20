@@ -1,0 +1,40 @@
+.TaskChipInput {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.TaskChipInput__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.TaskChipInput__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 2px 2px 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--chip-background);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-default);
+}
+
+.TaskChipInput__chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.TaskChipInput__chip__remove {
+  flex-shrink: 0;
+  min-width: 16px;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-gray);
+}

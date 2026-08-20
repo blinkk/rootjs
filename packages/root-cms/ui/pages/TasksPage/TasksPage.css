@@ -13,3 +13,10 @@
     padding: 20px;
   }
 }
+
+.TasksPage__header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}

@@ -1,0 +1,37 @@
+.TaskFieldInput {
+  width: 100%;
+}
+
+input.TaskFieldInput__date {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--surface-background);
+  font-family: var(--font-family-default);
+  font-size: 12px;
+  color: var(--color-text-default);
+}
+
+.TaskFieldValue {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-default);
+}
+
+.TaskFieldValue--empty {
+  color: var(--color-text-gray);
+}
+
+.TaskFieldValue__badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--chip-background);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
