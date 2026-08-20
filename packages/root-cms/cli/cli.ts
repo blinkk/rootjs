@@ -6,6 +6,7 @@ import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
 import {initFirebase} from './init-firebase.js';
+import {proposalApply, proposalCheck, proposalDiff} from './proposal.js';
 import {installSkill} from './skill.js';
 
 class CliRunner {
@@ -22,9 +23,11 @@ class CliRunner {
     program.version(this.version);
     program.option('-q, --quiet', 'quiet');
     program.hook('preAction', (cmd, actionCommand) => {
-      // The `client.*` commands emit machine-readable JSON on stdout, so skip
-      // the decorative banner to keep their output clean for AI agents.
-      if (actionCommand.name().startsWith('client.')) {
+      // The `client.*` and `proposal.*` commands emit machine-readable JSON
+      // on stdout, so skip the decorative banner to keep their output clean
+      // for AI agents.
+      const name = actionCommand.name();
+      if (name.startsWith('client.') || name.startsWith('proposal.')) {
         return;
       }
       if (!cmd.opts().quiet) {
@@ -190,11 +193,57 @@ class CliRunner {
       .option('--types', 'include referenced type/interface definitions')
       .action(clientMethods);
     program
+      .command('proposal.check <file>')
+      .description(
+        'checks a CMS change proposal without touching the database\n\n' +
+          'Parses the YAML, checks it against the proposal format, and prints\n' +
+          'a summary of the changes it describes. Collection schemas are not\n' +
+          'checked here (that needs db access — use proposal.diff). Exits\n' +
+          'non-zero on any error, so it works as a CI gate on a pull request.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms proposal.check cms-proposals/hero-refresh.yaml'
+      )
+      .action(proposalCheck);
+    program
+      .command('proposal.diff <file>')
+      .description(
+        'resolves a proposal against the live database and reports what it\n' +
+          'would write, without writing anything\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms proposal.diff cms-proposals/hero-refresh.yaml'
+      )
+      .option('--skip-validation', 'skip collection schema validation')
+      .action(proposalDiff);
+    program
+      .command('proposal.apply <file>')
+      .description(
+        'applies a CMS change proposal to the database\n\n' +
+          'Writes drafts, release contents, and draft translations only —\n' +
+          'never publishes, schedules, or deletes. Nothing is written unless\n' +
+          'every change in the proposal resolves cleanly.\n\n' +
+          "By default a proposal's recorded `before` values are treated as\n" +
+          'documentation for the human reviewer and are not checked against\n' +
+          'the database. Pass --verify-before to fail on drift instead.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml\n' +
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml --dry-run\n' +
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml --verify-before'
+      )
+      .option('--dry-run', 'resolve and validate everything, but write nothing')
+      .option(
+        '--verify-before',
+        'fail if a recorded `before` value no longer matches the database'
+      )
+      .option('--skip-validation', 'skip collection schema validation')
+      .option('--modified-by <email>', 'email attributed as the author')
+      .action(proposalApply);
+    program
       .command('skill.install [dir]')
       .description(
-        'installs the bundled "root-cms-cli" agent skill\n\n' +
-          'Copies the skill (which teaches AI coding agents how to use the\n' +
-          '`root-cms client.*` commands) into a local skills directory.\n\n' +
+        'installs the bundled agent skills\n\n' +
+          'Copies the skills (which teach AI coding agents how to use the\n' +
+          '`root-cms client.*` commands, and how to propose and apply CMS\n' +
+          'change proposals) into a local skills directory.\n\n' +
           'When no directory is given, existing agent skills directories are\n' +
           'auto-detected (e.g. `.claude/skills`, `.agent/skills`, or any\n' +
           '`.*/skills` dir already in the project) so Root does not assume a\n' +
@@ -203,9 +252,11 @@ class CliRunner {
           'Usage examples:\n' +
           '  $ root-cms skill.install\n' +
           '  $ root-cms skill.install ./my-agent/skills\n' +
+          '  $ root-cms skill.install --skill root-cms-propose\n' +
           '  $ root-cms skill.install --force'
       )
       .option('--force', 'overwrite the skill if it is already installed')
+      .option('--skill <name>', 'install only the named skill')
       .action(installSkill);
     await program.parseAsync(argv);
   }
@@ -224,4 +275,7 @@ export {
   importData,
   initFirebase,
   installSkill,
+  proposalApply,
+  proposalCheck,
+  proposalDiff,
 };

@@ -101,6 +101,7 @@
     "sanitize-html": "2.17.6",
     "sirv": "3.0.2",
     "tiny-glob": "0.2.9",
+    "yaml": "2.9.0",
     "zod": "4.4.3"
   },
   "//": "NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12",

@@ -4,8 +4,12 @@ import {fileURLToPath} from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** The name of the bundled skill directory. */
-const SKILL_NAME = 'root-cms-cli';
+/** Names of the bundled skill directories, in install order. */
+export const SKILL_NAMES = [
+  'root-cms-cli',
+  'root-cms-propose',
+  'root-cms-apply',
+] as const;
 
 /**
  * Known AI-agent config directories that use the `SKILL.md` "skills"
@@ -22,11 +26,14 @@ const DEFAULT_SKILLS_DIR = '.agent/skills';
 export interface InstallSkillOptions {
   /** Overwrite the destination if it already exists. */
   force?: boolean;
+  /** Install only this skill instead of all bundled skills. */
+  skill?: string;
 }
 
 /**
- * Installs the bundled `root-cms-cli` agent skill into the project's skills
- * directory (or directories).
+ * Installs the bundled agent skills into the project's skills directory (or
+ * directories). All bundled skills are installed unless `options.skill` names
+ * a single one.
  *
  * When no directory is given, existing agent skills directories are
  * auto-detected (e.g. `.claude/skills`, `.agent/skills`, or any other
@@ -36,37 +43,58 @@ export interface InstallSkillOptions {
  * Usage:
  *   root-cms skill.install
  *   root-cms skill.install ./my-agent/skills
+ *   root-cms skill.install --skill root-cms-propose
  *   root-cms skill.install --force
  */
 export async function installSkill(
   dirArg: string | undefined,
   options?: InstallSkillOptions
 ) {
-  const src = findSkillDir();
+  const skillNames = resolveSkillNames(options?.skill);
   const rootDir = process.cwd();
   const targets = dirArg ? [path.resolve(dirArg)] : detectSkillsDirs(rootDir);
 
   let installed = 0;
   for (const skillsDir of targets) {
-    const dest = path.join(skillsDir, SKILL_NAME);
-    if (fs.existsSync(dest)) {
-      if (!options?.force) {
-        console.log(
-          `Skipped ${dest} (already installed; re-run with --force to overwrite)`
-        );
-        continue;
+    for (const skillName of skillNames) {
+      const src = findSkillDir(skillName);
+      const dest = path.join(skillsDir, skillName);
+      if (fs.existsSync(dest)) {
+        if (!options?.force) {
+          console.log(
+            `Skipped ${dest} (already installed; re-run with --force to overwrite)`
+          );
+          continue;
+        }
+        fs.rmSync(dest, {recursive: true, force: true});
       }
-      fs.rmSync(dest, {recursive: true, force: true});
+      fs.mkdirSync(skillsDir, {recursive: true});
+      fs.cpSync(src, dest, {recursive: true});
+      console.log(`Installed "${skillName}" skill to ${dest}`);
+      installed++;
     }
-    fs.mkdirSync(skillsDir, {recursive: true});
-    fs.cpSync(src, dest, {recursive: true});
-    console.log(`Installed "${SKILL_NAME}" skill to ${dest}`);
-    installed++;
   }
 
   if (installed === 0) {
     console.log('No skills installed.');
   }
+}
+
+/**
+ * Returns the skills to install: all of them by default, or just the named one.
+ *
+ * Exposed for testing.
+ */
+export function resolveSkillNames(skill?: string): string[] {
+  if (!skill) {
+    return [...SKILL_NAMES];
+  }
+  if (!(SKILL_NAMES as readonly string[]).includes(skill)) {
+    throw new Error(
+      `unknown skill: "${skill}" (available: ${SKILL_NAMES.join(', ')})`
+    );
+  }
+  return [skill];
 }
 
 /**
@@ -126,14 +154,14 @@ function isDirectory(p: string): boolean {
 }
 
 /**
- * Locates the bundled skill directory. The skill ships at `<package>/skills/`,
- * while the CLI runs from `dist/`, so a few candidate locations are checked.
+ * Locates a bundled skill directory. Skills ship at `<package>/skills/`, while
+ * the CLI runs from `dist/`, so a few candidate locations are checked.
  */
-function findSkillDir(): string {
+function findSkillDir(skillName: string): string {
   const candidates = [
-    path.resolve(__dirname, `../skills/${SKILL_NAME}`),
-    path.resolve(__dirname, `../../skills/${SKILL_NAME}`),
-    path.resolve(__dirname, `skills/${SKILL_NAME}`),
+    path.resolve(__dirname, `../skills/${skillName}`),
+    path.resolve(__dirname, `../../skills/${skillName}`),
+    path.resolve(__dirname, `skills/${skillName}`),
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, 'SKILL.md'))) {
@@ -141,7 +169,7 @@ function findSkillDir(): string {
     }
   }
   throw new Error(
-    `could not locate the "${SKILL_NAME}" skill (looked in: ${candidates.join(
+    `could not locate the "${skillName}" skill (looked in: ${candidates.join(
       ', '
     )})`
   );
