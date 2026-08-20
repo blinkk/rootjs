@@ -387,6 +387,77 @@ export async function cmsSyncDependencyGraph(docIds: string[]) {
   }
 }
 
+/** Behavior of the reference guard when a doc is deleted or unpublished. */
+export type ReferenceGuardMode = 'warn' | 'block';
+
+/** Result of a reference guard check for a doc. */
+export interface ReferenceGuardResult {
+  mode: ReferenceGuardMode;
+  /** Doc ids that directly reference the doc. Non-empty, sorted. */
+  dependents: string[];
+}
+
+/**
+ * Returns the reference guard mode from the `dependencyGraph.referenceGuard`
+ * cmsPlugin option, or `null` when the feature is disabled.
+ */
+export function getReferenceGuardMode(): ReferenceGuardMode | null {
+  if (!window.__ROOT_CTX.dependencyGraphEnabled) {
+    return null;
+  }
+  return window.__ROOT_CTX.dependencyGraphReferenceGuard || null;
+}
+
+/**
+ * Checks the reference guard before deleting or unpublishing a doc, returning
+ * the guard mode and the docs that directly reference `docId`. Deleting a doc
+ * affects both draft and published references (union of both graph modes);
+ * unpublishing only affects published references. Returns `null` when the
+ * guard is disabled, no other docs reference the doc, or the query fails —
+ * failures are logged and the caller falls back to the standard confirmation
+ * flow (a graph outage should never prevent edits).
+ */
+export async function cmsCheckReferenceGuard(
+  docId: string,
+  action: 'delete' | 'unpublish'
+): Promise<ReferenceGuardResult | null> {
+  const mode = getReferenceGuardMode();
+  if (!mode) {
+    return null;
+  }
+  const graphModes =
+    action === 'delete' ? ['draft', 'published'] : ['published'];
+  try {
+    const results = await Promise.all(
+      graphModes.map(async (graphMode) => {
+        const res = await fetch('/cms/api/dependency_graph.query', {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({
+            docIds: [docId],
+            mode: graphMode,
+            direction: 'dependents',
+            transitive: false,
+          }),
+        });
+        if (res.status !== 200) {
+          throw new Error(await res.text());
+        }
+        const data = await res.json();
+        return (data.deps || []) as string[];
+      })
+    );
+    const dependents = Array.from(new Set(results.flat())).sort();
+    if (dependents.length === 0) {
+      return null;
+    }
+    return {mode, dependents};
+  } catch (err) {
+    console.error('reference guard check failed:', err);
+    return null;
+  }
+}
+
 /**
  * Schedules a CMS doc to be published at some time in the future.
  */

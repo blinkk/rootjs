@@ -5,6 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
+import {resolveReferenceGuardMode} from './dependency-graph.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -156,6 +157,9 @@ export async function renderApp(
     // Matches `resolveDependencyGraphConfig()`: `true` or a config object
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
+    dependencyGraphReferenceGuard: resolveReferenceGuardMode(
+      cmsConfig.dependencyGraph
+    ),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

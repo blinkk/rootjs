@@ -421,7 +421,8 @@ export function api(server: Server, options: ApiOptions) {
   >();
 
   /**
-   * Queries the dependency graph for the docs referenced by one or more docs.
+   * Queries the dependency graph for the docs referenced by one or more docs,
+   * or — with `direction: "dependents"` — the docs that reference them.
    * Requires the `dependencyGraph` cmsPlugin option to be enabled.
    *
    * Authentication: any signed-in CMS user.
@@ -431,6 +432,13 @@ export function api(server: Server, options: ApiOptions) {
    * ```
    * POST /cms/api/dependency_graph.query
    * {"docIds": ["Pages/index"], "mode": "draft", "transitive": true}
+   * ```
+   *
+   * Reverse lookup:
+   *
+   * ```
+   * POST /cms/api/dependency_graph.query
+   * {"docIds": ["Pages/index"], "direction": "dependents", "transitive": false}
    * ```
    */
   server.use(
@@ -460,6 +468,8 @@ export function api(server: Server, options: ApiOptions) {
         return;
       }
       const mode = body.mode === 'published' ? 'published' : 'draft';
+      const direction =
+        body.direction === 'dependents' ? 'dependents' : 'dependencies';
       const transitive = body.transitive !== false;
       try {
         const service = new DependencyGraphService(req.rootConfig!);
@@ -468,11 +478,15 @@ export function api(server: Server, options: ApiOptions) {
           return;
         }
         const graph = await service.getGraph(mode);
-        const deps = graph.getDependencies(docIds, {transitive});
+        const deps =
+          direction === 'dependents'
+            ? graph.getDependents(docIds, {transitive})
+            : graph.getDependencies(docIds, {transitive});
         res.setHeader('Cache-Control', 'no-store');
         res.status(200).json({
           success: true,
           mode,
+          direction,
           deps,
           lastRun: graph.lastRun,
         });

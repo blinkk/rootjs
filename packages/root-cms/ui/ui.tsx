@@ -284,6 +284,12 @@ declare global {
        * client-side publishes so the graph is updated immediately.
        */
       dependencyGraphEnabled?: boolean;
+      /**
+       * Reference guard mode from the `dependencyGraph.referenceGuard`
+       * cmsPlugin option. When set, the UI warns ('warn') or blocks ('block')
+       * deleting or unpublishing a doc that other docs reference.
+       */
+      dependencyGraphReferenceGuard?: 'warn' | 'block' | null;
     };
     firebase: FirebaseContextObject;
   }
