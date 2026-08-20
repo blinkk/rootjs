@@ -40,6 +40,7 @@ import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
 import {replaceParams} from '../utils/url-path-params.js';
 import {AssetMap} from './asset-map/asset-map.js';
+import {collectStyleDeps} from './asset-map/collect-style-deps.js';
 import {transformHtml} from './html-transform.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, Router} from './router.js';
@@ -188,6 +189,7 @@ export class Renderer {
       headComponents: [],
       bodyAttrs: {},
       scriptDeps: [],
+      styleDeps: [],
     };
     const vdom = (
       <ASSET_MAP_CONTEXT.Provider value={this.assetMap}>
@@ -271,6 +273,11 @@ export class Renderer {
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
     await this.collectElementDeps(mainHtml, jsDeps, cssDeps, preloadDeps);
+
+    // Inject CSS deps for components registered via `<StyleDeps src="...">`.
+    // This covers components imported dynamically (e.g. via `import()`), whose
+    // CSS is not reachable through the route's static import graph.
+    await collectStyleDeps(this.assetMap, htmlContext.styleDeps, cssDeps);
 
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(

@@ -7,6 +7,13 @@ export interface HtmlContext {
   headComponents: ComponentChildren[];
   bodyAttrs: preact.JSX.HTMLAttributes<HTMLBodyElement>;
   scriptDeps: Array<preact.JSX.ScriptHTMLAttributes<HTMLScriptElement>>;
+  /**
+   * Source paths of components rendered on the page whose CSS deps should be
+   * injected, even when the component is imported dynamically (and therefore
+   * not reachable via the route's static import graph). Registered via
+   * `<StyleDeps>`.
+   */
+  styleDeps: string[];
 }
 
 export const HTML_CONTEXT = createContext<HtmlContext | null>(null);

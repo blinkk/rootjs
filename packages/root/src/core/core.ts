@@ -1,5 +1,6 @@
 export * from './config.js';
 export {Body} from './components/Body.js';
+export {StyleDeps} from './components/StyleDeps.js';
 export {Head} from './components/Head.js';
 export {Html, HTML_CONTEXT} from './components/Html.js';
 export {Script} from './components/Script.js';
