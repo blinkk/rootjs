@@ -134,10 +134,78 @@ Firestore `Timestamp`, `GeoPoint`, and `DocumentReference` values are encoded
 as `{"_seconds","_nanoseconds"}`, `{"_latitude","_longitude"}`, and
 `{"_referencePath"}` respectively in both arguments and results.
 
+## Change proposals
+
+AI agents can **propose** content changes instead of writing them straight to
+Firestore. A proposal is a single YAML file describing the edits — doc id,
+field path, old value, new value — that gets committed to your repo and
+reviewed in a pull request. Nothing touches the database until you apply it.
+
+```yaml
+version: 1
+id: 2026-08-20-hero-refresh
+title: Refresh the homepage hero
+changes:
+  - kind: doc.edit
+    docId: Pages/home
+    ops:
+      - op: set
+        path: hero.title
+        before: "Welcome to Acme"
+        after: "Build faster with Acme"
+```
+
+Supported change kinds are `doc.edit`, `doc.create`, `doc.duplicate`,
+`release.create`, `release.update`, and `translations`. Edit operations
+(`set`, `insert_item`, `remove_item`) use dotted field paths with zero-based
+array indices, and apply in order.
+
+Three commands drive the workflow:
+
+```bash
+# Check the proposal format. No db access, so it works as a CI gate on a PR.
+root-cms proposal.check cms-proposals/2026-08-20-hero-refresh.yaml
+
+# Resolve against the live db, validate against collection schemas, and
+# report what it would write.
+root-cms proposal.diff cms-proposals/2026-08-20-hero-refresh.yaml
+
+# Apply it.
+root-cms proposal.apply cms-proposals/2026-08-20-hero-refresh.yaml
+```
+
+Applying writes **drafts only** — it never publishes, schedules, or deletes —
+and nothing is written unless every change in the proposal resolves cleanly.
+Each command prints the same single-line JSON envelope as `client.call`.
+
+A proposal's `before` values are documentation for the human reading the diff;
+they are not checked against the database unless you pass `--verify-before`.
+
+### Previewing a proposal
+
+`RootCMSClient` can overlay an unapplied proposal on everything it reads, so
+you can see proposed content rendered on a running site before accepting it:
+
+```ts
+import {RootCMSClient, parseProposal} from '@blinkk/root-cms/core';
+
+const res = parseProposal(fs.readFileSync('cms-proposals/x.yaml', 'utf8'));
+if (res.ok) {
+  const client = new RootCMSClient(rootConfig, {proposal: res.proposal});
+  // getDoc(), listDocs(), and batch reads now reflect the proposal.
+}
+```
+
+The overlay applies to reads only. Writes never fold the proposal in, and
+`getRawDoc()` / `listDocs({raw: true})` deliberately bypass it so proposed
+content can never leak into a `setRawDoc()` round-trip.
+
 ## Downloadable agent skill
 
-A ready-to-use skill that teaches AI coding agents how to use these commands
-ships with the package. Install it with:
+Ready-to-use skills that teach AI coding agents how to use these commands ship
+with the package: `root-cms-cli` (the `client.*` commands), `root-cms-propose`
+(authoring change proposals), and `root-cms-apply` (reviewing and applying
+them). Install them with:
 
 ```bash
 root-cms skill.install
@@ -148,7 +216,8 @@ existing agent skills directories (e.g. `.claude/skills`, `.agent/skills`, or
 any `.*/skills` directory already in your project) and installs into them. If
 none is found, it installs to `.agent/skills`. Pass an explicit directory to
 override detection (e.g. `root-cms skill.install ./my-agent/skills`), or
-`--force` to overwrite an existing copy.
+`--force` to overwrite an existing copy. Pass `--skill <name>` to install just
+one of them.
 
 # Embedding the CMS (`@blinkk/root-cms/browser-client`)
 
