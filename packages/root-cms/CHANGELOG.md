@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.4.7
+
+### Patch Changes
+
+- 8a91744: fix: let admins reset a user's stale Google sign-in link
+- 80e7979: fix: don't log rejected sign-in tokens as server errors
+- 8b2a925: feat: warn and recursively delete non-empty asset folders
+- debc101: fix: sort JSON metadata keys immediately after their parent key
+- 1f67252: fix: send CSV imports as plain text instead of multipart/form-data
+- Updated dependencies [6f26b68]
+  - @blinkk/root@3.4.7
+
 ## 3.4.6
 
 ### Patch Changes
