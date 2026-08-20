@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.4.7
+
+### Patch Changes
+
+- 6f26b68: feat: add inert to the jsx html attribute types
+
 ## 3.4.6
 
 ## 3.4.5
