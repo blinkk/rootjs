@@ -198,21 +198,32 @@ function getAssetPickerStorageKey(): string {
   return `${ASSET_PICKER_LAST_FOLDER_KEY}:${projectId}`;
 }
 
-/** Returns the last folder the user navigated to in the asset picker modal. */
-export function getAssetPickerLastFolder(): string {
+/**
+ * Returns the last folder the user navigated to in the asset picker modal
+ * during this tab session, or `null` if the picker hasn't been used yet in
+ * this tab. An empty string is a meaningful value (the project root), so
+ * callers should check for `null` rather than falsiness.
+ *
+ * The value is stored in `sessionStorage` so that each tab keeps its own
+ * folder history and new tabs start fresh.
+ */
+export function getAssetPickerLastFolder(): string | null {
   try {
-    return localStorage.getItem(getAssetPickerStorageKey()) || '';
+    return sessionStorage.getItem(getAssetPickerStorageKey());
   } catch {
-    return '';
+    return null;
   }
 }
 
-/** Persists the last folder the user navigated to in the asset picker modal. */
+/**
+ * Persists the last folder the user navigated to in the asset picker modal
+ * for the current tab session.
+ */
 export function setAssetPickerLastFolder(folder: string): void {
   try {
-    localStorage.setItem(getAssetPickerStorageKey(), folder || '');
+    sessionStorage.setItem(getAssetPickerStorageKey(), folder || '');
   } catch {
-    // localStorage may be unavailable; ignore.
+    // sessionStorage may be unavailable; ignore.
   }
 }
 

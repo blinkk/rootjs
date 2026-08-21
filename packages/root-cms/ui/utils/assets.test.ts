@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   Asset,
   AssetFile,
@@ -7,11 +7,13 @@ import {
   buildSyncedFieldValue,
   collectAssetFieldPaths,
   extractAssetIds,
+  getAssetPickerLastFolder,
   getFolderId,
   getRelativeFolderPath,
   joinFolderPath,
   parseFolderPath,
   replaceFileExt,
+  setAssetPickerLastFolder,
   sortAssets,
   validateAssetName,
   validateFolderPath,
@@ -369,5 +371,49 @@ describe('sortAssets', () => {
     const input = [...assets];
     sortAssets(input, {field: 'modified', dir: 'desc'});
     expect(names(input)).toEqual(names(assets));
+  });
+});
+
+describe('assetPickerLastFolder', () => {
+  const originalCtx = window.__ROOT_CTX;
+
+  beforeEach(() => {
+    window.__ROOT_CTX = {rootConfig: {projectId: 'test-project'}} as any;
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    window.__ROOT_CTX = originalCtx;
+    sessionStorage.clear();
+  });
+
+  it('returns null when unset in the tab session', () => {
+    expect(getAssetPickerLastFolder()).toEqual(null);
+  });
+
+  it('round-trips the last folder within the tab session', () => {
+    setAssetPickerLastFolder('marketing/2026');
+    expect(getAssetPickerLastFolder()).toEqual('marketing/2026');
+  });
+
+  it('distinguishes the project root from an unset value', () => {
+    setAssetPickerLastFolder('');
+    expect(getAssetPickerLastFolder()).toEqual('');
+  });
+
+  it('stores the value in sessionStorage, not localStorage', () => {
+    setAssetPickerLastFolder('marketing');
+    expect(
+      sessionStorage.getItem('root-cms:assetPicker:lastFolder:test-project')
+    ).toEqual('marketing');
+    expect(
+      localStorage.getItem('root-cms:assetPicker:lastFolder:test-project')
+    ).toEqual(null);
+  });
+
+  it('scopes the value per project', () => {
+    setAssetPickerLastFolder('marketing');
+    window.__ROOT_CTX = {rootConfig: {projectId: 'other-project'}} as any;
+    expect(getAssetPickerLastFolder()).toEqual(null);
   });
 });
