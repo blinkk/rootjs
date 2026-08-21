@@ -48,8 +48,7 @@ import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {testAiEnabled, testAiImageEditingEnabled} from '../../../utils/ai.js';
 import {
   buildAssetFieldValue,
-  getAsset,
-  getAssetPickerLastFolder,
+  resolveAssetPickerFolder,
 } from '../../../utils/assets.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
@@ -442,20 +441,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
    * asset (when replacing a value backed by `assetId`), or the project root.
    */
   async function requestAssetPicker() {
-    let initialFolder = getAssetPickerLastFolder();
-    if (initialFolder === null) {
-      initialFolder = '';
-      if (value?.assetId) {
-        try {
-          const asset = await getAsset(value.assetId);
-          if (asset) {
-            initialFolder = asset.parent || '';
-          }
-        } catch (err) {
-          console.warn('failed to resolve linked asset folder:', err);
-        }
-      }
-    }
+    const initialFolder = await resolveAssetPickerFolder(value?.assetId);
     assetPickerModal.open({
       accept: acceptedFileTypes,
       initialFolder,

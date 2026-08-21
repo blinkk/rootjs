@@ -228,6 +228,35 @@ export function setAssetPickerLastFolder(folder: string): void {
 }
 
 /**
+ * Resolves the folder the asset picker should open to for a field, where
+ * `assetId` is the asset the field currently points at (if any).
+ *
+ * Within a tab session the picker returns to the folder the user last
+ * visited, so picking assets across several fields keeps the user in the
+ * folder they were browsing. For a new tab session (nothing stored yet) it
+ * falls back to the folder of the field's current asset, or the project
+ * root.
+ */
+export async function resolveAssetPickerFolder(
+  assetId?: string
+): Promise<string> {
+  const lastFolder = getAssetPickerLastFolder();
+  if (lastFolder !== null) {
+    return lastFolder;
+  }
+  if (!assetId) {
+    return '';
+  }
+  try {
+    const asset = await getAsset(assetId);
+    return asset?.parent || '';
+  } catch (err) {
+    console.warn('failed to resolve linked asset folder:', err);
+    return '';
+  }
+}
+
+/**
  * Validates a file or folder display name. Returns the trimmed name or throws
  * an `AssetNameError`.
  */
