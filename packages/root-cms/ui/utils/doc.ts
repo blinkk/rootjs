@@ -813,7 +813,7 @@ export async function cmsCreateDoc(
     const oldData = doc.data();
     data.sys = {
       ...oldData.sys,
-      locales: options?.locales ?? oldData.sys.locales,
+      locales: options?.locales ?? oldData.sys.locales ?? ['en'],
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
     };
