@@ -48,8 +48,7 @@ import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {testAiEnabled, testAiImageEditingEnabled} from '../../../utils/ai.js';
 import {
   buildAssetFieldValue,
-  getAsset,
-  getAssetPickerLastFolder,
+  resolveAssetPickerFolder,
 } from '../../../utils/assets.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
@@ -437,21 +436,12 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
    * The selected asset's file data is copied into the doc along with an
    * `assetId` backlink so updates to the asset can be synced to the doc.
    *
-   * The picker opens in the folder of the currently-linked asset (when
-   * replacing a value backed by `assetId`) or the user's last visited folder.
+   * The picker opens in the last folder visited during this tab session. For
+   * new tab sessions it falls back to the folder of the currently-linked
+   * asset (when replacing a value backed by `assetId`), or the project root.
    */
   async function requestAssetPicker() {
-    let initialFolder = getAssetPickerLastFolder();
-    if (value?.assetId) {
-      try {
-        const asset = await getAsset(value.assetId);
-        if (asset) {
-          initialFolder = asset.parent || '';
-        }
-      } catch (err) {
-        console.warn('failed to resolve linked asset folder:', err);
-      }
-    }
+    const initialFolder = await resolveAssetPickerFolder(value?.assetId);
     assetPickerModal.open({
       accept: acceptedFileTypes,
       initialFolder,
