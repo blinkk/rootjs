@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.4.8
+
+### Patch Changes
+
+- e5f4687: fix: remove blank paragraphs when pasting into the rich text editor
+- 0e299f4: fix: remember the asset picker folder per tab session
+- Updated dependencies [85ab684]
+  - @blinkk/root@3.4.8
+
 ## 3.4.7
 
 ### Patch Changes
