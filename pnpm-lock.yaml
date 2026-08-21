@@ -389,6 +389,9 @@ importers:
       tiny-glob:
         specifier: 0.2.9
         version: 0.2.9
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -2246,18 +2249,17 @@ packages:
   '@maxim_mazurok/gapi.client.discovery-v1@0.6.20200806':
     resolution: {integrity: sha512-QN6aGmIbLXcJW0SEf8tz9UWCpQTBMy2u4xSuZ04YofzMGknhWwMeUecySLntCZYAEstHzDoSgwxCf5Gb8GqIRQ==}
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260723':
-    resolution: {integrity: sha512-jD52mI84xdhul51lYGJXH367SwHiRIVAJrKf8MNtTjqMR/KveBmeTiAuWZcLOnV1I2nvNbY5AoryTJVgc381ag==}
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260810':
+    resolution: {integrity: sha512-J8IA28ANqiCD0E1oUkrRcFjaaAZOV2kU+MY/0wU13fMfin2d7+QJ9PnhTqB8cLU+WWOg+FtWt/FRnHUbpZr5bA==}
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260722':
-    resolution: {integrity: sha512-hhE/8xd+YxJBH2+zim7O5wDX8zkeFntvtCNlu/4mZcjMt+uAAAAuewZHRx7PWQvTuvgMtvoLZVJu2jVDdeWwzQ==}
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260812':
+    resolution: {integrity: sha512-AYn4VRYxnZbJahwtbDzpq19YJSjJyBf8utlejQro+wrXBq7yE1D5cX3mplkZfI/Se/EGB4RX39eEehS7dxHp3w==}
 
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -9881,17 +9883,17 @@ snapshots:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260723':
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260810':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260722':
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260812':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.4.3)':
+  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.23)
       ajv: 8.20.0
@@ -10361,11 +10363,11 @@ snapshots:
 
   '@types/gapi.client.drive-v3@0.0.5':
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260723
+      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260810
 
   '@types/gapi.client.sheets-v4@0.0.4':
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260722
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260812
 
   '@types/gapi.client@1.0.8': {}
 
@@ -12368,7 +12370,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@25.9.1)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
@@ -12457,7 +12459,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@24.13.3)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
