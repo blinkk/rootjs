@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.4.8
+
+### Patch Changes
+
+- 85ab684: feat: add <StyleDeps> for adding CSS deps of dynamic components
+
 ## 3.4.7
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @blinkk/root-password-protect
 
+## 3.4.8
+
+### Patch Changes
+
+- Updated dependencies [85ab684]
+  - @blinkk/root@3.4.8
+
 ## 3.4.7
 
 ### Patch Changes
