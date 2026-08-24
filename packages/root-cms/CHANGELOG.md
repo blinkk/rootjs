@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.4.8
+
+### Patch Changes
+
+- 709e0b8: fix: default sys.locales when overwriting a doc without locales
+- 42d56d3: feat: add required publishing checks configurable per collection
+- 513a563: fix: index content nested inside oneOf fields in site-wide search
+- 36be4af: feat: add paragraph size variants to the richtext editor
+- e5f4687: fix: remove blank paragraphs when pasting into the rich text editor
+- f73f972: feat: various polish features for CMS tasks
+- 0e299f4: fix: remember the asset picker folder per tab session
+- Updated dependencies [85ab684]
+  - @blinkk/root@3.4.8
+
 ## 3.4.7
 
 ### Patch Changes
