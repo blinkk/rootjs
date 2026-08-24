@@ -44,10 +44,12 @@ import {Text} from '../../components/Text/Text.js';
 import {UserTag} from '../../components/UserTag/UserTag.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {errorMessage} from '../../utils/notifications.js';
+import {getRole} from '../../utils/permissions.js';
 import {
   addTaskComment,
   addTaskAttachment,
@@ -591,6 +593,7 @@ function TaskMetadataPanel(props: {task: Task}) {
   const {route} = useLocation();
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const {roles} = useProjectRoles();
   const [assignee, setAssignee] = useState(task.assignee || '');
   const [ccDraft, setCcDraft] = useState('');
   const [targetLaunchDate, setTargetLaunchDate] = useState(
@@ -598,6 +601,12 @@ function TaskMetadataPanel(props: {task: Task}) {
   );
   const [savingField, setSavingField] = useState<TaskMetadataField | ''>('');
   const ccList = task.cc || [];
+  const currentUserEmail = (window.firebase.user.email || '').toLowerCase();
+  const isAssignedToMe =
+    (task.assignee || '').toLowerCase() === currentUserEmail;
+  const isCcdToMe = ccList.some(
+    (email) => email.toLowerCase() === currentUserEmail
+  );
 
   useEffect(() => {
     setAssignee(task.assignee || '');
@@ -633,6 +642,24 @@ function TaskMetadataPanel(props: {task: Task}) {
     );
   }
 
+  function assignToMe() {
+    if (!currentUserEmail || isAssignedToMe) {
+      return;
+    }
+    setAssignee(currentUserEmail);
+    saveMetadata('assignee', () =>
+      updateTaskAssignee(task.id, currentUserEmail)
+    );
+  }
+
+  function ccMe() {
+    if (!currentUserEmail || isCcdToMe) {
+      return;
+    }
+    const normalizedCc = normalizeTaskCcList([...ccList, currentUserEmail]);
+    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
+  }
+
   function addCcEmails() {
     const draftEmails = ccDraft.split(/[,\s]+/).filter(Boolean);
     if (draftEmails.length === 0) {
@@ -642,6 +669,19 @@ function TaskMetadataPanel(props: {task: Task}) {
       showNotification({
         title: 'Could not add to CC',
         message: 'Enter a valid email address.',
+        color: 'red',
+      });
+      return;
+    }
+    const notAllowed = draftEmails.filter(
+      (email) => !getRole(roles, email.trim().toLowerCase())
+    );
+    if (notAllowed.length > 0) {
+      showNotification({
+        title: 'Could not add to CC',
+        message: `${notAllowed.join(', ')} ${
+          notAllowed.length === 1 ? 'is' : 'are'
+        } not a member of this project.`,
         color: 'red',
       });
       return;
@@ -657,6 +697,27 @@ function TaskMetadataPanel(props: {task: Task}) {
   function removeCcEmail(email: string) {
     const normalizedCc = ccList.filter((value) => value !== email);
     saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
+  }
+
+  // Copies the full email addresses of the selected chips, instead of the
+  // short names shown in the UI (e.g. "jeremydw" -> "jeremydw@example.com").
+  function handleCopyCc(e: ClipboardEvent) {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      return;
+    }
+    const container = e.currentTarget as HTMLElement;
+    const emails = Array.from(
+      container.querySelectorAll<HTMLElement>('[data-cc-email]')
+    )
+      .filter((el) => selection.containsNode(el, true))
+      .map((el) => el.dataset.ccEmail || '')
+      .filter(Boolean);
+    if (emails.length === 0) {
+      return;
+    }
+    e.preventDefault();
+    e.clipboardData?.setData('text/plain', emails.join(', '));
   }
 
   function onDeleteTask() {
@@ -736,6 +797,16 @@ function TaskMetadataPanel(props: {task: Task}) {
             }}
           />
         </div>
+        {currentUserEmail && !isAssignedToMe && (
+          <button
+            type="button"
+            className="TaskPage__metadata__selfLink"
+            disabled={savingField === 'assignee'}
+            onClick={assignToMe}
+          >
+            Assign me
+          </button>
+        )}
       </div>
       <div className="TaskPage__metadata__field">
         <label>CC</label>
@@ -758,9 +829,13 @@ function TaskMetadataPanel(props: {task: Task}) {
             }}
           />
           {ccList.length > 0 && (
-            <div className="TaskPage__metadata__ccList">
+            <div className="TaskPage__metadata__ccList" onCopy={handleCopyCc}>
               {ccList.map((email) => (
-                <div className="TaskPage__metadata__ccItem" key={email}>
+                <div
+                  className="TaskPage__metadata__ccItem"
+                  key={email}
+                  data-cc-email={email}
+                >
                   <UserTag email={email} />
                   <ActionIcon
                     size="xs"
@@ -773,6 +848,16 @@ function TaskMetadataPanel(props: {task: Task}) {
                 </div>
               ))}
             </div>
+          )}
+          {currentUserEmail && !isCcdToMe && (
+            <button
+              type="button"
+              className="TaskPage__metadata__selfLink"
+              disabled={savingField === 'cc'}
+              onClick={ccMe}
+            >
+              CC me
+            </button>
           )}
         </div>
       </div>
@@ -961,17 +1046,59 @@ function TaskEventTimelineItem(props: {event: TaskEvent}) {
         <b>
           <UserTag email={event.createdBy || 'unknown'} />
         </b>{' '}
-        changed {formatTaskField(event.field)} from{' '}
-        <span className="TaskPage__timelineValue">
-          {formatTaskEventValue(event.field, event.oldValue)}
-        </span>{' '}
-        to{' '}
-        <span className="TaskPage__timelineValue">
-          {formatTaskEventValue(event.field, event.newValue)}
-        </span>{' '}
+        {event.field === 'cc' ? (
+          <TaskCcEventSummary event={event} />
+        ) : (
+          <>
+            changed {formatTaskField(event.field)} from{' '}
+            <span className="TaskPage__timelineValue">
+              {formatTaskEventValue(event.field, event.oldValue)}
+            </span>{' '}
+            to{' '}
+            <span className="TaskPage__timelineValue">
+              {formatTaskEventValue(event.field, event.newValue)}
+            </span>
+          </>
+        )}{' '}
         {formatTaskDateTime(event.createdAt)}.
       </div>
     </div>
+  );
+}
+
+/** Renders a concise "added/removed X to/from cc" summary for a cc event. */
+function TaskCcEventSummary(props: {event: TaskEvent}) {
+  const {event} = props;
+  const toEmails = (value: TaskEvent['oldValue']) =>
+    typeof value === 'string' ? value.split(/,\s*/).filter(Boolean) : [];
+  const oldEmails = toEmails(event.oldValue);
+  const newEmails = toEmails(event.newValue);
+  const added = newEmails.filter((email) => !oldEmails.includes(email));
+  const removed = oldEmails.filter((email) => !newEmails.includes(email));
+  const renderEmails = (emails: string[]) =>
+    emails.map((email, index) => (
+      <span key={email}>
+        {index > 0 && ', '}
+        <UserTag email={email} />
+      </span>
+    ));
+  if (added.length > 0 && removed.length === 0) {
+    return <>added {renderEmails(added)} to cc</>;
+  }
+  if (removed.length > 0 && added.length === 0) {
+    return <>removed {renderEmails(removed)} from cc</>;
+  }
+  return (
+    <>
+      changed cc from{' '}
+      <span className="TaskPage__timelineValue">
+        {formatTaskEventValue(event.field, event.oldValue)}
+      </span>{' '}
+      to{' '}
+      <span className="TaskPage__timelineValue">
+        {formatTaskEventValue(event.field, event.newValue)}
+      </span>
+    </>
   );
 }
 

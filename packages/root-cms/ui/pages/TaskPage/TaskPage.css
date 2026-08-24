@@ -264,6 +264,25 @@
   font-weight: 700;
 }
 
+.TaskPage__metadata__selfLink {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-primary, #1c7ed6);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.TaskPage__metadata__selfLink:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.TaskPage__metadata__selfLink:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .TaskPage__metadata__assignee,
 .TaskPage__metadata__date {
   align-items: center;
