@@ -1,4 +1,5 @@
 import {describe, it, expect} from 'vitest';
+import {convertOneOfTypes, SchemaModule} from './project.js';
 import * as schema from './schema.js';
 import {
   MAX_FIELD_TEXT_CHARS,
@@ -316,6 +317,104 @@ describe('extractDocRecords', () => {
       deepKey: 'fields.blocks.a.text',
       text: 'hello',
     });
+  });
+
+  it('resolves oneOf types given as string names via schema.types', () => {
+    const TextBlock = schema.define({
+      name: 'TextBlock',
+      fields: [schema.string({id: 'text'})],
+    });
+    // The shape produced by `convertOneOfTypes()`: `types` holds schema names
+    // and the schemas themselves are hoisted onto the collection.
+    const S: schema.SchemaWithTypes = {
+      name: 'O',
+      fields: [
+        schema.array({
+          id: 'blocks',
+          of: schema.oneOf({types: ['TextBlock'] as any}),
+        }),
+      ],
+      types: {TextBlock},
+    };
+    const records = extractDocRecords(S, {
+      collection: 'O',
+      slug: 's',
+      fields: {
+        blocks: {
+          _array: ['a'],
+          a: {_type: 'TextBlock', text: 'hello'},
+        },
+      },
+    });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      deepKey: 'fields.blocks.a.text',
+      text: 'hello',
+    });
+  });
+
+  it('indexes nested modules of a collection run through convertOneOfTypes', () => {
+    const Nested = schema.define({
+      name: 'Nested',
+      fields: [schema.string({id: 'caption'})],
+    });
+    const Container = schema.define({
+      name: 'Container',
+      fields: [
+        schema.string({id: 'heading'}),
+        schema.array({
+          id: 'modules',
+          of: schema.oneOf({types: [Nested]}),
+        }),
+      ],
+    });
+    const schemaModules: Record<string, SchemaModule> = {
+      '/modules/Container.schema.ts': {default: Container},
+      '/modules/Nested.schema.ts': {default: Nested},
+    };
+    const collection = convertOneOfTypes(
+      {
+        id: 'Pages',
+        name: 'Pages',
+        url: '/[...slug]',
+        fields: [
+          schema.string({id: 'title'}),
+          schema.array({
+            id: 'modules',
+            of: schema.oneOf({
+              types: schema.glob('/modules/*.schema.ts'),
+            }),
+          }),
+        ],
+      },
+      schemaModules
+    );
+
+    const records = extractDocRecords(collection, {
+      collection: 'Pages',
+      slug: 'home',
+      fields: {
+        title: 'Home',
+        modules: {
+          _array: ['m1'],
+          m1: {
+            _type: 'Container',
+            heading: 'Section heading',
+            modules: {
+              _array: ['n1'],
+              n1: {_type: 'Nested', caption: 'Deeply nested text'},
+            },
+          },
+        },
+      },
+    });
+
+    expect(records.map((r) => r.deepKey)).toEqual([
+      'fields.title',
+      'fields.modules.m1.heading',
+      'fields.modules.m1.modules.n1.caption',
+    ]);
+    expect(records.map((r) => r.text)).toContain('Deeply nested text');
   });
 
   it('truncates long text to MAX_FIELD_TEXT_CHARS', () => {

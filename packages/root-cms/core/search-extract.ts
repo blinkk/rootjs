@@ -20,6 +20,7 @@ import type {
   ObjectField,
   OneOfField,
   Schema,
+  SchemaWithTypes,
 } from './schema.js';
 
 /** Hard cap for any single extracted text value. */
@@ -46,6 +47,11 @@ interface EmitContext {
   docId: string;
   collection: string;
   slug: string;
+  /**
+   * Schema-name => Schema map used to resolve `oneOf` fields whose `types`
+   * were converted to string names by `convertOneOfTypes()`.
+   */
+  types: Record<string, Schema>;
 }
 
 type EmitFn = (record: ExtractedRecord) => void;
@@ -325,6 +331,11 @@ function walkOneOf(
           matchedSchema = schema;
           break;
         }
+      } else if (candidate === typeName) {
+        // `convertOneOfTypes()` rewrites `types` to string names and hoists the
+        // schemas onto `collection.types`.
+        matchedSchema = ctx.types[typeName] || null;
+        break;
       }
     }
   }
@@ -367,7 +378,7 @@ export interface ExtractDocOptions {
 
 /** Extracts every searchable record from a single doc. */
 export function extractDocRecords(
-  schema: Schema,
+  schema: SchemaWithTypes,
   options: ExtractDocOptions
 ): ExtractedRecord[] {
   const records: ExtractedRecord[] = [];
@@ -376,6 +387,7 @@ export function extractDocRecords(
     docId,
     collection: options.collection,
     slug: options.slug,
+    types: schema.types || {},
   };
   walkSchemaFields(schema.fields, options.fields || {}, 'fields', ctx, (rec) =>
     records.push(rec)
