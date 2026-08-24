@@ -4,6 +4,7 @@ import {showNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {usePublishChecks} from '../../hooks/usePublishChecks.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {scheduleRelease} from '../../utils/release.js';
 import {getLocalISOString} from '../../utils/time.js';
@@ -17,6 +18,13 @@ export type PublishType = 'now' | 'scheduled' | '';
 export interface ScheduleReleaseModalProps {
   [key: string]: unknown;
   releaseId: string;
+  /**
+   * Docs in the release. Used to run the publishing checks configured on each
+   * doc's collection before the release is scheduled.
+   */
+  docIds?: string[];
+  /** Whether an admin opted to skip the publishing checks. */
+  skipChecks?: boolean;
   onScheduled?: (scheduledAt: Timestamp) => void;
 }
 
@@ -42,6 +50,7 @@ export function ScheduleReleaseModal(
   const [loading, setLoading] = useState(false);
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
+  const publishChecks = usePublishChecks();
 
   async function schedule() {
     setLoading(true);
@@ -51,8 +60,19 @@ export function ScheduleReleaseModal(
       if (now >= millis) {
         throw new Error('bad datetime, please choose a date in the future');
       }
+      // Checks run when the release is scheduled, not when it goes live.
+      const decision = await publishChecks.run({
+        docIds: props.docIds || [],
+        actionLabel: 'Schedule',
+        skip: props.skipChecks,
+      });
+      if (!decision.proceed) {
+        return;
+      }
       const timestamp = Timestamp.fromMillis(millis);
-      await scheduleRelease(props.releaseId, millis);
+      await scheduleRelease(props.releaseId, millis, {
+        checksAudit: decision.audit || undefined,
+      });
       showNotification({
         title: 'Scheduled!',
         message: `Release ${props.releaseId} will go live ${scheduledDate}.`,
@@ -62,6 +82,9 @@ export function ScheduleReleaseModal(
       if (props.onScheduled) {
         props.onScheduled(timestamp);
       }
+      // Opened after `closeAll()` so the warnings aren't closed along with the
+      // schedule modal.
+      publishChecks.showWarnings(decision.results, {actionLabel: 'Schedule'});
     });
     setLoading(false);
   }
