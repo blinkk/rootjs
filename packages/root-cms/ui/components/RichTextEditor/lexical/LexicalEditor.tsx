@@ -62,6 +62,7 @@ import {
 } from './nodes/InlineComponentNode.js';
 import {SizedParagraphNode} from './nodes/SizedParagraphNode.js';
 import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
+import {AutoLinkPlugin} from './plugins/AutoLinkPlugin.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
@@ -616,6 +617,7 @@ function Editor(props: EditorProps) {
           ErrorBoundary={LexicalErrorBoundary}
         />
         <LinkPlugin />
+        <AutoLinkPlugin />
         <ListPlugin />
         {props.variant !== 'comment' && (
           <>

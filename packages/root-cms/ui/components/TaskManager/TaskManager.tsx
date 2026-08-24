@@ -33,8 +33,11 @@ import {
   Task,
   TaskPriority,
 } from '../../utils/tasks.js';
+import {formatDateTime} from '../../utils/time.js';
 import {Surface} from '../Surface/Surface.js';
+import {UserActionTooltip} from '../UserActionTooltip/UserActionTooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
+import {UserTag} from '../UserTag/UserTag.js';
 
 type TaskFilter =
   | 'open'
@@ -493,6 +496,7 @@ function TaskTable(props: {tasks: Task[]}) {
             <th>assignee</th>
             <th>target</th>
             <th>opened</th>
+            <th>updated</th>
           </tr>
         </thead>
         <tbody>
@@ -515,7 +519,7 @@ function TaskTable(props: {tasks: Task[]}) {
                         {task.title}
                       </span>
                       <span className="TaskManager__tableTask__meta">
-                        #{task.id} by {formatTaskUser(createdBy)}
+                        #{task.id} by <UserTag email={createdBy} />
                       </span>
                     </span>
                   </a>
@@ -536,14 +540,24 @@ function TaskTable(props: {tasks: Task[]}) {
                   </span>
                 </td>
                 <td>
-                  {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+                  {task.assignee ? (
+                    <UserTag email={task.assignee} />
+                  ) : (
+                    'Unassigned'
+                  )}
                 </td>
                 <td>
                   {task.targetLaunchDate
                     ? formatTaskDate(task.targetLaunchDate)
                     : 'None'}
                 </td>
-                <td>{formatTaskDate(task.createdAt)}</td>
+                <td>{renderTaskDate(task.createdAt, task.createdBy)}</td>
+                <td>
+                  {renderTaskDate(
+                    task.updatedAt || task.createdAt,
+                    task.updatedBy || task.createdBy
+                  )}
+                </td>
               </tr>
             );
           })}
@@ -597,7 +611,7 @@ function TaskBoardCard(props: {task: Task}) {
       )}
       <div className="TaskManager__boardCard__meta">
         #{task.id} opened {formatTaskDate(task.createdAt)} by{' '}
-        {formatTaskUser(createdBy)}
+        <UserTag email={createdBy} />
       </div>
       <div className="TaskManager__boardCard__badges">
         <span
@@ -608,7 +622,7 @@ function TaskBoardCard(props: {task: Task}) {
           {formatTaskPriority(task.priority)}
         </span>
         <span className="TaskManager__boardCard__badge">
-          {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+          {task.assignee ? <UserTag email={task.assignee} /> : 'Unassigned'}
         </span>
         {task.targetLaunchDate && (
           <span className="TaskManager__boardCard__badge">
@@ -645,7 +659,8 @@ function TaskRow(props: {task: Task}) {
       <div className="TaskManager__taskRow__content">
         <div className="TaskManager__taskRow__title">{task.title}</div>
         <div className="TaskManager__taskRow__meta">
-          opened {formatTaskDate(task.createdAt)} by {formatTaskUser(createdBy)}
+          opened {formatTaskDate(task.createdAt)} by{' '}
+          <UserTag email={createdBy} />
         </div>
       </div>
       <div className="TaskManager__taskRow__badges">
@@ -745,6 +760,22 @@ function formatTaskDate(ts?: Task['createdAt']) {
     month: 'short',
     day: 'numeric',
   });
+}
+
+/**
+ * Renders a short task date (e.g. "Aug 12") with a tooltip showing the full
+ * date and the user who performed the action, matching the doc list.
+ */
+function renderTaskDate(ts?: Task['createdAt'], by?: string) {
+  const label = formatTaskDate(ts);
+  if (!ts?.toMillis) {
+    return label;
+  }
+  return (
+    <UserActionTooltip message={formatDateTime(ts)} user={by}>
+      <span>{label}</span>
+    </UserActionTooltip>
+  );
 }
 
 function formatTaskStatus(status?: string) {

@@ -1,0 +1,44 @@
+.UserTag {
+  cursor: default;
+  display: inline;
+}
+
+.UserTag__tooltip,
+.UserTag__tooltip__text span {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.UserTag__tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Cap the tooltip width and allow long emails to wrap onto multiple lines. */
+  max-width: 240px;
+}
+
+.UserTag__tooltip__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.UserTag__tooltip__text span {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.UserTag__tooltip__name {
+  font-weight: 600;
+}
+
+.UserTag__tooltip__email {
+  opacity: 0.85;
+}
+
+.UserTag__tooltip .UserAvatar {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
