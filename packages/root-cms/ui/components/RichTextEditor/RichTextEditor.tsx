@@ -1,5 +1,6 @@
 import * as schema from '../../../core/schema.js';
 import {
+  normalizeRichTextParagraphSizes,
   RichTextData,
   RichTextParagraphSizeOption,
 } from '../../../shared/richtext.js';
@@ -30,9 +31,16 @@ export interface RichTextEditorProps {
 
 export function RichTextEditor(props: RichTextEditorProps) {
   const userPrefs = useUserPreferences();
-  if (userPrefs.preferences.EnableEditorJSEditor) {
-    // EditorJSEditor doesn't use `deepKey`, and it has no concept of paragraph
-    // sizes (it drops `data.size` on save); strip both before forwarding.
+  // The legacy EditorJS editor has no concept of paragraph size, and its
+  // `editor.save()` rebuilds every block from its own tools — so a single edit
+  // there would silently strip `data.size` from paragraphs another user sized
+  // in the lexical editor. Fields that offer sizes always use the lexical
+  // editor, whatever the user's preference.
+  const offersParagraphSizes =
+    normalizeRichTextParagraphSizes(props.paragraphSizes).length > 0;
+  if (userPrefs.preferences.EnableEditorJSEditor && !offersParagraphSizes) {
+    // EditorJSEditor understands neither `deepKey` nor `paragraphSizes`; strip
+    // both before forwarding.
     const {
       /* eslint-disable @typescript-eslint/no-unused-vars */
       deepKey,
