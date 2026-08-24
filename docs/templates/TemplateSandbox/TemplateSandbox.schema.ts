@@ -55,7 +55,10 @@ export default schema.define({
       label: 'RichTextField',
       autosize: true,
       translate: true,
-      paragraphSizes: ['small', {value: 'large', label: 'Larger'}],
+      paragraphSizes: [
+        {value: 'small', label: 'Small', fontSize: '0.875em'},
+        {value: 'large', label: 'Larger', fontSize: '1.25em'},
+      ],
       blockComponents: [
         schema.define({
           name: 'PeopleListBlock',

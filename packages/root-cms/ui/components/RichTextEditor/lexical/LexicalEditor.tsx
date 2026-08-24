@@ -25,6 +25,7 @@ import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {
+  getRichTextParagraphFontSizes,
   RichTextData,
   RichTextParagraphSizeOption,
 } from '../../../../shared/richtext.js';
@@ -75,7 +76,6 @@ import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
-  theme: LexicalTheme,
   nodes: [
     AutoLinkNode,
     HeadingNode,
@@ -140,8 +140,24 @@ export function LexicalEditor(props: LexicalEditorProps) {
   // then renders the <Editor> component which can use the shared context states
   // to render the rich text editor.
 
+  // The theme carries each size's preview font size, which is per field, so it
+  // is built here rather than shared at module scope. `LexicalComposer` reads
+  // `initialConfig` once on mount; schemas don't change at runtime.
+  const initialConfig = useMemo(
+    () => ({
+      ...INITIAL_CONFIG,
+      theme: {
+        ...LexicalTheme,
+        paragraphSizeFontSizes: getRichTextParagraphFontSizes(
+          props.paragraphSizes
+        ),
+      },
+    }),
+    [props.paragraphSizes]
+  );
+
   return (
-    <LexicalComposer initialConfig={INITIAL_CONFIG}>
+    <LexicalComposer initialConfig={initialConfig}>
       <SharedHistoryProvider>
         <ToolbarProvider>
           <div

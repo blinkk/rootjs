@@ -12,18 +12,6 @@
 .LexicalTheme__paragraph:first-child {
   margin-top: 0;
 }
-/*
- * Approximations for the two conventional paragraph sizes, so that picking one
- * is visible in the editor and not only in the split preview. Sites define
- * their own size values and their own CSS, so a size named anything else
- * renders at the normal size here and is still correct on the site.
- */
-.LexicalTheme__paragraph[data-size='small'] {
-  font-size: 0.875em;
-}
-.LexicalTheme__paragraph[data-size='large'] {
-  font-size: 1.25em;
-}
 .LexicalTheme__quote {
   font-family: var(--font-family-default);
   font-size: 14px;

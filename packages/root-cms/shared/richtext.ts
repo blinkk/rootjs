@@ -36,6 +36,21 @@ export interface RichTextParagraphSizeOption {
   value: RichTextParagraphSize;
   /** Label shown in the editor's dropdown. Defaults to `value`. */
   label?: string;
+  /**
+   * CSS font size used to preview this size inside the CMS editor, e.g.
+   * `0.875em`. It never reaches the published page, which is styled by the
+   * site's own CSS for `<p data-size="...">`; it exists so that picking a size
+   * visibly changes the text the editor is looking at. Omit it and the size
+   * still works, but the editor previews it at the normal size.
+   */
+  fontSize?: string;
+}
+
+/** A paragraph size option with its label resolved. */
+export interface ResolvedRichTextParagraphSize {
+  value: RichTextParagraphSize;
+  label: string;
+  fontSize?: string;
 }
 
 export interface RichTextParagraphBlock {
@@ -77,11 +92,11 @@ export function parseRichTextParagraphSize(
  */
 export function normalizeRichTextParagraphSizes(
   paragraphSizes?: Array<RichTextParagraphSizeOption | string> | null
-): Array<Required<RichTextParagraphSizeOption>> {
+): ResolvedRichTextParagraphSize[] {
   if (!paragraphSizes) {
     return [];
   }
-  const options: Array<Required<RichTextParagraphSizeOption>> = [];
+  const options: ResolvedRichTextParagraphSize[] = [];
   for (const option of paragraphSizes) {
     const value = parseRichTextParagraphSize(
       typeof option === 'string' ? option : option?.value
@@ -89,13 +104,38 @@ export function normalizeRichTextParagraphSizes(
     if (!value) {
       continue;
     }
-    const label =
-      typeof option === 'string'
-        ? undefined
-        : option.label?.trim() || undefined;
-    options.push({value, label: label || value});
+    if (typeof option === 'string') {
+      options.push({value, label: value});
+      continue;
+    }
+    const resolved: ResolvedRichTextParagraphSize = {
+      value,
+      label: option.label?.trim() || value,
+    };
+    const fontSize = option.fontSize?.trim();
+    if (fontSize) {
+      resolved.fontSize = fontSize;
+    }
+    options.push(resolved);
   }
   return options;
+}
+
+/**
+ * Builds the size-to-font-size map that the editor theme uses to preview
+ * paragraph sizes. Sizes without a `fontSize` are omitted, and preview at the
+ * normal size.
+ */
+export function getRichTextParagraphFontSizes(
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string> | null
+): Record<string, string> {
+  const fontSizes: Record<string, string> = {};
+  for (const option of normalizeRichTextParagraphSizes(paragraphSizes)) {
+    if (option.fontSize) {
+      fontSizes[option.value] = option.fontSize;
+    }
+  }
+  return fontSizes;
 }
 
 /**

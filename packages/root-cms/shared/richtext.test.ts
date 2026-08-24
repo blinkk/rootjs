@@ -1,5 +1,6 @@
 import {describe, expect, test} from 'vitest';
 import {
+  getRichTextParagraphFontSizes,
   normalizeRichTextParagraphSizes,
   parseRichTextParagraphSize,
 } from './richtext.js';
@@ -29,6 +30,18 @@ describe('normalizeRichTextParagraphSizes', () => {
     ]);
   });
 
+  test('carries an explicit font size and omits a blank one', () => {
+    expect(
+      normalizeRichTextParagraphSizes([
+        {value: 'tiny', label: 'Tiny', fontSize: '  0.75em '},
+        {value: 'huge', fontSize: '   '},
+      ])
+    ).toEqual([
+      {value: 'tiny', label: 'Tiny', fontSize: '0.75em'},
+      {value: 'huge', label: 'huge'},
+    ]);
+  });
+
   test('preserves explicit labels and declaration order', () => {
     expect(
       normalizeRichTextParagraphSizes([
@@ -55,5 +68,21 @@ describe('normalizeRichTextParagraphSizes', () => {
   test('returns an empty list when the option is omitted', () => {
     expect(normalizeRichTextParagraphSizes()).toEqual([]);
     expect(normalizeRichTextParagraphSizes(null)).toEqual([]);
+  });
+});
+
+describe('getRichTextParagraphFontSizes', () => {
+  test('maps only the sizes that declared a font size', () => {
+    expect(
+      getRichTextParagraphFontSizes([
+        {value: 'tiny', label: 'Tiny', fontSize: '0.75em'},
+        {value: 'huge', label: 'Huge'},
+        'small',
+      ])
+    ).toEqual({tiny: '0.75em'});
+  });
+
+  test('is empty when the option is omitted', () => {
+    expect(getRichTextParagraphFontSizes()).toEqual({});
   });
 });

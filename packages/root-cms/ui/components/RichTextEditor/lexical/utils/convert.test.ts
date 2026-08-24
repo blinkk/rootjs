@@ -23,9 +23,10 @@ import {convertToRichTextData} from './convert-from-lexical.js';
 import {convertToLexical} from './convert-to-lexical.js';
 
 /** Headless editor registering the same nodes as `<LexicalEditor>`. */
-function createTestEditor(): LexicalEditor {
+function createTestEditor(theme?: Record<string, any>): LexicalEditor {
   return createEditor({
     namespace: 'RootCMS',
+    theme,
     nodes: [
       AutoLinkNode,
       HeadingNode,
@@ -178,5 +179,53 @@ describe('paragraph sizes', () => {
       result = convertToRichTextData();
     });
     expect(result?.blocks).toEqual(SIZED_PARAGRAPHS.blocks);
+  });
+});
+
+describe('paragraph size editor preview', () => {
+  /** Renders the value into a real DOM tree and returns the paragraphs. */
+  function renderParagraphs(theme?: Record<string, any>) {
+    const editor = createTestEditor(theme);
+    const root = document.createElement('div');
+    root.contentEditable = 'true';
+    document.body.appendChild(root);
+    editor.setRootElement(root);
+    editor.update(
+      () =>
+        convertToLexical({
+          version: '1',
+          time: 0,
+          blocks: [
+            {type: 'paragraph', data: {text: 'Normal.'}},
+            {type: 'paragraph', data: {size: 'tiny', text: 'Tiny.'}},
+            {type: 'paragraph', data: {size: 'huge', text: 'Huge.'}},
+          ],
+        }),
+      {discrete: true}
+    );
+    return Array.from(root.querySelectorAll('p'));
+  }
+
+  test('applies the font size the schema declared for each size', () => {
+    const paragraphs = renderParagraphs({
+      paragraphSizeFontSizes: {tiny: '0.75em'},
+    });
+    expect(paragraphs.map((el) => el.getAttribute('data-size'))).toEqual([
+      null,
+      'tiny',
+      'huge',
+    ]);
+    expect(paragraphs.map((el) => el.style.fontSize)).toEqual([
+      '',
+      '0.75em',
+      // Declared with no `fontSize`, so it previews at the normal size.
+      '',
+    ]);
+  });
+
+  test('still marks the size when no font size is declared', () => {
+    const paragraphs = renderParagraphs();
+    expect(paragraphs[1].getAttribute('data-size')).toBe('tiny');
+    expect(paragraphs[1].style.fontSize).toBe('');
   });
 });

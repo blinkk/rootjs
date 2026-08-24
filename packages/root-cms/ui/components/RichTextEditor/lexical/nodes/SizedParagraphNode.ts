@@ -69,9 +69,7 @@ export class SizedParagraphNode extends ParagraphNode {
 
   createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
-    if (this.__paragraphSize) {
-      dom.setAttribute('data-size', this.__paragraphSize);
-    }
+    applyParagraphSizeToDOM(dom, config, this.__paragraphSize);
     return dom;
   }
 
@@ -81,11 +79,7 @@ export class SizedParagraphNode extends ParagraphNode {
     config: EditorConfig
   ): boolean {
     if (prevNode.__paragraphSize !== this.__paragraphSize) {
-      if (this.__paragraphSize) {
-        dom.setAttribute('data-size', this.__paragraphSize);
-      } else {
-        dom.removeAttribute('data-size');
-      }
+      applyParagraphSizeToDOM(dom, config, this.__paragraphSize);
     }
     return super.updateDOM(prevNode, dom, config);
   }
@@ -116,6 +110,35 @@ export class SizedParagraphNode extends ParagraphNode {
     const writable = this.getWritable();
     writable.__paragraphSize = size;
     return writable;
+  }
+}
+
+/**
+ * Mirrors the size onto the editor DOM as `data-size`, and applies the preview
+ * font size the field's schema declared for it (if any).
+ *
+ * The font size is an editor-only affordance: the published page carries the
+ * `data-size` attribute alone and is styled by the site's own CSS.
+ */
+function applyParagraphSizeToDOM(
+  dom: HTMLElement,
+  config: EditorConfig,
+  size: RichTextParagraphSize
+) {
+  if (!size) {
+    dom.removeAttribute('data-size');
+    dom.style.removeProperty('font-size');
+    return;
+  }
+  dom.setAttribute('data-size', size);
+  const fontSizes = config.theme.paragraphSizeFontSizes as
+    | Record<string, string>
+    | undefined;
+  const fontSize = fontSizes?.[size];
+  if (fontSize) {
+    dom.style.fontSize = fontSize;
+  } else {
+    dom.style.removeProperty('font-size');
   }
 }
 
