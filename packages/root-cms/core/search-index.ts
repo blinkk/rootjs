@@ -26,7 +26,7 @@ import MiniSearch from 'minisearch';
 import glob from 'tiny-glob';
 import {getCmsPlugin} from './client.js';
 import type {CMSSearchIndexConfig} from './plugin.js';
-import type {Schema} from './schema.js';
+import type {SchemaWithTypes} from './schema.js';
 import {extractDocRecords, ExtractedRecord} from './search-extract.js';
 import {executeQuery, parseQuery} from './search-query.js';
 
@@ -209,8 +209,13 @@ export function withWeight(rec: ExtractedRecord): IndexableRecord {
 /**
  * Loader for a collection's schema. Pluggable so callers can provide a
  * dev-mode loader (Vite SSR) and prod uses the default (`dist/...json`).
+ *
+ * Both loaders return the post-`convertOneOfTypes()` shape, where `oneOf`
+ * fields hold schema *names* and the schemas themselves live on `types`.
  */
-export type LoadSchemaFn = (collectionId: string) => Promise<Schema | null>;
+export type LoadSchemaFn = (
+  collectionId: string
+) => Promise<SchemaWithTypes | null>;
 
 export class SearchIndexService {
   private readonly rootConfig: RootConfig;
@@ -288,7 +293,7 @@ export class SearchIndexService {
    */
   private async loadCollectionSchemaFromDist(
     collectionId: string
-  ): Promise<Schema | null> {
+  ): Promise<SchemaWithTypes | null> {
     const distPath = path.join(
       this.rootConfig.rootDir,
       'dist',
@@ -299,7 +304,7 @@ export class SearchIndexService {
       return null;
     }
     const contents = fs.readFileSync(distPath, 'utf8');
-    return JSON.parse(contents) as Schema;
+    return JSON.parse(contents) as SchemaWithTypes;
   }
 
   private async readMeta(): Promise<SearchIndexMeta | null> {
@@ -618,7 +623,7 @@ export class SearchIndexService {
     const changedDocs = await this.listChangedDocs(collectionIds, lastRun);
 
     // Schema lookups are amortized across changed docs.
-    const schemaCache = new Map<string, Schema | null>();
+    const schemaCache = new Map<string, SchemaWithTypes | null>();
     const getSchema = async (collectionId: string) => {
       if (!schemaCache.has(collectionId)) {
         schemaCache.set(collectionId, await this.loadSchema(collectionId));
