@@ -19,11 +19,22 @@ import {
   $isTextNode,
   LexicalEditor,
 } from 'lexical';
+import {RichTextParagraphSize} from '../../../../../shared/richtext.js';
+import {$createSizedParagraphNode} from '../nodes/SizedParagraphNode.js';
 
-export const formatParagraph = (editor: LexicalEditor) => {
+/**
+ * Converts the selected blocks into paragraphs. Pass a `size` to convert them
+ * into sized paragraphs instead (see the richtext field's `paragraphSizes`).
+ */
+export const formatParagraph = (
+  editor: LexicalEditor,
+  size?: RichTextParagraphSize
+) => {
   editor.update(() => {
     const selection = $getSelection();
-    $setBlocksType(selection, () => $createParagraphNode());
+    $setBlocksType(selection, () =>
+      size ? $createSizedParagraphNode(size) : $createParagraphNode()
+    );
   });
 };
 

@@ -30,6 +30,7 @@ export function RichTextField(props: FieldProps) {
       placeholder={field.placeholder}
       blockComponents={field.blockComponents}
       inlineComponents={field.inlineComponents}
+      paragraphSizes={field.paragraphSizes}
       onChange={onChange}
       onFocus={props.onFocus}
       onBlur={props.onBlur}

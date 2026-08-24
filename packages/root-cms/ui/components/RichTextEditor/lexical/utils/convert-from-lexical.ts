@@ -38,6 +38,7 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from '../nodes/InlineComponentNode.js';
+import {$getParagraphSize} from '../nodes/SizedParagraphNode.js';
 
 interface TextExtractionResult {
   text: string;
@@ -293,6 +294,10 @@ function extractTableData(node: TableNode) {
                   text: result.text,
                 },
               };
+              const size = $getParagraphSize(child);
+              if (size) {
+                block.data!.size = size;
+              }
               if (hasInlineComponents(result.components)) {
                 block.data!.components = result.components;
               }
@@ -369,6 +374,10 @@ export function convertToRichTextData(): RichTextData | null {
           text: result.text,
         },
       };
+      const size = $getParagraphSize(node);
+      if (size) {
+        block.data!.size = size;
+      }
       if (hasInlineComponents(result.components)) {
         block.data!.components = result.components;
       }

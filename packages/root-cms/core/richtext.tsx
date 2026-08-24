@@ -2,6 +2,10 @@ import {StringParamsProvider, useTranslations} from '@blinkk/root';
 import {Component, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {renderToString} from 'preact-render-to-string';
+import {
+  parseRichTextParagraphSize,
+  RichTextParagraphSize,
+} from '../shared/richtext.js';
 import {sanitizeBlockHtml, sanitizeInlineHtml} from '../shared/sanitize.js';
 
 export interface RichTextBlock {
@@ -143,6 +147,11 @@ class InlineComponentRenderer extends Component<InlineComponentRendererProps> {
 export interface RichTextParagraphBlockProps {
   type: 'paragraph';
   data?: {
+    /**
+     * Optional size variant, emitted as a `data-size` attribute. Sites decide
+     * what each size means in their own CSS.
+     */
+    size?: RichTextParagraphSize;
     text?: string;
     components?: Record<string, any>;
   };
@@ -154,7 +163,8 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
   }
   const t = useRichTextTranslations();
   const html = sanitizeInlineHtml(t(props.data.text));
-  return <p dangerouslySetInnerHTML={{__html: html}} />;
+  const size = parseRichTextParagraphSize(props.data.size);
+  return <p data-size={size} dangerouslySetInnerHTML={{__html: html}} />;
 };
 
 export interface RichTextHeadingBlockProps {

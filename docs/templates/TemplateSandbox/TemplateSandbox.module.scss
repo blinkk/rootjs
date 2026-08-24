@@ -87,4 +87,17 @@
   .preWrap {
     white-space: pre-wrap;
   }
+
+  /*
+   * Demonstrates the richtext field's `paragraphSizes` option. The CMS stores
+   * the size the editor picked and renders it as `<p data-size="...">`; what
+   * each size looks like is up to the site.
+   */
+  p[data-size='small'] {
+    font-size: 0.875rem;
+  }
+
+  p[data-size='large'] {
+    font-size: 1.25rem;
+  }
 }

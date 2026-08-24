@@ -44,10 +44,12 @@ import {
   IconBracketsAngle,
   IconSquare,
   IconCapsuleHorizontal,
+  IconTextSize,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
   $isElementNode,
+  $isParagraphNode,
   $isRangeSelection,
   $isRootOrShadowRoot,
   CAN_REDO_COMMAND,
@@ -67,12 +69,18 @@ import {
   useState,
 } from 'preact/compat';
 import * as schema from '../../../../../core/schema.js';
+import {
+  normalizeRichTextParagraphSizes,
+  RichTextParagraphSize,
+  RichTextParagraphSizeOption,
+} from '../../../../../shared/richtext.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {
   TOOLBAR_BLOCK_LABELS,
   ToolbarBlockType,
   useToolbar,
 } from '../hooks/useToolbar.js';
+import {$getParagraphSize} from '../nodes/SizedParagraphNode.js';
 import {getSelectedNode} from '../utils/selection.js';
 import {SHORTCUTS} from '../utils/shortcuts.js';
 import {
@@ -130,10 +138,25 @@ interface BlockFormatDropDownProps {
   rootType: 'root' | 'table';
   editor: LexicalEditor;
   disabled?: boolean;
+  /** Paragraph sizes declared by the field's schema. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
+  /** Size of the currently selected paragraph, if it has one. */
+  paragraphSize?: RichTextParagraphSize;
 }
 
 function BlockFormatDropDown(props: BlockFormatDropDownProps) {
-  const {editor, blockType} = props;
+  const {editor, blockType, paragraphSize} = props;
+  const paragraphSizes = useMemo(
+    () => normalizeRichTextParagraphSizes(props.paragraphSizes),
+    [props.paragraphSizes]
+  );
+  // A paragraph can carry a size the field doesn't declare (e.g. pasted from a
+  // field that does), so fall back to the raw value rather than mislabeling it
+  // as "Normal".
+  const label = paragraphSize
+    ? paragraphSizes.find((option) => option.value === paragraphSize)?.label ||
+      paragraphSize
+    : TOOLBAR_BLOCK_LABELS[blockType];
   return (
     <Menu
       control={
@@ -144,20 +167,38 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
           )}
           variant="default"
           compact
-          leftIcon={<BlockTypeIcon blockType={blockType} />}
+          leftIcon={
+            paragraphSize ? (
+              <IconTextSize size={16} />
+            ) : (
+              <BlockTypeIcon blockType={blockType} />
+            )
+          }
           rightIcon={<IconChevronDown size={16} />}
         >
-          {TOOLBAR_BLOCK_LABELS[blockType]}
+          {label}
         </Button>
       }
     >
       <Menu.Item
         icon={<BlockTypeIcon blockType="paragraph" />}
-        className={dropDownActiveClass(blockType === 'paragraph')}
+        className={dropDownActiveClass(
+          blockType === 'paragraph' && !paragraphSize
+        )}
         onClick={() => formatParagraph(editor)}
       >
         Normal
       </Menu.Item>
+      {paragraphSizes.map((option) => (
+        <Menu.Item
+          key={option.value}
+          icon={<IconTextSize size={16} />}
+          className={dropDownActiveClass(paragraphSize === option.value)}
+          onClick={() => formatParagraph(editor, option.value)}
+        >
+          {option.label}
+        </Menu.Item>
+      ))}
       <Menu.Item
         icon={<BlockTypeIcon blockType="bullet" />}
         className={dropDownActiveClass(blockType === 'bullet')}
@@ -307,6 +348,8 @@ interface ToolbarPluginProps {
   onInsertBlockComponent?: (blockName: string) => void;
   inlineComponents?: schema.Schema[];
   onInsertInlineComponent?: (componentName: string) => void;
+  /** Paragraph sizes declared by the field's schema. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 }
 
 export function ToolbarPlugin(props: ToolbarPluginProps) {
@@ -320,6 +363,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     variant = 'document',
     onInsertBlockComponent,
     onInsertInlineComponent,
+    paragraphSizes,
   } = props;
   // TODO(stevenle): figure out if this is required or not.
   // const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
@@ -381,7 +425,15 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
             : element.getListType();
 
           updateToolbarState('blockType', type as ToolbarBlockType);
+          updateToolbarState('paragraphSize', undefined);
+        } else if ($isParagraphNode(element)) {
+          // A sized paragraph is a `ParagraphNode` subclass with its own node
+          // type, so it would never match `TOOLBAR_BLOCK_LABELS` and would
+          // leave the dropdown showing whatever block was selected before.
+          updateToolbarState('blockType', 'paragraph');
+          updateToolbarState('paragraphSize', $getParagraphSize(element));
         } else {
+          updateToolbarState('paragraphSize', undefined);
           const type = $isHeadingNode(element)
             ? element.getTag()
             : element.getType();
@@ -544,6 +596,8 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               blockType={toolbarState.blockType}
               rootType={toolbarState.rootType}
               editor={activeEditor}
+              paragraphSizes={paragraphSizes}
+              paragraphSize={toolbarState.paragraphSize}
             />
             <Divider />
           </>

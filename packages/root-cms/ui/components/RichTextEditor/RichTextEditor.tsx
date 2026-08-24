@@ -1,5 +1,8 @@
 import * as schema from '../../../core/schema.js';
-import {RichTextData} from '../../../shared/richtext.js';
+import {
+  RichTextData,
+  RichTextParagraphSizeOption,
+} from '../../../shared/richtext.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {EditorJSEditor} from './editorjs/EditorJSEditor.js';
 import {LexicalEditor} from './lexical/LexicalEditor.js';
@@ -21,15 +24,20 @@ export interface RichTextEditorProps {
   onBlur?: (e: FocusEvent) => void;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
   const userPrefs = useUserPreferences();
   if (userPrefs.preferences.EnableEditorJSEditor) {
-    // EditorJSEditor doesn't use `deepKey`; strip it before forwarding.
+    // EditorJSEditor doesn't use `deepKey`, and it has no concept of paragraph
+    // sizes (it drops `data.size` on save); strip both before forwarding.
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       deepKey,
+      paragraphSizes,
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       ...rest
     } = props;
     return <EditorJSEditor {...rest} />;

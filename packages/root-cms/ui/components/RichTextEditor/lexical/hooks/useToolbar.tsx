@@ -1,6 +1,7 @@
 import {ElementFormatType} from 'lexical';
 import {ComponentChildren, createContext} from 'preact';
 import {useCallback, useContext, useMemo, useState} from 'preact/hooks';
+import {RichTextParagraphSize} from '../../../../../shared/richtext.js';
 
 export const TOOLBAR_BLOCK_LABELS = {
   paragraph: 'Normal',
@@ -19,6 +20,12 @@ export type ToolbarBlockType = keyof typeof TOOLBAR_BLOCK_LABELS;
 
 const INITIAL_TOOLBAR_STATE = {
   blockType: 'paragraph' as ToolbarBlockType,
+  /**
+   * Size variant of the selected paragraph, or `undefined` when the selection
+   * isn't a sized paragraph. Tracked separately from `blockType` because the
+   * sizes are defined by each site rather than by a fixed list.
+   */
+  paragraphSize: undefined as RichTextParagraphSize | undefined,
   canRedo: false,
   canUndo: false,
   codeLanguage: '',

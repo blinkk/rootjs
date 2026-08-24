@@ -51,3 +51,25 @@ test('inline component sees context providers from the parent render tree', () =
   expect(container.innerHTML).toContain('Alice');
   expect(container.innerHTML).toContain('Hello,');
 });
+
+test('paragraph size renders as a data-size attribute', () => {
+  const data: RichTextData = {
+    blocks: [
+      {type: 'paragraph', data: {text: 'Normal.'}},
+      {type: 'paragraph', data: {size: 'small', text: 'Small.'}},
+      // Sizes are site-defined, so any value is passed through as-is.
+      {type: 'paragraph', data: {size: 'body-3', text: 'Custom.'}},
+      {type: 'paragraph', data: {size: 42, text: 'Not a size.'}},
+    ],
+  };
+
+  const {container} = render(<RichText data={data} />);
+
+  const paragraphs = Array.from(container.querySelectorAll('p'));
+  expect(paragraphs.map((el) => el.getAttribute('data-size'))).toEqual([
+    null,
+    'small',
+    'body-3',
+    null,
+  ]);
+});
