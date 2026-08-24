@@ -146,6 +146,38 @@ describe('cmsCopyDoc', () => {
       })
     );
   });
+
+  it('defaults locales when overwriting a doc without locales', async () => {
+    mocks.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          fields: {title: 'Hello'},
+          sys: {},
+        }),
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          sys: {
+            createdAt: 'old-created-at',
+            createdBy: 'previous@example.com',
+          },
+        }),
+      });
+
+    await cmsCopyDoc('pages/source', 'pages/copy', {overwrite: true});
+
+    expect(mocks.setDoc).toHaveBeenCalledWith(
+      'doc:Projects/test-project/Collections/pages/Drafts/copy',
+      expect.objectContaining({
+        fields: {title: 'Hello'},
+        sys: expect.objectContaining({
+          locales: ['en'],
+        }),
+      })
+    );
+  });
 });
 
 function setupWindowMocks(collections?: Record<string, any>) {
