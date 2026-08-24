@@ -361,15 +361,20 @@ export type RichTextField = CommonFieldProps & {
    * list sizes the site has actually styled — an unstyled size renders as an
    * ordinary paragraph. Omit the option to hide sizes entirely.
    *
-   * Give a size a `fontSize` to have the editor preview it at that size;
-   * without one it still works, but the editor shows it at the normal size.
+   * Give a size an `editorStyle` to have the CMS editor approximate it while
+   * writing; without one it still works, but previews at the normal size. The
+   * `editorStyle` never reaches the published page.
    *
    * ```ts
    * schema.richtext({
    *   id: 'body',
    *   paragraphSizes: [
-   *     {value: 'small', label: 'Small', fontSize: '0.875em'},
-   *     {value: 'large', label: 'Larger', fontSize: '1.25em'},
+   *     {
+   *       value: 'small',
+   *       label: 'Small',
+   *       editorStyle: {fontSize: '0.875em', lineHeight: 1.4},
+   *     },
+   *     {value: 'large', label: 'Larger', editorStyle: {fontSize: '1.25em'}},
    *   ],
    * })
    * ```

@@ -206,26 +206,37 @@ describe('paragraph size editor preview', () => {
     return Array.from(root.querySelectorAll('p'));
   }
 
-  test('applies the font size the schema declared for each size', () => {
+  test('applies the editor style the schema declared for each size', () => {
     const paragraphs = renderParagraphs({
-      paragraphSizeFontSizes: {tiny: '0.75em'},
+      paragraphSizeStyles: {
+        tiny: {fontSize: '0.75em', lineHeight: 1.4, fontWeight: 500},
+      },
     });
     expect(paragraphs.map((el) => el.getAttribute('data-size'))).toEqual([
       null,
       'tiny',
       'huge',
     ]);
-    expect(paragraphs.map((el) => el.style.fontSize)).toEqual([
-      '',
-      '0.75em',
-      // Declared with no `fontSize`, so it previews at the normal size.
-      '',
-    ]);
+    expect(paragraphs[1].style.fontSize).toBe('0.75em');
+    expect(paragraphs[1].style.lineHeight).toBe('1.4');
+    expect(paragraphs[1].style.fontWeight).toBe('500');
+    // Declared with no `editorStyle`, so it previews at the normal size.
+    expect(paragraphs[2].style.fontSize).toBe('');
+    expect(paragraphs[2].style.lineHeight).toBe('');
+    expect(paragraphs[2].style.fontWeight).toBe('');
   });
 
-  test('still marks the size when no font size is declared', () => {
+  test('still marks the size when no editor style is declared', () => {
     const paragraphs = renderParagraphs();
     expect(paragraphs[1].getAttribute('data-size')).toBe('tiny');
     expect(paragraphs[1].style.fontSize).toBe('');
+  });
+
+  test('never puts the editor style on an unsized paragraph', () => {
+    const paragraphs = renderParagraphs({
+      paragraphSizeStyles: {tiny: {fontSize: '0.75em'}},
+    });
+    expect(paragraphs[0].hasAttribute('data-size')).toBe(false);
+    expect(paragraphs[0].style.fontSize).toBe('');
   });
 });

@@ -56,8 +56,16 @@ export default schema.define({
       autosize: true,
       translate: true,
       paragraphSizes: [
-        {value: 'small', label: 'Small', fontSize: '0.875em'},
-        {value: 'large', label: 'Larger', fontSize: '1.25em'},
+        {
+          value: 'small',
+          label: 'Small',
+          editorStyle: {fontSize: '0.875em', lineHeight: 1.45},
+        },
+        {
+          value: 'large',
+          label: 'Larger',
+          editorStyle: {fontSize: '1.25em', lineHeight: 1.3, fontWeight: 500},
+        },
       ],
       blockComponents: [
         schema.define({

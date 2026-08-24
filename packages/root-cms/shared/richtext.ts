@@ -37,20 +37,35 @@ export interface RichTextParagraphSizeOption {
   /** Label shown in the editor's dropdown. Defaults to `value`. */
   label?: string;
   /**
-   * CSS font size used to preview this size inside the CMS editor, e.g.
-   * `0.875em`. It never reaches the published page, which is styled by the
-   * site's own CSS for `<p data-size="...">`; it exists so that picking a size
-   * visibly changes the text the editor is looking at. Omit it and the size
-   * still works, but the editor previews it at the normal size.
+   * How the CMS editor should approximate this size. Editor-only: none of it
+   * reaches the published page, which carries `data-size` alone and is styled
+   * by the site's own CSS. It exists so that picking a size visibly changes
+   * the text the editor is looking at. Omit it and the size still works, but
+   * the editor previews it at the normal size.
    */
+  editorStyle?: RichTextParagraphSizeEditorStyle;
+}
+
+/**
+ * Typography used to preview a paragraph size in the CMS editor. Deliberately
+ * limited to the properties that describe a body size variant: anything that
+ * would make the editor misrepresent the content (colors, layout, visibility)
+ * is out of scope.
+ */
+export interface RichTextParagraphSizeEditorStyle {
+  /** e.g. `0.875em`. */
   fontSize?: string;
+  /** e.g. `1.4` or `1.4em`. */
+  lineHeight?: string | number;
+  /** e.g. `500` or `bold`. */
+  fontWeight?: string | number;
 }
 
 /** A paragraph size option with its label resolved. */
 export interface ResolvedRichTextParagraphSize {
   value: RichTextParagraphSize;
   label: string;
-  fontSize?: string;
+  editorStyle?: RichTextParagraphSizeEditorStyle;
 }
 
 export interface RichTextParagraphBlock {
@@ -112,30 +127,58 @@ export function normalizeRichTextParagraphSizes(
       value,
       label: option.label?.trim() || value,
     };
-    const fontSize = option.fontSize?.trim();
-    if (fontSize) {
-      resolved.fontSize = fontSize;
+    const editorStyle = normalizeParagraphSizeEditorStyle(option.editorStyle);
+    if (editorStyle) {
+      resolved.editorStyle = editorStyle;
     }
     options.push(resolved);
   }
   return options;
 }
 
+const EDITOR_STYLE_PROPS = ['fontSize', 'lineHeight', 'fontWeight'] as const;
+
 /**
- * Builds the size-to-font-size map that the editor theme uses to preview
- * paragraph sizes. Sizes without a `fontSize` are omitted, and preview at the
- * normal size.
+ * Keeps the supported editor style properties that hold a usable value, and
+ * returns `undefined` when none do. Guards against unknown properties reaching
+ * the editor DOM.
  */
-export function getRichTextParagraphFontSizes(
-  paragraphSizes?: Array<RichTextParagraphSizeOption | string> | null
-): Record<string, string> {
-  const fontSizes: Record<string, string> = {};
-  for (const option of normalizeRichTextParagraphSizes(paragraphSizes)) {
-    if (option.fontSize) {
-      fontSizes[option.value] = option.fontSize;
+function normalizeParagraphSizeEditorStyle(
+  editorStyle?: RichTextParagraphSizeEditorStyle | null
+): RichTextParagraphSizeEditorStyle | undefined {
+  if (!editorStyle) {
+    return undefined;
+  }
+  const normalized: RichTextParagraphSizeEditorStyle = {};
+  let hasValue = false;
+  for (const prop of EDITOR_STYLE_PROPS) {
+    const value = editorStyle[prop];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      normalized[prop] = value as never;
+      hasValue = true;
+    } else if (typeof value === 'string' && value.trim()) {
+      normalized[prop] = value.trim() as never;
+      hasValue = true;
     }
   }
-  return fontSizes;
+  return hasValue ? normalized : undefined;
+}
+
+/**
+ * Builds the size-to-style map that the editor theme uses to preview paragraph
+ * sizes. Sizes without an `editorStyle` are omitted, and preview at the normal
+ * size.
+ */
+export function getRichTextParagraphEditorStyles(
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string> | null
+): Record<string, RichTextParagraphSizeEditorStyle> {
+  const styles: Record<string, RichTextParagraphSizeEditorStyle> = {};
+  for (const option of normalizeRichTextParagraphSizes(paragraphSizes)) {
+    if (option.editorStyle) {
+      styles[option.value] = option.editorStyle;
+    }
+  }
+  return styles;
 }
 
 /**

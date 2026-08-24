@@ -10,6 +10,7 @@ import {
 import {
   parseRichTextParagraphSize,
   RichTextParagraphSize,
+  RichTextParagraphSizeEditorStyle,
 } from '../../../../../shared/richtext.js';
 
 export type SerializedSizedParagraphNode = Spread<
@@ -113,11 +114,13 @@ export class SizedParagraphNode extends ParagraphNode {
   }
 }
 
+const EDITOR_STYLE_CSS_PROPS = ['font-size', 'line-height', 'font-weight'];
+
 /**
- * Mirrors the size onto the editor DOM as `data-size`, and applies the preview
- * font size the field's schema declared for it (if any).
+ * Mirrors the size onto the editor DOM as `data-size`, and applies whatever
+ * preview typography the field's schema declared for it (if any).
  *
- * The font size is an editor-only affordance: the published page carries the
+ * The typography is an editor-only affordance: the published page carries the
  * `data-size` attribute alone and is styled by the site's own CSS.
  */
 function applyParagraphSizeToDOM(
@@ -125,20 +128,29 @@ function applyParagraphSizeToDOM(
   config: EditorConfig,
   size: RichTextParagraphSize
 ) {
+  EDITOR_STYLE_CSS_PROPS.forEach((prop) => dom.style.removeProperty(prop));
   if (!size) {
     dom.removeAttribute('data-size');
-    dom.style.removeProperty('font-size');
     return;
   }
   dom.setAttribute('data-size', size);
-  const fontSizes = config.theme.paragraphSizeFontSizes as
-    | Record<string, string>
+  const editorStyles = config.theme.paragraphSizeStyles as
+    | Record<string, RichTextParagraphSizeEditorStyle>
     | undefined;
-  const fontSize = fontSizes?.[size];
-  if (fontSize) {
-    dom.style.fontSize = fontSize;
-  } else {
-    dom.style.removeProperty('font-size');
+  const editorStyle = editorStyles?.[size];
+  if (!editorStyle) {
+    return;
+  }
+  // Assigned through CSSOM, so an unusable value is dropped by the browser
+  // rather than injected into the editor's styles.
+  if (editorStyle.fontSize) {
+    dom.style.fontSize = editorStyle.fontSize;
+  }
+  if (editorStyle.lineHeight !== undefined) {
+    dom.style.lineHeight = String(editorStyle.lineHeight);
+  }
+  if (editorStyle.fontWeight !== undefined) {
+    dom.style.fontWeight = String(editorStyle.fontWeight);
   }
 }
 

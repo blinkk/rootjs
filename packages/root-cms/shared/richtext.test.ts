@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 import {
-  getRichTextParagraphFontSizes,
+  getRichTextParagraphEditorStyles,
   normalizeRichTextParagraphSizes,
   parseRichTextParagraphSize,
 } from './richtext.js';
@@ -30,16 +30,40 @@ describe('normalizeRichTextParagraphSizes', () => {
     ]);
   });
 
-  test('carries an explicit font size and omits a blank one', () => {
+  test('carries the editor style and drops unusable values', () => {
     expect(
       normalizeRichTextParagraphSizes([
-        {value: 'tiny', label: 'Tiny', fontSize: '  0.75em '},
-        {value: 'huge', fontSize: '   '},
+        {
+          value: 'tiny',
+          label: 'Tiny',
+          editorStyle: {
+            fontSize: '  0.75em ',
+            lineHeight: 1.4,
+            fontWeight: 500,
+          },
+        },
+        {value: 'huge', editorStyle: {fontSize: '   '}},
+        {value: 'plain', editorStyle: {}},
       ])
     ).toEqual([
-      {value: 'tiny', label: 'Tiny', fontSize: '0.75em'},
+      {
+        value: 'tiny',
+        label: 'Tiny',
+        editorStyle: {fontSize: '0.75em', lineHeight: 1.4, fontWeight: 500},
+      },
       {value: 'huge', label: 'huge'},
+      {value: 'plain', label: 'plain'},
     ]);
+  });
+
+  test('ignores editor style properties outside the supported set', () => {
+    const [option] = normalizeRichTextParagraphSizes([
+      {
+        value: 'tiny',
+        editorStyle: {fontSize: '0.75em', color: 'red', display: 'none'} as any,
+      },
+    ]);
+    expect(option.editorStyle).toEqual({fontSize: '0.75em'});
   });
 
   test('preserves explicit labels and declaration order', () => {
@@ -71,18 +95,22 @@ describe('normalizeRichTextParagraphSizes', () => {
   });
 });
 
-describe('getRichTextParagraphFontSizes', () => {
-  test('maps only the sizes that declared a font size', () => {
+describe('getRichTextParagraphEditorStyles', () => {
+  test('maps only the sizes that declared an editor style', () => {
     expect(
-      getRichTextParagraphFontSizes([
-        {value: 'tiny', label: 'Tiny', fontSize: '0.75em'},
+      getRichTextParagraphEditorStyles([
+        {
+          value: 'tiny',
+          label: 'Tiny',
+          editorStyle: {fontSize: '0.75em', fontWeight: 300},
+        },
         {value: 'huge', label: 'Huge'},
         'small',
       ])
-    ).toEqual({tiny: '0.75em'});
+    ).toEqual({tiny: {fontSize: '0.75em', fontWeight: 300}});
   });
 
   test('is empty when the option is omitted', () => {
-    expect(getRichTextParagraphFontSizes()).toEqual({});
+    expect(getRichTextParagraphEditorStyles()).toEqual({});
   });
 });

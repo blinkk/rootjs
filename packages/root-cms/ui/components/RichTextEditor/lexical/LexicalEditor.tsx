@@ -25,7 +25,7 @@ import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {
-  getRichTextParagraphFontSizes,
+  getRichTextParagraphEditorStyles,
   RichTextData,
   RichTextParagraphSizeOption,
 } from '../../../../shared/richtext.js';
@@ -148,7 +148,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
       ...INITIAL_CONFIG,
       theme: {
         ...LexicalTheme,
-        paragraphSizeFontSizes: getRichTextParagraphFontSizes(
+        paragraphSizeStyles: getRichTextParagraphEditorStyles(
           props.paragraphSizes
         ),
       },
