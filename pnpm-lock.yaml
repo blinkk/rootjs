@@ -39,7 +39,7 @@ importers:
         version: link:../packages/root-cms
       '@tabler/icons-preact':
         specifier: 2.39.0
-        version: 2.39.0(preact@10.27.1)
+        version: 2.39.0(preact@10.29.7)
       firebase-admin:
         specifier: 13.10.0
         version: 13.10.0(supports-color@10.2.2)
@@ -50,8 +50,8 @@ importers:
         specifier: 11.6.0
         version: 11.6.0
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
     devDependencies:
       firebase-tools:
         specifier: 15.19.0
@@ -63,8 +63,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
 
   examples/blog:
     dependencies:
@@ -81,8 +81,8 @@ importers:
         specifier: 11.11.1
         version: 11.11.1(supports-color@10.2.2)
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
     devDependencies:
       '@types/node':
         specifier: 24.3.1
@@ -100,8 +100,8 @@ importers:
         specifier: 11.11.1
         version: 11.11.1(supports-color@10.2.2)
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
     devDependencies:
       '@types/node':
         specifier: 24.3.1
@@ -113,8 +113,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
     devDependencies:
       '@types/node':
         specifier: 24.3.1
@@ -126,8 +126,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
 
   packages/create-root:
     dependencies:
@@ -632,8 +632,8 @@ importers:
         specifier: 0.28.0
         version: 0.28.0
       preact:
-        specifier: 10.27.1
-        version: 10.27.1
+        specifier: 10.29.7
+        version: 10.29.7(preact-render-to-string@6.7.0)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -2246,18 +2246,17 @@ packages:
   '@maxim_mazurok/gapi.client.discovery-v1@0.6.20200806':
     resolution: {integrity: sha512-QN6aGmIbLXcJW0SEf8tz9UWCpQTBMy2u4xSuZ04YofzMGknhWwMeUecySLntCZYAEstHzDoSgwxCf5Gb8GqIRQ==}
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260723':
-    resolution: {integrity: sha512-jD52mI84xdhul51lYGJXH367SwHiRIVAJrKf8MNtTjqMR/KveBmeTiAuWZcLOnV1I2nvNbY5AoryTJVgc381ag==}
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260819':
+    resolution: {integrity: sha512-xOXj+gbdM67rYrs2tg6OVkpBUGPD58A6NwyiOTuixpq99IyY8XCHhrV4a7utRa2vsJCgsc9J24lJe5tdGduALg==}
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260722':
-    resolution: {integrity: sha512-hhE/8xd+YxJBH2+zim7O5wDX8zkeFntvtCNlu/4mZcjMt+uAAAAuewZHRx7PWQvTuvgMtvoLZVJu2jVDdeWwzQ==}
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260821':
+    resolution: {integrity: sha512-unTwNRRUkY9VX4pYnvlY45NK+OODfOxLWTI31L0qA3iv2MK/cC6jOVtp8GKDvJSi4gCTLBAio9v6rmMDACD1aQ==}
 
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -6364,9 +6363,6 @@ packages:
     peerDependencies:
       preact: '>=10 || >= 11.0.0-0'
 
-  preact@10.27.1:
-    resolution: {integrity: sha512-V79raXEWch/rbqoNc7nT9E4ep7lu+mI3+sBmfRD4i1M73R3WLYcCtdI0ibxGVf4eQL8ZIz2nFacqEC+rmnOORQ==}
-
   preact@10.29.7:
     resolution: {integrity: sha512-DCHYrK/B10yUD3ZjLfhZ3WIE/9Vf9VFUODcRE2dRomTYDpJk6z6L9wecSfhfE6M9ZTHUdyQkoC46arIDhEV84Q==}
     peerDependencies:
@@ -9881,17 +9877,17 @@ snapshots:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260723':
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260819':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260722':
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260821':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.4.3)':
+  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.23)
       ajv: 8.20.0
@@ -10195,10 +10191,10 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@tabler/icons-preact@2.39.0(preact@10.27.1)':
+  '@tabler/icons-preact@2.39.0(preact@10.29.7)':
     dependencies:
       '@tabler/icons': 2.39.0
-      preact: 10.27.1
+      preact: 10.29.7(preact-render-to-string@6.7.0)
 
   '@tabler/icons-preact@3.46.0(preact@10.29.7)':
     dependencies:
@@ -10361,11 +10357,11 @@ snapshots:
 
   '@types/gapi.client.drive-v3@0.0.5':
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260723
+      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260819
 
   '@types/gapi.client.sheets-v4@0.0.4':
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260722
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260821
 
   '@types/gapi.client@1.0.8': {}
 
@@ -12368,7 +12364,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@25.9.1)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
@@ -12457,7 +12453,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@24.13.3)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
@@ -14621,8 +14617,6 @@ snapshots:
   preact-render-to-string@6.7.0(preact@10.29.7):
     dependencies:
       preact: 10.29.7(preact-render-to-string@6.7.0)
-
-  preact@10.27.1: {}
 
   preact@10.29.7(preact-render-to-string@6.7.0):
     optionalDependencies:

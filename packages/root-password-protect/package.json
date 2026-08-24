@@ -51,7 +51,7 @@
     "@types/micromatch": "4.0.6",
     "@types/node": "25.9.1",
     "esbuild": "0.28.0",
-    "preact": "10.27.1",
+    "preact": "10.29.7",
     "typescript": "7.0.2"
   }
 }
