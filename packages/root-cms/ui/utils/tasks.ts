@@ -26,6 +26,8 @@ export interface Task {
   description?: string;
   attachments?: TaskAttachment[];
   assignee?: string | null;
+  /** Emails of users cc'd on the task. */
+  cc?: string[];
   priority?: TaskPriority;
   status?: string;
   targetLaunchDate?: Timestamp | null;
@@ -33,6 +35,9 @@ export interface Task {
   createdBy: string;
   updatedAt?: Timestamp;
   updatedBy?: string;
+  deleted?: boolean;
+  deletedAt?: Timestamp;
+  deletedBy?: string;
 }
 
 export type TaskPriority = 'high' | 'medium' | 'normal';
@@ -60,6 +65,8 @@ export interface TaskComment {
   parentId?: string | null;
   content: string;
   body?: RichTextData | null;
+  /** Files attached to the comment (e.g. pasted images). */
+  attachments?: TaskAttachment[];
   /** Lower-cased emails of users mentioned via `@<email>` in the content. */
   mentions?: string[];
   createdAt: Timestamp;
@@ -75,6 +82,7 @@ export interface TaskComment {
 export type TaskMetadataField =
   | 'title'
   | 'assignee'
+  | 'cc'
   | 'priority'
   | 'status'
   | 'targetLaunchDate';
@@ -259,12 +267,14 @@ function readTasksFromSnapshot(snapshot: {
   docs: Array<{id: string; data(): unknown}>;
 }) {
   return sortTasksByCreatedAt(
-    snapshot.docs.map((docSnapshot) => {
-      return {
-        ...(docSnapshot.data() as Record<string, unknown>),
-        id: docSnapshot.id,
-      } as Task;
-    })
+    snapshot.docs
+      .map((docSnapshot) => {
+        return {
+          ...(docSnapshot.data() as Record<string, unknown>),
+          id: docSnapshot.id,
+        } as Task;
+      })
+      .filter((task) => !task.deleted)
   );
 }
 
@@ -375,6 +385,93 @@ export async function updateTaskAssignee(
       metadata: {taskId, assignee: normalizedAssignee},
     });
   }
+}
+
+/**
+ * Updates the cc list on a task. The task doc stores the list as an array;
+ * the history event records the values as comma-joined strings.
+ */
+export async function updateTaskCcList(taskId: string, cc: string[]) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const normalizedCc = normalizeTaskCcList(cc);
+  const db = window.firebase.db;
+  const taskRef = taskDocRef(taskId);
+  const eventRef = taskEventDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+
+  const didUpdate = await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(taskRef);
+    if (!snapshot.exists()) {
+      throw new Error('task not found');
+    }
+    const data = snapshot.data() as Task;
+    const oldCc = normalizeTaskCcList(data.cc || []);
+    if (oldCc.join(',') === normalizedCc.join(',')) {
+      return false;
+    }
+    transaction.update(taskRef, {
+      cc: normalizedCc,
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+    transaction.set(eventRef, {
+      id: eventRef.id,
+      taskId,
+      type: 'metadata',
+      field: 'cc',
+      oldValue: oldCc.join(', ') || null,
+      newValue: normalizedCc.join(', ') || null,
+      createdAt: serverTimestamp(),
+      createdBy: userEmail,
+    });
+    return true;
+  });
+
+  if (didUpdate) {
+    logAction('tasks.updateCc', {metadata: {taskId, cc: normalizedCc}});
+  }
+}
+
+/** Trims, lower-cases, and de-dupes a list of cc emails. */
+export function normalizeTaskCcList(cc: string[]) {
+  const normalized: string[] = [];
+  cc.forEach((email) => {
+    const value = email.trim().toLowerCase();
+    if (value && !normalized.includes(value)) {
+      normalized.push(value);
+    }
+  });
+  return normalized;
+}
+
+/** Soft-deletes a task so it no longer appears in task lists. */
+export async function deleteTask(taskId: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  await updateDoc(taskDocRef(taskId), {
+    deleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: window.firebase.user.email || '',
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+  logAction('tasks.delete', {metadata: {taskId}});
+}
+
+/** Restores a soft-deleted task. */
+export async function restoreTask(taskId: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  await updateDoc(taskDocRef(taskId), {
+    deleted: false,
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+  logAction('tasks.restore', {metadata: {taskId}});
 }
 
 export async function updateTaskTitle(taskId: string, title: string) {
@@ -625,22 +722,43 @@ function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
   });
 }
 
+/** Builds a `TaskAttachment` from an uploaded file, for embedding in a comment. */
+export function buildTaskAttachment(
+  file: UploadedFile & {contentType?: string; size?: number}
+): TaskAttachment {
+  const attachment: Record<string, unknown> = {};
+  // Skip undefined values, which firestore rejects.
+  Object.entries(file).forEach(([key, value]) => {
+    if (value !== undefined) {
+      attachment[key] = value;
+    }
+  });
+  attachment.id = doc(tasksCollectionRef()).id;
+  attachment.attachedAt = Timestamp.now();
+  attachment.attachedBy = window.firebase.user.email || '';
+  return attachment as unknown as TaskAttachment;
+}
+
 export async function addTaskComment(
   taskId: string,
-  content: string | RichTextData,
+  content: string | RichTextData | null,
   parentId?: string | null,
-  options?: {mentions?: string[]}
+  options?: {mentions?: string[]; attachments?: TaskAttachment[]}
 ) {
   if (!taskId) {
     throw new Error('missing task id');
   }
-  if (!content) {
+  const attachments = options?.attachments || [];
+  if (!content && attachments.length === 0) {
     throw new Error('missing comment content');
   }
-  const body = normalizeTaskCommentBody(content);
-  const contentText =
-    typeof content === 'string' ? content : getRichTextPlainText(content);
-  if (!contentText.trim() && !body) {
+  const body = content ? normalizeTaskCommentBody(content) : null;
+  const contentText = !content
+    ? ''
+    : typeof content === 'string'
+      ? content
+      : getRichTextPlainText(content);
+  if (!contentText.trim() && !body && attachments.length === 0) {
     throw new Error('missing comment content');
   }
 
@@ -654,6 +772,7 @@ export async function addTaskComment(
     parentId: parentId || null,
     content: contentText,
     body,
+    attachments,
     mentions,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || '',

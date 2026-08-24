@@ -35,6 +35,7 @@ import {
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
+import {UserTag} from '../UserTag/UserTag.js';
 
 type TaskFilter =
   | 'open'
@@ -515,7 +516,7 @@ function TaskTable(props: {tasks: Task[]}) {
                         {task.title}
                       </span>
                       <span className="TaskManager__tableTask__meta">
-                        #{task.id} by {formatTaskUser(createdBy)}
+                        #{task.id} by <UserTag email={createdBy} />
                       </span>
                     </span>
                   </a>
@@ -536,7 +537,11 @@ function TaskTable(props: {tasks: Task[]}) {
                   </span>
                 </td>
                 <td>
-                  {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+                  {task.assignee ? (
+                    <UserTag email={task.assignee} />
+                  ) : (
+                    'Unassigned'
+                  )}
                 </td>
                 <td>
                   {task.targetLaunchDate
@@ -597,7 +602,7 @@ function TaskBoardCard(props: {task: Task}) {
       )}
       <div className="TaskManager__boardCard__meta">
         #{task.id} opened {formatTaskDate(task.createdAt)} by{' '}
-        {formatTaskUser(createdBy)}
+        <UserTag email={createdBy} />
       </div>
       <div className="TaskManager__boardCard__badges">
         <span
@@ -608,7 +613,7 @@ function TaskBoardCard(props: {task: Task}) {
           {formatTaskPriority(task.priority)}
         </span>
         <span className="TaskManager__boardCard__badge">
-          {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+          {task.assignee ? <UserTag email={task.assignee} /> : 'Unassigned'}
         </span>
         {task.targetLaunchDate && (
           <span className="TaskManager__boardCard__badge">
@@ -645,7 +650,8 @@ function TaskRow(props: {task: Task}) {
       <div className="TaskManager__taskRow__content">
         <div className="TaskManager__taskRow__title">{task.title}</div>
         <div className="TaskManager__taskRow__meta">
-          opened {formatTaskDate(task.createdAt)} by {formatTaskUser(createdBy)}
+          opened {formatTaskDate(task.createdAt)} by{' '}
+          <UserTag email={createdBy} />
         </div>
       </div>
       <div className="TaskManager__taskRow__badges">

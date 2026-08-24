@@ -25,8 +25,10 @@ import {
   IconX,
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
+import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 import {
   RichTextBlock,
   RichTextData,
@@ -37,6 +39,7 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
+import {UserTag} from '../../components/UserTag/UserTag.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -45,10 +48,14 @@ import {errorMessage} from '../../utils/notifications.js';
 import {
   addTaskComment,
   addTaskAttachment,
+  buildTaskAttachment,
+  deleteTask,
   deleteTaskComment,
   editTaskComment,
+  normalizeTaskCcList,
   normalizeTaskStatus,
   removeTaskAttachment,
+  restoreTask,
   subscribeTask,
   subscribeTaskComments,
   subscribeTaskEvents,
@@ -59,6 +66,7 @@ import {
   TaskMetadataField,
   TaskPriority,
   updateTaskTitle,
+  updateTaskCcList,
   updateTaskDescription,
   updateTaskAssignee,
   updateTaskPriority,
@@ -157,20 +165,70 @@ export function TaskPage(props: {id: string}) {
           <Surface className="TaskPage__notFound">Task not found.</Surface>
         )}
         {!loading && !error && task && (
-          <div className="TaskPage__body">
-            <main className="TaskPage__main">
-              <TaskDescription task={task} />
-              <TaskAttachments task={task} />
-              <TaskTimeline task={task} comments={comments} events={events} />
-              <TaskCommentComposer taskId={task.id} />
-            </main>
-            <aside className="TaskPage__side">
-              <TaskMetadataPanel task={task} />
-            </aside>
-          </div>
+          <>
+            {task.deleted && <TaskDeletedBanner task={task} />}
+            <div className="TaskPage__body">
+              <main className="TaskPage__main">
+                <TaskDescription task={task} />
+                <TaskAttachments task={task} />
+                <TaskTimeline task={task} comments={comments} events={events} />
+                <TaskCommentComposer taskId={task.id} />
+              </main>
+              <aside className="TaskPage__side">
+                <TaskMetadataPanel task={task} />
+              </aside>
+            </div>
+          </>
         )}
       </div>
     </Layout>
+  );
+}
+
+/** Banner shown when a task has been deleted, with an option to restore it. */
+function TaskDeletedBanner(props: {task: Task}) {
+  const {task} = props;
+  const [restoring, setRestoring] = useState(false);
+
+  async function onRestore() {
+    setRestoring(true);
+    try {
+      await restoreTask(task.id);
+    } catch (err) {
+      showNotification({
+        title: 'Could not restore task',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  return (
+    <div className="TaskPage__deletedBanner">
+      <div className="TaskPage__deletedBanner__text">
+        This task was deleted
+        {task.deletedBy && (
+          <>
+            {' '}
+            by <UserTag email={task.deletedBy} />
+          </>
+        )}
+        {task.deletedAt && <> {formatTaskDateTime(task.deletedAt)}</>}. It no
+        longer appears in task lists.
+      </div>
+      <Button
+        compact
+        size="xs"
+        variant="default"
+        loading={restoring}
+        onClick={onRestore}
+      >
+        Restore task
+      </Button>
+    </div>
   );
 }
 
@@ -489,7 +547,7 @@ function TaskAttachments(props: {task: Task}) {
                   {formatTaskAttachmentName(attachment)}
                 </a>
                 <div className="TaskPage__attachments__itemMeta">
-                  {formatTaskAttachmentMeta(attachment)}
+                  <TaskAttachmentMeta attachment={attachment} />
                 </div>
               </div>
               <div className="TaskPage__attachments__itemActions">
@@ -527,16 +585,20 @@ function TaskAttachments(props: {task: Task}) {
 /** Renders editable task metadata and writes changes to history. */
 function TaskMetadataPanel(props: {task: Task}) {
   const {task} = props;
+  const {route} = useLocation();
   const [assignee, setAssignee] = useState(task.assignee || '');
+  const [cc, setCc] = useState((task.cc || []).join(', '));
   const [targetLaunchDate, setTargetLaunchDate] = useState(
     formatDateInputValue(task.targetLaunchDate)
   );
   const [savingField, setSavingField] = useState<TaskMetadataField | ''>('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setAssignee(task.assignee || '');
+    setCc((task.cc || []).join(', '));
     setTargetLaunchDate(formatDateInputValue(task.targetLaunchDate));
-  }, [task.assignee, task.targetLaunchDate]);
+  }, [task.assignee, task.cc, task.targetLaunchDate]);
 
   async function saveMetadata(
     field: TaskMetadataField,
@@ -565,6 +627,35 @@ function TaskMetadataPanel(props: {task: Task}) {
     saveMetadata('assignee', () =>
       updateTaskAssignee(task.id, normalizedAssignee || null)
     );
+  }
+
+  function saveCc() {
+    const normalizedCc = normalizeTaskCcList(cc.split(/[,\s]+/));
+    if ((task.cc || []).join(',') === normalizedCc.join(',')) {
+      setCc(normalizedCc.join(', '));
+      return;
+    }
+    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
+  }
+
+  async function onDeleteTask() {
+    if (!window.confirm(`Delete task #${task.id} "${task.title}"?`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteTask(task.id);
+      route('/cms/tasks');
+    } catch (err) {
+      showNotification({
+        title: 'Could not delete task',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function saveTargetLaunchDate(value: string) {
@@ -614,6 +705,33 @@ function TaskMetadataPanel(props: {task: Task}) {
         </div>
       </div>
       <div className="TaskPage__metadata__field">
+        <label>CC</label>
+        <div className="TaskPage__metadata__cc">
+          <TextInput
+            size="xs"
+            placeholder="a@example.com, b@example.com"
+            value={cc}
+            disabled={savingField === 'cc'}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setCc(e.currentTarget.value)
+            }
+            onBlur={() => saveCc()}
+            onKeyDown={(e: KeyboardEvent) => {
+              if (e.key === 'Enter') {
+                (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+          />
+          {(task.cc || []).length > 0 && (
+            <div className="TaskPage__metadata__ccList">
+              {(task.cc || []).map((email) => (
+                <UserTag key={email} email={email} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="TaskPage__metadata__field">
         <label>Priority</label>
         <Select
           size="xs"
@@ -641,6 +759,21 @@ function TaskMetadataPanel(props: {task: Task}) {
           />
         </div>
       </div>
+      {!task.deleted && (
+        <div className="TaskPage__metadata__danger">
+          <Button
+            compact
+            size="xs"
+            variant="subtle"
+            color="red"
+            loading={deleting}
+            leftIcon={<IconTrash size={14} strokeWidth="1.8" />}
+            onClick={onDeleteTask}
+          >
+            Delete task
+          </Button>
+        </div>
+      )}
     </Surface>
   );
 }
@@ -652,6 +785,37 @@ function TaskTimeline(props: {
   events: TaskEvent[];
 }) {
   const {task, comments, events} = props;
+  // Assign stable 1-based numbers to comments (in createdAt order) for
+  // deeplink anchors like `#comment-1`.
+  const commentNumbers = useMemo(() => {
+    const numbers = new Map<string, number>();
+    [...comments]
+      .sort(
+        (a, b) => timestampMillis(a.createdAt) - timestampMillis(b.createdAt)
+      )
+      .forEach((comment, index) => {
+        numbers.set(comment.id, index + 1);
+      });
+    return numbers;
+  }, [comments]);
+
+  // Scroll to the comment referenced by the URL hash once comments load.
+  const didScrollToHashRef = useRef(false);
+  useEffect(() => {
+    if (didScrollToHashRef.current || comments.length === 0) {
+      return;
+    }
+    const hash = window.location.hash;
+    if (!/^#comment-\d+$/.test(hash)) {
+      return;
+    }
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      didScrollToHashRef.current = true;
+      el.scrollIntoView({block: 'start'});
+    }
+  }, [comments]);
+
   const repliesByParentId = useMemo(() => {
     const replies = new Map<string, TaskComment[]>();
     comments
@@ -705,6 +869,7 @@ function TaskTimeline(props: {
             comment={item.comment}
             replies={repliesByParentId.get(item.comment.id) || []}
             threadParentId={item.comment.id}
+            commentNumbers={commentNumbers}
           />
         );
       })}
@@ -721,8 +886,10 @@ function TaskOpenedTimelineItem(props: {task: Task}) {
         <IconCheck size={15} strokeWidth="2" />
       </div>
       <div className="TaskPage__timelineItem__content">
-        <b>{formatTaskUser(task.createdBy || 'unknown')}</b> opened this task{' '}
-        {formatTaskDateTime(task.createdAt)}.
+        <b>
+          <UserTag email={task.createdBy || 'unknown'} />
+        </b>{' '}
+        opened this task {formatTaskDateTime(task.createdAt)}.
       </div>
     </div>
   );
@@ -747,8 +914,10 @@ function TaskEventTimelineItem(props: {event: TaskEvent}) {
         )}
       </div>
       <div className="TaskPage__timelineItem__content">
-        <b>{formatTaskUser(event.createdBy || 'unknown')}</b> changed{' '}
-        {formatTaskField(event.field)} from{' '}
+        <b>
+          <UserTag email={event.createdBy || 'unknown'} />
+        </b>{' '}
+        changed {formatTaskField(event.field)} from{' '}
         <span className="TaskPage__timelineValue">
           {formatTaskEventValue(event.field, event.oldValue)}
         </span>{' '}
@@ -768,8 +937,11 @@ function TaskCommentCard(props: {
   replies?: TaskComment[];
   isReply?: boolean;
   threadParentId?: string;
+  commentNumbers?: Map<string, number>;
 }) {
   const {comment} = props;
+  const commentNumber = props.commentNumbers?.get(comment.id);
+  const anchorId = commentNumber ? `comment-${commentNumber}` : undefined;
   const currentUserEmail = window.firebase.user.email || '';
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -823,6 +995,7 @@ function TaskCommentCard(props: {
 
   return (
     <div
+      id={anchorId}
       className={joinClassNames(
         'TaskPage__timelineItem',
         'TaskPage__timelineItem--comment',
@@ -840,8 +1013,19 @@ function TaskCommentCard(props: {
         <Surface className="TaskPage__comment">
           <div className="TaskPage__comment__header">
             <div>
-              <b>{formatTaskUser(comment.createdBy || 'unknown')}</b>{' '}
-              <span>{formatTaskDateTime(comment.createdAt)}</span>
+              <b>
+                <UserTag email={comment.createdBy || 'unknown'} />
+              </b>{' '}
+              {anchorId ? (
+                <a
+                  className="TaskPage__comment__timestamp"
+                  href={`#${anchorId}`}
+                >
+                  {formatTaskDateTime(comment.createdAt)}
+                </a>
+              ) : (
+                <span>{formatTaskDateTime(comment.createdAt)}</span>
+              )}
               {comment.updatedAt && !comment.isDeleted && (
                 <span> edited {formatTaskDateTime(comment.updatedAt)}</span>
               )}
@@ -876,6 +1060,7 @@ function TaskCommentCard(props: {
                 value={editBody}
                 placeholder="Edit this comment..."
                 onChange={setEditBody}
+                onSubmitShortcut={onEdit}
               />
               <div className="TaskPage__comment__editActions">
                 <Button
@@ -911,6 +1096,7 @@ function TaskCommentCard(props: {
                 'TaskPage__comment__body',
                 comment.isDeleted && 'TaskPage__comment__body--deleted'
               )}
+              onClick={onCommentBodyClick}
             >
               {comment.isDeleted ? (
                 'Comment deleted.'
@@ -919,10 +1105,15 @@ function TaskCommentCard(props: {
                   className="TaskPage__comment__richText"
                   data={comment.body}
                 />
-              ) : (
+              ) : comment.content ? (
                 <Markdown
                   className="TaskPage__comment__markdown"
                   code={comment.content}
+                />
+              ) : null}
+              {!comment.isDeleted && (
+                <TaskCommentAttachments
+                  attachments={comment.attachments || []}
                 />
               )}
             </div>
@@ -945,6 +1136,7 @@ function TaskCommentCard(props: {
                 comment={reply}
                 isReply
                 threadParentId={comment.id}
+                commentNumbers={props.commentNumbers}
               />
             ))}
           </div>
@@ -963,19 +1155,55 @@ function TaskCommentComposer(props: {
   onCancel?: () => void;
 }) {
   const [body, setBody] = useState<RichTextData | null>(null);
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isReply = Boolean(props.parentId);
+  const canSubmit =
+    Boolean(body || attachments.length > 0) && !submitting && !uploading;
 
-  async function onSubmit(e: Event) {
-    e.preventDefault();
-    if (!body) {
+  async function uploadFiles(files: File[]) {
+    if (files.length === 0) {
+      return;
+    }
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const uploadedFile = await uploadFileToGCS(file);
+        const attachment = buildTaskAttachment({
+          ...uploadedFile,
+          filename: uploadedFile.filename || file.name,
+          contentType: file.type || undefined,
+          size: file.size,
+        });
+        setAttachments((current) => [...current, attachment]);
+      }
+    } catch (err) {
+      showNotification({
+        title: 'Could not attach file',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }
+
+  async function submit() {
+    if (!body && attachments.length === 0) {
       return;
     }
     setSubmitting(true);
     try {
-      await addTaskComment(props.taskId, body, props.parentId);
+      await addTaskComment(props.taskId, body, props.parentId, {attachments});
       setBody(null);
+      setAttachments([]);
       setEditorKey((value) => value + 1);
       props.onSubmitted?.();
     } catch (err) {
@@ -988,6 +1216,11 @@ function TaskCommentComposer(props: {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onSubmit(e: Event) {
+    e.preventDefault();
+    submit();
   }
 
   return (
@@ -1004,8 +1237,57 @@ function TaskCommentComposer(props: {
           placeholder={isReply ? 'Write a reply...' : 'Leave a comment...'}
           value={body}
           onChange={setBody}
+          onSubmitShortcut={submit}
+          onPasteFiles={uploadFiles}
         />
+        {attachments.length > 0 && (
+          <div className="TaskPage__composer__attachments">
+            {attachments.map((attachment) => (
+              <div
+                className="TaskPage__composer__attachment"
+                key={attachment.id}
+              >
+                <IconPaperclip size={14} strokeWidth="1.8" />
+                <span className="TaskPage__composer__attachment__name">
+                  {formatTaskAttachmentName(attachment)}
+                </span>
+                <ActionIcon
+                  size="xs"
+                  title="Remove attachment"
+                  onClick={() =>
+                    setAttachments((current) =>
+                      current.filter((a) => a.id !== attachment.id)
+                    )
+                  }
+                >
+                  <IconX size={12} strokeWidth="1.8" />
+                </ActionIcon>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="TaskPage__composer__actions">
+          <Button
+            compact
+            size="xs"
+            variant="subtle"
+            type="button"
+            loading={uploading}
+            leftIcon={<IconPaperclip size={14} strokeWidth="1.8" />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Attach
+          </Button>
+          <input
+            ref={fileInputRef}
+            className="TaskPage__composer__fileInput"
+            type="file"
+            multiple
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              uploadFiles(Array.from(e.currentTarget.files || []));
+            }}
+          />
+          <div className="TaskPage__composer__actions__spacer" />
           {props.onCancel && (
             <Button
               compact
@@ -1017,20 +1299,120 @@ function TaskCommentComposer(props: {
               Cancel
             </Button>
           )}
-          <Button
-            compact
-            size="xs"
-            color="dark"
-            type="submit"
-            loading={submitting}
-            disabled={!body}
-          >
-            {isReply ? 'Reply' : 'Comment'}
-          </Button>
+          <Tooltip label="Cmd+Enter to submit" withArrow>
+            <Button
+              compact
+              size="xs"
+              color="dark"
+              type="submit"
+              loading={submitting}
+              disabled={!canSubmit}
+            >
+              {isReply ? 'Reply' : 'Comment'}
+            </Button>
+          </Tooltip>
         </div>
       </form>
     </Surface>
   );
+}
+
+/** Renders attachment chips nested within a comment. */
+function TaskCommentAttachments(props: {attachments: TaskAttachment[]}) {
+  const attachments = props.attachments;
+  if (attachments.length === 0) {
+    return null;
+  }
+  return (
+    <div className="TaskPage__comment__attachments">
+      {attachments.map((attachment) => (
+        <a
+          key={attachment.id}
+          className="TaskPage__comment__attachment"
+          href={attachment.src}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {isImageAttachment(attachment) ? (
+            <img
+              className="TaskPage__comment__attachment__thumb"
+              src={attachment.src}
+              alt={formatTaskAttachmentName(attachment)}
+            />
+          ) : (
+            <IconPaperclip size={14} strokeWidth="1.8" />
+          )}
+          <span className="TaskPage__comment__attachment__name">
+            {formatTaskAttachmentName(attachment)}
+          </span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function isImageAttachment(attachment: TaskAttachment) {
+  if (attachment.contentType?.startsWith('image/')) {
+    return true;
+  }
+  const ext =
+    attachment.src.split('?')[0].split('.').at(-1)?.toLowerCase() || '';
+  return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif'].includes(ext);
+}
+
+/**
+ * Handles clicks on links inside comment bodies. Only `/cms` links are left to
+ * the SPA router; all other links open in a new window.
+ */
+function onCommentBodyClick(e: MouseEvent) {
+  const link = (e.target as HTMLElement)?.closest?.(
+    'a[href]'
+  ) as HTMLAnchorElement | null;
+  if (!link) {
+    return;
+  }
+  const href = link.getAttribute('href') || '';
+  if (!href || href.startsWith('#') || isCmsInternalUrl(href)) {
+    return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  window.open(link.href, '_blank', 'noopener,noreferrer');
+}
+
+/** Returns true if a link should be handled by the CMS SPA router. */
+function isCmsInternalUrl(href: string) {
+  try {
+    const url = new URL(href, window.location.origin);
+    return (
+      url.origin === window.location.origin &&
+      (url.pathname === '/cms' || url.pathname.startsWith('/cms/'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Adds `target="_blank"` and an external-link marker class to any non-CMS
+ * links in sanitized comment HTML, so they bypass SPA navigation.
+ */
+function decorateCommentHtml(html: string) {
+  if (!html.includes('<a')) {
+    return html;
+  }
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  template.content.querySelectorAll('a[href]').forEach((link) => {
+    const href = link.getAttribute('href') || '';
+    if (href.startsWith('#') || isCmsInternalUrl(href)) {
+      return;
+    }
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    link.classList.add('TaskPage__externalLink');
+  });
+  return template.innerHTML;
 }
 
 function TaskRichText(props: {className?: string; data: RichTextData}) {
@@ -1101,7 +1483,9 @@ function TaskRichTextHtml(props: {
   const Component = props.tag;
   return (
     <Component
-      dangerouslySetInnerHTML={{__html: sanitizeInlineHtml(props.html)}}
+      dangerouslySetInnerHTML={{
+        __html: decorateCommentHtml(sanitizeInlineHtml(props.html)),
+      }}
     />
   );
 }
@@ -1112,7 +1496,7 @@ function TaskRichTextListItem(props: {item: RichTextListItem}) {
       {props.item.content && (
         <span
           dangerouslySetInnerHTML={{
-            __html: sanitizeInlineHtml(props.item.content),
+            __html: decorateCommentHtml(sanitizeInlineHtml(props.item.content)),
           }}
         />
       )}
@@ -1165,16 +1549,34 @@ function formatTaskAttachmentName(attachment: TaskAttachment) {
   }
 }
 
-function formatTaskAttachmentMeta(attachment: TaskAttachment) {
-  const parts = [
+/** Renders the meta line (size, type, uploader, date) for a task attachment. */
+function TaskAttachmentMeta(props: {attachment: TaskAttachment}) {
+  const {attachment} = props;
+  const parts: ComponentChildren[] = [
     formatFileSize(attachment.size),
     attachment.contentType || '',
-    attachment.attachedBy
-      ? `attached by ${formatTaskUser(attachment.attachedBy)}`
-      : '',
+    attachment.attachedBy ? (
+      <>
+        attached by <UserTag email={attachment.attachedBy} />
+      </>
+    ) : (
+      ''
+    ),
     attachment.attachedAt ? formatTaskDateTime(attachment.attachedAt) : '',
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(' - ') : 'Attached file';
+  if (parts.length === 0) {
+    return <>Attached file</>;
+  }
+  return (
+    <>
+      {parts.map((part, index) => (
+        <span key={index}>
+          {index > 0 && ' - '}
+          {part}
+        </span>
+      ))}
+    </>
+  );
 }
 
 function formatFileSize(size?: number) {
@@ -1192,10 +1594,6 @@ function formatFileSize(size?: number) {
     unitIndex += 1;
   }
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
-function formatTaskUser(email: string) {
-  return email.split('@')[0] || email;
 }
 
 function formatTaskDate(ts?: Timestamp | null) {
@@ -1240,7 +1638,20 @@ function formatTaskEventValue(
     return formatTaskDate(value);
   }
   if (field === 'assignee') {
-    return formatTaskUser(value);
+    return <UserTag email={value} />;
+  }
+  if (field === 'cc') {
+    const emails = value.split(/,\s*/).filter(Boolean);
+    return (
+      <>
+        {emails.map((email, index) => (
+          <span key={email}>
+            {index > 0 && ', '}
+            <UserTag email={email} />
+          </span>
+        ))}
+      </>
+    );
   }
   if (field === 'title') {
     return value;
