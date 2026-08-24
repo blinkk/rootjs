@@ -98,6 +98,47 @@ export function normalizeRichTextParagraphSizes(
   return options;
 }
 
+/**
+ * Returns whether any paragraph in the value carries a size, including
+ * paragraphs nested inside table cells.
+ *
+ * A field can hold sized paragraphs without declaring `paragraphSizes` (they
+ * can be pasted in from a field that does, and a site's CSS is global rather
+ * than per field), so the stored value — not just the schema — decides whether
+ * sizes need protecting.
+ */
+export function testRichTextParagraphSizes(
+  data?: RichTextData | null
+): boolean {
+  return testBlocksHaveParagraphSize(data?.blocks);
+}
+
+function testBlocksHaveParagraphSize(blocks?: RichTextBlock[]): boolean {
+  if (!blocks) {
+    return false;
+  }
+  for (const block of blocks) {
+    if (
+      block.type === 'paragraph' &&
+      parseRichTextParagraphSize((block.data as {size?: unknown})?.size)
+    ) {
+      return true;
+    }
+    if (block.type === 'table') {
+      const rows: RichTextTableRow[] =
+        (block.data as RichTextTableBlock['data'])?.rows || [];
+      for (const row of rows) {
+        for (const cell of row.cells || []) {
+          if (testBlocksHaveParagraphSize(cell.blocks)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 export interface RichTextHeadingBlock {
   type: 'heading';
   data?: {

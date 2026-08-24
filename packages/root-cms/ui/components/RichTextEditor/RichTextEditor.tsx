@@ -1,8 +1,10 @@
+import {useRef} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {
   normalizeRichTextParagraphSizes,
   RichTextData,
   RichTextParagraphSizeOption,
+  testRichTextParagraphSizes,
 } from '../../../shared/richtext.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {EditorJSEditor} from './editorjs/EditorJSEditor.js';
@@ -31,14 +33,25 @@ export interface RichTextEditorProps {
 
 export function RichTextEditor(props: RichTextEditorProps) {
   const userPrefs = useUserPreferences();
+  const editorJSPreferred = !!userPrefs.preferences.EnableEditorJSEditor;
   // The legacy EditorJS editor has no concept of paragraph size, and its
   // `editor.save()` rebuilds every block from its own tools — so a single edit
-  // there would silently strip `data.size` from paragraphs another user sized
-  // in the lexical editor. Fields that offer sizes always use the lexical
-  // editor, whatever the user's preference.
-  const offersParagraphSizes =
-    normalizeRichTextParagraphSizes(props.paragraphSizes).length > 0;
-  if (userPrefs.preferences.EnableEditorJSEditor && !offersParagraphSizes) {
+  // there would silently strip `data.size`. The lexical editor is used instead
+  // whenever sizes are in play, whatever the user's preference: either the
+  // field offers them, or the stored value already contains one (sizes can be
+  // pasted into a field that doesn't offer them, and still render, because a
+  // site's CSS is global rather than per field).
+  //
+  // Latched, because the value arrives after the first render and because
+  // removing the last sized paragraph mid-edit must not swap the editor out
+  // from under the user.
+  const requiresLexical = useRef(false);
+  if (editorJSPreferred && !requiresLexical.current) {
+    requiresLexical.current =
+      normalizeRichTextParagraphSizes(props.paragraphSizes).length > 0 ||
+      testRichTextParagraphSizes(props.value);
+  }
+  if (editorJSPreferred && !requiresLexical.current) {
     // EditorJSEditor understands neither `deepKey` nor `paragraphSizes`; strip
     // both before forwarding.
     const {

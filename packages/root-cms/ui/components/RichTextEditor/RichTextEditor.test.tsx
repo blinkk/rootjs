@@ -50,4 +50,76 @@ describe('RichTextEditor', () => {
     render(<RichTextEditor paragraphSizes={['  ']} />);
     expect(screen.queryByTestId('editorjs')).toBeTruthy();
   });
+
+  test('overrides the preference when the value already has a size', () => {
+    // The field never declared sizes, but a pasted paragraph carries one and a
+    // site's CSS is global, so the size renders and must not be stripped.
+    userPreferences.EnableEditorJSEditor = true;
+    render(
+      <RichTextEditor
+        value={{
+          version: '1',
+          time: 0,
+          blocks: [{type: 'paragraph', data: {size: 'small', text: 'Hi.'}}],
+        }}
+      />
+    );
+    expect(screen.queryByTestId('lexical')).toBeTruthy();
+    expect(screen.queryByTestId('editorjs')).toBeNull();
+  });
+
+  test('overrides the preference for a size inside a table cell', () => {
+    userPreferences.EnableEditorJSEditor = true;
+    render(
+      <RichTextEditor
+        value={{
+          version: '1',
+          time: 0,
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                rows: [
+                  {
+                    cells: [
+                      {
+                        type: 'data',
+                        blocks: [
+                          {
+                            type: 'paragraph',
+                            data: {size: 'large', text: 'Cell.'},
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        }}
+      />
+    );
+    expect(screen.queryByTestId('lexical')).toBeTruthy();
+  });
+
+  test('keeps the lexical editor once a size has been seen', () => {
+    userPreferences.EnableEditorJSEditor = true;
+    const value = {
+      version: '1',
+      time: 0,
+      blocks: [{type: 'paragraph', data: {size: 'small', text: 'Hi.'}}],
+    };
+    const {rerender} = render(<RichTextEditor value={value} />);
+    expect(screen.queryByTestId('lexical')).toBeTruthy();
+
+    // Removing the last sized paragraph must not swap the editor mid-edit.
+    rerender(
+      <RichTextEditor
+        value={{...value, blocks: [{type: 'paragraph', data: {text: 'Hi.'}}]}}
+      />
+    );
+    expect(screen.queryByTestId('lexical')).toBeTruthy();
+    expect(screen.queryByTestId('editorjs')).toBeNull();
+  });
 });
