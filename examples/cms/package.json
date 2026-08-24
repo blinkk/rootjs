@@ -19,7 +19,7 @@
     "@blinkk/root": "workspace:*",
     "@blinkk/root-cms": "workspace:*",
     "firebase-admin": "11.11.1",
-    "preact": "10.27.1"
+    "preact": "10.29.7"
   },
   "devDependencies": {
     "@types/node": "24.3.1"

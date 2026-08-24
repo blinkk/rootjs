@@ -1,5 +1,11 @@
+import {useRef} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
-import {RichTextData} from '../../../shared/richtext.js';
+import {
+  normalizeRichTextParagraphSizes,
+  RichTextData,
+  RichTextParagraphSizeOption,
+  testRichTextParagraphSizes,
+} from '../../../shared/richtext.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {EditorJSEditor} from './editorjs/EditorJSEditor.js';
 import {LexicalEditor} from './lexical/LexicalEditor.js';
@@ -21,15 +27,38 @@ export interface RichTextEditorProps {
   onBlur?: (e: FocusEvent) => void;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
   const userPrefs = useUserPreferences();
-  if (userPrefs.preferences.EnableEditorJSEditor) {
-    // EditorJSEditor doesn't use `deepKey`; strip it before forwarding.
+  const editorJSPreferred = !!userPrefs.preferences.EnableEditorJSEditor;
+  // The legacy EditorJS editor has no concept of paragraph size, and its
+  // `editor.save()` rebuilds every block from its own tools — so a single edit
+  // there would silently strip `data.size`. The lexical editor is used instead
+  // whenever sizes are in play, whatever the user's preference: either the
+  // field offers them, or the stored value already contains one (sizes can be
+  // pasted into a field that doesn't offer them, and still render, because a
+  // site's CSS is global rather than per field).
+  //
+  // Latched, because the value arrives after the first render and because
+  // removing the last sized paragraph mid-edit must not swap the editor out
+  // from under the user.
+  const requiresLexical = useRef(false);
+  if (editorJSPreferred && !requiresLexical.current) {
+    requiresLexical.current =
+      normalizeRichTextParagraphSizes(props.paragraphSizes).length > 0 ||
+      testRichTextParagraphSizes(props.value);
+  }
+  if (editorJSPreferred && !requiresLexical.current) {
+    // EditorJSEditor understands neither `deepKey` nor `paragraphSizes`; strip
+    // both before forwarding.
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       deepKey,
+      paragraphSizes,
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       ...rest
     } = props;
     return <EditorJSEditor {...rest} />;

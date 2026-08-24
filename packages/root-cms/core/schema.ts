@@ -1,3 +1,5 @@
+import type {RichTextParagraphSizeOption} from '../shared/richtext.js';
+
 export interface CommonFieldProps {
   /** The type that defines the structure of the field and its UI component. */
   type: string;
@@ -352,6 +354,32 @@ export type RichTextField = CommonFieldProps & {
   blockComponents?: Schema[];
   /** Custom inline component definitions to include in the rich text editor. */
   inlineComponents?: Schema[];
+  /**
+   * Paragraph size variants offered in the editor's block type dropdown. The
+   * values are the site's own: each is stored on the block and rendered as
+   * `<p data-size="...">`, and the site decides in its CSS what it means. Only
+   * list sizes the site has actually styled — an unstyled size renders as an
+   * ordinary paragraph. Omit the option to hide sizes entirely.
+   *
+   * Give a size an `editorStyle` to have the CMS editor approximate it while
+   * writing; without one it still works, but previews at the normal size. The
+   * `editorStyle` never reaches the published page.
+   *
+   * ```ts
+   * schema.richtext({
+   *   id: 'body',
+   *   paragraphSizes: [
+   *     {
+   *       value: 'small',
+   *       label: 'Small',
+   *       editorStyle: {fontSize: '0.875em', lineHeight: 1.4},
+   *     },
+   *     {value: 'large', label: 'Larger', editorStyle: {fontSize: '1.25em'}},
+   *   ],
+   * })
+   * ```
+   */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 };
 
 export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {

@@ -24,6 +24,7 @@ import {
   TextNode,
 } from 'lexical';
 import {
+  parseRichTextParagraphSize,
   RichTextData,
   RichTextInlineComponentsMap,
   RichTextListItem,
@@ -31,6 +32,7 @@ import {
 import {cloneData} from '../../../../utils/objects.js';
 import {$createBlockComponentNode} from '../nodes/BlockComponentNode.js';
 import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
+import {$createSizedParagraphNode} from '../nodes/SizedParagraphNode.js';
 
 /**
  * Converts from lexical to rich text data and writes the output directly to
@@ -44,7 +46,7 @@ export function convertToLexical(data?: RichTextData | null) {
   const blocks = data?.blocks || [];
   for (const block of blocks) {
     if (block.type === 'paragraph') {
-      const paragraphNode = $createParagraphNode();
+      const paragraphNode = createParagraphNodeWithSize(block.data?.size);
       if (block.data.text) {
         const children = createNodesFromHTML(
           block.data.text,
@@ -100,7 +102,9 @@ export function convertToLexical(data?: RichTextData | null) {
           // Process each block in the cell
           cellBlocks.forEach((cellBlock: any) => {
             if (cellBlock.type === 'paragraph') {
-              const paragraphNode = $createParagraphNode();
+              const paragraphNode = createParagraphNodeWithSize(
+                cellBlock.data?.size
+              );
               if (cellBlock.data?.text) {
                 const children = createNodesFromHTML(
                   cellBlock.data.text,
@@ -169,6 +173,19 @@ export function convertToLexical(data?: RichTextData | null) {
       root.append(node);
     }
   }
+}
+
+/**
+ * Creates a paragraph node, using a sized paragraph when the stored block
+ * carries a usable size. Sizes are site-defined, so the value is only checked
+ * for usability, never against the field's declared list.
+ */
+function createParagraphNodeWithSize(size?: unknown) {
+  const paragraphSize = parseRichTextParagraphSize(size);
+  if (paragraphSize) {
+    return $createSizedParagraphNode(paragraphSize);
+  }
+  return $createParagraphNode();
 }
 
 function createNodesFromHTML(

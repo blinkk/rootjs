@@ -129,4 +129,3 @@ export function getKeyHierarchy(key: string) {
   }
   return keys;
 }
-

@@ -24,7 +24,11 @@ import {$dfs} from '@lexical/utils';
 import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {RichTextData} from '../../../../shared/richtext.js';
+import {
+  getRichTextParagraphEditorStyles,
+  RichTextData,
+  RichTextParagraphSizeOption,
+} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   OPEN_RICHTEXT_BLOCK_EVENT,
@@ -56,6 +60,7 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
+import {SizedParagraphNode} from './nodes/SizedParagraphNode.js';
 import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
@@ -71,7 +76,6 @@ import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
-  theme: LexicalTheme,
   nodes: [
     AutoLinkNode,
     HeadingNode,
@@ -85,6 +89,7 @@ const INITIAL_CONFIG: InitialConfigType = {
     TableRowNode,
     BlockComponentNode,
     InlineComponentNode,
+    SizedParagraphNode,
     SpecialCharacterNode,
   ],
   // Lexical routes errors it catches while updating, reconciling, or parsing
@@ -126,6 +131,8 @@ export interface LexicalEditorProps {
   autoFocus?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 }
 
 export function LexicalEditor(props: LexicalEditorProps) {
@@ -133,8 +140,24 @@ export function LexicalEditor(props: LexicalEditorProps) {
   // then renders the <Editor> component which can use the shared context states
   // to render the rich text editor.
 
+  // The theme carries each size's preview font size, which is per field, so it
+  // is built here rather than shared at module scope. `LexicalComposer` reads
+  // `initialConfig` once on mount; schemas don't change at runtime.
+  const initialConfig = useMemo(
+    () => ({
+      ...INITIAL_CONFIG,
+      theme: {
+        ...LexicalTheme,
+        paragraphSizeStyles: getRichTextParagraphEditorStyles(
+          props.paragraphSizes
+        ),
+      },
+    }),
+    [props.paragraphSizes]
+  );
+
   return (
-    <LexicalComposer initialConfig={INITIAL_CONFIG}>
+    <LexicalComposer initialConfig={initialConfig}>
       <SharedHistoryProvider>
         <ToolbarProvider>
           <div
@@ -156,6 +179,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
               autoFocus={props.autoFocus}
               blockComponents={props.blockComponents}
               inlineComponents={props.inlineComponents}
+              paragraphSizes={props.paragraphSizes}
             />
           </div>
         </ToolbarProvider>
@@ -223,6 +247,8 @@ interface EditorProps {
   autoFocus?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
 }
 
 function Editor(props: EditorProps) {
@@ -563,6 +589,7 @@ function Editor(props: EditorProps) {
           variant={props.variant}
           blockComponents={blockComponents}
           inlineComponents={inlineComponents}
+          paragraphSizes={props.paragraphSizes}
           onInsertBlockComponent={(blockName) =>
             openBlockComponentModal(blockName, {mode: 'create'})
           }

@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "preact": "10.27.1"
+    "preact": "10.29.7"
   },
   "devDependencies": {
     "@types/node": "24.3.1"
