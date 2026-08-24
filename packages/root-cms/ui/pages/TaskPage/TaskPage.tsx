@@ -10,6 +10,7 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
+import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
   IconCalendar,
@@ -39,7 +40,9 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
+import {Text} from '../../components/Text/Text.js';
 import {UserTag} from '../../components/UserTag/UserTag.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -586,19 +589,20 @@ function TaskAttachments(props: {task: Task}) {
 function TaskMetadataPanel(props: {task: Task}) {
   const {task} = props;
   const {route} = useLocation();
+  const modals = useModals();
+  const modalTheme = useModalTheme();
   const [assignee, setAssignee] = useState(task.assignee || '');
-  const [cc, setCc] = useState((task.cc || []).join(', '));
+  const [ccDraft, setCcDraft] = useState('');
   const [targetLaunchDate, setTargetLaunchDate] = useState(
     formatDateInputValue(task.targetLaunchDate)
   );
   const [savingField, setSavingField] = useState<TaskMetadataField | ''>('');
-  const [deleting, setDeleting] = useState(false);
+  const ccList = task.cc || [];
 
   useEffect(() => {
     setAssignee(task.assignee || '');
-    setCc((task.cc || []).join(', '));
     setTargetLaunchDate(formatDateInputValue(task.targetLaunchDate));
-  }, [task.assignee, task.cc, task.targetLaunchDate]);
+  }, [task.assignee, task.targetLaunchDate]);
 
   async function saveMetadata(
     field: TaskMetadataField,
@@ -629,33 +633,62 @@ function TaskMetadataPanel(props: {task: Task}) {
     );
   }
 
-  function saveCc() {
-    const normalizedCc = normalizeTaskCcList(cc.split(/[,\s]+/));
-    if ((task.cc || []).join(',') === normalizedCc.join(',')) {
-      setCc(normalizedCc.join(', '));
+  function addCcEmails() {
+    const draftEmails = ccDraft.split(/[,\s]+/).filter(Boolean);
+    if (draftEmails.length === 0) {
+      return;
+    }
+    if (draftEmails.some((email) => !email.includes('@'))) {
+      showNotification({
+        title: 'Could not add to CC',
+        message: 'Enter a valid email address.',
+        color: 'red',
+      });
+      return;
+    }
+    const normalizedCc = normalizeTaskCcList([...ccList, ...draftEmails]);
+    setCcDraft('');
+    if (ccList.join(',') === normalizedCc.join(',')) {
       return;
     }
     saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
   }
 
-  async function onDeleteTask() {
-    if (!window.confirm(`Delete task #${task.id} "${task.title}"?`)) {
-      return;
-    }
-    setDeleting(true);
-    try {
-      await deleteTask(task.id);
-      route('/cms/tasks');
-    } catch (err) {
-      showNotification({
-        title: 'Could not delete task',
-        message: errorMessage(err),
-        color: 'red',
-        autoClose: false,
-      });
-    } finally {
-      setDeleting(false);
-    }
+  function removeCcEmail(email: string) {
+    const normalizedCc = ccList.filter((value) => value !== email);
+    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
+  }
+
+  function onDeleteTask() {
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Delete task #${task.id}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to delete "{task.title}"? The task will no
+          longer appear in task lists.
+        </Text>
+      ),
+      labels: {confirm: 'Delete task', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        try {
+          await deleteTask(task.id);
+          modals.closeModal(modalId);
+          route('/cms/tasks');
+        } catch (err) {
+          modals.closeModal(modalId);
+          showNotification({
+            title: 'Could not delete task',
+            message: errorMessage(err),
+            color: 'red',
+            autoClose: false,
+          });
+        }
+      },
+    });
   }
 
   function saveTargetLaunchDate(value: string) {
@@ -709,23 +742,35 @@ function TaskMetadataPanel(props: {task: Task}) {
         <div className="TaskPage__metadata__cc">
           <TextInput
             size="xs"
-            placeholder="a@example.com, b@example.com"
-            value={cc}
+            type="email"
+            placeholder="Add email and press enter"
+            value={ccDraft}
             disabled={savingField === 'cc'}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setCc(e.currentTarget.value)
+              setCcDraft(e.currentTarget.value)
             }
-            onBlur={() => saveCc()}
+            onBlur={() => addCcEmails()}
             onKeyDown={(e: KeyboardEvent) => {
               if (e.key === 'Enter') {
-                (e.currentTarget as HTMLInputElement).blur();
+                e.preventDefault();
+                addCcEmails();
               }
             }}
           />
-          {(task.cc || []).length > 0 && (
+          {ccList.length > 0 && (
             <div className="TaskPage__metadata__ccList">
-              {(task.cc || []).map((email) => (
-                <UserTag key={email} email={email} />
+              {ccList.map((email) => (
+                <div className="TaskPage__metadata__ccItem" key={email}>
+                  <UserTag email={email} />
+                  <ActionIcon
+                    size="xs"
+                    title="Remove from CC"
+                    disabled={savingField === 'cc'}
+                    onClick={() => removeCcEmail(email)}
+                  >
+                    <IconX size={12} strokeWidth="1.8" />
+                  </ActionIcon>
+                </div>
               ))}
             </div>
           )}
@@ -766,7 +811,6 @@ function TaskMetadataPanel(props: {task: Task}) {
             size="xs"
             variant="subtle"
             color="red"
-            loading={deleting}
             leftIcon={<IconTrash size={14} strokeWidth="1.8" />}
             onClick={onDeleteTask}
           >

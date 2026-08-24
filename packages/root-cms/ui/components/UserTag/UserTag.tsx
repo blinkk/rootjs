@@ -46,7 +46,14 @@ export function UserTag(props: UserTagProps) {
     </div>
   );
   return (
-    <Tooltip label={label} position="bottom" withArrow transition="pop">
+    <Tooltip
+      label={label}
+      position="bottom"
+      withArrow
+      transition="pop"
+      // Keep the tooltip interactive so the email can be selected/copied.
+      allowPointerEvents
+    >
       <span className={joinClassNames('UserTag', props.className)}>
         {shortName}
       </span>

@@ -779,6 +779,12 @@ export async function addTaskComment(
     history: [],
   });
 
+  // Bump the task's `updatedAt` so comment activity is reflected in lists.
+  await updateDoc(taskDocRef(taskId), {
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+
   logAction('tasks.comment.add', {
     metadata: {taskId, commentId, parentId: parentId || null, mentions},
   });

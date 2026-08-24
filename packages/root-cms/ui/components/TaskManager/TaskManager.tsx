@@ -494,6 +494,7 @@ function TaskTable(props: {tasks: Task[]}) {
             <th>assignee</th>
             <th>target</th>
             <th>opened</th>
+            <th>updated</th>
           </tr>
         </thead>
         <tbody>
@@ -549,6 +550,7 @@ function TaskTable(props: {tasks: Task[]}) {
                     : 'None'}
                 </td>
                 <td>{formatTaskDate(task.createdAt)}</td>
+                <td>{formatTaskDate(task.updatedAt || task.createdAt)}</td>
               </tr>
             );
           })}

@@ -575,14 +575,24 @@
 }
 
 .TaskPage__metadata__ccList {
-  color: var(--color-text-gray);
-  font-size: 12px;
-  line-height: 1.5;
-  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
 }
 
-.TaskPage__metadata__ccList .UserTag {
-  margin-right: 6px;
+.TaskPage__metadata__ccItem {
+  align-items: center;
+  background: #f6f7f8;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-default);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 3px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 1px 4px 1px 10px;
 }
 
 .TaskPage__metadata__danger {
