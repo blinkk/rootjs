@@ -41,6 +41,7 @@ import {FilePreview} from '../../components/FilePreview/FilePreview.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {UserActionTooltip} from '../../components/UserActionTooltip/UserActionTooltip.js';
+import {Density, useDensity} from '../../hooks/useDensity.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -58,9 +59,6 @@ import {
 import {getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
-
-/** Document listing density. */
-type Density = 'comfortable' | 'compact';
 
 const DENSITY_OPTIONS: Array<{
   value: Density;
@@ -172,12 +170,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
   // Collections can force the compact listing via schema
   // (`viewOptions: {compact: true}`). Otherwise the user's chosen density is
   // remembered globally (sticky as the user navigates between collections).
-  const forceCompactView = Boolean(collection.viewOptions?.compact);
-  const [userDensity, setUserDensity] = useLocalStorage<Density>(
-    'root::CollectionPage:density',
-    'comfortable'
-  );
-  const density: Density = forceCompactView ? 'compact' : userDensity;
+  const {
+    density,
+    locked: forceCompactView,
+    setDensity,
+  } = useDensity(props.collection);
   const compactView = density === 'compact';
 
   const sortOptions = [
@@ -251,7 +248,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
               <DensityControl
                 density={density}
                 locked={forceCompactView}
-                onChange={setUserDensity}
+                onChange={setDensity}
               />
               <div className="CollectionPage__collection__docsTab__controls__newDoc">
                 <ConditionalTooltip

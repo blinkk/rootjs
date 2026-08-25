@@ -5,10 +5,12 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconSearch} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 
+import {useDensity} from '../../hooks/useDensity.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useFilteredDocs} from '../../hooks/useFilteredDocs.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../FilePreview/FilePreview.js';
@@ -174,6 +176,12 @@ DocPickerModal.DocsList = (props: {
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
+  // Render the condensed rows when the collection forces the compact listing
+  // (`viewOptions: {compact: true}`) or when the user's preferred listing
+  // density is compact.
+  const {density} = useDensity(props.collection);
+  const compact = density === 'compact';
+
   const [loading, refreshDocs, docs] = useDocsList(props.collection || '', {
     orderBy: sortBy,
   });
@@ -278,6 +286,7 @@ DocPickerModal.DocsList = (props: {
                 multiSelect={props.multiSelect}
                 selected={selectedDocIds.includes(doc.id)}
                 enableStatusBadges={options.enableStatusBadges}
+                compact={compact}
               />
             ))}
           </div>
@@ -298,6 +307,11 @@ DocPickerModal.DocsList = (props: {
   );
 };
 
+/**
+ * A row in the doc picker's listing. The `compact` variant renders a condensed
+ * single-line row (small thumbnail, doc id, title, badges), mirroring the
+ * compact listing on the collection page.
+ */
 DocPickerModal.DocCard = (props: {
   doc: any;
   onDocSelected: (doc: any) => void;
@@ -305,8 +319,10 @@ DocPickerModal.DocCard = (props: {
   multiSelect?: boolean;
   selected?: boolean;
   enableStatusBadges?: boolean;
+  compact?: boolean;
 }) => {
   const [selected, setSelected] = useState(!!props.selected);
+  const compact = !!props.compact;
   const doc = props.doc;
   const [collection, slug] = doc.id.split('/');
   const fields = doc.fields || {};
@@ -320,15 +336,20 @@ DocPickerModal.DocCard = (props: {
     getNestedValue(fields, rootCollection.preview?.image || 'meta.image') ||
     rootCollection.preview?.defaultImage;
   return (
-    <div className="DocPickerModal__DocCard">
+    <div
+      className={joinClassNames(
+        'DocPickerModal__DocCard',
+        compact && 'DocPickerModal__DocCard--compact'
+      )}
+    >
       <div
         className="DocPickerModal__DocCard__image"
         onClick={() => window.open(cmsUrl, '_blank')}
       >
         <FilePreview
           file={previewImage}
-          width={120}
-          height={90}
+          width={compact ? 40 : 120}
+          height={compact ? 30 : 90}
           withPlaceholder={!previewImage?.src}
         />
       </div>
@@ -363,6 +384,7 @@ DocPickerModal.DocCard = (props: {
                 variant="light"
                 color="blue"
                 size="xs"
+                compact={compact}
                 onClick={() => {
                   setSelected(false);
                   props.onDocUnselected(props.doc);
@@ -375,6 +397,7 @@ DocPickerModal.DocCard = (props: {
                 variant="filled"
                 color="blue"
                 size="xs"
+                compact={compact}
                 onClick={() => {
                   setSelected(true);
                   props.onDocSelected(props.doc);
@@ -387,6 +410,7 @@ DocPickerModal.DocCard = (props: {
             <Button
               color="blue"
               size="xs"
+              compact={compact}
               onClick={() => props.onDocSelected(props.doc)}
             >
               Select

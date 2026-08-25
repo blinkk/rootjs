@@ -169,3 +169,60 @@
   margin-bottom: 12px;
   padding: 0 4px;
 }
+
+/*
+ * Compact rows. Enabled when the collection forces the compact listing
+ * (`viewOptions: {compact: true}`) or when the user's preferred listing
+ * density is compact. Condenses each row onto a single line — small
+ * thumbnail, doc id, title, badges — mirroring the compact listing on the
+ * collection page.
+ */
+.DocPickerModal__DocCard--compact {
+  gap: 12px;
+  padding: 4px 8px 4px 0;
+}
+
+.DocPickerModal__DocCard--compact .DocPickerModal__DocCard__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.DocPickerModal__DocCard--compact
+  .DocPickerModal__DocCard__content__header__docId {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.DocPickerModal__DocCard--compact .DocPickerModal__DocCard__content__header {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  flex-wrap: nowrap;
+}
+
+.DocPickerModal__DocCard--compact .DocPickerModal__DocCard__content__title {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.DocPickerModal__DocCard--compact .DocPickerModal__DocCard__content__link {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.DocPickerModal__DocCard--compact .DocPickerModal__DocCard__content__badges {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
