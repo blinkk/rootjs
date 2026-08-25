@@ -41,15 +41,17 @@ import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
 import {Text} from '../../components/Text/Text.js';
+import {
+  UserMultiSelect,
+  UserSelect,
+} from '../../components/UserSelect/UserSelect.js';
 import {UserTag} from '../../components/UserTag/UserTag.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
-import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {errorMessage} from '../../utils/notifications.js';
-import {getRole} from '../../utils/permissions.js';
 import {
   addTaskComment,
   addTaskAttachment,
@@ -593,9 +595,7 @@ function TaskMetadataPanel(props: {task: Task}) {
   const {route} = useLocation();
   const modals = useModals();
   const modalTheme = useModalTheme();
-  const {roles} = useProjectRoles();
   const [assignee, setAssignee] = useState(task.assignee || '');
-  const [ccDraft, setCcDraft] = useState('');
   const [targetLaunchDate, setTargetLaunchDate] = useState(
     formatDateInputValue(task.targetLaunchDate)
   );
@@ -632,9 +632,10 @@ function TaskMetadataPanel(props: {task: Task}) {
     }
   }
 
-  function saveAssignee() {
-    const normalizedAssignee = assignee.trim();
-    if ((task.assignee || '') === normalizedAssignee) {
+  function saveAssignee(value: string) {
+    const normalizedAssignee = value.trim().toLowerCase();
+    setAssignee(normalizedAssignee);
+    if ((task.assignee || '').toLowerCase() === normalizedAssignee) {
       return;
     }
     saveMetadata('assignee', () =>
@@ -646,61 +647,26 @@ function TaskMetadataPanel(props: {task: Task}) {
     if (!currentUserEmail || isAssignedToMe) {
       return;
     }
-    setAssignee(currentUserEmail);
-    saveMetadata('assignee', () =>
-      updateTaskAssignee(task.id, currentUserEmail)
-    );
+    saveAssignee(currentUserEmail);
+  }
+
+  function saveCcList(emails: string[]) {
+    const normalizedCc = normalizeTaskCcList(emails);
+    if (normalizeTaskCcList(ccList).join(',') === normalizedCc.join(',')) {
+      return;
+    }
+    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
   }
 
   function ccMe() {
     if (!currentUserEmail || isCcdToMe) {
       return;
     }
-    const normalizedCc = normalizeTaskCcList([...ccList, currentUserEmail]);
-    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
-  }
-
-  function addCcEmails() {
-    const draftEmails = ccDraft.split(/[,\s]+/).filter(Boolean);
-    if (draftEmails.length === 0) {
-      return;
-    }
-    if (draftEmails.some((email) => !email.includes('@'))) {
-      showNotification({
-        title: 'Could not add to CC',
-        message: 'Enter a valid email address.',
-        color: 'red',
-      });
-      return;
-    }
-    const notAllowed = draftEmails.filter(
-      (email) => !getRole(roles, email.trim().toLowerCase())
-    );
-    if (notAllowed.length > 0) {
-      showNotification({
-        title: 'Could not add to CC',
-        message: `${notAllowed.join(', ')} ${
-          notAllowed.length === 1 ? 'is' : 'are'
-        } not a member of this project.`,
-        color: 'red',
-      });
-      return;
-    }
-    const normalizedCc = normalizeTaskCcList([...ccList, ...draftEmails]);
-    setCcDraft('');
-    if (ccList.join(',') === normalizedCc.join(',')) {
-      return;
-    }
-    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
-  }
-
-  function removeCcEmail(email: string) {
-    const normalizedCc = ccList.filter((value) => value !== email);
-    saveMetadata('cc', () => updateTaskCcList(task.id, normalizedCc));
+    saveCcList([...ccList, currentUserEmail]);
   }
 
   // Copies the full email addresses of the selected chips, instead of the
-  // short names shown in the UI (e.g. "jeremydw" -> "jeremydw@example.com").
+  // display names shown in the UI (e.g. "Jeremy" -> "jeremydw@example.com").
   function handleCopyCc(e: ClipboardEvent) {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
@@ -708,10 +674,10 @@ function TaskMetadataPanel(props: {task: Task}) {
     }
     const container = e.currentTarget as HTMLElement;
     const emails = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-cc-email]')
+      container.querySelectorAll<HTMLElement>('[data-user-email]')
     )
       .filter((el) => selection.containsNode(el, true))
-      .map((el) => el.dataset.ccEmail || '')
+      .map((el) => el.dataset.userEmail || '')
       .filter(Boolean);
     if (emails.length === 0) {
       return;
@@ -780,21 +746,10 @@ function TaskMetadataPanel(props: {task: Task}) {
       <div className="TaskPage__metadata__field">
         <label>Assignee</label>
         <div className="TaskPage__metadata__assignee">
-          <TextInput
-            size="xs"
-            type="email"
-            placeholder="teammate@example.com"
+          <UserSelect
             value={assignee}
             disabled={savingField === 'assignee'}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setAssignee(e.currentTarget.value)
-            }
-            onBlur={() => saveAssignee()}
-            onKeyDown={(e: KeyboardEvent) => {
-              if (e.key === 'Enter') {
-                (e.currentTarget as HTMLInputElement).blur();
-              }
-            }}
+            onChange={(email: string) => saveAssignee(email)}
           />
         </div>
         {currentUserEmail && !isAssignedToMe && (
@@ -810,45 +765,12 @@ function TaskMetadataPanel(props: {task: Task}) {
       </div>
       <div className="TaskPage__metadata__field">
         <label>CC</label>
-        <div className="TaskPage__metadata__cc">
-          <TextInput
-            size="xs"
-            type="email"
-            placeholder="Add email and press enter"
-            value={ccDraft}
+        <div className="TaskPage__metadata__cc" onCopy={handleCopyCc}>
+          <UserMultiSelect
+            value={ccList}
             disabled={savingField === 'cc'}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setCcDraft(e.currentTarget.value)
-            }
-            onBlur={() => addCcEmails()}
-            onKeyDown={(e: KeyboardEvent) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addCcEmails();
-              }
-            }}
+            onChange={(emails: string[]) => saveCcList(emails)}
           />
-          {ccList.length > 0 && (
-            <div className="TaskPage__metadata__ccList" onCopy={handleCopyCc}>
-              {ccList.map((email) => (
-                <div
-                  className="TaskPage__metadata__ccItem"
-                  key={email}
-                  data-cc-email={email}
-                >
-                  <UserTag email={email} />
-                  <ActionIcon
-                    size="xs"
-                    title="Remove from CC"
-                    disabled={savingField === 'cc'}
-                    onClick={() => removeCcEmail(email)}
-                  >
-                    <IconX size={12} strokeWidth="1.8" />
-                  </ActionIcon>
-                </div>
-              ))}
-            </div>
-          )}
           {currentUserEmail && !isCcdToMe && (
             <button
               type="button"
