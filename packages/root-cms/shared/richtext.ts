@@ -309,6 +309,10 @@ export function testValidRichTextData(data: RichTextData | unknown) {
  * (ignore it, so the cursor isn't reset on every keystroke) or an external
  * replacement they need to re-render (e.g. "discard draft edits", which
  * restores published content whose `time` is older than the draft's).
+ *
+ * The keystroke path exits on reference equality: an editor's own value is
+ * handed back to it by the same object, so the deep walk only runs for values
+ * that arrived from somewhere else (the db, undo/redo, a revert).
  */
 export function testSameRichTextContent(
   a?: RichTextData | null,
@@ -346,9 +350,16 @@ function testSameJsonValue(a: unknown, b: unknown): boolean {
   if (isObject(a) && isObject(b)) {
     const aObj = a as Record<string, unknown>;
     const bObj = b as Record<string, unknown>;
-    const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
-    for (const key of keys) {
+    for (const key of Object.keys(aObj)) {
       if (!testSameJsonValue(aObj[key], bObj[key])) {
+        return false;
+      }
+    }
+    // A key only `b` has matches a's missing (i.e. `undefined`) value only when
+    // it's empty itself. Key counts can't stand in for this check: `a` and `b`
+    // can hold the same number of keys and still not hold the same ones.
+    for (const key of Object.keys(bObj)) {
+      if (!(key in aObj) && !testSameJsonValue(undefined, bObj[key])) {
         return false;
       }
     }

@@ -172,6 +172,27 @@ describe('testSameRichTextContent', () => {
     expect(testSameRichTextContent(null, richText('hello', 1))).toBe(false);
   });
 
+  test('compares keys that one side swapped for another', () => {
+    // Same key count, different keys: a block that dropped `components` and
+    // gained `size` is not the same content.
+    expect(
+      testSameRichTextContent(
+        {
+          time: 1,
+          version: '1',
+          blocks: [
+            {type: 'paragraph', data: {text: 'hello', components: undefined}},
+          ],
+        },
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello', size: 'large'}}],
+        }
+      )
+    ).toBe(false);
+  });
+
   test('treats missing and empty keys as equal', () => {
     // Values that round-trip through firestore lose their `undefined` keys.
     expect(
