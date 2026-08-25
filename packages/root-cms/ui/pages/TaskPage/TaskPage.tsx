@@ -1012,7 +1012,7 @@ function TaskOpenedTimelineItem(props: {task: Task}) {
   return (
     <div className="TaskPage__timelineItem TaskPage__timelineItem--event">
       <div className="TaskPage__timelineItem__marker">
-        <IconCheck size={15} strokeWidth="2" />
+        <IconCheck size={13} strokeWidth="2" />
       </div>
       <div className="TaskPage__timelineItem__content">
         <b>
@@ -1031,15 +1031,15 @@ function TaskEventTimelineItem(props: {event: TaskEvent}) {
     <div className="TaskPage__timelineItem TaskPage__timelineItem--event">
       <div className="TaskPage__timelineItem__marker">
         {event.field === 'title' ? (
-          <IconPencil size={15} strokeWidth="2" />
+          <IconPencil size={13} strokeWidth="2" />
         ) : event.field === 'assignee' ? (
-          <IconUser size={15} strokeWidth="2" />
+          <IconUser size={13} strokeWidth="2" />
         ) : event.field === 'priority' ? (
-          <IconFlag size={15} strokeWidth="2" />
+          <IconFlag size={13} strokeWidth="2" />
         ) : event.field === 'targetLaunchDate' ? (
-          <IconCalendar size={15} strokeWidth="2" />
+          <IconCalendar size={13} strokeWidth="2" />
         ) : (
-          <IconCheck size={15} strokeWidth="2" />
+          <IconCheck size={13} strokeWidth="2" />
         )}
       </div>
       <div className="TaskPage__timelineItem__content">
@@ -1175,9 +1175,9 @@ function TaskCommentCard(props: {
     >
       <div className="TaskPage__timelineItem__marker">
         {props.isReply ? (
-          <IconCornerDownRight size={15} strokeWidth="2" />
+          <IconCornerDownRight size={13} strokeWidth="2" />
         ) : (
-          <IconMessageCircle size={15} strokeWidth="2" />
+          <IconMessageCircle size={13} strokeWidth="2" />
         )}
       </div>
       <div className="TaskPage__timelineItem__content">

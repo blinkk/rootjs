@@ -1,11 +1,13 @@
 .TaskPage {
+  /* Shared width cap for the page's header, banners, and two-column body. */
+  --task-page-max-width: 1340px;
   background: var(--page-background);
   padding: var(--page-padding-lg);
 }
 
 .TaskPage__header {
   margin-bottom: 28px;
-  max-width: 1040px;
+  max-width: var(--task-page-max-width);
 }
 
 .TaskPage__header__breadcrumbs {
@@ -41,7 +43,7 @@
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(220px, 1fr) auto auto;
-  max-width: 760px;
+  max-width: 960px;
   min-width: 0;
   width: 100%;
 }
@@ -107,8 +109,8 @@
   align-items: start;
   display: grid;
   gap: 28px;
-  grid-template-columns: minmax(0, 760px) minmax(260px, 320px);
-  max-width: 1120px;
+  grid-template-columns: minmax(0, 960px) minmax(280px, 340px);
+  max-width: var(--task-page-max-width);
 }
 
 .TaskPage__main {
@@ -118,10 +120,16 @@
   min-width: 0;
 }
 
+/*
+ * The page element is itself the scroll container, and sticky offsets resolve
+ * against its content box, so the page's own `--page-padding-lg` already sits
+ * above the pinned sidebar. The negative offset trims that padding back to a
+ * ~40px gap; it never clips the panel, since the padding absorbs it.
+ */
 .TaskPage__side {
   min-width: 0;
   position: sticky;
-  top: calc(var(--header-height) + 20px);
+  top: -20px;
 }
 
 .TaskPage__description {
@@ -310,8 +318,8 @@
 
 .TaskPage__timelineItem {
   display: grid;
-  gap: 12px;
-  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
   position: relative;
 }
 
@@ -319,18 +327,18 @@
   background: var(--color-border);
   bottom: 0;
   content: '';
-  left: 15px;
+  left: 11px;
   position: absolute;
   top: 0;
   width: 2px;
 }
 
 .TaskPage__timelineItem:first-child::before {
-  top: 18px;
+  top: 14px;
 }
 
 .TaskPage__timelineItem:last-child::before {
-  bottom: calc(100% - 18px);
+  bottom: calc(100% - 14px);
 }
 
 .TaskPage__timelineItem__marker {
@@ -340,23 +348,23 @@
   border-radius: 50%;
   color: var(--color-text-gray);
   display: flex;
-  height: 32px;
+  height: 24px;
   justify-content: center;
   position: relative;
-  width: 32px;
+  width: 24px;
   z-index: 1;
 }
 
 .TaskPage__timelineItem__content {
   min-width: 0;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 .TaskPage__timelineItem--event .TaskPage__timelineItem__content {
   color: var(--color-text-gray);
-  font-size: 13px;
-  line-height: 1.5;
-  padding-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  padding-top: 4px;
 }
 
 .TaskPage__timelineItem--event b {
@@ -376,7 +384,7 @@
 }
 
 .TaskPage__timelineItem--comment .TaskPage__timelineItem__content {
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 .TaskPage__timelineValue {
@@ -384,9 +392,9 @@
   border-radius: 4px;
   color: var(--color-text-default);
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 5px;
+  padding: 1px 5px;
 }
 
 .TaskPage__comment {
@@ -556,9 +564,9 @@
 .TaskPage__replies {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-left: 42px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-left: 34px;
+  margin-top: 10px;
   padding-left: 0;
 }
 
@@ -589,7 +597,7 @@
   gap: 12px;
   justify-content: space-between;
   margin-bottom: 18px;
-  max-width: 1120px;
+  max-width: var(--task-page-max-width);
   padding: 10px 14px;
 }
 
@@ -633,7 +641,7 @@
 
 /* Highlights the comment targeted by a `#comment-N` deeplink. */
 .TaskPage__timelineItem:target {
-  scroll-margin-top: calc(var(--header-height) + 16px);
+  scroll-margin-top: 16px;
 }
 
 .TaskPage__timelineItem:target .TaskPage__comment {
