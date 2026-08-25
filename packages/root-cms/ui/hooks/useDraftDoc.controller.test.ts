@@ -42,8 +42,12 @@ vi.mock('firebase/firestore', () => {
   };
 });
 
+const {showNotificationMock} = vi.hoisted(() => ({
+  showNotificationMock: vi.fn(),
+}));
+
 vi.mock('@mantine/notifications', () => ({
-  showNotification: vi.fn(),
+  showNotification: showNotificationMock,
 }));
 
 import {DraftDocController} from './useDraftDoc.js';
@@ -78,6 +82,7 @@ describe('DraftDocController', () => {
   beforeEach(() => {
     updateDocMock.mockClear();
     onSnapshotMock.mockClear();
+    showNotificationMock.mockClear();
     (window as any).__ROOT_CTX = {
       rootConfig: {projectId: 'test-project'},
       collections: {},
@@ -227,5 +232,52 @@ describe('DraftDocController', () => {
     expect(findUndefinedPaths(payload)).toEqual([]);
     expect(payload['fields.blocks.a'].nested.kept).toEqual('yes');
     expect('subtitle' in payload['fields.blocks.a']).toBe(false);
+  });
+
+  /**
+   * Builds a value nested `levels` maps deep, e.g. 2 => `{a: {a: 'leaf'}}`.
+   */
+  function nest(levels: number): any {
+    let value: any = 'leaf';
+    for (let i = 0; i < levels; i++) {
+      value = {a: value};
+    }
+    return value;
+  }
+
+  it('warns when a flush exceeds the Firestore nesting limit', async () => {
+    const controller = new DraftDocController('pages/index');
+    // `fields.blocks` is depth 1, so 20 more maps lands the leaf at depth 21,
+    // one past what Firestore accepts.
+    controller.updateKey('fields.blocks', nest(20));
+    await controller.flush();
+
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+    const notification = showNotificationMock.mock.calls[0][0];
+    expect(notification.title).toEqual('Nesting limit exceeded');
+    expect(notification.color).toEqual('red');
+    expect(notification.message).toContain('fields.blocks');
+    expect(notification.message).toContain('20 levels deep');
+  });
+
+  it('warns once per offending field across repeated flushes', async () => {
+    const controller = new DraftDocController('pages/index');
+    controller.updateKey('fields.blocks', nest(20));
+    await controller.flush();
+    controller.updateKey('fields.blocks', nest(20));
+    await controller.flush();
+
+    expect(updateDocMock).toHaveBeenCalledTimes(2);
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not warn for docs within the nesting limit', async () => {
+    const controller = new DraftDocController('pages/index');
+    controller.updateKey('fields.meta', {title: 'Hello', tags: ['a', 'b']});
+    await controller.flush();
+
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(showNotificationMock).not.toHaveBeenCalled();
   });
 });

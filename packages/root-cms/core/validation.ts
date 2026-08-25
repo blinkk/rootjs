@@ -1,3 +1,7 @@
+import {
+  checkNestingDepth,
+  formatNestingDepthMessage,
+} from '../shared/nesting.js';
 import type {
   ArrayField,
   FieldWithId,
@@ -5,6 +9,9 @@ import type {
   OneOfField,
   Schema,
 } from './schema.js';
+
+/** Doc-level key the schema's fields are stored under in Firestore. */
+const FIELDS_KEY = 'fields';
 
 /**
  * Represents a validation error for a field.
@@ -69,7 +76,34 @@ export function validateFields(
     errors.push(...validateValue(value, field, field.id));
   }
 
+  errors.push(...validateNestingDepth(fieldsData));
+
   return errors;
+}
+
+/**
+ * Validates that no field is nested deeper than Firestore allows.
+ *
+ * Firestore rejects writes containing a field nested more than 20 levels deep
+ * with an opaque error, so the offending path is reported here instead. Depth
+ * is measured against the stored shape, which nests the schema's fields under
+ * a top-level `fields` map.
+ */
+function validateNestingDepth(fieldsData: any): ValidationError[] {
+  const issue = checkNestingDepth(FIELDS_KEY, fieldsData, {warningBuffer: 0});
+  if (!issue) {
+    return [];
+  }
+  // Report the path relative to `fields`, matching the rest of the errors.
+  const path = issue.deepKey.slice(FIELDS_KEY.length + 1);
+  return [
+    {
+      path: path,
+      message: formatNestingDepthMessage({...issue, deepKey: path}),
+      expected: `at most ${issue.limit} levels of nesting`,
+      received: `${issue.depth} levels`,
+    },
+  ];
 }
 
 /**

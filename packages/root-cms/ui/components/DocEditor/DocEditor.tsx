@@ -18,6 +18,7 @@ import {
 import {useModals} from '@mantine/modals';
 import {hideNotification, showNotification} from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconArrowBackUp,
   IconArrowForwardUp,
   IconBraces,
@@ -56,6 +57,11 @@ import {
 } from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
+import {
+  FIRESTORE_MAX_NESTING_DEPTH,
+  getRemainingNestingDepth,
+  NESTING_DEPTH_WARNING_BUFFER,
+} from '../../../shared/nesting.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   buildDeeplinkUrl,
@@ -1603,7 +1609,43 @@ DocEditor.ArrayField = (props: FieldProps) => {
     return draft.getValue(itemKey) || {};
   };
 
+  // Firestore refuses to store a field nested more than 20 levels deep, and an
+  // array costs two of them per item: one for the item's key in the stored
+  // ArrayObject, and one for the item's own fields (array items are always
+  // object-like). Adding an item that can't be saved would silently lose the
+  // editor's work, so cap it here and warn while there's still room to
+  // restructure the content.
+  const LEVELS_PER_ARRAY_ITEM = 2;
+  const remainingDepth = getRemainingNestingDepth(props.deepKey);
+  const canAddItem = remainingDepth >= LEVELS_PER_ARRAY_ITEM;
+  const itemHeadroom = remainingDepth - LEVELS_PER_ARRAY_ITEM;
+  const nestingLimitMessage = `Firestore cannot save fields nested more than ${FIRESTORE_MAX_NESTING_DEPTH} levels deep. Flatten the content, or split it into a separate doc and use a reference field.`;
+  const nestingWarning = !canAddItem
+    ? `Items can't be added here. ${nestingLimitMessage}`
+    : itemHeadroom <= NESTING_DEPTH_WARNING_BUFFER
+      ? `Items added here have room for ${itemHeadroom} more ${
+          itemHeadroom === 1 ? 'level' : 'levels'
+        } of nesting. ${nestingLimitMessage}`
+      : '';
+
+  /** Blocks item creation once the array has bottomed out on nesting depth. */
+  const testCanAddItem = () => {
+    if (canAddItem) {
+      return true;
+    }
+    showNotification({
+      title: 'Nesting limit reached',
+      message: nestingWarning,
+      color: 'red',
+      autoClose: false,
+    });
+    return false;
+  };
+
   const add = () => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'add',
       draft: draft,
@@ -1613,6 +1655,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const pasteBefore = (index: number, data: ClipboardData) => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'pasteBefore',
       draft: draft,
@@ -1623,6 +1668,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const pasteAfter = (index: number, data: ClipboardData) => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'pasteAfter',
       draft: draft,
@@ -1641,6 +1689,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const insertBefore = (index: number) => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'insertBefore',
       draft: draft,
@@ -1651,6 +1702,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const insertAfter = (index: number) => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'insertAfter',
       draft: draft,
@@ -1661,6 +1715,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const duplicate = (index: number) => {
+    if (!testCanAddItem()) {
+      return;
+    }
     dispatch({
       type: 'duplicate',
       draft: draft,
@@ -1846,34 +1903,51 @@ DocEditor.ArrayField = (props: FieldProps) => {
   );
 
   const addButtonRow = (
-    <div className="DocEditor__ArrayField__add">
-      <Button
-        className="DocEditor__ArrayField__add__button"
-        color="dark"
-        size="xs"
-        leftIcon={<IconCirclePlus size={16} />}
-        onClick={() => add()}
-      >
-        {field.buttonLabel || 'Add'}
-      </Button>
-      <Menu
-        className="DocEditor__ArrayField__add__menu"
-        control={
-          <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-            <IconDotsVertical size={16} />
-          </ActionIcon>
-        }
-      >
-        <Menu.Label>CLIPBOARD</Menu.Label>
-        <Menu.Item
-          className="DocEditor__ArrayField__menu__item"
-          icon={<IconRowInsertBottom size={18} />}
-          onClick={() => pasteFromVirtualClipboard(order.length - 1)}
+    <>
+      {nestingWarning && (
+        <div
+          className="DocEditor__ArrayField__nestingWarning"
+          data-severity={canAddItem ? 'warning' : 'error'}
         >
-          Paste item to end
-        </Menu.Item>
-      </Menu>
-    </div>
+          <IconAlertTriangle size={16} />
+          <div className="DocEditor__ArrayField__nestingWarning__message">
+            {nestingWarning}
+          </div>
+        </div>
+      )}
+      <div className="DocEditor__ArrayField__add">
+        <ConditionalTooltip label={nestingWarning} condition={!canAddItem}>
+          <Button
+            className="DocEditor__ArrayField__add__button"
+            color="dark"
+            size="xs"
+            leftIcon={<IconCirclePlus size={16} />}
+            onClick={() => add()}
+            disabled={!canAddItem}
+          >
+            {field.buttonLabel || 'Add'}
+          </Button>
+        </ConditionalTooltip>
+        <Menu
+          className="DocEditor__ArrayField__add__menu"
+          control={
+            <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+              <IconDotsVertical size={16} />
+            </ActionIcon>
+          }
+        >
+          <Menu.Label>CLIPBOARD</Menu.Label>
+          <Menu.Item
+            className="DocEditor__ArrayField__menu__item"
+            icon={<IconRowInsertBottom size={18} />}
+            onClick={() => pasteFromVirtualClipboard(order.length - 1)}
+            disabled={!canAddItem}
+          >
+            Paste item to end
+          </Menu.Item>
+        </Menu>
+      </div>
+    </>
   );
 
   if (order.length === 0 && !value._new) {
@@ -1925,6 +1999,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                       !!field.defaultOpen
                     }
                     isCut={cutIndex === i}
+                    canAddItem={canAddItem}
                     aiEnabled={testAiEnabled()}
                     onFocusHeader={focusFieldHeader}
                     onHeaderKeyDown={handleKeyDown}
@@ -1959,6 +2034,11 @@ interface ArrayFieldItemProps {
   index: number;
   initialOpen: boolean;
   isCut: boolean;
+  /**
+   * Whether another item can be nested here without blowing past Firestore's
+   * field nesting limit. When false, the insert and paste actions are disabled.
+   */
+  canAddItem: boolean;
   aiEnabled: boolean;
   onFocusHeader: (deepKey: string, index: number) => void;
   onHeaderKeyDown: (e: KeyboardEvent, arrayKey: string) => void;
@@ -2067,6 +2147,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                     className="DocEditor__ArrayField__menu__item"
                     icon={<IconRowInsertTop size={18} />}
                     onClick={() => props.onInsertBefore(props.index)}
+                    disabled={!props.canAddItem}
                   >
                     Add before
                   </Menu.Item>
@@ -2074,6 +2155,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                     className="DocEditor__ArrayField__menu__item"
                     icon={<IconRowInsertBottom size={18} />}
                     onClick={() => props.onInsertAfter(props.index)}
+                    disabled={!props.canAddItem}
                   >
                     Add after
                   </Menu.Item>
@@ -2081,6 +2163,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                     className="DocEditor__ArrayField__menu__item"
                     icon={<IconCopy size={18} />}
                     onClick={() => props.onDuplicate(props.index)}
+                    disabled={!props.canAddItem}
                   >
                     Duplicate
                   </Menu.Item>
@@ -2096,6 +2179,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                     className="DocEditor__ArrayField__menu__item"
                     icon={<IconRowInsertTop size={18} />}
                     onClick={() => props.onPasteBefore(props.index)}
+                    disabled={!props.canAddItem}
                   >
                     Paste before
                   </Menu.Item>
@@ -2103,6 +2187,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                     className="DocEditor__ArrayField__menu__item"
                     icon={<IconRowInsertBottom size={18} />}
                     onClick={() => props.onPasteAfter(props.index)}
+                    disabled={!props.canAddItem}
                   >
                     Paste after
                   </Menu.Item>
