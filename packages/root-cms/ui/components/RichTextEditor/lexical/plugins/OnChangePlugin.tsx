@@ -2,7 +2,10 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {OnChangePlugin as LexicalOnChangePlugin} from '@lexical/react/LexicalOnChangePlugin';
 import {EditorState} from 'lexical';
 import {useEffect, useRef} from 'preact/hooks';
-import {RichTextData} from '../../../../../shared/richtext.js';
+import {
+  RichTextData,
+  testSameRichTextContent,
+} from '../../../../../shared/richtext.js';
 import {convertToRichTextData} from '../utils/convert-from-lexical.js';
 import {convertToLexical} from '../utils/convert-to-lexical.js';
 
@@ -14,20 +17,31 @@ export interface OnChangePluginProps {
 export function OnChangePlugin(props: OnChangePluginProps) {
   const [editor] = useLexicalComposerContext();
 
-  const timeSavedRef = useRef(0);
+  /**
+   * The content currently reflected in the editor, either because the user
+   * typed it or because it was rendered from `props.value`. Compared against
+   * incoming values to tell an echo of the editor's own change apart from an
+   * external replacement.
+   */
+  const currentValueRef = useRef<RichTextData | null>(null);
   const isUpdatingRef = useRef(false);
 
   useEffect(() => {
     // When props.value changes, convert the RichTextData to lexical data and
-    // write to the active editor.
-    const time = props.value?.time || 0;
-    if (time > timeSavedRef.current) {
-      timeSavedRef.current = time;
-      editor.update(() => {
-        isUpdatingRef.current = true;
-        convertToLexical(props.value);
-      });
+    // write to the active editor. Values that match what the editor already
+    // holds are ignored, so typing doesn't re-render (and reset the cursor).
+    // NOTE(stevenle): the content is compared rather than `time` because an
+    // external replacement can carry an older timestamp, e.g. "discard draft
+    // edits" restores the published version of the doc.
+    const newValue = props.value ?? null;
+    if (testSameRichTextContent(currentValueRef.current, newValue)) {
+      return;
     }
+    currentValueRef.current = newValue;
+    editor.update(() => {
+      isUpdatingRef.current = true;
+      convertToLexical(newValue);
+    });
   }, [editor, props.value]);
 
   const onChange = (editorState: EditorState) => {
@@ -41,7 +55,7 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     editorState.read(
       () => {
         const richTextData = convertToRichTextData();
-        timeSavedRef.current = richTextData?.time || 0;
+        currentValueRef.current = richTextData;
         if (props.onChange) {
           props.onChange(richTextData);
         }

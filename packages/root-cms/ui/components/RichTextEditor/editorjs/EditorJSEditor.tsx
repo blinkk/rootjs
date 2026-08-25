@@ -6,7 +6,10 @@ import NestedList from '@editorjs/nested-list';
 import RawHtmlTool from '@editorjs/raw';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {RichTextData} from '../../../../shared/richtext.js';
+import {
+  RichTextData,
+  testSameRichTextContent,
+} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {uploadFileToGCS} from '../../../utils/gcs.js';
 import {isObject} from '../../../utils/objects.js';
@@ -28,11 +31,13 @@ export interface EditorJSEditorProps {
 export function EditorJSEditor(props: EditorJSEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<any>(null);
-  const [currentValue, setCurrentValue] = useState<RichTextData>({
-    blocks: [{type: 'paragraph', data: {}}],
-    time: 0,
-    version: '',
-  });
+  /**
+   * The content currently reflected in the editor, either because the user
+   * typed it or because it was rendered from `props.value`. Compared against
+   * incoming values to tell an echo of the editor's own change apart from an
+   * external replacement.
+   */
+  const currentValueRef = useRef<RichTextData | null>(null);
 
   const placeholder = props.placeholder || 'Start typing...';
 
@@ -40,23 +45,26 @@ export function EditorJSEditor(props: EditorJSEditorProps) {
     if (!editor) {
       return;
     }
-    const newValue = props.value;
-    if (currentValue?.time !== newValue?.time) {
-      const currentTime = currentValue?.time || 0;
-      const newValueTime = newValue?.time || 0;
-      if (newValueTime > currentTime && validateRichTextData(newValue)) {
-        const blocks = newValue?.blocks || [];
-        if (blocks.length > 0) {
-          editor.render(newValue);
-        } else {
-          editor.render({
-            ...newValue,
-            blocks: [{type: 'paragraph', data: {text: ''}}],
-          });
-        }
-        setCurrentValue(newValue);
-      }
+    // Values that match what the editor already holds are ignored, so typing
+    // doesn't re-render (and reset the cursor).
+    // NOTE(stevenle): the content is compared rather than `time` because an
+    // external replacement can carry an older timestamp, e.g. "discard draft
+    // edits" restores the published version of the doc.
+    const newValue: RichTextData | null = isObject(props.value)
+      ? props.value
+      : null;
+    if (testSameRichTextContent(currentValueRef.current, newValue)) {
+      return;
     }
+    currentValueRef.current = newValue;
+    const blocks = newValue?.blocks || [];
+    editor.render({
+      ...newValue,
+      // EditorJS requires at least one block, so an empty value renders as an
+      // empty paragraph.
+      blocks:
+        blocks.length > 0 ? blocks : [{type: 'paragraph', data: {text: ''}}],
+    });
   }, [editor, props.value]);
 
   useEffect(() => {
@@ -140,7 +148,7 @@ export function EditorJSEditor(props: EditorJSEditorProps) {
         editor
           .save()
           .then((richTextData: RichTextData) => {
-            setCurrentValue(richTextData);
+            currentValueRef.current = richTextData;
             if (props.onChange) {
               props.onChange(richTextData);
             }
@@ -165,10 +173,6 @@ export function EditorJSEditor(props: EditorJSEditorProps) {
       className={joinClassNames(props.className, 'EditorJSEditor')}
     />
   );
-}
-
-export function validateRichTextData(data: RichTextData) {
-  return isObject(data) && Array.isArray(data.blocks) && data.blocks.length > 0;
 }
 
 function gcsUploader() {

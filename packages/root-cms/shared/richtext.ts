@@ -299,3 +299,60 @@ export function testValidRichTextData(data: RichTextData | unknown) {
     (data as Record<string, any>).blocks.length > 0
   );
 }
+
+/**
+ * Returns true if two rich text values hold the same content.
+ *
+ * Only `blocks` are compared: `time` and `version` are editor bookkeeping that
+ * change on every save and say nothing about what the user sees. Editors use
+ * this to decide whether an incoming value is an echo of their own last change
+ * (ignore it, so the cursor isn't reset on every keystroke) or an external
+ * replacement they need to re-render (e.g. "discard draft edits", which
+ * restores published content whose `time` is older than the draft's).
+ */
+export function testSameRichTextContent(
+  a?: RichTextData | null,
+  b?: RichTextData | null
+): boolean {
+  return testSameJsonValue(getRichTextBlocks(a), getRichTextBlocks(b));
+}
+
+/** Returns a rich text value's blocks, or an empty list if it has none. */
+function getRichTextBlocks(data?: RichTextData | null): RichTextBlock[] {
+  if (!isObject(data) || !Array.isArray((data as RichTextData).blocks)) {
+    return [];
+  }
+  return (data as RichTextData).blocks;
+}
+
+/**
+ * Deep-compares two JSON-like values. `null` and `undefined` are treated as
+ * equivalent, since a value that round-trips through firestore loses its
+ * `undefined` keys.
+ */
+function testSameJsonValue(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return (a === null || a === undefined) && (b === null || b === undefined);
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((item, i) => testSameJsonValue(item, b[i]));
+  }
+  if (isObject(a) && isObject(b)) {
+    const aObj = a as Record<string, unknown>;
+    const bObj = b as Record<string, unknown>;
+    const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
+    for (const key of keys) {
+      if (!testSameJsonValue(aObj[key], bObj[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
