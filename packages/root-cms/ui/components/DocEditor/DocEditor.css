@@ -535,6 +535,35 @@
   gap: 4px;
 }
 
+.DocEditor__ArrayField__nestingWarning {
+  margin-top: 16px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--mantine-color-dark-9, #212529);
+  background-color: var(--mantine-color-yellow-0, #fff9db);
+  border: 1px solid var(--mantine-color-yellow-3, #ffe066);
+}
+
+.DocEditor__ArrayField__nestingWarning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--mantine-color-yellow-9, #e67700);
+}
+
+.DocEditor__ArrayField__nestingWarning[data-severity='error'] {
+  background-color: var(--mantine-color-red-0, #fff5f5);
+  border-color: var(--mantine-color-red-3, #ffa8a8);
+}
+
+.DocEditor__ArrayField__nestingWarning[data-severity='error'] svg {
+  color: var(--mantine-color-red-8, #e03131);
+}
+
 .DocEditor__OneOfField__select {
   display: flex;
   gap: 8px;

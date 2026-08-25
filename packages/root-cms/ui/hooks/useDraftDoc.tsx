@@ -12,6 +12,11 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {SaveState} from '../../shared/embed-protocol.js';
+import {
+  checkNestingDepthForUpdates,
+  formatNestingDepthMessage,
+  NestingDepthIssue,
+} from '../../shared/nesting.js';
 import {logAction} from '../utils/actions.js';
 import {containsAssetId, extractAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
@@ -89,6 +94,11 @@ export class DraftDocController extends EventListener {
    * when an asset-bearing field was actually touched.
    */
   private mightHaveAssetChanges = false;
+  /**
+   * The nesting depth issue the user was last warned about, as
+   * `<severity>:<deepKey>`.
+   */
+  private lastNestingDepthWarning: string | null = null;
   /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
   readOnly = false;
   /** When false, draft changes are only written by explicitly calling flush(). */
@@ -479,6 +489,42 @@ export class DraftDocController extends EventListener {
   }
 
   /**
+   * Warns when a queued write reaches Firestore's field nesting limit.
+   *
+   * Firestore refuses to store a field nested more than 20 levels deep and
+   * reports it as a generic invalid-argument failure, which gives the editor
+   * nothing to act on. Naming the offending field path before the write goes
+   * out turns that into something fixable. The write is still attempted, since
+   * the limit is enforced by the backend and not by this check.
+   */
+  private warnOnNestingDepth(updates: Record<string, any>) {
+    const issues = checkNestingDepthForUpdates(updates);
+    const issue: NestingDepthIssue | undefined = issues[0];
+    if (!issue) {
+      this.lastNestingDepthWarning = null;
+      return;
+    }
+    // Warn once per offending field, since a doc parked over the limit would
+    // otherwise re-notify on every debounced save.
+    const warningId = `${issue.severity}:${issue.deepKey}`;
+    if (this.lastNestingDepthWarning === warningId) {
+      return;
+    }
+    this.lastNestingDepthWarning = warningId;
+    const message = formatNestingDepthMessage(issue);
+    console.warn(`nesting depth ${issue.severity}: ${message}`);
+    const isError = issue.severity === 'error';
+    showNotification({
+      title: isError
+        ? 'Nesting limit exceeded'
+        : 'Approaching the nesting limit',
+      message: isError ? `${message} This change may fail to save.` : message,
+      color: isError ? 'red' : 'yellow',
+      autoClose: false,
+    });
+  }
+
+  /**
    * Immediately write all queued data to the DB.
    */
   async flush(options?: {quiet?: boolean}) {
@@ -490,6 +536,7 @@ export class DraftDocController extends EventListener {
     }
 
     const updates = this.getPendingUpdates();
+    this.warnOnNestingDepth(updates);
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
 

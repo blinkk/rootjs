@@ -1044,3 +1044,37 @@ test('partial validation ignores missing fields', () => {
       ]
     `);
 });
+
+test('flags fields nested deeper than Firestore allows', () => {
+  const testSchema = schema.define({
+    name: 'TestSchema',
+    fields: [schema.object({id: 'blocks', fields: []})],
+  });
+
+  /** Builds a value nested `levels` maps deep. */
+  function nest(levels: number): any {
+    let value: any = 'leaf';
+    for (let i = 0; i < levels; i++) {
+      value = {a: value};
+    }
+    return value;
+  }
+
+  // `fields.blocks` is depth 1, so 19 more maps lands the leaf at depth 20 —
+  // the deepest write Firestore accepts.
+  expect(validateFields({blocks: nest(19)}, testSchema)).toMatchInlineSnapshot(
+    '[]'
+  );
+
+  // One more level puts the leaf past the limit.
+  expect(validateFields({blocks: nest(20)}, testSchema)).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "at most 20 levels of nesting",
+        "message": ""blocks.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a" is nested 21 levels deep. Firestore cannot save fields nested more than 20 levels deep. Flatten the content, or split it into a separate doc and use a reference field.",
+        "path": "blocks.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a.a",
+        "received": "21 levels",
+      },
+    ]
+  `);
+});
