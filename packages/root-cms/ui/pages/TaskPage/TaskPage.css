@@ -1,11 +1,13 @@
 .TaskPage {
+  /* Shared width cap for the page's header, banners, and two-column body. */
+  --task-page-max-width: 1260px;
   background: var(--page-background);
   padding: var(--page-padding-lg);
 }
 
 .TaskPage__header {
   margin-bottom: 28px;
-  max-width: 1040px;
+  max-width: var(--task-page-max-width);
 }
 
 .TaskPage__header__breadcrumbs {
@@ -41,7 +43,7 @@
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(220px, 1fr) auto auto;
-  max-width: 760px;
+  max-width: 880px;
   min-width: 0;
   width: 100%;
 }
@@ -107,8 +109,8 @@
   align-items: start;
   display: grid;
   gap: 28px;
-  grid-template-columns: minmax(0, 760px) minmax(260px, 320px);
-  max-width: 1120px;
+  grid-template-columns: minmax(0, 880px) minmax(280px, 340px);
+  max-width: var(--task-page-max-width);
 }
 
 .TaskPage__main {
@@ -118,10 +120,15 @@
   min-width: 0;
 }
 
+/*
+ * The page element is itself the scroll container and already starts below the
+ * CMS header, so the sticky offset only needs a small gap from the top of the
+ * scroll port.
+ */
 .TaskPage__side {
   min-width: 0;
   position: sticky;
-  top: calc(var(--header-height) + 20px);
+  top: 20px;
 }
 
 .TaskPage__description {
@@ -589,7 +596,7 @@
   gap: 12px;
   justify-content: space-between;
   margin-bottom: 18px;
-  max-width: 1120px;
+  max-width: var(--task-page-max-width);
   padding: 10px 14px;
 }
 
@@ -633,7 +640,7 @@
 
 /* Highlights the comment targeted by a `#comment-N` deeplink. */
 .TaskPage__timelineItem:target {
-  scroll-margin-top: calc(var(--header-height) + 16px);
+  scroll-margin-top: 16px;
 }
 
 .TaskPage__timelineItem:target .TaskPage__comment {
