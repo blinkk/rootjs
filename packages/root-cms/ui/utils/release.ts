@@ -36,6 +36,132 @@ export interface Release {
 
 const COLLECTION_ID = 'Releases';
 
+/** Callback notified whenever the releases cache changes. */
+type ReleasesListener = (releases: Release[]) => void;
+
+/**
+ * In-memory cache of the project's releases, ordered by `createdAt` desc.
+ *
+ * Release state is rendered throughout the CMS (e.g. the "in release" badge in
+ * the doc list), so the releases are fetched once and then kept in sync locally
+ * as releases are mutated. `null` means the releases haven't been fetched yet.
+ */
+let releasesCache: Release[] | null = null;
+
+/** In-flight `listReleases()` request, shared by concurrent callers. */
+let pendingReleasesFetch: Promise<Release[]> | null = null;
+
+const releasesListeners = new Set<ReleasesListener>();
+
+/**
+ * Returns the cached releases, or `null` if the releases haven't been fetched
+ * yet.
+ */
+export function getCachedReleases(): Release[] | null {
+  return releasesCache;
+}
+
+/**
+ * Subscribes to changes to the releases cache. The listener is called whenever
+ * a release is added, updated, or removed. Returns an unsubscribe function.
+ *
+ * Usage:
+ *
+ * ```
+ * useEffect(() => subscribeToReleases(setReleases), []);
+ * ```
+ */
+export function subscribeToReleases(listener: ReleasesListener): () => void {
+  releasesListeners.add(listener);
+  return () => {
+    releasesListeners.delete(listener);
+  };
+}
+
+/**
+ * Fetches the project's releases, re-using the cached values when available.
+ * Pass `{force: true}` to bypass the cache and re-fetch from the db.
+ */
+export function listReleasesFromCacheOrFetch(options?: {
+  force?: boolean;
+}): Promise<Release[]> {
+  if (!options?.force && releasesCache) {
+    return Promise.resolve(releasesCache);
+  }
+  if (!pendingReleasesFetch) {
+    pendingReleasesFetch = listReleases().finally(() => {
+      pendingReleasesFetch = null;
+    });
+  }
+  return pendingReleasesFetch;
+}
+
+/** Returns true if a release is neither published nor archived. */
+export function isPendingRelease(release: Release): boolean {
+  return !release.publishedAt && !release.archivedAt;
+}
+
+function notifyReleasesListeners() {
+  const releases = releasesCache || [];
+  releasesListeners.forEach((listener) => listener(releases));
+}
+
+/** Replaces the cached releases and notifies listeners. */
+function setCachedReleases(releases: Release[]) {
+  releasesCache = releases;
+  notifyReleasesListeners();
+}
+
+/**
+ * Adds or replaces a release in the cache. New releases are prepended since the
+ * cache is ordered by `createdAt` desc. No-ops if the releases haven't been
+ * fetched yet, since the cache is only valid when it holds the full list.
+ */
+function addReleaseToCache(release: Release) {
+  if (!releasesCache) {
+    return;
+  }
+  if (releasesCache.some((r) => r.id === release.id)) {
+    setCachedReleases(
+      releasesCache.map((r) => (r.id === release.id ? release : r))
+    );
+    return;
+  }
+  setCachedReleases([release, ...releasesCache]);
+}
+
+/**
+ * Merges field updates into a cached release. Fields set to `undefined` are
+ * removed from the cached release, mirroring `deleteField()` writes.
+ */
+function updateReleaseInCache(id: string, updates: Partial<Release>) {
+  if (!releasesCache) {
+    return;
+  }
+  setCachedReleases(
+    releasesCache.map((release) => {
+      if (release.id !== id) {
+        return release;
+      }
+      const updated: Release = {...release, ...updates};
+      for (const key of Object.keys(updates)) {
+        if (updates[key as keyof Release] === undefined) {
+          delete (updated as Record<string, unknown>)[key];
+        }
+      }
+      return updated;
+    })
+  );
+}
+
+/** Removes a release from the cache. */
+function removeReleaseFromCache(id: string) {
+  if (!releasesCache) {
+    return;
+  }
+  setCachedReleases(releasesCache.filter((release) => release.id !== id));
+}
+
 export async function addRelease(id: string, release: Partial<Release>) {
   if (!id) {
     throw new Error('missing data source id');
@@ -55,6 +181,14 @@ export async function addRelease(id: string, release: Partial<Release>) {
       createdBy: window.firebase.user.email,
     });
   });
+  // Approximate the server-generated `createdAt` locally so that the release
+  // shows up in the cache in the right order.
+  addReleaseToCache({
+    ...release,
+    id: id,
+    createdAt: Timestamp.now(),
+    createdBy: window.firebase.user.email,
+  });
   logAction('release.create', {metadata: {releaseId: id}});
 }
 
@@ -68,6 +202,7 @@ export async function listReleases(): Promise<Release[]> {
   querySnapshot.forEach((doc) => {
     res.push(doc.data() as Release);
   });
+  setCachedReleases(res);
   return res;
 }
 
@@ -77,16 +212,20 @@ export async function getRelease(id: string) {
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   const snapshot = await getDoc(docRef);
   if (!snapshot.exists()) {
+    removeReleaseFromCache(id);
     return null;
   }
-  return snapshot.data() as Release;
+  const release = snapshot.data() as Release;
+  addReleaseToCache(release);
+  return release;
 }
 
-export async function updateRelease(id: string, dataSource: Partial<Release>) {
+export async function updateRelease(id: string, release: Partial<Release>) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
-  await updateDoc(docRef, dataSource);
+  await updateDoc(docRef, release);
+  updateReleaseInCache(id, release);
   logAction('release.save', {metadata: {releaseId: id}});
 }
 
@@ -95,6 +234,7 @@ export async function deleteRelease(id: string) {
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await deleteDoc(docRef);
+  removeReleaseFromCache(id);
   console.log(`deleted release ${id}`);
   logAction('release.delete', {metadata: {releaseId: id}});
 }
@@ -105,6 +245,10 @@ export async function archiveRelease(id: string) {
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await updateDoc(docRef, {
     archivedAt: serverTimestamp(),
+    archivedBy: window.firebase.user.email,
+  });
+  updateReleaseInCache(id, {
+    archivedAt: Timestamp.now(),
     archivedBy: window.firebase.user.email,
   });
   logAction('release.archive', {metadata: {releaseId: id}});
@@ -118,6 +262,7 @@ export async function unarchiveRelease(id: string) {
     archivedAt: deleteField(),
     archivedBy: deleteField(),
   });
+  updateReleaseInCache(id, {archivedAt: undefined, archivedBy: undefined});
   logAction('release.unarchive', {metadata: {releaseId: id}});
 }
 
@@ -167,6 +312,12 @@ export async function publishRelease(
     scheduledBy: deleteField(),
   });
   await batch.commit();
+  updateReleaseInCache(id, {
+    publishedAt: Timestamp.now(),
+    publishedBy: window.firebase.user.email,
+    scheduledAt: undefined,
+    scheduledBy: undefined,
+  });
   console.log(`published release: ${id}`);
   // Update the dependency graph for the released docs (cmsPublishDocs skips
   // the sync when writing to a shared batch, since the batch commits here).
@@ -213,6 +364,10 @@ export async function scheduleRelease(
     scheduledAt: timestamp,
     scheduledBy: window.firebase.user.email,
   });
+  updateReleaseInCache(id, {
+    scheduledAt: timestamp,
+    scheduledBy: window.firebase.user.email,
+  });
   const metadata: Record<string, unknown> = {
     releaseId: id,
     scheduledAt: timestamp.toMillis(),
@@ -242,5 +397,6 @@ export async function cancelScheduledRelease(id: string) {
     scheduledAt: deleteField(),
     scheduledBy: deleteField(),
   });
+  updateReleaseInCache(id, {scheduledAt: undefined, scheduledBy: undefined});
   logAction('release.unschedule', {metadata: {releaseId: id}});
 }

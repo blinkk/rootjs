@@ -11,6 +11,7 @@ import {
   Release,
   addRelease,
   generateReleaseId,
+  isPendingRelease,
   listReleases,
   updateRelease,
 } from '../../utils/release.js';
@@ -60,10 +61,7 @@ export function AddToReleaseModal(
       await notifyErrors(async () => {
         const allReleases = await listReleases();
         // Filter to unpublished, non-archived releases.
-        const unpublished = allReleases.filter(
-          (r) => !r.publishedAt && !r.archivedAt
-        );
-        setReleases(unpublished);
+        setReleases(allReleases.filter(isPendingRelease));
       });
       setLoading(false);
     }
