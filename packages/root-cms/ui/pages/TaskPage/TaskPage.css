@@ -298,6 +298,12 @@
   gap: 8px;
 }
 
+.TaskPage__metadata__cc {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
 .TaskPage__metadata__date input {
   border: 1px solid #ced4da;
   border-radius: 4px;
@@ -599,27 +605,6 @@
   margin-bottom: 18px;
   max-width: var(--task-page-max-width);
   padding: 10px 14px;
-}
-
-.TaskPage__metadata__ccList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.TaskPage__metadata__ccItem {
-  align-items: center;
-  background: #f6f7f8;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  color: var(--color-text-default);
-  display: inline-flex;
-  font-size: 12px;
-  gap: 3px;
-  max-width: 100%;
-  min-height: 24px;
-  padding: 1px 4px 1px 10px;
 }
 
 .TaskPage__metadata__danger {

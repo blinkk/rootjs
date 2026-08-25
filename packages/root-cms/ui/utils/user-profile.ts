@@ -15,6 +15,9 @@ export interface UserProfile {
 /** Time-to-live for cached profile entries. */
 const PROFILE_CACHE_TTL_MS = 60 * 60 * 1000;
 
+/** Time-to-live for the cached "list all profiles" result. */
+const PROFILE_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
+
 interface CacheEntry {
   /** Cached profile, or `null` if no profile exists for the email. */
   value: UserProfile | null;
@@ -25,6 +28,10 @@ interface CacheEntry {
 const profileCache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<UserProfile | null>>();
 const subscribers = new Set<() => void>();
+
+/** Cached result of `listUserProfiles()`, shared by all callers. */
+let listCache: {value: UserProfile[]; fetchedAt: number} | null = null;
+let listInflight: Promise<UserProfile[]> | null = null;
 
 /** Lower-cases an email for use as a cache/db key. */
 function normalizeEmail(email: string): string {
@@ -131,23 +138,47 @@ export async function fetchUserProfiles(
 
 /**
  * Lists all user profiles for the current project. Results are merged into
- * the in-memory cache.
+ * the in-memory cache and the list itself is cached, so repeat callers (e.g.
+ * autocomplete pickers mounted on several pages) share a single fetch.
  */
-export async function listUserProfiles(): Promise<UserProfile[]> {
-  const snapshot = await getDocs(userProfilesCollectionRef());
-  const profiles: UserProfile[] = [];
-  snapshot.forEach((d) => {
-    const data = d.data() as UserProfile;
-    profiles.push(data);
-    if (data.email) {
-      profileCache.set(normalizeEmail(data.email), {
-        value: data,
-        fetchedAt: Date.now(),
-      });
+export async function listUserProfiles(options?: {
+  /** Bypasses the cached list and re-fetches from the DB. */
+  force?: boolean;
+}): Promise<UserProfile[]> {
+  if (!options?.force) {
+    if (
+      listCache &&
+      Date.now() - listCache.fetchedAt <= PROFILE_LIST_CACHE_TTL_MS
+    ) {
+      return listCache.value;
     }
-  });
-  notifySubscribers();
-  return profiles;
+    if (listInflight) {
+      return listInflight;
+    }
+  }
+  const promise = (async () => {
+    try {
+      const snapshot = await getDocs(userProfilesCollectionRef());
+      const profiles: UserProfile[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as UserProfile;
+        profiles.push(data);
+        if (data.email) {
+          profileCache.set(normalizeEmail(data.email), {
+            value: data,
+            fetchedAt: Date.now(),
+          });
+        }
+      });
+      listCache = {value: profiles, fetchedAt: Date.now()};
+      notifySubscribers();
+      return profiles;
+    } finally {
+      listInflight = null;
+    }
+  })();
+  listInflight = promise;
+  return promise;
 }
 
 /** Subscribes to cache updates. Returns an unsubscribe function. */
@@ -162,6 +193,8 @@ export function subscribeToUserProfileCache(cb: () => void): () => void {
 export function clearUserProfileCache() {
   profileCache.clear();
   inflight.clear();
+  listCache = null;
+  listInflight = null;
 }
 
 /** Returns the initials to display when no photoURL is available. */
