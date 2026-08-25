@@ -3,6 +3,8 @@ import {
   getRichTextParagraphEditorStyles,
   normalizeRichTextParagraphSizes,
   parseRichTextParagraphSize,
+  RichTextData,
+  testSameRichTextContent,
 } from './richtext.js';
 
 describe('parseRichTextParagraphSize', () => {
@@ -112,5 +114,114 @@ describe('getRichTextParagraphEditorStyles', () => {
 
   test('is empty when the option is omitted', () => {
     expect(getRichTextParagraphEditorStyles()).toEqual({});
+  });
+});
+
+describe('testSameRichTextContent', () => {
+  function richText(text: string, time: number): RichTextData {
+    return {time, version: '1', blocks: [{type: 'paragraph', data: {text}}]};
+  }
+
+  test('ignores the timestamp and version', () => {
+    expect(
+      testSameRichTextContent(richText('hello', 1), richText('hello', 2))
+    ).toBe(true);
+    expect(
+      testSameRichTextContent(
+        {time: 1, version: 'editorjs', blocks: []},
+        {time: 2, version: 'lexical-0.31.2', blocks: []}
+      )
+    ).toBe(true);
+  });
+
+  test('compares block content', () => {
+    expect(
+      testSameRichTextContent(richText('hello', 1), richText('world', 1))
+    ).toBe(false);
+    expect(
+      testSameRichTextContent(richText('hello', 1), {
+        time: 1,
+        version: '1',
+        blocks: [
+          {type: 'paragraph', data: {text: 'hello'}},
+          {type: 'paragraph', data: {text: 'world'}},
+        ],
+      })
+    ).toBe(false);
+    expect(
+      testSameRichTextContent(
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'heading', data: {level: 2, text: 'hello'}}],
+        },
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'heading', data: {text: 'hello', level: 2}}],
+        }
+      )
+    ).toBe(true);
+  });
+
+  test('treats empty values as equal', () => {
+    expect(testSameRichTextContent(null, undefined)).toBe(true);
+    expect(
+      testSameRichTextContent(null, {time: 1, version: '1', blocks: []})
+    ).toBe(true);
+    expect(testSameRichTextContent(null, richText('hello', 1))).toBe(false);
+  });
+
+  test('compares keys that one side swapped for another', () => {
+    // Same key count, different keys: a block that dropped `components` and
+    // gained `size` is not the same content.
+    expect(
+      testSameRichTextContent(
+        {
+          time: 1,
+          version: '1',
+          blocks: [
+            {type: 'paragraph', data: {text: 'hello', components: undefined}},
+          ],
+        },
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello', size: 'large'}}],
+        }
+      )
+    ).toBe(false);
+  });
+
+  test('treats missing and empty keys as equal', () => {
+    // Values that round-trip through firestore lose their `undefined` keys.
+    expect(
+      testSameRichTextContent(
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello', size: undefined}}],
+        },
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello'}}],
+        }
+      )
+    ).toBe(true);
+    expect(
+      testSameRichTextContent(
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello', size: 'large'}}],
+        },
+        {
+          time: 1,
+          version: '1',
+          blocks: [{type: 'paragraph', data: {text: 'hello'}}],
+        }
+      )
+    ).toBe(false);
   });
 });

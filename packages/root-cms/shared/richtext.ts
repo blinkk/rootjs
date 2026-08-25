@@ -299,3 +299,71 @@ export function testValidRichTextData(data: RichTextData | unknown) {
     (data as Record<string, any>).blocks.length > 0
   );
 }
+
+/**
+ * Returns true if two rich text values hold the same content.
+ *
+ * Only `blocks` are compared: `time` and `version` are editor bookkeeping that
+ * change on every save and say nothing about what the user sees. Editors use
+ * this to decide whether an incoming value is an echo of their own last change
+ * (ignore it, so the cursor isn't reset on every keystroke) or an external
+ * replacement they need to re-render (e.g. "discard draft edits", which
+ * restores published content whose `time` is older than the draft's).
+ *
+ * The keystroke path exits on reference equality: an editor's own value is
+ * handed back to it by the same object, so the deep walk only runs for values
+ * that arrived from somewhere else (the db, undo/redo, a revert).
+ */
+export function testSameRichTextContent(
+  a?: RichTextData | null,
+  b?: RichTextData | null
+): boolean {
+  return testSameJsonValue(getRichTextBlocks(a), getRichTextBlocks(b));
+}
+
+/** Returns a rich text value's blocks, or an empty list if it has none. */
+function getRichTextBlocks(data?: RichTextData | null): RichTextBlock[] {
+  if (!isObject(data) || !Array.isArray((data as RichTextData).blocks)) {
+    return [];
+  }
+  return (data as RichTextData).blocks;
+}
+
+/**
+ * Deep-compares two JSON-like values. `null` and `undefined` are treated as
+ * equivalent, since a value that round-trips through firestore loses its
+ * `undefined` keys.
+ */
+function testSameJsonValue(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return (a === null || a === undefined) && (b === null || b === undefined);
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((item, i) => testSameJsonValue(item, b[i]));
+  }
+  if (isObject(a) && isObject(b)) {
+    const aObj = a as Record<string, unknown>;
+    const bObj = b as Record<string, unknown>;
+    for (const key of Object.keys(aObj)) {
+      if (!testSameJsonValue(aObj[key], bObj[key])) {
+        return false;
+      }
+    }
+    // A key only `b` has matches a's missing (i.e. `undefined`) value only when
+    // it's empty itself. Key counts can't stand in for this check: `a` and `b`
+    // can hold the same number of keys and still not hold the same ones.
+    for (const key of Object.keys(bObj)) {
+      if (!(key in aObj) && !testSameJsonValue(undefined, bObj[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
