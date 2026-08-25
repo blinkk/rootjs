@@ -318,8 +318,8 @@
 
 .TaskPage__timelineItem {
   display: grid;
-  gap: 12px;
-  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
   position: relative;
 }
 
@@ -327,18 +327,18 @@
   background: var(--color-border);
   bottom: 0;
   content: '';
-  left: 15px;
+  left: 11px;
   position: absolute;
   top: 0;
   width: 2px;
 }
 
 .TaskPage__timelineItem:first-child::before {
-  top: 18px;
+  top: 14px;
 }
 
 .TaskPage__timelineItem:last-child::before {
-  bottom: calc(100% - 18px);
+  bottom: calc(100% - 14px);
 }
 
 .TaskPage__timelineItem__marker {
@@ -348,23 +348,23 @@
   border-radius: 50%;
   color: var(--color-text-gray);
   display: flex;
-  height: 32px;
+  height: 24px;
   justify-content: center;
   position: relative;
-  width: 32px;
+  width: 24px;
   z-index: 1;
 }
 
 .TaskPage__timelineItem__content {
   min-width: 0;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 .TaskPage__timelineItem--event .TaskPage__timelineItem__content {
   color: var(--color-text-gray);
-  font-size: 13px;
-  line-height: 1.5;
-  padding-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  padding-top: 4px;
 }
 
 .TaskPage__timelineItem--event b {
@@ -384,7 +384,7 @@
 }
 
 .TaskPage__timelineItem--comment .TaskPage__timelineItem__content {
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 .TaskPage__timelineValue {
@@ -392,9 +392,9 @@
   border-radius: 4px;
   color: var(--color-text-default);
   font-family: var(--font-family-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 5px;
+  padding: 1px 5px;
 }
 
 .TaskPage__comment {
@@ -564,9 +564,9 @@
 .TaskPage__replies {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-left: 42px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-left: 34px;
+  margin-top: 10px;
   padding-left: 0;
 }
 
