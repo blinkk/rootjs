@@ -14,13 +14,16 @@ import {
   unmarshalDataSourceData,
 } from '../shared/data-source.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
+import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
+import {hashStr} from '../shared/strings.js';
 import {isCronDue} from './cron-schedule.js';
 import type {
   DependencyGraph,
   DependencyGraphBatchOp,
   DependencyGraphService,
 } from './dependency-graph.js';
+import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {
@@ -346,14 +349,236 @@ export interface SendEmailOptions {
   emailService?: string | boolean;
 }
 
+/** Options for constructing a `RootCMSClient`. */
+export interface RootCMSClientOptions {
+  /**
+   * An unapplied change proposal to overlay on top of every read. Use this to
+   * preview proposed content on a running site before accepting it.
+   */
+  proposal?: Proposal;
+}
+
+/**
+ * Indexes a change proposal so it can be applied cheaply to docs and
+ * translations as they are read.
+ *
+ * Only the change kinds that affect rendering are handled: doc edits, doc
+ * creation, and translations. Release changes affect publishing rather than
+ * content, so they are ignored here and only take effect when the proposal is
+ * applied.
+ */
+export class ProposalOverlay {
+  readonly proposal: Proposal;
+  /** Edit ops keyed by doc id, in proposal order. */
+  private readonly docOps = new Map<string, DocEditOperation[]>();
+  /** Fields for docs the proposal creates outright, keyed by doc id. */
+  private readonly newDocs = new Map<string, Record<string, any>>();
+  /** Doc ids the proposal duplicates, keyed by the new doc id. */
+  private readonly duplicates = new Map<string, string>();
+  /** Proposed translations keyed by translations id, then source, then locale. */
+  private readonly translations = new Map<
+    string,
+    Record<string, Record<string, string>>
+  >();
+
+  constructor(proposal: Proposal) {
+    this.proposal = proposal;
+    for (const change of proposal.changes) {
+      switch (change.kind) {
+        case 'doc.edit': {
+          const ops = this.docOps.get(change.docId) || [];
+          ops.push(...(toDocEditOperations(change.ops) as DocEditOperation[]));
+          this.docOps.set(change.docId, ops);
+          break;
+        }
+        case 'doc.create':
+          this.newDocs.set(change.docId, change.after);
+          break;
+        case 'doc.duplicate':
+          this.duplicates.set(change.toDocId, change.fromDocId);
+          break;
+        case 'translations': {
+          const bySource = this.translations.get(change.translationsId) || {};
+          for (const entry of change.entries) {
+            bySource[entry.source] ??= {};
+            for (const [locale, value] of Object.entries(entry.locales)) {
+              bySource[entry.source][locale] = value.after;
+            }
+          }
+          this.translations.set(change.translationsId, bySource);
+          break;
+        }
+      }
+    }
+  }
+
+  /** Applies any edit ops for `doc.id` to an unmarshaled doc. */
+  applyToDoc(doc: Doc): Doc {
+    const docId = doc?.id;
+    if (!docId) {
+      return doc;
+    }
+    const ops = this.docOps.get(docId);
+    if (!ops || ops.length === 0) {
+      return doc;
+    }
+    const applied = applyDocEdits(doc.fields || {}, ops);
+    if (!applied.ok) {
+      console.warn(
+        `proposal overlay skipped for ${docId}: ${applied.error.message}`
+      );
+      return doc;
+    }
+    return {...doc, fields: applied.fields};
+  }
+
+  /** True if the proposal creates any doc in `collectionId`. */
+  hasNewDocsInCollection(collectionId: string): boolean {
+    return this.countNewDocsInCollection(collectionId) > 0;
+  }
+
+  /** Number of docs the proposal creates in `collectionId`. */
+  countNewDocsInCollection(collectionId: string): number {
+    return this.newDocIds().filter((docId) =>
+      docId.startsWith(`${collectionId}/`)
+    ).length;
+  }
+
+  /**
+   * Builds `Doc` objects for the docs the proposal creates in `collectionId`,
+   * skipping any that already exist in the db.
+   */
+  newDocsInCollection(collectionId: string, existingIds: Set<string>): Doc[] {
+    const docs: Doc[] = [];
+    for (const docId of this.newDocIds()) {
+      if (!docId.startsWith(`${collectionId}/`) || existingIds.has(docId)) {
+        continue;
+      }
+      const doc = this.buildNewDoc(docId);
+      if (doc) {
+        docs.push(doc);
+      }
+    }
+    return docs;
+  }
+
+  /**
+   * Synthesizes a `Doc` for a doc id the proposal creates, or null if the
+   * proposal does not create it. Duplicated docs are not resolved here (the
+   * source doc is not available synchronously), so they come back with empty
+   * fields.
+   */
+  buildNewDoc(docId: string): Doc | null {
+    const fields =
+      this.newDocs.get(docId) ?? (this.duplicates.has(docId) ? {} : null);
+    if (fields === null) {
+      return null;
+    }
+    const slashIndex = docId.indexOf('/');
+    const now = Date.now();
+    return {
+      id: docId,
+      collection: docId.slice(0, slashIndex),
+      slug: docId.slice(slashIndex + 1),
+      sys: {
+        createdAt: now,
+        createdBy: 'root-cms-proposal',
+        modifiedAt: now,
+        modifiedBy: 'root-cms-proposal',
+      } as Doc['sys'],
+      fields,
+    };
+  }
+
+  /** Every doc id the proposal creates, in proposal order. */
+  newDocIds(): string[] {
+    return [...this.newDocs.keys(), ...this.duplicates.keys()];
+  }
+
+  /** All proposed translations, flattened to `{source: {locale: string}}`. */
+  allTranslations(): Record<string, Record<string, string>> | null {
+    if (this.translations.size === 0) {
+      return null;
+    }
+    const out: Record<string, Record<string, string>> = {};
+    for (const bySource of this.translations.values()) {
+      for (const [source, locales] of Object.entries(bySource)) {
+        out[source] = {...(out[source] || {}), ...locales};
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Returns proposed strings for one translations id and locale, shaped like
+   * the `strings` hash map stored on a translations locale doc, or null when
+   * the proposal has nothing for it.
+   */
+  localeDocStrings(
+    translationsId: string,
+    locale: string
+  ): Record<string, {source: string; translation: string}> | null {
+    const bySource = this.translations.get(translationsId);
+    if (!bySource) {
+      return null;
+    }
+    const out: Record<string, {source: string; translation: string}> = {};
+    for (const [source, locales] of Object.entries(bySource)) {
+      const translation = locales[locale];
+      if (translation !== undefined) {
+        out[hashStr(source)] = {source, translation};
+      }
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  }
+}
+
+/**
+ * Sorts docs in place by a dotted field path, matching the ordering a
+ * Firestore `orderBy` would have produced.
+ */
+function sortDocsBy(
+  docs: any[],
+  fieldPath: string,
+  direction?: 'asc' | 'desc'
+) {
+  const sign = direction === 'desc' ? -1 : 1;
+  docs.sort((a, b) => {
+    const aVal = readFieldPath(a, fieldPath);
+    const bVal = readFieldPath(b, fieldPath);
+    if (aVal === bVal) return 0;
+    if (aVal === undefined || aVal === null) return 1;
+    if (bVal === undefined || bVal === null) return -1;
+    return (aVal < bVal ? -1 : 1) * sign;
+  });
+}
+
+/** Reads a dotted field path out of a doc. */
+function readFieldPath(data: any, fieldPath: string): any {
+  let cursor = data;
+  for (const segment of fieldPath.split('.')) {
+    if (cursor === null || cursor === undefined) {
+      return undefined;
+    }
+    cursor = cursor[segment];
+  }
+  return cursor;
+}
+
 export class RootCMSClient {
   readonly rootConfig: RootConfig;
   readonly cmsPlugin: CMSPlugin;
   readonly projectId: string;
   readonly app: App;
   readonly db: Firestore;
+  /**
+   * An unapplied change proposal overlaid on top of everything this client
+   * reads. Lets a developer preview proposed content against a running site
+   * before accepting it. Reads only — writes never fold the proposal in.
+   */
+  readonly proposal?: ProposalOverlay;
 
-  constructor(rootConfig: RootConfig) {
+  constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
     this.rootConfig = rootConfig;
     this.cmsPlugin = getCmsPlugin(this.rootConfig);
 
@@ -361,6 +586,35 @@ export class RootCMSClient {
     this.projectId = cmsPluginOptions.id || 'default';
     this.app = this.cmsPlugin.getFirebaseApp();
     this.db = this.cmsPlugin.getFirestore();
+    if (options?.proposal) {
+      this.proposal = new ProposalOverlay(options.proposal);
+    }
+  }
+
+  /**
+   * Applies the proposal overlay (if any) to an unmarshaled doc.
+   *
+   * Called from every non-raw read path. `getRawDoc()` and
+   * `listDocs({raw: true})` deliberately skip this: those exist to feed
+   * `setRawDoc()`, and folding proposed content into them would leak it into a
+   * write.
+   */
+  overlayDoc<T = any>(doc: T): T {
+    if (!this.proposal || !doc) {
+      return doc;
+    }
+    return this.proposal.applyToDoc(doc as any) as T;
+  }
+
+  /**
+   * Returns docs the proposal creates in a collection that do not exist in the
+   * database yet, so list and count reads can include them.
+   */
+  proposedDocsInCollection(collectionId: string, existingIds: Set<string>) {
+    if (!this.proposal) {
+      return [];
+    }
+    return this.proposal.newDocsInCollection(collectionId, existingIds);
   }
 
   /**
@@ -380,7 +634,12 @@ export class RootCMSClient {
   ): Promise<Doc<Fields> | null> {
     const rawData = await this.getRawDoc(collectionId, slug, options);
     if (rawData) {
-      return unmarshalData(rawData) as Doc<Fields>;
+      return this.overlayDoc(unmarshalData(rawData)) as Doc<Fields>;
+    }
+    // The proposal may create a doc that does not exist in the db yet.
+    const proposed = this.proposal?.buildNewDoc(`${collectionId}/${slug}`);
+    if (proposed) {
+      return proposed as Doc<Fields>;
     }
     return null;
   }
@@ -683,11 +942,19 @@ export class RootCMSClient {
     const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
     let query: Query = this.db.collection(dbPath);
-    if (options.limit) {
-      query = query.limit(options.limit);
-    }
-    if (options.offset) {
-      query = query.offset(options.offset);
+    // A Firestore query cannot see docs the proposal has not written yet, so
+    // when the overlay adds docs to this collection the paging is skipped here
+    // and redone in memory over the merged set below.
+    const mergeProposedDocs = Boolean(
+      this.proposal?.hasNewDocsInCollection(collectionId) && !options.raw
+    );
+    if (!mergeProposedDocs) {
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      if (options.offset) {
+        query = query.offset(options.offset);
+      }
     }
     // Default to ordering by slug. The default is skipped when a `query` fn is
     // provided, since the fn is applied after this orderBy (which would take
@@ -715,11 +982,24 @@ export class RootCMSClient {
         const rawDoc = result.data() as T;
         docs.push(rawDoc);
       } else {
-        const doc = unmarshalData(result.data()) as T;
+        const doc = this.overlayDoc(unmarshalData(result.data())) as T;
         docs.push(doc);
       }
     });
-    return {docs};
+    if (!mergeProposedDocs) {
+      return {docs};
+    }
+    const existingIds = new Set(
+      docs.map((doc) => (doc as any)?.id).filter(Boolean)
+    );
+    const merged = [
+      ...docs,
+      ...(this.proposedDocsInCollection(collectionId, existingIds) as T[]),
+    ];
+    sortDocsBy(merged, orderBy || 'slug', options.orderByDirection);
+    const start = options.offset || 0;
+    const end = options.limit ? start + options.limit : undefined;
+    return {docs: merged.slice(start, end)};
   }
 
   /**
@@ -738,7 +1018,7 @@ export class RootCMSClient {
     }
     const results = await query.count().get();
     const count = results.data().count;
-    return count;
+    return count + (this.proposal?.countNewDocsInCollection(collectionId) ?? 0);
   }
 
   /**
@@ -1253,6 +1533,71 @@ export class RootCMSClient {
   }
 
   /**
+   * Returns the Firestore path for a release doc.
+   */
+  dbReleasePath(releaseId: string): string {
+    return `Projects/${this.projectId}/Releases/${releaseId}`;
+  }
+
+  /**
+   * Retrieves a release by id, or null if it does not exist.
+   */
+  async getRelease(releaseId: string): Promise<Release | null> {
+    if (!releaseId) {
+      throw new Error('releaseId is required');
+    }
+    const snapshot = await this.db.doc(this.dbReleasePath(releaseId)).get();
+    if (!snapshot.exists) {
+      return null;
+    }
+    return snapshot.data() as Release;
+  }
+
+  /**
+   * Lists all releases, most recently created first.
+   */
+  async listReleases(): Promise<Release[]> {
+    const releasesPath = `Projects/${this.projectId}/Releases`;
+    const querySnapshot = await this.db
+      .collection(releasesPath)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return querySnapshot.docs.map((doc) => doc.data() as Release);
+  }
+
+  /**
+   * Creates or updates a release.
+   *
+   * Only the fields describing the release's contents are written
+   * (`description`, `docIds`, `dataSourceIds`); scheduling and publishing
+   * state is left untouched, so this can never publish or schedule a release
+   * as a side effect.
+   */
+  async setRelease(
+    releaseId: string,
+    release: Partial<Release>,
+    options?: {modifiedBy?: string}
+  ) {
+    if (!releaseId) {
+      throw new Error('releaseId is required');
+    }
+    const docRef = this.db.doc(this.dbReleasePath(releaseId));
+    const snapshot = await docRef.get();
+    const modifiedBy = options?.modifiedBy || 'root-cms-client';
+    const data: Record<string, any> = {id: releaseId};
+    for (const key of ['description', 'docIds', 'dataSourceIds'] as const) {
+      if (release[key] !== undefined) {
+        data[key] = release[key];
+      }
+    }
+    if (!snapshot.exists) {
+      data.createdAt = Timestamp.now();
+      data.createdBy = modifiedBy;
+    }
+    await docRef.set(data, {merge: true});
+  }
+
+  /**
    * Publishes docs in scheduled releases.
    */
   async publishScheduledReleases() {
@@ -1454,6 +1799,18 @@ export class RootCMSClient {
       const hash = doc.id;
       translationsMap[hash] = doc.data() as Translation;
     });
+    // Overlay proposed translations, keyed by the same sha1 hash the db uses.
+    const proposed = this.proposal?.allTranslations();
+    if (proposed) {
+      for (const [source, locales] of Object.entries(proposed)) {
+        const hash = this.getTranslationKey(source);
+        translationsMap[hash] = {
+          ...(translationsMap[hash] || {}),
+          ...locales,
+          source: this.normalizeString(source),
+        };
+      }
+    }
     return translationsMap;
   }
 
@@ -2873,7 +3230,9 @@ export class BatchRequest {
         console.warn(`doc "${docId}" does not exist`);
         return;
       }
-      const docData = unmarshalData(doc.data()) as Doc;
+      const docData = this.cmsClient.overlayDoc(
+        unmarshalData(doc.data())
+      ) as Doc;
       res.docs[docId] = docData;
 
       if (this.options.translate) {
@@ -2913,7 +3272,9 @@ export class BatchRequest {
       const results = await query.get();
       const docs: Doc[] = [];
       results.forEach((result) => {
-        const doc = unmarshalData(result.data()) as Doc;
+        const doc = this.cmsClient.overlayDoc(
+          unmarshalData(result.data())
+        ) as Doc;
         docs.push(doc);
         // Based on the results of the query, fetch the corresponding
         // translations for each doc.
@@ -3004,12 +3365,22 @@ export class BatchRequest {
       const snapshots = snapshotChunks.flat();
       localeDocRefs.forEach((item, i) => {
         const snapshot = snapshots[i];
-        if (!snapshot.exists) {
+        const proposed = this.cmsClient.proposal?.localeDocStrings(
+          item.translationsId,
+          item.locale
+        );
+        if (!snapshot.exists && !proposed) {
           return;
         }
+        const localeDoc = (
+          snapshot.exists
+            ? snapshot.data()
+            : {id: item.translationsId, locale: item.locale, strings: {}}
+        ) as TranslationsLocaleDoc;
         res.translations[item.translationsId] ??= {};
-        res.translations[item.translationsId][item.locale] =
-          snapshot.data() as TranslationsLocaleDoc;
+        res.translations[item.translationsId][item.locale] = proposed
+          ? {...localeDoc, strings: {...localeDoc.strings, ...proposed}}
+          : localeDoc;
       });
     } else {
       // When the locales are unknown, query the translations locale docs by
@@ -3032,8 +3403,14 @@ export class BatchRequest {
       // Store the results in insertion (precedence) order.
       for (const translationsId of translationsIds) {
         for (const localeDoc of localeDocsById[translationsId] || []) {
+          const proposed = this.cmsClient.proposal?.localeDocStrings(
+            translationsId,
+            localeDoc.locale
+          );
           res.translations[translationsId] ??= {};
-          res.translations[translationsId][localeDoc.locale] = localeDoc;
+          res.translations[translationsId][localeDoc.locale] = proposed
+            ? {...localeDoc, strings: {...localeDoc.strings, ...proposed}}
+            : localeDoc;
         }
       }
     }

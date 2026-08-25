@@ -1,7 +1,9 @@
+export * from '../shared/proposal.js';
 export * from '../shared/sort-key.js';
 export * from './client.js';
 export * from './dependency-graph.js';
 export * from './middleware.js';
+export * from './proposal-apply.js';
 export * from './route.js';
 export * from './runtime.js';
 export * as schema from './schema.js';
