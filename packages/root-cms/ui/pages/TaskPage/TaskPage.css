@@ -1,6 +1,6 @@
 .TaskPage {
   /* Shared width cap for the page's header, banners, and two-column body. */
-  --task-page-max-width: 1260px;
+  --task-page-max-width: 1340px;
   background: var(--page-background);
   padding: var(--page-padding-lg);
 }
@@ -43,7 +43,7 @@
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(220px, 1fr) auto auto;
-  max-width: 880px;
+  max-width: 960px;
   min-width: 0;
   width: 100%;
 }
@@ -109,7 +109,7 @@
   align-items: start;
   display: grid;
   gap: 28px;
-  grid-template-columns: minmax(0, 880px) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 960px) minmax(280px, 340px);
   max-width: var(--task-page-max-width);
 }
 
@@ -121,14 +121,15 @@
 }
 
 /*
- * The page element is itself the scroll container and already starts below the
- * CMS header, so the sticky offset only needs a small gap from the top of the
- * scroll port.
+ * The page element is itself the scroll container, and sticky offsets resolve
+ * against its content box, so the page's own `--page-padding-lg` already sits
+ * above the pinned sidebar. The negative offset trims that padding back to a
+ * ~40px gap; it never clips the panel, since the padding absorbs it.
  */
 .TaskPage__side {
   min-width: 0;
   position: sticky;
-  top: 20px;
+  top: -20px;
 }
 
 .TaskPage__description {
