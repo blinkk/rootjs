@@ -46,6 +46,16 @@ beforeEach(async () => {
           image: 'meta.image',
         },
       },
+      Redirects: {
+        name: 'Redirects',
+        preview: {
+          title: 'meta.title',
+          image: 'meta.image',
+        },
+        viewOptions: {
+          compact: true,
+        },
+      },
     },
     rootConfig: {
       projectId: 'test-project',
@@ -56,6 +66,16 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
 });
+
+// The status badges read pending releases from a context provider that isn't
+// rendered in these tests.
+vi.mock('../../hooks/usePendingReleases.js', () => ({
+  usePendingReleases: () => ({
+    releases: [],
+    loading: false,
+    getReleasesForDoc: () => [],
+  }),
+}));
 
 vi.mock('../../hooks/useDocsList.js', () => ({
   useDocsList: vi.fn(() => {
@@ -261,6 +281,32 @@ describe('DocPickerModal', () => {
     const element = page.getByTestId('wrapper');
     await expect.element(element).toBeVisible();
     await expect.element(element).toMatchScreenshot('multiple-collections.png');
+  });
+
+  it('renders the compact view for collections with viewOptions.compact', async () => {
+    const modalProps: ContextModalProps<DocPickerModalProps> = {
+      context: {} as any,
+      id: 'test-modal',
+      innerProps: {
+        collections: ['Redirects'],
+        initialCollection: 'Redirects',
+        onChange: vi.fn(),
+        enableSearch: true,
+        enableSort: true,
+        enableCreate: true,
+        enableStatusBadges: true,
+      },
+    };
+
+    render(
+      <TestWrapper>
+        <DocPickerModal {...modalProps} />
+      </TestWrapper>
+    );
+
+    const element = page.getByTestId('wrapper');
+    await expect.element(element).toBeVisible();
+    await expect.element(element).toMatchScreenshot('compact-view.png');
   });
 
   it('renders initial state with collection selector and create button', async () => {
