@@ -169,9 +169,14 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const assetPickerModal = useAssetPickerModal();
   const allowEditing = props.allowEditing !== false;
 
+  // The naming mode configured by the schema. Fields that set
+  // `preserveFilename: true` upload to `{hash}/{filename}.{ext}` so that the
+  // original filename is kept in the serving URL without risking collisions.
+  const defaultNamingMode = field.preserveFilename ? 'hash-path' : 'hash';
+
   // New state from FileUploader
   const [namingMode, setNamingMode] = useState<'hash' | 'hash-path' | 'clean'>(
-    'hash'
+    defaultNamingMode
   );
   const [pendingUpload, setPendingUpload] = useState<File | null>(null);
   const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
@@ -200,9 +205,9 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   ) {
     try {
       setLoadingState('loading');
-      // Use prop namingMode if available, otherwise fall back to field config
-      const mode =
-        options?.namingMode || (field.preserveFilename ? 'clean' : 'hash');
+      // Use the requested namingMode if available, otherwise fall back to the
+      // field config.
+      const mode = options?.namingMode || defaultNamingMode;
 
       // When using the original filename without a hash, the file can be
       // overwritten by a subsequent upload, so disable caching.
