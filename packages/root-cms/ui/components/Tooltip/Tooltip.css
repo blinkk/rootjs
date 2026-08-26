@@ -6,3 +6,24 @@
 .Tooltip.mantine-Tooltip-root {
   display: inline-flex;
 }
+
+/*
+ * Take the popper's wrapper out of the flow while the tooltip is open.
+ *
+ * Mantine renders the tooltip's popper into a portal, but it leaves behind an
+ * empty div inside the wrapper for as long as the tooltip is visible. Since the
+ * wrapper is a flex box, that empty div becomes its first flex item, and a flex
+ * box takes its baseline from its first item. Swapping the child's text
+ * baseline for the empty div's synthesized one grows the line box, which nudges
+ * the child up or down every time the tooltip opens and closes. Absolute
+ * positioning stops the div from being a flex item, so the child always sets
+ * the baseline.
+ *
+ * The selector matches an empty div that is the first of exactly two children,
+ * which is what the leftover looks like (the tooltip's own child is the
+ * second). A closed tooltip renders a single child, so the leftover is the only
+ * element this can match.
+ */
+.Tooltip.mantine-Tooltip-root > div:first-child:nth-last-child(2):empty {
+  position: absolute;
+}
