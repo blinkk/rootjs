@@ -3,6 +3,7 @@ import '../../styles/theme.css';
 import {MantineProvider} from '@mantine/core';
 import {render, waitFor} from '@testing-library/preact';
 import {describe, expect, it, vi} from 'vitest';
+import {userEvent} from 'vitest/browser';
 import {ActionLogs} from './ActionLogs.js';
 
 const MOCK_ACTIONS = vi.hoisted(() => {
@@ -91,5 +92,34 @@ describe('ActionLogs', () => {
     expect(offsets[0].centerY).toBeCloseTo(offsets[1].centerY, 1);
     expect(offsets[0].right).toBeCloseTo(offsets[1].right, 1);
     expect(offsets[0].height).toBeCloseTo(offsets[1].height, 1);
+  });
+
+  it('keeps the timestamp in place when its tooltip opens', async () => {
+    const {container} = renderCompact();
+    const rows = await waitForRows(container);
+    const timestamp = rows[0].querySelector(
+      '.ActionsLogs__timestamp'
+    ) as HTMLElement;
+    expect(timestamp).not.toBeNull();
+    // Hovering scrolls the timestamp into view, so measure it relative to its
+    // row rather than to the viewport.
+    const offset = () => {
+      const rowRect = rows[0].getBoundingClientRect();
+      const rect = timestamp.getBoundingClientRect();
+      return {
+        top: rect.top - rowRect.top,
+        height: rect.height,
+        rowHeight: rowRect.height,
+      };
+    };
+    const before = offset();
+    await userEvent.hover(timestamp);
+    await waitFor(() => {
+      expect(document.querySelector('.mantine-Tooltip-body')).not.toBeNull();
+    });
+    const after = offset();
+    expect(after.top).toBeCloseTo(before.top, 1);
+    expect(after.height).toBeCloseTo(before.height, 1);
+    expect(after.rowHeight).toBeCloseTo(before.rowHeight, 1);
   });
 });
