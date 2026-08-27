@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.4.9
+
+### Patch Changes
+
+- 9a3adf0: fix: flush rich text editors when draft edits are discarded
+- 677cc68: fix: refresh release badges when releases are updated
+- 26637b4: fix: respect the compact view options in the doc picker modal
+- f78db94: feat: add CMS change proposals for reviewing AI content edits before applying
+- aa4c3b8: feat: warn when content approaches Firestore's 20-level field nesting limit
+- 68af507: feat: add user autocomplete to the task assignee and cc fields
+- e75ac0a: fix: honor the `preserveFilename` option in the file field
+- 75dc554: fix: keep tooltip targets from shifting when the tooltip opens
+  - @blinkk/root@3.4.9
+
 ## 3.4.8
 
 ### Patch Changes
