@@ -73,6 +73,18 @@
   flex-wrap: wrap;
 }
 
+.SettingsPage__siteAdmin__resetSignIn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.SettingsPage__siteAdmin__resetSignIn__user {
+  flex: 1;
+  max-width: 360px;
+}
+
 .SettingsPage__share {
   position: relative;
   display: flex;

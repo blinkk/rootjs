@@ -16,27 +16,8 @@
 }
 
 .ShareBox__user {
-  grid-template-columns: 24px minmax(0, 1fr) 24px 120px;
+  grid-template-columns: 24px minmax(0, 1fr) 120px;
   padding: 6px 16px;
-}
-
-.ShareBox__user__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-/* Kept out of the way until the row is hovered or the button is tabbed to.
- * The grid column is reserved either way so rows don't shift. */
-.ShareBox__user__resetSignIn {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.ShareBox__user:hover .ShareBox__user__resetSignIn,
-.ShareBox__user:focus-within .ShareBox__user__resetSignIn {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .ShareBox__user:hover {
