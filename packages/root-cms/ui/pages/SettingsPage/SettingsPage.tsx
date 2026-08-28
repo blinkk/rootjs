@@ -11,10 +11,12 @@ import {PermissionGroupsBox} from '../../components/PermissionGroupsBox/Permissi
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
+import {UserSelect} from '../../components/UserSelect/UserSelect.js';
 import {useSearchIndexStatus} from '../../hooks/useGlobalSearch.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {useSignInStatuses} from '../../hooks/useSignInStatus.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
@@ -58,6 +60,130 @@ function isCurrentUserAdmin(roles: Record<string, string>): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Admin control for clearing a user's stale Google sign-in link.
+ *
+ * Unlinks the Google account from the user's sign-in record so their next
+ * sign-in links it again. Used to recover accounts that fail sign-in with an
+ * error about the Google account no longer being linked. The user's role and
+ * content are untouched.
+ */
+function ResetSignInSetting() {
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const emails = useMemo(() => (email ? [email] : []), [email]);
+  const {statuses, loading} = useSignInStatuses(emails, {enabled: !!email});
+  const status = email ? statuses.get(email) : undefined;
+  // The lookup can fail (leaving `status` undefined), in which case the reset
+  // stays available rather than being blocked by a status we couldn't read.
+  const nothingToReset = !!status && !status.hasGoogleLink;
+
+  function statusHint() {
+    if (!email) {
+      return 'Pick a user to check whether their sign-in can be reset.';
+    }
+    if (loading) {
+      return 'Checking sign-in status…';
+    }
+    if (!status) {
+      return "Couldn't check this user's sign-in status.";
+    }
+    if (!status.exists) {
+      return `${email} has never signed in, so there's nothing to reset.`;
+    }
+    if (!status.hasGoogleLink) {
+      return `${email} has no Google sign-in link to reset. They may be signing in with a different address.`;
+    }
+    return `${email} has a Google sign-in link that can be reset.`;
+  }
+
+  function confirmReset() {
+    if (!email || submitting) {
+      return;
+    }
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: 'Reset sign-in',
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          <p>
+            Use this when {email} can't sign in and sees an error about their
+            Google account no longer being linked. It unlinks the Google account
+            from their sign-in record so the next sign-in links it again.
+          </p>
+          <p>
+            Their role and content are not affected, and they stay signed in
+            wherever they already are.
+          </p>
+        </Text>
+      ),
+      labels: {confirm: 'Reset sign-in', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        setSubmitting(true);
+        await notifyErrors(async () => {
+          const reset = await resetUserSignIn(email);
+          showNotification({
+            title: reset ? 'Sign-in reset' : 'Nothing to reset',
+            message: reset
+              ? `${email} can sign in again.`
+              : `${email} has no Google sign-in link to reset. They may be signing in with a different address.`,
+            color: reset ? 'green' : 'yellow',
+            autoClose: 5000,
+          });
+          if (reset) {
+            setEmail('');
+          }
+        });
+        setSubmitting(false);
+        modals.closeModal(modalId);
+      },
+    });
+  }
+
+  return (
+    <div className="SettingsPage__section__setting">
+      <Text size="body" weight="semi-bold">
+        Reset sign-in
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>
+          Unlinks a user's Google account from their sign-in record so the next
+          sign-in links it again. Use this when someone is blocked at sign-in
+          with an error about their Google account no longer being linked. Their
+          role and content are not affected.
+        </p>
+      </Text>
+      <div className="SettingsPage__siteAdmin__resetSignIn">
+        <UserSelect
+          className="SettingsPage__siteAdmin__resetSignIn__user"
+          value={email}
+          onChange={(value: string) => setEmail(value.trim().toLowerCase())}
+          placeholder="Search or enter an email"
+          disabled={submitting}
+        />
+        <Button
+          variant="default"
+          size="xs"
+          compact
+          loading={submitting}
+          disabled={!email || loading || nothingToReset}
+          onClick={confirmReset}
+        >
+          Reset sign-in
+        </Button>
+      </div>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        {statusHint()}
+      </Text>
+    </div>
+  );
 }
 
 function SiteAdminSection() {
@@ -222,6 +348,7 @@ function SiteAdminSection() {
             </Button>
           </div>
         </div>
+        <ResetSignInSetting />
       </Surface>
     </div>
   );
@@ -245,8 +372,6 @@ function ShareSection() {
   );
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId);
-  const modals = useModals();
-  const modalTheme = useModalTheme();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -308,49 +433,6 @@ function ShareSection() {
 
   function setGroups(permissionGroups: PermissionGroup[]) {
     setDraft((prev) => ({...prev, permissionGroups}));
-  }
-
-  /**
-   * Clears the stale Google link on a user's account so that they can sign in
-   * again. Their role and content are untouched; the account re-links itself
-   * on their next sign-in.
-   */
-  function resetSignIn(email: string) {
-    const modalId = modals.openConfirmModal({
-      ...modalTheme,
-      title: 'Reset sign-in',
-      children: (
-        <Text size="body-sm" weight="semi-bold">
-          <p>
-            Use this when {email} can't sign in and sees an error about their
-            Google account no longer being linked. It unlinks the Google account
-            from their sign-in record so the next sign-in links it again.
-          </p>
-          <p>
-            Their role and content are not affected, and they stay signed in
-            wherever they already are.
-          </p>
-        </Text>
-      ),
-      labels: {confirm: 'Reset sign-in', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        await notifyErrors(async () => {
-          const reset = await resetUserSignIn(email);
-          showNotification({
-            title: reset ? 'Sign-in reset' : 'Nothing to reset',
-            message: reset
-              ? `${email} can sign in again.`
-              : `${email} has no Google sign-in link to reset. They may be signing in with a different address.`,
-            color: reset ? 'green' : 'yellow',
-            autoClose: 5000,
-          });
-        });
-        modals.closeModal(modalId);
-      },
-    });
   }
 
   function discard() {
@@ -455,8 +537,8 @@ function ShareSection() {
           </p>
           <p>
             If a user is blocked at sign-in because their Google account is no
-            longer linked, hover their row and use{' '}
-            <strong>Reset sign-in</strong>.
+            longer linked, use <strong>Reset sign-in</strong> in the{' '}
+            <strong>Site Admin</strong> section.
           </p>
         </Text>
       </div>
@@ -475,7 +557,6 @@ function ShareSection() {
               roles={draft.globalRoles}
               onChange={setRoles}
               currentUserIsAdmin={currentUserIsAdmin}
-              onResetSignIn={resetSignIn}
             />
           </div>
           <div className="SettingsPage__share__subsection">
