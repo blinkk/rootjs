@@ -61,6 +61,31 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   );
   // Track the previous linkUrl to detect when we switch to a different link.
   const prevLinkUrlRef = useRef<string>('');
+  // Whether the form holds unsaved edits. Pending edits are preserved across
+  // editor state updates so that interacting with the form (e.g. clicking the
+  // "open in new tab" checkbox, which moves focus out of the url input)
+  // doesn't revert the values back to what's stored on the link node.
+  const hasPendingEditsRef = useRef(false);
+
+  // Syncs the form with the values stored on the link node, discarding any
+  // pending edits.
+  const syncEditedValues = useCallback((url: string, target: string | null) => {
+    setEditedLinkUrl(normalizeUrl(url));
+    setEditedLinkTarget(target);
+    hasPendingEditsRef.current = false;
+  }, []);
+
+  // Updates the url field and flags the form as having unsaved edits.
+  const updateEditedLinkUrl = useCallback((url: string) => {
+    hasPendingEditsRef.current = true;
+    setEditedLinkUrl(url);
+  }, []);
+
+  // Updates the target field and flags the form as having unsaved edits.
+  const updateEditedLinkTarget = useCallback((target: string | null) => {
+    hasPendingEditsRef.current = true;
+    setEditedLinkTarget(target);
+  }, []);
 
   const $updateLinkEditor = useCallback(() => {
     const selection = $getSelection();
@@ -79,13 +104,11 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       }
       setLinkUrl(url);
       setLinkTarget(target);
-      // Always sync edited values when not actively editing (i.e., when the
-      // input is not focused), or when switching to a different link.
-      const isInputFocused = inputRef.current === document.activeElement;
+      // Sync the form with the link node's values unless the user has unsaved
+      // edits. Switching to a different link always resyncs.
       const isSwitchingLinks = url !== prevLinkUrlRef.current;
-      if (!isInputFocused || isSwitchingLinks) {
-        setEditedLinkUrl(normalizeUrl(url));
-        setEditedLinkTarget(target);
+      if (isSwitchingLinks || !hasPendingEditsRef.current) {
+        syncEditedValues(url, target);
       }
       prevLinkUrlRef.current = url;
     } else if ($isNodeSelection(selection)) {
@@ -104,11 +127,9 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         }
         setLinkUrl(url);
         setLinkTarget(target);
-        const isInputFocused = inputRef.current === document.activeElement;
         const isSwitchingLinks = url !== prevLinkUrlRef.current;
-        if (!isInputFocused || isSwitchingLinks) {
-          setEditedLinkUrl(normalizeUrl(url));
-          setEditedLinkTarget(target);
+        if (isSwitchingLinks || !hasPendingEditsRef.current) {
+          syncEditedValues(url, target);
         }
         prevLinkUrlRef.current = url;
       }
@@ -156,10 +177,18 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       setIsLinkEditMode(false);
       setLinkUrl('');
       prevLinkUrlRef.current = '';
+      hasPendingEditsRef.current = false;
     }
 
     return true;
-  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, linkUrl]);
+  }, [
+    anchorElem,
+    editor,
+    setIsLinkEditMode,
+    isLinkEditMode,
+    linkUrl,
+    syncEditedValues,
+  ]);
 
   useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
@@ -364,6 +393,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
           }
         });
       }
+      hasPendingEditsRef.current = false;
       setIsLinkEditMode(false);
     }
   };
@@ -375,8 +405,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
 
   // Revert changes back to the original link values.
   const handleUndo = () => {
-    setEditedLinkUrl(linkUrl);
-    setEditedLinkTarget(linkTarget);
+    syncEditedValues(linkUrl, linkTarget);
   };
 
   return (
@@ -395,7 +424,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
             value={editedLinkUrl}
             onChange={(event: KeyboardEvent) => {
               const target = event.target as HTMLInputElement;
-              setEditedLinkUrl(target.value);
+              updateEditedLinkUrl(target.value);
             }}
             onKeyDown={(event: KeyboardEvent) => {
               monitorInputInteraction(event);
@@ -411,7 +440,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
               label="Open in new tab"
               checked={editedLinkTarget === '_blank'}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                setEditedLinkTarget(
+                updateEditedLinkTarget(
                   event.currentTarget.checked ? '_blank' : null
                 )
               }
