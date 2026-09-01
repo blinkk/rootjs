@@ -42,7 +42,7 @@ import {
   IconClearFormatting,
   IconPhoto,
   IconBracketsAngle,
-  IconSquare,
+  IconCube,
   IconCapsuleHorizontal,
   IconTextSize,
 } from '@tabler/icons-preact';
@@ -576,7 +576,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       default:
         break;
     }
-    return <IconSquare size={16} />;
+    return <IconCube size={16} />;
   };
   const isCommentVariant = variant === 'comment';
 
@@ -668,6 +668,9 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         {!isCommentVariant && (
           <>
             <Menu
+              classNames={{
+                body: 'LexicalEditor__toolbar__insertDropdown__body',
+              }}
               control={
                 <Button
                   className={joinClassNames(
@@ -714,6 +717,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                     <Menu.Item
                       key={component.name}
                       icon={<IconCapsuleHorizontal size={16} />}
+                      title={component.label || component.name}
                       onClick={() => onInsertInlineComponent?.(component.name)}
                     >
                       {component.label || component.name}
@@ -728,6 +732,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                     <Menu.Item
                       key={block.name}
                       icon={getComponentIcon(block.name)}
+                      title={block.label || block.name}
                       onClick={() => onInsertBlockComponent?.(block.name)}
                     >
                       {block.label || block.name}
