@@ -717,6 +717,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                     <Menu.Item
                       key={component.name}
                       icon={<IconCapsuleHorizontal size={16} />}
+                      title={component.label || component.name}
                       onClick={() => onInsertInlineComponent?.(component.name)}
                     >
                       {component.label || component.name}
@@ -731,6 +732,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                     <Menu.Item
                       key={block.name}
                       icon={getComponentIcon(block.name)}
+                      title={block.label || block.name}
                       onClick={() => onInsertBlockComponent?.(block.name)}
                     >
                       {block.label || block.name}
