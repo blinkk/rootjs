@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.4.10
+
+### Patch Changes
+
+- 16c99a2: fix: keep the "open in new tab" checkbox checked when editing a link
+- 8f67372: fix: scroll long components dropdown in the rich text toolbar
+- de3627e: feat: move reset sign-in into the Site Admin settings section
+  - @blinkk/root@3.4.10
+
 ## 3.4.9
 
 ### Patch Changes
