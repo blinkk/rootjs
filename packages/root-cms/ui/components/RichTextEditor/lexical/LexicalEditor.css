@@ -77,6 +77,26 @@
   font-size: 12px;
 }
 
+/* Constrain the height of the components dropdown so that long lists of custom
+ * components scroll within the menu instead of overflowing the viewport. */
+.LexicalEditor__toolbar__insertDropdown__body {
+  max-height: min(60vh, 480px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Component names that don't fit on a single line push the flex row wider than
+ * the menu, which squishes (and can fully collapse) the item's icon. Let the
+ * label wrap anywhere and pin the icon to its intrinsic size. */
+.LexicalEditor__toolbar__insertDropdown__body .mantine-Menu-itemIcon {
+  flex-shrink: 0;
+}
+
+.LexicalEditor__toolbar__insertDropdown__body .mantine-Menu-itemLabel {
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
 .LexicalEditor__editor {
   border: 1px solid #ced4da;
   background: #fff;
