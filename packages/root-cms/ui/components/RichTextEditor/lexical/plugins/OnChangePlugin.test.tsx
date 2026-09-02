@@ -147,6 +147,52 @@ describe('OnChangePlugin', () => {
     expect(editor.getEditorState()).toBe(editorState);
   });
 
+  test('ignores stale echoes of earlier edits', async () => {
+    // A controlled parent re-renders each emitted value, but its effects can
+    // lag behind fast typing. When the render for an earlier keystroke lands
+    // after a later keystroke was already applied, the editor must keep the
+    // later content rather than reverting (and resetting the cursor).
+    let editor!: LexicalEditor;
+    const onChange = vi.fn();
+    const {rerender} = render(
+      <TestEditor
+        value={richText('h', 1000)}
+        onChange={onChange}
+        onReady={(e) => (editor = e)}
+      />
+    );
+    await flush();
+
+    const type = (text: string) => {
+      editor.update(() => {
+        const paragraph = $createParagraphNode();
+        paragraph.append($createTextNode(text));
+        const root = $getRoot();
+        root.clear();
+        root.append(paragraph);
+      });
+    };
+    type('he');
+    await flush();
+    type('hel');
+    await flush();
+    expect(onChange).toHaveBeenCalledTimes(2);
+    const staleValue = onChange.mock.calls[0][0] as RichTextData;
+    const editorState = editor.getEditorState();
+
+    // The first keystroke's value arrives after the second was applied.
+    rerender(
+      <TestEditor
+        value={staleValue}
+        onChange={onChange}
+        onReady={(e) => (editor = e)}
+      />
+    );
+    await flush();
+    expect(editor.getEditorState()).toBe(editorState);
+    expect(editor.getRootElement()?.textContent).toContain('hel');
+  });
+
   test('ignores values that only differ by timestamp', async () => {
     let editor!: LexicalEditor;
     const {rerender} = render(

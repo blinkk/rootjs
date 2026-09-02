@@ -1,0 +1,15 @@
+.CommentEditor {
+  width: 100%;
+}
+
+.CommentEditor .LexicalEditor__placeholder {
+  color: var(--color-text-gray);
+  font-size: 14px;
+  left: 12px;
+  line-height: 1.5;
+  top: 12px;
+}
+
+.CommentEditor__wrap--minimal .LexicalEditor__placeholder {
+  top: 10px;
+}

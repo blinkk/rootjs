@@ -31,15 +31,16 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {
-  RichTextBlock,
+  extractRichTextMentions,
   RichTextData,
-  RichTextListItem,
 } from '../../../shared/richtext.js';
-import {sanitizeInlineHtml} from '../../../shared/sanitize.js';
+import {
+  CommentBody,
+  richTextFromPlainText,
+} from '../../components/CommentBody/CommentBody.js';
+import {CommentEditor} from '../../components/CommentEditor/CommentEditor.js';
 import {Heading} from '../../components/Heading/Heading.js';
-import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
-import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
 import {Text} from '../../components/Text/Text.js';
 import {
   UserMultiSelect,
@@ -1056,7 +1057,9 @@ function TaskCommentCard(props: {
     }
     setSaving(true);
     try {
-      await editTaskComment(comment.taskId, comment.id, editBody);
+      await editTaskComment(comment.taskId, comment.id, editBody, {
+        mentions: extractRichTextMentions(editBody),
+      });
       setEditing(false);
     } catch (err) {
       showNotification({
@@ -1149,7 +1152,7 @@ function TaskCommentCard(props: {
           </div>
           {editing ? (
             <div className="TaskPage__comment__edit">
-              <TaskCommentEditor
+              <CommentEditor
                 value={editBody}
                 placeholder="Edit this comment..."
                 onChange={setEditBody}
@@ -1184,26 +1187,12 @@ function TaskCommentCard(props: {
               </div>
             </div>
           ) : (
-            <div
-              className={joinClassNames(
-                'TaskPage__comment__body',
-                comment.isDeleted && 'TaskPage__comment__body--deleted'
-              )}
-              onClick={onCommentBodyClick}
-            >
-              {comment.isDeleted ? (
-                'Comment deleted.'
-              ) : comment.body ? (
-                <TaskRichText
-                  className="TaskPage__comment__richText"
-                  data={comment.body}
-                />
-              ) : comment.content ? (
-                <Markdown
-                  className="TaskPage__comment__markdown"
-                  code={comment.content}
-                />
-              ) : null}
+            <div className="TaskPage__comment__body">
+              <CommentBody
+                body={comment.body}
+                content={comment.content}
+                deleted={comment.isDeleted}
+              />
               {!comment.isDeleted && (
                 <TaskCommentAttachments
                   attachments={comment.attachments || []}
@@ -1294,7 +1283,10 @@ function TaskCommentComposer(props: {
     }
     setSubmitting(true);
     try {
-      await addTaskComment(props.taskId, body, props.parentId, {attachments});
+      await addTaskComment(props.taskId, body, props.parentId, {
+        attachments,
+        mentions: extractRichTextMentions(body),
+      });
       setBody(null);
       setAttachments([]);
       setEditorKey((value) => value + 1);
@@ -1324,7 +1316,7 @@ function TaskCommentComposer(props: {
       )}
     >
       <form onSubmit={onSubmit}>
-        <TaskCommentEditor
+        <CommentEditor
           key={editorKey}
           autoFocus={props.autoFocus}
           placeholder={isReply ? 'Write a reply...' : 'Leave a comment...'}
@@ -1451,180 +1443,6 @@ function isImageAttachment(attachment: TaskAttachment) {
   const ext =
     attachment.src.split('?')[0].split('.').at(-1)?.toLowerCase() || '';
   return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif'].includes(ext);
-}
-
-/**
- * Handles clicks on links inside comment bodies. Only `/cms` links are left to
- * the SPA router; all other links open in a new window.
- */
-function onCommentBodyClick(e: MouseEvent) {
-  const link = (e.target as HTMLElement)?.closest?.(
-    'a[href]'
-  ) as HTMLAnchorElement | null;
-  if (!link) {
-    return;
-  }
-  const href = link.getAttribute('href') || '';
-  if (!href || href.startsWith('#') || isCmsInternalUrl(href)) {
-    return;
-  }
-  e.preventDefault();
-  e.stopPropagation();
-  window.open(link.href, '_blank', 'noopener,noreferrer');
-}
-
-/** Returns true if a link should be handled by the CMS SPA router. */
-function isCmsInternalUrl(href: string) {
-  try {
-    const url = new URL(href, window.location.origin);
-    return (
-      url.origin === window.location.origin &&
-      (url.pathname === '/cms' || url.pathname.startsWith('/cms/'))
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Adds `target="_blank"` and an external-link marker class to any non-CMS
- * links in sanitized comment HTML, so they bypass SPA navigation.
- */
-function decorateCommentHtml(html: string) {
-  if (!html.includes('<a')) {
-    return html;
-  }
-  const template = document.createElement('template');
-  template.innerHTML = html;
-  template.content.querySelectorAll('a[href]').forEach((link) => {
-    const href = link.getAttribute('href') || '';
-    if (href.startsWith('#') || isCmsInternalUrl(href)) {
-      return;
-    }
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    link.classList.add('TaskPage__externalLink');
-  });
-  return template.innerHTML;
-}
-
-function TaskRichText(props: {className?: string; data: RichTextData}) {
-  return (
-    <div className={props.className}>
-      {(props.data.blocks || []).map((block, index) => (
-        <TaskRichTextBlock key={index} block={block} />
-      ))}
-    </div>
-  );
-}
-
-function TaskRichTextBlock(props: {block: RichTextBlock}) {
-  const {block} = props;
-  switch (block.type) {
-    case 'paragraph':
-      return <TaskRichTextHtml tag="p" html={block.data?.text} />;
-    case 'heading':
-      return <TaskRichTextHtml tag="h4" html={block.data?.text} />;
-    case 'quote':
-      return <TaskRichTextHtml tag="blockquote" html={block.data?.text} />;
-    case 'orderedList':
-      return (
-        <ol>
-          {(block.data?.items || []).map(
-            (item: RichTextListItem, index: number) => (
-              <TaskRichTextListItem key={index} item={item} />
-            )
-          )}
-        </ol>
-      );
-    case 'unorderedList':
-      return (
-        <ul>
-          {(block.data?.items || []).map(
-            (item: RichTextListItem, index: number) => (
-              <TaskRichTextListItem key={index} item={item} />
-            )
-          )}
-        </ul>
-      );
-    case 'image': {
-      const image = block.data?.file;
-      if (!image?.url) {
-        return null;
-      }
-      return (
-        <img
-          src={image.url}
-          width={Number(image.width) || undefined}
-          height={Number(image.height) || undefined}
-          alt={image.alt || ''}
-        />
-      );
-    }
-    default:
-      return null;
-  }
-}
-
-function TaskRichTextHtml(props: {
-  tag: 'p' | 'h4' | 'blockquote';
-  html?: string;
-}) {
-  if (!props.html) {
-    return null;
-  }
-  const Component = props.tag;
-  return (
-    <Component
-      dangerouslySetInnerHTML={{
-        __html: decorateCommentHtml(sanitizeInlineHtml(props.html)),
-      }}
-    />
-  );
-}
-
-function TaskRichTextListItem(props: {item: RichTextListItem}) {
-  return (
-    <li>
-      {props.item.content && (
-        <span
-          dangerouslySetInnerHTML={{
-            __html: decorateCommentHtml(sanitizeInlineHtml(props.item.content)),
-          }}
-        />
-      )}
-      {props.item.items && props.item.items.length > 0 && (
-        <ul>
-          {props.item.items.map((item, index) => (
-            <TaskRichTextListItem key={index} item={item} />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-}
-
-function richTextFromPlainText(value: string): RichTextData | null {
-  if (!value.trim()) {
-    return null;
-  }
-  return {
-    blocks: value.split(/\n{2,}/).map((text) => ({
-      type: 'paragraph',
-      data: {text: escapeHtml(text).replace(/\n/g, '<br>')},
-    })),
-    time: Date.now(),
-    version: 'plain-text',
-  };
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function timestampMillis(ts?: Timestamp) {
