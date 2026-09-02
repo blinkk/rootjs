@@ -75,13 +75,13 @@ export function CommentsPanel(props: CommentsPanelProps) {
     if (!focusFieldKey || ctx?.loading) {
       return;
     }
-    const thread = ctx?.threadsByFieldKey.get(focusFieldKey);
-    if (thread) {
+    if (ctx?.threadsByFieldKey.has(focusFieldKey)) {
       setDraftFieldKey(null);
-      if (!isOpenThread(thread) && filter === 'open') {
+      if (filter === 'resolved') {
         setFilter('all');
       }
     } else {
+      // No open thread on the field: offer a composer for a new one.
       setDraftFieldKey(focusFieldKey);
     }
     // Wait for the list to render before scrolling.
@@ -107,6 +107,23 @@ export function CommentsPanel(props: CommentsPanelProps) {
   // ancestors, and highlights the field.
   const navigateTo = (fieldKey: string) => {
     window.postMessage({scrollToDeeplink: {deepKey: fieldKey}}, '*');
+  };
+
+  // Starts a new thread on a field from one of its resolved threads. The
+  // field's open thread is focused instead when it already has one.
+  const startNewThread = (fieldKey: string) => {
+    if (!ctx?.threadsByFieldKey.has(fieldKey)) {
+      setDraftFieldKey(fieldKey);
+    }
+    if (filter === 'resolved') {
+      setFilter('all');
+    }
+    requestAnimationFrame(() => {
+      const el = bodyRef.current?.querySelector<HTMLElement>(
+        `[data-field-key="${CSS.escape(fieldKey)}"]`
+      );
+      el?.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    });
   };
 
   return (
@@ -165,8 +182,11 @@ export function CommentsPanel(props: CommentsPanelProps) {
                 fieldKey={thread.fieldKey}
                 fieldLabel={labelFor(thread.fieldKey, thread.fieldLabel)}
                 thread={thread}
-                focused={thread.fieldKey === focusFieldKey}
+                focused={
+                  thread.fieldKey === focusFieldKey && isOpenThread(thread)
+                }
                 onNavigate={() => navigateTo(thread.fieldKey)}
+                onStartNewThread={() => startNewThread(thread.fieldKey)}
               />
             ))}
             {visibleThreads.length === 0 && !draftFieldKey && (
@@ -193,6 +213,7 @@ interface CommentsPanelThreadProps {
   focused?: boolean;
   autoFocus?: boolean;
   onNavigate: () => void;
+  onStartNewThread?: () => void;
 }
 
 function CommentsPanelThread(props: CommentsPanelThreadProps) {
@@ -211,6 +232,7 @@ function CommentsPanelThread(props: CommentsPanelThreadProps) {
         thread={props.thread}
         autoFocus={props.autoFocus}
         onNavigate={props.onNavigate}
+        onStartNewThread={props.onStartNewThread}
       />
     </div>
   );

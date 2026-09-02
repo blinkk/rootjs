@@ -157,8 +157,7 @@ export function buildCommentEmailTemplateData(
     actionName,
     by,
     fieldLabel,
-    metadata.docId,
-    Boolean(metadata.reopened)
+    metadata.docId
   );
   const baseUrl = (options?.cmsUrl || (ctx.rootConfig as any)?.domain || '')
     .toString()
@@ -190,14 +189,11 @@ function describeCommentAction(
   actionName: FieldCommentAction,
   by: string,
   fieldLabel: string,
-  docId: string,
-  reopened = false
+  docId: string
 ): string {
   switch (actionName) {
     case FIELD_COMMENT_ACTIONS.add:
-      return reopened
-        ? `${by} reopened and commented on "${fieldLabel}" in ${docId}`
-        : `${by} commented on "${fieldLabel}" in ${docId}`;
+      return `${by} commented on "${fieldLabel}" in ${docId}`;
     case FIELD_COMMENT_ACTIONS.edit:
       return `${by} edited a comment on "${fieldLabel}" in ${docId}`;
     case FIELD_COMMENT_ACTIONS.delete:

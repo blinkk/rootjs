@@ -14,6 +14,7 @@ import {
   fieldKeyToThreadId,
   getThreadComments,
   normalizeEmails,
+  resolvedThreadId,
   truncateCommentContent,
 } from '../../shared/comments.js';
 import {
@@ -28,6 +29,11 @@ export type FieldCommentsUnsubscribe = () => void;
 /**
  * Firestore access for field comment threads, stored per draft doc at
  * `Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}`.
+ *
+ * A field's open thread lives at a deterministic id derived from the field
+ * key, so it can be read and written inside a transaction without a query.
+ * Resolving a thread moves it to a timestamped id, which frees the
+ * deterministic id for the field's next thread.
  */
 
 function parseDocId(docId: string) {
@@ -76,7 +82,7 @@ function readThread(data: Record<string, any>, id: string): FieldCommentThread {
   };
 }
 
-/** Subscribes to all comment threads for a doc. */
+/** Subscribes to all comment threads (open and resolved) for a doc. */
 export function subscribeFieldCommentThreads(
   docId: string,
   onThreads: (threads: FieldCommentThread[]) => void,
@@ -125,8 +131,9 @@ export interface AddFieldCommentOptions {
 }
 
 /**
- * Adds a comment to a field's thread, creating the thread when the field has
- * no comments yet. Commenting on a resolved thread reopens it.
+ * Adds a comment to the field's open thread, starting a new thread when the
+ * field has none. Resolved threads are never appended to; they stay archived
+ * and the comment goes into a fresh thread.
  */
 export async function addFieldComment(
   docId: string,
@@ -159,10 +166,23 @@ export async function addFieldComment(
   };
 
   let participants: string[] = [];
-  let reopened = false;
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(threadRef);
-    if (!snapshot.exists()) {
+    const existing = snapshot.exists()
+      ? readThread(snapshot.data() || {}, snapshot.id)
+      : null;
+
+    // A resolved thread at the open id is left over from an older data
+    // layout; archive it so the field starts a fresh thread.
+    if (existing && existing.status === 'resolved') {
+      const archivedRef = threadDocRef(
+        docId,
+        resolvedThreadId(threadId, now.toMillis())
+      );
+      transaction.set(archivedRef, {...snapshot.data(), id: archivedRef.id});
+    }
+
+    if (!existing || existing.status === 'resolved') {
       participants = [userEmail];
       const thread: Record<string, any> = {
         id: threadId,
@@ -175,6 +195,8 @@ export async function addFieldComment(
         createdBy: userEmail,
         updatedAt: serverTimestamp(),
         updatedBy: userEmail,
+        resolvedAt: null,
+        resolvedBy: null,
       };
       if (options.fieldLabel) {
         thread.fieldLabel = options.fieldLabel;
@@ -183,50 +205,31 @@ export async function addFieldComment(
       return;
     }
 
-    const existing = readThread(snapshot.data() || {}, snapshot.id);
     participants = normalizeEmails([...existing.participants, userEmail]);
-    const comments = [...existing.comments];
-    reopened = existing.status === 'resolved';
-    if (reopened) {
-      comments.push({
-        id: newEntryId(docId),
-        type: 'reopened',
-        createdAt: now,
-        createdBy: userEmail,
-      });
-    }
-    comments.push(comment);
     const update: Record<string, any> = {
-      comments,
+      comments: [...existing.comments, comment],
       participants,
-      status: 'open',
       updatedAt: serverTimestamp(),
       updatedBy: userEmail,
     };
-    if (reopened) {
-      update.resolvedAt = null;
-      update.resolvedBy = null;
-    }
     if (options.fieldLabel && !existing.fieldLabel) {
       update.fieldLabel = options.fieldLabel;
     }
     transaction.update(threadRef, update);
   });
 
-  // A comment that reopens a resolved thread is logged as a single `add`
-  // action (flagged `reopened`) so notification services don't fire twice.
-  const metadata = buildActionMetadata(
-    docId,
-    {id: threadId, fieldKey, fieldLabel: options.fieldLabel},
-    {
-      commentId,
-      content: truncateCommentContent(content),
-      mentions,
-      participants,
-      ...(reopened ? {reopened: true} : {}),
-    }
-  );
-  logAction(FIELD_COMMENT_ACTIONS.add, {metadata});
+  logAction(FIELD_COMMENT_ACTIONS.add, {
+    metadata: buildActionMetadata(
+      docId,
+      {id: threadId, fieldKey, fieldLabel: options.fieldLabel},
+      {
+        commentId,
+        content: truncateCommentContent(content),
+        mentions,
+        participants,
+      }
+    ),
+  });
   return {threadId, commentId};
 }
 
@@ -348,71 +351,136 @@ export async function deleteFieldComment(
   });
 }
 
-async function setThreadStatus(
+/**
+ * Marks a thread as resolved. The thread is moved from the field's open
+ * thread id to a timestamped id so the field can start a new thread. Returns
+ * the archived thread's id.
+ */
+export async function resolveFieldCommentThread(
   docId: string,
-  threadId: string,
-  status: 'open' | 'resolved'
+  threadId: string
 ) {
   const db = window.firebase.db;
   const threadRef = threadDocRef(docId, threadId);
   const userEmail = currentUserEmail();
+  const now = Timestamp.now();
+  const archivedId = resolvedThreadId(threadId, now.toMillis());
+  const archivedRef = threadDocRef(docId, archivedId);
 
-  return runTransaction(db, async (transaction) => {
+  const thread = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(threadRef);
     if (!snapshot.exists()) {
       throw new Error('comment thread not found');
     }
     const existing = readThread(snapshot.data() || {}, snapshot.id);
-    if (existing.status === status) {
+    if (existing.status === 'resolved') {
       return null;
     }
-    const comments = [
-      ...existing.comments,
-      {
-        id: newEntryId(docId),
-        type: status === 'resolved' ? 'resolved' : 'reopened',
-        createdAt: Timestamp.now(),
-        createdBy: userEmail,
-      } as FieldComment,
-    ];
-    transaction.update(threadRef, {
-      status,
-      comments,
-      resolvedAt: status === 'resolved' ? serverTimestamp() : null,
-      resolvedBy: status === 'resolved' ? userEmail : null,
+    transaction.set(archivedRef, {
+      ...snapshot.data(),
+      id: archivedId,
+      status: 'resolved',
+      comments: [
+        ...existing.comments,
+        {
+          id: newEntryId(docId),
+          type: 'resolved',
+          createdAt: now,
+          createdBy: userEmail,
+        } as FieldComment,
+      ],
+      resolvedAt: serverTimestamp(),
+      resolvedBy: userEmail,
       updatedAt: serverTimestamp(),
       updatedBy: userEmail,
     });
+    transaction.delete(threadRef);
     return existing;
   });
-}
 
-/** Marks a thread as resolved. */
-export async function resolveFieldCommentThread(
-  docId: string,
-  threadId: string
-) {
-  const thread = await setThreadStatus(docId, threadId, 'resolved');
   if (thread) {
     logAction(FIELD_COMMENT_ACTIONS.resolve, {
-      metadata: buildActionMetadata(docId, thread, {
-        participants: thread.participants,
-      }),
+      metadata: buildActionMetadata(
+        docId,
+        {...thread, id: archivedId},
+        {participants: thread.participants}
+      ),
     });
   }
+  return thread ? archivedId : threadId;
 }
 
-/** Reopens a resolved thread. */
+/**
+ * Reopens a resolved thread by moving it back to the field's open thread id.
+ * Fails when the field already has an open thread; comments should go there
+ * instead. Returns the reopened thread's id.
+ */
 export async function reopenFieldCommentThread(
   docId: string,
   threadId: string
 ) {
-  const thread = await setThreadStatus(docId, threadId, 'open');
-  if (thread) {
-    logAction(FIELD_COMMENT_ACTIONS.reopen, {
-      metadata: buildActionMetadata(docId, thread, {
-        participants: thread.participants,
-      }),
-    });
+  const db = window.firebase.db;
+  const archivedRef = threadDocRef(docId, threadId);
+  const userEmail = currentUserEmail();
+  const now = Timestamp.now();
+
+  // The field key is needed to derive the open id, so read the thread first.
+  // The transaction re-reads it to guard against concurrent changes.
+  const archivedSnapshot = await runTransaction(db, (transaction) =>
+    transaction.get(archivedRef)
+  );
+  if (!archivedSnapshot.exists()) {
+    throw new Error('comment thread not found');
   }
+  const archived = readThread(archivedSnapshot.data() || {}, threadId);
+  if (archived.status !== 'resolved') {
+    return threadId;
+  }
+  const openId = await fieldKeyToThreadId(archived.fieldKey);
+  const openRef = threadDocRef(docId, openId);
+
+  const thread = await runTransaction(db, async (transaction) => {
+    const [snapshot, openSnapshot] = await Promise.all([
+      transaction.get(archivedRef),
+      transaction.get(openRef),
+    ]);
+    if (!snapshot.exists()) {
+      throw new Error('comment thread not found');
+    }
+    if (openSnapshot.exists()) {
+      throw new Error(
+        'This field already has an open thread. Add your comment there instead.'
+      );
+    }
+    const existing = readThread(snapshot.data() || {}, snapshot.id);
+    transaction.set(openRef, {
+      ...snapshot.data(),
+      id: openId,
+      status: 'open',
+      comments: [
+        ...existing.comments,
+        {
+          id: newEntryId(docId),
+          type: 'reopened',
+          createdAt: now,
+          createdBy: userEmail,
+        } as FieldComment,
+      ],
+      resolvedAt: null,
+      resolvedBy: null,
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+    transaction.delete(archivedRef);
+    return existing;
+  });
+
+  logAction(FIELD_COMMENT_ACTIONS.reopen, {
+    metadata: buildActionMetadata(
+      docId,
+      {...thread, id: openId},
+      {participants: thread.participants}
+    ),
+  });
+  return openId;
 }

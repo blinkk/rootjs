@@ -170,3 +170,30 @@
   color: var(--color-text-gray);
   font-size: 12px;
 }
+
+.CommentThread__resolvedNote {
+  align-items: flex-start;
+  color: var(--color-text-gray);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.CommentThread__resolvedLink {
+  background: none;
+  border: none;
+  color: var(--color-text-gray);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.CommentThread__resolvedLink:hover {
+  color: var(--color-text-default);
+}

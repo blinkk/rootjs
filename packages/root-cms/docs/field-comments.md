@@ -9,9 +9,13 @@ UI, and `core/services-notifications-comments.ts` for email notifications.
 ## Overview
 
 Field comments let editors leave comments on individual fields of a doc,
-similar to comments in Google Docs or Figma. Each field has a single thread:
-a flat, chronological history of comments with no nested replies. Threads
-can be resolved and are reopened automatically when someone comments again.
+similar to comments in Google Docs or Figma. A thread is a flat,
+chronological history of comments with no nested replies. A field has at
+most one open thread at a time. Resolving a thread archives it; the next
+comment on the field starts a fresh thread, so a long-lived doc accumulates
+separate threads per launch rather than one ever-growing history. Archived
+threads can be reopened from the comments panel as long as the field has no
+other open thread.
 
 Comments support `@mentions`. Typing `@` followed by part of a user's name or
 email in the comment box opens an autocomplete of the project's users.
@@ -31,8 +35,10 @@ they survive sanitization and can be extracted server-side.
   resolved, or all. Clicking a thread's field label scrolls the editor to
   the field. The popover's "Open in comments panel" action focuses the
   thread in the panel.
-- **Resolving.** Anyone with edit access can mark a thread as resolved or
-  reopen it. Authors can edit or delete their own comments.
+- **Resolving.** Anyone with edit access can mark a thread as resolved.
+  Resolved threads are read-only; they offer a "Reopen" action (allowed only
+  when the field has no open thread) and a "New thread" action. Authors can
+  edit or delete their own comments.
 
 The comment box is the same `CommentEditor` component used by the task
 manager (`ui/components/CommentEditor/`). Tasks use its default variant
@@ -46,13 +52,19 @@ Threads are stored per draft doc:
 Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}
 ```
 
-`threadId` is derived from the field's deep key (e.g. `fields.hero.title`):
-a readable prefix (the last segment of the key) plus a truncated SHA-256 of
-the full key, e.g. `title-3f9a0c1d2e…`. Hashing keeps ids well under
-firestore's 1,500-byte doc id limit no matter how deeply a field is nested,
-while staying deterministic so a thread can be fetched without a query.
+A field's **open** thread lives at a deterministic id derived from the
+field's deep key (e.g. `fields.hero.title`): a readable prefix (the last
+segment of the key) plus a truncated SHA-256 of the full key, e.g.
+`title-3f9a0c1d2e…`. Hashing keeps ids well under firestore's 1,500-byte doc
+id limit no matter how deeply a field is nested, while staying deterministic
+so the open thread can be read and written in a transaction without a query.
 Array items are keyed by their stable item key, so they keep their comments
-when reordered. Each thread doc holds:
+when reordered.
+
+Resolving a thread moves it to `<openThreadId>-<resolvedAtMillis>` and
+deletes the open doc, which frees the deterministic id for the field's next
+thread. Reopening moves it back, and fails if another thread now occupies
+the open id. Each thread doc holds:
 
 ```ts
 {
@@ -82,11 +94,11 @@ The metadata shape is `FieldCommentActionMetadata` in `shared/comments.ts`.
 
 | Action               | When                                  |
 | -------------------- | ------------------------------------- |
-| `doc.comment.add`    | A comment is added to a thread. Carries `reopened: true` when it reopened a resolved thread (no separate `reopen` action is logged). |
+| `doc.comment.add`    | A comment is added to a thread (or starts one). |
 | `doc.comment.edit`   | The author edits a comment.           |
 | `doc.comment.delete` | The author deletes a comment.         |
-| `doc.comment.resolve`| A thread is marked as resolved.       |
-| `doc.comment.reopen` | A resolved thread is reopened via the reopen button. |
+| `doc.comment.resolve`| A thread is resolved. `threadId` is the archived id. |
+| `doc.comment.reopen` | A resolved thread is reopened. `threadId` is the open id. |
 
 ## Email notifications
 

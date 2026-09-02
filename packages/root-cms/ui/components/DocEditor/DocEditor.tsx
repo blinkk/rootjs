@@ -62,7 +62,7 @@ import {
 } from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
-import {countThreadComments, isOpenThread} from '../../../shared/comments.js';
+import {countThreadComments} from '../../../shared/comments.js';
 import {
   FIRESTORE_MAX_NESTING_DEPTH,
   getRemainingNestingDepth,
@@ -91,6 +91,7 @@ import {
   TOGGLE_COMMENTS_EVENT,
   useFieldCommentThread,
   useFieldComments,
+  useFieldResolvedThreads,
 } from '../../hooks/useFieldComments.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -991,12 +992,13 @@ DocEditor.FieldHeaderCommentActionIconInner = (
 ) => {
   const comments = useFieldComments()!;
   const thread = useFieldCommentThread(props.deepKey);
+  const resolvedThreads = useFieldResolvedThreads(props.deepKey);
   const draft = useDraftDoc();
   const collection = useDocCollectionSchema();
   const [opened, setOpened] = useState(false);
   const count = thread ? countThreadComments(thread) : 0;
-  const isOpen = Boolean(thread && isOpenThread(thread));
-  const canOpen = Boolean(thread) || comments.canComment;
+  const hasResolved = resolvedThreads.length > 0;
+  const canOpen = Boolean(thread) || hasResolved || comments.canComment;
 
   // The label depends on the doc value (array positions, one-of types), so
   // it's recomputed each time the popover opens.
@@ -1013,10 +1015,10 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   }
 
   const label = thread
-    ? isOpen
-      ? `${count} comment${count === 1 ? '' : 's'}`
-      : 'Resolved comments'
-    : 'Add comment';
+    ? `${count} comment${count === 1 ? '' : 's'}`
+    : hasResolved
+      ? 'Add comment (has resolved threads)'
+      : 'Add comment';
 
   return (
     <Popover
@@ -1039,8 +1041,9 @@ DocEditor.FieldHeaderCommentActionIconInner = (
             type="button"
             className={joinClassNames(
               'DocEditor__FieldHeader__comments__button',
-              thread && 'DocEditor__FieldHeader__comments__button--hasThread',
-              isOpen && 'DocEditor__FieldHeader__comments__button--open',
+              (thread || hasResolved) &&
+                'DocEditor__FieldHeader__comments__button--hasThread',
+              thread && 'DocEditor__FieldHeader__comments__button--open',
               opened && 'DocEditor__FieldHeader__comments__button--active'
             )}
             aria-label={label}
@@ -1053,12 +1056,12 @@ DocEditor.FieldHeaderCommentActionIconInner = (
               setOpened((value) => !value);
             }}
           >
-            {thread ? (
+            {thread || hasResolved ? (
               <IconMessages size={14} strokeWidth="1.8" />
             ) : (
               <IconMessage size={14} strokeWidth="1.8" />
             )}
-            {isOpen && count > 0 && (
+            {thread && count > 0 && (
               <span className="DocEditor__FieldHeader__comments__count">
                 {count}
               </span>
@@ -1076,6 +1079,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
           fieldKey={props.deepKey}
           fieldLabel={fieldLabel}
           thread={thread}
+          resolvedCount={resolvedThreads.length}
           autoFocus
           headerActions={
             <>
