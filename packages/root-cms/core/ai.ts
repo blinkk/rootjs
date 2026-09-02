@@ -31,7 +31,6 @@ import {
   AiExecutionMode,
   AiModelConfig,
   normalizeExecutionMode,
-  resolveImageModel,
   resolveLanguageModel,
   testSupportsImageEditing,
 } from '../shared/ai/models.js';
@@ -46,6 +45,11 @@ import {
   stripUndefined,
   TITLE_GENERATION_SYSTEM_PROMPT,
 } from '../shared/ai/prompt-utils.js';
+import {
+  ResolvedAiModelConfig,
+  resolveServerImageModel,
+  resolveVertexCredentials,
+} from './ai-vertex.js';
 
 // Re-exports for back-compat (consumers and tests import these from `./ai.js`).
 export type {
@@ -62,6 +66,11 @@ export {
   testSupportsImageEditing,
   withBrowserHeaders,
 } from '../shared/ai/models.js';
+export type {ResolvedAiModelConfig} from './ai-vertex.js';
+export {
+  resolveServerImageModel,
+  resolveVertexCredentials,
+} from './ai-vertex.js';
 export {
   buildTitlePrompt,
   buildTitlePromptContext,
@@ -130,7 +139,7 @@ export function serializeAiConfig(config: AiConfig) {
  * Only return it from authenticated endpoints, and only for the model the user
  * actually selected.
  */
-export function serializeAiClientModel(model: AiModelConfig) {
+export function serializeAiClientModel(model: ResolvedAiModelConfig) {
   return {
     id: model.id,
     label: model.label || model.id,
@@ -140,6 +149,9 @@ export function serializeAiClientModel(model: AiModelConfig) {
     apiKey: model.apiKey,
     baseURL: model.baseURL,
     headers: model.headers,
+    project: model.project,
+    location: model.location,
+    credentialsExpireAt: model.credentialsExpireAt,
     capabilities: {
       tools: model.capabilities?.tools !== false,
       reasoning: model.capabilities?.reasoning ?? false,
@@ -149,6 +161,20 @@ export function serializeAiClientModel(model: AiModelConfig) {
 }
 
 export type SerializedAiClientModel = ReturnType<typeof serializeAiClientModel>;
+
+/**
+ * Resolves request-time credentials for `model` (e.g. a short-lived Vertex AI
+ * access token) and serializes it for the browser. The `prepare` endpoints
+ * use this instead of calling `serializeAiClientModel` directly.
+ */
+export async function prepareClientModel(
+  rootConfig: RootConfig,
+  model: AiModelConfig
+): Promise<SerializedAiClientModel> {
+  return serializeAiClientModel(
+    await resolveVertexCredentials(rootConfig, model)
+  );
+}
 
 /** Returns the AI config registered on the CMS plugin, or `null`. */
 export function getAiConfig(rootConfig: RootConfig): AiConfig | null {
@@ -573,7 +599,9 @@ export async function summarizeDiff(
   options: SummarizeDiffOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(model);
+  const languageModel = resolveLanguageModel(
+    await resolveVertexCredentials(rootConfig, model)
+  );
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
@@ -613,7 +641,9 @@ export async function generatePublishMessage(
   options: SummarizeDiffOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(model);
+  const languageModel = resolveLanguageModel(
+    await resolveVertexCredentials(rootConfig, model)
+  );
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
@@ -665,7 +695,9 @@ export async function translateString(
   options: TranslateStringOptions
 ): Promise<Record<string, string>> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(model);
+  const languageModel = resolveLanguageModel(
+    await resolveVertexCredentials(rootConfig, model)
+  );
 
   const system = [
     'You are a professional translator assistant for a website CMS.',
@@ -744,7 +776,9 @@ export async function generateAltText(
   options: GenerateAltTextOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(model);
+  const languageModel = resolveLanguageModel(
+    await resolveVertexCredentials(rootConfig, model)
+  );
 
   const system = [
     'Write descriptive, concise alt text for the image provided by the user.',
@@ -817,7 +851,10 @@ export async function generateImage(
     );
   }
 
-  const imageModel = resolveImageModel(imageModelConfig);
+  const imageModel = await resolveServerImageModel(
+    rootConfig,
+    imageModelConfig
+  );
   const result = await generateImageSdk({
     model: imageModel,
     prompt: options.prompt,
@@ -891,7 +928,10 @@ export async function editImage(
   // remote URLs, and a data URL works the same for both.
   const sourceImage = await fetchImageAsDataUrl(options.imageUrl);
 
-  const imageModel = resolveImageModel(imageModelConfig);
+  const imageModel = await resolveServerImageModel(
+    rootConfig,
+    imageModelConfig
+  );
   const result = await generateImageSdk({
     model: imageModel,
     prompt: {images: [sourceImage], text: options.prompt},

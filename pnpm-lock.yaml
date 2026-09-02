@@ -317,6 +317,9 @@ importers:
       '@ai-sdk/google':
         specifier: 4.0.26
         version: 4.0.26(zod@4.4.3)
+      '@ai-sdk/google-vertex':
+        specifier: 5.0.33
+        version: 5.0.33(supports-color@10.2.2)(zod@4.4.3)
       '@ai-sdk/openai':
         specifier: 4.0.22
         version: 4.0.22(zod@4.4.3)
@@ -371,6 +374,9 @@ importers:
       fnv-plus:
         specifier: 1.3.1
         version: 1.3.1
+      google-auth-library:
+        specifier: 10.6.2
+        version: 10.6.2(supports-color@10.2.2)
       jsonwebtoken:
         specifier: 9.0.3
         version: 9.0.3
@@ -667,6 +673,12 @@ packages:
 
   '@ai-sdk/gateway@4.0.30':
     resolution: {integrity: sha512-nhgR5U6N0wRg+32Mnd8YrOknWQhWfn3ZAKhEOEf6u3dWzhNxTAAPIB7nnz5gRf8Us8K45yIsTrk0OtH897z7Mw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/google-vertex@5.0.33':
+    resolution: {integrity: sha512-cawoMO83j6892IUicaxVhAKoJ1Pp727965Iory+VCjgnborl2M6FRwH1uLycvhIvjTvTONlJenJezDc14pqvkg==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -2249,17 +2261,18 @@ packages:
   '@maxim_mazurok/gapi.client.discovery-v1@0.6.20200806':
     resolution: {integrity: sha512-QN6aGmIbLXcJW0SEf8tz9UWCpQTBMy2u4xSuZ04YofzMGknhWwMeUecySLntCZYAEstHzDoSgwxCf5Gb8GqIRQ==}
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260819':
-    resolution: {integrity: sha512-xOXj+gbdM67rYrs2tg6OVkpBUGPD58A6NwyiOTuixpq99IyY8XCHhrV4a7utRa2vsJCgsc9J24lJe5tdGduALg==}
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260824':
+    resolution: {integrity: sha512-cuwWJOo02oycXxmFNbHpszu0AUwCA5MfzlmUCps8jZXRP11yVqI1s67/I38l1A4MiDbGi2D3z7C2GkN1qZOXjw==}
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260821':
-    resolution: {integrity: sha512-unTwNRRUkY9VX4pYnvlY45NK+OODfOxLWTI31L0qA3iv2MK/cC6jOVtp8GKDvJSi4gCTLBAio9v6rmMDACD1aQ==}
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260828':
+    resolution: {integrity: sha512-P2zqGVOndRifb6tewCmWOXTmMf12rSzm9ecyM9w4aG1Z/j4hveTLEMWmf3NyYkDZF5A2RAFFuYrD3rBZIb6+Aw==}
 
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
+      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -7895,6 +7908,18 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.4.3
 
+  '@ai-sdk/google-vertex@5.0.33(supports-color@10.2.2)(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/anthropic': 4.0.23(zod@4.4.3)
+      '@ai-sdk/google': 4.0.26(zod@4.4.3)
+      '@ai-sdk/openai-compatible': 3.0.16(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.4
+      '@ai-sdk/provider-utils': 5.0.14(zod@4.4.3)
+      google-auth-library: 10.6.2(supports-color@10.2.2)
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
   '@ai-sdk/google@4.0.26(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.4
@@ -9880,17 +9905,39 @@ snapshots:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260819':
+  '@maxim_mazurok/gapi.client.drive-v3@0.3.20260824':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260821':
+  '@maxim_mazurok/gapi.client.sheets-v4@0.3.20260828':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
 
-  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)':
+  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@3.25.76)':
+    dependencies:
+      '@hono/node-server': 1.19.14(hono@4.12.23)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.1.0
+      express: 5.2.1(supports-color@10.2.2)
+      express-rate-limit: 8.5.2(express@5.2.1(supports-color@10.2.2))
+      hono: 4.12.23
+      jose: 6.2.3
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.2(zod@3.25.76)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.4.3)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.23)
       ajv: 8.20.0
@@ -10360,11 +10407,11 @@ snapshots:
 
   '@types/gapi.client.drive-v3@0.0.5':
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260819
+      '@maxim_mazurok/gapi.client.drive-v3': 0.3.20260824
 
   '@types/gapi.client.sheets-v4@0.0.4':
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260821
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.3.20260828
 
   '@types/gapi.client@1.0.8': {}
 
@@ -12367,7 +12414,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@25.9.1)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@3.25.76)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
@@ -12456,7 +12503,7 @@ snapshots:
       '@google-cloud/cloud-sql-connector': 1.11.1(supports-color@10.2.2)
       '@google-cloud/pubsub': 5.3.0(supports-color@10.2.2)
       '@inquirer/prompts': 7.10.1(@types/node@24.13.3)
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.4.3)
       abort-controller: 3.0.0
       ajv: 8.20.0
       ajv-formats: 3.0.1
