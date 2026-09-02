@@ -149,22 +149,6 @@ describe('commentEmailNotifications', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it('sends a single email when a comment reopens a thread', async () => {
-    const {ctx, sendEmail} = testContext();
-    const service = commentEmailNotifications();
-    await service.onAction!(
-      ctx,
-      commentAction({
-        metadata: {...commentAction().metadata, reopened: true},
-      })
-    );
-    expect(sendEmail).toHaveBeenCalledTimes(1);
-    const email = (sendEmail.mock.calls[0] as any)[0];
-    expect(email.subject).toBe(
-      '[Root CMS] author@example.com reopened and commented on "Hero › Title" in Pages/foo'
-    );
-  });
-
   it('describes resolve actions without comment content', async () => {
     const {ctx, sendEmail} = testContext();
     const service = commentEmailNotifications();

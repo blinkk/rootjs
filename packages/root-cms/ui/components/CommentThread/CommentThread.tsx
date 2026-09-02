@@ -6,6 +6,7 @@ import {
   IconArrowBackUp,
   IconCheck,
   IconMessage,
+  IconMessagePlus,
   IconPencil,
   IconSend2,
   IconTrash,
@@ -19,7 +20,10 @@ import {
   isOpenThread,
 } from '../../../shared/comments.js';
 import {RichTextData} from '../../../shared/richtext.js';
-import {useFieldComments} from '../../hooks/useFieldComments.js';
+import {
+  openFieldCommentsPanel,
+  useFieldComments,
+} from '../../hooks/useFieldComments.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   addFieldComment,
@@ -51,6 +55,17 @@ export interface CommentThreadProps {
   headerActions?: ComponentChildren;
   /** Called after a comment is successfully added. */
   onCommentAdded?: () => void;
+  /**
+   * Called when the user wants to start a new thread on the field (shown on
+   * resolved threads). When omitted, the comments panel is opened on the
+   * field instead.
+   */
+  onStartNewThread?: () => void;
+  /**
+   * Number of resolved threads the field has. Shown as a link to the
+   * comments panel when rendering a field without an open thread.
+   */
+  resolvedCount?: number;
   className?: string;
 }
 
@@ -87,6 +102,17 @@ export function CommentThread(props: CommentThreadProps) {
     } finally {
       setStatusPending(false);
     }
+  }
+
+  function startNewThread() {
+    if (props.onStartNewThread) {
+      props.onStartNewThread();
+      return;
+    }
+    openFieldCommentsPanel({
+      fieldKey: props.fieldKey,
+      fieldLabel: props.fieldLabel,
+    });
   }
 
   const fieldLabel = (
@@ -158,14 +184,30 @@ export function CommentThread(props: CommentThreadProps) {
           )}
         </div>
       )}
-      {canComment ? (
+      {!isOpen ? (
+        <div className="CommentThread__resolvedNote">
+          <span>
+            This thread is resolved. Reopen it to continue the conversation, or
+            start a new thread on the field.
+          </span>
+          {canComment && (
+            <Button
+              compact
+              size="xs"
+              variant="default"
+              leftIcon={<IconMessagePlus size={14} strokeWidth="1.8" />}
+              onClick={startNewThread}
+            >
+              New thread
+            </Button>
+          )}
+        </div>
+      ) : canComment ? (
         <CommentThreadComposer
           docId={props.docId}
           fieldKey={props.fieldKey}
           fieldLabel={props.fieldLabel}
-          placeholder={
-            isOpen ? 'Comment or @mention someone…' : 'Reply to reopen…'
-          }
+          placeholder="Comment or @mention someone…"
           autoFocus={props.autoFocus}
           onSubmitted={props.onCommentAdded}
         />
@@ -175,6 +217,21 @@ export function CommentThread(props: CommentThreadProps) {
             You don't have permission to comment on this doc.
           </div>
         )
+      )}
+      {!thread && (props.resolvedCount || 0) > 0 && (
+        <button
+          type="button"
+          className="CommentThread__resolvedLink"
+          onClick={() =>
+            openFieldCommentsPanel({
+              fieldKey: props.fieldKey,
+              fieldLabel: props.fieldLabel,
+            })
+          }
+        >
+          {props.resolvedCount} resolved thread
+          {props.resolvedCount === 1 ? '' : 's'} on this field
+        </button>
       )}
     </div>
   );

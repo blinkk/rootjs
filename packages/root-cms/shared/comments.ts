@@ -2,13 +2,16 @@ import type {RichTextData} from './richtext.js';
 
 /**
  * Field comments let CMS users leave comments on individual fields of a doc.
- * Each field has a single thread (a flat, chronological history, no nested
- * replies) which can be resolved and later reopened.
+ * A thread is a flat, chronological history (no nested replies). A field has
+ * at most one open thread at a time; resolving it archives the thread, and
+ * the next comment on the field starts a fresh thread. Archived threads can
+ * be reopened as long as the field has no other open thread.
  *
  * Threads are stored at
- * `Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}`
- * where `threadId` is derived from a hash of the field's deep key (see
- * {@link fieldKeyToThreadId}).
+ * `Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}`.
+ * The open thread lives at a deterministic id derived from the field's deep
+ * key (see {@link fieldKeyToThreadId}); resolved threads are moved to a
+ * timestamped id (see {@link resolvedThreadId}).
  */
 
 /** Minimal shape of a firestore `Timestamp` shared by the client and admin SDKs. */
@@ -51,7 +54,10 @@ export interface FieldComment {
 
 /** A thread of comments attached to a single field of a doc. */
 export interface FieldCommentThread {
-  /** Thread id, derived from a hash of the field key. */
+  /**
+   * Thread id. Open threads use the id derived from the field key; resolved
+   * threads carry a timestamp suffix.
+   */
   id: string;
   /** Doc id in the form `<collection>/<slug>`. */
   docId: string;
@@ -98,11 +104,6 @@ export interface FieldCommentActionMetadata {
   threadId: string;
   /** Id of the comment entry, for `add`, `edit` and `delete` actions. */
   commentId?: string;
-  /**
-   * Set on `add` actions when the comment reopened a resolved thread. No
-   * separate `reopen` action is logged in that case.
-   */
-  reopened?: boolean;
   /** Plain-text content of the comment, truncated for the log. */
   content?: string;
   /** Lower-cased emails of users mentioned in the comment. */
@@ -121,8 +122,8 @@ const THREAD_ID_PREFIX_MAX_LENGTH = 24;
 const THREAD_ID_HASH_LENGTH = 24;
 
 /**
- * Derives a firestore doc id for a field's comment thread from the field's
- * deep key (e.g. `fields.hero.title`).
+ * Derives the firestore doc id of a field's *open* comment thread from the
+ * field's deep key (e.g. `fields.hero.title`).
  *
  * Deep keys can grow long with nested objects and arrays, and firestore caps
  * doc ids at 1,500 bytes, so the key isn't used directly. Instead the id is
@@ -144,6 +145,19 @@ export async function fieldKeyToThreadId(fieldKey: string): Promise<string> {
     .slice(0, THREAD_ID_PREFIX_MAX_LENGTH);
   const hash = (await sha256Hex(key)).slice(0, THREAD_ID_HASH_LENGTH);
   return prefix ? `${prefix}-${hash}` : hash;
+}
+
+/**
+ * Returns the doc id a thread is moved to when it is resolved: the open
+ * thread id plus the resolve time in millis, e.g. `title-3f9a…-1788365631876`.
+ * Moving resolved threads out of the deterministic id frees it up for the
+ * field's next thread.
+ */
+export function resolvedThreadId(
+  openThreadId: string,
+  resolvedAtMillis: number
+) {
+  return `${openThreadId}-${Math.floor(resolvedAtMillis)}`;
 }
 
 /** Returns the hex-encoded SHA-256 digest of a string. */

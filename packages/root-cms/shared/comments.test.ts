@@ -3,6 +3,7 @@ import {
   countThreadComments,
   fieldKeyToThreadId,
   FieldCommentThread,
+  resolvedThreadId,
   getThreadComments,
   isOpenThread,
   normalizeEmails,
@@ -56,6 +57,14 @@ describe('fieldKeyToThreadId', () => {
 
   it('rejects empty keys', async () => {
     await expect(fieldKeyToThreadId('  ')).rejects.toThrow();
+  });
+});
+
+describe('resolvedThreadId', () => {
+  it('suffixes the open thread id with the resolve time', () => {
+    expect(resolvedThreadId('title-abc123', 1788365631876.9)).toBe(
+      'title-abc123-1788365631876'
+    );
   });
 });
 

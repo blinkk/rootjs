@@ -37,10 +37,12 @@ export function openFieldCommentsPanel(detail: OpenFieldCommentsEventDetail) {
 
 export interface FieldCommentsContext {
   docId: string;
-  /** All threads for the doc, open threads first. */
+  /** All threads for the doc (open and resolved), open threads first. */
   threads: FieldCommentThread[];
-  /** Threads keyed by field deep key. */
+  /** The open thread of each field, keyed by field deep key. */
   threadsByFieldKey: Map<string, FieldCommentThread>;
+  /** Resolved threads of each field, keyed by field deep key. */
+  resolvedThreadsByFieldKey: Map<string, FieldCommentThread[]>;
   /** Number of open threads. */
   openCount: number;
   loading: boolean;
@@ -90,13 +92,21 @@ export function FieldCommentsProvider(props: FieldCommentsProviderProps) {
 
   const value = useMemo<FieldCommentsContext>(() => {
     const threadsByFieldKey = new Map<string, FieldCommentThread>();
+    const resolvedThreadsByFieldKey = new Map<string, FieldCommentThread[]>();
     threads.forEach((thread) => {
-      threadsByFieldKey.set(thread.fieldKey, thread);
+      if (isOpenThread(thread)) {
+        threadsByFieldKey.set(thread.fieldKey, thread);
+      } else {
+        const list = resolvedThreadsByFieldKey.get(thread.fieldKey) || [];
+        list.push(thread);
+        resolvedThreadsByFieldKey.set(thread.fieldKey, list);
+      }
     });
     return {
       docId,
       threads,
       threadsByFieldKey,
+      resolvedThreadsByFieldKey,
       openCount: threads.filter(isOpenThread).length,
       loading,
       error,
@@ -119,10 +129,18 @@ export function useFieldComments(): FieldCommentsContext | null {
   return useContext(FIELD_COMMENTS_CONTEXT);
 }
 
-/** Returns the comment thread for a field, or `null` if there is none. */
+/** Returns the open comment thread for a field, or `null` if there is none. */
 export function useFieldCommentThread(
   fieldKey: string
 ): FieldCommentThread | null {
   const ctx = useFieldComments();
   return ctx?.threadsByFieldKey.get(fieldKey) || null;
+}
+
+/** Returns the resolved comment threads for a field, newest first. */
+export function useFieldResolvedThreads(
+  fieldKey: string
+): FieldCommentThread[] {
+  const ctx = useFieldComments();
+  return ctx?.resolvedThreadsByFieldKey.get(fieldKey) || [];
 }
