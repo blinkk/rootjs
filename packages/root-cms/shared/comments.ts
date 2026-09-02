@@ -98,6 +98,11 @@ export interface FieldCommentActionMetadata {
   threadId: string;
   /** Id of the comment entry, for `add`, `edit` and `delete` actions. */
   commentId?: string;
+  /**
+   * Set on `add` actions when the comment reopened a resolved thread. No
+   * separate `reopen` action is logged in that case.
+   */
+  reopened?: boolean;
   /** Plain-text content of the comment, truncated for the log. */
   content?: string;
   /** Lower-cased emails of users mentioned in the comment. */
