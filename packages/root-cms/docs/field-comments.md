@@ -82,11 +82,11 @@ The metadata shape is `FieldCommentActionMetadata` in `shared/comments.ts`.
 
 | Action               | When                                  |
 | -------------------- | ------------------------------------- |
-| `doc.comment.add`    | A comment is added to a thread.       |
+| `doc.comment.add`    | A comment is added to a thread. Carries `reopened: true` when it reopened a resolved thread (no separate `reopen` action is logged). |
 | `doc.comment.edit`   | The author edits a comment.           |
 | `doc.comment.delete` | The author deletes a comment.         |
 | `doc.comment.resolve`| A thread is marked as resolved.       |
-| `doc.comment.reopen` | A resolved thread is reopened.        |
+| `doc.comment.reopen` | A resolved thread is reopened via the reopen button. |
 
 ## Email notifications
 

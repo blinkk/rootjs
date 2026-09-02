@@ -213,6 +213,8 @@ export async function addFieldComment(
     transaction.update(threadRef, update);
   });
 
+  // A comment that reopens a resolved thread is logged as a single `add`
+  // action (flagged `reopened`) so notification services don't fire twice.
   const metadata = buildActionMetadata(
     docId,
     {id: threadId, fieldKey, fieldLabel: options.fieldLabel},
@@ -221,11 +223,9 @@ export async function addFieldComment(
       content: truncateCommentContent(content),
       mentions,
       participants,
+      ...(reopened ? {reopened: true} : {}),
     }
   );
-  if (reopened) {
-    logAction(FIELD_COMMENT_ACTIONS.reopen, {metadata});
-  }
   logAction(FIELD_COMMENT_ACTIONS.add, {metadata});
   return {threadId, commentId};
 }
