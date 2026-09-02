@@ -142,7 +142,7 @@ export async function addFieldComment(
   }
 
   const db = window.firebase.db;
-  const threadId = fieldKeyToThreadId(fieldKey);
+  const threadId = await fieldKeyToThreadId(fieldKey);
   const threadRef = threadDocRef(docId, threadId);
   const userEmail = currentUserEmail();
   const mentions = extractRichTextMentions(options.body);

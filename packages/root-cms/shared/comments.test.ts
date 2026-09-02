@@ -29,16 +29,33 @@ function thread(overrides: Partial<FieldCommentThread>): FieldCommentThread {
 }
 
 describe('fieldKeyToThreadId', () => {
-  it('uses the deep key as the thread id', () => {
-    expect(fieldKeyToThreadId('fields.hero.title')).toBe('fields.hero.title');
+  it('derives a short, deterministic id from the deep key', async () => {
+    const id = await fieldKeyToThreadId('fields.hero.title');
+    expect(id).toMatch(/^title-[0-9a-f]{24}$/);
+    expect(await fieldKeyToThreadId('fields.hero.title')).toBe(id);
+    expect(await fieldKeyToThreadId('fields.footer.title')).not.toBe(id);
   });
 
-  it('replaces slashes so the id is a valid firestore doc id', () => {
-    expect(fieldKeyToThreadId('fields/a/b')).toBe('fields__a__b');
+  it('stays bounded for deeply nested keys', async () => {
+    const key = Array.from(
+      {length: 20},
+      (_, i) => `a_very_long_field_identifier_${i}.k1a2b3c4`
+    ).join('.');
+    expect(key.length).toBeGreaterThan(700);
+    const id = await fieldKeyToThreadId(`fields.${key}`);
+    expect(id.length).toBeLessThanOrEqual(50);
+    expect(id).not.toContain('/');
   });
 
-  it('rejects empty keys', () => {
-    expect(() => fieldKeyToThreadId('  ')).toThrow();
+  it('sanitizes the readable prefix', async () => {
+    expect(await fieldKeyToThreadId('fields.Hero Title!')).toMatch(
+      /^hero-title-[0-9a-f]{24}$/
+    );
+    expect(await fieldKeyToThreadId('fields.日本語')).toMatch(/^[0-9a-f]{24}$/);
+  });
+
+  it('rejects empty keys', async () => {
+    await expect(fieldKeyToThreadId('  ')).rejects.toThrow();
   });
 });
 

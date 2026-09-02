@@ -46,12 +46,17 @@ Threads are stored per draft doc:
 Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}
 ```
 
-`threadId` is derived from the field's deep key (e.g. `fields.hero.title`),
-so array items keep their comments when reordered. Each thread doc holds:
+`threadId` is derived from the field's deep key (e.g. `fields.hero.title`):
+a readable prefix (the last segment of the key) plus a truncated SHA-256 of
+the full key, e.g. `title-3f9a0c1d2e…`. Hashing keeps ids well under
+firestore's 1,500-byte doc id limit no matter how deeply a field is nested,
+while staying deterministic so a thread can be fetched without a query.
+Array items are keyed by their stable item key, so they keep their comments
+when reordered. Each thread doc holds:
 
 ```ts
 {
-  id: 'fields.hero.title',
+  id: 'title-3f9a0c1d2e4f6a8b0c2d4e6f',
   docId: 'Pages/foo',
   fieldKey: 'fields.hero.title',
   fieldLabel: 'Hero › Title',
