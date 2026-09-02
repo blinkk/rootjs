@@ -7,7 +7,7 @@ import type {RichTextData} from './richtext.js';
  *
  * Threads are stored at
  * `Projects/{projectId}/Collections/{collectionId}/Drafts/{slug}/Comments/{threadId}`
- * where `threadId` is derived from the field's deep key (see
+ * where `threadId` is derived from a hash of the field's deep key (see
  * {@link fieldKeyToThreadId}).
  */
 
@@ -51,7 +51,7 @@ export interface FieldComment {
 
 /** A thread of comments attached to a single field of a doc. */
 export interface FieldCommentThread {
-  /** Thread id, derived from the field key. */
+  /** Thread id, derived from a hash of the field key. */
   id: string;
   /** Doc id in the form `<collection>/<slug>`. */
   docId: string;
@@ -109,17 +109,51 @@ export interface FieldCommentActionMetadata {
 /** Max length of the plain-text comment content stored in the action log. */
 export const FIELD_COMMENT_CONTENT_MAX_LENGTH = 2000;
 
+/** Max length of the readable prefix in a thread id. */
+const THREAD_ID_PREFIX_MAX_LENGTH = 24;
+
+/** Number of hex characters of the field key hash kept in a thread id. */
+const THREAD_ID_HASH_LENGTH = 24;
+
 /**
- * Converts a field's deep key (e.g. `fields.hero.title`) to a firestore doc
- * id. Deep keys never contain `/`, but the replacement keeps the id valid
- * regardless of where the key came from.
+ * Derives a firestore doc id for a field's comment thread from the field's
+ * deep key (e.g. `fields.hero.title`).
+ *
+ * Deep keys can grow long with nested objects and arrays, and firestore caps
+ * doc ids at 1,500 bytes, so the key isn't used directly. Instead the id is
+ * a short readable prefix (the last segment of the key, sanitized) followed
+ * by a truncated SHA-256 of the full key, e.g. `title-3f9a0c…`. The id is
+ * deterministic, so a thread can be fetched by id without a query, and is
+ * bounded to ~50 characters regardless of nesting depth.
  */
-export function fieldKeyToThreadId(fieldKey: string): string {
+export async function fieldKeyToThreadId(fieldKey: string): Promise<string> {
   const key = fieldKey.trim();
   if (!key) {
     throw new Error('missing field key');
   }
-  return key.replace(/\//g, '__');
+  const lastSegment = key.split('.').filter(Boolean).at(-1) || '';
+  const prefix = lastSegment
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, THREAD_ID_PREFIX_MAX_LENGTH);
+  const hash = (await sha256Hex(key)).slice(0, THREAD_ID_HASH_LENGTH);
+  return prefix ? `${prefix}-${hash}` : hash;
+}
+
+/** Returns the hex-encoded SHA-256 digest of a string. */
+async function sha256Hex(value: string): Promise<string> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) {
+    throw new Error('crypto.subtle is not available');
+  }
+  const digest = await subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(value)
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 /** Returns true when the thread is open (has unresolved comments). */
