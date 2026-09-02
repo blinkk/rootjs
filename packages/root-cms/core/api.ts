@@ -20,7 +20,7 @@ import {
   generatePublishMessage,
   getAiConfig,
   normalizeExecutionMode,
-  serializeAiClientModel,
+  prepareClientModel,
   serializeAiConfig,
   summarizeDiff,
   translateString,
@@ -1469,7 +1469,7 @@ export function api(server: Server, options: ApiOptions) {
       });
       res.status(200).json({
         success: true,
-        model: serializeAiClientModel(model),
+        model: await prepareClientModel(req.rootConfig!, model),
         system,
         executionMode,
         canAutoApply,
@@ -1530,7 +1530,7 @@ export function api(server: Server, options: ApiOptions) {
       });
       res.status(200).json({
         success: true,
-        model: serializeAiClientModel(model),
+        model: await prepareClientModel(req.rootConfig!, model),
         system,
         maxSteps: aiConfig.maxSteps ?? 10,
       });

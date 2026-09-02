@@ -37,7 +37,10 @@ import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import type {SerializedClientModel} from '../../../shared/ai/models.js';
+import {
+  testClientModelExpired,
+  type SerializedClientModel,
+} from '../../../shared/ai/models.js';
 import {
   ChatSummary,
   deleteChat as deleteStoredChat,
@@ -848,7 +851,8 @@ function ChatPane(props: {
 
   // Streams directly from the browser to the provider. A non-streaming
   // `ai.chat.prepare` call supplies the system prompt + selected model's
-  // connection config (cached per model/mode/doc).
+  // connection config (cached per model/mode/doc until any short-lived
+  // credentials it carries expire).
   const transport = useMemo(
     () =>
       createClientChatTransport({
@@ -858,7 +862,11 @@ function ChatPane(props: {
           const docId = docContextRef.current?.docId;
           const key = `${modelId}|${mode}|${docId || ''}`;
           const cached = turnCacheRef.current;
-          if (cached && cached.key === key) {
+          if (
+            cached &&
+            cached.key === key &&
+            !testClientModelExpired(cached.config.model)
+          ) {
             return cached.config;
           }
           const res = await fetch('/cms/api/ai.chat.prepare', {

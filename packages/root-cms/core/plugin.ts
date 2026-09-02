@@ -457,6 +457,14 @@ export type CMSPluginOptions = {
    * messages, translations, alt text, image generation) still run server-side,
    * so their keys stay on the server.
    *
+   * The `google-vertex` provider needs no API key: it authenticates with
+   * Google Cloud Application Default Credentials (the runtime service account
+   * in production, `gcloud auth application-default login` locally) and
+   * defaults `project` to `firebaseConfig.projectId` and `location` to
+   * `global`. The server mints a short-lived access token for the browser, so
+   * the underlying credentials never leave the server. Grant the runtime
+   * service account the "Vertex AI User" role.
+   *
    * Example:
    * ```ts
    * cmsPlugin({
@@ -479,8 +487,17 @@ export type CMSPluginOptions = {
    *       {
    *         id: 'gemini-3.1-pro',
    *         label: 'Gemini 3.1 Pro',
-   *         provider: 'gemini',
+   *         provider: 'google',
    *         apiKey: process.env.GEMINI_API_KEY,
+   *         capabilities: {tools: true, reasoning: true, attachments: true},
+   *       },
+   *       {
+   *         id: 'gemini-3.1-pro-vertex',
+   *         label: 'Gemini 3.1 Pro (Vertex AI)',
+   *         provider: 'google-vertex',
+   *         modelId: 'gemini-3.1-pro',
+   *         // Optional: `project` and `location` default to the Firebase
+   *         // project id and `global`.
    *         capabilities: {tools: true, reasoning: true, attachments: true},
    *       },
    *       {
