@@ -113,7 +113,78 @@
 
 .DocEditor__FieldHeader {
   position: relative;
-  padding-right: 30px;
+  padding-right: 56px;
+}
+
+.DocEditor__FieldHeader__actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.DocEditor__FieldHeader__comments__button {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-gray);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 3px;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  opacity: 0;
+  padding: 0 2px;
+  transition: opacity 0.2s ease, background-color 0.15s ease;
+}
+
+.DocEditor__FieldHeader:hover .DocEditor__FieldHeader__comments__button,
+.DocEditor__FieldHeader:focus-within .DocEditor__FieldHeader__comments__button,
+.DocEditor__FieldHeader__comments__button:focus-visible,
+.DocEditor__FieldHeader__comments__button--hasThread,
+.DocEditor__FieldHeader__comments__button--active {
+  opacity: 1;
+}
+
+.DocEditor__FieldHeader__comments__button:hover,
+.DocEditor__FieldHeader__comments__button--active {
+  background: var(--button-background-hover);
+  color: var(--color-text-default);
+}
+
+.DocEditor__FieldHeader__comments__button--open {
+  color: rgb(28, 126, 214);
+}
+
+.DocEditor__FieldHeader__comments__count {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.DocEditor__FieldHeader__comments__popover {
+  padding: 4px 2px;
+}
+
+.DocEditor__FieldHeader__comments__popover .CommentThread__entries {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.DocEditor__statusBar__comments__count {
+  background: rgb(28, 126, 214);
+  border-radius: 9px;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  min-width: 18px;
+  padding: 4px 5px;
+  text-align: center;
 }
 
 .DocEditor__FieldHeader__label {
@@ -148,9 +219,7 @@
 }
 
 .DocEditor__FieldHeader__translate {
-  position: absolute;
-  top: 0;
-  right: 0;
+  display: flex;
 }
 
 .DocEditor__FieldHeader__translate__iconDisabled {

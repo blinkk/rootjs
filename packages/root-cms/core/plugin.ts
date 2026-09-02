@@ -72,6 +72,22 @@ export type {
   EmailNotificationTemplate,
   EmailNotificationsOptions,
 } from './services-notifications-email.js';
+export {
+  buildCommentEmailTemplateData,
+  commentEmailNotifications,
+  DEFAULT_COMMENT_EMAIL_TEMPLATE,
+} from './services-notifications-comments.js';
+export type {
+  CommentEmailNotificationsOptions,
+  CommentEmailTemplateData,
+} from './services-notifications-comments.js';
+export type {
+  FieldComment,
+  FieldCommentAction,
+  FieldCommentActionMetadata,
+  FieldCommentThread,
+  FieldCommentThreadStatus,
+} from '../shared/comments.js';
 export type {
   CMSTranslationService,
   RootLocale,
@@ -605,6 +621,14 @@ export type CMSPluginOptions = {
    *       to: ['cms-alerts@example.com'],
    *     }),
    *   ],
+   * });
+   * ```
+   *
+   * Use `commentEmailNotifications()` to email users who are `@mentioned`
+   * in (or previously took part in) a field comment thread:
+   * ```ts
+   * cmsPlugin({
+   *   notifications: [commentEmailNotifications({emailService: true})],
    * });
    * ```
    *

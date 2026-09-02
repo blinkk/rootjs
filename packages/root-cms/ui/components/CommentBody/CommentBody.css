@@ -1,0 +1,100 @@
+.CommentBody {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.CommentBody--deleted {
+  color: var(--color-text-gray);
+  font-style: italic;
+}
+
+.CommentBody__markdown,
+.CommentBody__richText {
+  white-space: normal;
+}
+
+.CommentBody__markdown p,
+.CommentBody__markdown ul,
+.CommentBody__markdown ol,
+.CommentBody__markdown blockquote,
+.CommentBody__markdown pre,
+.CommentBody__richText p,
+.CommentBody__richText h4,
+.CommentBody__richText ul,
+.CommentBody__richText ol,
+.CommentBody__richText blockquote,
+.CommentBody__richText pre {
+  margin: 0 0 10px;
+}
+
+.CommentBody__markdown > :last-child,
+.CommentBody__richText > :last-child {
+  margin-bottom: 0;
+}
+
+.CommentBody__markdown ul,
+.CommentBody__markdown ol,
+.CommentBody__richText ul,
+.CommentBody__richText ol {
+  padding-left: 22px;
+}
+
+.CommentBody__markdown code,
+.CommentBody__richText code {
+  background: #efefef;
+  border-radius: 4px;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  padding: 2px 5px;
+}
+
+.CommentBody__markdown blockquote,
+.CommentBody__richText blockquote {
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-gray);
+  padding-left: 12px;
+}
+
+.CommentBody__markdown a,
+.CommentBody__richText a {
+  color: #175cd3;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.CommentBody__richText h4 {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.CommentBody__richText img {
+  border-radius: 6px;
+  max-height: 420px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.CommentBody__richText a.CommentBody__mention {
+  background: rgba(33, 111, 219, 0.08);
+  border-radius: 4px;
+  color: rgb(33, 111, 219);
+  font-weight: 500;
+  padding: 0 2px;
+  text-decoration: none;
+}
+
+.CommentBody__externalLink::after {
+  background-color: currentColor;
+  content: '';
+  display: inline-block;
+  height: 11px;
+  margin-left: 3px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6'/%3E%3Cpath d='M11 13l9 -9'/%3E%3Cpath d='M15 4h5v5'/%3E%3C/svg%3E")
+    no-repeat center / contain;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6'/%3E%3Cpath d='M11 13l9 -9'/%3E%3Cpath d='M15 4h5v5'/%3E%3C/svg%3E")
+    no-repeat center / contain;
+  vertical-align: -1px;
+  width: 11px;
+}

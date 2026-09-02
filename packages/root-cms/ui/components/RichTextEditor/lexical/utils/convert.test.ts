@@ -11,9 +11,13 @@ import {
   LexicalEditor,
 } from 'lexical';
 import {describe, expect, test} from 'vitest';
-import {RichTextData} from '../../../../../shared/richtext.js';
+import {
+  createRichTextMentionHtml,
+  RichTextData,
+} from '../../../../../shared/richtext.js';
 import {BlockComponentNode} from '../nodes/BlockComponentNode.js';
 import {InlineComponentNode} from '../nodes/InlineComponentNode.js';
+import {$isMentionNode, MentionNode} from '../nodes/MentionNode.js';
 import {
   $getParagraphSize,
   SizedParagraphNode,
@@ -42,6 +46,7 @@ function createTestEditor(theme?: Record<string, any>): LexicalEditor {
       InlineComponentNode,
       SizedParagraphNode,
       SpecialCharacterNode,
+      MentionNode,
     ],
     onError: (err: Error) => {
       throw err;
@@ -238,5 +243,58 @@ describe('paragraph size editor preview', () => {
     });
     expect(paragraphs[0].hasAttribute('data-size')).toBe(false);
     expect(paragraphs[0].style.fontSize).toBe('');
+  });
+});
+
+describe('mentions', () => {
+  const MENTIONS: RichTextData = {
+    version: '1',
+    time: 0,
+    blocks: [
+      {
+        type: 'paragraph',
+        data: {
+          text: `cc ${createRichTextMentionHtml('me@example.com', 'Me')} please`,
+        },
+      },
+      {
+        type: 'unorderedList',
+        data: {
+          style: 'unordered',
+          items: [{content: createRichTextMentionHtml('you@example.com')}],
+        },
+      },
+    ],
+  };
+
+  test('loads mention links as mention nodes', () => {
+    const editor = createTestEditor();
+    editor.update(() => convertToLexical(MENTIONS), {discrete: true});
+    editor.read(() => {
+      const paragraph = $getRoot().getFirstChild();
+      const children = (paragraph as any).getChildren();
+      expect(children).toHaveLength(3);
+      expect($isMentionNode(children[1])).toBe(true);
+      expect(children[1].getEmail()).toBe('me@example.com');
+      expect(children[1].getTextContent()).toBe('@Me');
+    });
+  });
+
+  test('round-trips mentions through rich text data', () => {
+    expect(roundTrip(MENTIONS)?.blocks).toEqual(MENTIONS.blocks);
+  });
+
+  test('keeps plain mailto links as links', () => {
+    const data: RichTextData = {
+      version: '1',
+      time: 0,
+      blocks: [
+        {
+          type: 'paragraph',
+          data: {text: '<a href="mailto:me@example.com">email me</a>'},
+        },
+      ],
+    };
+    expect(roundTrip(data)?.blocks).toEqual(data.blocks);
   });
 });

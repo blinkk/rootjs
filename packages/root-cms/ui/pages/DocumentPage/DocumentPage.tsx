@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {ChecksPanel} from '../../components/ChecksPanel/ChecksPanel.js';
+import {CommentsPanel} from '../../components/CommentsPanel/CommentsPanel.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
@@ -23,6 +24,13 @@ import {RootAIChat} from '../../components/RootAIChat/RootAIChat.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
+import {
+  COMMENTS_VISIBLE_EVENT,
+  FieldCommentsProvider,
+  OPEN_FIELD_COMMENTS_EVENT,
+  OpenFieldCommentsEventDetail,
+  TOGGLE_COMMENTS_EVENT,
+} from '../../hooks/useFieldComments.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -118,7 +126,9 @@ export function DocumentPage(props: DocumentPageProps) {
   const canEdit = testCanEdit(roles, currentUserEmail);
   return (
     <DraftDocProvider docId={docId} readOnly={!canEdit}>
-      <DocumentPageLayout {...props} canEdit={canEdit} />
+      <FieldCommentsProvider docId={docId}>
+        <DocumentPageLayout {...props} canEdit={canEdit} />
+      </FieldCommentsProvider>
     </DraftDocProvider>
   );
 }
@@ -166,6 +176,23 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const isAiVisibleRef = useRef(isAiVisible);
   isAiVisibleRef.current = isAiVisible;
 
+  const [isCommentsVisible, setIsCommentsVisible] = useLocalStorage<boolean>(
+    'root::DocumentPage::commentsVisible',
+    false
+  );
+  const isCommentsVisibleRef = useRef(isCommentsVisible);
+  isCommentsVisibleRef.current = isCommentsVisible;
+  const [focusCommentFieldKey, setFocusCommentFieldKey] = useState<
+    string | null
+  >(null);
+
+  // Broadcast comments visibility so the StatusBar button can reflect it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(COMMENTS_VISIBLE_EVENT, {detail: isCommentsVisible})
+    );
+  }, [isCommentsVisible]);
+
   // Broadcast checks visibility so the StatusBar button can reflect it.
   useEffect(() => {
     window.dispatchEvent(
@@ -195,8 +222,8 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const [isDraggingSearch, setIsDraggingSearch] = useState(false);
   const layoutRef = useRef<HTMLDivElement>(null);
 
-  // Only one right-hand panel (Checks, Search, AI) is allowed open at a time.
-  // Opening any one of them closes the others.
+  // Only one right-hand panel (Checks, Search, AI, Comments) is allowed open
+  // at a time. Opening any one of them closes the others.
   useEffect(() => {
     const handler = () => {
       const willBeVisible = !isChecksVisibleRef.current;
@@ -204,10 +231,44 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       if (willBeVisible) {
         setIsSearchVisible(() => false);
         setIsAiVisible(() => false);
+        setIsCommentsVisible(() => false);
       }
     };
     window.addEventListener('root:toggle-checks', handler);
     return () => window.removeEventListener('root:toggle-checks', handler);
+  }, []);
+
+  // Listen for toggle events from the DocEditor's Comments button.
+  useEffect(() => {
+    const handler = () => {
+      const willBeVisible = !isCommentsVisibleRef.current;
+      setIsCommentsVisible(() => willBeVisible);
+      if (willBeVisible) {
+        setIsChecksVisible(() => false);
+        setIsSearchVisible(() => false);
+        setIsAiVisible(() => false);
+      }
+    };
+    window.addEventListener(TOGGLE_COMMENTS_EVENT, handler);
+    return () => window.removeEventListener(TOGGLE_COMMENTS_EVENT, handler);
+  }, []);
+
+  // Listen for requests to open the comments panel on a specific field (e.g.
+  // from the field header's comment popover).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<OpenFieldCommentsEventDetail>).detail;
+      if (!detail?.fieldKey) {
+        return;
+      }
+      setIsCommentsVisible(() => true);
+      setIsChecksVisible(() => false);
+      setIsSearchVisible(() => false);
+      setIsAiVisible(() => false);
+      setFocusCommentFieldKey(detail.fieldKey);
+    };
+    window.addEventListener(OPEN_FIELD_COMMENTS_EVENT, handler);
+    return () => window.removeEventListener(OPEN_FIELD_COMMENTS_EVENT, handler);
   }, []);
 
   // Listen for toggle event from DocEditor's Search button. Always focus the
@@ -219,6 +280,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       if (willBeVisible) {
         setIsChecksVisible(() => false);
         setIsAiVisible(() => false);
+        setIsCommentsVisible(() => false);
         // Defer to allow the panel to mount before dispatching focus.
         requestAnimationFrame(() => {
           window.dispatchEvent(new CustomEvent('root:focus-search'));
@@ -237,6 +299,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       if (willBeVisible) {
         setIsChecksVisible(() => false);
         setIsSearchVisible(() => false);
+        setIsCommentsVisible(() => false);
       }
     };
     window.addEventListener('root:toggle-ai', handler);
@@ -466,6 +529,14 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
         {isAiConfigured && isAiVisible && (
           <DocumentPageAiPanel docId={docId} onClose={closeAi} />
         )}
+        {isCommentsVisible && (
+          <DocumentPageCommentsPanel
+            docId={docId}
+            focusFieldKey={focusCommentFieldKey}
+            onFocusHandled={() => setFocusCommentFieldKey(null)}
+            onClose={() => setIsCommentsVisible(() => false)}
+          />
+        )}
       </div>
     </Layout>
   );
@@ -545,6 +616,78 @@ function DocumentPageAiPanel(props: DocumentPageAiPanelProps) {
         style={{flexBasis: `${aiPanelWidth}px`}}
       >
         {aiChat}
+      </div>
+    </>
+  );
+}
+
+interface DocumentPageCommentsPanelProps {
+  docId: string;
+  focusFieldKey: string | null;
+  onFocusHandled: () => void;
+  onClose: () => void;
+}
+
+/** Renders the comments panel with resize state isolated from the layout. */
+function DocumentPageCommentsPanel(props: DocumentPageCommentsPanelProps) {
+  const [savedPanelWidth, setSavedPanelWidth] = useLocalStorage<number>(
+    'root::DocumentPage::commentsPanelWidth',
+    380
+  );
+  const [panelWidth, setPanelWidth] = useState(savedPanelWidth);
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const panelWidthRef = useRef(panelWidth);
+  const dragCleanupRef = useRef<() => void>();
+
+  const startDragging = useCallback(() => {
+    const layout = dividerRef.current?.parentElement;
+    if (!layout) return;
+    panelWidthRef.current = panelWidth;
+    layout.classList.add('DocumentPage__layout--dragging');
+    const onMouseMove = (e: MouseEvent) => {
+      const container = dividerRef.current?.parentElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(280, Math.min(rect.right - e.clientX, 800));
+      panelWidthRef.current = newWidth;
+      setPanelWidth(newWidth);
+    };
+    const cleanup = () => {
+      layout.classList.remove('DocumentPage__layout--dragging');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      dragCleanupRef.current = undefined;
+    };
+    const onMouseUp = () => {
+      cleanup();
+      setSavedPanelWidth(() => panelWidthRef.current);
+    };
+    dragCleanupRef.current = cleanup;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [panelWidth, setSavedPanelWidth]);
+
+  useEffect(() => {
+    return () => dragCleanupRef.current?.();
+  }, []);
+
+  return (
+    <>
+      <div
+        className="DocumentPage__commentsDivider"
+        ref={dividerRef}
+        onMouseDown={startDragging}
+      />
+      <div
+        className="DocumentPage__comments"
+        style={{flexBasis: `${panelWidth}px`}}
+      >
+        <CommentsPanel
+          docId={props.docId}
+          focusFieldKey={props.focusFieldKey}
+          onFocusHandled={props.onFocusHandled}
+          onClose={props.onClose}
+        />
       </div>
     </>
   );
