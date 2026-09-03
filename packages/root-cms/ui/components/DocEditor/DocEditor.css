@@ -1,5 +1,15 @@
+/*
+ * Type and rhythm dials for themes (see the `theme` plugin option). The
+ * defaults reproduce the stock editor exactly.
+ *
+ *   --cms-font-size   base size for the editor's own text
+ *   --cms-label-size  field labels
+ *   --cms-help-size   help text beneath a label
+ *   --cms-help-color  its colour
+ *   --cms-field-gap   vertical space between fields
+ */
 .DocEditor {
-  font-size: 12px;
+  font-size: var(--cms-font-size, 12px);
   position: relative;
 }
 
@@ -97,7 +107,7 @@
 .DocEditor__fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--cms-field-gap, 16px);
 }
 
 .DocEditor__field--deprecated {
@@ -117,7 +127,7 @@
 }
 
 .DocEditor__FieldHeader__label {
-  font-size: 12px;
+  font-size: var(--cms-label-size, 12px);
   font-weight: 600;
   display: flex;
   gap: 8px;
@@ -142,8 +152,9 @@
 }
 
 .DocEditor__FieldHeader__help {
-  font-size: 12px;
+  font-size: var(--cms-help-size, 12px);
   font-weight: 400;
+  color: var(--cms-help-color, inherit);
   margin-top: 2px;
 }
 
@@ -167,7 +178,7 @@
 .DocEditor__ObjectFieldDrawer__fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--cms-field-gap, 16px);
 }
 
 .DocEditor__FieldHeader {
@@ -187,7 +198,7 @@
 .DocEditor__field[data-type='object']:not([data-level='0'])
   .DocEditor__ObjectField__fields {
   padding-left: 12px;
-  border-left: 2px solid lightblue;
+  border-left: 2px solid var(--cms-accent, lightblue);
 }
 
 .DocEditor__ObjectFieldDrawer
@@ -196,9 +207,29 @@
   margin-bottom: 0;
 }
 
+/*
+ * A drawer runs edge to edge across the field column by default (the
+ * negative margins cancel the column padding) so its header reads as a band.
+ * Themes can pull it back into the column and box it instead:
+ *
+ *   --cms-drawer-bleed      how far past the column edge it runs (0 = none)
+ *   --cms-drawer-border     a border around the whole drawer
+ *   --cms-drawer-radius     corner radius of that box
+ *   --cms-drawer-bg         background of the box
+ *   --cms-drawer-header-bg  background of the header row
+ */
 .DocEditor__ObjectFieldDrawer {
-  margin-left: -16px;
-  margin-right: -16px;
+  margin-left: var(--cms-drawer-bleed, -16px);
+  margin-right: var(--cms-drawer-bleed, -16px);
+  border: var(--cms-drawer-border, none);
+  border-radius: var(--cms-drawer-radius, 0);
+  background: var(--cms-drawer-bg, transparent);
+}
+
+/* The <details> sits between the box and its header; pass the radius through
+   so a themed header's background follows the box's corners. */
+.DocEditor__ObjectFieldDrawer__drawer {
+  border-radius: inherit;
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle {
@@ -206,6 +237,8 @@
   padding: 8px 16px;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
+  border-radius: inherit;
+  background: var(--cms-drawer-header-bg, transparent);
   align-items: center;
   gap: 8px;
   cursor: pointer;
@@ -223,8 +256,18 @@
   min-width: 0;
 }
 
+/*
+ * Nesting is flat by default: a group's fields sit on the same left edge as
+ * the fields around the group. Themes that want the nesting visible set
+ * these custom properties (see the `theme` plugin option):
+ *
+ *   --cms-drawer-indent  extra space before a group's fields (a length)
+ *   --cms-drawer-rule    a rule down that space (a border shorthand)
+ */
 .DocEditor__ObjectFieldDrawer__drawer__content {
   padding: 16px;
+  margin-left: var(--cms-drawer-indent, 0);
+  border-left: var(--cms-drawer-rule, none);
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
@@ -386,7 +429,7 @@
 }
 
 .DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
-  border-bottom: 2px solid lightblue;
+  border-bottom: 2px solid var(--cms-accent, lightblue);
   border-radius: 0;
 }
 
@@ -507,13 +550,13 @@
 }
 
 .DocEditor__ArrayField__item:not([open]) .DocEditor__ArrayField__item__header {
-  border-left: 2px solid lightblue;
+  border-left: 2px solid var(--cms-accent, lightblue);
   padding-left: 8px;
 }
 
 .DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__body {
   padding: 16px;
-  border: 2px solid lightblue;
+  border: 2px solid var(--cms-accent, lightblue);
 }
 
 .DocEditor__ArrayField__item__header:focus {

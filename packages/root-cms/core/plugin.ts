@@ -31,6 +31,7 @@ import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
+import {type CMSTheme} from './editor-theme.js';
 import {
   clearDevAuthCookie,
   getDevAuthCookie,
@@ -50,6 +51,7 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {CMSTheme} from './editor-theme.js';
 export type {
   CollectionPublishingOptions,
   PublishCheckConfig,
@@ -149,6 +151,8 @@ async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
 /** Paths to non-confidential static files. These files won't require authentication. */
+/** Built-in editor themes (`ui/themes/*.css`) are served under this prefix. */
+const THEME_STATIC_PREFIX = '/cms/static/themes/';
 const NONCONF_STATIC_PATHS = [
   '/cms/static/signin.css',
   '/cms/static/signin.js',
@@ -437,6 +441,37 @@ export type CMSPluginOptions = {
    * logo and displays the project name on the top-right.
    */
   minimalBranding?: boolean;
+
+  /**
+   * Theme for the CMS editor UI. Leave unset for the stock look.
+   *
+   * Built-in themes ship with root-cms as `ui/themes/<name>.css` and load
+   * after the base stylesheet:
+   *
+   * - `clarity` — a calmer editor that shows its structure: field groups
+   *   become boxed cards with their fields indented behind a rule, help text
+   *   steps down beneath its label, and the structural accents go neutral.
+   *
+   * Three forms:
+   *
+   * ```ts
+   * // A built-in theme, as-is.
+   * theme: 'clarity'
+   *
+   * // A built-in theme with project tweaks on top.
+   * theme: {extends: 'clarity', css: ':root { --cms-drawer-indent: 32px; }'}
+   *
+   * // A theme from scratch (on the base editor styles only).
+   * theme: {css: fs.readFileSync('./cms-theme.css', 'utf-8')}
+   * ```
+   *
+   * `css` is inlined last, so it wins the cascade without `!important`.
+   * Prefer the `--cms-*` custom properties where one exists — they are the
+   * stable surface — over rules that target the editor's class names, which
+   * may change between versions. A built-in theme that builds on another
+   * does the same thing in CSS with `@import './other.css';`.
+   */
+  theme?: string | CMSTheme;
 
   /**
    * Callback when an action occurs.
@@ -758,6 +793,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     }
     // Allow non-confidential static files to be rendered without auth.
     if (NONCONF_STATIC_PATHS.includes(urlPath)) {
+      return false;
+    }
+    // Theme stylesheets are as public as ui.css, and there is one per theme
+    // name, so exempt the folder rather than listing each file.
+    if (urlPath.startsWith(THEME_STATIC_PREFIX)) {
       return false;
     }
     // Require login on all `/cms/` paths.

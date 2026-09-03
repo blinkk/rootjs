@@ -5,6 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
+import {resolveEditorTheme} from './editor-theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -17,6 +18,10 @@ interface AppProps {
   title: string;
   ctx: any;
   favicon?: string;
+  /** Built-in theme stylesheet, already cache-busted. */
+  themeUrl?: string;
+  /** Project theme CSS, already made safe to inline. */
+  themeCss?: string;
 }
 
 function App(props: AppProps) {
@@ -53,6 +58,20 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
+        {props.themeUrl && (
+          <link rel="stylesheet" href={props.themeUrl} nonce="{NONCE}" />
+        )}
+        {/* A text child would be HTML-escaped, turning selectors like
+            `a > b` into `a &gt; b`; CSS has to reach the browser verbatim.
+            The value comes from root.config.ts, i.e. the site's own code,
+            not from users, and `resolveEditorTheme` has already neutralised
+            the one sequence (`</style`) that could break out of the element. */}
+        {props.themeCss && (
+          <style
+            dangerouslySetInnerHTML={{__html: props.themeCss}}
+            nonce="{NONCE}"
+          />
+        )}
       </head>
       <body>
         <div id="root">
@@ -160,8 +179,20 @@ export async function renderApp(
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
+  const theme = resolveEditorTheme(cmsConfig.theme);
+  if (theme.warning) {
+    console.warn(`[root-cms] ${theme.warning}`);
+  }
   const mainHtml = renderJsxToString(
-    <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
+    <App
+      title={title}
+      ctx={ctx}
+      favicon={cmsConfig.favicon}
+      themeUrl={
+        theme.stylesheetUrl ? cachebust(req, theme.stylesheetUrl) : undefined
+      }
+      themeCss={theme.inlineCss ?? undefined}
+    />
   );
   const nonce = generateNonce();
   const html = `<!doctype html>\n${mainHtml}`
