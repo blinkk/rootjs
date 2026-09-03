@@ -106,7 +106,10 @@ export function getDocPreviewPath(options: DocUrlOptions) {
   });
 }
 
-function formatUrlPath(urlFormat: string, params: Record<string, string>) {
+export function formatUrlPath(
+  urlFormat: string,
+  params: Record<string, string>
+) {
   const urlPath = urlFormat.replaceAll(
     /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
     (match: string, _wildcard: string, key: string) => {
@@ -118,7 +121,7 @@ function formatUrlPath(urlFormat: string, params: Record<string, string>) {
   });
 }
 
-function normalizeUrlPath(
+export function normalizeUrlPath(
   urlPath: string,
   options?: {trailingSlash?: boolean}
 ) {

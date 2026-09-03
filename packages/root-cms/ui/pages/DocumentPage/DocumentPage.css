@@ -312,3 +312,8 @@
   overflow: hidden;
   background: white;
 }
+
+.DocumentPage__side__header__followToggle.active {
+  color: var(--mantine-color-blue-7, #1c7ed6);
+  background-color: var(--mantine-color-blue-0, #e7f5ff);
+}
