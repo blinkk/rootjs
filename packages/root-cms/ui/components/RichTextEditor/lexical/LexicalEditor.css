@@ -129,6 +129,15 @@
   max-height: 220px;
 }
 
+.LexicalEditor--noToolbar .LexicalEditor__editor {
+  border-radius: 6px;
+}
+
+.LexicalEditor--noToolbar.LexicalEditor--comment .LexicalEditor__editor {
+  min-height: 64px;
+  padding: 10px 12px;
+}
+
 .LexicalEditor--withMaxHeight .LexicalEditor__editor {
   max-height: max(30vh, 280px);
   overflow: auto;

@@ -48,7 +48,7 @@ const BLOCK_TAGS = [
 ];
 
 const ALLOWED_ATTRIBUTES: Record<string, string[]> = {
-  a: ['href', 'title', 'target', 'rel', 'id'],
+  a: ['href', 'title', 'target', 'rel', 'id', 'data-mention'],
   span: ['class'],
   code: ['class'],
   pre: ['class'],

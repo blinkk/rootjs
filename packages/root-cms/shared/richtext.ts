@@ -367,3 +367,194 @@ function testSameJsonValue(a: unknown, b: unknown): boolean {
   }
   return false;
 }
+
+/**
+ * Attribute placed on `<a>` tags that represent an `@mention` of a CMS user
+ * within rich text HTML, e.g.
+ * `<a href="mailto:me@example.com" data-mention="me@example.com">@Me</a>`.
+ */
+export const RICHTEXT_MENTION_ATTR = 'data-mention';
+
+/** Escapes a string for use inside HTML text or a double-quoted attribute. */
+function escapeRichTextHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Decodes the small set of HTML entities produced by the rich text editor. */
+function decodeRichTextHtml(value: string): string {
+  return value
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+/**
+ * Builds the HTML for an `@mention` of a user. The `label` is the text shown
+ * to readers (typically the user's display name or email).
+ */
+export function createRichTextMentionHtml(email: string, label?: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const text = `@${label || normalizedEmail}`;
+  return (
+    `<a href="mailto:${escapeRichTextHtml(normalizedEmail)}" ` +
+    `${RICHTEXT_MENTION_ATTR}="${escapeRichTextHtml(normalizedEmail)}">` +
+    `${escapeRichTextHtml(text)}</a>`
+  );
+}
+
+/**
+ * Returns the unique, lower-cased emails of users mentioned (via
+ * `@mention`) anywhere in the rich text data. Mentions are found inside
+ * paragraphs, headings, quotes, list items and table cells.
+ */
+export function extractRichTextMentions(
+  data: RichTextData | null | undefined
+): string[] {
+  const mentions = new Set<string>();
+  const pattern = new RegExp(`${RICHTEXT_MENTION_ATTR}="([^"]+)"`, 'g');
+  for (const html of collectRichTextHtml(data)) {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(html)) !== null) {
+      const email = decodeRichTextHtml(match[1]).trim().toLowerCase();
+      if (email) {
+        mentions.add(email);
+      }
+    }
+  }
+  return Array.from(mentions);
+}
+
+/**
+ * Returns a plain-text rendering of rich text data, with HTML tags stripped
+ * and blocks separated by newlines. Useful for previews, search and
+ * notifications.
+ */
+export function getRichTextPlainText(
+  data: RichTextData | null | undefined
+): string {
+  if (!data?.blocks?.length) {
+    return '';
+  }
+  return data.blocks
+    .map((block) => getRichTextBlockPlainText(block))
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function getRichTextBlockPlainText(block: RichTextBlock): string {
+  switch (block.type) {
+    case 'paragraph':
+    case 'heading':
+    case 'quote':
+      return stripRichTextHtml((block as any).data?.text || '');
+    case 'orderedList':
+    case 'unorderedList':
+      return ((block as RichTextListBlock).data?.items || [])
+        .map((item) => getRichTextListItemPlainText(item))
+        .filter(Boolean)
+        .join('\n');
+    case 'table':
+      return ((block as RichTextTableBlock).data?.rows || [])
+        .map((row) =>
+          (row.cells || [])
+            .map((cell) =>
+              (cell.blocks || [])
+                .map((cellBlock) => getRichTextBlockPlainText(cellBlock))
+                .filter(Boolean)
+                .join(' ')
+            )
+            .filter(Boolean)
+            .join(' | ')
+        )
+        .filter(Boolean)
+        .join('\n');
+    case 'image':
+      return (
+        (block as RichTextImageBlock).data?.file?.alt ||
+        (block as RichTextImageBlock).data?.file?.url ||
+        ''
+      );
+    default:
+      return '';
+  }
+}
+
+function getRichTextListItemPlainText(item: RichTextListItem): string {
+  const parts = [stripRichTextHtml(item.content || '')];
+  if (item.items?.length) {
+    parts.push(
+      item.items
+        .map((child) => getRichTextListItemPlainText(child))
+        .filter(Boolean)
+        .join('\n')
+    );
+  }
+  return parts.filter(Boolean).join('\n');
+}
+
+function stripRichTextHtml(value: string): string {
+  return decodeRichTextHtml(value.replace(/<br\s*\/?>/gi, '\n')).replace(
+    /<[^>]+>/g,
+    ''
+  );
+}
+
+/** Yields every inline HTML string stored within the rich text data. */
+function* collectRichTextHtml(
+  data: RichTextData | null | undefined
+): Generator<string> {
+  for (const block of data?.blocks || []) {
+    yield* collectRichTextBlockHtml(block);
+  }
+}
+
+function* collectRichTextBlockHtml(block: RichTextBlock): Generator<string> {
+  switch (block.type) {
+    case 'paragraph':
+    case 'heading':
+    case 'quote': {
+      const text = (block as any).data?.text;
+      if (typeof text === 'string') {
+        yield text;
+      }
+      return;
+    }
+    case 'orderedList':
+    case 'unorderedList':
+      for (const item of (block as RichTextListBlock).data?.items || []) {
+        yield* collectRichTextListItemHtml(item);
+      }
+      return;
+    case 'table':
+      for (const row of (block as RichTextTableBlock).data?.rows || []) {
+        for (const cell of row.cells || []) {
+          for (const cellBlock of cell.blocks || []) {
+            yield* collectRichTextBlockHtml(cellBlock);
+          }
+        }
+      }
+      return;
+    default:
+      return;
+  }
+}
+
+function* collectRichTextListItemHtml(
+  item: RichTextListItem
+): Generator<string> {
+  if (typeof item.content === 'string') {
+    yield item.content;
+  }
+  for (const child of item.items || []) {
+    yield* collectRichTextListItemHtml(child);
+  }
+}

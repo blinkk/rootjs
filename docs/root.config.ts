@@ -6,6 +6,7 @@ import {adminPublishNotifications} from './plugins/admin-publish-notifications.j
 import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
 import {exampleToolPod} from './plugins/example-tools-pod.js';
+import {fieldCommentNotifications} from './plugins/field-comment-notifications.js';
 import {templatesPod} from './plugins/templates-pod.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
@@ -107,7 +108,7 @@ export default defineConfig({
         }),
         deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],
-      notifications: [adminPublishNotifications()],
+      notifications: [adminPublishNotifications(), fieldCommentNotifications()],
       checks: [
         {
           id: 'custom/green-check',

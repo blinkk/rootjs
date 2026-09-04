@@ -12,6 +12,7 @@ import {
   Button,
   LoadingOverlay,
   Menu,
+  Popover,
   Select,
   Tooltip,
 } from '@mantine/core';
@@ -29,13 +30,16 @@ import {
   IconCirclePlus,
   IconClipboard,
   IconClipboardCopy,
-  IconGripVertical,
   IconCopy,
   IconDotsVertical,
+  IconGripVertical,
   IconLanguage,
   IconLanguageOff,
+  IconLayoutSidebarRight,
   IconListCheck,
   IconLock,
+  IconMessage,
+  IconMessages,
   IconPlanet,
   IconRobot,
   IconRocket,
@@ -44,6 +48,7 @@ import {
   IconSearch,
   IconTrash,
   IconTriangleFilled,
+  IconX,
 } from '@tabler/icons-preact';
 import {createContext, RefObject} from 'preact';
 import {
@@ -57,6 +62,7 @@ import {
 } from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
+import {countThreadComments} from '../../../shared/comments.js';
 import {
   FIRESTORE_MAX_NESTING_DEPTH,
   getRemainingNestingDepth,
@@ -79,6 +85,14 @@ import {
   useDraftDocHistoryApplied,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
+import {
+  COMMENTS_VISIBLE_EVENT,
+  openFieldCommentsPanel,
+  TOGGLE_COMMENTS_EVENT,
+  useFieldCommentThread,
+  useFieldComments,
+  useFieldResolvedThreads,
+} from '../../hooks/useFieldComments.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
@@ -94,6 +108,7 @@ import {
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
+import {formatFieldPath} from '../../utils/field-labels.js';
 import {getDefaultFieldValue, normalizePresetData} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
 import {
@@ -109,6 +124,7 @@ import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
+import {CommentThread} from '../CommentThread/CommentThread.js';
 import {
   ComponentPickerOption,
   useComponentPickerModal,
@@ -200,6 +216,13 @@ function showUndoNotification(draft: DraftDocController, message: string) {
   });
 }
 
+const COLLECTION_SCHEMA_CONTEXT = createContext<schema.Collection | null>(null);
+
+/** Returns the full collection schema of the doc being edited, if loaded. */
+function useDocCollectionSchema(): schema.Collection | null {
+  return useContext(COLLECTION_SCHEMA_CONTEXT);
+}
+
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
   Record<string, schema.Schema>
 >({});
@@ -229,38 +252,40 @@ export function DocEditor(props: DocEditorProps) {
   }
 
   return (
-    <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
-      value={collection?.schema?.types || {}}
-    >
-      <DeeplinkProvider>
-        <div
-          className={joinClassNames(props.className, 'DocEditor')}
-          ref={rootRef}
-        >
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <DocEditor.HistoryDeeplink rootRef={rootRef} />
-          {!loading && !props.hideStatusBar && (
-            <DocEditor.StatusBar
-              {...props}
-              draft={draft}
-              collection={collection.schema!}
+    <COLLECTION_SCHEMA_CONTEXT.Provider value={collection?.schema || null}>
+      <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
+        value={collection?.schema?.types || {}}
+      >
+        <DeeplinkProvider>
+          <div
+            className={joinClassNames(props.className, 'DocEditor')}
+            ref={rootRef}
+          >
+            <LoadingOverlay
+              visible={loading}
+              loaderProps={{color: 'gray', size: 'xl'}}
             />
-          )}
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                field={field}
-                deepKey={`fields.${field.id!}`}
+            <DocEditor.HistoryDeeplink rootRef={rootRef} />
+            {!loading && !props.hideStatusBar && (
+              <DocEditor.StatusBar
+                {...props}
+                draft={draft}
+                collection={collection.schema!}
               />
-            ))}
+            )}
+            <div className="DocEditor__fields">
+              {fields.map((field) => (
+                <DocEditor.Field
+                  key={field.id}
+                  field={field}
+                  deepKey={`fields.${field.id!}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </DeeplinkProvider>
-    </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
+        </DeeplinkProvider>
+      </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
+    </COLLECTION_SCHEMA_CONTEXT.Provider>
   );
 }
 
@@ -368,6 +393,25 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
     }
   });
   const aiAvailable = testAiEnabled();
+  const fieldComments = useFieldComments();
+  const [commentsActive, setCommentsActive] = useState(() => {
+    try {
+      const val = window.localStorage.getItem(
+        'root::DocumentPage::commentsVisible'
+      );
+      return val ? JSON.parse(val) === true : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setCommentsActive((e as CustomEvent).detail === true);
+    };
+    window.addEventListener(COMMENTS_VISIBLE_EVENT, handler);
+    return () => window.removeEventListener(COMMENTS_VISIBLE_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -449,6 +493,34 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             </Button>
           </Tooltip>
         </div>
+        {fieldComments && (
+          <div className="DocEditor__statusBar__comments">
+            <Button
+              className={joinClassNames(
+                'DocEditor__statusBar__buttonGroup__button',
+                commentsActive
+                  ? 'DocEditor__statusBar__buttonGroup__button--active'
+                  : ''
+              )}
+              variant="default"
+              color="dark"
+              size="xs"
+              leftIcon={<IconMessage size={16} />}
+              rightIcon={
+                fieldComments.openCount > 0 ? (
+                  <span className="DocEditor__statusBar__comments__count">
+                    {fieldComments.openCount}
+                  </span>
+                ) : undefined
+              }
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent(TOGGLE_COMMENTS_EVENT));
+              }}
+            >
+              Comments
+            </Button>
+          </div>
+        )}
         {(window.__ROOT_CTX.checks || []).length > 0 && (
           <div className="DocEditor__statusBar__checks">
             <Button
@@ -880,11 +952,166 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       {field.help && (
         <div className="DocEditor__FieldHeader__help">{field.help}</div>
       )}
-      <DocEditor.FieldHeaderTranslationsActionIcon
-        field={field}
-        deepKey={props.deepKey}
-      />
+      <div className="DocEditor__FieldHeader__actions">
+        <DocEditor.FieldHeaderCommentActionIcon
+          field={field}
+          deepKey={props.deepKey}
+        />
+        <DocEditor.FieldHeaderTranslationsActionIcon
+          field={field}
+          deepKey={props.deepKey}
+        />
+      </div>
     </div>
+  );
+};
+
+interface FieldHeaderCommentActionIconProps {
+  field: schema.Field;
+  deepKey: string;
+}
+
+/**
+ * Comment button in the field header. Shows the number of open comments on
+ * the field's thread and opens a popover with the thread. Only rendered when
+ * a `FieldCommentsProvider` is available (i.e. on the document page).
+ */
+DocEditor.FieldHeaderCommentActionIcon = (
+  props: FieldHeaderCommentActionIconProps
+) => {
+  const comments = useFieldComments();
+  if (!comments || !props.deepKey) {
+    return null;
+  }
+  return <DocEditor.FieldHeaderCommentActionIconInner {...props} />;
+};
+
+/** Inner component that only mounts when field comments are available. */
+DocEditor.FieldHeaderCommentActionIconInner = (
+  props: FieldHeaderCommentActionIconProps
+) => {
+  const comments = useFieldComments()!;
+  const thread = useFieldCommentThread(props.deepKey);
+  const resolvedThreads = useFieldResolvedThreads(props.deepKey);
+  const draft = useDraftDoc();
+  const collection = useDocCollectionSchema();
+  const [opened, setOpened] = useState(false);
+  const count = thread ? countThreadComments(thread) : 0;
+  const hasResolved = resolvedThreads.length > 0;
+  const canOpen = Boolean(thread) || hasResolved || comments.canComment;
+
+  // The label depends on the doc value (array positions, one-of types), so
+  // it's recomputed each time the popover opens.
+  const fieldLabel = useMemo(
+    () =>
+      formatFieldPath(collection, props.deepKey, (deepKey) =>
+        draft.controller?.getValue(deepKey)
+      ),
+    [collection, props.deepKey, draft.controller, opened]
+  );
+
+  if (!canOpen) {
+    return null;
+  }
+
+  const label = thread
+    ? `${count} comment${count === 1 ? '' : 's'}`
+    : hasResolved
+      ? 'Add comment (has resolved threads)'
+      : 'Add comment';
+
+  return (
+    <Popover
+      opened={opened}
+      onClose={() => setOpened(false)}
+      position="left"
+      placement="start"
+      width={380}
+      shadow="md"
+      withArrow
+      withinPortal
+      trapFocus={false}
+      closeOnClickOutside={false}
+      closeOnEscape
+      zIndex={200}
+      className="DocEditor__FieldHeader__comments"
+      target={
+        <Tooltip label={label} withArrow>
+          <button
+            type="button"
+            className={joinClassNames(
+              'DocEditor__FieldHeader__comments__button',
+              (thread || hasResolved) &&
+                'DocEditor__FieldHeader__comments__button--hasThread',
+              thread && 'DocEditor__FieldHeader__comments__button--open',
+              opened && 'DocEditor__FieldHeader__comments__button--active'
+            )}
+            aria-label={label}
+            aria-expanded={opened}
+            onClick={(e: MouseEvent) => {
+              // The header may live inside a <summary>; keep the click from
+              // toggling the drawer.
+              e.preventDefault();
+              e.stopPropagation();
+              setOpened((value) => !value);
+            }}
+          >
+            {thread || hasResolved ? (
+              <IconMessages size={14} strokeWidth="1.8" />
+            ) : (
+              <IconMessage size={14} strokeWidth="1.8" />
+            )}
+            {thread && count > 0 && (
+              <span className="DocEditor__FieldHeader__comments__count">
+                {count}
+              </span>
+            )}
+          </button>
+        </Tooltip>
+      }
+    >
+      <div
+        className="DocEditor__FieldHeader__comments__popover"
+        onClick={(e: MouseEvent) => e.stopPropagation()}
+      >
+        <CommentThread
+          docId={comments.docId}
+          fieldKey={props.deepKey}
+          fieldLabel={fieldLabel}
+          thread={thread}
+          resolvedCount={resolvedThreads.length}
+          autoFocus
+          headerActions={
+            <>
+              <Tooltip label="Open in comments panel" withArrow>
+                <ActionIcon
+                  size="sm"
+                  aria-label="Open in comments panel"
+                  onClick={() => {
+                    setOpened(false);
+                    openFieldCommentsPanel({
+                      fieldKey: props.deepKey,
+                      fieldLabel,
+                    });
+                  }}
+                >
+                  <IconLayoutSidebarRight size={16} strokeWidth="1.8" />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Close" withArrow>
+                <ActionIcon
+                  size="sm"
+                  aria-label="Close"
+                  onClick={() => setOpened(false)}
+                >
+                  <IconX size={16} strokeWidth="1.8" />
+                </ActionIcon>
+              </Tooltip>
+            </>
+          }
+        />
+      </div>
+    </Popover>
   );
 };
 

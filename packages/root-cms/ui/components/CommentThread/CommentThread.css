@@ -1,0 +1,199 @@
+.CommentThread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.CommentThread__header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+.CommentThread__field {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--color-text-default);
+  display: flex;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.CommentThread__field--link {
+  cursor: pointer;
+}
+
+.CommentThread__field--link:hover .CommentThread__field__label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.CommentThread__field__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CommentThread__header__actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.CommentThread__status {
+  background: #e6f4ea;
+  border-radius: 10px;
+  color: #1e7e34;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.CommentThread__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.CommentThread__comment {
+  display: flex;
+  gap: 8px;
+}
+
+.CommentThread__comment__avatar {
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.CommentThread__comment__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.CommentThread__comment__header {
+  align-items: center;
+  color: var(--color-text-gray);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.CommentThread__comment__author {
+  color: var(--color-text-default);
+  font-weight: 600;
+}
+
+.CommentThread__comment__edited {
+  font-size: 11px;
+}
+
+.CommentThread__comment__actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.CommentThread__comment:hover .CommentThread__comment__actions,
+.CommentThread__comment:focus-within .CommentThread__comment__actions {
+  opacity: 1;
+}
+
+.CommentThread__comment__body {
+  font-size: 13px;
+}
+
+.CommentThread__comment__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.CommentThread__comment__editActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.CommentThread__event {
+  align-items: center;
+  color: var(--color-text-gray);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+.CommentThread__event__icon {
+  align-items: center;
+  background: #f1f3f5;
+  border-radius: 50%;
+  display: inline-flex;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.CommentThread__event__time {
+  margin-left: auto;
+}
+
+.CommentThread__composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.CommentThread__composer__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.CommentThread__readOnly {
+  color: var(--color-text-gray);
+  font-size: 12px;
+}
+
+.CommentThread__resolvedNote {
+  align-items: flex-start;
+  color: var(--color-text-gray);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.CommentThread__resolvedLink {
+  background: none;
+  border: none;
+  color: var(--color-text-gray);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.CommentThread__resolvedLink:hover {
+  color: var(--color-text-default);
+}

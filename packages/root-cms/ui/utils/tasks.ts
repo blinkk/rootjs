@@ -13,7 +13,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import {RichTextData, RichTextBlock} from '../../shared/richtext.js';
+import {getRichTextPlainText, RichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
 import type {UploadedFile} from './gcs.js';
 
@@ -842,56 +842,6 @@ export async function editTaskComment(
 
 function normalizeTaskCommentBody(content: string | RichTextData) {
   return typeof content === 'string' ? null : content;
-}
-
-function getRichTextPlainText(data: RichTextData | null) {
-  if (!data?.blocks?.length) {
-    return '';
-  }
-  return data.blocks
-    .map((block) => getRichTextBlockPlainText(block))
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
-
-function getRichTextBlockPlainText(block: RichTextBlock): string {
-  switch (block.type) {
-    case 'paragraph':
-    case 'heading':
-    case 'quote':
-      return stripHtml(block.data?.text || '');
-    case 'orderedList':
-    case 'unorderedList':
-      return (block.data?.items || [])
-        .map((item: any) => getRichTextListItemPlainText(item))
-        .filter(Boolean)
-        .join('\n');
-    case 'image':
-      return block.data?.file?.alt || block.data?.file?.url || '';
-    default:
-      return '';
-  }
-}
-
-function getRichTextListItemPlainText(item: {
-  content?: string;
-  items?: Array<any>;
-}) {
-  const parts = [stripHtml(item.content || '')];
-  if (item.items?.length) {
-    parts.push(
-      item.items
-        .map((child) => getRichTextListItemPlainText(child))
-        .filter(Boolean)
-        .join('\n')
-    );
-  }
-  return parts.filter(Boolean).join('\n');
-}
-
-function stripHtml(value: string) {
-  return value.replace(/<[^>]+>/g, '');
 }
 
 export async function deleteTaskComment(taskId: string, commentId: string) {
