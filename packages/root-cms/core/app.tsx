@@ -1,15 +1,26 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
-import {resolveEditorTheme} from './editor-theme.js';
+import {listBuiltInThemes, resolveEditorTheme} from './editor-theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
 import {getServerVersion} from './server-version.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** The built-in editor themes, read once from the built package. */
+let builtInThemes: Promise<string[]> | null = null;
+
+function getBuiltInThemes(): Promise<string[]> {
+  builtInThemes ??= listBuiltInThemes(path.resolve(__dirname, 'ui/themes'));
+  return builtInThemes;
+}
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -59,7 +70,12 @@ function App(props: AppProps) {
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
         {props.themeUrl && (
-          <link rel="stylesheet" href={props.themeUrl} nonce="{NONCE}" />
+          <link
+            id="root-cms-theme"
+            rel="stylesheet"
+            href={props.themeUrl}
+            nonce="{NONCE}"
+          />
         )}
         {/* A text child would be HTML-escaped, turning selectors like
             `a > b` into `a &gt; b`; CSS has to reach the browser verbatim.
@@ -132,6 +148,10 @@ export async function renderApp(
   }
   // Only set on prebuilt (deployed) servers; `null` on the dev server.
   const buildInfo = await getBuildInfo(rootConfig.rootDir);
+  const theme = resolveEditorTheme(cmsConfig.theme);
+  if (theme.warning) {
+    console.warn(`[root-cms] ${theme.warning}`);
+  }
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -175,14 +195,16 @@ export async function renderApp(
     // Matches `resolveDependencyGraphConfig()`: `true` or a config object
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
+    // The project's default theme and the built-ins a user can pick instead
+    // (Settings → User Preferences).
+    theme: {
+      default: theme.name,
+      available: await getBuiltInThemes(),
+    },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
-  const theme = resolveEditorTheme(cmsConfig.theme);
-  if (theme.warning) {
-    console.warn(`[root-cms] ${theme.warning}`);
-  }
   const mainHtml = renderJsxToString(
     <App
       title={title}

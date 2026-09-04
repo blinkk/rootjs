@@ -1,6 +1,13 @@
+import fs from 'node:fs/promises';
+
 /**
  * Resolves the `theme` plugin option into what the editor page loads: an
  * optional built-in theme stylesheet, then optional inline CSS on top.
+ *
+ * The option is the project's default. Each user can pick a different
+ * built-in theme (or none) under Settings → User Preferences; the client
+ * swaps the theme stylesheet accordingly, while the project's inline CSS
+ * always applies.
  */
 
 /** Themes ship as `ui/themes/<name>.css` and are served from this prefix. */
@@ -21,6 +28,8 @@ export interface CMSTheme {
 }
 
 export interface ResolvedEditorTheme {
+  /** The built-in theme's name, or `null` when none applies. */
+  name: string | null;
   /** URL of the built-in theme stylesheet, or `null` when none applies. */
   stylesheetUrl: string | null;
   /** CSS to inline, already made safe for a `<style>` element. */
@@ -59,6 +68,7 @@ export function resolveEditorTheme(
     typeof option === 'string' ? {extends: option} : option || {};
   const stylesheetUrl = themeStylesheetUrl(theme.extends);
   const result: ResolvedEditorTheme = {
+    name: stylesheetUrl ? theme.extends! : null,
     stylesheetUrl,
     inlineCss: theme.css ? escapeInlineCss(theme.css) : null,
   };
@@ -66,4 +76,23 @@ export function resolveEditorTheme(
     result.warning = `ignoring theme "${theme.extends}": theme names use lowercase letters, digits and hyphens`;
   }
   return result;
+}
+
+/**
+ * The names of the built-in themes shipped in `themesDir` (the `ui/themes`
+ * folder of the built package): every `<name>.css` whose name is one the
+ * option would accept. Missing folder means no themes.
+ */
+export async function listBuiltInThemes(themesDir: string): Promise<string[]> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(themesDir);
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.endsWith('.css'))
+    .map((entry) => entry.slice(0, -'.css'.length))
+    .filter((name) => THEME_NAME_PATTERN.test(name))
+    .sort();
 }

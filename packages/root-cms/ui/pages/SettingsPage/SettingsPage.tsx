@@ -1,5 +1,5 @@
 import './SettingsPage.css';
-import {Button, LoadingOverlay, Switch, Textarea} from '@mantine/core';
+import {Button, LoadingOverlay, Select, Switch, Textarea} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconCheck} from '@tabler/icons-preact';
@@ -19,6 +19,11 @@ import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useSignInStatuses} from '../../hooks/useSignInStatus.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
+import {
+  STOCK_THEME,
+  THEME_PREFERENCE_KEY,
+  getEditorThemeConfig,
+} from '../../hooks/useEditorTheme.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 import {logAction} from '../../utils/actions.js';
@@ -603,6 +608,63 @@ function ShareSection() {
   );
 }
 
+/**
+ * The user's editor theme. The project sets a default in root.config.ts;
+ * this picks a different built-in (or the stock look) for this user only.
+ */
+function ThemePreference() {
+  const userPrefs = useUserPreferences();
+  const {defaultTheme, available} = getEditorThemeConfig();
+  const options = [
+    {
+      value: '',
+      label: `Project default (${defaultTheme ?? 'stock'})`,
+    },
+    ...(defaultTheme ? [{value: STOCK_THEME, label: 'Stock'}] : []),
+    ...available.map((name) => ({value: name, label: name})),
+  ];
+  const current = userPrefs.preferences[THEME_PREFERENCE_KEY];
+  const value =
+    typeof current === 'string' &&
+    options.some((option) => option.value === current)
+      ? current
+      : '';
+  return (
+    <div className="SettingsPage__section__userPref">
+      <div className="SettingsPage__section__userPref__description">
+        <Text
+          className="SettingsPage__section__userPref__description__title"
+          size="body"
+          weight="semi-bold"
+        >
+          Editor theme
+        </Text>
+        <Text
+          className="SettingsPage__section__userPref__description__body"
+          size="body-sm"
+          weight="semi-bold"
+          color="gray"
+        >
+          <p>
+            How the document editor looks for you. The project chooses a
+            default; pick another built-in theme, or the stock look, to
+            override it here.
+          </p>
+        </Text>
+      </div>
+      <div className="SettingsPage__section__userPref__input">
+        <Select
+          data={options}
+          value={value}
+          onChange={(next: string | null) => {
+            userPrefs.setPreference(THEME_PREFERENCE_KEY, next || null);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   usePageTitle('Settings');
   const userPrefs = useUserPreferences();
@@ -676,6 +738,7 @@ export function SettingsPage() {
             </Text>
           </div>
           <Surface className="SettingsPage__section__right">
+            <ThemePreference />
             <div className="SettingsPage__section__userPref">
               <div className="SettingsPage__section__userPref__description">
                 <Text

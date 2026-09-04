@@ -44,6 +44,7 @@ import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
+import {EditorThemeApplier} from './hooks/useEditorTheme.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
 import {installGlobalErrorHandlers} from './utils/global-errors.js';
 import {lazyRoute} from './utils/lazy-route.js';
@@ -285,6 +286,11 @@ declare global {
        * client-side publishes so the graph is updated immediately.
        */
       dependencyGraphEnabled?: boolean;
+      /** The project's default editor theme and the built-ins a user can pick. */
+      theme?: {
+        default: string | null;
+        available: string[];
+      };
     };
     firebase: FirebaseContextObject;
   }
@@ -344,6 +350,7 @@ function App() {
             <SiteSettingsProvider>
               <PendingReleasesProvider>
                 <UserPreferencesProvider>
+                  <EditorThemeApplier />
                   {/*
                     NOTE: <LocationProvider> must wrap <ModalsProvider>. The
                     modals provider renders the currently open modal as a

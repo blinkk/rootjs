@@ -150,9 +150,10 @@ async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
-/** Paths to non-confidential static files. These files won't require authentication. */
 /** Built-in editor themes (`ui/themes/*.css`) are served under this prefix. */
 const THEME_STATIC_PREFIX = '/cms/static/themes/';
+
+/** Paths to non-confidential static files. These files won't require authentication. */
 const NONCONF_STATIC_PATHS = [
   '/cms/static/signin.css',
   '/cms/static/signin.js',
@@ -443,14 +444,18 @@ export type CMSPluginOptions = {
   minimalBranding?: boolean;
 
   /**
-   * Theme for the CMS editor UI. Leave unset for the stock look.
+   * The project's default theme for the CMS editor UI. Leave unset for the
+   * stock look. Each user can pick a different built-in theme, or the stock
+   * look, for themselves under Settings → User Preferences; this option is
+   * what they get until they do.
    *
    * Built-in themes ship with root-cms as `ui/themes/<name>.css` and load
    * after the base stylesheet:
    *
    * - `clarity` — a calmer editor that shows its structure: field groups
-   *   become boxed cards with their fields indented behind a rule, help text
-   *   steps down beneath its label, and the structural accents go neutral.
+   *   become boxed cards, the fields a type picker reveals sit behind a rule,
+   *   help text steps down beneath its label, and the structural accents go
+   *   neutral.
    *
    * Three forms:
    *
@@ -465,11 +470,15 @@ export type CMSPluginOptions = {
    * theme: {css: fs.readFileSync('./cms-theme.css', 'utf-8')}
    * ```
    *
-   * `css` is inlined last, so it wins the cascade without `!important`.
-   * Prefer the `--cms-*` custom properties where one exists — they are the
-   * stable surface — over rules that target the editor's class names, which
-   * may change between versions. A built-in theme that builds on another
-   * does the same thing in CSS with `@import './other.css';`.
+   * `css` is inlined last, so it wins the cascade without `!important`, and
+   * applies whichever built-in the user has chosen.
+   *
+   * The supported surface for project CSS is the `--cms-*` custom
+   * properties, documented in `ui/themes/README.md`; those are kept stable
+   * across versions. Rules that target the editor's class names or DOM are
+   * unsupported: they work today but may break with any release, since the
+   * editor's markup is free to change. A built-in theme that builds on
+   * another does the same thing in CSS with `@import './other.css';`.
    */
   theme?: string | CMSTheme;
 
