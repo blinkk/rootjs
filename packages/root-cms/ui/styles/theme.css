@@ -38,7 +38,7 @@
 
   /* --- Type and rhythm ------------------------------------------------- */
 
-  /* Base size for the editor's own text. */
+  /* Base size for the document editor's text. */
   --cms-font-size: 12px;
   /* Field labels. */
   --cms-label-size: 12px;
