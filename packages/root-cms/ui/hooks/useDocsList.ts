@@ -32,6 +32,16 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
   const includeArchived = options.includeArchived ?? false;
 
   const listDocs = async () => {
+    // Callers may render before a collection is chosen (e.g. the doc picker's
+    // "Content Type" select starts blank when a field spans multiple
+    // collections). An empty segment collapses the firestore path to
+    // `Projects/<id>/Collections/Drafts`, which throws an "Invalid collection
+    // reference" error and surfaces as a "Something went wrong" notification.
+    if (!collectionId) {
+      setDocs([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const dbCollection = collection(
       db,
