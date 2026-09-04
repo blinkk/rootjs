@@ -31,7 +31,7 @@ import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
-import {type CMSTheme, THEME_URL, loadEditorTheme} from './editor-theme.js';
+import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {
   clearDevAuthCookie,
   getDevAuthCookie,
@@ -51,7 +51,7 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
-export type {CMSTheme} from './editor-theme.js';
+export type {CMSTheme} from './theme.js';
 export type {
   CollectionPublishingOptions,
   PublishCheckConfig,
@@ -441,34 +441,42 @@ export type CMSPluginOptions = {
   minimalBranding?: boolean;
 
   /**
-   * Experimental: a stylesheet for the CMS editor UI, applied for everyone
-   * on the project. The editor's markup changes as features are added, so a
-   * theme may need adjusting from version to version; the `--cms-*` custom
-   * properties are the part meant to last (see `docs/editor-theme.md`).
+   * Experimental: themes for the CMS UI, each a stylesheet loaded after the
+   * CMS's own. Anything the CSS reaches can be restyled; the `--cms-*`
+   * custom properties in `ui/styles/theme.css` are the part meant to last
+   * (copy that file to start a theme — see `docs/themes.md`).
    *
    * ```ts
-   * theme: {file: './cms-theme.css'}
-   * theme: {file: './cms-theme.css', css: ':root { --cms-drawer-indent: 32px; }'}
+   * themes: [
+   *   {id: 'clarity', name: 'Clarity', file: './cms/clarity.css'},
+   *   ...somePlugin.themes,
+   * ],
+   * defaultTheme: 'clarity',
    * ```
    *
-   * `file` is relative to the project root; `css` is appended after it (or
-   * is the whole theme on its own). The result is served at `/cms/theme.css`
-   * behind the editor's login, cache-busted by its content, and linked after
-   * the editor's own stylesheet so it wins the cascade without `!important`.
-   * The file is read on each request, so an edit shows on the next reload.
+   * `file` is relative to the project root; `css` can be given instead, or
+   * appended after it. Each theme is served at `/cms/themes/<id>.css` behind
+   * the CMS's login and read on each request, so an edit shows on the next
+   * reload.
    *
-   * Each user can switch the project theme off for themselves under
-   * Settings → User Preferences. CSS can also be added from the CMS itself,
+   * Every user picks their own theme from this list under Settings → User
+   * Preferences; `defaultTheme` is what applies until they do, and no
+   * default means the stock CMS. CSS can also be added from the CMS itself,
    * without a deploy: for the whole project under Settings → Site Settings,
    * and per user under Settings → User Preferences — including an
    * `@import url(…)` of a hosted file.
    *
-   * The supported surface is the `--cms-*` custom properties, which are
-   * kept stable across versions. Rules that target the editor's class names
-   * or DOM are unsupported: they work today but may break with any release,
-   * since the editor's markup is free to change.
+   * Rules that target the CMS's class names or DOM are unsupported: they
+   * work today but may break with any release, since the markup is free to
+   * change.
    */
-  theme?: CMSTheme;
+  themes?: CMSTheme[];
+
+  /**
+   * Experimental: the id of the theme in `themes` that applies to users who
+   * haven't chosen one. Omit for the stock CMS.
+   */
+  defaultTheme?: string;
 
   /**
    * Callback when an action occurs.
@@ -1332,32 +1340,36 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         translations: options.translations,
       });
 
-      // The project's editor theme (`theme` option), served as its own
-      // stylesheet behind the same login as the editor page that links it.
-      server.get(THEME_URL, async (req: Request, res: Response) => {
-        if (!req.user) {
-          redirectToLogin(req, res);
-          return;
+      // The project's themes (`themes` option), each served as its own
+      // stylesheet behind the same login as the page that links it.
+      server.get(
+        `${THEMES_URL_PREFIX}:file`,
+        async (req: Request, res: Response) => {
+          if (!req.user) {
+            redirectToLogin(req, res);
+            return;
+          }
+          const id = String(req.params.file).replace(/\.css$/, '');
+          const configured = options.themes?.find((theme) => theme.id === id);
+          const theme = configured
+            ? await loadTheme(configured, req.rootConfig!.rootDir)
+            : null;
+          if (!theme) {
+            res.status(404).end();
+            return;
+          }
+          res.setHeader('content-type', 'text/css; charset=utf-8');
+          // The link carries the content hash, so a matching request can be
+          // cached for good; anything else is checked again each time.
+          res.setHeader(
+            'cache-control',
+            req.query.c === theme.hash
+              ? 'private, max-age=31536000, immutable'
+              : 'no-cache'
+          );
+          res.send(theme.css);
         }
-        const theme = await loadEditorTheme(
-          options.theme,
-          req.rootConfig!.rootDir
-        );
-        if (!theme) {
-          res.status(404).end();
-          return;
-        }
-        res.setHeader('content-type', 'text/css; charset=utf-8');
-        // The link carries the content hash, so a matching request can be
-        // cached for good; anything else is checked again each time.
-        res.setHeader(
-          'cache-control',
-          req.query.c === theme.hash
-            ? 'private, max-age=31536000, immutable'
-            : 'no-cache'
-        );
-        res.send(theme.css);
-      });
+      );
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

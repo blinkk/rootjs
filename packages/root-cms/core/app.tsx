@@ -5,7 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
-import {THEME_URL, loadEditorTheme} from './editor-theme.js';
+import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -18,7 +18,7 @@ interface AppProps {
   title: string;
   ctx: any;
   favicon?: string;
-  /** The project theme stylesheet, cache-busted by its content. */
+  /** The default theme's stylesheet, cache-busted by its content. */
   themeUrl?: string;
 }
 
@@ -56,9 +56,9 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
-        {/* The project's theme (`cmsPlugin({theme})`), after ui.css so it
-            wins the cascade. The id lets a user switch it off client-side
-            (Settings → User Preferences). */}
+        {/* The default theme (`cmsPlugin({themes, defaultTheme})`), after
+            ui.css so it wins the cascade. The id lets the client swap in
+            the user's own choice (Settings → User Preferences). */}
         {props.themeUrl && (
           <link
             id="root-cms-theme"
@@ -127,7 +127,8 @@ export async function renderApp(
   }
   // Only set on prebuilt (deployed) servers; `null` on the dev server.
   const buildInfo = await getBuildInfo(rootConfig.rootDir);
-  const theme = await loadEditorTheme(cmsConfig.theme, rootConfig.rootDir);
+  const themes = await loadThemes(cmsConfig.themes, rootConfig.rootDir);
+  const defaultTheme = resolveDefaultTheme(themes, cmsConfig.defaultTheme);
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -171,9 +172,12 @@ export async function renderApp(
     // Matches `resolveDependencyGraphConfig()`: `true` or a config object
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
-    // Whether there is a project theme for a user to switch off (Settings →
-    // User Preferences).
-    theme: {configured: Boolean(theme)},
+    // The themes a user can pick between, and which one applies until they
+    // do (Settings → User Preferences).
+    theme: {
+      default: defaultTheme?.id ?? null,
+      themes: themes.map(({id, name, hash}) => ({id, name, hash})),
+    },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
@@ -183,7 +187,11 @@ export async function renderApp(
       title={title}
       ctx={ctx}
       favicon={cmsConfig.favicon}
-      themeUrl={theme ? cachebust(req, THEME_URL, theme.hash) : undefined}
+      themeUrl={
+        defaultTheme
+          ? cachebust(req, themeUrl(defaultTheme.id)!, defaultTheme.hash)
+          : undefined
+      }
     />
   );
   const nonce = generateNonce();

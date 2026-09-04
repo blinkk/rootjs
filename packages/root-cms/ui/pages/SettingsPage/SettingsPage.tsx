@@ -1,5 +1,5 @@
 import './SettingsPage.css';
-import {Button, LoadingOverlay, Switch, Textarea} from '@mantine/core';
+import {Button, LoadingOverlay, Select, Switch, Textarea} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconCheck} from '@tabler/icons-preact';
@@ -21,10 +21,10 @@ import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
 import {
   CUSTOM_CSS_PREFERENCE_KEY,
-  PROJECT_THEME_PREFERENCE_KEY,
-  hasProjectTheme,
-  usesProjectTheme,
-} from '../../hooks/useEditorTheme.js';
+  STOCK_THEME,
+  THEME_PREFERENCE_KEY,
+  getThemeConfig,
+} from '../../hooks/useTheme.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 import {logAction} from '../../utils/actions.js';
@@ -664,8 +664,8 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
         >
           <p>
             {props.scope === 'site'
-              ? 'Styles the document editor for everyone on this project. '
-              : 'Styles the document editor for you only. '}
+              ? 'Styles the CMS for everyone on this project, on top of the theme. '
+              : 'Styles the CMS for you only, on top of the theme. '}
             Paste CSS, or pull in a hosted file with{' '}
             <code>@import url("https://…");</code>. The editor changes between
             versions, so rules written against its class names can stop working;
@@ -696,14 +696,28 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
 }
 
 /**
- * Switches the project's editor theme (`cmsPlugin({theme})`) off for this
- * user only. Rendered only when the project has one.
+ * The user's theme, chosen from the ones the project registered. Rendered
+ * only when there are any.
  */
-function ProjectThemePreference() {
+function ThemePreference() {
   const userPrefs = useUserPreferences();
-  if (!hasProjectTheme()) {
+  const {defaultTheme, themes} = getThemeConfig();
+  if (themes.length === 0) {
     return null;
   }
+  const defaultName =
+    themes.find((theme) => theme.id === defaultTheme)?.name ?? 'stock';
+  const options = [
+    {value: '', label: `Project default (${defaultName})`},
+    ...(defaultTheme ? [{value: STOCK_THEME, label: 'Stock'}] : []),
+    ...themes.map((theme) => ({value: theme.id, label: theme.name})),
+  ];
+  const current = userPrefs.preferences[THEME_PREFERENCE_KEY];
+  const value =
+    typeof current === 'string' &&
+    options.some((option) => option.value === current)
+      ? current
+      : '';
   return (
     <div className="SettingsPage__section__userPref">
       <div className="SettingsPage__section__userPref__description">
@@ -712,7 +726,7 @@ function ProjectThemePreference() {
           size="body"
           weight="semi-bold"
         >
-          Project editor theme
+          Theme (experimental)
         </Text>
         <Text
           className="SettingsPage__section__userPref__description__body"
@@ -721,21 +735,17 @@ function ProjectThemePreference() {
           color="gray"
         >
           <p>
-            This project styles the document editor with its own CSS. Switch it
-            off to use the stock editor instead; your own custom CSS still
-            applies.
+            How the CMS looks for you. The project chooses a default; pick
+            another theme, or the stock look, to override it here.
           </p>
         </Text>
       </div>
       <div className="SettingsPage__section__userPref__input">
-        <Switch
-          color="dark"
-          checked={usesProjectTheme(
-            userPrefs.preferences[PROJECT_THEME_PREFERENCE_KEY]
-          )}
-          onChange={(e: Event) => {
-            const enabled = (e.currentTarget as HTMLInputElement).checked;
-            userPrefs.setPreference(PROJECT_THEME_PREFERENCE_KEY, enabled);
+        <Select
+          data={options}
+          value={value}
+          onChange={(next: string | null) => {
+            userPrefs.setPreference(THEME_PREFERENCE_KEY, next || null);
           }}
         />
       </div>
@@ -817,7 +827,7 @@ export function SettingsPage() {
             </Text>
           </div>
           <Surface className="SettingsPage__section__right">
-            <ProjectThemePreference />
+            <ThemePreference />
             <CustomCssSetting scope="user" />
             <div className="SettingsPage__section__userPref">
               <div className="SettingsPage__section__userPref__description">
