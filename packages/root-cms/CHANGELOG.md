@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 3.4.11
+
+### Patch Changes
+
+- 3b67346: fix: don't query firestore in useDocsList before a collection is selected
+- 24ed0cd: feat: add google-vertex ai model provider
+  - @blinkk/root@3.4.11
+
 ## 3.4.10
 
 ### Patch Changes
