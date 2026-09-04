@@ -1,7 +1,8 @@
 import './DocumentPage.css';
 
-import {ActionIcon, Button, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Checkbox, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
+import {useModals} from '@mantine/modals';
 import {
   IconArrowLeft,
   IconArrowUpRight,
@@ -11,9 +12,12 @@ import {
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
+import {isNavigateToDocMessage} from '../../../shared/embed-protocol.js';
 import {ChecksPanel} from '../../components/ChecksPanel/ChecksPanel.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
+import {DocIdBadge} from '../../components/DocIdBadge/DocIdBadge.js';
 import {
   DocumentPagePreviewBar,
   type DeviceType,
@@ -22,8 +26,10 @@ import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js'
 import {RootAIChat} from '../../components/RootAIChat/RootAIChat.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
+import {Text} from '../../components/Text/Text.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useStringParam} from '../../hooks/useQueryParam.js';
@@ -31,6 +37,8 @@ import {Layout} from '../../layout/Layout.js';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
+import {isAllowedOrigin} from '../../utils/embed-bridge.js';
+import {testEnableChannelFromPreview} from '../../utils/iframe-preview.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {
   getPreviewPathFromUrlKey,
@@ -622,6 +630,17 @@ interface PreviewProps {
   docId: string;
 }
 
+/**
+ * The answer to remember when the user ticks "don't ask again" in the
+ * confirmation below: `true` to keep following, `false` to stop following, and
+ * `null` to keep asking.
+ *
+ * Scoped to the page session rather than persisted: following is only useful
+ * for a stretch of browsing, and a decision made once shouldn't quietly
+ * outlive it. Reloading the CMS asks again.
+ */
+let rememberedFollowAnswer: boolean | null = null;
+
 const DeviceResolution = {
   mobile: [430, 932],
   tablet: [768, 1024],
@@ -713,6 +732,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   // The url the preview panes are expected to be showing. Used to detect when
   // the user navigates within a pane so the other panes can be brought along.
   const syncedUrlKey = useRef<string | null>(null);
+  const {route} = useLocation();
+  const modals = useModals();
+  const modalTheme = useModalTheme();
   const previewFrameRef = useRef<HTMLDivElement>(null);
   // Remembers the viewport selection from before 2-up was enabled so it can be
   // restored when 2-up is turned back off.
@@ -811,6 +833,108 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   /**
+   * Returns whether a doc id from the preview names a real collection and a
+   * well-formed slug. Without this a previewed page could send the editor to
+   * an arbitrary route.
+   */
+  function testDocIdIsValid(docId: string): boolean {
+    const parts = docId.split('/');
+    if (parts.length !== 2) {
+      return false;
+    }
+    const [collection, slug] = parts;
+    // The slug isn't matched against the CMS slug pattern: docs created before
+    // it was enforced would stop being reachable. Rejecting dot segments and
+    // requiring a known collection is what keeps the route well-formed.
+    if (!collection || !slug || slug === '.' || slug === '..') {
+      return false;
+    }
+    return Boolean(window.__ROOT_CTX.collections[collection]);
+  }
+
+  /**
+   * Switches the editor to the doc a preview pane says it is showing.
+   *
+   * The doc id comes from the previewed page itself (see `navigateToDoc()` in
+   * the browser client), so there is nothing to derive from the url. It is
+   * still untrusted input -- any page the pane can reach could post it -- so
+   * the collection and slug are validated before routing anywhere.
+   */
+  function navigateToDoc(docId: string, options?: {confirm?: boolean}) {
+    if (docId === props.docId || !testDocIdIsValid(docId)) {
+      return;
+    }
+    // Confirm unless the site opted out. The editor switching docs on its own
+    // is disorienting for someone who doesn't know the page can ask for it.
+    if (options?.confirm === false || rememberedFollowAnswer === true) {
+      openDoc(docId);
+      return;
+    }
+    // The user asked not to be prompted again and said no last time.
+    if (rememberedFollowAnswer === false) {
+      return;
+    }
+    // Read on confirm rather than through state: the checkbox only has to be
+    // correct at the moment the user accepts, so there's nothing to re-render.
+    let dontAskAgain = false;
+    modals.openConfirmModal({
+      ...modalTheme,
+      title: 'The preview has changed',
+      children: (
+        <>
+          <Text size="body-sm" weight="semi-bold">
+            Do you want to load this page in the editor?
+          </Text>
+          <DocIdBadge docId={docId} />
+          <Checkbox
+            className="DocumentPage__followConfirm__dontAsk"
+            label="Don't ask again this session"
+            size="xs"
+            onChange={(e: Event) => {
+              dontAskAgain = (e.currentTarget as HTMLInputElement).checked;
+            }}
+          />
+        </>
+      ),
+      labels: {confirm: 'Yes', cancel: 'No'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {size: 'xs'},
+      onConfirm: () => {
+        if (dontAskAgain) {
+          rememberedFollowAnswer = true;
+        }
+        openDoc(docId);
+      },
+      onCancel: () => {
+        if (dontAskAgain) {
+          rememberedFollowAnswer = false;
+        }
+      },
+    });
+  }
+
+  /** Routes the editor to a doc the preview asked for. */
+  function openDoc(docId: string) {
+    // Autosave runs on a delay, so a navigation can land mid-window. This
+    // isn't awaited: the update is handed to Firestore before the route
+    // changes, and the controller flushes again when it's disposed.
+    draft.controller?.flush();
+    const params = new URLSearchParams(window.location.search);
+    // Both of these point at a field in the doc being left behind.
+    params.delete('modal');
+    params.delete('deeplink');
+    const query = params.toString();
+    const [collection, slug] = docId.split('/');
+    const path = `/cms/content/${encodeURIComponent(
+      collection
+    )}/${encodeURIComponent(slug)}`;
+    // Push, so the doc the editor came from stays in the back stack. The
+    // iframe's own navigation doesn't add a top-level entry, so replacing here
+    // would discard the previous doc and leave the back button doing nothing.
+    route(`${path}${query ? `?${query}` : ''}`);
+  }
+
+  /**
    * Returns the url a newly-mounted pane should open at, which is whatever page
    * the other panes are showing (or the doc's preview url when there are none).
    */
@@ -843,6 +967,27 @@ DocumentPage.Preview = (props: PreviewProps) => {
   function reloadAllIframes() {
     iframeRefs.current.forEach((iframe) => reloadIframe(iframe));
   }
+
+  // Listen for a preview pane asking the editor to open another doc. Only
+  // messages from this page's own preview iframes are accepted, so an
+  // unrelated frame can't drive the editor.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (!testEnableChannelFromPreview() || !isAllowedOrigin(event.origin)) {
+        return;
+      }
+      const isOwnPane = Array.from(iframeRefs.current.values()).some(
+        (iframe) => iframe.contentWindow === event.source
+      );
+      if (!isOwnPane || !isNavigateToDocMessage(event.data)) {
+        return;
+      }
+      const req = event.data.navigateToDoc;
+      navigateToDoc(req.docId, {confirm: req.confirm});
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [props.docId]);
 
   // Reload every visible preview iframe whenever the draft is flushed.
   useEffect(() => {

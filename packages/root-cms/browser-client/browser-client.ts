@@ -16,6 +16,7 @@
 
 import {
   isHighlightNodeMessage,
+  NavigateToDocMessage,
   ScrollToDeeplinkMessage,
 } from '../shared/embed-protocol.js';
 import {normalizeSlug} from '../shared/slug.js';
@@ -25,6 +26,7 @@ import {Emitter} from './emitter.js';
 export {SaveState} from '../shared/embed-protocol.js';
 export type {
   HighlightNodeMessage,
+  NavigateToDocMessage,
   RootEmbedMessage,
   ScrollToDeeplinkMessage,
 } from '../shared/embed-protocol.js';
@@ -201,6 +203,48 @@ export class PreviewConnection {
   }
 
   /**
+   * Tells the doc editor to switch to a document, so the editor follows the
+   * preview as the user navigates the site.
+   *
+   * Call it with the page's own doc id when the page loads. `isEmbedded` is
+   * false outside the CMS preview pane, so the call is a no-op on the live
+   * site. The CMS only acts on it when the plugin's `preview.channel` enables
+   * messages from the preview.
+   *
+   * The editor asks the user before switching by default, since a doc changing
+   * on its own is disorienting for someone who doesn't know the page can do
+   * that. Pass `{confirm: false}` to switch straight away, for sites that have
+   * their own affordance for it (a toggle the user turned on, say).
+   *
+   * Usage:
+   * ```
+   * const preview = new PreviewConnection();
+   * if (preview.isEmbedded) {
+   *   preview.navigateToDoc(doc.id);
+   * }
+   * ```
+   */
+  navigateToDoc(docId: string, options?: {confirm?: boolean}) {
+    if (window.parent === window) {
+      return;
+    }
+    const [collection, ...slugParts] = docId.split('/');
+    const slug = normalizeSlug(slugParts.join('/'));
+    if (!collection || !slug) {
+      throw new Error(
+        `invalid docId: "${docId}" (expected "<collection>/<slug>")`
+      );
+    }
+    const message: NavigateToDocMessage = {
+      navigateToDoc: {
+        docId: `${collection}/${slug}`,
+        confirm: options?.confirm,
+      },
+    };
+    window.parent.postMessage(message, window.location.origin);
+  }
+
+  /**
    * Subscribes to field highlight requests from the doc editor (sent when the
    * user hovers/focuses a field). Returns an unsubscribe function.
    */
@@ -330,10 +374,26 @@ export class RootCMSBrowserClient {
     return new PreviewConnection();
   }
 
-  /** Returns whether this page is rendered inside the in-CMS preview pane. */
+  /**
+   * Returns whether this page is rendered inside the in-CMS preview pane.
+   *
+   * The parent's location is the reliable signal: the preview iframe is
+   * same-origin, so the CMS path is readable. The referrer only names the CMS
+   * for the first page the pane loads -- once the user follows a link inside
+   * the preview it names the previous page of the site instead -- so it is
+   * kept as a fallback for the cases where the parent can't be read.
+   */
   static isInPreviewIframe(): boolean {
     if (window.parent === window) {
       return false;
+    }
+    try {
+      const parentPath = window.parent.location.pathname;
+      if (parentPath.startsWith('/cms')) {
+        return true;
+      }
+    } catch {
+      // Cross-origin parent: fall through to the referrer check.
     }
     return document.referrer.startsWith(`${window.location.origin}/cms`);
   }
