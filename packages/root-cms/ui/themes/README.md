@@ -1,5 +1,10 @@
 # Editor themes
 
+> **Experimental.** The editor's markup changes as features are added, so a
+> theme may need adjusting from version to version. The `--cms-*` custom
+> properties below are the part meant to last; everything else is best
+> effort.
+
 A theme restyles the Root CMS document editor. Built-in themes live in this
 folder as `<name>.css`, ship with the package, and are served side by side at
 `/cms/static/themes/<name>.css`, so one can build on another with
@@ -19,8 +24,21 @@ theme: {extends: 'clarity', css: ':root { … }'}        // a built-in plus twea
 theme: {css: fs.readFileSync('./cms-theme.css', 'utf-8')} // from scratch
 ```
 
-Project `css` is inlined last and applies on top of whichever built-in the
-user has chosen.
+Project `css` is inlined after the theme and applies on top of whichever
+built-in the user has chosen.
+
+## Custom CSS from the CMS
+
+CSS can also be added without a deploy, from the Settings page:
+
+- **Site Settings → Custom CSS** — applies to everyone on the project
+  (admins).
+- **User Preferences → Custom CSS** — applies to you only.
+
+Paste CSS directly, or pull in a hosted file with
+`@import url("https://…");` (a stylesheet in a GitHub repo, served raw,
+works). The cascade order is: base stylesheet, theme, project `css`, site
+custom CSS, user custom CSS — later wins.
 
 ## What is stable
 
@@ -33,7 +51,9 @@ Rules that target the editor's class names or DOM structure are **not**
 supported. They work today and may break with any release — the editor's
 markup is free to change, and nothing in the build checks such selectors.
 Built-in themes in this folder may use class names because they are
-maintained with the UI and updated alongside it; a project theme should not.
+maintained with the UI and updated alongside it; CSS written outside this
+repo — in `root.config.ts` or pasted into Settings — should stick to the
+properties.
 
 Set the properties on `:root`. Every property defaults to the stock value, so
 an unthemed editor renders exactly as it did before themes existed.

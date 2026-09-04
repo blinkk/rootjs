@@ -444,6 +444,10 @@ export type CMSPluginOptions = {
   minimalBranding?: boolean;
 
   /**
+   * Experimental: the editor's markup changes as features are added, so
+   * theming may need adjusting from version to version. The `--cms-*`
+   * custom properties are the part meant to last.
+   *
    * The project's default theme for the CMS editor UI. Leave unset for the
    * stock look. Each user can pick a different built-in theme, or the stock
    * look, for themselves under Settings → User Preferences; this option is
@@ -470,8 +474,11 @@ export type CMSPluginOptions = {
    * theme: {css: fs.readFileSync('./cms-theme.css', 'utf-8')}
    * ```
    *
-   * `css` is inlined last, so it wins the cascade without `!important`, and
-   * applies whichever built-in the user has chosen.
+   * `css` is inlined after the theme, so it wins the cascade without
+   * `!important`, and applies whichever built-in the user has chosen. CSS
+   * can also be added from the CMS itself, without a deploy: for the whole
+   * project under Settings → Site Settings, and per user under Settings →
+   * User Preferences — including an `@import url(…)` of a hosted file.
    *
    * The supported surface for project CSS is the `--cms-*` custom
    * properties, documented in `ui/themes/README.md`; those are kept stable
