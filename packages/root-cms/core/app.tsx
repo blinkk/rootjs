@@ -1,26 +1,15 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
-import {listBuiltInThemes, resolveEditorTheme} from './editor-theme.js';
+import {THEME_URL, loadEditorTheme} from './editor-theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
 import {getServerVersion} from './server-version.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-/** The built-in editor themes, read once from the built package. */
-let builtInThemes: Promise<string[]> | null = null;
-
-function getBuiltInThemes(): Promise<string[]> {
-  builtInThemes ??= listBuiltInThemes(path.resolve(__dirname, 'ui/themes'));
-  return builtInThemes;
-}
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -29,10 +18,8 @@ interface AppProps {
   title: string;
   ctx: any;
   favicon?: string;
-  /** Built-in theme stylesheet, already cache-busted. */
+  /** The project theme stylesheet, cache-busted by its content. */
   themeUrl?: string;
-  /** Project theme CSS, already made safe to inline. */
-  themeCss?: string;
 }
 
 function App(props: AppProps) {
@@ -69,22 +56,14 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
+        {/* The project's theme (`cmsPlugin({theme})`), after ui.css so it
+            wins the cascade. The id lets a user switch it off client-side
+            (Settings → User Preferences). */}
         {props.themeUrl && (
           <link
             id="root-cms-theme"
             rel="stylesheet"
             href={props.themeUrl}
-            nonce="{NONCE}"
-          />
-        )}
-        {/* A text child would be HTML-escaped, turning selectors like
-            `a > b` into `a &gt; b`; CSS has to reach the browser verbatim.
-            The value comes from root.config.ts, i.e. the site's own code,
-            not from users, and `resolveEditorTheme` has already neutralised
-            the one sequence (`</style`) that could break out of the element. */}
-        {props.themeCss && (
-          <style
-            dangerouslySetInnerHTML={{__html: props.themeCss}}
             nonce="{NONCE}"
           />
         )}
@@ -148,10 +127,7 @@ export async function renderApp(
   }
   // Only set on prebuilt (deployed) servers; `null` on the dev server.
   const buildInfo = await getBuildInfo(rootConfig.rootDir);
-  const theme = resolveEditorTheme(cmsConfig.theme);
-  if (theme.warning) {
-    console.warn(`[root-cms] ${theme.warning}`);
-  }
+  const theme = await loadEditorTheme(cmsConfig.theme, rootConfig.rootDir);
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -195,12 +171,9 @@ export async function renderApp(
     // Matches `resolveDependencyGraphConfig()`: `true` or a config object
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
-    // The project's default theme and the built-ins a user can pick instead
-    // (Settings → User Preferences).
-    theme: {
-      default: theme.name,
-      available: await getBuiltInThemes(),
-    },
+    // Whether there is a project theme for a user to switch off (Settings →
+    // User Preferences).
+    theme: {configured: Boolean(theme)},
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
@@ -210,10 +183,7 @@ export async function renderApp(
       title={title}
       ctx={ctx}
       favicon={cmsConfig.favicon}
-      themeUrl={
-        theme.stylesheetUrl ? cachebust(req, theme.stylesheetUrl) : undefined
-      }
-      themeCss={theme.inlineCss ?? undefined}
+      themeUrl={theme ? cachebust(req, THEME_URL, theme.hash) : undefined}
     />
   );
   const nonce = generateNonce();
@@ -427,8 +397,7 @@ function getRefererOrigin(req: Request): string {
 }
 
 /** Modify the given URL to bust the cache. */
-function cachebust(req: Request, url: string) {
-  const cb = getServerVersion();
+function cachebust(req: Request, url: string, cb = getServerVersion()) {
   const host = req.get('host');
   // On localhost, use a full URL so that the vite server doesn't attempt to
   // transform the file.

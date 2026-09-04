@@ -1,122 +1,66 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {describe, expect, it} from 'vitest';
-import {
-  escapeInlineCss,
-  listBuiltInThemes,
-  resolveEditorTheme,
-  themeStylesheetUrl,
-} from './editor-theme.js';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {loadEditorTheme} from './editor-theme.js';
 
-describe('themeStylesheetUrl', () => {
-  it('maps a theme name to its stylesheet under /cms/static/themes', () => {
-    expect(themeStylesheetUrl('clarity')).toBe(
-      '/cms/static/themes/clarity.css'
+describe('loadEditorTheme', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-cms-theme-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, {recursive: true, force: true});
+    vi.restoreAllMocks();
+  });
+
+  it('is null when the project has no theme', async () => {
+    expect(await loadEditorTheme(undefined, dir)).toBe(null);
+    expect(await loadEditorTheme({}, dir)).toBe(null);
+    expect(await loadEditorTheme({css: ' \n'}, dir)).toBe(null);
+  });
+
+  it('reads the file relative to the project root', async () => {
+    fs.writeFileSync(
+      path.join(dir, 'cms-theme.css'),
+      '\n:root { --cms-drawer-radius: 6px; }\n'
     );
-    expect(themeStylesheetUrl('my-theme-2')).toBe(
-      '/cms/static/themes/my-theme-2.css'
+    const theme = await loadEditorTheme({file: './cms-theme.css'}, dir);
+    expect(theme?.css).toBe(':root { --cms-drawer-radius: 6px; }');
+    expect(theme?.hash).toMatch(/^[0-9a-f]{8}$/);
+  });
+
+  it('appends css after the file', async () => {
+    fs.writeFileSync(path.join(dir, 'cms-theme.css'), 'a {}\n');
+    const theme = await loadEditorTheme(
+      {file: 'cms-theme.css', css: 'b {}'},
+      dir
     );
+    expect(theme?.css).toBe('a {}\nb {}');
   });
 
-  it('returns null when no theme is set', () => {
-    expect(themeStylesheetUrl(undefined)).toBe(null);
-    expect(themeStylesheetUrl('')).toBe(null);
+  it('takes css on its own', async () => {
+    const theme = await loadEditorTheme({css: 'b {}'}, dir);
+    expect(theme?.css).toBe('b {}');
   });
 
-  it('rejects names that are not plain file names', () => {
-    expect(themeStylesheetUrl('../ui')).toBe(null);
-    expect(themeStylesheetUrl('clarity.css')).toBe(null);
-    expect(themeStylesheetUrl('Nested')).toBe(null);
-    expect(themeStylesheetUrl('a b')).toBe(null);
-  });
-});
-
-describe('escapeInlineCss', () => {
-  it('leaves ordinary css alone', () => {
-    const css = ':root { --cms-drawer-indent: 20px; } /* a > b */';
-    expect(escapeInlineCss(css)).toBe(css);
-  });
-
-  it('keeps a stray end tag from closing the style element', () => {
-    expect(escapeInlineCss('a::after { content: "</style>"; }')).toBe(
-      'a::after { content: "<\\/style>"; }'
-    );
-    expect(escapeInlineCss('/* </STYLE> */')).toBe('/* <\\/STYLE> */');
-  });
-
-  it('escapes every occurrence', () => {
-    expect(escapeInlineCss('</style></style>')).toBe('<\\/style><\\/style>');
-  });
-});
-
-describe('resolveEditorTheme', () => {
-  it('loads nothing extra when no theme is configured', () => {
-    expect(resolveEditorTheme(undefined)).toEqual({
-      name: null,
-      stylesheetUrl: null,
-      inlineCss: null,
-    });
-  });
-
-  it('treats a string as a built-in theme used as-is', () => {
-    expect(resolveEditorTheme('clarity')).toEqual({
-      name: 'clarity',
-      stylesheetUrl: '/cms/static/themes/clarity.css',
-      inlineCss: null,
-    });
-  });
-
-  it('extends a built-in theme with inline css', () => {
+  it('warns about a missing file, once, and carries on', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(await loadEditorTheme({file: 'missing.css'}, dir)).toBe(null);
     expect(
-      resolveEditorTheme({
-        extends: 'clarity',
-        css: ':root { --cms-drawer-indent: 32px; }',
-      })
-    ).toEqual({
-      name: 'clarity',
-      stylesheetUrl: '/cms/static/themes/clarity.css',
-      inlineCss: ':root { --cms-drawer-indent: 32px; }',
-    });
+      await loadEditorTheme({file: 'missing.css', css: 'b {}'}, dir)
+    ).toEqual(expect.objectContaining({css: 'b {}'}));
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('missing.css');
   });
 
-  it('starts from scratch when only css is given', () => {
-    expect(resolveEditorTheme({css: 'body { color: red; }'})).toEqual({
-      name: null,
-      stylesheetUrl: null,
-      inlineCss: 'body { color: red; }',
-    });
-  });
-
-  it('escapes the inline css', () => {
-    expect(resolveEditorTheme({css: '/* </style> */'}).inlineCss).toBe(
-      '/* <\\/style> */'
-    );
-  });
-
-  it('warns about, and drops, an invalid built-in name', () => {
-    const resolved = resolveEditorTheme({extends: '../x', css: 'a {}'});
-    expect(resolved.name).toBe(null);
-    expect(resolved.stylesheetUrl).toBe(null);
-    expect(resolved.inlineCss).toBe('a {}');
-    expect(resolved.warning).toContain('../x');
-  });
-});
-
-describe('listBuiltInThemes', () => {
-  it('lists the css files in the themes folder, by name, sorted', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-cms-themes-'));
-    try {
-      for (const file of ['zebra.css', 'clarity.css', 'notes.txt', 'Bad.css']) {
-        fs.writeFileSync(path.join(dir, file), '');
-      }
-      expect(await listBuiltInThemes(dir)).toEqual(['clarity', 'zebra']);
-    } finally {
-      fs.rmSync(dir, {recursive: true, force: true});
-    }
-  });
-
-  it('is empty when the folder is missing', async () => {
-    expect(await listBuiltInThemes('/nonexistent/themes')).toEqual([]);
+  it('hashes the content', async () => {
+    const a = await loadEditorTheme({css: 'a {}'}, dir);
+    const b = await loadEditorTheme({css: 'b {}'}, dir);
+    const aAgain = await loadEditorTheme({css: 'a {}'}, dir);
+    expect(a?.hash).not.toBe(b?.hash);
+    expect(aAgain?.hash).toBe(a?.hash);
   });
 });

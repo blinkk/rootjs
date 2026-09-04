@@ -1,98 +1,67 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /**
- * Resolves the `theme` plugin option into what the editor page loads: an
- * optional built-in theme stylesheet, then optional inline CSS on top.
- *
- * The option is the project's default. Each user can pick a different
- * built-in theme (or none) under Settings → User Preferences; the client
- * swaps the theme stylesheet accordingly, while the project's inline CSS
- * always applies.
+ * A project theme for the CMS editor: a stylesheet loaded after the editor's
+ * own, from a file in the project and/or a CSS string.
  */
-
-/** Themes ship as `ui/themes/<name>.css` and are served from this prefix. */
-const THEME_URL_PREFIX = '/cms/static/themes/';
-
-/**
- * Theme names are file names, so they are limited to what can never leave the
- * themes directory or need escaping in a URL.
- */
-const THEME_NAME_PATTERN = /^[a-z0-9-]+$/;
-
-/** A project theme: a built-in to start from, CSS to add, or both. */
 export interface CMSTheme {
-  /** Name of a built-in theme to load first. Omit to start from scratch. */
-  extends?: string;
-  /** CSS inlined after the built-in theme (and after the base stylesheet). */
+  /** Path to a CSS file, relative to the project root (`root.config.ts`). */
+  file?: string;
+  /** CSS appended after the file, e.g. a few property overrides. */
   css?: string;
 }
 
-export interface ResolvedEditorTheme {
-  /** The built-in theme's name, or `null` when none applies. */
-  name: string | null;
-  /** URL of the built-in theme stylesheet, or `null` when none applies. */
-  stylesheetUrl: string | null;
-  /** CSS to inline, already made safe for a `<style>` element. */
-  inlineCss: string | null;
-  /** Set when part of the option was ignored; worth logging. */
-  warning?: string;
+/**
+ * Where the project theme is served, behind the same login as the editor
+ * page that links it.
+ */
+export const THEME_URL = '/cms/theme.css';
+
+export interface EditorTheme {
+  css: string;
+  /** Hash of `css`, to cache-bust the stylesheet URL. */
+  hash: string;
 }
 
+/** Files already warned about, so a missing file is reported once. */
+const warnedFiles = new Set<string>();
+
 /**
- * The stylesheet URL for a named theme, or `null` when the name is not one a
- * theme file could have (so a typo or a path never reaches the static server).
+ * The project theme's CSS: the file's contents, then `css`. `null` when the
+ * project has no theme. Read on every call, so an edit to the file shows on
+ * the next reload; the served stylesheet is cached by its content hash.
  */
-export function themeStylesheetUrl(theme: string | undefined): string | null {
-  if (!theme || !THEME_NAME_PATTERN.test(theme)) {
+export async function loadEditorTheme(
+  option: CMSTheme | undefined,
+  rootDir: string
+): Promise<EditorTheme | null> {
+  if (!option) {
     return null;
   }
-  return `${THEME_URL_PREFIX}${theme}.css`;
-}
-
-/**
- * Makes a CSS string safe to inline in a `<style>` element. The HTML parser
- * ends a style element at the first `</style` it sees regardless of CSS
- * syntax, so a stylesheet containing that sequence (in a string or a comment)
- * would otherwise close the element early and leak the rest into the page as
- * markup. Escaping the slash keeps the CSS meaning (`<\/style` is still the
- * text `</style` to the CSS parser) while hiding the end tag from HTML.
- */
-export function escapeInlineCss(css: string): string {
-  return css.replace(/<\/(style)/gi, '<\\/$1');
-}
-
-export function resolveEditorTheme(
-  option: string | CMSTheme | undefined
-): ResolvedEditorTheme {
-  const theme: CMSTheme =
-    typeof option === 'string' ? {extends: option} : option || {};
-  const stylesheetUrl = themeStylesheetUrl(theme.extends);
-  const result: ResolvedEditorTheme = {
-    name: stylesheetUrl ? theme.extends! : null,
-    stylesheetUrl,
-    inlineCss: theme.css ? escapeInlineCss(theme.css) : null,
-  };
-  if (theme.extends && !stylesheetUrl) {
-    result.warning = `ignoring theme "${theme.extends}": theme names use lowercase letters, digits and hyphens`;
+  const parts: string[] = [];
+  if (option.file) {
+    const filePath = path.resolve(rootDir, option.file);
+    try {
+      parts.push(await fs.readFile(filePath, 'utf-8'));
+    } catch {
+      if (!warnedFiles.has(filePath)) {
+        warnedFiles.add(filePath);
+        console.warn(`[root-cms] theme file not found: ${filePath}`);
+      }
+    }
   }
-  return result;
-}
-
-/**
- * The names of the built-in themes shipped in `themesDir` (the `ui/themes`
- * folder of the built package): every `<name>.css` whose name is one the
- * option would accept. Missing folder means no themes.
- */
-export async function listBuiltInThemes(themesDir: string): Promise<string[]> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(themesDir);
-  } catch {
-    return [];
+  if (option.css) {
+    parts.push(option.css);
   }
-  return entries
-    .filter((entry) => entry.endsWith('.css'))
-    .map((entry) => entry.slice(0, -'.css'.length))
-    .filter((name) => THEME_NAME_PATTERN.test(name))
-    .sort();
+  const css = parts
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join('\n');
+  if (!css) {
+    return null;
+  }
+  const hash = crypto.createHash('sha1').update(css).digest('hex').slice(0, 8);
+  return {css, hash};
 }

@@ -31,7 +31,7 @@ import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
-import {type CMSTheme} from './editor-theme.js';
+import {type CMSTheme, THEME_URL, loadEditorTheme} from './editor-theme.js';
 import {
   clearDevAuthCookie,
   getDevAuthCookie,
@@ -149,9 +149,6 @@ async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
 
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
-
-/** Built-in editor themes (`ui/themes/*.css`) are served under this prefix. */
-const THEME_STATIC_PREFIX = '/cms/static/themes/';
 
 /** Paths to non-confidential static files. These files won't require authentication. */
 const NONCONF_STATIC_PATHS = [
@@ -444,50 +441,34 @@ export type CMSPluginOptions = {
   minimalBranding?: boolean;
 
   /**
-   * Experimental: the editor's markup changes as features are added, so
-   * theming may need adjusting from version to version. The `--cms-*`
-   * custom properties are the part meant to last.
-   *
-   * The project's default theme for the CMS editor UI. Leave unset for the
-   * stock look. Each user can pick a different built-in theme, or the stock
-   * look, for themselves under Settings → User Preferences; this option is
-   * what they get until they do.
-   *
-   * Built-in themes ship with root-cms as `ui/themes/<name>.css` and load
-   * after the base stylesheet:
-   *
-   * - `clarity` — a calmer editor that shows its structure: field groups
-   *   become boxed cards, the fields a type picker reveals sit behind a rule,
-   *   help text steps down beneath its label, and the structural accents go
-   *   neutral.
-   *
-   * Three forms:
+   * Experimental: a stylesheet for the CMS editor UI, applied for everyone
+   * on the project. The editor's markup changes as features are added, so a
+   * theme may need adjusting from version to version; the `--cms-*` custom
+   * properties are the part meant to last (see `docs/editor-theme.md`).
    *
    * ```ts
-   * // A built-in theme, as-is.
-   * theme: 'clarity'
-   *
-   * // A built-in theme with project tweaks on top.
-   * theme: {extends: 'clarity', css: ':root { --cms-drawer-indent: 32px; }'}
-   *
-   * // A theme from scratch (on the base editor styles only).
-   * theme: {css: fs.readFileSync('./cms-theme.css', 'utf-8')}
+   * theme: {file: './cms-theme.css'}
+   * theme: {file: './cms-theme.css', css: ':root { --cms-drawer-indent: 32px; }'}
    * ```
    *
-   * `css` is inlined after the theme, so it wins the cascade without
-   * `!important`, and applies whichever built-in the user has chosen. CSS
-   * can also be added from the CMS itself, without a deploy: for the whole
-   * project under Settings → Site Settings, and per user under Settings →
-   * User Preferences — including an `@import url(…)` of a hosted file.
+   * `file` is relative to the project root; `css` is appended after it (or
+   * is the whole theme on its own). The result is served at `/cms/theme.css`
+   * behind the editor's login, cache-busted by its content, and linked after
+   * the editor's own stylesheet so it wins the cascade without `!important`.
+   * The file is read on each request, so an edit shows on the next reload.
    *
-   * The supported surface for project CSS is the `--cms-*` custom
-   * properties, documented in `ui/themes/README.md`; those are kept stable
-   * across versions. Rules that target the editor's class names or DOM are
-   * unsupported: they work today but may break with any release, since the
-   * editor's markup is free to change. A built-in theme that builds on
-   * another does the same thing in CSS with `@import './other.css';`.
+   * Each user can switch the project theme off for themselves under
+   * Settings → User Preferences. CSS can also be added from the CMS itself,
+   * without a deploy: for the whole project under Settings → Site Settings,
+   * and per user under Settings → User Preferences — including an
+   * `@import url(…)` of a hosted file.
+   *
+   * The supported surface is the `--cms-*` custom properties, which are
+   * kept stable across versions. Rules that target the editor's class names
+   * or DOM are unsupported: they work today but may break with any release,
+   * since the editor's markup is free to change.
    */
-  theme?: string | CMSTheme;
+  theme?: CMSTheme;
 
   /**
    * Callback when an action occurs.
@@ -809,11 +790,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     }
     // Allow non-confidential static files to be rendered without auth.
     if (NONCONF_STATIC_PATHS.includes(urlPath)) {
-      return false;
-    }
-    // Theme stylesheets are as public as ui.css, and there is one per theme
-    // name, so exempt the folder rather than listing each file.
-    if (urlPath.startsWith(THEME_STATIC_PREFIX)) {
       return false;
     }
     // Require login on all `/cms/` paths.
@@ -1354,6 +1330,33 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         getRenderer,
         checks: options.checks,
         translations: options.translations,
+      });
+
+      // The project's editor theme (`theme` option), served as its own
+      // stylesheet behind the same login as the editor page that links it.
+      server.get(THEME_URL, async (req: Request, res: Response) => {
+        if (!req.user) {
+          redirectToLogin(req, res);
+          return;
+        }
+        const theme = await loadEditorTheme(
+          options.theme,
+          req.rootConfig!.rootDir
+        );
+        if (!theme) {
+          res.status(404).end();
+          return;
+        }
+        res.setHeader('content-type', 'text/css; charset=utf-8');
+        // The link carries the content hash, so a matching request can be
+        // cached for good; anything else is checked again each time.
+        res.setHeader(
+          'cache-control',
+          req.query.c === theme.hash
+            ? 'private, max-age=31536000, immutable'
+            : 'no-cache'
+        );
+        res.send(theme.css);
       });
 
       // Render the CMS SPA.

@@ -286,11 +286,8 @@ declare global {
        * client-side publishes so the graph is updated immediately.
        */
       dependencyGraphEnabled?: boolean;
-      /** The project's default editor theme and the built-ins a user can pick. */
-      theme?: {
-        default: string | null;
-        available: string[];
-      };
+      /** Whether the project configured an editor theme (`cmsPlugin({theme})`). */
+      theme?: {configured: boolean};
     };
     firebase: FirebaseContextObject;
   }

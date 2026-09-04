@@ -2,88 +2,41 @@ import {useEffect} from 'preact/hooks';
 import {useSiteSettings} from './useSiteSettings.js';
 import {useUserPreferences} from './useUserPreferences.js';
 
-/** The user preference key holding the chosen theme. */
-export const THEME_PREFERENCE_KEY = 'theme';
+/** User preference: `false` switches the project's theme off for this user. */
+export const PROJECT_THEME_PREFERENCE_KEY = 'projectTheme';
 
-/** The user preference key holding the user's own CSS. */
+/** User preference: the user's own CSS. */
 export const CUSTOM_CSS_PREFERENCE_KEY = 'customCss';
 
-/** Preference value meaning "no theme, the stock editor". */
-export const STOCK_THEME = 'none';
+/** The `<link>` the server renders for the project's theme stylesheet. */
+const PROJECT_THEME_ID = 'root-cms-theme';
 
-const LINK_ID = 'root-cms-theme';
+/** Whether the project configured a theme (`cmsPlugin({theme})`). */
+export function hasProjectTheme(): boolean {
+  return Boolean(window.__ROOT_CTX.theme?.configured);
+}
 
-/** What the project ships: its default theme and the built-ins on offer. */
-export function getEditorThemeConfig(): {
-  defaultTheme: string | null;
-  available: string[];
-} {
-  const theme = window.__ROOT_CTX.theme;
-  return {
-    defaultTheme: theme?.default ?? null,
-    available: theme?.available ?? [],
-  };
+/** The project's theme applies unless the user switched it off. */
+export function usesProjectTheme(preference: unknown): boolean {
+  return preference !== false;
 }
 
 /**
- * The theme the editor should show for this user: their preference when it
- * names a built-in (or the stock editor), else the project default.
+ * Switches the server-rendered project theme on or off. The element stays
+ * in place, so switching it back on needs no reload or refetch.
  */
-export function resolveUserTheme(
-  preference: unknown,
-  defaultTheme: string | null,
-  available: string[]
-): string | null {
-  if (preference === STOCK_THEME) {
-    return null;
-  }
-  if (typeof preference === 'string' && available.includes(preference)) {
-    return preference;
-  }
-  return defaultTheme;
-}
-
-/**
- * Points the page's theme stylesheet at `name`, or removes it. The server
- * renders the project default's `<link>`, so a user on the default never
- * sees a swap; everyone else gets theirs as soon as preferences load.
- */
-function applyTheme(name: string | null) {
-  const existing = document.getElementById(LINK_ID) as HTMLLinkElement | null;
-  if (!name) {
-    existing?.remove();
-    return;
-  }
-  // Reuse the base stylesheet's cache-bust so a deploy refreshes both.
-  const base = document.querySelector<HTMLLinkElement>(
-    'link[href*="/cms/static/ui.css"]'
-  );
-  const query = base ? new URL(base.href).search : '';
-  const href = `/cms/static/themes/${name}.css${query}`;
-  if (existing) {
-    if (!existing.getAttribute('href')?.startsWith(href)) {
-      existing.setAttribute('href', href);
-    }
-    return;
-  }
-  const link = document.createElement('link');
-  link.id = LINK_ID;
-  link.rel = 'stylesheet';
-  link.href = href;
-  // Keep the project's inline CSS last in the cascade.
-  const inline = base?.parentElement?.querySelector('style[nonce]');
-  if (base && inline) {
-    inline.before(link);
-  } else if (base) {
-    base.after(link);
-  } else {
-    document.head.appendChild(link);
+function applyProjectTheme(enabled: boolean) {
+  const link = document.getElementById(
+    PROJECT_THEME_ID
+  ) as HTMLLinkElement | null;
+  if (link) {
+    link.disabled = !enabled;
   }
 }
 
 /**
  * Keeps a `<style>` at the end of the head in sync with `css`, so custom CSS
- * from the UI lands last in the cascade: base, theme, project CSS, then the
+ * from the UI lands last in the cascade: base, project theme, then the
  * site's, then the user's. `textContent` is set rather than parsed, so the
  * CSS cannot break out of the element.
  */
@@ -106,19 +59,18 @@ function applyCustomCss(id: string, css: unknown) {
 }
 
 /**
- * Applies the user's theme choice, then the site's and the user's custom
- * CSS, to the page whenever any of them changes.
+ * Applies the user's choice about the project theme, then the site's and
+ * the user's custom CSS, to the page whenever any of them changes.
  */
 export function EditorThemeApplier() {
   const {preferences} = useUserPreferences();
   const {settings} = useSiteSettings();
-  const preference = preferences[THEME_PREFERENCE_KEY];
+  const projectTheme = preferences[PROJECT_THEME_PREFERENCE_KEY];
   const siteCss = settings.customCss;
   const userCss = preferences[CUSTOM_CSS_PREFERENCE_KEY];
   useEffect(() => {
-    const {defaultTheme, available} = getEditorThemeConfig();
-    applyTheme(resolveUserTheme(preference, defaultTheme, available));
-  }, [preference]);
+    applyProjectTheme(usesProjectTheme(projectTheme));
+  }, [projectTheme]);
   useEffect(() => {
     applyCustomCss('root-cms-site-css', siteCss);
     applyCustomCss('root-cms-user-css', userCss);
