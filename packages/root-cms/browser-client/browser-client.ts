@@ -16,6 +16,7 @@
 
 import {
   isHighlightNodeMessage,
+  NavigateToDocMessage,
   ScrollToDeeplinkMessage,
 } from '../shared/embed-protocol.js';
 import {normalizeSlug} from '../shared/slug.js';
@@ -25,6 +26,7 @@ import {Emitter} from './emitter.js';
 export {SaveState} from '../shared/embed-protocol.js';
 export type {
   HighlightNodeMessage,
+  NavigateToDocMessage,
   RootEmbedMessage,
   ScrollToDeeplinkMessage,
 } from '../shared/embed-protocol.js';
@@ -197,6 +199,48 @@ export class PreviewConnection {
       return;
     }
     const message: ScrollToDeeplinkMessage = {scrollToDeeplink: {deepKey}};
+    window.parent.postMessage(message, window.location.origin);
+  }
+
+  /**
+   * Tells the doc editor to switch to a document, so the editor follows the
+   * preview as the user navigates the site.
+   *
+   * Call it with the page's own doc id when the page loads. `isEmbedded` is
+   * false outside the CMS preview pane, so the call is a no-op on the live
+   * site. The CMS only acts on it when the plugin's `preview.channel` enables
+   * messages from the preview.
+   *
+   * The editor asks the user before switching by default, since a doc changing
+   * on its own is disorienting for someone who doesn't know the page can do
+   * that. Pass `{confirm: false}` to switch straight away, for sites that have
+   * their own affordance for it (a toggle the user turned on, say).
+   *
+   * Usage:
+   * ```
+   * const preview = new PreviewConnection();
+   * if (preview.isEmbedded) {
+   *   preview.navigateToDoc(doc.id);
+   * }
+   * ```
+   */
+  navigateToDoc(docId: string, options?: {confirm?: boolean}) {
+    if (window.parent === window) {
+      return;
+    }
+    const [collection, ...slugParts] = docId.split('/');
+    const slug = normalizeSlug(slugParts.join('/'));
+    if (!collection || !slug) {
+      throw new Error(
+        `invalid docId: "${docId}" (expected "<collection>/<slug>")`
+      );
+    }
+    const message: NavigateToDocMessage = {
+      navigateToDoc: {
+        docId: `${collection}/${slug}`,
+        confirm: options?.confirm,
+      },
+    };
     window.parent.postMessage(message, window.location.origin);
   }
 
