@@ -330,10 +330,26 @@ export class RootCMSBrowserClient {
     return new PreviewConnection();
   }
 
-  /** Returns whether this page is rendered inside the in-CMS preview pane. */
+  /**
+   * Returns whether this page is rendered inside the in-CMS preview pane.
+   *
+   * The parent's location is the reliable signal: the preview iframe is
+   * same-origin, so the CMS path is readable. The referrer only names the CMS
+   * for the first page the pane loads -- once the user follows a link inside
+   * the preview it names the previous page of the site instead -- so it is
+   * kept as a fallback for the cases where the parent can't be read.
+   */
   static isInPreviewIframe(): boolean {
     if (window.parent === window) {
       return false;
+    }
+    try {
+      const parentPath = window.parent.location.pathname;
+      if (parentPath.startsWith('/cms')) {
+        return true;
+      }
+    } catch {
+      // Cross-origin parent: fall through to the referrer check.
     }
     return document.referrer.startsWith(`${window.location.origin}/cms`);
   }
