@@ -12,6 +12,11 @@ interface SiteSettings {
   googleDriveFolder?: string;
   /** The default assignee for new tasks created within the CMS. */
   defaultAssignee?: string;
+  /**
+   * CSS applied to the document editor for everyone on the project, on top
+   * of the configured theme. Experimental; edited under Settings.
+   */
+  customCss?: string;
 }
 
 interface Setting {

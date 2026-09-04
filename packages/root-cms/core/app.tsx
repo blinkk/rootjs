@@ -5,6 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
+import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -17,6 +18,8 @@ interface AppProps {
   title: string;
   ctx: any;
   favicon?: string;
+  /** The default theme's stylesheet, cache-busted by its content. */
+  themeUrl?: string;
 }
 
 function App(props: AppProps) {
@@ -53,6 +56,17 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
+        {/* The default theme (`cmsPlugin({themes, defaultTheme})`), after
+            ui.css so it wins the cascade. The id lets the client swap in
+            the user's own choice (Settings → User Preferences). */}
+        {props.themeUrl && (
+          <link
+            id="root-cms-theme"
+            rel="stylesheet"
+            href={props.themeUrl}
+            nonce="{NONCE}"
+          />
+        )}
       </head>
       <body>
         <div id="root">
@@ -113,6 +127,8 @@ export async function renderApp(
   }
   // Only set on prebuilt (deployed) servers; `null` on the dev server.
   const buildInfo = await getBuildInfo(rootConfig.rootDir);
+  const themes = await loadThemes(cmsConfig.themes, rootConfig.rootDir);
+  const defaultTheme = resolveDefaultTheme(themes, cmsConfig.defaultTheme);
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -156,12 +172,27 @@ export async function renderApp(
     // Matches `resolveDependencyGraphConfig()`: `true` or a config object
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
+    // The themes a user can pick between, and which one applies until they
+    // do (Settings → User Preferences).
+    theme: {
+      default: defaultTheme?.id ?? null,
+      themes: themes.map(({id, name, hash}) => ({id, name, hash})),
+    },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
   const mainHtml = renderJsxToString(
-    <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
+    <App
+      title={title}
+      ctx={ctx}
+      favicon={cmsConfig.favicon}
+      themeUrl={
+        defaultTheme
+          ? cachebust(req, themeUrl(defaultTheme.id)!, defaultTheme.hash)
+          : undefined
+      }
+    />
   );
   const nonce = generateNonce();
   const html = `<!doctype html>\n${mainHtml}`
@@ -374,8 +405,7 @@ function getRefererOrigin(req: Request): string {
 }
 
 /** Modify the given URL to bust the cache. */
-function cachebust(req: Request, url: string) {
-  const cb = getServerVersion();
+function cachebust(req: Request, url: string, cb = getServerVersion()) {
   const host = req.get('host');
   // On localhost, use a full URL so that the vite server doesn't attempt to
   // transform the file.
