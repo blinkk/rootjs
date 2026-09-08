@@ -57,6 +57,7 @@ import {
   createAssetFolder,
   createAssetFolderPaths,
   deleteAsset,
+  findAssetFile,
   findDocsUsingAsset,
   getAsset,
   getFolderId,
@@ -67,6 +68,7 @@ import {
   moveAsset,
   parseFolderPath,
   renameAsset,
+  replaceAssetFile,
   sortAssets,
   syncAssetToDocs,
   updateAssetAltDisabled,
@@ -297,7 +299,9 @@ export function AssetBrowser(props: AssetBrowserProps) {
    * Uploads files into the current folder. Entries that came from a folder
    * upload carry the folder path they were nested under, which is mirrored in
    * the asset library (creating any missing folders) before the files are
-   * uploaded into it.
+   * uploaded into it. A file whose destination folder already has a file of
+   * the same name replaces that file in place (and the change fans out to
+   * docs that use it) rather than creating a duplicate entry.
    */
   async function uploadFiles(entries: UploadFileEntry[]) {
     if (entries.length === 0 || uploading) {
@@ -322,6 +326,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
     });
     const uploaded: AssetFile[] = [];
     const failed: string[] = [];
+    // Existing assets that were replaced by a same-named upload.
+    const replaced: AssetFile[] = [];
+    // Docs that failed to pick up a replaced asset's new file.
+    const failedDocIds = new Set<string>();
 
     // Resolve each file's destination folder up front so that files with a
     // path the asset library can't represent are skipped individually.
@@ -375,12 +383,25 @@ export function AssetBrowser(props: AssetBrowserProps) {
         disallowClose: true,
       });
       try {
+        const existing = await findAssetFile(
+          item.parent,
+          item.file.name.trim()
+        );
         const uploadedFile = await uploadFileToGCS(item.file);
-        const asset = await createAssetFile({
-          parent: item.parent,
-          file: uploadedFile,
-        });
-        uploaded.push(asset);
+        if (existing) {
+          const previousFile = existing.file;
+          const asset = await replaceAssetFile(existing, uploadedFile);
+          uploaded.push(asset);
+          replaced.push(asset);
+          const res = await syncAssetToDocs(asset, {previousFile});
+          res.failedDocIds.forEach((docId) => failedDocIds.add(docId));
+        } else {
+          const asset = await createAssetFile({
+            parent: item.parent,
+            file: uploadedFile,
+          });
+          uploaded.push(asset);
+        }
       } catch (err) {
         console.error(`failed to upload ${item.label}:`, err);
         failed.push(item.label);
@@ -396,9 +417,18 @@ export function AssetBrowser(props: AssetBrowserProps) {
         autoClose: false,
       });
     } else {
+      const parts = [`Uploaded ${uploaded.length} file(s).`];
+      if (replaced.length > 0) {
+        parts.push(`Replaced ${replaced.length} existing file(s).`);
+      }
+      showNotification({message: parts.join(' '), color: 'green'});
+    }
+    if (failedDocIds.size > 0) {
       showNotification({
-        message: `Uploaded ${uploaded.length} file(s).`,
-        color: 'green',
+        title: 'Some docs failed to update',
+        message: `Failed to update: ${Array.from(failedDocIds).join(', ')}. Re-save the asset to retry.`,
+        color: 'red',
+        autoClose: false,
       });
     }
     await reload(folder);
