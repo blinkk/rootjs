@@ -517,6 +517,33 @@ export async function getAsset(assetId: string): Promise<Asset | null> {
 }
 
 /**
+ * Finds the file asset named `name` directly within a folder, or null if the
+ * folder has no file by that name. Used by uploads to replace an existing
+ * file in place rather than creating a duplicate entry with the same name.
+ */
+export async function findAssetFile(
+  parent: string,
+  name: string
+): Promise<AssetFile | null> {
+  const colRef = getAssetsDbCollection();
+  const snapshot = await getDocs(
+    query(
+      colRef,
+      where('parent', '==', normalizeParentPath(parent)),
+      where('name', '==', name)
+    )
+  );
+  let res: AssetFile | null = null;
+  snapshot.forEach((snap) => {
+    const data = snap.data();
+    if (!res && isValidAsset(data) && data.type === 'file') {
+      res = data;
+    }
+  });
+  return res;
+}
+
+/**
  * Creates a folder within the asset library. No-op if the folder already
  * exists.
  */
