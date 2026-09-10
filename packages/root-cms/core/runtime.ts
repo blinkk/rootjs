@@ -2,6 +2,7 @@
 
 import {RootConfig} from '@blinkk/root';
 import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
+import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {
   LoadTranslationsOptions,
@@ -266,5 +267,6 @@ export async function loadTranslationsForLocale(
   options?: LoadTranslationsOptions
 ): Promise<LocaleTranslations> {
   const translationsMap = await loadTranslations(rootConfig, options);
-  return translationsForLocale(translationsMap, locale);
+  const fallbackLocales = resolveLocaleFallbacks(rootConfig.i18n, locale);
+  return translationsForLocale(translationsMap, fallbackLocales);
 }

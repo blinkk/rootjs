@@ -1,5 +1,9 @@
 import type {Handler, HandlerContext, Request, Response} from '@blinkk/root';
-import {RootCMSClient, translationsForLocale} from '@blinkk/root-cms/client';
+import {
+  RootCMSClient,
+  resolveLocaleFallbacks,
+  translationsForLocale,
+} from '@blinkk/root-cms/client';
 import {BlogPost} from '@/components/BlogPost/BlogPost.js';
 import {Container} from '@/components/Container/Container.js';
 import {Text} from '@/components/Text/Text.js';
@@ -65,7 +69,10 @@ export const handle: Handler = async (req: BlogRequest, res: Response) => {
   const locale = ctx.route.isDefaultLocale
     ? ctx.getPreferredLocale(['en'])
     : ctx.route.locale;
-  const translations = translationsForLocale(translationsMap, locale);
+  const translations = translationsForLocale(
+    translationsMap,
+    resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+  );
 
   if (mode === 'published') {
     res.setHeader('cache-control', 'public, max-age=15, s-maxage=30');
