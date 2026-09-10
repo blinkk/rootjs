@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 3.4.11
+
+### Patch Changes
+
+- e7ed34e: feat: surface AI provider errors in Root AI chats and add a retry button
+- 379dc94: fix: replace same-named files in place when uploading to the asset library
+- 3b67346: fix: don't query firestore in useDocsList before a collection is selected
+- fb3a754: feat: add filter chips, deep links, and scrolling to the global search
+- 24ed0cd: feat: add google-vertex ai model provider
+- 5ac3193: feat: honor i18n.fallbacks in v1 translations and export resolveLocaleFallbacks
+- a3056bb: feat: add a search filter to the rich text components dropdown
+  - @blinkk/root@3.4.11
+
 ## 3.4.10
 
 ### Patch Changes
