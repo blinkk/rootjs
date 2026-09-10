@@ -1,12 +1,16 @@
 import './GlobalSearch.css';
-import {
-  SpotlightProvider,
-  SpotlightAction,
-  openSpotlight,
-} from '@mantine/spotlight';
+import {SpotlightAction} from '@mantine/spotlight';
+import {Spotlight} from '@mantine/spotlight/esm/Spotlight/Spotlight.js';
 import {IconSearch} from '@tabler/icons-preact';
-import {ComponentChildren} from 'preact';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {ComponentChildren, createContext} from 'preact';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {
   DocSlugHit,
@@ -18,6 +22,7 @@ import {
 import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
 import {isEditableTarget} from '../../utils/keyboard.js';
+import {showErrorNotification} from '../../utils/notifications.js';
 import {
   RecentView,
   recentViewFromUrl,
@@ -28,6 +33,18 @@ import {
   GlobalSearchAction,
   GlobalSearchActionMeta,
 } from './GlobalSearchAction.js';
+import {
+  GlobalSearchCounts,
+  GlobalSearchFilters,
+} from './GlobalSearchFilters.js';
+import {
+  GlobalSearchFilter,
+  GlobalSearchUrlState,
+  buildGlobalSearchUrl,
+  getGlobalSearchFilterLabel,
+  readGlobalSearchUrlState,
+  writeGlobalSearchUrlState,
+} from './search-filters.js';
 
 function formatLastIndexed(status: GlobalSearchStatus | null): string | null {
   if (!status?.lastRun) {
@@ -240,12 +257,114 @@ function buildTipsRow(): SpotlightAction {
   };
 }
 
+/** Custom event used by `openGlobalSearch()` to reach the provider. */
+const OPEN_EVENT = 'rootcms:open-global-search';
+
+/** Duration of the spotlight open/close transition. */
+const TRANSITION_MS = 150;
+
+/**
+ * Debounce for mirroring the query into the URL. Safari throttles
+ * `history.replaceState()` (100 calls per 30s), so the URL must not be
+ * rewritten on every keystroke.
+ */
+const URL_SYNC_DEBOUNCE_MS = 300;
+
+export interface OpenGlobalSearchOptions {
+  /** Query to prefill the search input with. */
+  query?: string;
+  /** Result type filter to preselect. */
+  filter?: GlobalSearchFilter;
+}
+
+/**
+ * Opens the global search modal from anywhere in the CMS, optionally with a
+ * prefilled query. Requires a mounted `<GlobalSearch>`.
+ */
+export function openGlobalSearch(options: OpenGlobalSearchOptions = {}) {
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT, {detail: options}));
+}
+
+/** Rewrites the URL's search string without adding a history entry. */
+function replaceUrlSearch(search: string) {
+  const url = new URL(window.location.href);
+  url.search = search;
+  try {
+    // Preserve the existing history state so the router isn't disrupted.
+    window.history.replaceState(window.history.state, '', url.toString());
+  } catch (err) {
+    console.error('failed to update the search url:', err);
+  }
+}
+
+/** Removes the `?modal=search` params from the URL, if present. */
+function clearSearchUrlState() {
+  const search = window.location.search;
+  const next = writeGlobalSearchUrlState(search, null);
+  if (next !== search) {
+    replaceUrlSearch(next);
+  }
+}
+
+interface FiltersContextValue {
+  /** Whether the chip bar should render (only when there's a query). */
+  visible: boolean;
+  filter: GlobalSearchFilter;
+  onFilterChange: (filter: GlobalSearchFilter) => void;
+  counts: GlobalSearchCounts;
+  onCopyLink: () => Promise<boolean>;
+}
+
+const FILTERS_CONTEXT = createContext<FiltersContextValue | null>(null);
+
+/**
+ * Wraps the spotlight's action list. Renders the filter chips above the
+ * results and makes the results scrollable so long lists no longer overflow
+ * the viewport. Passed to `Spotlight` as `actionsWrapperComponent`, which is
+ * why it reads its state from context rather than props.
+ */
+function GlobalSearchBody(props: {children?: ComponentChildren}) {
+  const ctx = useContext(FILTERS_CONTEXT);
+  return (
+    <div className="GlobalSearch__body">
+      {ctx?.visible && (
+        <GlobalSearchFilters
+          value={ctx.filter}
+          onChange={ctx.onFilterChange}
+          counts={ctx.counts}
+          onCopyLink={ctx.onCopyLink}
+        />
+      )}
+      <div className="GlobalSearch__results">{props.children}</div>
+    </div>
+  );
+}
+
+/**
+ * Copies a shareable deep link to the current search to the clipboard.
+ * Returns false (after notifying the user) when the copy failed.
+ */
+async function copySearchLink(state: GlobalSearchUrlState): Promise<boolean> {
+  const url = new URL(buildGlobalSearchUrl(state), window.location.origin);
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    return true;
+  } catch (err) {
+    showErrorNotification(err, {title: 'Failed to copy link'});
+    return false;
+  }
+}
+
 function GlobalSearchInner(props: {
   children: ComponentChildren;
+  opened: boolean;
   query: string;
+  filter: GlobalSearchFilter;
   onQueryChange: (q: string) => void;
+  onFilterChange: (filter: GlobalSearchFilter) => void;
+  onClose: () => void;
 }) {
-  const {query, onQueryChange} = props;
+  const {opened, query, filter, onQueryChange, onFilterChange} = props;
   const location = useLocation();
   const trimmedQuery = query.trim();
   const {
@@ -278,32 +397,6 @@ function GlobalSearchInner(props: {
 
   const {releases: pendingReleases} = usePendingReleases();
 
-  // Custom Cmd/Ctrl+K handler. We can't use Mantine's built-in `shortcut`
-  // prop because its `useHotkeys` only ignores INPUT/TEXTAREA/SELECT — not
-  // `contenteditable` rich text fields. Lexical binds Cmd+K to "insert link",
-  // so opening the global search at the same time clobbers that. Skip the
-  // shortcut whenever focus is inside any editable field.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const isModK =
-        (event.metaKey || event.ctrlKey) &&
-        !event.altKey &&
-        !event.shiftKey &&
-        (event.key.toLowerCase() === 'k' || event.code === 'KeyK');
-      if (!isModK) {
-        return;
-      }
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-      event.preventDefault();
-      openSpotlight();
-    };
-    document.documentElement.addEventListener('keydown', onKeyDown);
-    return () =>
-      document.documentElement.removeEventListener('keydown', onKeyDown);
-  }, []);
-
   // Static spotlight targets: collections (always present), data sources, and
   // active releases (pending = not published, not archived).
   const staticTargets = useMemo<StaticTarget[]>(() => {
@@ -325,8 +418,32 @@ function GlobalSearchInner(props: {
 
   const navigate = (url: string) => location.route(url);
 
+  // Static matches split by kind so the filter chips can count and select
+  // them individually.
+  const matchedStatic = useMemo(() => {
+    const matched = filterStaticTargets(staticTargets, trimmedQuery);
+    return {
+      collections: matched.filter((t) => t.kind === 'collection'),
+      dataSources: matched.filter((t) => t.kind === 'data-source'),
+      releases: matched.filter((t) => t.kind === 'release'),
+    };
+  }, [staticTargets, trimmedQuery]);
+
+  const counts = useMemo<GlobalSearchCounts>(
+    () => ({
+      docs: docSlugHits.length,
+      fields: fieldHits.length,
+      collections: matchedStatic.collections.length,
+      'data-sources': matchedStatic.dataSources.length,
+      releases: matchedStatic.releases.length,
+    }),
+    [docSlugHits, fieldHits, matchedStatic]
+  );
+  const totalCount = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
   // When the query is empty, surface recent views; when populated, compose
-  // matches across static targets, doc slug lookups, and field text hits.
+  // matches across static targets, doc slug lookups, and field text hits,
+  // narrowed down to the active filter.
   const actions: SpotlightAction[] = useMemo(() => {
     if (!trimmedQuery) {
       if (recentViews.length === 0) {
@@ -340,16 +457,23 @@ function GlobalSearchInner(props: {
       ];
     }
 
+    const show = (kind: Exclude<GlobalSearchFilter, 'all'>) =>
+      filter === 'all' || filter === kind;
+
     const result: SpotlightAction[] = [];
-    const matchedStatic = filterStaticTargets(staticTargets, trimmedQuery);
-    if (matchedStatic.length > 0) {
+    const statics: StaticTarget[] = [
+      ...(show('collections') ? matchedStatic.collections : []),
+      ...(show('data-sources') ? matchedStatic.dataSources : []),
+      ...(show('releases') ? matchedStatic.releases : []),
+    ];
+    if (statics.length > 0) {
       result.push(buildHeader('static', 'Jump to'));
-      for (const target of matchedStatic) {
+      for (const target of statics) {
         result.push(buildStaticAction(target, () => navigate(target.url)));
       }
     }
 
-    if (docSlugHits.length > 0) {
+    if (show('docs') && docSlugHits.length > 0) {
       result.push(buildHeader('docs', 'Documents'));
       for (const hit of docSlugHits) {
         const url = `/cms/content/${hit.collection}/${encodeURIComponent(
@@ -359,7 +483,7 @@ function GlobalSearchInner(props: {
       }
     }
 
-    if (fieldHits.length > 0) {
+    if (show('fields') && fieldHits.length > 0) {
       result.push(buildHeader('fields', 'Field matches'));
       for (const hit of fieldHits) {
         const url = `/cms/content/${hit.collection}/${encodeURIComponent(
@@ -371,9 +495,10 @@ function GlobalSearchInner(props: {
     return result;
   }, [
     trimmedQuery,
+    filter,
     fieldHits,
     docSlugHits,
-    staticTargets,
+    matchedStatic,
     recentViews,
     location,
   ]);
@@ -405,8 +530,39 @@ function GlobalSearchInner(props: {
     if (!trimmedQuery) {
       return 'Type to search · "quotes" for exact match · -word to exclude';
     }
+    if (filter !== 'all' && totalCount > 0) {
+      return (
+        <span>
+          No {getGlobalSearchFilterLabel(filter).toLowerCase()} match.{' '}
+          <button
+            type="button"
+            className="GlobalSearch__resetFilter"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onFilterChange('all')}
+          >
+            Show all results
+          </button>
+        </span>
+      );
+    }
     return 'No results. Try fewer words, or "quotes" for an exact phrase.';
-  }, [loading, trimmedQuery]);
+  }, [loading, trimmedQuery, filter, totalCount, onFilterChange]);
+
+  const onCopyLink = useCallback(
+    () => copySearchLink({query: trimmedQuery, filter}),
+    [trimmedQuery, filter]
+  );
+
+  const filtersCtx = useMemo<FiltersContextValue>(
+    () => ({
+      visible: !!trimmedQuery,
+      filter,
+      onFilterChange,
+      counts,
+      onCopyLink,
+    }),
+    [trimmedQuery, filter, onFilterChange, counts, onCopyLink]
+  );
 
   // Pass-through filter: server already ranks/filters and our static-target
   // filter is computed above; we don't want Spotlight's built-in title/
@@ -414,21 +570,26 @@ function GlobalSearchInner(props: {
   const filterAll = (_q: string, list: SpotlightAction[]) => list;
 
   return (
-    <SpotlightProvider
-      actions={augmented}
-      shortcut={null}
-      onQueryChange={onQueryChange}
-      searchPlaceholder="Search docs, collections, releases…"
-      searchIcon={<IconSearch size={18} />}
-      nothingFoundMessage={nothingFoundMessage}
-      filter={filterAll}
-      actionComponent={GlobalSearchAction}
-      limit={50}
-      cleanQueryOnClose
-      withinPortal
-    >
+    <FILTERS_CONTEXT.Provider value={filtersCtx}>
+      <Spotlight
+        opened={opened}
+        onClose={props.onClose}
+        query={query}
+        onQueryChange={onQueryChange}
+        actions={augmented}
+        transitionDuration={TRANSITION_MS}
+        classNames={{spotlight: 'GlobalSearch__spotlight'}}
+        searchPlaceholder="Search docs, collections, releases…"
+        searchIcon={<IconSearch size={18} />}
+        nothingFoundMessage={nothingFoundMessage}
+        filter={filterAll}
+        actionComponent={GlobalSearchAction}
+        actionsWrapperComponent={GlobalSearchBody}
+        limit={50}
+        withinPortal
+      />
       {props.children}
-    </SpotlightProvider>
+    </FILTERS_CONTEXT.Provider>
   );
 }
 
@@ -438,11 +599,137 @@ function GlobalSearchInner(props: {
  *  - Collections, data sources, and active releases by name
  *  - Documents by slug or `<collection>/<slug>` id
  *  - Field text hits from the server-side MiniSearch index
+ *
+ * Results can be narrowed by type with the filter chips, and the open state,
+ * query, and filter are mirrored into the URL so a search can be deep linked
+ * and shared, e.g. `/cms/?modal=search&q=foo&type=docs`.
+ *
+ * The inner `Spotlight` component is rendered directly (rather than through
+ * `SpotlightProvider`) so the query state lives here and can be prefilled.
  */
 export function GlobalSearch(props: {children: ComponentChildren}) {
+  const [opened, setOpened] = useState(false);
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<GlobalSearchFilter>('all');
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
+  const clearTimerRef = useRef(0);
+  const urlTimerRef = useRef(0);
+
+  const open = useCallback((options: OpenGlobalSearchOptions = {}) => {
+    window.clearTimeout(clearTimerRef.current);
+    setQuery(options.query ?? '');
+    setFilter(options.filter ?? 'all');
+    setOpened(true);
+  }, []);
+
+  const close = useCallback(() => {
+    window.clearTimeout(urlTimerRef.current);
+    setOpened(false);
+    clearSearchUrlState();
+    // Clear the query once the close transition has finished so the results
+    // don't visibly flash away while the modal is still fading out.
+    clearTimerRef.current = window.setTimeout(() => {
+      setQuery('');
+      setFilter('all');
+    }, TRANSITION_MS);
+  }, []);
+
+  // Open requests from `openGlobalSearch()` (e.g. the sidebar search bar).
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const detail = (event as CustomEvent<OpenGlobalSearchOptions>).detail;
+      open(detail || {});
+    };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, [open]);
+
+  // Custom Cmd/Ctrl+K handler. We can't use Mantine's built-in `shortcut`
+  // prop because its `useHotkeys` only ignores INPUT/TEXTAREA/SELECT — not
+  // `contenteditable` rich text fields. Lexical binds Cmd+K to "insert link",
+  // so opening the global search at the same time clobbers that. Skip the
+  // shortcut whenever focus is inside any editable field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isModK =
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        (event.key.toLowerCase() === 'k' || event.code === 'KeyK');
+      if (!isModK) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      open();
+    };
+    document.documentElement.addEventListener('keydown', onKeyDown);
+    return () =>
+      document.documentElement.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  // Deep links: open the modal when the URL carries `?modal=search`, both on
+  // the initial page load and on client-side navigations (e.g. the browser
+  // back button returning to a URL that had the search open). NOTE:
+  // `useLocation()` is what makes this reactive to client-side URL changes.
+  const {url} = useLocation();
+  useEffect(() => {
+    const state = readGlobalSearchUrlState(window.location.search);
+    if (!state || openedRef.current) {
+      return;
+    }
+    open(state);
+  }, [url, open]);
+
+  // Mirror the open state, query, and filter into the URL so the current
+  // search can be shared straight from the address bar.
+  useEffect(() => {
+    if (!opened) {
+      return;
+    }
+    window.clearTimeout(urlTimerRef.current);
+    urlTimerRef.current = window.setTimeout(() => {
+      const search = window.location.search;
+      const next = writeGlobalSearchUrlState(search, {
+        query: query.trim(),
+        filter,
+      });
+      if (next !== search) {
+        replaceUrlSearch(next);
+      }
+    }, URL_SYNC_DEBOUNCE_MS);
+  }, [opened, query, filter]);
+
+  // Place the caret at the end of a prefilled query so it can be refined
+  // without first moving the cursor.
+  useEffect(() => {
+    if (!opened || !query) {
+      return;
+    }
+    const handle = window.requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>(
+        '.GlobalSearch__spotlight input'
+      );
+      if (input && document.activeElement === input) {
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    });
+    return () => window.cancelAnimationFrame(handle);
+    // Only runs when the modal opens; edits move the caret themselves.
+  }, [opened]);
+
   return (
-    <GlobalSearchInner query={query} onQueryChange={setQuery}>
+    <GlobalSearchInner
+      opened={opened}
+      query={query}
+      filter={filter}
+      onQueryChange={setQuery}
+      onFilterChange={setFilter}
+      onClose={close}
+    >
       {props.children}
     </GlobalSearchInner>
   );

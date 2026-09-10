@@ -176,3 +176,130 @@
   border: 1px solid var(--mantine-color-gray-3, #dee2e6);
   border-bottom-width: 2px;
 }
+
+/*
+ * The spotlight paper has no max height of its own, so long result lists
+ * used to overflow the viewport with no way to scroll. Cap the paper to the
+ * viewport (minus the spotlight's 120px top offset and a bottom margin) and
+ * let the results area scroll instead.
+ */
+.GlobalSearch__spotlight {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 144px);
+}
+
+/* Keep the search input at its natural height; only the body flexes. */
+.GlobalSearch__spotlight > :not(.GlobalSearch__body) {
+  flex: 0 0 auto;
+}
+
+.GlobalSearch__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.GlobalSearch__results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.GlobalSearch__resetFilter {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--mantine-color-blue-6, #228be6);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.GlobalSearchFilters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
+}
+
+.GlobalSearchFilters__chips {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.GlobalSearchFilters__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
+  border-radius: 999px;
+  background: var(--mantine-color-white, #fff);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--mantine-color-dark-7, #343a40);
+  cursor: pointer;
+}
+
+.GlobalSearchFilters__chip:hover {
+  background: var(--mantine-color-gray-0, #f8f9fa);
+}
+
+.GlobalSearchFilters__chip--empty {
+  color: var(--mantine-color-gray-6, #868e96);
+}
+
+.GlobalSearchFilters__chip--active,
+.GlobalSearchFilters__chip--active:hover {
+  border-color: var(--mantine-color-dark-7, #343a40);
+  background: var(--mantine-color-dark-7, #343a40);
+  color: var(--mantine-color-white, #fff);
+}
+
+.GlobalSearchFilters__count {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--mantine-color-gray-2, #e9ecef);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-7, #495057);
+}
+
+.GlobalSearchFilters__chip--active .GlobalSearchFilters__count {
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+}
+
+.GlobalSearchFilters__copy {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--mantine-color-gray-6, #868e96);
+  cursor: pointer;
+}
+
+.GlobalSearchFilters__copy:hover {
+  background: var(--mantine-color-gray-1, #f1f3f5);
+  color: var(--mantine-color-dark-7, #343a40);
+}
+
+.GlobalSearchFilters__copy--copied {
+  color: var(--mantine-color-green-7, #2f9e44);
+}
