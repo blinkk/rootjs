@@ -23,6 +23,7 @@ import {
   type UIMessage,
   type UIMessageChunk,
 } from 'ai';
+import {formatAiErrorMessage} from '../../../shared/ai/errors.js';
 import {
   resolveLanguageModel,
   withBrowserHeaders,
@@ -68,12 +69,15 @@ export function createClientChatTransport(
   options: ClientChatTransportOptions
 ): ChatTransport<UIMessage> {
   return {
-    async sendMessages({messages, abortSignal}): Promise<
-      ReadableStream<UIMessageChunk>
-    > {
+    async sendMessages({
+      messages,
+      abortSignal,
+    }): Promise<ReadableStream<UIMessageChunk>> {
       const turn = await options.loadTurnConfig();
       const tools = options.buildTools(turn.model);
-      const languageModel = resolveLanguageModel(withBrowserHeaders(turn.model));
+      const languageModel = resolveLanguageModel(
+        withBrowserHeaders(turn.model)
+      );
 
       // Heal any tool calls left unresolved by an abandoned turn (e.g. the
       // user closed the chat mid-approval) so every `tool_use` keeps a
@@ -93,6 +97,14 @@ export function createClientChatTransport(
       return result.toUIMessageStream({
         sendReasoning: turn.model.capabilities.reasoning,
         originalMessages: messages,
+        // The SDK masks stream errors as "An error occurred." by default to
+        // avoid leaking server details. Everything here already runs in the
+        // browser, so surface the provider's message (e.g. "high demand")
+        // instead and let the user decide whether to retry.
+        onError: (err) => {
+          console.error('Root AI request failed:', err);
+          return formatAiErrorMessage(err);
+        },
         onFinish: options.onFinish
           ? ({messages: finalMessages}) => {
               void options.onFinish!(finalMessages);

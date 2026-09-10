@@ -28,6 +28,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
+import {ChatErrorNotice} from '../ChatErrorNotice/ChatErrorNotice.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
 // Tool-call, reasoning, and streaming-indicator UI is shared with the Root AI
@@ -209,7 +210,16 @@ function ChatPanelInner(props: {
   // don't re-fire onEditModeResponse on every streaming token.
   const lastEmittedRef = useRef<Map<string, string>>(new Map());
 
-  const {messages, sendMessage, status, error, stop, addToolOutput} = useChat({
+  const {
+    messages,
+    sendMessage,
+    regenerate,
+    clearError,
+    status,
+    error,
+    stop,
+    addToolOutput,
+  } = useChat({
     transport,
     // Auto-resubmit once all tool calls in the latest assistant message have
     // results, so the model can finish its turn after consulting tools.
@@ -271,9 +281,13 @@ function ChatPanelInner(props: {
         welcome={props.welcome}
       />
       {error && (
-        <div className="AiEditModal__ChatPanel__error">
-          <strong>Error:</strong> {error.message}
-        </div>
+        <ChatErrorNotice
+          className="AiEditModal__ChatPanel__error"
+          error={error}
+          busy={isStreaming}
+          onRetry={() => regenerate()}
+          onDismiss={clearError}
+        />
       )}
       <ChatComposer
         canAttach={props.model.capabilities.attachments}
@@ -507,7 +521,9 @@ function ToolPartView(props: {part: any}) {
         <span className="RootAIChat__tool__title">
           {prettyToolName(toolName, part.input)}
         </span>
-        <span className="RootAIChat__tool__state">{prettyToolState(state)}</span>
+        <span className="RootAIChat__tool__state">
+          {prettyToolState(state)}
+        </span>
       </button>
       {open && (
         <div className="RootAIChat__tool__body">

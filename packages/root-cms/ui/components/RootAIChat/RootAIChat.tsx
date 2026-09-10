@@ -53,6 +53,7 @@ import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {stableJsonStringify} from '../../utils/objects.js';
 import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
+import {ChatErrorNotice} from '../ChatErrorNotice/ChatErrorNotice.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 import {Markdown} from '../Markdown/Markdown.js';
 import {
@@ -909,7 +910,16 @@ function ChatPane(props: {
     [persistChat]
   );
 
-  const {messages, sendMessage, status, error, stop, addToolOutput} = useChat({
+  const {
+    messages,
+    sendMessage,
+    regenerate,
+    clearError,
+    status,
+    error,
+    stop,
+    addToolOutput,
+  } = useChat({
     id: effectiveChatId,
     messages: props.initialMessages,
     transport,
@@ -944,9 +954,13 @@ function ChatPane(props: {
         }}
       />
       {error && (
-        <div className="RootAIChat__error">
-          <strong>Error:</strong> {error.message}
-        </div>
+        <ChatErrorNotice
+          className="RootAIChat__error"
+          error={error}
+          busy={isStreaming}
+          onRetry={() => regenerate()}
+          onDismiss={clearError}
+        />
       )}
       <ChatComposer
         disabled={!props.model}

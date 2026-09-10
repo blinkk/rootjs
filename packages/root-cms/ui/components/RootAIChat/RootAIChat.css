@@ -291,12 +291,6 @@
 .RootAIChat__error {
   max-width: 800px;
   margin: 0 auto 12px;
-  padding: 12px 16px;
-  background: #fff5f5;
-  border: 1px solid #ffa8a8;
-  color: #c92a2a;
-  border-radius: 8px;
-  font-size: 14px;
 }
 
 .RootAIChat__message {

@@ -1,0 +1,25 @@
+.ChatErrorNotice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  background: #fff5f5;
+  border: 1px solid #ffa8a8;
+  color: #c92a2a;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.ChatErrorNotice__message {
+  flex: 1 1 240px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ChatErrorNotice__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
