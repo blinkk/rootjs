@@ -1,8 +1,8 @@
 import './SearchBar.css';
-import {openSpotlight} from '@mantine/spotlight';
 import {IconSearch} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
+import {openGlobalSearch} from '../GlobalSearch/GlobalSearch.js';
 
 interface SearchBarProps {
   className?: string;
@@ -24,7 +24,7 @@ export function SearchBar(props: SearchBarProps) {
   }, []);
 
   const onClick = () => {
-    openSpotlight();
+    openGlobalSearch();
   };
 
   return (

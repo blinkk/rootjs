@@ -8,6 +8,7 @@ import {
   IconRocket,
 } from '@tabler/icons-preact';
 import {ComponentChild} from 'preact';
+import {useEffect, useRef} from 'preact/hooks';
 import type {DocSlugHit, GlobalSearchHit} from '../../hooks/useGlobalSearch.js';
 import type {RecentView, RecentViewKind} from '../../utils/recent-views.js';
 import {buildSnippet} from './snippet.js';
@@ -102,6 +103,15 @@ interface RowProps {
 }
 
 function Row(props: RowProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  // Keep the keyboard-selected row visible now that long result lists
+  // scroll. `nearest` makes this a no-op for rows already in view (e.g.
+  // ones hovered with the mouse).
+  useEffect(() => {
+    if (props.hovered) {
+      ref.current?.scrollIntoView?.({block: 'nearest'});
+    }
+  }, [props.hovered]);
   const className = [
     'GlobalSearchAction',
     props.className || '',
@@ -111,6 +121,7 @@ function Row(props: RowProps) {
     .join(' ');
   return (
     <button
+      ref={ref}
       type="button"
       className={className}
       onMouseDown={(e) => {
