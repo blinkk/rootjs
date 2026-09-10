@@ -148,12 +148,6 @@
 
 .AiEditModal__ChatPanel__error {
   margin: 8px 0;
-  padding: 8px 12px;
-  background: rgb(255, 245, 245);
-  border: 1px solid rgb(255, 201, 201);
-  border-radius: 4px;
-  color: rgb(201, 42, 42);
-  font-size: 0.875rem;
 }
 
 .AiEditModal__ChatPanel__message {
