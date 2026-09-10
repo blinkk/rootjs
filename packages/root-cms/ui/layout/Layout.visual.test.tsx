@@ -1,4 +1,5 @@
 import '../styles/global.css';
+import '../styles/mantine.css';
 import '../styles/theme.css';
 import {MantineProvider} from '@mantine/core';
 import {fireEvent, render, waitFor} from '@testing-library/preact';

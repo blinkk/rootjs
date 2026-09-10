@@ -1,0 +1,24 @@
+.mantine-Tooltip-body {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mantine-Tabs-tabControl[aria-selected="true"] {
+  color: var(--color-text-default);
+  border-bottom-color: lightblue;
+}
+
+.mantine-Notification-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.mantine-Table-root {
+  border: 1px solid #dee2e6;
+}
+
+.mantine-Table-root th:not(:first-child),
+.mantine-Table-root td:not(:first-child) {
+  border-left: 1px solid #dee2e6;
+}

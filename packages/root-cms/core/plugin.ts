@@ -31,6 +31,7 @@ import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
+import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {
   clearDevAuthCookie,
   getDevAuthCookie,
@@ -50,6 +51,7 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {CMSTheme} from './theme.js';
 export type {
   CollectionPublishingOptions,
   PublishCheckConfig,
@@ -437,6 +439,44 @@ export type CMSPluginOptions = {
    * logo and displays the project name on the top-right.
    */
   minimalBranding?: boolean;
+
+  /**
+   * Experimental: themes for the CMS UI, each a stylesheet loaded after the
+   * CMS's own. Anything the CSS reaches can be restyled; the `--cms-*`
+   * custom properties in `ui/styles/theme.css` are the part meant to last
+   * (copy that file to start a theme — see `docs/themes.md`).
+   *
+   * ```ts
+   * themes: [
+   *   {id: 'clarity', name: 'Clarity', file: './cms/clarity.css'},
+   *   ...somePlugin.themes,
+   * ],
+   * defaultTheme: 'clarity',
+   * ```
+   *
+   * `file` is relative to the project root; `css` can be given instead, or
+   * appended after it. Each theme is served at `/cms/themes/<id>.css` behind
+   * the CMS's login and read on each request, so an edit shows on the next
+   * reload.
+   *
+   * Every user picks their own theme from this list under Settings → User
+   * Preferences; `defaultTheme` is what applies until they do, and no
+   * default means the stock CMS. CSS can also be added from the CMS itself,
+   * without a deploy: for the whole project under Settings → Site Settings,
+   * and per user under Settings → User Preferences — including an
+   * `@import url(…)` of a hosted file.
+   *
+   * Rules that target the CMS's class names or DOM are unsupported: they
+   * work today but may break with any release, since the markup is free to
+   * change.
+   */
+  themes?: CMSTheme[];
+
+  /**
+   * Experimental: the id of the theme in `themes` that applies to users who
+   * haven't chosen one. Omit for the stock CMS.
+   */
+  defaultTheme?: string;
 
   /**
    * Callback when an action occurs.
@@ -1299,6 +1339,37 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         checks: options.checks,
         translations: options.translations,
       });
+
+      // The project's themes (`themes` option), each served as its own
+      // stylesheet behind the same login as the page that links it.
+      server.get(
+        `${THEMES_URL_PREFIX}:file`,
+        async (req: Request, res: Response) => {
+          if (!req.user) {
+            redirectToLogin(req, res);
+            return;
+          }
+          const id = String(req.params.file).replace(/\.css$/, '');
+          const configured = options.themes?.find((theme) => theme.id === id);
+          const theme = configured
+            ? await loadTheme(configured, req.rootConfig!.rootDir)
+            : null;
+          if (!theme) {
+            res.status(404).end();
+            return;
+          }
+          res.setHeader('content-type', 'text/css; charset=utf-8');
+          // The link carries the content hash, so a matching request can be
+          // cached for good; anything else is checked again each time.
+          res.setHeader(
+            'cache-control',
+            req.query.c === theme.hash
+              ? 'private, max-age=31536000, immutable'
+              : 'no-cache'
+          );
+          res.send(theme.css);
+        }
+      );
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

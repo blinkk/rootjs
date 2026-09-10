@@ -1,24 +1,51 @@
-.mantine-Tooltip-body {
-  font-size: 12px;
-  font-weight: 600;
-}
+/*
+ * The CMS theme: every custom property the UI reads, at its stock value.
+ *
+ * This file IS the contract. Copy it whole, change the values, and load the
+ * result as a theme (`cmsPlugin({themes, defaultTheme})` — see
+ * docs/themes.md) to restyle the CMS. Properties are added here as the UI
+ * grows; their names and meanings are kept stable across releases, so a
+ * theme written against them keeps working when the markup underneath
+ * changes.
+ *
+ * Rules that target the CMS's class names are a different matter: they work
+ * today and may break with any release. Themes are experimental.
+ */
 
-.mantine-Tabs-tabControl[aria-selected="true"] {
-  color: var(--color-text-default);
-  border-bottom-color: lightblue;
-}
+:root {
+  /* --- Structure -------------------------------------------------------
+   * A field group ("drawer") runs edge to edge across the field column by
+   * default, so its header reads as a band. Pull it back into the column
+   * (bleed 0) and give it a border to make it read as a box instead.
+   */
 
-.mantine-Notification-description {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
+  /* How far a field group runs past the field column, each side. */
+  --cms-drawer-bleed: -16px;
+  /* Border around a field group (a `border` shorthand). */
+  --cms-drawer-border: none;
+  /* Corner radius of a field group. */
+  --cms-drawer-radius: 0;
+  /* Background of a field group. */
+  --cms-drawer-bg: transparent;
+  /* Background of a field group's header row. */
+  --cms-drawer-header-bg: transparent;
+  /* Space before a group's fields, showing the nesting (a length). */
+  --cms-drawer-indent: 0;
+  /* A rule down that space (a `border` shorthand). */
+  --cms-drawer-rule: none;
+  /* The structural accent: open list items, inline groups. */
+  --cms-accent: lightblue;
 
-.mantine-Table-root {
-  border: 1px solid #dee2e6;
-}
+  /* --- Type and rhythm ------------------------------------------------- */
 
-.mantine-Table-root th:not(:first-child),
-.mantine-Table-root td:not(:first-child) {
-  border-left: 1px solid #dee2e6;
+  /* Base size for the document editor's text. */
+  --cms-font-size: 12px;
+  /* Field labels. */
+  --cms-label-size: 12px;
+  /* Help text beneath a label. */
+  --cms-help-size: 12px;
+  /* Its colour. */
+  --cms-help-color: inherit;
+  /* Vertical space between fields. */
+  --cms-field-gap: 16px;
 }
