@@ -14,6 +14,11 @@ import {
   unmarshalDataSourceData,
 } from '../shared/data-source.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
+
+export {
+  resolveLocaleFallbacks,
+  type LocaleFallbacksI18nConfig,
+} from '../shared/locale-fallbacks.js';
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
@@ -1879,6 +1884,11 @@ export class RootCMSClient {
   /**
    * Loads translations for a particular locale.
    *
+   * The locale is expanded through the fallback chain configured in
+   * `i18n.fallbacks` (ending with `i18n.defaultLocale`), so a string missing
+   * a translation for the locale falls through to its fallbacks before the
+   * source string is used.
+   *
    * Returns a map like:
    * ```
    * {
@@ -1891,7 +1901,11 @@ export class RootCMSClient {
     options?: LoadTranslationsOptions
   ): Promise<LocaleTranslations> {
     const translationsMap = await this.loadTranslations(options);
-    return translationsForLocale(translationsMap, locale);
+    const fallbackLocales = resolveLocaleFallbacks(
+      this.rootConfig.i18n,
+      locale
+    );
+    return translationsForLocale(translationsMap, fallbackLocales);
   }
 
   /**
@@ -3013,6 +3027,17 @@ function randString(len: number): string {
  * Converts a translations map from `loadTranslations()` to a map of source to
  * translated string for a particular locale.
  *
+ * The locale is either a single locale (e.g. `"fr"`), which falls back to
+ * `en` and then the source string, or an ordered fallback chain (e.g.
+ * `["en-CA", "en-GB", "en"]`) where the first locale with a translation wins
+ * before falling back to the source string. Use `resolveLocaleFallbacks()`
+ * to build the chain from the `i18n.fallbacks` config:
+ *
+ * ```ts
+ * const fallbackLocales = resolveLocaleFallbacks(rootConfig.i18n, 'en-CA');
+ * const translations = translationsForLocale(translationsMap, fallbackLocales);
+ * ```
+ *
  * Returns a map like:
  * ```
  * {
@@ -3022,12 +3047,19 @@ function randString(len: number): string {
  */
 export function translationsForLocale(
   translationsMap: TranslationsMap,
-  locale: string
-) {
+  locale: string | string[]
+): LocaleTranslations {
+  const fallbackLocales = Array.isArray(locale) ? locale : [locale, 'en'];
   const localeTranslations: LocaleTranslations = {};
   Object.values(translationsMap).forEach((string) => {
     const source = string.source;
-    const translation = string[locale] || string.en || string.source;
+    let translation = source;
+    for (const fallbackLocale of fallbackLocales) {
+      if (string[fallbackLocale]) {
+        translation = string[fallbackLocale];
+        break;
+      }
+    }
     localeTranslations[source] = translation;
   });
   return localeTranslations;

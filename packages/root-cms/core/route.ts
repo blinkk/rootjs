@@ -251,22 +251,21 @@ export function createRoute(options: CreateRouteOptions): Route {
 
   /**
    * Flattens a loaded translations map to a source -> translation map for a
-   * locale, resolving the locale's fallback chain (`i18n.fallbacks`) when the
-   * v2 translations manager is enabled.
+   * locale, resolving the locale's fallback chain (`i18n.fallbacks`).
    */
   function translationsMapForLocale(
     cmsClient: RootCMSClient,
     translationsMap: Record<string, any>,
     locale: string
   ): Record<string, string> {
+    const fallbackLocales = resolveLocaleFallbacks(
+      cmsClient.rootConfig.i18n,
+      locale
+    );
     if (cmsClient.isV2TranslationsEnabled()) {
-      const fallbackLocales = resolveLocaleFallbacks(
-        cmsClient.rootConfig.i18n,
-        locale
-      );
       return translationsForLocaleV2(translationsMap, fallbackLocales);
     }
-    return translationsForLocale(translationsMap, locale);
+    return translationsForLocale(translationsMap, fallbackLocales);
   }
 
   async function generateProps(routeContext: RouteContext, locale: string) {

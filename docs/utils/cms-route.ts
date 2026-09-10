@@ -6,7 +6,11 @@ import {
   Response,
   RouteParams,
 } from '@blinkk/root';
-import {RootCMSClient, translationsForLocale} from '@blinkk/root-cms/client';
+import {
+  RootCMSClient,
+  resolveLocaleFallbacks,
+  translationsForLocale,
+} from '@blinkk/root-cms/client';
 
 export type CMSRequest = Request & {
   cmsClient: RootCMSClient;
@@ -126,7 +130,10 @@ export function cmsRoute(options: CMSRouteOptions) {
       return {notFound: true};
     }
 
-    const translations = translationsForLocale(translationsMap, locale);
+    const translations = translationsForLocale(
+      translationsMap,
+      resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+    );
     let props: any = {...data, locale, mode, slug, doc};
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
@@ -227,7 +234,10 @@ export function cmsRoute(options: CMSRouteOptions) {
         req.get('x-country-code') ||
         req.get('x-appengine-country') ||
         null;
-      const translations = translationsForLocale(translationsMap, locale);
+      const translations = translationsForLocale(
+        translationsMap,
+        resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+      );
       let props: any = {...data, req, locale, mode, slug, doc, country};
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
