@@ -15,6 +15,7 @@ import {
   ActionIconVariant,
   Button,
   Menu,
+  TextInput,
   Tooltip,
 } from '@mantine/core';
 import {
@@ -45,6 +46,7 @@ import {
   IconCube,
   IconCapsuleHorizontal,
   IconTextSize,
+  IconSearch,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -93,8 +95,36 @@ import {
 } from '../utils/toolbar.js';
 import {sanitizeUrl} from '../utils/url.js';
 
+/**
+ * Number of custom components at which the components dropdown starts offering
+ * a filter input.
+ */
+const COMPONENT_FILTER_MIN_COMPONENTS = 8;
+
 function dropDownActiveClass(active: boolean) {
   return active ? 'active dropdown-item-active' : '';
+}
+
+/** Returns the menu item elements of the dropdown that contains `element`. */
+function getMenuItems(element: HTMLElement): HTMLElement[] {
+  const menu = element.closest('[role="menu"]');
+  if (!menu) {
+    return [];
+  }
+  return Array.from(menu.querySelectorAll<HTMLElement>('.mantine-Menu-item'));
+}
+
+/**
+ * Moves focus onto a menu item. Mantine tracks the highlighted item through
+ * `mouseenter` rather than focus, so dispatch one to keep its highlight (and
+ * its own arrow key handling) in sync.
+ */
+function focusMenuItem(item?: HTMLElement) {
+  if (!item) {
+    return;
+  }
+  item.dispatchEvent(new MouseEvent('mouseenter'));
+  item.focus();
 }
 
 interface BlockTypeIconProps {
@@ -567,6 +597,64 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     });
   }, [inlineComponents]);
 
+  const [componentsMenuOpened, setComponentsMenuOpened] = useState(false);
+  const [componentFilter, setComponentFilter] = useState('');
+
+  // Focus the filter as soon as it mounts, i.e. when the menu opens. The popper
+  // mounts the dropdown body asynchronously, so an effect keyed on the menu's
+  // open state would run before the input exists.
+  const componentFilterRef = useCallback((input: HTMLInputElement | null) => {
+    input?.focus();
+  }, []);
+
+  // Only offer the filter input once the list is long enough to be worth
+  // searching.
+  const showComponentFilter =
+    sortedInlineComponents.length + sortedBlockComponents.length >=
+    COMPONENT_FILTER_MIN_COMPONENTS;
+
+  const filterQuery = componentFilter.trim().toLowerCase();
+  const matchesComponentFilter = (...values: Array<string | undefined>) => {
+    if (!filterQuery) {
+      return true;
+    }
+    return values.some((value) => value?.toLowerCase().includes(filterQuery));
+  };
+
+  const filteredInlineComponents = sortedInlineComponents.filter((component) =>
+    matchesComponentFilter(component.label, component.name)
+  );
+  const filteredBlockComponents = sortedBlockComponents.filter((block) =>
+    matchesComponentFilter(block.label, block.name)
+  );
+  const showTableItem = matchesComponentFilter('Table');
+  const showHorizontalRuleItem = matchesComponentFilter('Horizontal Rule');
+  const hasFilterResults =
+    showTableItem ||
+    showHorizontalRuleItem ||
+    filteredInlineComponents.length > 0 ||
+    filteredBlockComponents.length > 0;
+
+  const onComponentFilterKeyDown = (event: KeyboardEvent) => {
+    const input = event.currentTarget as HTMLInputElement;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusMenuItem(getMenuItems(input)[0]);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      getMenuItems(input)[0]?.click();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      // Clear the query first so that Escape doesn't discard a long search by
+      // accident; a second Escape closes the menu.
+      if (componentFilter) {
+        setComponentFilter('');
+      } else {
+        setComponentsMenuOpened(false);
+      }
+    }
+  };
+
   const getComponentIcon = (componentName: string) => {
     switch (componentName) {
       case 'image':
@@ -671,6 +759,12 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               classNames={{
                 body: 'LexicalEditor__toolbar__insertDropdown__body',
               }}
+              opened={componentsMenuOpened}
+              onOpen={() => {
+                setComponentFilter('');
+                setComponentsMenuOpened(true);
+              }}
+              onClose={() => setComponentsMenuOpened(false)}
               control={
                 <Button
                   className={joinClassNames(
@@ -686,34 +780,56 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                 </Button>
               }
             >
-              <Menu.Label>Insert</Menu.Label>
-              <Menu.Item
-                icon={<IconTable size={16} />}
-                onClick={() => {
-                  activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
-                    columns: '3',
-                    rows: '3',
-                  });
-                }}
-              >
-                Table
-              </Menu.Item>
-              <Menu.Item
-                icon={<IconSeparatorHorizontal size={16} />}
-                onClick={() => {
-                  activeEditor.dispatchCommand(
-                    INSERT_HORIZONTAL_RULE_COMMAND,
-                    undefined
-                  );
-                }}
-              >
-                Horizontal Rule
-              </Menu.Item>
+              {showComponentFilter && (
+                <div className="LexicalEditor__toolbar__insertDropdown__filter">
+                  <TextInput
+                    ref={componentFilterRef}
+                    size="xs"
+                    icon={<IconSearch size={14} />}
+                    placeholder="Search components"
+                    aria-label="Search components"
+                    value={componentFilter}
+                    onInput={(event: any) =>
+                      setComponentFilter(event.currentTarget.value)
+                    }
+                    onKeyDown={onComponentFilterKeyDown}
+                  />
+                </div>
+              )}
+              {(showTableItem || showHorizontalRuleItem) && (
+                <Menu.Label>Insert</Menu.Label>
+              )}
+              {showTableItem && (
+                <Menu.Item
+                  icon={<IconTable size={16} />}
+                  onClick={() => {
+                    activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                      columns: '3',
+                      rows: '3',
+                    });
+                  }}
+                >
+                  Table
+                </Menu.Item>
+              )}
+              {showHorizontalRuleItem && (
+                <Menu.Item
+                  icon={<IconSeparatorHorizontal size={16} />}
+                  onClick={() => {
+                    activeEditor.dispatchCommand(
+                      INSERT_HORIZONTAL_RULE_COMMAND,
+                      undefined
+                    );
+                  }}
+                >
+                  Horizontal Rule
+                </Menu.Item>
+              )}
 
-              {sortedInlineComponents.length > 0 && (
+              {filteredInlineComponents.length > 0 && (
                 <>
                   <Menu.Label>Inline Components</Menu.Label>
-                  {sortedInlineComponents.map((component) => (
+                  {filteredInlineComponents.map((component) => (
                     <Menu.Item
                       key={component.name}
                       icon={<IconCapsuleHorizontal size={16} />}
@@ -725,10 +841,10 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                   ))}
                 </>
               )}
-              {sortedBlockComponents.length > 0 && (
+              {filteredBlockComponents.length > 0 && (
                 <>
                   <Menu.Label>Block Components</Menu.Label>
-                  {sortedBlockComponents.map((block) => (
+                  {filteredBlockComponents.map((block) => (
                     <Menu.Item
                       key={block.name}
                       icon={getComponentIcon(block.name)}
@@ -739,6 +855,11 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                     </Menu.Item>
                   ))}
                 </>
+              )}
+              {!hasFilterResults && (
+                <div className="LexicalEditor__toolbar__insertDropdown__empty">
+                  No components found.
+                </div>
               )}
             </Menu>
             <Divider />
