@@ -34,6 +34,7 @@ import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {
   getPreviewPathFromUrlKey,
+  getPreviewSearch,
   getPreviewSrcFromUrlKey,
   getPreviewUrlKey,
   getPreviewUrlKeyFromUrl,
@@ -51,15 +52,13 @@ function getPreviewUrl(
   selectedLocale = ''
 ) {
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
-  const searchParams = new URLSearchParams(window.location.search);
-  searchParams.set('preview', 'true');
-  // Avoid passing through internal CMS params (locale, modal) to the preview
-  // iframe. These are used by the CMS UI only.
+  // Avoid passing through internal CMS params (locale, modal, deeplink) to the
+  // preview. These are used by the CMS UI only.
   // NOTE(stevenle): if we ever need to pass through the locale param, switch to
   // using hash params for the internal CMS params that shouldn't pass through.
-  searchParams.delete('locale');
-  searchParams.delete('modal');
-  const query = `${searchParams.toString()}${window.location.hash}`;
+  const query = `${getPreviewSearch(window.location.search)}${
+    window.location.hash
+  }`;
   if (selectedLocale) {
     const localizedPreviewPath = getDocPreviewPath({
       collectionId,
