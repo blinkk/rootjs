@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   getPreviewPathFromUrlKey,
+  getPreviewSearch,
   getPreviewSrcFromUrlKey,
   getPreviewUrlKey,
   getPreviewUrlKeyFromUrl,
@@ -64,5 +65,29 @@ describe('getPreviewPathFromUrlKey', () => {
   it('drops the search params', () => {
     expect(getPreviewPathFromUrlKey('/about?debug=1')).toBe('/about');
     expect(getPreviewPathFromUrlKey('/about')).toBe('/about');
+  });
+});
+
+describe('getPreviewSearch', () => {
+  it('returns preview=true for an empty search', () => {
+    expect(getPreviewSearch('')).toBe('preview=true');
+  });
+
+  it('puts preview=true first', () => {
+    expect(getPreviewSearch('?debug=1&preview=true')).toBe(
+      'preview=true&debug=1'
+    );
+  });
+
+  it('strips cms-internal params', () => {
+    expect(
+      getPreviewSearch('?deeplink=fields.title&locale=fr&modal=search&debug=1')
+    ).toBe('preview=true&debug=1');
+  });
+
+  it('preserves repeated params', () => {
+    expect(getPreviewSearch('?flag=a&flag=b')).toBe(
+      'preview=true&flag=a&flag=b'
+    );
   });
 });

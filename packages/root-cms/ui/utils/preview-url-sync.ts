@@ -29,6 +29,33 @@ export interface UrlParts {
 const PREVIEW_PARAM = 'preview';
 
 /**
+ * Query params used by the CMS UI itself (e.g. the locale selector, modals,
+ * field deeplinks) that should never be passed through to the previewed page.
+ */
+const CMS_INTERNAL_PARAMS = ['locale', 'modal', 'deeplink'];
+
+/**
+ * Builds the query string for a preview url from the CMS page's current search
+ * string. `preview=true` is always the first param so the url stays stable and
+ * readable (e.g. when opened in a new tab), and CMS-internal params are
+ * stripped so only params meant for the previewed page pass through.
+ *
+ * Returns the query string without a leading `?`, e.g. `preview=true&debug=1`.
+ */
+export function getPreviewSearch(search: string): string {
+  const cmsParams = new URLSearchParams(search);
+  const params = new URLSearchParams();
+  params.set(PREVIEW_PARAM, 'true');
+  cmsParams.forEach((value, key) => {
+    if (key === PREVIEW_PARAM || CMS_INTERNAL_PARAMS.includes(key)) {
+      return;
+    }
+    params.append(key, value);
+  });
+  return params.toString();
+}
+
+/**
  * Returns a comparable key for a preview iframe location: its pathname plus
  * search params, minus the CMS's own `preview` param. Two panes showing the
  * same page share the same key even when only one of them was navigated by the
