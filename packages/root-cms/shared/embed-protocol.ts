@@ -9,6 +9,8 @@
  *   namespaced under `root` ({@link RootEmbedMessage}).
  * - Parent window -> doc editor: field focus requests
  *   ({@link ScrollToDeeplinkMessage}).
+ * - In-CMS preview iframe -> doc editor: requests to edit another doc
+ *   ({@link NavigateToDocMessage}).
  * - Doc editor -> in-CMS preview iframe: field highlight requests
  *   ({@link HighlightNodeMessage}).
  *
@@ -74,6 +76,32 @@ export interface ScrollToDeeplinkMessage {
 }
 
 /**
+ * Requests that the doc editor switch to another document.
+ *
+ * Posted by a page rendered inside the CMS preview pane to say which doc it is
+ * showing, so the editor can follow the preview as the user navigates the site.
+ * The page knows its own doc id, which is why the CMS doesn't try to derive one
+ * from the url.
+ *
+ * The doc id is untrusted input: the CMS checks the collection exists and the
+ * slug is well-formed before routing anywhere.
+ */
+export interface NavigateToDocMessage {
+  navigateToDoc: {
+    /** The doc to edit, e.g. "Pages/about". */
+    docId: string;
+    /**
+     * Whether to ask the user before switching docs. Defaults to `true`: the
+     * editor would otherwise jump to another doc unannounced, which is
+     * disorienting for an editor who doesn't know the page can do that. Set it
+     * to `false` only when the site has its own affordance, e.g. a toggle the
+     * user turned on.
+     */
+    confirm?: boolean;
+  };
+}
+
+/**
  * Requests that the preview page highlight the node associated with a field.
  * A `null` deepKey clears all highlights.
  */
@@ -119,6 +147,19 @@ export function isScrollToDeeplinkMessage(
   const req = (data as ScrollToDeeplinkMessage)?.scrollToDeeplink;
   return (
     typeof req === 'object' && req !== null && typeof req.deepKey === 'string'
+  );
+}
+
+/** Returns whether a postMessage payload is a {@link NavigateToDocMessage}. */
+export function isNavigateToDocMessage(
+  data: unknown
+): data is NavigateToDocMessage {
+  const req = (data as NavigateToDocMessage)?.navigateToDoc;
+  return (
+    typeof req === 'object' &&
+    req !== null &&
+    typeof req.docId === 'string' &&
+    (req.confirm === undefined || typeof req.confirm === 'boolean')
   );
 }
 

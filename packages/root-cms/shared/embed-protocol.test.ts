@@ -1,6 +1,7 @@
 import {describe, it, expect} from 'vitest';
 import {
   isHighlightNodeMessage,
+  isNavigateToDocMessage,
   isRootEmbedMessage,
   isRootToolLocationMessage,
   isScrollToDeeplinkMessage,
@@ -97,5 +98,48 @@ describe('isHighlightNodeMessage', () => {
     expect(isHighlightNodeMessage({highlightNode: null})).toBe(false);
     expect(isHighlightNodeMessage({highlightNode: {}})).toBe(false);
     expect(isHighlightNodeMessage({highlightNode: {deepKey: 1}})).toBe(false);
+  });
+});
+
+describe('isNavigateToDocMessage', () => {
+  it('accepts a doc id, with or without an explicit confirm flag', () => {
+    expect(
+      isNavigateToDocMessage({navigateToDoc: {docId: 'Pages/about'}})
+    ).toBe(true);
+    expect(
+      isNavigateToDocMessage({
+        navigateToDoc: {docId: 'Pages/about', confirm: false},
+      })
+    ).toBe(true);
+  });
+
+  it('rejects malformed payloads', () => {
+    expect(isNavigateToDocMessage({navigateToDoc: {}})).toBe(false);
+    expect(isNavigateToDocMessage({navigateToDoc: {docId: 42}})).toBe(false);
+    expect(
+      isNavigateToDocMessage({
+        navigateToDoc: {docId: 'Pages/a', confirm: 'yes'},
+      })
+    ).toBe(false);
+    expect(isNavigateToDocMessage({navigateToDoc: null})).toBe(false);
+    expect(isNavigateToDocMessage({})).toBe(false);
+    expect(isNavigateToDocMessage(null)).toBe(false);
+    expect(isNavigateToDocMessage('navigateToDoc')).toBe(false);
+  });
+
+  // The un-namespaced messages share a channel, so they must stay distinct.
+  it('does not match the other message types', () => {
+    expect(
+      isNavigateToDocMessage({scrollToDeeplink: {deepKey: 'hero.title'}})
+    ).toBe(false);
+    expect(isNavigateToDocMessage({highlightNode: {deepKey: null}})).toBe(
+      false
+    );
+    expect(isScrollToDeeplinkMessage({navigateToDoc: {docId: 'Pages/a'}})).toBe(
+      false
+    );
+    expect(isHighlightNodeMessage({navigateToDoc: {docId: 'Pages/a'}})).toBe(
+      false
+    );
   });
 });

@@ -312,3 +312,7 @@
   overflow: hidden;
   background: white;
 }
+
+.DocumentPage__followConfirm__dontAsk {
+  margin-top: 16px;
+}
