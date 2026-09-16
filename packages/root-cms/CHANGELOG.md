@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.4.12
+
+### Patch Changes
+
+- 901560a: fix: reset the document editor when navigating between documents
+  - @blinkk/root@3.4.12
+
 ## 3.4.11
 
 ### Patch Changes
