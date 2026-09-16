@@ -1,4 +1,5 @@
 import './styles/global.css';
+import './styles/mantine.css';
 import './styles/theme.css';
 
 import {MantineProvider} from '@mantine/core';
@@ -44,6 +45,7 @@ import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
+import {ThemeLoader} from './hooks/useTheme.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
 import {installGlobalErrorHandlers} from './utils/global-errors.js';
 import {lazyRoute} from './utils/lazy-route.js';
@@ -285,6 +287,13 @@ declare global {
        * client-side publishes so the graph is updated immediately.
        */
       dependencyGraphEnabled?: boolean;
+      /** The project's themes and which one applies by default. */
+      theme?: {
+        /** Id of the theme used when a user hasn't chosen one. */
+        default: string | null;
+        /** The themes the project registered, in config order. */
+        themes: Array<{id: string; name: string; hash: string}>;
+      };
     };
     firebase: FirebaseContextObject;
   }
@@ -344,6 +353,7 @@ function App() {
             <SiteSettingsProvider>
               <PendingReleasesProvider>
                 <UserPreferencesProvider>
+                  <ThemeLoader />
                   {/*
                     NOTE: <LocationProvider> must wrap <ModalsProvider>. The
                     modals provider renders the currently open modal as a

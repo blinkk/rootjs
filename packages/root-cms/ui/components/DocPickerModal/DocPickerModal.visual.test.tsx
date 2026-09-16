@@ -1,4 +1,5 @@
 import '../../styles/global.css';
+import '../../styles/mantine.css';
 import '../../styles/theme.css';
 import '../../pages/CollectionPage/CollectionPage.css';
 import './DocPickerModal.css';
