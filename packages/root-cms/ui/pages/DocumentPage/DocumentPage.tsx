@@ -425,7 +425,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                   'DocumentPage__side__editor--centered'
               )}
             >
-              <DocEditor docId={docId} />
+              <DocEditor key={docId} docId={docId} />
             </div>
           </SplitPanel.Item>
           <SplitPanel.Item
@@ -664,11 +664,6 @@ function getLocaleLabel(locale: string) {
 
 DocumentPage.Preview = (props: PreviewProps) => {
   const draft = useDraftDoc();
-  // TODO(stevenle): add a loader here instead.
-  if (draft.loading) {
-    return null;
-  }
-
   const [collectionId, slug] = props.docId.split('/');
   const collections = window.__ROOT_CTX.collections;
   const rootCollection = collections[collectionId];
@@ -856,7 +851,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     return () => {
       removeOnFlush?.();
     };
-  }, []);
+  }, [draft.controller]);
 
   // Navigate every visible iframe to the localized preview url. Runs on mount
   // (initial load) and whenever the selected locale changes.
