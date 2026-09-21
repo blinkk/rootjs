@@ -26,7 +26,6 @@ import {
   IconDownload,
   IconFileUpload,
   IconFolder,
-  IconFolderCog,
   IconFolderPlus,
   IconFolderSymlink,
   IconFolderUp,
@@ -554,7 +553,28 @@ export function AssetBrowser(props: AssetBrowserProps) {
       )}
     >
       <div className="AssetBrowser__toolbar">
-        <AssetBrowser.Breadcrumbs folder={folder} onNavigate={setFolder} />
+        <div className="AssetBrowser__toolbar__folder">
+          <AssetBrowser.Breadcrumbs folder={folder} onNavigate={setFolder} />
+          {props.mode === 'manage' && preserveFilenameFolder !== null && (
+            <span
+              className="AssetBrowser__toolbar__preserveBadge"
+              title={`Uploads to this folder preserve filenames (set on "${preserveFilenameFolder}")`}
+            >
+              <IconLetterCase size={14} />
+            </span>
+          )}
+          {props.mode === 'manage' && canManage && currentFolder && (
+            <ActionIcon
+              className="AssetBrowser__toolbar__folderSettings"
+              size="sm"
+              title="Folder settings"
+              aria-label="Folder settings"
+              onClick={() => setFolderSettingsTarget(currentFolder)}
+            >
+              <IconSettings size={16} />
+            </ActionIcon>
+          )}
+        </div>
         <div className="AssetBrowser__toolbar__actions">
           <TextInput
             className="AssetBrowser__toolbar__filter"
@@ -588,25 +608,6 @@ export function AssetBrowser(props: AssetBrowserProps) {
                 Connect sync source
               </Button>
             ))}
-          {props.mode === 'manage' && preserveFilenameFolder !== null && (
-            <span
-              className="AssetBrowser__toolbar__preserveBadge"
-              title={`Uploads to this folder preserve filenames (set on "${preserveFilenameFolder}")`}
-            >
-              <IconLetterCase size={14} />
-            </span>
-          )}
-          {props.mode === 'manage' && canManage && currentFolder && (
-            <ActionIcon
-              size="md"
-              variant="default"
-              title="Folder settings"
-              aria-label="Folder settings"
-              onClick={() => setFolderSettingsTarget(currentFolder)}
-            >
-              <IconFolderCog size={16} />
-            </ActionIcon>
-          )}
           {showUpload && props.mode === 'manage' && (
             <Button
               variant="default"
@@ -896,7 +897,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                               Move
                             </Menu.Item>
                             <Menu.Item
-                              icon={<IconFolderCog size={14} />}
+                              icon={<IconSettings size={14} />}
                               onClick={() => setFolderSettingsTarget(asset)}
                             >
                               Folder settings
