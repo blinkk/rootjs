@@ -38,3 +38,9 @@ function testEnableChannelToPreview() {
   const previewOptions = window.__ROOT_CTX.preview || {};
   return [true, 'to-preview'].includes(previewOptions.channel);
 }
+
+/** Returns whether messages from the preview should be accepted. */
+export function testEnableChannelFromPreview() {
+  const previewOptions = window.__ROOT_CTX.preview || {};
+  return [true, 'from-preview'].includes(previewOptions.channel);
+}
