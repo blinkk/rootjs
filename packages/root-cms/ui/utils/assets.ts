@@ -34,7 +34,7 @@ import {
 import {logAction} from './actions.js';
 import {removeDocsFromCache} from './doc-cache.js';
 import type {CMSDoc} from './doc.js';
-import {UploadedFile, getFileExt} from './gcs.js';
+import {UploadFileOptions, UploadedFile, getFileExt} from './gcs.js';
 import {autokey} from './rand.js';
 
 export type AssetType = 'file' | 'folder';
@@ -155,6 +155,13 @@ export interface AssetFolder extends AssetBase {
   type: 'folder';
   /** Connection to an external sync source (e.g. a Figma file/node). */
   sync?: AssetFolderSync;
+  /**
+   * When true, files uploaded into this folder (or any of its subfolders)
+   * keep their original filename in the GCS object path, i.e. they are
+   * stored as `{hash}/{filename}.{ext}` rather than `{hash}.{ext}`, giving
+   * readable file URLs. See {@link findPreserveFilenameFolder}.
+   */
+  preserveFilename?: boolean;
 }
 
 export type Asset = AssetFile | AssetFolder;
@@ -543,13 +550,20 @@ export async function findAssetFile(
   return res;
 }
 
+/** Options for {@link createAssetFolder}. */
+export interface CreateAssetFolderOptions {
+  /** Enables {@link AssetFolder.preserveFilename} on the new folder. */
+  preserveFilename?: boolean;
+}
+
 /**
  * Creates a folder within the asset library. No-op if the folder already
- * exists.
+ * exists (its existing settings are kept).
  */
 export async function createAssetFolder(
   parent: string,
-  name: string
+  name: string,
+  options?: CreateAssetFolderOptions
 ): Promise<AssetFolder> {
   const folderName = validateAssetName(name);
   const parentPath = normalizeParentPath(parent);
@@ -561,6 +575,7 @@ export async function createAssetFolder(
     type: 'folder',
     parent: parentPath,
     name: folderName,
+    ...(options?.preserveFilename ? {preserveFilename: true} : {}),
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email,
     modifiedAt: serverTimestamp(),
@@ -568,8 +583,88 @@ export async function createAssetFolder(
   };
   // merge:true keeps createdAt/createdBy when the folder already exists.
   await setDoc(docRef, folder, {merge: true});
-  logAction('asset.folder_create', {metadata: {folder: folderPath}});
+  logAction('asset.folder_create', {
+    metadata: {
+      folder: folderPath,
+      preserveFilename: !!options?.preserveFilename,
+    },
+  });
   return (await getAsset(folderId)) as AssetFolder;
+}
+
+/**
+ * Enables or disables {@link AssetFolder.preserveFilename} on a folder. Only
+ * affects future uploads; existing files keep their current URLs.
+ */
+export async function updateFolderPreserveFilename(
+  folder: AssetFolder,
+  enabled: boolean
+): Promise<AssetFolder> {
+  const folderPath = joinFolderPath(folder.parent, folder.name);
+  const docRef = doc(getAssetsDbCollection(), folder.id);
+  await updateDoc(docRef, {
+    preserveFilename: enabled ? true : deleteField(),
+    modifiedAt: serverTimestamp(),
+    modifiedBy: window.firebase.user.email,
+  });
+  logAction('asset.folder_update', {
+    metadata: {folder: folderPath, preserveFilename: enabled},
+  });
+  return (await getAsset(folder.id)) as AssetFolder;
+}
+
+/**
+ * Returns the path of the nearest folder, starting from `folderPath` itself
+ * and walking up its ancestors, that has {@link AssetFolder.preserveFilename}
+ * enabled; or null if none does. The setting is inherited by subfolders so a
+ * whole folder tree can be configured at once. Folder docs are fetched in
+ * parallel (one read per path segment).
+ */
+export async function findPreserveFilenameFolder(
+  folderPath: string
+): Promise<string | null> {
+  const segments = parseFolderPath(folderPath);
+  if (segments.length === 0) {
+    return null;
+  }
+  const paths = segments.map((_, i) => segments.slice(0, i + 1).join('/'));
+  const folders = await Promise.all(
+    paths.map((path) => getAsset(getFolderId(path)))
+  );
+  for (let i = folders.length - 1; i >= 0; i--) {
+    const folder = folders[i];
+    if (folder && folder.type === 'folder' && folder.preserveFilename) {
+      return paths[i];
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns the GCS upload options for files added to a folder. Folders with
+ * {@link AssetFolder.preserveFilename} enabled upload to
+ * `{hash}/{filename}.{ext}` so the file URL ends with a readable filename
+ * while remaining content-addressed (immutable and cacheable).
+ */
+export function getFolderUploadOptions(
+  preserveFilename: boolean
+): UploadFileOptions {
+  if (preserveFilename) {
+    return {namingMode: 'hash-path'};
+  }
+  return {};
+}
+
+/**
+ * Resolves the GCS upload options for files added to `folderPath`, taking
+ * the folder's inherited {@link AssetFolder.preserveFilename} setting into
+ * account.
+ */
+export async function resolveFolderUploadOptions(
+  folderPath: string
+): Promise<UploadFileOptions> {
+  const preserveFolder = await findPreserveFilenameFolder(folderPath);
+  return getFolderUploadOptions(preserveFolder !== null);
 }
 
 /**

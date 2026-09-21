@@ -26,10 +26,12 @@ import {
   IconDownload,
   IconFileUpload,
   IconFolder,
+  IconFolderCog,
   IconFolderPlus,
   IconFolderSymlink,
   IconFolderUp,
   IconInfoCircle,
+  IconLetterCase,
   IconPencil,
   IconRefresh,
   IconSearch,
@@ -59,6 +61,7 @@ import {
   deleteAsset,
   findAssetFile,
   findDocsUsingAsset,
+  findPreserveFilenameFolder,
   getAsset,
   getFolderId,
   getRelativeFolderPath,
@@ -69,9 +72,11 @@ import {
   parseFolderPath,
   renameAsset,
   replaceAssetFile,
+  resolveFolderUploadOptions,
   sortAssets,
   syncAssetToDocs,
   updateAssetAltDisabled,
+  updateFolderPreserveFilename,
   validateFolderPath,
 } from '../../utils/assets.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -82,6 +87,7 @@ import {
   getUploadFilesFromDataTransfer,
 } from '../../utils/file-tree.js';
 import {
+  UploadFileOptions,
   testFileMatchesAccept,
   testIsImageFile,
   testIsVideoFile,
@@ -181,6 +187,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
   const [selected, setSelected] = useState<Map<string, Asset>>(new Map());
   // The current folder's own db doc (for its sync-source connection).
   const [currentFolder, setCurrentFolder] = useState<AssetFolder | null>(null);
+  // Path of the current folder or nearest ancestor with "preserve filename"
+  // enabled (null when uploads here use the default hashed names).
+  const [preserveFilenameFolder, setPreserveFilenameFolder] = useState<
+    string | null
+  >(null);
+  // Folder targeted by the folder settings modal.
+  const [folderSettingsTarget, setFolderSettingsTarget] =
+    useState<AssetFolder | null>(null);
   // Folder targeted by the sync settings / sync run modals.
   const [syncSettingsTarget, setSyncSettingsTarget] =
     useState<AssetFolder | null>(null);
@@ -207,13 +221,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
     setSearchIndex(null);
     setSelected(new Map());
     await notifyErrors(async () => {
-      const [res, folderAsset] = await withTimeout(
+      const [res, folderAsset, preserveFolder] = await withTimeout(
         Promise.all([
           listAssets(folderPath),
           // Fetch the current folder's own doc (for its sync connection).
           folderPath
             ? getAsset(getFolderId(folderPath))
             : Promise.resolve(null),
+          findPreserveFilenameFolder(folderPath),
         ]),
         undefined,
         'loading assets'
@@ -222,6 +237,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
       setCurrentFolder(
         folderAsset && folderAsset.type === 'folder' ? folderAsset : null
       );
+      setPreserveFilenameFolder(preserveFolder);
     });
     setLoading(false);
   }
@@ -373,6 +389,19 @@ export function AssetBrowser(props: AssetBrowserProps) {
       }
     }
 
+    // Upload options (e.g. the inherited "preserve filename" setting) are
+    // resolved once per destination folder: a folder upload can land files in
+    // existing subfolders that carry their own setting.
+    const uploadOptionsByFolder = new Map<string, Promise<UploadFileOptions>>();
+    function getUploadOptions(parent: string): Promise<UploadFileOptions> {
+      let options = uploadOptionsByFolder.get(parent);
+      if (!options) {
+        options = resolveFolderUploadOptions(parent);
+        uploadOptionsByFolder.set(parent, options);
+      }
+      return options;
+    }
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       updateNotification({
@@ -387,7 +416,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
           item.parent,
           item.file.name.trim()
         );
-        const uploadedFile = await uploadFileToGCS(item.file);
+        const uploadOptions = await getUploadOptions(item.parent);
+        const uploadedFile = await uploadFileToGCS(item.file, uploadOptions);
         if (existing) {
           const previousFile = existing.file;
           const asset = await replaceAssetFile(existing, uploadedFile);
@@ -558,6 +588,25 @@ export function AssetBrowser(props: AssetBrowserProps) {
                 Connect sync source
               </Button>
             ))}
+          {props.mode === 'manage' && preserveFilenameFolder !== null && (
+            <span
+              className="AssetBrowser__toolbar__preserveBadge"
+              title={`Uploads to this folder preserve filenames (set on "${preserveFilenameFolder}")`}
+            >
+              <IconLetterCase size={14} />
+            </span>
+          )}
+          {props.mode === 'manage' && canManage && currentFolder && (
+            <ActionIcon
+              size="md"
+              variant="default"
+              title="Folder settings"
+              aria-label="Folder settings"
+              onClick={() => setFolderSettingsTarget(currentFolder)}
+            >
+              <IconFolderCog size={16} />
+            </ActionIcon>
+          )}
           {showUpload && props.mode === 'manage' && (
             <Button
               variant="default"
@@ -800,6 +849,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
                                 />
                               </span>
                             )}
+                            {asset.preserveFilename && (
+                              <span
+                                className="AssetBrowser__preserveBadge"
+                                title="Uploads to this folder preserve filenames"
+                              >
+                                <IconLetterCase size={12} />
+                              </span>
+                            )}
                           </div>
                           <AssetLocation
                             asset={asset}
@@ -837,6 +894,12 @@ export function AssetBrowser(props: AssetBrowserProps) {
                               onClick={() => setMoveTarget([asset])}
                             >
                               Move
+                            </Menu.Item>
+                            <Menu.Item
+                              icon={<IconFolderCog size={14} />}
+                              onClick={() => setFolderSettingsTarget(asset)}
+                            >
+                              Folder settings
                             </Menu.Item>
                             <Menu.Item
                               color="red"
@@ -952,6 +1015,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
       <NewFolderModal
         opened={newFolderModalOpened}
         parent={folder}
+        preserveFilenameInheritedFrom={preserveFilenameFolder}
         onClose={() => setNewFolderModalOpened(false)}
         onCreated={(folderName) => {
           setNewFolderModalOpened(false);
@@ -1006,6 +1070,16 @@ export function AssetBrowser(props: AssetBrowserProps) {
           onChanged={() => reload(folder)}
           onDeleted={() => {
             setDetailsTarget(null);
+            reload(folder);
+          }}
+        />
+      )}
+      {folderSettingsTarget && (
+        <FolderSettingsModal
+          folder={folderSettingsTarget}
+          onClose={() => setFolderSettingsTarget(null)}
+          onSaved={() => {
+            setFolderSettingsTarget(null);
             reload(folder);
           }}
         />
@@ -1299,17 +1373,26 @@ function AssetModifiedBy(props: {asset: Asset}) {
 function NewFolderModal(props: {
   opened: boolean;
   parent: string;
+  /**
+   * Path of the ancestor folder that already enables "preserve filename"
+   * (the new folder inherits it), or null.
+   */
+  preserveFilenameInheritedFrom: string | null;
   onClose: () => void;
   onCreated: (name: string) => void;
 }) {
   const [name, setName] = useState('');
+  const [preserveFilename, setPreserveFilename] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit() {
     setLoading(true);
     await notifyErrors(async () => {
-      const folder = await createAssetFolder(props.parent, name);
+      const folder = await createAssetFolder(props.parent, name, {
+        preserveFilename,
+      });
       setName('');
+      setPreserveFilename(false);
       props.onCreated(folder.name);
     });
     setLoading(false);
@@ -1338,9 +1421,149 @@ function NewFolderModal(props: {
             setName(e.currentTarget.value)
           }
         />
+        <PreserveFilenameCheckbox
+          checked={preserveFilename}
+          inheritedFrom={props.preserveFilenameInheritedFrom}
+          disabled={loading}
+          onChange={setPreserveFilename}
+        />
         <Button type="submit" color="dark" loading={loading} disabled={!name}>
           Create
         </Button>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Checkbox for a folder's "preserve filename" upload setting. When an
+ * ancestor folder already enables the setting it is inherited, so the
+ * checkbox is shown checked and locked with a note pointing at that folder.
+ */
+function PreserveFilenameCheckbox(props: {
+  checked: boolean;
+  /** Path of the ancestor folder the setting is inherited from, if any. */
+  inheritedFrom: string | null;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const inherited = props.inheritedFrom !== null;
+  return (
+    <div>
+      <Checkbox
+        label="Preserve filenames when uploading"
+        description="Uploaded files keep their original filename at the end of the file URL (e.g. …/<hash>/report.pdf) instead of a content hash. Applies to this folder and its subfolders."
+        size="xs"
+        checked={inherited || props.checked}
+        disabled={inherited || props.disabled}
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+          props.onChange(e.currentTarget.checked)
+        }
+      />
+      {inherited && (
+        <div className="AssetBrowser__folderSettings__inherited">
+          Inherited from the folder <b>{props.inheritedFrom}</b>. Change the
+          setting there to disable it.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Modal for editing a folder's settings (currently "preserve filename"). */
+function FolderSettingsModal(props: {
+  folder: AssetFolder;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const folder = props.folder;
+  const folderPath = joinFolderPath(folder.parent, folder.name);
+  const [preserveFilename, setPreserveFilename] = useState(
+    !!folder.preserveFilename
+  );
+  // Nearest ancestor with "preserve filename" enabled (undefined = loading).
+  const [inheritedFrom, setInheritedFrom] = useState<string | null | undefined>(
+    undefined
+  );
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let res: string | null = null;
+      await notifyErrors(async () => {
+        res = await findPreserveFilenameFolder(folder.parent);
+      });
+      if (!cancelled) {
+        setInheritedFrom(res);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [folder.parent]);
+
+  const dirty = preserveFilename !== !!folder.preserveFilename;
+
+  async function onSubmit() {
+    setSaving(true);
+    await notifyErrors(async () => {
+      if (dirty) {
+        await updateFolderPreserveFilename(folder, preserveFilename);
+        showNotification({
+          message: `Updated settings for "${folderPath}".`,
+          color: 'green',
+        });
+      }
+      props.onSaved();
+    });
+    setSaving(false);
+  }
+
+  return (
+    <Modal
+      opened
+      onClose={props.onClose}
+      title={`Folder settings: ${folderPath}`}
+      size="md"
+      centered
+    >
+      <form
+        className="AssetBrowser__folderSettings"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        {inheritedFrom === undefined ? (
+          <Loader color="gray" size="sm" />
+        ) : (
+          <PreserveFilenameCheckbox
+            checked={preserveFilename}
+            inheritedFrom={inheritedFrom}
+            disabled={saving}
+            onChange={setPreserveFilename}
+          />
+        )}
+        <div className="AssetBrowser__folderSettings__buttons">
+          <Button
+            variant="default"
+            size="xs"
+            onClick={props.onClose}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            color="dark"
+            size="xs"
+            loading={saving}
+            disabled={inheritedFrom === undefined || !dirty}
+          >
+            Save
+          </Button>
+        </div>
       </form>
     </Modal>
   );

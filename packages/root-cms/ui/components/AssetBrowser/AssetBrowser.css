@@ -536,6 +536,37 @@
   vertical-align: middle;
 }
 
+.AssetBrowser__toolbar__preserveBadge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__preserveBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--color-text-gray);
+  vertical-align: middle;
+}
+
+.AssetBrowser__folderSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.AssetBrowser__folderSettings__inherited {
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__folderSettings__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .AssetBrowser__missingBadge {
   display: inline-flex;
   align-items: center;
