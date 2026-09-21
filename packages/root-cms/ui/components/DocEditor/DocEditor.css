@@ -1,5 +1,5 @@
 .DocEditor {
-  font-size: 12px;
+  font-size: var(--cms-font-size);
   position: relative;
 }
 
@@ -97,7 +97,7 @@
 .DocEditor__fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--cms-field-gap);
 }
 
 .DocEditor__field--deprecated {
@@ -117,7 +117,7 @@
 }
 
 .DocEditor__FieldHeader__label {
-  font-size: 12px;
+  font-size: var(--cms-label-size);
   font-weight: 600;
   display: flex;
   gap: 8px;
@@ -142,8 +142,9 @@
 }
 
 .DocEditor__FieldHeader__help {
-  font-size: 12px;
+  font-size: var(--cms-help-size);
   font-weight: 400;
+  color: var(--cms-help-color);
   margin-top: 2px;
 }
 
@@ -167,7 +168,7 @@
 .DocEditor__ObjectFieldDrawer__fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--cms-field-gap);
 }
 
 .DocEditor__FieldHeader {
@@ -187,7 +188,7 @@
 .DocEditor__field[data-type='object']:not([data-level='0'])
   .DocEditor__ObjectField__fields {
   padding-left: 12px;
-  border-left: 2px solid lightblue;
+  border-left: 2px solid var(--cms-accent);
 }
 
 .DocEditor__ObjectFieldDrawer
@@ -197,8 +198,17 @@
 }
 
 .DocEditor__ObjectFieldDrawer {
-  margin-left: -16px;
-  margin-right: -16px;
+  margin-left: var(--cms-drawer-bleed);
+  margin-right: var(--cms-drawer-bleed);
+  border: var(--cms-drawer-border);
+  border-radius: var(--cms-drawer-radius);
+  background: var(--cms-drawer-bg);
+}
+
+/* The <details> sits between the box and its header; pass the radius through
+   so a themed header's background follows the box's corners. */
+.DocEditor__ObjectFieldDrawer__drawer {
+  border-radius: inherit;
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle {
@@ -206,6 +216,8 @@
   padding: 8px 16px;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
+  border-radius: inherit;
+  background: var(--cms-drawer-header-bg);
   align-items: center;
   gap: 8px;
   cursor: pointer;
@@ -225,6 +237,8 @@
 
 .DocEditor__ObjectFieldDrawer__drawer__content {
   padding: 16px;
+  margin-left: var(--cms-drawer-indent);
+  border-left: var(--cms-drawer-rule);
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
@@ -386,7 +400,7 @@
 }
 
 .DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
-  border-bottom: 2px solid lightblue;
+  border-bottom: 2px solid var(--cms-accent);
   border-radius: 0;
 }
 
@@ -507,13 +521,13 @@
 }
 
 .DocEditor__ArrayField__item:not([open]) .DocEditor__ArrayField__item__header {
-  border-left: 2px solid lightblue;
+  border-left: 2px solid var(--cms-accent);
   padding-left: 8px;
 }
 
 .DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__body {
   padding: 16px;
-  border: 2px solid lightblue;
+  border: 2px solid var(--cms-accent);
 }
 
 .DocEditor__ArrayField__item__header:focus {
