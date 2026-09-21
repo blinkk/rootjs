@@ -31,7 +31,6 @@ import {getInvalidTokenErrorCode} from './auth-errors.js';
 import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
-import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {
   clearDevAuthCookie,
   getDevAuthCookie,
@@ -40,6 +39,7 @@ import {
 } from './dev-session.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
 
 export type {AiConfig, AiModelConfig, AiProvider} from './ai.js';
@@ -459,12 +459,12 @@ export type CMSPluginOptions = {
    * the CMS's login and read on each request, so an edit shows on the next
    * reload.
    *
-   * Every user picks their own theme from this list under Settings → User
-   * Preferences; `defaultTheme` is what applies until they do, and no
-   * default means the stock CMS. CSS can also be added from the CMS itself,
-   * without a deploy: for the whole project under Settings → Site Settings,
-   * and per user under Settings → User Preferences — including an
-   * `@import url(…)` of a hosted file.
+   * Every user picks their own theme from this list under Settings → Theme;
+   * `defaultTheme` is what applies until they do, and no default means the
+   * CMS's own look. CSS can also be added from the CMS itself, without a
+   * deploy, under Settings → Theme: for the whole project ("Project CSS")
+   * and per user ("Personal CSS") — including an `@import url(…)` of a
+   * hosted file.
    *
    * Rules that target the CMS's class names or DOM are unsupported: they
    * work today but may break with any release, since the markup is free to
@@ -474,7 +474,7 @@ export type CMSPluginOptions = {
 
   /**
    * Experimental: the id of the theme in `themes` that applies to users who
-   * haven't chosen one. Omit for the stock CMS.
+   * haven't chosen one. Omit for the CMS's own look.
    */
   defaultTheme?: string;
 

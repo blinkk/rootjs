@@ -148,9 +148,8 @@ export default defineConfig({
       // the CMS's own; the supported dials are the `--cms-*` properties in
       // `packages/root-cms/ui/styles/theme.css`. See
       // `packages/root-cms/docs/themes.md`. Users pick between them under
-      // Settings → User Preferences → Theme; `defaultTheme` applies until
-      // they do. Theme files are read on each request, so edits show on the
-      // next reload.
+      // Settings → Theme; `defaultTheme` applies until they do. Theme files
+      // are read on each request, so edits show on the next reload.
       themes: [
         {id: 'clarity', name: 'Clarity', file: './cms/themes/clarity.css'},
         {id: 'compact', name: 'Compact', file: './cms/themes/compact.css'},

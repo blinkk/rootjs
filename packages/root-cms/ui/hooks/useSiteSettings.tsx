@@ -13,8 +13,8 @@ interface SiteSettings {
   /** The default assignee for new tasks created within the CMS. */
   defaultAssignee?: string;
   /**
-   * CSS applied to the document editor for everyone on the project, on top
-   * of the configured theme. Experimental; edited under Settings.
+   * CSS applied to the CMS for everyone on the project, on top of the
+   * configured theme. Experimental; edited under Settings → Theme.
    */
   customCss?: string;
 }

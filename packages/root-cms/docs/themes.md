@@ -42,17 +42,17 @@ link is cache-busted by the stylesheet's content.
 
 ## Choosing one
 
-Every user picks their own theme under **Settings → User Preferences →
-Theme**, from the list the project registered. `defaultTheme` is what applies
-until they do; without one, they get the stock CMS.
+Every user picks their own theme under **Settings → Theme**, from the list
+the project registered. "Default" is the CMS's own look; the theme the
+project made its default is marked "(default)" and applies until the user
+picks another. Without a `defaultTheme`, they get the CMS's own look.
 
 ## Custom CSS from the CMS
 
-CSS can also be added without a deploy, from the Settings page:
+CSS can also be added without a deploy, under **Settings → Theme**:
 
-- **Site Settings → Custom CSS** — applies to everyone on the project
-  (admins).
-- **User Preferences → Custom CSS** — applies to you only.
+- **Project CSS** — applies to everyone on the project (admins).
+- **Personal CSS** — applies to you only.
 
 Paste CSS directly, or pull in a hosted file with
 `@import url("https://…");` (a stylesheet in a GitHub repo, served raw,

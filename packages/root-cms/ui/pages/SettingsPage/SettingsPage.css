@@ -57,6 +57,10 @@
   text-underline-offset: 3px;
 }
 
+.SettingsPage__theme__select {
+  max-width: 360px;
+}
+
 .SettingsPage__siteAdmin__searchStats {
   display: grid;
   grid-template-columns: 1fr 1fr;

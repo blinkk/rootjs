@@ -5,8 +5,8 @@ import {useUserPreferences} from './useUserPreferences.js';
 /** The user preference holding the chosen theme's id. */
 export const THEME_PREFERENCE_KEY = 'theme';
 
-/** Preference value meaning "no theme, the stock CMS". */
-export const STOCK_THEME = 'none';
+/** Preference value meaning no theme: the CMS's own, default look. */
+export const NO_THEME = 'none';
 
 /** The user preference holding the user's own CSS. */
 export const CUSTOM_CSS_PREFERENCE_KEY = 'customCss';
@@ -34,14 +34,14 @@ export function getThemeConfig(): {
 
 /**
  * The theme to show this user: their choice when it names a registered
- * theme (or the stock CMS), else the project's default.
+ * theme (or no theme at all), else the project's default.
  */
 export function resolveTheme(
   preference: unknown,
   defaultTheme: string | null,
   themes: ThemeOption[]
 ): ThemeOption | null {
-  if (preference === STOCK_THEME) {
+  if (preference === NO_THEME) {
     return null;
   }
   const id =

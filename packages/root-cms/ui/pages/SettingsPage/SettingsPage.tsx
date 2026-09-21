@@ -18,13 +18,13 @@ import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useSignInStatuses} from '../../hooks/useSignInStatus.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
-import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
 import {
   CUSTOM_CSS_PREFERENCE_KEY,
-  STOCK_THEME,
+  NO_THEME,
   THEME_PREFERENCE_KEY,
   getThemeConfig,
 } from '../../hooks/useTheme.js';
+import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 import {logAction} from '../../utils/actions.js';
@@ -610,11 +610,8 @@ function ShareSection() {
 }
 
 /**
- * Free-form CSS for the document editor, for the whole project (site scope,
- * admins) or for this user alone. Saved on blur rather than per keystroke.
- * Experimental: the editor's markup may change between versions, so CSS
- * written against class names can break; the `--cms-*` custom properties are
- * the surface meant to last.
+ * Free-form CSS for the CMS, for the whole project (site scope, admins) or
+ * for this user alone. Saved on blur rather than per keystroke.
  */
 function CustomCssSetting(props: {scope: 'site' | 'user'}) {
   const siteSettings = useSiteSettings();
@@ -647,57 +644,43 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
     }
   };
   return (
-    <div className="SettingsPage__section__userPref">
-      <div className="SettingsPage__section__userPref__description">
-        <Text
-          className="SettingsPage__section__userPref__description__title"
-          size="body"
-          weight="semi-bold"
-        >
-          Custom CSS (experimental)
-        </Text>
-        <Text
-          className="SettingsPage__section__userPref__description__body"
-          size="body-sm"
-          weight="semi-bold"
-          color="gray"
-        >
-          <p>
-            {props.scope === 'site'
-              ? 'Styles the CMS for everyone on this project, on top of the theme. '
-              : 'Styles the CMS for you only, on top of the theme. '}
-            Paste CSS, or pull in a hosted file with{' '}
-            <code>@import url("https://…");</code>. The editor changes between
-            versions, so rules written against its class names can stop working;
-            the <code>--cms-*</code> custom properties are the part meant to
-            last.
-          </p>
-        </Text>
-      </div>
-      <div className="SettingsPage__section__userPref__input">
-        <Textarea
-          autosize
-          minRows={3}
-          maxRows={16}
-          placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
-          styles={{input: {fontFamily: 'var(--font-family-mono)'}}}
-          value={value}
-          onFocus={() => {
-            editing.current = true;
-          }}
-          onChange={(e: Event) =>
-            setValue((e.currentTarget as HTMLTextAreaElement).value)
-          }
-          onBlur={save}
-        />
-      </div>
+    <div className="SettingsPage__section__setting">
+      <Text size="body" weight="semi-bold">
+        {props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>
+          {props.scope === 'site'
+            ? 'Applies to everyone on this project, on top of the theme. Only admins can change it. '
+            : 'Applies to you only, on top of the theme and the project CSS. '}
+          Paste CSS, or pull in a hosted file with{' '}
+          <code>@import url("https://…");</code>.
+        </p>
+      </Text>
+      <Textarea
+        autosize
+        minRows={3}
+        maxRows={16}
+        placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
+        styles={{input: {fontFamily: 'var(--font-family-mono)'}}}
+        value={value}
+        onFocus={() => {
+          editing.current = true;
+        }}
+        onChange={(e: Event) =>
+          setValue((e.currentTarget as HTMLTextAreaElement).value)
+        }
+        onBlur={save}
+      />
     </div>
   );
 }
 
 /**
- * The user's theme, chosen from the ones the project registered. Rendered
- * only when there are any.
+ * The user's theme, chosen from the ones the project registered. "Default"
+ * is the CMS's own look; the theme the project made its default is marked
+ * as such. Picking the project's default clears the preference, so the user
+ * follows the default if it changes. Rendered only when there are themes.
  */
 function ThemePreference() {
   const userPrefs = useUserPreferences();
@@ -705,50 +688,67 @@ function ThemePreference() {
   if (themes.length === 0) {
     return null;
   }
-  const defaultName =
-    themes.find((theme) => theme.id === defaultTheme)?.name ?? 'stock';
+  const projectDefault = defaultTheme ?? NO_THEME;
   const options = [
-    {value: '', label: `Project default (${defaultName})`},
-    ...(defaultTheme ? [{value: STOCK_THEME, label: 'Stock'}] : []),
-    ...themes.map((theme) => ({value: theme.id, label: theme.name})),
+    {value: NO_THEME, label: 'Default'},
+    ...themes.map((theme) => ({
+      value: theme.id,
+      label: theme.id === defaultTheme ? `${theme.name} (default)` : theme.name,
+    })),
   ];
   const current = userPrefs.preferences[THEME_PREFERENCE_KEY];
   const value =
     typeof current === 'string' &&
     options.some((option) => option.value === current)
       ? current
-      : '';
+      : projectDefault;
   return (
-    <div className="SettingsPage__section__userPref">
-      <div className="SettingsPage__section__userPref__description">
+    <div className="SettingsPage__section__setting">
+      <Text size="body" weight="semi-bold">
+        Theme
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>How the CMS looks for you.</p>
+      </Text>
+      <Select
+        className="SettingsPage__theme__select"
+        data={options}
+        value={value}
+        onChange={(next: string | null) => {
+          userPrefs.setPreference(
+            THEME_PREFERENCE_KEY,
+            !next || next === projectDefault ? null : next
+          );
+        }}
+      />
+    </div>
+  );
+}
+
+/** Theme and custom CSS: how the CMS looks, per user and per project. */
+function ThemeSection() {
+  return (
+    <div className="SettingsPage__section">
+      <div className="SettingsPage__section__left">
+        <Heading className="SettingsPage__section__left__title">Theme</Heading>
         <Text
-          className="SettingsPage__section__userPref__description__title"
-          size="body"
-          weight="semi-bold"
-        >
-          Theme (experimental)
-        </Text>
-        <Text
-          className="SettingsPage__section__userPref__description__body"
+          className="SettingsPage__section__body"
           size="body-sm"
           weight="semi-bold"
           color="gray"
         >
           <p>
-            How the CMS looks for you. The project chooses a default; pick
-            another theme, or the stock look, to override it here.
+            Experimental. The CMS changes between versions, so CSS written
+            against its class names can stop working; the <code>--cms-*</code>{' '}
+            custom properties are the part meant to last.
           </p>
         </Text>
       </div>
-      <div className="SettingsPage__section__userPref__input">
-        <Select
-          data={options}
-          value={value}
-          onChange={(next: string | null) => {
-            userPrefs.setPreference(THEME_PREFERENCE_KEY, next || null);
-          }}
-        />
-      </div>
+      <Surface className="SettingsPage__section__right">
+        <ThemePreference />
+        <CustomCssSetting scope="site" />
+        <CustomCssSetting scope="user" />
+      </Surface>
     </div>
   );
 }
@@ -808,10 +808,10 @@ export function SettingsPage() {
                 )}
               </div>
             ))}
-            <CustomCssSetting scope="site" />
           </Surface>
         </div>
         {isAdmin && <SiteAdminSection />}
+        <ThemeSection />
         <div className="SettingsPage__section">
           <div className="SettingsPage__section__left">
             <Heading className="SettingsPage__section__left__title">
@@ -827,8 +827,6 @@ export function SettingsPage() {
             </Text>
           </div>
           <Surface className="SettingsPage__section__right">
-            <ThemePreference />
-            <CustomCssSetting scope="user" />
             <div className="SettingsPage__section__userPref">
               <div className="SettingsPage__section__userPref__description">
                 <Text
