@@ -129,6 +129,8 @@ function readFileText(file: File): Promise<string> {
 function makeDeps(options: {
   folder: AssetFolder;
   localAssets?: Asset[];
+  /** Folder path that has "preserve filename" enabled, if any. */
+  preserveFilenameFolder?: string | null;
 }): SyncEngineDeps {
   return {
     getFolder: vi.fn(async () => options.folder),
@@ -137,6 +139,9 @@ function makeDeps(options: {
       src: `https://gcs.example.com/${file.name}`,
       filename: file.name,
     })),
+    findPreserveFilenameFolder: vi.fn(
+      async () => options.preserveFilenameFolder ?? null
+    ),
     createAssetFile: vi.fn(
       async (o: any) =>
         ({
@@ -198,6 +203,34 @@ describe('syncFolder', () => {
       expect.objectContaining({ok: true, added: 2}),
       {remoteVersion: 'v1'}
     );
+  });
+
+  it('preserves filenames when the folder (or an ancestor) enables it', async () => {
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      version: 'v1',
+      remote: [{remoteId: 'file:1:0', filename: 'a.png', contents: 'aaa'}],
+    });
+    const deps = makeDeps({folder, preserveFilenameFolder: 'icons'});
+    await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(deps.findPreserveFilenameFolder).toHaveBeenCalledWith('icons');
+    expect(deps.uploadFile).toHaveBeenCalledTimes(1);
+    expect((deps.uploadFile as any).mock.calls[0][1]).toEqual({
+      namingMode: 'hash-path',
+    });
+  });
+
+  it('uses hashed names when no folder enables preserve filename', async () => {
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      version: 'v1',
+      remote: [{remoteId: 'file:1:0', filename: 'a.png', contents: 'aaa'}],
+    });
+    const deps = makeDeps({folder});
+    await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect((deps.uploadFile as any).mock.calls[0][1]).toEqual({});
   });
 
   it('performs zero writes and zero fan-out when nothing changed', async () => {

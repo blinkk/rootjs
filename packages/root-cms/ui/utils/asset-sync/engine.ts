@@ -40,7 +40,9 @@ import {
   AssetSource,
   createAssetFile,
   finalizeFolderSync,
+  findPreserveFilenameFolder,
   getAsset,
+  getFolderUploadOptions,
   joinFolderPath,
   listAssets,
   replaceAssetFile,
@@ -49,7 +51,12 @@ import {
   updateAssetSource,
   updateAssetSourceMissing,
 } from '../assets.js';
-import {UploadedFile, sha1, uploadFileToGCS} from '../gcs.js';
+import {
+  UploadFileOptions,
+  UploadedFile,
+  sha1,
+  uploadFileToGCS,
+} from '../gcs.js';
 import {
   buildUniqueAssetName,
   isIgnoredSourceFile,
@@ -82,7 +89,9 @@ const DEFAULT_CONCURRENCY = 4;
 export interface SyncEngineDeps {
   getFolder(folderId: string): Promise<AssetFolder | null>;
   listAssets(folderPath: string): Promise<Asset[]>;
-  uploadFile(file: File): Promise<UploadedFile>;
+  uploadFile(file: File, options?: UploadFileOptions): Promise<UploadedFile>;
+  /** See `findPreserveFilenameFolder` in `ui/utils/assets.ts`. */
+  findPreserveFilenameFolder(folderPath: string): Promise<string | null>;
   createAssetFile(options: {
     parent: string;
     file: UploadedFile;
@@ -118,7 +127,9 @@ function defaultDeps(): SyncEngineDeps {
       return asset && asset.type === 'folder' ? asset : null;
     },
     listAssets: listAssets,
-    uploadFile: (file: File) => uploadFileToGCS(file),
+    uploadFile: (file: File, options?: UploadFileOptions) =>
+      uploadFileToGCS(file, options),
+    findPreserveFilenameFolder: findPreserveFilenameFolder,
     createAssetFile: createAssetFile,
     replaceAssetFile: replaceAssetFile,
     syncAssetToDocs: syncAssetToDocs,
@@ -230,6 +241,10 @@ export async function syncFolder(
 
     const folderPath = joinFolderPath(folder.parent, folder.name);
     const localAssets = await deps.listAssets(folderPath);
+    // Honor the folder's (inherited) "preserve filename" upload setting.
+    const uploadOptions = getFolderUploadOptions(
+      (await deps.findPreserveFilenameFolder(folderPath)) !== null
+    );
     // Index this folder's previously-synced files by remote id. Manually
     // uploaded files coexisting in the folder are left alone.
     const syncedByRemoteId = new Map<string, AssetFile>();
@@ -395,7 +410,7 @@ export async function syncFolder(
         }
         return;
       }
-      const uploadedFile = await deps.uploadFile(file);
+      const uploadedFile = await deps.uploadFile(file, uploadOptions);
       if (existing) {
         const previousFile = existing.file;
         const updated = await deps.replaceAssetFile(existing, uploadedFile, {

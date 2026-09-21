@@ -26,6 +26,7 @@ import {
   findDocsUsingAsset,
   replaceAssetFile,
   replaceFileExt,
+  resolveFolderUploadOptions,
   syncAssetToDocs,
   updateAssetAltDisabled,
   updateAssetAltText,
@@ -144,7 +145,8 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
     setSaving(true);
     await notifyErrors(async () => {
       const previousFile = {...file};
-      const uploadedFile = await uploadFileToGCS(newFile);
+      const uploadOptions = await resolveFolderUploadOptions(asset.parent);
+      const uploadedFile = await uploadFileToGCS(newFile, uploadOptions);
       const updated = await replaceAssetFile(asset, uploadedFile);
       setAsset(updated);
       setAltText(updated.file?.alt || '');
