@@ -144,6 +144,34 @@ export default defineConfig({
       preview: {
         channel: true,
       },
+      // Example CMS themes (experimental). Each is a stylesheet loaded after
+      // the CMS's own; the supported dials are the `--cms-*` properties in
+      // `packages/root-cms/ui/styles/theme.css`. See
+      // `packages/root-cms/docs/themes.md`. Users pick between them under
+      // Settings → User Preferences → Theme; `defaultTheme` applies until
+      // they do. Theme files are read on each request, so edits show on the
+      // next reload.
+      themes: [
+        {id: 'clarity', name: 'Clarity', file: './cms/themes/clarity.css'},
+        {id: 'compact', name: 'Compact', file: './cms/themes/compact.css'},
+        {
+          // A theme can also be given inline, with no file.
+          id: 'high-contrast',
+          name: 'High Contrast',
+          css: `
+            :root {
+              --cms-drawer-bleed: 0;
+              --cms-drawer-border: 2px solid #000;
+              --cms-drawer-radius: 0;
+              --cms-drawer-header-bg: #fff3bf;
+              --cms-accent: #000;
+              --cms-help-color: #000;
+              --cms-label-size: 13px;
+            }
+          `,
+        },
+      ],
+      defaultTheme: 'clarity',
     }),
   ],
   experiments: {

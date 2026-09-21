@@ -1,0 +1,32 @@
+/*
+ * "Clarity" — an example CMS theme for the docs project.
+ *
+ * Every field group ("drawer") becomes a bordered, rounded box inside the
+ * field column, with a tinted header, so nesting reads as containment rather
+ * than as bands across the page. Only the `--cms-*` properties from
+ * `packages/root-cms/ui/styles/theme.css` are set here, which is the
+ * supported theming surface.
+ */
+
+:root {
+  /* --- Structure ------------------------------------------------------- */
+
+  /* Keep field groups inside the column instead of bleeding to the edges. */
+  --cms-drawer-bleed: 0;
+  --cms-drawer-border: 1px solid var(--color-border);
+  --cms-drawer-radius: 8px;
+  --cms-drawer-bg: var(--surface-background);
+  --cms-drawer-header-bg: #f4f4f1;
+  --cms-drawer-indent: 0;
+  --cms-drawer-rule: none;
+  /* Accent for open list items and inline groups. */
+  --cms-accent: #4c6ef5;
+
+  /* --- Type and rhythm ------------------------------------------------- */
+
+  --cms-font-size: 13px;
+  --cms-label-size: 13px;
+  --cms-help-size: 12px;
+  --cms-help-color: var(--color-text-gray);
+  --cms-field-gap: 20px;
+}
