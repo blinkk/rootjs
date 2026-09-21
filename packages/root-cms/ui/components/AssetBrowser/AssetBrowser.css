@@ -539,8 +539,11 @@
 .AssetBrowser__toolbar__folder {
   display: flex;
   align-items: center;
-  gap: 4px;
   min-width: 0;
+}
+
+.AssetBrowser__toolbar__folderSettings {
+  color: var(--color-text-gray);
 }
 
 .AssetBrowser__toolbar__preserveBadge {
