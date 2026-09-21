@@ -5,11 +5,11 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
-import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
 import {getServerVersion} from './server-version.js';
+import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -58,7 +58,7 @@ function App(props: AppProps) {
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
         {/* The default theme (`cmsPlugin({themes, defaultTheme})`), after
             ui.css so it wins the cascade. The id lets the client swap in
-            the user's own choice (Settings → User Preferences). */}
+            the user's own choice (Settings → Theme). */}
         {props.themeUrl && (
           <link
             id="root-cms-theme"
@@ -173,7 +173,7 @@ export async function renderApp(
     // enables the feature.
     dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
     // The themes a user can pick between, and which one applies until they
-    // do (Settings → User Preferences).
+    // do (Settings → Theme).
     theme: {
       default: defaultTheme?.id ?? null,
       themes: themes.map(({id, name, hash}) => ({id, name, hash})),

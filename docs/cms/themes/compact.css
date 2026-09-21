@@ -1,0 +1,31 @@
+/*
+ * "Compact" — an example CMS theme for the docs project.
+ *
+ * A denser document editor: smaller type, tighter spacing, and nesting shown
+ * by an indented rule down the left of each field group rather than by a
+ * box. Only the `--cms-*` properties from
+ * `packages/root-cms/ui/styles/theme.css` are set here, which is the
+ * supported theming surface.
+ */
+
+:root {
+  /* --- Structure ------------------------------------------------------- */
+
+  --cms-drawer-bleed: -16px;
+  --cms-drawer-border: none;
+  --cms-drawer-radius: 0;
+  --cms-drawer-bg: transparent;
+  --cms-drawer-header-bg: transparent;
+  /* Indent a group's fields and draw a rule down the gap to show nesting. */
+  --cms-drawer-indent: 12px;
+  --cms-drawer-rule: 2px solid var(--color-border);
+  --cms-accent: #12b886;
+
+  /* --- Type and rhythm ------------------------------------------------- */
+
+  --cms-font-size: 11px;
+  --cms-label-size: 11px;
+  --cms-help-size: 11px;
+  --cms-help-color: var(--color-text-gray);
+  --cms-field-gap: 10px;
+}
