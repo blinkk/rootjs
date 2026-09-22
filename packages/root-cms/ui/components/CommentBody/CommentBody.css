@@ -1,7 +1,12 @@
 .CommentBody {
   font-size: 13px;
   line-height: 1.55;
+  /* Long unbreakable tokens (e.g. Google Docs urls) wrap instead of
+   * overflowing the popover. `anywhere` also keeps them out of the
+   * min-content width, so they can't widen flex parents either. */
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  word-break: normal;
 }
 
 .CommentBody--deleted {
@@ -83,6 +88,7 @@
   font-weight: 500;
   padding: 0 2px;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .CommentBody__externalLink::after {
