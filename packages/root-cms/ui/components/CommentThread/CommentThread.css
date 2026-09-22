@@ -116,10 +116,6 @@
   opacity: 1;
 }
 
-.CommentThread__comment__body {
-  font-size: 13px;
-}
-
 .CommentThread__comment__edit {
   display: flex;
   flex-direction: column;

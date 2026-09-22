@@ -1,5 +1,5 @@
 .CommentBody {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -64,7 +64,7 @@
 }
 
 .CommentBody__richText h4 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
 }
