@@ -5,8 +5,7 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconArrowBackUp,
   IconCheck,
-  IconMessage,
-  IconMessagePlus,
+  IconMessageCircle,
   IconPencil,
   IconSend2,
   IconTrash,
@@ -117,7 +116,7 @@ export function CommentThread(props: CommentThreadProps) {
 
   const fieldLabel = (
     <>
-      <IconMessage size={14} strokeWidth="1.8" />
+      <IconMessageCircle size={14} strokeWidth="1.8" />
       <span className="CommentThread__field__label">{props.fieldLabel}</span>
     </>
   );
@@ -195,7 +194,7 @@ export function CommentThread(props: CommentThreadProps) {
               compact
               size="xs"
               variant="default"
-              leftIcon={<IconMessagePlus size={14} strokeWidth="1.8" />}
+              leftIcon={<IconMessageCircle size={14} strokeWidth="1.8" />}
               onClick={startNewThread}
             >
               New thread

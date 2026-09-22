@@ -166,9 +166,13 @@
   line-height: 1;
 }
 
+/* Bleed through the popover's 12px inner padding so the scrollbar sits at
+ * the popover edge rather than inset from it. */
 .DocEditor__FieldHeader__comments__popover .CommentThread__entries {
+  margin: 0 -12px;
   max-height: 320px;
   overflow: auto;
+  padding: 0 12px;
 }
 
 .DocEditor__statusBar__comments__count {

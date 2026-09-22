@@ -38,8 +38,7 @@ import {
   IconLayoutSidebarRight,
   IconListCheck,
   IconLock,
-  IconMessage,
-  IconMessages,
+  IconMessageCircle,
   IconPlanet,
   IconRobot,
   IconRocket,
@@ -505,7 +504,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               variant="default"
               color="dark"
               size="xs"
-              leftIcon={<IconMessage size={16} />}
+              leftIcon={<IconMessageCircle size={16} />}
               rightIcon={
                 fieldComments.openCount > 0 ? (
                   <span className="DocEditor__statusBar__comments__count">
@@ -1057,11 +1056,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
               setOpened((value) => !value);
             }}
           >
-            {thread || hasResolved ? (
-              <IconMessages size={14} strokeWidth="1.8" />
-            ) : (
-              <IconMessage size={14} strokeWidth="1.8" />
-            )}
+            <IconMessageCircle size={14} strokeWidth="1.8" />
             {thread && count > 0 && (
               <span className="DocEditor__FieldHeader__comments__count">
                 {count}
