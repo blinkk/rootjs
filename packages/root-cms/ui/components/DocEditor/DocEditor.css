@@ -166,10 +166,6 @@
   line-height: 1;
 }
 
-.DocEditor__FieldHeader__comments__popover {
-  padding: 4px 2px;
-}
-
 .DocEditor__FieldHeader__comments__popover .CommentThread__entries {
   max-height: 320px;
   overflow: auto;

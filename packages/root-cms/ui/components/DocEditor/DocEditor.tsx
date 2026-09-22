@@ -1026,7 +1026,8 @@ DocEditor.FieldHeaderCommentActionIconInner = (
       onClose={() => setOpened(false)}
       position="left"
       placement="start"
-      width={380}
+      width={420}
+      spacing={12}
       shadow="md"
       withArrow
       withinPortal
