@@ -996,8 +996,9 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const collection = useDocCollectionSchema();
   const [opened, setOpened] = useState(false);
   const count = thread ? countThreadComments(thread) : 0;
-  const hasResolved = resolvedThreads.length > 0;
-  const canOpen = Boolean(thread) || hasResolved || comments.canComment;
+  // A field whose threads are all resolved is treated like a field with no
+  // comments; its resolved threads are reachable from inside the popover.
+  const canOpen = Boolean(thread) || comments.canComment;
 
   // The label depends on the doc value (array positions, one-of types), so
   // it's recomputed each time the popover opens.
@@ -1015,9 +1016,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
 
   const label = thread
     ? `${count} comment${count === 1 ? '' : 's'}`
-    : hasResolved
-      ? 'Add comment (has resolved threads)'
-      : 'Add comment';
+    : 'Add comment';
 
   return (
     <Popover
@@ -1041,8 +1040,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
             type="button"
             className={joinClassNames(
               'DocEditor__FieldHeader__comments__button',
-              (thread || hasResolved) &&
-                'DocEditor__FieldHeader__comments__button--hasThread',
+              thread && 'DocEditor__FieldHeader__comments__button--hasThread',
               thread && 'DocEditor__FieldHeader__comments__button--open',
               opened && 'DocEditor__FieldHeader__comments__button--active'
             )}
