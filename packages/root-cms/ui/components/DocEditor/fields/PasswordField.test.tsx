@@ -112,14 +112,21 @@ describe('PasswordField', () => {
     expect(JSON.stringify(stored)).not.toContain('"hunter2"');
   });
 
-  test('does not save when the password is too short', () => {
+  test('only reports a short password when saving', async () => {
     renderField(null, {minLength: 8});
     const input = screen.getByPlaceholderText('Enter a new password');
     fireEvent.input(input, {target: {value: 'short'}});
-    expect(screen.getByText('Must be at least 8 characters')).not.toBeNull();
+    // No error while typing.
+    expect(screen.queryByText('Must be at least 8 characters')).toBeNull();
     fireEvent.click(screen.getByText('Set password'));
+    expect(screen.getByText('Must be at least 8 characters')).not.toBeNull();
     expect(hashPasswordMock).not.toHaveBeenCalled();
     expect(setValueMock).not.toHaveBeenCalled();
+    // Typing again clears the error, and a long enough password saves.
+    fireEvent.input(input, {target: {value: 'long-enough'}});
+    expect(screen.queryByText('Must be at least 8 characters')).toBeNull();
+    fireEvent.click(screen.getByText('Set password'));
+    await waitFor(() => expect(setValueMock).toHaveBeenCalledTimes(1));
   });
 
   test('removes the stored password', () => {

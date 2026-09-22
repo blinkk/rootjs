@@ -38,8 +38,7 @@ export function PasswordField(props: FieldProps) {
 
   const hasPassword = isPasswordHash(value);
   const minLength = field.minLength ?? 1;
-  const tooShort = draft.length > 0 && draft.length < minLength;
-  const canSave = draft.length >= minLength && !saving;
+  const canSave = draft.length > 0 && !saving;
 
   function reset() {
     setDraft('');
@@ -49,6 +48,12 @@ export function PasswordField(props: FieldProps) {
 
   async function save() {
     if (!canSave) {
+      return;
+    }
+    // Only report a short password once the user tries to save it, otherwise
+    // the error would show on the very first keystroke.
+    if (draft.length < minLength) {
+      setError(`Must be at least ${minLength} characters`);
       return;
     }
     setSaving(true);
@@ -107,9 +112,12 @@ export function PasswordField(props: FieldProps) {
         autoComplete="new-password"
         placeholder={field.placeholder || 'Enter a new password'}
         value={draft}
-        error={tooShort ? `Must be at least ${minLength} characters` : error}
+        error={error}
         disabled={saving}
-        onChange={(e: any) => setDraft(e.currentTarget.value)}
+        onChange={(e: any) => {
+          setDraft(e.currentTarget.value);
+          setError(null);
+        }}
         onKeyDown={(e: KeyboardEvent) => {
           if (e.key === 'Enter') {
             e.preventDefault();
