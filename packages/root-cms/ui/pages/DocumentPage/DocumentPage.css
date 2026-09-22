@@ -231,6 +231,46 @@
   background: white;
 }
 
+.DocumentPage__commentsDivider {
+  flex: 0 0 3px;
+  width: 3px;
+  cursor: col-resize;
+  position: relative;
+}
+
+.DocumentPage__commentsDivider::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 1px;
+  width: 1px;
+  background-color: var(--color-border);
+}
+
+.DocumentPage__commentsDivider::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+}
+
+.DocumentPage__commentsDivider:hover::after {
+  background-color: lightblue;
+}
+
+.DocumentPage__comments {
+  flex: 0 0 380px;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: white;
+}
+
 .DocumentPage__searchDivider {
   flex: 0 0 3px;
   width: 3px;

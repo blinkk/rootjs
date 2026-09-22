@@ -137,7 +137,7 @@
 
 .LexicalEditor--comment .LexicalEditor__editor {
   border-radius: 0 0 6px 6px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   min-height: 92px;
   padding: 12px;
@@ -145,6 +145,15 @@
 
 .LexicalEditor--comment.LexicalEditor--withMaxHeight .LexicalEditor__editor {
   max-height: 220px;
+}
+
+.LexicalEditor--noToolbar .LexicalEditor__editor {
+  border-radius: 6px;
+}
+
+.LexicalEditor--noToolbar.LexicalEditor--comment .LexicalEditor__editor {
+  min-height: 64px;
+  padding: 10px 12px;
 }
 
 .LexicalEditor--withMaxHeight .LexicalEditor__editor {

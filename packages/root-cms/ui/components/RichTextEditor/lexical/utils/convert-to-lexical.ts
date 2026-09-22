@@ -25,6 +25,7 @@ import {
 } from 'lexical';
 import {
   parseRichTextParagraphSize,
+  RICHTEXT_MENTION_ATTR,
   RichTextData,
   RichTextInlineComponentsMap,
   RichTextListItem,
@@ -32,6 +33,7 @@ import {
 import {cloneData} from '../../../../utils/objects.js';
 import {$createBlockComponentNode} from '../nodes/BlockComponentNode.js';
 import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
+import {$createMentionNode} from '../nodes/MentionNode.js';
 import {$createSizedParagraphNode} from '../nodes/SizedParagraphNode.js';
 
 /**
@@ -266,6 +268,11 @@ function createNodesFromHTML(
           // Line breaks are handled by Lexical's LineBreakNode
           return [];
         case 'a': {
+          const mention = el.getAttribute(RICHTEXT_MENTION_ATTR);
+          if (mention) {
+            const label = (el.textContent || '').trim() || `@${mention}`;
+            return [$createMentionNode(mention, label)];
+          }
           const linkNode = $createLinkNode(el.getAttribute('href') || '');
           const target = el.getAttribute('target');
           if (target) {

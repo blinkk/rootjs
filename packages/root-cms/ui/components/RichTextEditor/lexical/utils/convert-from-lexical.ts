@@ -24,6 +24,7 @@ import {
   $isDecoratorNode,
 } from 'lexical';
 import {
+  createRichTextMentionHtml,
   RichTextBlock,
   RichTextData,
   RichTextHeadingBlock,
@@ -38,6 +39,7 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from '../nodes/InlineComponentNode.js';
+import {$isMentionNode} from '../nodes/MentionNode.js';
 import {$getParagraphSize} from '../nodes/SizedParagraphNode.js';
 
 interface TextExtractionResult {
@@ -185,6 +187,14 @@ function extractTextNode(node: ElementNode): TextExtractionResult {
 
     if ($isInlineComponentNode(child)) {
       appendExtractionResult(result, extractInlineComponent(child));
+      return;
+    }
+
+    if ($isMentionNode(child)) {
+      // Mentions are serialized as a flagged `mailto:` link. The label is
+      // stored without the leading `@`, which is re-added when rendering.
+      const label = child.getTextContent().replace(/^@/, '');
+      result.text += createRichTextMentionHtml(child.getEmail(), label);
       return;
     }
 

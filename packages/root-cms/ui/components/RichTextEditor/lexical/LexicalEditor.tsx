@@ -60,6 +60,7 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
+import {MentionNode} from './nodes/MentionNode.js';
 import {SizedParagraphNode} from './nodes/SizedParagraphNode.js';
 import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
 import {AutoLinkPlugin} from './plugins/AutoLinkPlugin.js';
@@ -67,6 +68,7 @@ import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
+import {MentionsPlugin} from './plugins/MentionsPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {PasteCleanupPlugin} from './plugins/PasteCleanupPlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
@@ -92,6 +94,7 @@ const INITIAL_CONFIG: InitialConfigType = {
     InlineComponentNode,
     SizedParagraphNode,
     SpecialCharacterNode,
+    MentionNode,
   ],
   // Lexical routes errors it catches while updating, reconciling, or parsing
   // here. Report them instead of rethrowing: rethrowing from this callback
@@ -130,6 +133,13 @@ export interface LexicalEditorProps {
   autosize?: boolean;
   variant?: 'document' | 'comment';
   autoFocus?: boolean;
+  /**
+   * Hides the toolbar above the editor. Formatting is still available via
+   * the floating toolbar that appears when text is selected.
+   */
+  hideToolbar?: boolean;
+  /** Enables `@mention` autocomplete of project users. */
+  mentions?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
   /** Paragraph size variants offered in the block type dropdown. */
@@ -166,6 +176,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
               props.className,
               'LexicalEditor',
               props.variant === 'comment' && 'LexicalEditor--comment',
+              props.hideToolbar && 'LexicalEditor--noToolbar',
               !props.autosize && 'LexicalEditor--withMaxHeight'
             )}
           >
@@ -178,6 +189,8 @@ export function LexicalEditor(props: LexicalEditorProps) {
               onBlur={props.onBlur}
               variant={props.variant}
               autoFocus={props.autoFocus}
+              hideToolbar={props.hideToolbar}
+              mentions={props.mentions}
               blockComponents={props.blockComponents}
               inlineComponents={props.inlineComponents}
               paragraphSizes={props.paragraphSizes}
@@ -246,6 +259,10 @@ interface EditorProps {
   onBlur?: (e: FocusEvent) => void;
   variant?: 'document' | 'comment';
   autoFocus?: boolean;
+  /** Hides the toolbar above the editor (the floating toolbar remains). */
+  hideToolbar?: boolean;
+  /** Enables `@mention` autocomplete of project users. */
+  mentions?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
   /** Paragraph size variants offered in the block type dropdown. */
@@ -582,22 +599,24 @@ function Editor(props: EditorProps) {
         onEditBlock={openBlockComponentModal}
       >
         <OnChangePlugin value={props.value} onChange={props.onChange} />
-        <ToolbarPlugin
-          editor={editor}
-          activeEditor={activeEditor}
-          setActiveEditor={setActiveEditor}
-          setIsLinkEditMode={setIsLinkEditMode}
-          variant={props.variant}
-          blockComponents={blockComponents}
-          inlineComponents={inlineComponents}
-          paragraphSizes={props.paragraphSizes}
-          onInsertBlockComponent={(blockName) =>
-            openBlockComponentModal(blockName, {mode: 'create'})
-          }
-          onInsertInlineComponent={(componentName) =>
-            openInlineComponentModal(componentName, {mode: 'create'})
-          }
-        />
+        {!props.hideToolbar && (
+          <ToolbarPlugin
+            editor={editor}
+            activeEditor={activeEditor}
+            setActiveEditor={setActiveEditor}
+            setIsLinkEditMode={setIsLinkEditMode}
+            variant={props.variant}
+            blockComponents={blockComponents}
+            inlineComponents={inlineComponents}
+            paragraphSizes={props.paragraphSizes}
+            onInsertBlockComponent={(blockName) =>
+              openBlockComponentModal(blockName, {mode: 'create'})
+            }
+            onInsertInlineComponent={(componentName) =>
+              openInlineComponentModal(componentName, {mode: 'create'})
+            }
+          />
+        )}
         <ShortcutsPlugin
           editor={activeEditor}
           setIsLinkEditMode={setIsLinkEditMode}
@@ -632,6 +651,7 @@ function Editor(props: EditorProps) {
         <TrailingParagraphPlugin />
         <SpecialCharacterPlugin />
         <PasteCleanupPlugin />
+        {props.mentions && <MentionsPlugin />}
         {props.variant !== 'comment' && <ImagePastePlugin />}
         {floatingAnchorElem && (
           <>
