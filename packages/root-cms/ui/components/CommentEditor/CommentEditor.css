@@ -9,3 +9,7 @@
   line-height: 1.5;
   top: 12px;
 }
+
+.CommentEditor__wrap--minimal .LexicalEditor__placeholder {
+  top: 10px;
+}

@@ -153,7 +153,7 @@
 
 .LexicalEditor--noToolbar.LexicalEditor--comment .LexicalEditor__editor {
   min-height: 64px;
-  padding: 12px;
+  padding: 10px 12px;
 }
 
 .LexicalEditor--withMaxHeight .LexicalEditor__editor {
