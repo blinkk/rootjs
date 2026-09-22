@@ -143,6 +143,33 @@ export function validateValue(
       }
       return [];
 
+    case 'password': {
+      // Passwords are stored as a hash object, never as a plain string.
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return [createError(path, 'object', value)];
+      }
+      const errors: ValidationError[] = [];
+      const required: Array<[string, 'string' | 'number']> = [
+        ['algorithm', 'string'],
+        ['iterations', 'number'],
+        ['salt', 'string'],
+        ['hash', 'string'],
+      ];
+      for (const [key, expected] of required) {
+        if (value[key] === undefined) {
+          errors.push({
+            path: `${path}.${key}`,
+            message: 'Required',
+            expected,
+            received: 'undefined',
+          });
+        } else if (typeof value[key] !== expected) {
+          errors.push(createError(`${path}.${key}`, expected, value[key]));
+        }
+      }
+      return errors;
+    }
+
     case 'date':
     case 'datetime': {
       // Basic check for object structure matching Firestore Timestamp-like or object with seconds.

@@ -1078,3 +1078,61 @@ test('flags fields nested deeper than Firestore allows', () => {
     ]
   `);
 });
+
+test('validates password fields', () => {
+  const testSchema = schema.define({
+    name: 'TestSchema',
+    fields: [schema.password({id: 'password'})],
+  });
+
+  // Valid hashed value.
+  expect(
+    validateFields(
+      {
+        password: {
+          algorithm: 'pbkdf2-sha256',
+          iterations: 600000,
+          salt: 'c2FsdA==',
+          hash: 'aGFzaA==',
+        },
+      },
+      testSchema
+    )
+  ).toMatchInlineSnapshot('[]');
+
+  // Plain text passwords are never valid.
+  expect(validateFields({password: 'hunter2'}, testSchema))
+    .toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "object",
+        "message": "Expected object, received string",
+        "path": "password",
+        "received": "string",
+      },
+    ]
+  `);
+
+  // Missing and mistyped keys.
+  expect(
+    validateFields(
+      {password: {algorithm: 'pbkdf2-sha256', iterations: '1', salt: 'x'}},
+      testSchema
+    )
+  ).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "number",
+        "message": "Expected number, received string",
+        "path": "password.iterations",
+        "received": "string",
+      },
+      {
+        "expected": "string",
+        "message": "Required",
+        "path": "password.hash",
+        "received": "undefined",
+      },
+    ]
+  `);
+});
