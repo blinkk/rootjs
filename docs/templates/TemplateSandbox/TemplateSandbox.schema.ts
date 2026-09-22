@@ -36,6 +36,12 @@ export default schema.define({
       id: 'date',
       label: 'DateField',
     }),
+    schema.password({
+      id: 'password',
+      label: 'PasswordField',
+      help: 'Stored as a salted hash; verify with cmsClient.verifyPassword().',
+      minLength: 4,
+    }),
     schema.string({
       id: 'string',
       label: 'StringField (Textarea)',

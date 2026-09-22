@@ -1,5 +1,8 @@
+import type {PasswordHash} from '../shared/password.js';
 import {type CollectionPublishingOptions} from '../shared/publish-checks.js';
 import type {RichTextParagraphSizeOption} from '../shared/richtext.js';
+
+export type {PasswordHash, PasswordHashAlgorithm} from '../shared/password.js';
 
 export type {
   CollectionPublishingOptions,
@@ -120,6 +123,42 @@ export type NumberField = CommonFieldProps & {
 export function number(field: Omit<NumberField, 'type'>): NumberField {
   return {type: 'number', ...field};
 }
+
+/**
+ * A field for securely storing a password.
+ *
+ * The password is hashed in the CMS UI before it is saved, so the plain text
+ * value is never written to the db. The stored value is a {@link PasswordHash}
+ * containing the algorithm, salt and hash. Use `verifyPassword()` from
+ * `@blinkk/root-cms` (or `RootCMSClient.verifyPassword()`) to check whether a
+ * candidate password matches.
+ *
+ * ```ts
+ * schema.password({id: 'password', label: 'Password'});
+ *
+ * // Server-side:
+ * const ok = await cmsClient.verifyPassword(doc.fields.password, input);
+ * ```
+ */
+export type PasswordField = CommonFieldProps & {
+  type: 'password';
+  /** Password fields cannot have a default value. */
+  default?: never;
+  /** The minimum number of characters required when setting a password. */
+  minLength?: number;
+  /**
+   * The number of PBKDF2 iterations to use when hashing. Defaults to 600,000.
+   * Higher values are slower to compute and slower to brute force.
+   */
+  iterations?: number;
+};
+
+export function password(field: Omit<PasswordField, 'type'>): PasswordField {
+  return {type: 'password', ...field};
+}
+
+/** The value stored in the db for a {@link PasswordField}. */
+export type PasswordFieldValue = PasswordHash;
 
 function validateTimezone(timezone?: string): string | undefined {
   if (!timezone) {
@@ -426,6 +465,7 @@ export function references(
 export type Field =
   | StringField
   | NumberField
+  | PasswordField
   | DateField
   | DateTimeField
   | BooleanField

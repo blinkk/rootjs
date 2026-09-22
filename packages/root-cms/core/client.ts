@@ -14,11 +14,20 @@ import {
   unmarshalDataSourceData,
 } from '../shared/data-source.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
+import {verifyPassword, type PasswordHash} from '../shared/password.js';
 
 export {
   resolveLocaleFallbacks,
   type LocaleFallbacksI18nConfig,
 } from '../shared/locale-fallbacks.js';
+export {
+  hashPassword,
+  isPasswordHash,
+  verifyPassword,
+  type HashPasswordOptions,
+  type PasswordHash,
+  type PasswordHashAlgorithm,
+} from '../shared/password.js';
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
@@ -1854,6 +1863,22 @@ export class RootCMSClient {
       throw new Error('up to 500 translations can be saved at a time.');
     }
     await batch.commit();
+  }
+
+  /**
+   * Verifies a candidate password against the hashed value stored by a
+   * `password` field. Returns `false` when the field is empty or malformed.
+   *
+   * ```ts
+   * const doc = await cmsClient.getDoc('Members', 'alice', {mode: 'published'});
+   * const ok = await cmsClient.verifyPassword(doc?.fields.password, input);
+   * ```
+   */
+  async verifyPassword(
+    stored: PasswordHash | null | undefined,
+    password: string
+  ): Promise<boolean> {
+    return verifyPassword(stored, password);
   }
 
   /**

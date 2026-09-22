@@ -66,6 +66,18 @@ export interface RootCMSRichText {
   blocks: RootCMSRichTextBlock[];
 }
 
+/** A hashed password as stored by a "password" field. */
+export interface RootCMSPasswordHash {
+  /** The key derivation algorithm used, e.g. "pbkdf2-sha256". */
+  algorithm: string;
+  /** The number of iterations used to derive the hash. */
+  iterations: number;
+  /** The salt used to derive the hash, base64-encoded. */
+  salt: string;
+  /** The derived hash, base64-encoded. */
+  hash: string;
+}
+
 export interface RootCMSReference {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
@@ -298,6 +310,9 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
   }
   if (field.type === 'multiselect') {
     return dom.type.array(dom.type.string);
+  }
+  if (field.type === 'password') {
+    return dom.create.namedTypeReference('RootCMSPasswordHash');
   }
   if (field.type === 'number') {
     return dom.type.number;

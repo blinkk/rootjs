@@ -23,6 +23,18 @@ export interface RootCMSRichText {
   blocks: RootCMSRichTextBlock[];
 }
 
+/** A hashed password as stored by a "password" field. */
+export interface RootCMSPasswordHash {
+  /** The key derivation algorithm used, e.g. "pbkdf2-sha256". */
+  algorithm: string;
+  /** The number of iterations used to derive the hash. */
+  iterations: number;
+  /** The salt used to derive the hash, base64-encoded. */
+  salt: string;
+  /** The derived hash, base64-encoded. */
+  hash: string;
+}
+
 export interface RootCMSReference {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
@@ -50,6 +62,11 @@ export interface RootCMSDoc<Fields extends {}> {
     publishedAt?: number;
     publishedBy?: string;
     locales?: string[];
+    /**
+     * Fractional-index string defining the doc's custom order within the
+     * collection. See the `customSorting` collection option.
+    */
+    sortKey?: string;
   };
   /** User-entered field values from the CMS. */
   fields?: Fields;
@@ -482,6 +499,8 @@ export interface TemplateSandboxFields {
   datetimeWithTimezone?: number;
   /** DateField */
   date?: string;
+  /** PasswordField. Stored as a salted hash; verify with cmsClient.verifyPassword(). */
+  password?: RootCMSPasswordHash;
   /** StringField (Textarea) */
   string?: string;
   /** StringField (JSON) */

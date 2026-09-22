@@ -32,6 +32,8 @@ export function testFieldEmpty(
     case 'image':
     case 'file':
       return !value || !value.src;
+    case 'password':
+      return !value || !value.hash;
     case 'reference':
       return !value || !value.id;
     case 'references':

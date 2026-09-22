@@ -140,6 +140,7 @@ import {FileField} from './fields/FileField.js';
 import {ImageField} from './fields/ImageField.js';
 import {MultiSelectField} from './fields/MultiSelectField.js';
 import {NumberField} from './fields/NumberField.js';
+import {PasswordField} from './fields/PasswordField.js';
 import {ReferenceField} from './fields/ReferenceField.js';
 import {ReferencesField} from './fields/ReferencesField.js';
 import {RichTextField} from './fields/RichTextField.js';
@@ -823,6 +824,8 @@ DocEditor.FieldBody = (props: FieldProps) => {
             <DocEditor.ObjectField {...props} />
           ) : field.type === 'oneof' ? (
             <DocEditor.OneOfField {...props} />
+          ) : field.type === 'password' ? (
+            <PasswordField {...props} />
           ) : field.type === 'reference' ? (
             <ReferenceField {...props} />
           ) : field.type === 'references' ? (
