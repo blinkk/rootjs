@@ -11,7 +11,7 @@ import {
   IconTrash,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {
   CommentTimestamp,
   FieldComment,
@@ -79,6 +79,17 @@ export function CommentThread(props: CommentThreadProps) {
   const thread = props.thread || null;
   const isOpen = !thread || isOpenThread(thread);
   const [statusPending, setStatusPending] = useState(false);
+  const entriesRef = useRef<HTMLDivElement>(null);
+  const entryCount = thread?.comments.length || 0;
+
+  // Long threads scroll within the popover, so start at the latest entry (and
+  // follow along when a new one is appended).
+  useEffect(() => {
+    const el = entriesRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [entryCount]);
 
   async function toggleStatus() {
     if (!thread || statusPending) {
@@ -168,7 +179,7 @@ export function CommentThread(props: CommentThreadProps) {
         </div>
       </div>
       {thread && thread.comments.length > 0 && (
-        <div className="CommentThread__entries">
+        <div className="CommentThread__entries" ref={entriesRef}>
           {thread.comments.map((entry) =>
             !entry.type || entry.type === 'comment' ? (
               <CommentThreadComment

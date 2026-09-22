@@ -116,6 +116,10 @@
   opacity: 1;
 }
 
+.CommentThread__comment__body {
+  padding-right: 12px;
+}
+
 .CommentThread__comment__edit {
   display: flex;
   flex-direction: column;
