@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.5.1
+
+### Patch Changes
+
+- 0796524: feat: add a folder-level "preserve filenames" setting to the asset manager
+- 281c4ef: feat: theme stylesheet hook (experimental)
+- 901560a: fix: reset the document editor when navigating between documents
+- 9df1c9a: feat: add field comments to the doc editor
+- 5173af1: feat: password field
+- fc7e30c: feat: let the preview pane switch the edited doc
+  - @blinkk/root@3.5.1
+
 ## 3.4.11
 
 ### Patch Changes
