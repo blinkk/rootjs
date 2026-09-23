@@ -1,7 +1,9 @@
+import type {AspectRatio} from '../shared/aspect-ratio.js';
 import type {PasswordHash} from '../shared/password.js';
 import {type CollectionPublishingOptions} from '../shared/publish-checks.js';
 import type {RichTextParagraphSizeOption} from '../shared/richtext.js';
 
+export type {AspectRatio} from '../shared/aspect-ratio.js';
 export type {PasswordHash, PasswordHashAlgorithm} from '../shared/password.js';
 
 export type {
@@ -255,6 +257,16 @@ export type ImageField = CommonFieldProps & {
   cacheControl?: string;
   /** Set to `false` to disable the alt text input. */
   alt?: boolean;
+  /**
+   * The recommended aspect ratio for images and videos uploaded to the field,
+   * e.g. `'16:9'`, `'4/3'` or `1.5`. Pass a list to allow multiple ratios.
+   *
+   * When an uploaded image or video doesn't match, the CMS shows a warning
+   * that the user can dismiss (stored in the field's `@<id>` metadata as
+   * `ignoreAspectRatioWarning: true`). The image editor also defaults its crop
+   * box to the recommended aspect ratio.
+   */
+  aspectRatio?: AspectRatio | AspectRatio[];
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
@@ -276,6 +288,16 @@ export type FileField = CommonFieldProps & {
   cacheControl?: string;
   /** Set to `false` to disable the alt text input. */
   alt?: boolean;
+  /**
+   * The recommended aspect ratio for images and videos uploaded to the field,
+   * e.g. `'16:9'`, `'4/3'` or `1.5`. Pass a list to allow multiple ratios.
+   *
+   * When an uploaded image or video doesn't match, the CMS shows a warning
+   * that the user can dismiss (stored in the field's `@<id>` metadata as
+   * `ignoreAspectRatioWarning: true`). The image editor also defaults its crop
+   * box to the recommended aspect ratio.
+   */
+  aspectRatio?: AspectRatio | AspectRatio[];
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {
