@@ -18,10 +18,10 @@
   "dependencies": {
     "@blinkk/root": "workspace:*",
     "@blinkk/root-cms": "workspace:*",
-    "firebase-admin": "11.11.1",
-    "preact": "10.29.7"
+    "firebase-admin": "14.4.0",
+    "preact": "10.29.8"
   },
   "devDependencies": {
-    "@types/node": "24.3.1"
+    "@types/node": "24.13.6"
   }
 }

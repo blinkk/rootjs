@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "preact": "10.29.7"
+    "preact": "10.29.8"
   }
 }

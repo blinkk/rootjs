@@ -36,10 +36,10 @@
     "test": "pnpm build"
   },
   "dependencies": {
-    "body-parser": "1.20.2",
-    "commander": "11.0.0",
+    "body-parser": "2.3.0",
+    "commander": "15.0.0",
     "kleur": "4.1.5",
-    "micromatch": "4.0.5"
+    "micromatch": "4.0.8"
   },
   "peerDependencies": {
     "@blinkk/root": "3.5.1",
@@ -47,11 +47,11 @@
   },
   "devDependencies": {
     "@blinkk/root": "workspace:*",
-    "@types/body-parser": "1.19.3",
-    "@types/micromatch": "4.0.6",
+    "@types/body-parser": "1.19.6",
+    "@types/micromatch": "4.0.10",
     "@types/node": "25.9.1",
-    "esbuild": "0.28.0",
-    "preact": "10.29.7",
+    "esbuild": "0.28.2",
+    "preact": "10.29.8",
     "typescript": "7.0.2"
   }
 }

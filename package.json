@@ -37,9 +37,9 @@
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
     "@changesets/cli": "2.31.0",
-    "eslint": "10.4.0",
-    "prettier": "3.8.3",
-    "turbo": "2.10.4",
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "turbo": "2.11.3",
     "typescript": "7.0.2"
   }
 }
