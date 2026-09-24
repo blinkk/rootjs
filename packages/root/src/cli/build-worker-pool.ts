@@ -148,7 +148,7 @@ class BuildWorker {
           pending.task.urlPath,
           pending.task.params,
           pending.task.routeSrc,
-          `worker thread died while rendering this page (` +
+          'worker thread died while rendering this page (' +
             `${pendingTasks.length} page(s) were in flight): ` +
             String(err.message || err)
         )

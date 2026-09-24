@@ -50,7 +50,8 @@ export function DataSourceForm(props: DataSourceFormProps) {
   const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
   const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
   const [cronEnabled, setCronEnabled] = useState(false);
-  const [cronSchedule, setCronSchedule] = useState<CronScheduleType>('interval');
+  const [cronSchedule, setCronSchedule] =
+    useState<CronScheduleType>('interval');
   const [cronInterval, setCronInterval] = useState<number>(1);
   const [cronUnit, setCronUnit] = useState<CronUnit>('hours');
   const [cronDailyTime, setCronDailyTime] = useState('09:00');
@@ -191,7 +192,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
       cron.interval = cronInterval;
       cron.unit = cronUnit;
     } else {
-      let expression = '';
+      let expression: string;
       if (cronSchedule === 'daily') {
         expression = buildDailyCron(cronDailyTime);
       } else if (cronSchedule === 'weekly') {
@@ -587,7 +588,7 @@ const TIMEZONE_OPTIONS = getTimezoneOptions();
 function getTimezoneOptions(): string[] {
   try {
     return (Intl as any).supportedValuesOf('timeZone');
-  } catch (err) {
+  } catch {
     return ['UTC'];
   }
 }
@@ -595,7 +596,7 @@ function getTimezoneOptions(): string[] {
 function getDefaultTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch (err) {
+  } catch {
     return 'UTC';
   }
 }

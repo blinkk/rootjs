@@ -2,7 +2,8 @@ import {expect, test} from 'vitest';
 import {RootConfig} from '../core/config.js';
 import {transformHtml} from './html-transform.js';
 
-const HTML = '<!doctype html>\n<div>lorem ipsum <my-element>bar</my-element></div>\n';
+const HTML =
+  '<!doctype html>\n<div>lorem ipsum <my-element>bar</my-element></div>\n';
 
 function config(overrides: Partial<RootConfig>): RootConfig {
   return overrides as RootConfig;

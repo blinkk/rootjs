@@ -31,7 +31,6 @@ import {
   AiExecutionMode,
   AiModelConfig,
   assertSupportsImageGeneration,
-  normalizeExecutionMode,
   resolveLanguageModel,
   testSupportsImageEditing,
   testSupportsImageGeneration,
@@ -41,10 +40,7 @@ import {
   buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
-  mergeIncomingMessage,
-  sanitizeDanglingToolCalls,
   sanitizeGeneratedTitle,
-  stripUndefined,
   TITLE_GENERATION_SYSTEM_PROMPT,
 } from '../shared/ai/prompt-utils.js';
 import {

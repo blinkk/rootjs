@@ -107,8 +107,9 @@ type CSSPropertyName = {
  * renderer's `styleToString`), and CSS custom properties (`--my-var`) are also
  * permitted.
  */
-export interface CSSProperties
-  extends Partial<Record<CSSPropertyName, string | number>> {
+export interface CSSProperties extends Partial<
+  Record<CSSPropertyName, string | number>
+> {
   [key: `--${string}`]: string | number | undefined;
 }
 

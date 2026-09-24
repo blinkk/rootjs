@@ -19,7 +19,10 @@ export function DataSourceIcon(props: DataSourceIconProps) {
     ? `DataSourceIcon ${props.className}`
     : 'DataSourceIcon';
   return (
-    <div className={className} style={{width: `${size}px`, height: `${size}px`}}>
+    <div
+      className={className}
+      style={{width: `${size}px`, height: `${size}px`}}
+    >
       {props.type === 'gsheet' ? (
         <IconTable size={iconSize} stroke={1.5} />
       ) : (

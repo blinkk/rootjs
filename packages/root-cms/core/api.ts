@@ -1411,75 +1411,78 @@ export function api(server: Server, options: ApiOptions) {
    * Chat history is created and persisted to Firestore directly from the
    * browser, so this endpoint is stateless.
    */
-  server.use('/cms/api/ai.chat.prepare', async (req: Request, res: Response) => {
-    if (req.method !== 'POST') {
-      res.status(400).json({success: false, error: 'BAD_REQUEST'});
-      return;
-    }
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const aiConfig = getAiConfig(req.rootConfig!);
-    if (!aiConfig) {
-      res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
-      return;
-    }
-
-    const body = req.body || {};
-    const model = findModel(aiConfig, body.modelId);
-    if (!model) {
-      res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
-      return;
-    }
-    const requestedMode = normalizeExecutionMode(body.executionMode);
-    const activeDocId =
-      typeof body.docId === 'string' && body.docId.trim()
-        ? body.docId.trim()
-        : undefined;
-
-    // Require the user to have an assigned role on this project. Write tools
-    // dispatched by the model are gated by Firestore rules, but we still deny
-    // AI access to ACL'd users with no role and restrict auto-apply to
-    // publishers. Auto requested by a non-publisher is downgraded to "approve"
-    // so the system prompt and the client approval flow stay in sync.
-    let canAutoApply = false;
-    try {
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const role = await cmsClient.getUserRole(req.user.email);
-      if (!role) {
-        res.status(403).json({success: false, error: 'FORBIDDEN'});
+  server.use(
+    '/cms/api/ai.chat.prepare',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }
-      canAutoApply = role === 'ADMIN' || role === 'EDITOR';
-    } catch (err) {
-      console.error('failed to resolve user role:', err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
-      return;
-    }
-    const executionMode =
-      requestedMode === 'auto' && !canAutoApply ? 'approve' : requestedMode;
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const aiConfig = getAiConfig(req.rootConfig!);
+      if (!aiConfig) {
+        res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+        return;
+      }
 
-    try {
-      const system = await buildChatSystemPrompt({
-        rootConfig: req.rootConfig!,
-        config: aiConfig,
-        executionMode,
-        activeDocId,
-      });
-      res.status(200).json({
-        success: true,
-        model: await prepareClientModel(req.rootConfig!, model),
-        system,
-        executionMode,
-        canAutoApply,
-        maxSteps: aiConfig.maxSteps ?? 10,
-      });
-    } catch (err: any) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      const body = req.body || {};
+      const model = findModel(aiConfig, body.modelId);
+      if (!model) {
+        res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
+        return;
+      }
+      const requestedMode = normalizeExecutionMode(body.executionMode);
+      const activeDocId =
+        typeof body.docId === 'string' && body.docId.trim()
+          ? body.docId.trim()
+          : undefined;
+
+      // Require the user to have an assigned role on this project. Write tools
+      // dispatched by the model are gated by Firestore rules, but we still deny
+      // AI access to ACL'd users with no role and restrict auto-apply to
+      // publishers. Auto requested by a non-publisher is downgraded to "approve"
+      // so the system prompt and the client approval flow stay in sync.
+      let canAutoApply: boolean;
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const role = await cmsClient.getUserRole(req.user.email);
+        if (!role) {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+        canAutoApply = role === 'ADMIN' || role === 'EDITOR';
+      } catch (err) {
+        console.error('failed to resolve user role:', err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+        return;
+      }
+      const executionMode =
+        requestedMode === 'auto' && !canAutoApply ? 'approve' : requestedMode;
+
+      try {
+        const system = await buildChatSystemPrompt({
+          rootConfig: req.rootConfig!,
+          config: aiConfig,
+          executionMode,
+          activeDocId,
+        });
+        res.status(200).json({
+          success: true,
+          model: await prepareClientModel(req.rootConfig!, model),
+          system,
+          executionMode,
+          canAutoApply,
+          maxSteps: aiConfig.maxSteps ?? 10,
+        });
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
     }
-  });
+  );
 
   /**
    * Prepares a client-side "Edit with AI" turn (array-item diff-viewer flow).
@@ -1488,57 +1491,60 @@ export function api(server: Server, options: ApiOptions) {
    * `root-cms.d.ts` types and the JSON being edited injected as untrusted
    * data) plus the selected model's connection config.
    */
-  server.use('/cms/api/ai.edit.prepare', async (req: Request, res: Response) => {
-    if (req.method !== 'POST') {
-      res.status(400).json({success: false, error: 'BAD_REQUEST'});
-      return;
-    }
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const aiConfig = getAiConfig(req.rootConfig!);
-    if (!aiConfig) {
-      res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
-      return;
-    }
-
-    const body = req.body || {};
-    const model = findModel(aiConfig, body.modelId);
-    if (!model) {
-      res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
-      return;
-    }
-
-    try {
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const role = await cmsClient.getUserRole(req.user.email);
-      if (!role) {
-        res.status(403).json({success: false, error: 'FORBIDDEN'});
+  server.use(
+    '/cms/api/ai.edit.prepare',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }
-    } catch (err) {
-      console.error('failed to resolve user role:', err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
-      return;
-    }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const aiConfig = getAiConfig(req.rootConfig!);
+      if (!aiConfig) {
+        res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+        return;
+      }
 
-    try {
-      const system = await buildEditSystemPrompt({
-        rootConfig: req.rootConfig!,
-        editData: body.editData,
-      });
-      res.status(200).json({
-        success: true,
-        model: await prepareClientModel(req.rootConfig!, model),
-        system,
-        maxSteps: aiConfig.maxSteps ?? 10,
-      });
-    } catch (err: any) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      const body = req.body || {};
+      const model = findModel(aiConfig, body.modelId);
+      if (!model) {
+        res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
+        return;
+      }
+
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const role = await cmsClient.getUserRole(req.user.email);
+        if (!role) {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+      } catch (err) {
+        console.error('failed to resolve user role:', err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+        return;
+      }
+
+      try {
+        const system = await buildEditSystemPrompt({
+          rootConfig: req.rootConfig!,
+          editData: body.editData,
+        });
+        res.status(200).json({
+          success: true,
+          model: await prepareClientModel(req.rootConfig!, model),
+          system,
+          maxSteps: aiConfig.maxSteps ?? 10,
+        });
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
     }
-  });
+  );
 
   server.use('/cms/api/ai.translate', async (req: Request, res: Response) => {
     if (
