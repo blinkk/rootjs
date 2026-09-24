@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.5.2
+
+### Patch Changes
+
+- 837a7e8: chore: update third-party dependencies
+
 ## 3.5.1
 
 ## 3.4.11
