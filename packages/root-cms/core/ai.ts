@@ -376,7 +376,7 @@ function buildWorkspacePrompt(rootConfig: RootConfig): string {
 /**
  * Whether the project configured Google API credentials on the cmsPlugin.
  * When set, the browser adds the Google read tools (`gdoc_get`, `gsheet_get`,
- * `gdrive_getFile`) to the chat tool set, so the system prompt describes them.
+ * `gslides_get`, `gdrive_getFile`) to the chat tool set, so the system prompt describes them.
  */
 export function testGoogleApiEnabled(rootConfig: RootConfig): boolean {
   const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
@@ -391,11 +391,13 @@ export function buildGoogleToolsPrompt(): string {
   return [
     'Google Workspace tools:',
     '- `gdoc_get` reads a Google Doc as markdown, `gsheet_get` reads the cell',
-    '  values of one tab of a Google Sheet, and `gdrive_getFile` reads other',
-    '  Drive files that can be represented as text.',
+    '  values of one tab of a Google Sheet, `gslides_get` reads a Google',
+    '  Slides deck slide by slide (titles, text and speaker notes), and',
+    '  `gdrive_getFile` reads other Drive files that can be represented as',
+    '  text.',
     '- Use them whenever the user points at a Google link (e.g. "update the',
-    '  page with the copy from this doc"). If they mention a doc or sheet',
-    '  without a link, ask for the URL instead of guessing a file id.',
+    '  page with the copy from this doc"). If they mention a doc, sheet or',
+    '  deck without a link, ask for the URL instead of guessing a file id.',
     "- Reads run with the signed-in user's own Google account, so you can",
     '  only open files that user can open. The tools are read-only: never',
     '  claim to have created, edited or shared a Google file.',
@@ -403,6 +405,8 @@ export function buildGoogleToolsPrompt(): string {
     '- On a `GOOGLE_AUTH_REQUIRED` error, tell the user the CMS will prompt',
     '  them to sign in with Google when they send their next message, and ask',
     '  them to reply once they have. Do not retry the tool in the same turn.',
+    '- On a `GOOGLE_NOT_CONFIGURED` error, tell the user a CMS admin needs to',
+    '  enable the named Google API for the project; retrying will not help.',
   ].join('\n');
 }
 

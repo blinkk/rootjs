@@ -45,6 +45,8 @@ export function prettyToolName(toolName: string, input: any): string {
       return 'Read Google Doc';
     case 'gsheet_get':
       return `Read Google Sheet${input?.sheet ? ` (${input.sheet})` : ''}`;
+    case 'gslides_get':
+      return 'Read Google Slides';
     case 'gdrive_getFile':
       return 'Read Google Drive file';
     default:
