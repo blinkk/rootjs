@@ -436,11 +436,9 @@ export class GSheet {
     cells.push(headers);
     // Add rows.
     cells.push(
-      ...rows.map((row) => {
-        // TODO(stevenle): escape the input so that the cells are stored as
-        // raw strings.
-        return headers.map((key) => row[key] || '');
-      })
+      // Values are written with `valueInputOption: 'RAW'`, so they're stored
+      // as-is rather than parsed as formulas or numbers.
+      ...rows.map((row) => headers.map((key) => row[key] || ''))
     );
 
     // Resize the sheet.

@@ -395,10 +395,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     onInsertInlineComponent,
     paragraphSizes,
   } = props;
-  // TODO(stevenle): figure out if this is required or not.
-  // const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
-  //   null
-  // );
   const [isEditable, setIsEditable] = useState(() => editor.isEditable());
   const {toolbarState, updateToolbarState} = useToolbar();
 
@@ -443,8 +439,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       updateToolbarState('rootType', 'root');
 
       if (elementDOM !== null) {
-        // TODO(stevenle): figure out if this is required or not.
-        // setSelectedElementKey(elementKey);
         if ($isListNode(element)) {
           const parentList = $getNearestNodeOfType<ListNode>(
             anchorNode,

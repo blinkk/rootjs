@@ -1,5 +1,3 @@
-> `CLAUDE.md` is a symlink to this file. Edit `AGENTS.md`.
-
 ## Project Structure
 
 - `packages/root` (**@blinkk/root**) — the core framework.

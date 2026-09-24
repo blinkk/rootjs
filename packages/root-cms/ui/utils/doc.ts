@@ -1386,11 +1386,16 @@ function randString(len: number): string {
   return result.join('');
 }
 
+/**
+ * Parses a doc id in the form `Collection/slug`. Improperly formatted ids with
+ * extra path segments (e.g. `Foo/bar/baz`) are normalized so that the slug
+ * uses `--` as the separator (e.g. `Foo/bar--baz`).
+ */
 export function parseDocId(docId: string) {
-  // TODO(stevenle): normalize improperly formatted docIds like 'Foo/bar/baz'.
-  const [collection, slug] = docId.split('/');
+  const [collection, ...slugParts] = docId.split('/');
+  const slug = slugParts.join('--');
   return {
-    id: docId,
+    id: slugParts.length > 0 ? `${collection}/${slug}` : docId,
     collection: collection,
     slug: slug,
   };

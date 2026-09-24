@@ -662,7 +662,7 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
         minRows={3}
         maxRows={16}
         placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
-        styles={{input: {fontFamily: 'var(--font-family-mono)'}}}
+        className="SettingsPage__customCss"
         value={value}
         onFocus={() => {
           editing.current = true;
