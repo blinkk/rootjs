@@ -80,12 +80,7 @@ export interface TaskComment {
 }
 
 export type TaskMetadataField =
-  | 'title'
-  | 'assignee'
-  | 'cc'
-  | 'priority'
-  | 'status'
-  | 'targetLaunchDate';
+  'title' | 'assignee' | 'cc' | 'priority' | 'status' | 'targetLaunchDate';
 
 export interface TaskEvent {
   id: string;

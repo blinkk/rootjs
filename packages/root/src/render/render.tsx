@@ -681,10 +681,7 @@ export class Renderer {
    * `preact-render-to-string` depending if the `jsxRenderer` config is set up
    * in `root.config.ts`.
    */
-  private async renderJsx(
-    vnode: any,
-    options?: {mode?: JsxRenderMode}
-  ) {
+  private async renderJsx(vnode: any, options?: {mode?: JsxRenderMode}) {
     const render = await this.getJsxRenderFn(options);
     return render(vnode);
   }

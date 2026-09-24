@@ -70,7 +70,9 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
         </div>
         <div className="DocPreviewCard__content">
           <div className="DocPreviewCard__content__header">
-            <div className="DocPreviewCard__content__header__docId">{docId}</div>
+            <div className="DocPreviewCard__content__header__docId">
+              {docId}
+            </div>
           </div>
           <div className="DocPreviewCard__notfound__message">
             Doc not found (was it deleted or archived?)

@@ -23,13 +23,13 @@
     "build": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json"
   },
   "dependencies": {
-    "commander": "11.0.0",
+    "commander": "15.0.0",
     "degit": "2.8.4",
     "kleur": "4.1.5"
   },
   "devDependencies": {
-    "@types/degit": "2.8.4",
+    "@types/degit": "2.8.6",
     "@types/node": "^25.9.1",
-    "esbuild": "0.28.0"
+    "esbuild": "0.28.2"
   }
 }

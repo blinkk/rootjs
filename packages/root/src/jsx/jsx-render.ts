@@ -668,10 +668,10 @@ export function renderJsxToString(
     let innerHasNewline = false;
     if (props) {
       const dsih = props.dangerouslySetInnerHTML;
-      if (dsih && dsih.__html != null) {
+      if (dsih && dsih.__html !== null && dsih.__html !== undefined) {
         inner = dsih.__html;
         innerHasNewline = inner.includes('\n');
-      } else if (props.children != null) {
+      } else if (props.children !== null && props.children !== undefined) {
         const children = props.children;
         // Inline the single string child (e.g. `<h3>Title</h3>`) — the most
         // common element body — to skip a `renderChildren`/`render` dispatch.
@@ -687,7 +687,7 @@ export function renderJsxToString(
         // For <textarea>, render value/defaultValue as text content since
         // browsers ignore the value attribute on textarea elements.
         const textVal = props.value ?? props.defaultValue;
-        if (textVal != null) {
+        if (textVal !== null && textVal !== undefined) {
           inner = escapeHtml(String(textVal));
           innerHasNewline = inner.includes('\n');
         }
@@ -722,7 +722,7 @@ export function renderJsxToString(
       // `null`/`undefined` props produce no attribute. Checking this first
       // short-circuits absent optional attributes immediately, before the
       // reserved-key string comparisons.
-      if (value == null) continue;
+      if (value === null || value === undefined) continue;
       if (
         key === 'children' ||
         key === 'dangerouslySetInnerHTML' ||
@@ -824,7 +824,7 @@ export function renderJsxToString(
   }
 
   function renderChildren(children: any): string {
-    if (children == null) {
+    if (children === null || children === undefined) {
       nlFlag = false;
       return '';
     }
@@ -921,11 +921,11 @@ export function renderJsxToString(
     let inner = '';
     if (props) {
       const dsih = props.dangerouslySetInnerHTML;
-      if (dsih && dsih.__html != null) {
+      if (dsih && dsih.__html !== null && dsih.__html !== undefined) {
         inner = dsih.__html;
       } else {
         const children = props.children;
-        if (children != null) {
+        if (children !== null && children !== undefined) {
           // Inline the single string child (e.g. `<h3>Title</h3>`,
           // `<li>Tag</li>`) — the most common element body — so it skips a
           // `mChildren` call; `mChildren('...')` is exactly `escapeHtml('...')`.
@@ -937,7 +937,7 @@ export function renderJsxToString(
           // For <textarea>, render value/defaultValue as text content since
           // browsers ignore the value attribute on textarea elements.
           const textVal = props.value ?? props.defaultValue;
-          if (textVal != null) {
+          if (textVal !== null && textVal !== undefined) {
             inner = escapeHtml(String(textVal));
           }
         }
@@ -949,7 +949,7 @@ export function renderJsxToString(
   }
 
   function mChildren(children: any): string {
-    if (children == null) {
+    if (children === null || children === undefined) {
       return '';
     }
     if (Array.isArray(children)) {

@@ -14,12 +14,7 @@ import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
 export type StatusTone =
-  | 'draft'
-  | 'published'
-  | 'scheduled'
-  | 'locked'
-  | 'archived'
-  | 'release';
+  'draft' | 'published' | 'scheduled' | 'locked' | 'archived' | 'release';
 
 /**
  * Per-tone Mantine gradient (matches the original badge colors exactly).

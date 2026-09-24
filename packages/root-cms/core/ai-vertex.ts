@@ -53,8 +53,7 @@ export function getFirebaseProjectId(
   rootConfig: RootConfig
 ): string | undefined {
   const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
-    | {getConfig: () => {firebaseConfig?: {projectId?: string}}}
-    | undefined;
+    {getConfig: () => {firebaseConfig?: {projectId?: string}}} | undefined;
   return cmsPlugin?.getConfig()?.firebaseConfig?.projectId || undefined;
 }
 

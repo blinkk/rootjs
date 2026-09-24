@@ -448,11 +448,7 @@ async function sharedImportedNames(
 }
 
 export type KeyStatusKind =
-  | 'in-sync'
-  | 'remote-newer'
-  | 'locally-edited'
-  | 'conflict'
-  | 'not-pulled';
+  'in-sync' | 'remote-newer' | 'locally-edited' | 'conflict' | 'not-pulled';
 
 export interface KeyStatus {
   name: string;

@@ -3,12 +3,7 @@
  * to. `all` shows every group.
  */
 export type GlobalSearchFilter =
-  | 'all'
-  | 'docs'
-  | 'fields'
-  | 'collections'
-  | 'data-sources'
-  | 'releases';
+  'all' | 'docs' | 'fields' | 'collections' | 'data-sources' | 'releases';
 
 export interface GlobalSearchFilterOption {
   id: GlobalSearchFilter;

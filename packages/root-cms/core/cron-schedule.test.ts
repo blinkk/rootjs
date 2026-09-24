@@ -105,7 +105,12 @@ describe('isCronDue', () => {
     const friday = ms('2026-06-26T17:00:20-04:00');
     const lastSyncMs = ms('2026-06-19T17:00:00-04:00');
     expect(
-      isCronDue({expression: '0 17 * * 5', timezone: tz, lastSyncMs: lastSyncMs, now: friday})
+      isCronDue({
+        expression: '0 17 * * 5',
+        timezone: tz,
+        lastSyncMs: lastSyncMs,
+        now: friday,
+      })
     ).toBe(true);
   });
 
@@ -114,7 +119,12 @@ describe('isCronDue', () => {
     const thursday = ms('2026-06-25T17:00:20-04:00');
     const lastSyncMs = ms('2026-06-19T17:00:00-04:00');
     expect(
-      isCronDue({expression: '0 17 * * 5', timezone: tz, lastSyncMs, now: thursday})
+      isCronDue({
+        expression: '0 17 * * 5',
+        timezone: tz,
+        lastSyncMs,
+        now: thursday,
+      })
     ).toBe(false);
   });
 
@@ -122,13 +132,23 @@ describe('isCronDue', () => {
     // Never synced + not currently the scheduled minute => not due, no backfill.
     const notScheduled = ms('2026-06-26T15:00:00-04:00');
     expect(
-      isCronDue({expression: '0 19 * * *', timezone: tz, lastSyncMs: 0, now: notScheduled})
+      isCronDue({
+        expression: '0 19 * * *',
+        timezone: tz,
+        lastSyncMs: 0,
+        now: notScheduled,
+      })
     ).toBe(false);
 
     // Never synced + currently the scheduled minute => due.
     const scheduled = ms('2026-06-26T19:00:00-04:00');
     expect(
-      isCronDue({expression: '0 19 * * *', timezone: tz, lastSyncMs: 0, now: scheduled})
+      isCronDue({
+        expression: '0 19 * * *',
+        timezone: tz,
+        lastSyncMs: 0,
+        now: scheduled,
+      })
     ).toBe(true);
   });
 

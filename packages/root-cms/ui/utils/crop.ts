@@ -17,15 +17,7 @@ export interface CropBounds {
  * other values are the edge or corner handle being resized.
  */
 export type CropHandle =
-  | 'move'
-  | 'n'
-  | 's'
-  | 'e'
-  | 'w'
-  | 'ne'
-  | 'nw'
-  | 'se'
-  | 'sw';
+  'move' | 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
 /** Options for {@link resizeCrop}. */
 export interface ResizeCropOptions {

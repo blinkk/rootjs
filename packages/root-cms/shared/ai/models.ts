@@ -32,11 +32,7 @@ export type AiExecutionMode = 'read' | 'approve' | 'auto';
  * API key.
  */
 export type AiProvider =
-  | 'openai'
-  | 'openai-compatible'
-  | 'anthropic'
-  | 'google'
-  | 'google-vertex';
+  'openai' | 'openai-compatible' | 'anthropic' | 'google' | 'google-vertex';
 
 /** Default Vertex AI location used when a `google-vertex` model omits one. */
 export const DEFAULT_VERTEX_LOCATION = 'global';

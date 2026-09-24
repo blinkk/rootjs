@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Root.js is a developer-focused CMS that writes directly to Firestore.",
-  "packageManager": "pnpm@12.5.1+sha512.e3f305bc784a2bc89f5ad3b6138889470fae8d2af5f36b61216ec91c2c3d64089775f9de38aac331044ea40f245cb0d5666392dfdf65824e1907ef6a2c62de5f",
+  "packageManager": "pnpm@12.6.0+sha512.3ef68f951cb111ac204b4a5a16f0b2ddf0da56a96e0413e81d855d9f0b55ef926714709028e1cd00c405c2c5fb7b9e8ec4dc46777c805d0373c2f2ff00fd20ec",
   "main": "index.js",
   "scripts": {
     "cms:dev": "./scripts/dev_cms.sh",
@@ -37,9 +37,9 @@
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
     "@changesets/cli": "2.31.0",
-    "eslint": "10.4.0",
-    "prettier": "3.8.3",
-    "turbo": "2.10.4",
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "turbo": "2.11.3",
     "typescript": "7.0.2"
   }
 }

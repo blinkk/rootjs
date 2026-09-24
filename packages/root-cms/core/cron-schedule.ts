@@ -145,7 +145,7 @@ export function isValidCronExpression(expression: string): boolean {
   try {
     parseCronExpression(expression);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 }

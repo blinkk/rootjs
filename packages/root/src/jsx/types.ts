@@ -107,8 +107,9 @@ type CSSPropertyName = {
  * renderer's `styleToString`), and CSS custom properties (`--my-var`) are also
  * permitted.
  */
-export interface CSSProperties
-  extends Partial<Record<CSSPropertyName, string | number>> {
+export interface CSSProperties extends Partial<
+  Record<CSSPropertyName, string | number>
+> {
   [key: `--${string}`]: string | number | undefined;
 }
 
@@ -124,14 +125,7 @@ export interface AriaAttributes {
   'aria-colspan'?: number;
   'aria-controls'?: string;
   'aria-current'?:
-    | boolean
-    | 'false'
-    | 'true'
-    | 'page'
-    | 'step'
-    | 'location'
-    | 'date'
-    | 'time';
+    boolean | 'false' | 'true' | 'page' | 'step' | 'location' | 'date' | 'time';
   'aria-describedby'?: string;
   'aria-details'?: string;
   'aria-disabled'?: boolean | 'false' | 'true';

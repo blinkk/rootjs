@@ -135,8 +135,7 @@ function applyParagraphSizeToDOM(
   }
   dom.setAttribute('data-size', size);
   const editorStyles = config.theme.paragraphSizeStyles as
-    | Record<string, RichTextParagraphSizeEditorStyle>
-    | undefined;
+    Record<string, RichTextParagraphSizeEditorStyle> | undefined;
   const editorStyle = editorStyles?.[size];
   if (!editorStyle) {
     return;

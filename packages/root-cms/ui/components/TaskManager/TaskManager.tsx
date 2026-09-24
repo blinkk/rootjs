@@ -40,11 +40,7 @@ import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {UserTag} from '../UserTag/UserTag.js';
 
 type TaskFilter =
-  | 'open'
-  | 'all'
-  | 'closed'
-  | 'assigned-to-me'
-  | 'created-by-me';
+  'open' | 'all' | 'closed' | 'assigned-to-me' | 'created-by-me';
 type TaskLayout = 'table' | 'board';
 type TaskListLayout = TaskLayout | 'compact';
 type TaskManagerVariant = 'compact' | 'page';

@@ -116,10 +116,7 @@ export interface CmsToolCollectionSummary {
 
 /** Lifecycle status of a release, derived via `getReleaseStatus()`. */
 export type CmsToolReleaseStatus =
-  | 'unpublished'
-  | 'scheduled'
-  | 'published'
-  | 'archived';
+  'unpublished' | 'scheduled' | 'published' | 'archived';
 
 /** A CMS release shaped for the model (timestamps in epoch millis). */
 export interface CmsToolRelease {

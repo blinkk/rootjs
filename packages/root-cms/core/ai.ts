@@ -31,7 +31,6 @@ import {
   AiExecutionMode,
   AiModelConfig,
   assertSupportsImageGeneration,
-  normalizeExecutionMode,
   resolveLanguageModel,
   testSupportsImageEditing,
   testSupportsImageGeneration,
@@ -41,10 +40,7 @@ import {
   buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
-  mergeIncomingMessage,
-  sanitizeDanglingToolCalls,
   sanitizeGeneratedTitle,
-  stripUndefined,
   TITLE_GENERATION_SYSTEM_PROMPT,
 } from '../shared/ai/prompt-utils.js';
 import {
@@ -182,8 +178,7 @@ export async function prepareClientModel(
 /** Returns the AI config registered on the CMS plugin, or `null`. */
 export function getAiConfig(rootConfig: RootConfig): AiConfig | null {
   const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
-    | {getConfig: () => {ai?: AiConfig}}
-    | undefined;
+    {getConfig: () => {ai?: AiConfig}} | undefined;
   const ai = cmsPlugin?.getConfig().ai;
   if (!ai || !Array.isArray(ai.models) || ai.models.length === 0) {
     return null;
