@@ -61,6 +61,11 @@
   max-width: 360px;
 }
 
+.SettingsPage__customCss textarea {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+}
+
 .SettingsPage__siteAdmin__searchStats {
   display: grid;
   grid-template-columns: 1fr 1fr;
