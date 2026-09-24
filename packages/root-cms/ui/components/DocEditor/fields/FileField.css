@@ -77,6 +77,51 @@
   padding: 0;
 }
 
+.FileField__AspectRatioWarning {
+  align-items: flex-start;
+  background-color: #fff9db;
+  border-top: 1px solid #ffe066;
+  color: #5c3c00;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 1.4;
+  padding: 8px;
+  pointer-events: all;
+}
+
+.FileField__AspectRatioWarning__Icon {
+  color: #f08c00;
+  flex: none;
+  margin-top: 1px;
+}
+
+.FileField__AspectRatioWarning__Message {
+  flex: 1;
+}
+
+.FileField__AspectRatioWarning__Actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.FileField__AspectRatioWarning__Button {
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  color: #212529;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+
+.FileField__AspectRatioWarning__Button:hover {
+  background: #f1f3f5;
+}
+
 .DocEditor__ImageField__imagePreview__Image__Alt {
   padding: 8px;
   border-top: 1px solid #ced4da;
@@ -116,7 +161,8 @@
 }
 
 /* When the asset library badge is active, move the dimens box to the bottom left. */
-.FileField__Preview:has(.FileField__Preview__AssetLibraryBadge) .FileField__Preview__Info {
+.FileField__Preview:has(.FileField__Preview__AssetLibraryBadge)
+  .FileField__Preview__Info {
   top: auto;
   bottom: var(--floating-button-position);
 }
@@ -335,7 +381,7 @@ a.FileField__Preview__AssetLibraryBadge:active {
 }
 
 .FileField__Preview__Menu {
-  width: 214px;
+  width: 230px;
 }
 
 .FileField__Preview__Menu .mantine-Menu-itemLabel {

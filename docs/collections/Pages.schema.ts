@@ -36,6 +36,7 @@ export default schema.collection({
           id: 'image',
           label: 'Image',
           help: 'Meta image for social shares. Recommended: 1400x600 JPG.',
+          aspectRatio: '1400:600',
         }),
       ],
     }),

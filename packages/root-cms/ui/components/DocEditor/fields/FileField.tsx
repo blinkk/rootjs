@@ -21,6 +21,7 @@ import {
 } from '@mantine/core';
 import {hideNotification, showNotification} from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconCopy,
   IconCrop,
   IconDotsVertical,
@@ -43,6 +44,14 @@ import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {lazy, Suspense} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {
+  AspectRatio,
+  COMMON_ASPECT_RATIOS,
+  formatAspectRatio,
+  formatDimensionsAspectRatio,
+  normalizeAspectRatios,
+  testAnyAspectRatioMatches,
+} from '../../../../shared/aspect-ratio.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {testAiEnabled, testAiImageEditingEnabled} from '../../../utils/ai.js';
@@ -114,6 +123,11 @@ interface FileFieldContextValue {
   altDisabledByMetadata: boolean;
   setAltDisabledByMetadata?: (disabled: boolean) => void;
   allowEditing: boolean;
+  /** Recommended aspect ratios from the field's schema. */
+  aspectRatios: AspectRatio[];
+  /** Whether the user dismissed the aspect ratio warning. */
+  aspectRatioWarningIgnored: boolean;
+  setAspectRatioWarningIgnored?: (ignored: boolean) => void;
 }
 
 const FileFieldContext = createContext<FileFieldContextValue | null>(null);
@@ -155,6 +169,16 @@ export interface FileFieldInternalProps {
    * toggle to disable the alt text input on a per-instance basis.
    */
   setAltDisabledByMetadata?: (disabled: boolean) => void;
+  /**
+   * Whether the aspect ratio warning was dismissed via per-field metadata
+   * (`ignoreAspectRatioWarning`).
+   */
+  aspectRatioWarningIgnored?: boolean;
+  /**
+   * Setter for the per-field `ignoreAspectRatioWarning` metadata. When
+   * provided, users can dismiss the aspect ratio warning.
+   */
+  setAspectRatioWarningIgnored?: (ignored: boolean) => void;
 }
 
 export function FileFieldInternal(props: FileFieldInternalProps) {
@@ -181,6 +205,11 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const [pendingUpload, setPendingUpload] = useState<File | null>(null);
   const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
   const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
+
+  const aspectRatios = useMemo(
+    () => normalizeAspectRatios(field.aspectRatio),
+    [field.aspectRatio]
+  );
 
   const acceptedFileTypes =
     props.accept ??
@@ -540,6 +569,9 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         altDisabledByMetadata: altDisabledByMetadata,
         setAltDisabledByMetadata: props.setAltDisabledByMetadata,
         allowEditing: allowEditing,
+        aspectRatios: aspectRatios,
+        aspectRatioWarningIgnored: props.aspectRatioWarningIgnored === true,
+        setAspectRatioWarningIgnored: props.setAspectRatioWarningIgnored,
       }}
     >
       <Modal
@@ -603,8 +635,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
             src={value.src}
             originalSrc={value.originalSrc}
             filename={value.filename}
-            initialWidth={parseInt(value.width as unknown as string)}
-            initialHeight={parseInt(value.height as unknown as string)}
+            aspectRatios={aspectRatios}
             onSave={(file) => {
               uploadFile(file, value.originalSrc || value.src);
               setImageEditorOpened(false);
@@ -763,21 +794,38 @@ export function FileField(props: FileFieldProps) {
     metadataKey
   );
   const altDisabledByMetadata = metadata?.alt === false;
-  const setAltDisabledByMetadata = (disabled: boolean) => {
+  const updateMetadata = (key: string, fieldValue: any) => {
     const next = {...(metadata || {})};
-    if (disabled) {
-      next.alt = false;
+    if (fieldValue === undefined) {
+      delete next[key];
     } else {
-      delete next.alt;
+      next[key] = fieldValue;
     }
     setMetadata(Object.keys(next).length === 0 ? null : next);
+  };
+  const setAltDisabledByMetadata = (disabled: boolean) => {
+    updateMetadata('alt', disabled ? false : undefined);
+  };
+
+  const aspectRatioWarningIgnored = metadata?.ignoreAspectRatioWarning === true;
+  const setAspectRatioWarningIgnored = (ignored: boolean) => {
+    updateMetadata('ignoreAspectRatioWarning', ignored ? true : undefined);
+  };
+
+  const setValueAndResetWarning = (newValue: FileFieldValueType) => {
+    // A dismissed aspect ratio warning only applies to the file that was
+    // dismissed, so reset it when the file changes.
+    if (aspectRatioWarningIgnored && newValue?.src !== value?.src) {
+      setAspectRatioWarningIgnored(false);
+    }
+    setValue(newValue);
   };
 
   return (
     <FileFieldInternal
       field={field}
       value={value}
-      setValue={setValue}
+      setValue={setValueAndResetWarning}
       loadingState={loadingState}
       setLoadingState={setLoadingState}
       variant={props.variant}
@@ -788,6 +836,8 @@ export function FileField(props: FileFieldProps) {
           ? setAltDisabledByMetadata
           : undefined
       }
+      aspectRatioWarningIgnored={aspectRatioWarningIgnored}
+      setAspectRatioWarningIgnored={setAspectRatioWarningIgnored}
     />
   );
 }
@@ -1000,6 +1050,27 @@ FileField.Preview = () => {
                 Use dark canvas
               </Menu.Item>
             )}
+          {ctx.allowEditing &&
+            ctx.setAspectRatioWarningIgnored &&
+            testAspectRatioMismatch(ctx.value, ctx.aspectRatios) && (
+              <Menu.Item
+                icon={
+                  ctx.aspectRatioWarningIgnored ? (
+                    <IconSquareCheckFilled size={16} />
+                  ) : (
+                    <IconSquareCheck size={16} style={{opacity: 0.25}} />
+                  )
+                }
+                closeOnItemClick={false}
+                onClick={() => {
+                  ctx.setAspectRatioWarningIgnored?.(
+                    !ctx.aspectRatioWarningIgnored
+                  );
+                }}
+              >
+                Ignore aspect ratio warning
+              </Menu.Item>
+            )}
           {ctx.allowEditing && ctx.setAltDisabledByMetadata && (
             <Menu.Item
               icon={
@@ -1210,6 +1281,7 @@ FileField.Preview = () => {
           </div>
         )}
       </div>
+      <FileField.AspectRatioWarning />
       {ctx.allowEditing &&
         ctx.showAltText &&
         (ctx.altText ||
@@ -1249,6 +1321,74 @@ FileField.Preview = () => {
               )}
           </div>
         )}
+    </div>
+  );
+};
+
+/**
+ * Warns the user when an uploaded image or video doesn't match the field's
+ * recommended aspect ratio. The warning can be dismissed, which is stored in
+ * the field's metadata.
+ */
+FileField.AspectRatioWarning = () => {
+  const ctx = useFileField();
+  const value = ctx.value;
+  if (
+    !value ||
+    ctx.aspectRatioWarningIgnored ||
+    !testAspectRatioMismatch(value, ctx.aspectRatios)
+  ) {
+    return null;
+  }
+  const width = Number(value.width);
+  const height = Number(value.height);
+  const isVideo =
+    testIsVideoFile(value.src) || testIsVideoFile(value.filename || '');
+  const canCrop =
+    ctx.allowEditing &&
+    testIsImageFile(value.src) &&
+    !value.src.endsWith('.svg');
+  const recommended = ctx.aspectRatios
+    .map((ratio) => formatAspectRatio(ratio))
+    .join(' or ');
+  return (
+    <div className="FileField__AspectRatioWarning" role="status">
+      <IconAlertTriangle
+        size={16}
+        className="FileField__AspectRatioWarning__Icon"
+      />
+      <div className="FileField__AspectRatioWarning__Message">
+        This {isVideo ? 'video' : 'image'} is{' '}
+        <strong>
+          {formatDimensionsAspectRatio(width, height, [
+            ...ctx.aspectRatios,
+            ...COMMON_ASPECT_RATIOS,
+          ])}
+        </strong>{' '}
+        ({width}x{height}). The recommended aspect ratio is{' '}
+        <strong>{recommended}</strong>.
+      </div>
+      <div className="FileField__AspectRatioWarning__Actions">
+        {canCrop && (
+          <button
+            type="button"
+            className="FileField__AspectRatioWarning__Button"
+            onClick={() => ctx.requestImageEditorOpen()}
+          >
+            Crop
+          </button>
+        )}
+        {ctx.allowEditing && ctx.setAspectRatioWarningIgnored && (
+          <button
+            type="button"
+            className="FileField__AspectRatioWarning__Button"
+            title="Dismiss this warning for the current file"
+            onClick={() => ctx.setAspectRatioWarningIgnored?.(true)}
+          >
+            Dismiss
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -1495,6 +1635,33 @@ const NamingModeSelectItem = forwardRef(
     );
   }
 );
+
+/**
+ * Returns whether an uploaded image or video doesn't match any of the
+ * recommended aspect ratios.
+ */
+function testAspectRatioMismatch(
+  value: FileFieldValueType,
+  aspectRatios: AspectRatio[]
+): boolean {
+  if (!value?.src || aspectRatios.length === 0) {
+    return false;
+  }
+  const isMedia =
+    testIsImageFile(value.src) ||
+    testIsImageFile(value.filename || '') ||
+    testIsVideoFile(value.src) ||
+    testIsVideoFile(value.filename || '');
+  if (!isMedia) {
+    return false;
+  }
+  const width = Number(value.width);
+  const height = Number(value.height);
+  if (!(width > 0 && height > 0)) {
+    return false;
+  }
+  return !testAnyAspectRatioMatches(width, height, aspectRatios);
+}
 
 /** Returns whether a file should display the alt text field (based on its filename). */
 function testShouldHaveAltText(filename: string | undefined): boolean {

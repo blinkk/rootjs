@@ -171,7 +171,6 @@
     "preact-render-to-string": "6.7.0",
     "react": "npm:@preact/compat@18.3.2",
     "react-dom": "npm:@preact/compat@18.3.2",
-    "react-easy-crop": "6.2.3",
     "react-json-view-compare": "2.0.2",
     "typescript": "7.0.2",
     "vite": "8.2.0",
