@@ -3,7 +3,9 @@ import {RootCMSClient} from '@blinkk/root-cms';
 import {Timestamp} from 'firebase-admin/firestore';
 
 async function main() {
-  const rootConfig = await loadRootConfig(process.cwd());
+  const rootConfig = await loadRootConfig(process.cwd(), {
+    command: 'root-cms',
+  });
   const client = new RootCMSClient(rootConfig);
   const db = client.db;
   const releases = await db.collection('Projects/www/Releases').get();

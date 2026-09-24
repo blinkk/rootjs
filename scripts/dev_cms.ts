@@ -9,7 +9,7 @@
  * wrappers in between don't forward signals to their descendants.
  */
 
-import {spawn} from 'node:child_process';
+import {spawn, type ChildProcess} from 'node:child_process';
 import {constants} from 'node:os';
 import path from 'node:path';
 
@@ -18,7 +18,7 @@ const rootDir = path.resolve(import.meta.dirname, '..');
 // Delay before starting the docs server so the CMS watcher can build first.
 const DOCS_START_DELAY_MS = 2000;
 
-const children = [];
+const children: ChildProcess[] = [];
 let exiting = false;
 
 startChild('CMS dev watcher', ['--filter=@blinkk/root-cms', 'run', 'dev'], {
@@ -30,13 +30,17 @@ const docsTimer = setTimeout(() => {
   });
 }, DOCS_START_DELAY_MS);
 
-for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
   process.on(signal, () => shutdown(exitCode(null, signal)));
 }
 process.on('exit', () => killChildren());
 
 /** Spawns `pnpm <args>` in a new process group and tracks it. */
-function startChild(name, args, options) {
+function startChild(
+  name: string,
+  args: string[],
+  options: {stdin: 'ignore' | 'inherit'}
+) {
   const child = spawn('pnpm', args, {
     cwd: rootDir,
     detached: true,
@@ -52,7 +56,7 @@ function startChild(name, args, options) {
 }
 
 /** Stops all children and exits with the given code. */
-function shutdown(code) {
+function shutdown(code: number) {
   if (exiting) {
     return;
   }
@@ -66,7 +70,7 @@ function shutdown(code) {
 function killChildren() {
   for (const child of children) {
     try {
-      process.kill(-child.pid, 'SIGTERM');
+      process.kill(-child.pid!, 'SIGTERM');
     } catch {
       // The process group has already exited.
     }
@@ -74,6 +78,6 @@ function killChildren() {
 }
 
 /** Converts a child's exit info into a shell-style exit code. */
-function exitCode(code, signal) {
-  return code ?? 128 + (constants.signals[signal] || 0);
+function exitCode(code: number | null, signal: NodeJS.Signals | null) {
+  return code ?? 128 + (signal ? constants.signals[signal] : 0);
 }

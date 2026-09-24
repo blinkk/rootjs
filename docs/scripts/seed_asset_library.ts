@@ -10,10 +10,10 @@
  * Run from the root of a Root.js CMS project (one with a `root.config.ts`),
  * e.g. the `docs/` site:
  *
- *   node scripts/seed_asset_library.mjs
- *   node scripts/seed_asset_library.mjs --count 250
- *   node scripts/seed_asset_library.mjs --folder test-pagination
- *   node scripts/seed_asset_library.mjs --clear   # remove existing files first
+ *   node scripts/seed_asset_library.ts
+ *   node scripts/seed_asset_library.ts --count 250
+ *   node scripts/seed_asset_library.ts --folder test-pagination
+ *   node scripts/seed_asset_library.ts --clear   # remove existing files first
  *
  * Requires application-default credentials for the project's Firestore (the
  * same auth used by the other root-cms admin scripts).
@@ -24,7 +24,7 @@
 
 import {loadRootConfig} from '@blinkk/root/node';
 import {RootCMSClient} from '@blinkk/root-cms';
-import {Timestamp} from 'firebase-admin/firestore';
+import {Timestamp, type Firestore} from 'firebase-admin/firestore';
 
 /** Default number of assets to create. Two pages at 100 assets/page. */
 const DEFAULT_COUNT = 200;
@@ -95,7 +95,7 @@ function autokey(len = 12) {
 }
 
 /** Parses `--count`, `--folder` and `--clear` flags from argv. */
-function parseArgs(argv) {
+function parseArgs(argv: string[]) {
   const args = {
     count: DEFAULT_COUNT,
     folder: DEFAULT_FOLDER,
@@ -106,7 +106,7 @@ function parseArgs(argv) {
     const [flag, inlineValue] = arg.split('=');
     const nextValue = () => inlineValue ?? argv[++i];
     if (flag === '--count') {
-      const count = parseInt(nextValue(), 10);
+      const count = parseInt(nextValue() ?? '', 10);
       if (!Number.isInteger(count) || count <= 0) {
         throw new Error(`invalid --count value: ${arg}`);
       }
@@ -132,7 +132,7 @@ function parseArgs(argv) {
  * lists; if more assets are requested than there are unique combinations, a
  * numeric suffix is appended to keep names unique.
  */
-function buildName(i, usedNames) {
+function buildName(i: number, usedNames: Set<string>) {
   const idxA =
     Math.floor(i / (NOUNS.length * SUFFIXES.length)) % ADJECTIVES.length;
   const idxB = Math.floor(i / SUFFIXES.length) % NOUNS.length;
@@ -150,7 +150,7 @@ function buildName(i, usedNames) {
 }
 
 /** Escapes text for safe inclusion in SVG/XML markup. */
-function escapeXml(value) {
+function escapeXml(value: string) {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -158,7 +158,7 @@ function escapeXml(value) {
 }
 
 /** Builds a `data:` URI for a 200x200 SVG labeled with the asset name. */
-function buildSvgDataUri(label, color) {
+function buildSvgDataUri(label: string, color: string) {
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" ' +
     'viewBox="0 0 200 200">' +
@@ -171,7 +171,7 @@ function buildSvgDataUri(label, color) {
 }
 
 /** Deletes all file assets directly within `folder`. */
-async function clearFolder(db, assetsPath, folder) {
+async function clearFolder(db: Firestore, assetsPath: string, folder: string) {
   const snapshot = await db
     .collection(assetsPath)
     .where('parent', '==', folder)
@@ -201,7 +201,9 @@ async function clearFolder(db, assetsPath, folder) {
 async function main() {
   const {count, folder, clear} = parseArgs(process.argv.slice(2));
 
-  const rootConfig = await loadRootConfig(process.cwd());
+  const rootConfig = await loadRootConfig(process.cwd(), {
+    command: 'root-cms',
+  });
   const client = new RootCMSClient(rootConfig);
   const db = client.db;
   const projectId = client.projectId;
@@ -234,7 +236,7 @@ async function main() {
   );
 
   // Backfill file assets in batches.
-  const usedNames = new Set();
+  const usedNames = new Set<string>();
   let batch = db.batch();
   let ops = 0;
   for (let i = 0; i < count; i++) {

@@ -16,9 +16,17 @@
 
 ### Building
 
-Packages bundle with esbuild via `scripts/build-esbuild.mjs` plus a per-package
+Packages bundle with esbuild via `scripts/build-esbuild.ts` plus a per-package
 `esbuild.config.json`. `dist/` is generated output — never edit it by hand.
 `pnpm build` at the root only builds `--filter="@blinkk/*"`.
+
+### Scripts
+
+Standalone scripts (`scripts/`, `docs/scripts/`, etc.) are `.ts` files run
+directly with `node` via Node's built-in type stripping, with no build step. Use
+only erasable TypeScript syntax (no `enum`, `namespace`, or parameter
+properties), use `import type` for type-only imports, and use `.ts` extensions
+for relative imports.
 
 ### Testing
 
