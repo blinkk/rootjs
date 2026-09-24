@@ -7,7 +7,7 @@
   "packageManager": "pnpm@12.6.0+sha512.3ef68f951cb111ac204b4a5a16f0b2ddf0da56a96e0413e81d855d9f0b55ef926714709028e1cd00c405c2c5fb7b9e8ec4dc46777c805d0373c2f2ff00fd20ec",
   "main": "index.js",
   "scripts": {
-    "cms:dev": "./scripts/dev_cms.sh",
+    "cms:dev": "node ./scripts/dev_cms.ts",
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
     "lint": "eslint .",
@@ -37,6 +37,7 @@
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
     "@changesets/cli": "2.31.0",
+    "@types/node": "24.13.6",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
     "turbo": "2.11.3",

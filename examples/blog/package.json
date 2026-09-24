@@ -13,7 +13,7 @@
     "start": "root start",
     "create-package": "root create-package",
     "test": "pnpm run build",
-    "test:prod": "pnpm run build && node scripts/test.mjs",
+    "test:prod": "pnpm run build && node scripts/test.ts",
     "types": "root-cms generate-types"
   },
   "dependencies": {
