@@ -35,6 +35,7 @@ import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.j
 import {GlobalSearch} from './components/GlobalSearch/GlobalSearch.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
+import {PinnedCommentThreads} from './components/PinnedCommentThreads/PinnedCommentThreads.js';
 import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {PublishChecksModal} from './components/PublishChecksModal/PublishChecksModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
@@ -43,6 +44,7 @@ import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleRe
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
+import {PinnedCommentThreadsProvider} from './hooks/usePinnedCommentThreads.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {ThemeLoader} from './hooks/useTheme.js';
@@ -362,106 +364,115 @@ function App() {
                     if the location provider is the outer one.
                   */}
                   <LocationProvider>
-                    <ModalsProvider
-                      modals={{
-                        [AddToReleaseModal.id]: AddToReleaseModal,
-                        [AiEditModal.id]: AiEditModal,
-                        [AssetPickerModal.id]: AssetPickerModal,
-                        [CompareDraftModal.id]: CompareDraftModal,
-                        [ComponentPickerModal.id]: ComponentPickerModal,
-                        [CopyDocModal.id]: CopyDocModal,
-                        [DocPickerModal.id]: DocPickerModal,
-                        [DataSourceSelectModal.id]: DataSourceSelectModal,
-                        [EditJsonModal.id]: EditJsonModal,
-                        [EditTranslationsModal.id]: EditTranslationsModal,
-                        [ExportSheetModal.id]: ExportSheetModal,
-                        [LocalizationModal.id]: LocalizationModal,
-                        [LockPublishingModal.id]: LockPublishingModal,
-                        [PruneTranslationsModal.id]: PruneTranslationsModal,
-                        [PublishChecksModal.id]: PublishChecksModal,
-                        [PublishDocModal.id]: PublishDocModal,
-                        [ReferenceFieldEditorModal.id]:
-                          ReferenceFieldEditorModal,
-                        [ScheduleReleaseModal.id]: ScheduleReleaseModal,
-                        [VersionHistoryModal.id]: VersionHistoryModal,
-                      }}
-                    >
-                      <GlobalSearch>
-                        <AppErrorBoundary>
-                          <Router>
-                            <Route path="/cms" component={ProjectPage} />
-                            <Route path="/cms/ai" component={AIPage} />
-                            <Route
-                              path="/cms/ai/chat/:chatId"
-                              component={AIPage}
-                            />
-                            <Route path="/cms/assets" component={AssetsPage} />
-                            <Route
-                              path="/cms/compare"
-                              component={ComparePage}
-                            />
-                            <Route
-                              path="/cms/content/:collection?"
-                              component={CollectionPage}
-                            />
-                            <Route
-                              path="/cms/content/:collection/:slug"
-                              component={DocumentPage}
-                            />
-                            <Route
-                              path="/cms/embed/content/:collection/:slug"
-                              component={EmbeddedDocumentPage}
-                            />
-                            <Route
-                              path="/cms/embed/ai"
-                              component={EmbeddedAIPage}
-                            />
-                            <Route path="/cms/data" component={DataPage} />
-                            <Route
-                              path="/cms/data/new"
-                              component={NewDataSourcePage}
-                            />
-                            <Route
-                              path="/cms/data/:id"
-                              component={DataSourcePage}
-                            />
-                            <Route
-                              path="/cms/data/:id/edit"
-                              component={EditDataSourcePage}
-                            />
-                            <Route path="/cms/logs" component={LogsPage} />
-                            <Route
-                              path="/cms/releases"
-                              component={ReleasesPage}
-                            />
-                            <Route
-                              path="/cms/releases/new"
-                              component={NewReleasePage}
-                            />
-                            <Route
-                              path="/cms/releases/:id"
-                              component={ReleasePage}
-                            />
-                            <Route
-                              path="/cms/releases/:id/edit"
-                              component={EditReleasePage}
-                            />
-                            <Route
-                              path="/cms/settings"
-                              component={SettingsPage}
-                            />
-                            <Route path="/cms/tasks" component={TasksPage} />
-                            <Route path="/cms/tasks/:id" component={TaskPage} />
-                            <Route
-                              path="/cms/tools/:id/:rest*"
-                              component={SidebarToolsPage}
-                            />
-                            {translationsRoutes}
-                            <Route default component={NotFoundPage} />
-                          </Router>
-                        </AppErrorBoundary>
-                      </GlobalSearch>
-                    </ModalsProvider>
+                    <PinnedCommentThreadsProvider>
+                      <ModalsProvider
+                        modals={{
+                          [AddToReleaseModal.id]: AddToReleaseModal,
+                          [AiEditModal.id]: AiEditModal,
+                          [AssetPickerModal.id]: AssetPickerModal,
+                          [CompareDraftModal.id]: CompareDraftModal,
+                          [ComponentPickerModal.id]: ComponentPickerModal,
+                          [CopyDocModal.id]: CopyDocModal,
+                          [DocPickerModal.id]: DocPickerModal,
+                          [DataSourceSelectModal.id]: DataSourceSelectModal,
+                          [EditJsonModal.id]: EditJsonModal,
+                          [EditTranslationsModal.id]: EditTranslationsModal,
+                          [ExportSheetModal.id]: ExportSheetModal,
+                          [LocalizationModal.id]: LocalizationModal,
+                          [LockPublishingModal.id]: LockPublishingModal,
+                          [PruneTranslationsModal.id]: PruneTranslationsModal,
+                          [PublishChecksModal.id]: PublishChecksModal,
+                          [PublishDocModal.id]: PublishDocModal,
+                          [ReferenceFieldEditorModal.id]:
+                            ReferenceFieldEditorModal,
+                          [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                          [VersionHistoryModal.id]: VersionHistoryModal,
+                        }}
+                      >
+                        <GlobalSearch>
+                          <AppErrorBoundary>
+                            <Router>
+                              <Route path="/cms" component={ProjectPage} />
+                              <Route path="/cms/ai" component={AIPage} />
+                              <Route
+                                path="/cms/ai/chat/:chatId"
+                                component={AIPage}
+                              />
+                              <Route
+                                path="/cms/assets"
+                                component={AssetsPage}
+                              />
+                              <Route
+                                path="/cms/compare"
+                                component={ComparePage}
+                              />
+                              <Route
+                                path="/cms/content/:collection?"
+                                component={CollectionPage}
+                              />
+                              <Route
+                                path="/cms/content/:collection/:slug"
+                                component={DocumentPage}
+                              />
+                              <Route
+                                path="/cms/embed/content/:collection/:slug"
+                                component={EmbeddedDocumentPage}
+                              />
+                              <Route
+                                path="/cms/embed/ai"
+                                component={EmbeddedAIPage}
+                              />
+                              <Route path="/cms/data" component={DataPage} />
+                              <Route
+                                path="/cms/data/new"
+                                component={NewDataSourcePage}
+                              />
+                              <Route
+                                path="/cms/data/:id"
+                                component={DataSourcePage}
+                              />
+                              <Route
+                                path="/cms/data/:id/edit"
+                                component={EditDataSourcePage}
+                              />
+                              <Route path="/cms/logs" component={LogsPage} />
+                              <Route
+                                path="/cms/releases"
+                                component={ReleasesPage}
+                              />
+                              <Route
+                                path="/cms/releases/new"
+                                component={NewReleasePage}
+                              />
+                              <Route
+                                path="/cms/releases/:id"
+                                component={ReleasePage}
+                              />
+                              <Route
+                                path="/cms/releases/:id/edit"
+                                component={EditReleasePage}
+                              />
+                              <Route
+                                path="/cms/settings"
+                                component={SettingsPage}
+                              />
+                              <Route path="/cms/tasks" component={TasksPage} />
+                              <Route
+                                path="/cms/tasks/:id"
+                                component={TaskPage}
+                              />
+                              <Route
+                                path="/cms/tools/:id/:rest*"
+                                component={SidebarToolsPage}
+                              />
+                              {translationsRoutes}
+                              <Route default component={NotFoundPage} />
+                            </Router>
+                          </AppErrorBoundary>
+                          <PinnedCommentThreads />
+                        </GlobalSearch>
+                      </ModalsProvider>
+                    </PinnedCommentThreadsProvider>
                   </LocationProvider>
                 </UserPreferencesProvider>
               </PendingReleasesProvider>
