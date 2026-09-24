@@ -46,6 +46,7 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {
   AspectRatio,
+  COMMON_ASPECT_RATIOS,
   formatAspectRatio,
   formatDimensionsAspectRatio,
   normalizeAspectRatios,
@@ -1358,8 +1359,13 @@ FileField.AspectRatioWarning = () => {
       />
       <div className="FileField__AspectRatioWarning__Message">
         This {isVideo ? 'video' : 'image'} is{' '}
-        <strong>{formatDimensionsAspectRatio(width, height)}</strong> ({width}x
-        {height}). The recommended aspect ratio is{' '}
+        <strong>
+          {formatDimensionsAspectRatio(width, height, [
+            ...ctx.aspectRatios,
+            ...COMMON_ASPECT_RATIOS,
+          ])}
+        </strong>{' '}
+        ({width}x{height}). The recommended aspect ratio is{' '}
         <strong>{recommended}</strong>.
       </div>
       <div className="FileField__AspectRatioWarning__Actions">

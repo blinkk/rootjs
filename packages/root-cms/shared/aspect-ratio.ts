@@ -11,6 +11,9 @@ export type AspectRatio = string | number;
  */
 export const ASPECT_RATIO_TOLERANCE = 0.01;
 
+/** Matches ratio strings like `16:9`, `16/9` or `1400x600`. */
+const RATIO_PATTERN = /^(\d*\.?\d+)\s*[:/xX×]\s*(\d*\.?\d+)$/;
+
 /**
  * Parses an aspect ratio into a number (width divided by height). Returns
  * `null` if the value can't be parsed.
@@ -25,7 +28,7 @@ export function parseAspectRatio(
     return null;
   }
   const str = value.trim();
-  const match = str.match(/^(\d*\.?\d+)\s*[:/xX×]\s*(\d*\.?\d+)$/);
+  const match = str.match(RATIO_PATTERN);
   if (match) {
     const width = parseFloat(match[1]);
     const height = parseFloat(match[2]);
@@ -62,7 +65,7 @@ export function normalizeAspectRatios(
  */
 export function formatAspectRatio(value: AspectRatio): string {
   if (typeof value === 'string') {
-    const match = value.trim().match(/^(\d*\.?\d+)\s*[:/xX×]\s*(\d*\.?\d+)$/);
+    const match = value.trim().match(RATIO_PATTERN);
     if (match) {
       return `${match[1]}:${match[2]}`;
     }
@@ -75,15 +78,57 @@ export function formatAspectRatio(value: AspectRatio): string {
 }
 
 /**
+ * Common aspect ratios offered as presets in the image editor, and used to
+ * label dimensions that are close to one of them.
+ */
+export const COMMON_ASPECT_RATIOS: string[] = [
+  '1:1',
+  '16:9',
+  '4:3',
+  '3:2',
+  '5:4',
+];
+
+/**
+ * Flips an aspect ratio between landscape and portrait, e.g. `'16:9'` becomes
+ * `'9:16'`.
+ */
+export function flipAspectRatio(value: AspectRatio): AspectRatio {
+  if (typeof value === 'string') {
+    const match = value.trim().match(RATIO_PATTERN);
+    if (match) {
+      return `${match[2]}:${match[1]}`;
+    }
+  }
+  const ratio = parseAspectRatio(value);
+  return ratio ? 1 / ratio : value;
+}
+
+/**
  * Formats the aspect ratio of a width and height for display, e.g. `1920x1080`
  * becomes `'16:9'`.
+ *
+ * When `knownRatios` is provided and the dimensions match one of them (in
+ * either orientation), that ratio is used as written. For example, `2800x1200`
+ * with `['1400:600']` becomes `'1400:600'` instead of `'7:3'`, and
+ * `1000x563` with `['16:9']` becomes `'16:9'` instead of `'1.78:1'`.
  */
 export function formatDimensionsAspectRatio(
   width: number,
-  height: number
+  height: number,
+  knownRatios: AspectRatio[] = []
 ): string {
   if (!(width > 0 && height > 0)) {
     return '';
+  }
+  for (const known of normalizeAspectRatios(knownRatios)) {
+    if (testAspectRatioMatches(width, height, known)) {
+      return formatAspectRatio(known);
+    }
+    const flipped = flipAspectRatio(known);
+    if (testAspectRatioMatches(width, height, flipped)) {
+      return formatAspectRatio(flipped);
+    }
   }
   if (Number.isInteger(width) && Number.isInteger(height)) {
     const divisor = gcd(width, height);

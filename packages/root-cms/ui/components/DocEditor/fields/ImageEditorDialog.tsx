@@ -22,6 +22,7 @@ import {
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {
   AspectRatio,
+  COMMON_ASPECT_RATIOS,
   formatAspectRatio,
   formatDimensionsAspectRatio,
   normalizeAspectRatios,
@@ -41,14 +42,8 @@ import {
 import {GCI_URL_PREFIX} from '../../../utils/gcs.js';
 import './ImageEditorDialog.css';
 
-/** Preset aspect ratios available in the editor. */
-const PRESET_ASPECT_RATIOS: Array<{label: string; value: string}> = [
-  {label: 'Square', value: '1:1'},
-  {label: '16:9', value: '16:9'},
-  {label: '4:3', value: '4:3'},
-  {label: '3:2', value: '3:2'},
-  {label: '5:4', value: '5:4'},
-];
+/** Labels for preset aspect ratios that differ from the ratio itself. */
+const PRESET_LABELS: Record<string, string> = {'1:1': 'Square'};
 
 /** The minimum size of the crop box, in screen pixels. */
 const MIN_CROP_DISPLAY_SIZE = 24;
@@ -381,6 +376,16 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
     (selectedOption.value !== null && selectedOption.value !== 1);
   const isPortrait = aspect !== null && aspect < 1;
 
+  // Ratios shown on the chips, used to label the crop's aspect ratio (e.g.
+  // `1400:600` rather than `7:3`).
+  const knownRatios: AspectRatio[] = [
+    ...(selectedOption.id === 'custom' && customWidth > 0 && customHeight > 0
+      ? [`${customWidth}:${customHeight}`]
+      : []),
+    ...recommendedRatios,
+    ...COMMON_ASPECT_RATIOS,
+  ];
+
   const mismatchesRecommended =
     recommendedRatios.length > 0 &&
     outputCrop !== null &&
@@ -584,7 +589,8 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
                 {outputCrop
                   ? formatDimensionsAspectRatio(
                       outputCrop.width,
-                      outputCrop.height
+                      outputCrop.height,
+                      knownRatios
                     )
                   : '–'}
                 {mismatchesRecommended && (
@@ -696,13 +702,13 @@ function buildAspectRatioOptions(
       value: bounds.width / bounds.height,
     });
   }
-  PRESET_ASPECT_RATIOS.forEach((preset) => {
-    const value = parseAspectRatio(preset.value)!;
+  COMMON_ASPECT_RATIOS.forEach((preset) => {
+    const value = parseAspectRatio(preset)!;
     const isRecommended = recommendedRatios.some((ratio) =>
       testAspectRatioMatches(value, 1, ratio, 0.001)
     );
     if (!isRecommended) {
-      options.push({id: preset.value, label: preset.label, value});
+      options.push({id: preset, label: PRESET_LABELS[preset] || preset, value});
     }
   });
   options.push({id: 'custom', label: 'Custom', value: null});

@@ -234,7 +234,7 @@
 .ImageEditorDialog__Details {
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: 13px;
   gap: 2px;
   margin: 0;
 }

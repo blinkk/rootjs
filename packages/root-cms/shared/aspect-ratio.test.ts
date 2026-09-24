@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
+  COMMON_ASPECT_RATIOS,
+  flipAspectRatio,
   formatAspectRatio,
   formatDimensionsAspectRatio,
   normalizeAspectRatios,
@@ -66,6 +68,44 @@ describe('formatDimensionsAspectRatio', () => {
     expect(formatDimensionsAspectRatio(1366, 768)).toBe('16:9');
     expect(formatDimensionsAspectRatio(1200, 630)).toBe('1.9:1');
     expect(formatDimensionsAspectRatio(0, 100)).toBe('');
+  });
+});
+
+describe('formatDimensionsAspectRatio with known ratios', () => {
+  it('prefers a matching known ratio as written', () => {
+    expect(formatDimensionsAspectRatio(2800, 1200, ['1400:600'])).toBe(
+      '1400:600'
+    );
+    expect(formatDimensionsAspectRatio(1600, 686, ['1400x600'])).toBe(
+      '1400:600'
+    );
+    expect(formatDimensionsAspectRatio(1000, 563)).toBe('1.78:1');
+    expect(formatDimensionsAspectRatio(1000, 563, COMMON_ASPECT_RATIOS)).toBe(
+      '16:9'
+    );
+  });
+
+  it('matches known ratios in either orientation', () => {
+    expect(formatDimensionsAspectRatio(563, 1000, COMMON_ASPECT_RATIOS)).toBe(
+      '9:16'
+    );
+    expect(formatDimensionsAspectRatio(600, 1400, ['1400:600'])).toBe(
+      '600:1400'
+    );
+  });
+
+  it('falls back when nothing matches', () => {
+    expect(formatDimensionsAspectRatio(1200, 630, COMMON_ASPECT_RATIOS)).toBe(
+      '1.9:1'
+    );
+  });
+});
+
+describe('flipAspectRatio', () => {
+  it('flips ratio strings and numbers', () => {
+    expect(flipAspectRatio('16:9')).toBe('9:16');
+    expect(flipAspectRatio('1400x600')).toBe('600:1400');
+    expect(flipAspectRatio(2)).toBe(0.5);
   });
 });
 
