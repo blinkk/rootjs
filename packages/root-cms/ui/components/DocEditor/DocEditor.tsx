@@ -39,6 +39,7 @@ import {
   IconListCheck,
   IconLock,
   IconMessageCircle,
+  IconPin,
   IconPlanet,
   IconRobot,
   IconRocket,
@@ -93,6 +94,7 @@ import {
   useFieldResolvedThreads,
 } from '../../hooks/useFieldComments.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {usePinnedCommentThreads} from '../../hooks/usePinnedCommentThreads.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   ClipboardData,
@@ -144,6 +146,7 @@ import {FieldErrorBoundary} from '../FieldErrorBoundary/FieldErrorBoundary.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
+import {clampPinnedWindowPosition} from '../PinnedCommentThreads/PinnedCommentThreads.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
 import {Viewers} from '../Viewers/Viewers.js';
@@ -997,8 +1000,13 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const resolvedThreads = useFieldResolvedThreads(props.deepKey);
   const draft = useDraftDoc();
   const collection = useDocCollectionSchema();
+  const pinnedThreads = usePinnedCommentThreads();
   const [opened, setOpened] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const count = thread ? countThreadComments(thread) : 0;
+  const pinned = Boolean(
+    pinnedThreads?.isPinned(comments.docId, props.deepKey)
+  );
   // A field whose threads are all resolved is treated like a field with no
   // comments; its resolved threads are reachable from inside the popover.
   const canOpen = Boolean(thread) || comments.canComment;
@@ -1020,6 +1028,27 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const label = thread
     ? `${count} comment${count === 1 ? '' : 's'}`
     : 'Add comment';
+
+  // Moves the thread into a floating window that stays in place while the
+  // user edits and navigates around the CMS. The window starts where the
+  // popover was, offset by the window's padding and title bar.
+  const pinThread = () => {
+    if (!pinnedThreads) {
+      return;
+    }
+    const rect = popoverRef.current?.getBoundingClientRect();
+    const position = clampPinnedWindowPosition(
+      (rect?.left ?? window.innerWidth / 2) - 12,
+      (rect?.top ?? window.innerHeight / 3) - 42
+    );
+    pinnedThreads.pin({
+      docId: comments.docId,
+      fieldKey: props.deepKey,
+      fieldLabel,
+      ...position,
+    });
+    setOpened(false);
+  };
 
   return (
     <Popover
@@ -1045,7 +1074,8 @@ DocEditor.FieldHeaderCommentActionIconInner = (
               'DocEditor__FieldHeader__comments__button',
               thread && 'DocEditor__FieldHeader__comments__button--hasThread',
               thread && 'DocEditor__FieldHeader__comments__button--open',
-              opened && 'DocEditor__FieldHeader__comments__button--active'
+              (opened || pinned) &&
+                'DocEditor__FieldHeader__comments__button--active'
             )}
             aria-label={label}
             aria-expanded={opened}
@@ -1054,6 +1084,10 @@ DocEditor.FieldHeaderCommentActionIconInner = (
               // toggling the drawer.
               e.preventDefault();
               e.stopPropagation();
+              if (pinned) {
+                pinnedThreads!.focus(comments.docId, props.deepKey);
+                return;
+              }
               setOpened((value) => !value);
             }}
           >
@@ -1068,6 +1102,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
       }
     >
       <div
+        ref={popoverRef}
         className="DocEditor__FieldHeader__comments__popover"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
@@ -1080,6 +1115,17 @@ DocEditor.FieldHeaderCommentActionIconInner = (
           autoFocus
           headerActions={
             <>
+              {pinnedThreads && (
+                <Tooltip label="Pin to screen" withArrow>
+                  <ActionIcon
+                    size="sm"
+                    aria-label="Pin to screen"
+                    onClick={pinThread}
+                  >
+                    <IconPin size={16} strokeWidth="1.8" />
+                  </ActionIcon>
+                </Tooltip>
+              )}
               <Tooltip label="Open in comments panel" withArrow>
                 <ActionIcon
                   size="sm"
