@@ -454,6 +454,24 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
     );
   }
 
+  // Tasks are soft-deleted, so the task page is still viewable (and
+  // restorable) after a `tasks.delete` action.
+  if (action.action.startsWith('tasks.') && action.metadata?.taskId) {
+    links.push(
+      <Tooltip key="task" transition="pop" label={action.metadata.taskId}>
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          compact
+          href={`/cms/tasks/${action.metadata.taskId}`}
+        >
+          {label('Open task')}
+        </Button>
+      </Tooltip>
+    );
+  }
+
   if (action.metadata?.sheetId) {
     links.push(
       <Button

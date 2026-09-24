@@ -27,6 +27,13 @@ const MOCK_ACTIONS = vi.hoisted(() => {
       metadata: {sheetId: 'abc123'},
       timestamp: timestamp,
     },
+    // Renders an "Open task" link.
+    {
+      action: 'tasks.updateStatus',
+      by: 'test@example.com',
+      metadata: {taskId: '42', status: 'done'},
+      timestamp: timestamp,
+    },
   ];
 });
 
@@ -93,6 +100,17 @@ describe('ActionLogs', () => {
     expect(offsets[0].centerY).toBeCloseTo(offsets[1].centerY, 1);
     expect(offsets[0].right).toBeCloseTo(offsets[1].right, 1);
     expect(offsets[0].height).toBeCloseTo(offsets[1].height, 1);
+  });
+
+  it('links task actions to the task page', async () => {
+    const {container} = renderCompact();
+    const rows = await waitForRows(container);
+    const button = rows[2].querySelector(
+      '.ActionLogsCompactItemPreview__buttons a'
+    ) as HTMLAnchorElement;
+    expect(button).not.toBeNull();
+    expect(button.getAttribute('href')).toBe('/cms/tasks/42');
+    expect(button.textContent).toBe('Open');
   });
 
   it('keeps the timestamp in place when its tooltip opens', async () => {
