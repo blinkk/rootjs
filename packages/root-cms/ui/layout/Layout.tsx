@@ -25,7 +25,7 @@ import {ComponentChildren, createContext} from 'preact';
 import {useCallback, useContext, useMemo} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
-import packageJson from '../../package.json' assert {type: 'json'};
+import packageJson from '../../package.json' with {type: 'json'};
 import {clearLastSignIn} from '../../shared/auth-hints.js';
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
