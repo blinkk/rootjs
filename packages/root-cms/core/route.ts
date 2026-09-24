@@ -412,15 +412,17 @@ export function createRoute(options: CreateRouteOptions): Route {
 
         const preferredLocale = ctx.getPreferredLocale(docLocales);
         if (preferredLocale) {
-          // Older versions of `getPreferredLocale()` return the locale in
-          // lower-case, so convert it to the doc's locale casing.
+          // The `getPreferredLocale()` method returns the locale in lower-case,
+          // convert it to the doc's locale casing.
+          // TODO(stevenle): fix this upstream.
+
           const normalizedLocale =
-            localesMap[preferredLocale.toLowerCase()] || preferredLocale;
+            localesMap[preferredLocale] || preferredLocale;
 
           // "en" users in certain countries should default to en-GB if it
           // exists in the doc.
           // TODO(stevenle): add a formal fallback configuration system.
-          if (normalizedLocale.toLowerCase() === 'en') {
+          if (preferredLocale === 'en') {
             if (['AU', 'CA', 'IN', 'MY'].includes(country)) {
               if (localesMap[`en-${country.toLowerCase()}`]) {
                 return localesMap[`en-${country.toLowerCase()}`];
