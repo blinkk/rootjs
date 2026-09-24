@@ -373,6 +373,11 @@ export type CMSPluginOptions = {
   /**
    * GAPI credentials. Include if using Google Drive and Google Sheets features.
    * See: https://developers.google.com/sheets/api/quickstart/js
+   *
+   * Enable the Google Drive and Google Sheets APIs in the Google Cloud project
+   * that owns the OAuth client. Root AI can also read Google Slides decks
+   * slide by slide when the Google Slides API is enabled; otherwise it falls
+   * back to a plain-text export via the Drive API.
    */
   gapi?: {
     /** https://developers.google.com/sheets/api/quickstart/js#create_an_api_key */

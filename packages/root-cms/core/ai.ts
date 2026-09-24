@@ -30,9 +30,11 @@ import {
   AiConfig,
   AiExecutionMode,
   AiModelConfig,
+  assertSupportsImageGeneration,
   normalizeExecutionMode,
   resolveLanguageModel,
   testSupportsImageEditing,
+  testSupportsImageGeneration,
 } from '../shared/ai/models.js';
 import {
   buildTitlePrompt,
@@ -64,6 +66,7 @@ export {
   resolveImageModel,
   resolveLanguageModel,
   testSupportsImageEditing,
+  testSupportsImageGeneration,
   withBrowserHeaders,
 } from '../shared/ai/models.js';
 export type {ResolvedAiModelConfig} from './ai-vertex.js';
@@ -103,7 +106,7 @@ export const DEFAULT_CHAT_SYSTEM_PROMPT = [
  * separately (and only for the selected model) via `serializeAiClientModel`.
  */
 export function serializeAiConfig(config: AiConfig) {
-  const imageModels = config.imageModels || [];
+  const imageModels = listImageModels(config);
   return {
     defaultModel: config.defaultModel || config.models[0]?.id,
     models: config.models.map((m) => ({
@@ -118,7 +121,7 @@ export function serializeAiConfig(config: AiConfig) {
       },
     })),
     imageGenerationEnabled: imageModels.length > 0,
-    defaultImageModel: config.defaultImageModel || imageModels[0]?.id,
+    defaultImageModel: findImageModel(config)?.id,
     imageModels: imageModels.map((m) => ({
       id: m.id,
       label: m.label || m.id,
@@ -203,12 +206,41 @@ export function findModel(
   return config.models.find((m) => m.id === defaultId) || null;
 }
 
-/** Returns the image model config matching `modelId`, or the default image model. */
+/** Image model ids already warned about by `listImageModels`. */
+const warnedUnsupportedImageModels = new Set<string>();
+
+/**
+ * Returns the configured image models that can generate images, skipping (and
+ * warning once about) unsupported ones such as retired Imagen models.
+ */
+function listImageModels(config: AiConfig): AiModelConfig[] {
+  return (config.imageModels || []).filter((model) => {
+    if (testSupportsImageGeneration(model)) {
+      return true;
+    }
+    if (!warnedUnsupportedImageModels.has(model.id)) {
+      warnedUnsupportedImageModels.add(model.id);
+      try {
+        assertSupportsImageGeneration(model);
+      } catch (err: any) {
+        console.warn(
+          `[root-cms] ignoring ai.imageModels entry: ${err.message}`
+        );
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Returns the image model config matching `modelId`, or the default image
+ * model. Unsupported image models are never returned.
+ */
 export function findImageModel(
   config: AiConfig,
   modelId?: string
 ): AiModelConfig | null {
-  const imageModels = config.imageModels || [];
+  const imageModels = listImageModels(config);
   if (imageModels.length === 0) {
     return null;
   }
@@ -218,8 +250,8 @@ export function findImageModel(
       return match;
     }
   }
-  const defaultId = config.defaultImageModel || imageModels[0]?.id;
-  return imageModels.find((m) => m.id === defaultId) || null;
+  const defaultId = config.defaultImageModel;
+  return imageModels.find((m) => m.id === defaultId) || imageModels[0];
 }
 
 /**
@@ -376,7 +408,7 @@ function buildWorkspacePrompt(rootConfig: RootConfig): string {
 /**
  * Whether the project configured Google API credentials on the cmsPlugin.
  * When set, the browser adds the Google read tools (`gdoc_get`, `gsheet_get`,
- * `gdrive_getFile`) to the chat tool set, so the system prompt describes them.
+ * `gslides_get`, `gdrive_getFile`) to the chat tool set, so the system prompt describes them.
  */
 export function testGoogleApiEnabled(rootConfig: RootConfig): boolean {
   const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
@@ -391,11 +423,13 @@ export function buildGoogleToolsPrompt(): string {
   return [
     'Google Workspace tools:',
     '- `gdoc_get` reads a Google Doc as markdown, `gsheet_get` reads the cell',
-    '  values of one tab of a Google Sheet, and `gdrive_getFile` reads other',
-    '  Drive files that can be represented as text.',
+    '  values of one tab of a Google Sheet, `gslides_get` reads a Google',
+    '  Slides deck slide by slide (titles, text and speaker notes), and',
+    '  `gdrive_getFile` reads other Drive files that can be represented as',
+    '  text.',
     '- Use them whenever the user points at a Google link (e.g. "update the',
-    '  page with the copy from this doc"). If they mention a doc or sheet',
-    '  without a link, ask for the URL instead of guessing a file id.',
+    '  page with the copy from this doc"). If they mention a doc, sheet or',
+    '  deck without a link, ask for the URL instead of guessing a file id.',
     "- Reads run with the signed-in user's own Google account, so you can",
     '  only open files that user can open. The tools are read-only: never',
     '  claim to have created, edited or shared a Google file.',
@@ -403,6 +437,8 @@ export function buildGoogleToolsPrompt(): string {
     '- On a `GOOGLE_AUTH_REQUIRED` error, tell the user the CMS will prompt',
     '  them to sign in with Google when they send their next message, and ask',
     '  them to reply once they have. Do not retry the tool in the same turn.',
+    '- On a `GOOGLE_NOT_CONFIGURED` error, tell the user a CMS admin needs to',
+    '  enable the named Google API for the project; retrying will not help.',
   ].join('\n');
 }
 
@@ -847,7 +883,7 @@ export async function generateImage(
   const imageModelConfig = findImageModel(config, options.modelId);
   if (!imageModelConfig) {
     throw new Error(
-      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+      'No supported image model configured. Set `ai.imageModels` on the cmsPlugin config (Imagen models are no longer supported, use a Gemini or OpenAI image model).'
     );
   }
 
@@ -914,7 +950,7 @@ export async function editImage(
   const imageModelConfig = findImageModel(config, options.modelId);
   if (!imageModelConfig) {
     throw new Error(
-      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+      'No supported image model configured. Set `ai.imageModels` on the cmsPlugin config (Imagen models are no longer supported, use a Gemini or OpenAI image model).'
     );
   }
   if (!testSupportsImageEditing(imageModelConfig)) {

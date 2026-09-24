@@ -1,7 +1,7 @@
 /**
  * Browser-side backend for the Root AI Google tools (`core/ai-tools-google.ts`).
  *
- * Calls the Drive and Sheets REST APIs directly with the signed-in user's own
+ * Calls the Drive, Sheets and Slides REST APIs directly with the signed-in user's own
  * OAuth token (see `ui/utils/google-auth.ts`), so the model can only read
  * files the user personally has access to and no Google credential is ever
  * stored server-side. The REST APIs are used instead of `gapi.client` so the
@@ -20,6 +20,8 @@ import {
   type GoogleFileMeta,
   type GoogleSheetContent,
   type GoogleSheetTab,
+  type GoogleSlide,
+  type GoogleSlidesContent,
   type GoogleToolBackend,
 } from '../../../core/ai-tools-google.js';
 import {parseGoogleDriveId} from '../../utils/gdrive.js';
@@ -32,6 +34,7 @@ import {
 
 const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
 const SHEETS_API_ORIGIN = 'https://sheets.googleapis.com';
+const SLIDES_API_ORIGIN = 'https://slides.googleapis.com';
 
 const DOC_MIME_TYPE = 'application/vnd.google-apps.document';
 const SHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet';
@@ -40,6 +43,16 @@ const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 /** Drive file fields requested for every file read. */
 const FILE_FIELDS = 'id,name,mimeType,modifiedTime,size,webViewLink';
+
+/**
+ * Slides API fields requested by `gslides_get`: each slide's page elements
+ * plus its speaker notes page.
+ */
+const SLIDES_FIELDS =
+  'slides(objectId,pageElements,slideProperties(isSkipped,notesPage(notesProperties,pageElements)))';
+
+/** Placeholder types treated as a slide's title. */
+const TITLE_PLACEHOLDER_TYPES = ['TITLE', 'CENTERED_TITLE'];
 
 /** Non-`text/*` mime types that can still be read as text. */
 const TEXT_MIME_TYPES = [
@@ -58,6 +71,8 @@ export interface GoogleFileRef {
   fileId: string;
   /** Spreadsheet tab id, when the URL pointed at a specific tab. */
   gid?: number;
+  /** Slide object id, when the URL pointed at a specific slide. */
+  slideId?: string;
 }
 
 /**
@@ -78,8 +93,16 @@ export function parseGoogleFileRef(input: string): GoogleFileRef | null {
   if (!fileId) {
     return null;
   }
+  const ref: GoogleFileRef = {fileId};
   const gid = parseGid(value);
-  return gid === null ? {fileId} : {fileId, gid};
+  if (gid !== null) {
+    ref.gid = gid;
+  }
+  const slideId = parseSlideId(value);
+  if (slideId) {
+    ref.slideId = slideId;
+  }
+  return ref;
 }
 
 /** Extracts the `gid` (spreadsheet tab id) from a URL hash or query param. */
@@ -90,6 +113,12 @@ function parseGid(url: string): number | null {
   }
   const gid = Number(match[1]);
   return Number.isFinite(gid) ? gid : null;
+}
+
+/** Extracts the slide object id from a `#slide=id.<objectId>` URL hash. */
+function parseSlideId(url: string): string | null {
+  const match = url.match(/[#?&]slide=id\.([A-Za-z0-9_-]+)/);
+  return match ? match[1] : null;
 }
 
 /** Parses a file ref, throwing a model-readable error on bad input. */
@@ -141,6 +170,17 @@ async function googleFetch(url: string, retryOn401 = true): Promise<Response> {
   const reason = String(
     body?.error?.errors?.[0]?.reason || body?.error?.status || ''
   ).toLowerCase();
+  if (res.status === 403 && isApiDisabledError(body)) {
+    throw new GoogleToolError(
+      'GOOGLE_NOT_CONFIGURED',
+      `A Google API needed to read this file is not enabled for the CMS's Google Cloud project${
+        body?.error?.message ? `: ${body.error.message}` : '.'
+      }`,
+      {
+        hint: 'Tell the user a CMS admin needs to enable the API in the Google Cloud console.',
+      }
+    );
+  }
   if (
     res.status === 429 ||
     (res.status === 403 &&
@@ -168,6 +208,21 @@ async function googleFetch(url: string, retryOn401 = true): Promise<Response> {
   throw new GoogleToolError(
     'GOOGLE_REQUEST_FAILED',
     `Google API request failed (${res.status})${message ? `: ${message}` : ''}`
+  );
+}
+
+/**
+ * Whether a 403 response body means the API is disabled for the OAuth
+ * client's Google Cloud project, rather than a per-file permission error.
+ */
+function isApiDisabledError(body: any): boolean {
+  const reasons = [
+    body?.error?.errors?.[0]?.reason,
+    ...(body?.error?.details || []).map((detail: any) => detail?.reason),
+  ].map((reason) => String(reason || '').toLowerCase());
+  return reasons.some(
+    (reason) =>
+      reason === 'accessnotconfigured' || reason === 'service_disabled'
   );
 }
 
@@ -319,7 +374,9 @@ async function getSheet(
         hint:
           meta.mimeType === DOC_MIME_TYPE
             ? 'Call `gdoc_get` for this file instead.'
-            : 'Call `gdrive_getFile` for this file instead.',
+            : meta.mimeType === SLIDES_MIME_TYPE
+              ? 'Call `gslides_get` for this file instead.'
+              : 'Call `gdrive_getFile` for this file instead.',
       }
     );
   }
@@ -413,6 +470,245 @@ function quoteSheetTitle(title: string): string {
   return `'${title.replace(/'/g, "''")}'`;
 }
 
+/**
+ * Converts a Slides API `TextContent` into text. Bulleted paragraphs become
+ * markdown list items and linked runs become markdown links.
+ */
+function textContentToString(textContent: any): string {
+  const parts: string[] = [];
+  for (const element of textContent?.textElements || []) {
+    const bullet = element?.paragraphMarker?.bullet;
+    if (bullet) {
+      parts.push(`${'  '.repeat(Number(bullet.nestingLevel || 0))}- `);
+      continue;
+    }
+    const content = element?.textRun?.content;
+    if (!content) {
+      continue;
+    }
+    const url = element.textRun.style?.link?.url;
+    const match = url ? content.match(/^(\s*)([\s\S]*?)(\s*)$/) : null;
+    if (match && match[2]) {
+      parts.push(`${match[1]}[${match[2]}](${url})${match[3]}`);
+    } else {
+      parts.push(content);
+    }
+  }
+  return normalizeSlideText(parts.join(''));
+}
+
+/**
+ * Normalizes slide text: soft line breaks (vertical tabs) become newlines,
+ * trailing whitespace is dropped, and runs of blank lines are collapsed.
+ */
+function normalizeSlideText(text: string): string {
+  return text
+    .split('\u000b')
+    .join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Sorts page elements top-to-bottom, then left-to-right. */
+function sortByPosition(elements: any[]): any[] {
+  return [...elements].sort((a, b) => {
+    const dy =
+      Number(a?.transform?.translateY || 0) -
+      Number(b?.transform?.translateY || 0);
+    if (dy !== 0) {
+      return dy;
+    }
+    return (
+      Number(a?.transform?.translateX || 0) -
+      Number(b?.transform?.translateX || 0)
+    );
+  });
+}
+
+/** Extracts the readable text of a single page element. */
+function pageElementToString(element: any): string {
+  if (element?.shape) {
+    return textContentToString(element.shape.text);
+  }
+  if (element?.table) {
+    return (element.table.tableRows || [])
+      .map((row: any) =>
+        (row?.tableCells || [])
+          .map((cell: any) =>
+            textContentToString(cell?.text).replace(/\s*\n\s*/g, ' ')
+          )
+          .join(' | ')
+      )
+      .filter((line: string) => line.replace(/[\s|]/g, ''))
+      .join('\n');
+  }
+  if (element?.elementGroup) {
+    return sortByPosition(element.elementGroup.children || [])
+      .map(pageElementToString)
+      .filter(Boolean)
+      .join('\n\n');
+  }
+  if (element?.wordArt?.renderedText) {
+    return normalizeSlideText(String(element.wordArt.renderedText));
+  }
+  if (element?.image || element?.video || element?.sheetsChart) {
+    const alt = String(element.description || element.title || '').trim();
+    if (alt) {
+      const kind = element.image ? 'Image' : element.video ? 'Video' : 'Chart';
+      return `[${kind}: ${alt}]`;
+    }
+  }
+  return '';
+}
+
+/** Whether a page element is a slide's title placeholder. */
+function isTitleElement(element: any): boolean {
+  return TITLE_PLACEHOLDER_TYPES.includes(element?.shape?.placeholder?.type);
+}
+
+/** Extracts the speaker notes text from a slide, if any. */
+function slideNotesToString(slide: any): string {
+  const notesPage = slide?.slideProperties?.notesPage;
+  const notesId = notesPage?.notesProperties?.speakerNotesObjectId;
+  if (!notesId) {
+    return '';
+  }
+  const notesShape = (notesPage.pageElements || []).find(
+    (element: any) => element?.objectId === notesId
+  );
+  return notesShape ? pageElementToString(notesShape) : '';
+}
+
+/**
+ * Converts a Slides API `Presentation` resource into `GoogleSlide`s. When
+ * `linkedSlideId` is set, the matching slide is marked `linked: true`.
+ */
+export function extractSlides(
+  presentation: any,
+  linkedSlideId?: string
+): GoogleSlide[] {
+  return (presentation?.slides || []).map((slide: any, index: number) => {
+    const elements = sortByPosition(slide?.pageElements || []);
+    const titleElement = elements.find(isTitleElement);
+    const title = titleElement ? pageElementToString(titleElement) : '';
+    const text = elements
+      .filter((element) => element !== titleElement)
+      .map(pageElementToString)
+      .filter(Boolean)
+      .join('\n\n');
+    const notes = slideNotesToString(slide);
+    const objectId = String(slide?.objectId || '');
+    const result: GoogleSlide = {slideNumber: index + 1, objectId, text};
+    if (title) {
+      result.title = title;
+    }
+    if (notes) {
+      result.notes = notes;
+    }
+    if (slide?.slideProperties?.isSkipped) {
+      result.skipped = true;
+    }
+    if (linkedSlideId && objectId === linkedSlideId) {
+      result.linked = true;
+    }
+    return result;
+  });
+}
+
+/**
+ * Keeps slides until their combined title, text and notes reach `maxChars`.
+ * The slide that crosses the limit is cut short and later slides are dropped.
+ */
+export function limitSlides(
+  slides: GoogleSlide[],
+  maxChars: number
+): {slides: GoogleSlide[]; truncated: boolean} {
+  const kept: GoogleSlide[] = [];
+  let remaining = maxChars;
+  for (const slide of slides) {
+    if (remaining <= 0) {
+      return {slides: kept, truncated: true};
+    }
+    const size =
+      (slide.title?.length || 0) +
+      slide.text.length +
+      (slide.notes?.length || 0);
+    if (size <= remaining) {
+      kept.push(slide);
+      remaining -= size;
+      continue;
+    }
+    const cut: GoogleSlide = {...slide};
+    if (cut.title) {
+      cut.title = cut.title.slice(0, remaining);
+      remaining -= cut.title.length;
+    }
+    cut.text = cut.text.slice(0, Math.max(remaining, 0));
+    remaining -= cut.text.length;
+    if (cut.notes) {
+      if (remaining > 0) {
+        cut.notes = cut.notes.slice(0, remaining);
+      } else {
+        delete cut.notes;
+      }
+    }
+    kept.push(cut);
+    return {slides: kept, truncated: true};
+  }
+  return {slides: kept, truncated: false};
+}
+
+async function getSlides(
+  fileRef: string,
+  options: {maxChars: number}
+): Promise<GoogleSlidesContent> {
+  const ref = requireFileRef(fileRef);
+  const file = await fetchFileMetadata(ref.fileId);
+  const meta = shapeFileMeta(file);
+  if (meta.mimeType !== SLIDES_MIME_TYPE) {
+    throw new GoogleToolError(
+      'GOOGLE_UNSUPPORTED_FILE',
+      `"${meta.name}" is not a Google Slides presentation (${meta.mimeType}).`,
+      {
+        hint:
+          meta.mimeType === DOC_MIME_TYPE
+            ? 'Call `gdoc_get` for this file instead.'
+            : meta.mimeType === SHEET_MIME_TYPE
+              ? 'Call `gsheet_get` for this file instead.'
+              : 'Call `gdrive_getFile` for this file instead.',
+      }
+    );
+  }
+
+  let presentation: any;
+  try {
+    const res = await googleFetch(
+      `${SLIDES_API_ORIGIN}/v1/presentations/${encodeURIComponent(
+        ref.fileId
+      )}?fields=${encodeURIComponent(SLIDES_FIELDS)}`
+    );
+    presentation = await res.json();
+  } catch (err) {
+    if (
+      !(err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED')
+    ) {
+      throw err;
+    }
+    // The Slides API is not enabled for this project. Fall back to Drive's
+    // plain-text export, which has the deck's text without slide structure.
+    const {text, truncated} = truncate(
+      await exportAsText(ref.fileId, meta.mimeType),
+      options.maxChars
+    );
+    return {...meta, slides: [], text, truncated};
+  }
+
+  const allSlides = extractSlides(presentation, ref.slideId);
+  const {slides, truncated} = limitSlides(allSlides, options.maxChars);
+  return {...meta, slides, slideCount: allSlides.length, truncated};
+}
+
 async function getFile(
   fileRef: string,
   options: {maxChars: number}
@@ -456,7 +752,7 @@ async function getFile(
 
 /** Builds a `GoogleToolBackend` backed by the Drive and Sheets REST APIs. */
 export function createClientGoogleToolBackend(): GoogleToolBackend {
-  return {getDoc, getSheet, getFile};
+  return {getDoc, getSheet, getSlides, getFile};
 }
 
 /** Matches a Google Docs/Sheets/Drive link inside chat text. */

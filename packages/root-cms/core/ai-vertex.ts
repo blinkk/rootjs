@@ -17,6 +17,7 @@ import {ImageModel} from 'ai';
 import {GoogleAuth} from 'google-auth-library';
 import {
   AiModelConfig,
+  assertSupportsImageGeneration,
   DEFAULT_VERTEX_LOCATION,
   resolveImageModel,
   testHasAuthorizationHeader,
@@ -130,6 +131,7 @@ export async function resolveServerImageModel(
   if (model.provider !== 'google-vertex') {
     return resolveImageModel(model);
   }
+  assertSupportsImageGeneration(model);
   let project = model.project;
   if (!model.apiKey) {
     try {

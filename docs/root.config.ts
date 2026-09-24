@@ -71,8 +71,8 @@ export default defineConfig({
             capabilities: {tools: true, reasoning: true, attachments: true},
           },
           {
-            id: 'claude-opus-5',
-            label: 'Claude Opus 5',
+            id: 'claude-opus-5-5',
+            label: 'Claude Opus 5.5',
             provider: 'anthropic',
             apiKey: process.env.ANTHROPIC_API_KEY,
             capabilities: {tools: true, reasoning: true, attachments: true},
