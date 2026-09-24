@@ -10,6 +10,9 @@
 - `docs/` — powers `rootjs.dev`. It's a real Root.js project (`@private/docs`)
   and the local playground for testing framework/CMS changes.
 - `examples/` — example projects. `apps/` — internal, unpublished.
+- `docker/` — an Ubuntu image (Node + pnpm + gcloud) for running a Root CMS
+  project against Firestore with persisted gcloud credentials, plus a child
+  image (`Dockerfile.claude`) that adds the Claude Code CLI.
 
 ## Development
 
