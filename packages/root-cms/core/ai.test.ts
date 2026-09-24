@@ -9,6 +9,7 @@ import {
   buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
+  findImageModel,
   findModel,
   mergeIncomingMessage,
   sanitizeDanglingToolCalls,
@@ -18,6 +19,7 @@ import {
   serializeAiConfig,
   stripUndefined,
   testSupportsImageEditing,
+  testSupportsImageGeneration,
 } from './ai.js';
 
 describe('ai', () => {
@@ -87,11 +89,7 @@ describe('ai', () => {
       const result = serializeAiConfig({
         ...config,
         imageModels: [
-          {
-            id: 'imagen',
-            provider: 'google',
-            modelId: 'imagen-4.0-generate-001',
-          },
+          {id: 'dall-e-3', provider: 'openai'},
           {
             id: 'nano-banana',
             label: 'Nano Banana',
@@ -106,10 +104,10 @@ describe('ai', () => {
       expect(result.defaultImageModel).toBe('nano-banana');
       expect(result.imageModels).toEqual([
         {
-          id: 'imagen',
-          label: 'imagen',
+          id: 'dall-e-3',
+          label: 'dall-e-3',
           description: undefined,
-          provider: 'google',
+          provider: 'openai',
           editing: false,
         },
         {
@@ -121,6 +119,104 @@ describe('ai', () => {
         },
       ]);
       expect((result.imageModels[1] as any).apiKey).toBeUndefined();
+    });
+
+    it('omits retired imagen models', () => {
+      const result = serializeAiConfig({
+        ...config,
+        imageModels: [
+          {
+            id: 'imagen',
+            provider: 'google',
+            modelId: 'imagen-4.0-generate-001',
+          },
+          {
+            id: 'nano-banana',
+            provider: 'google',
+            modelId: 'gemini-3-pro-image-preview',
+          },
+        ],
+        defaultImageModel: 'imagen',
+      });
+      expect(result.imageGenerationEnabled).toBe(true);
+      expect(result.defaultImageModel).toBe('nano-banana');
+      expect(result.imageModels.map((m) => m.id)).toEqual(['nano-banana']);
+    });
+
+    it('disables image generation when only imagen models are configured', () => {
+      const result = serializeAiConfig({
+        ...config,
+        imageModels: [
+          {id: 'imagen-4.0-generate-001', provider: 'google-vertex'},
+        ],
+      });
+      expect(result.imageGenerationEnabled).toBe(false);
+      expect(result.defaultImageModel).toBeUndefined();
+      expect(result.imageModels).toEqual([]);
+    });
+  });
+
+  describe('findImageModel', () => {
+    const imageConfig: AiConfig = {
+      models: [],
+      imageModels: [
+        {id: 'imagen', provider: 'google', modelId: 'imagen-4.0-generate-001'},
+        {id: 'gpt-image-1', provider: 'openai'},
+        {id: 'gemini-3-pro-image-preview', provider: 'google-vertex'},
+      ],
+    };
+
+    it('returns the requested model', () => {
+      expect(
+        findImageModel(imageConfig, 'gemini-3-pro-image-preview')?.id
+      ).toBe('gemini-3-pro-image-preview');
+    });
+
+    it('never returns an imagen model', () => {
+      expect(findImageModel(imageConfig, 'imagen')?.id).toBe('gpt-image-1');
+      expect(
+        findImageModel({...imageConfig, defaultImageModel: 'imagen'})?.id
+      ).toBe('gpt-image-1');
+    });
+  });
+
+  describe('testSupportsImageGeneration', () => {
+    it('accepts openai and gemini image models', () => {
+      expect(
+        testSupportsImageGeneration({id: 'gpt-image-1', provider: 'openai'})
+      ).toBe(true);
+      expect(
+        testSupportsImageGeneration({
+          id: 'nano-banana',
+          provider: 'google',
+          modelId: 'gemini-3-pro-image-preview',
+        })
+      ).toBe(true);
+      expect(
+        testSupportsImageGeneration({
+          id: 'gemini-3-pro-image-preview',
+          provider: 'google-vertex',
+        })
+      ).toBe(true);
+    });
+
+    it('rejects imagen and providers without image support', () => {
+      expect(
+        testSupportsImageGeneration({
+          id: 'img',
+          provider: 'google',
+          modelId: 'imagen-4.0-generate-001',
+        })
+      ).toBe(false);
+      expect(
+        testSupportsImageGeneration({
+          id: 'imagen-3.0-capability-001',
+          provider: 'google-vertex',
+        })
+      ).toBe(false);
+      expect(
+        testSupportsImageGeneration({id: 'claude-opus', provider: 'anthropic'})
+      ).toBe(false);
     });
   });
 

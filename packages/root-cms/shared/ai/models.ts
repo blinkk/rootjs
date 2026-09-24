@@ -28,8 +28,8 @@ export type AiExecutionMode = 'read' | 'approve' | 'auto';
 /**
  * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
  * endpoint (e.g. local Ollama, vLLM, OpenRouter). Use `google-vertex` to call
- * Gemini/Imagen through Vertex AI with Google Cloud credentials instead of a
- * Gemini API key.
+ * Gemini through Vertex AI with Google Cloud credentials instead of a Gemini
+ * API key.
  */
 export type AiProvider =
   | 'openai'
@@ -99,8 +99,7 @@ export interface AiModelConfig {
   project?: string;
   /**
    * Vertex AI location (`google-vertex` only), e.g. `us-central1`. Defaults
-   * to `global`. Imagen models are only served from regional locations, so
-   * Vertex image models usually need this set explicitly.
+   * to `global`.
    */
   location?: string;
   /** Capabilities advertised to the UI. */
@@ -117,8 +116,9 @@ export interface AiConfig {
   defaultModel?: string;
   /**
    * Image generation models. Used by the image generator and any other
-   * features that produce images. Only the `openai` and `google` providers
-   * support image generation.
+   * features that produce images. Supported providers are `openai` (e.g.
+   * `gpt-image-*`), and `google` or `google-vertex` with a Gemini image model
+   * (e.g. `gemini-3-pro-image-preview`). Imagen models are not supported.
    */
   imageModels?: AiModelConfig[];
   /** Id of the default image model. Defaults to the first entry in `imageModels`. */
@@ -328,8 +328,46 @@ export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
   }
 }
 
+/**
+ * Returns whether an image model config can generate images. Google retired
+ * the Imagen API, so the `google` and `google-vertex` providers only serve
+ * Gemini image models (ids starting with `gemini-`).
+ */
+export function testSupportsImageGeneration(model: AiModelConfig): boolean {
+  const modelId = model.modelId || model.id;
+  switch (model.provider) {
+    case 'openai':
+      return true;
+    case 'google':
+    case 'google-vertex':
+      return modelId.startsWith('gemini-');
+    default:
+      return false;
+  }
+}
+
+/**
+ * Throws a descriptive error if `model` cannot generate images, e.g. a
+ * retired Imagen model.
+ */
+export function assertSupportsImageGeneration(model: AiModelConfig) {
+  if (testSupportsImageGeneration(model)) {
+    return;
+  }
+  const modelId = model.modelId || model.id;
+  if (model.provider === 'google' || model.provider === 'google-vertex') {
+    throw new Error(
+      `image model "${model.id}" (${modelId}) is not supported: Google retired the Imagen API. Use a Gemini image model instead, e.g. "gemini-3-pro-image-preview".`
+    );
+  }
+  throw new Error(
+    `provider "${model.provider}" does not support image generation`
+  );
+}
+
 /** Resolves an `AiModelConfig` to an AI SDK `ImageModel` instance. */
 export function resolveImageModel(model: AiModelConfig): ImageModel {
+  assertSupportsImageGeneration(model);
   const modelId = model.modelId || model.id;
   switch (model.provider) {
     case 'openai': {
@@ -371,10 +409,7 @@ export function resolveImageModel(model: AiModelConfig): ImageModel {
  * Support is provider- and model-specific:
  * - `openai`: the `/images/edits` endpoint backs `gpt-image-*` and `dall-e-2`.
  *   `dall-e-3` is generation-only.
- * - `google`: only the Gemini image models accept source images. Imagen models
- *   are generation-only on the Gemini API.
- * - `google-vertex`: Gemini image models accept source images, and the Imagen
- *   "capability" models expose Vertex's reference-image editing API.
+ * - `google` / `google-vertex`: Gemini image models accept source images.
  */
 export function testSupportsImageEditing(model: AiModelConfig): boolean {
   const modelId = model.modelId || model.id;
@@ -382,9 +417,8 @@ export function testSupportsImageEditing(model: AiModelConfig): boolean {
     case 'openai':
       return !modelId.startsWith('dall-e-3');
     case 'google':
-      return modelId.startsWith('gemini-');
     case 'google-vertex':
-      return modelId.startsWith('gemini-') || modelId.includes('-capability-');
+      return modelId.startsWith('gemini-');
     default:
       return false;
   }

@@ -30,9 +30,11 @@ import {
   AiConfig,
   AiExecutionMode,
   AiModelConfig,
+  assertSupportsImageGeneration,
   normalizeExecutionMode,
   resolveLanguageModel,
   testSupportsImageEditing,
+  testSupportsImageGeneration,
 } from '../shared/ai/models.js';
 import {
   buildTitlePrompt,
@@ -64,6 +66,7 @@ export {
   resolveImageModel,
   resolveLanguageModel,
   testSupportsImageEditing,
+  testSupportsImageGeneration,
   withBrowserHeaders,
 } from '../shared/ai/models.js';
 export type {ResolvedAiModelConfig} from './ai-vertex.js';
@@ -103,7 +106,7 @@ export const DEFAULT_CHAT_SYSTEM_PROMPT = [
  * separately (and only for the selected model) via `serializeAiClientModel`.
  */
 export function serializeAiConfig(config: AiConfig) {
-  const imageModels = config.imageModels || [];
+  const imageModels = listImageModels(config);
   return {
     defaultModel: config.defaultModel || config.models[0]?.id,
     models: config.models.map((m) => ({
@@ -118,7 +121,7 @@ export function serializeAiConfig(config: AiConfig) {
       },
     })),
     imageGenerationEnabled: imageModels.length > 0,
-    defaultImageModel: config.defaultImageModel || imageModels[0]?.id,
+    defaultImageModel: findImageModel(config)?.id,
     imageModels: imageModels.map((m) => ({
       id: m.id,
       label: m.label || m.id,
@@ -203,12 +206,41 @@ export function findModel(
   return config.models.find((m) => m.id === defaultId) || null;
 }
 
-/** Returns the image model config matching `modelId`, or the default image model. */
+/** Image model ids already warned about by `listImageModels`. */
+const warnedUnsupportedImageModels = new Set<string>();
+
+/**
+ * Returns the configured image models that can generate images, skipping (and
+ * warning once about) unsupported ones such as retired Imagen models.
+ */
+function listImageModels(config: AiConfig): AiModelConfig[] {
+  return (config.imageModels || []).filter((model) => {
+    if (testSupportsImageGeneration(model)) {
+      return true;
+    }
+    if (!warnedUnsupportedImageModels.has(model.id)) {
+      warnedUnsupportedImageModels.add(model.id);
+      try {
+        assertSupportsImageGeneration(model);
+      } catch (err: any) {
+        console.warn(
+          `[root-cms] ignoring ai.imageModels entry: ${err.message}`
+        );
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Returns the image model config matching `modelId`, or the default image
+ * model. Unsupported image models are never returned.
+ */
 export function findImageModel(
   config: AiConfig,
   modelId?: string
 ): AiModelConfig | null {
-  const imageModels = config.imageModels || [];
+  const imageModels = listImageModels(config);
   if (imageModels.length === 0) {
     return null;
   }
@@ -218,8 +250,8 @@ export function findImageModel(
       return match;
     }
   }
-  const defaultId = config.defaultImageModel || imageModels[0]?.id;
-  return imageModels.find((m) => m.id === defaultId) || null;
+  const defaultId = config.defaultImageModel;
+  return imageModels.find((m) => m.id === defaultId) || imageModels[0];
 }
 
 /**
@@ -851,7 +883,7 @@ export async function generateImage(
   const imageModelConfig = findImageModel(config, options.modelId);
   if (!imageModelConfig) {
     throw new Error(
-      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+      'No supported image model configured. Set `ai.imageModels` on the cmsPlugin config (Imagen models are no longer supported, use a Gemini or OpenAI image model).'
     );
   }
 
@@ -918,7 +950,7 @@ export async function editImage(
   const imageModelConfig = findImageModel(config, options.modelId);
   if (!imageModelConfig) {
     throw new Error(
-      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+      'No supported image model configured. Set `ai.imageModels` on the cmsPlugin config (Imagen models are no longer supported, use a Gemini or OpenAI image model).'
     );
   }
   if (!testSupportsImageEditing(imageModelConfig)) {

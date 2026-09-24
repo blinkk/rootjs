@@ -7,7 +7,11 @@ import {
   testHasAuthorizationHeader,
   testSupportsImageEditing,
 } from '../shared/ai/models.js';
-import {getFirebaseProjectId, resolveVertexCredentials} from './ai-vertex.js';
+import {
+  getFirebaseProjectId,
+  resolveServerImageModel,
+  resolveVertexCredentials,
+} from './ai-vertex.js';
 import {AiModelConfig, serializeAiClientModel} from './ai.js';
 
 /** Builds a minimal RootConfig with a cms plugin exposing `firebaseConfig`. */
@@ -225,8 +229,34 @@ describe('ai-vertex', () => {
     });
   });
 
+  describe('resolveServerImageModel', () => {
+    it('rejects retired imagen models on vertex', async () => {
+      await expect(
+        resolveServerImageModel(fakeRootConfig('my-project'), {
+          id: 'imagen',
+          provider: 'google-vertex',
+          modelId: 'imagen-4.0-generate-001',
+          apiKey: 'test-key',
+        })
+      ).rejects.toThrow(/Google retired the Imagen API/);
+    });
+
+    it('resolves gemini image models on vertex', async () => {
+      const model = await resolveServerImageModel(
+        fakeRootConfig('my-project'),
+        {
+          id: 'nano-banana',
+          provider: 'google-vertex',
+          modelId: 'gemini-3-pro-image-preview',
+          apiKey: 'test-key',
+        }
+      );
+      expect(model.modelId).toBe('gemini-3-pro-image-preview');
+    });
+  });
+
   describe('testSupportsImageEditing', () => {
-    it('accepts gemini and imagen capability models on vertex', () => {
+    it('accepts gemini but not imagen models on vertex', () => {
       expect(
         testSupportsImageEditing({
           id: 'gemini-2.5-flash-image',
@@ -238,7 +268,7 @@ describe('ai-vertex', () => {
           id: 'imagen-3.0-capability-001',
           provider: 'google-vertex',
         })
-      ).toBe(true);
+      ).toBe(false);
       expect(
         testSupportsImageEditing({
           id: 'imagen-4.0-generate-001',
