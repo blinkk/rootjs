@@ -1,4 +1,4 @@
-import {initializeApp} from 'firebase-admin/app';
+import {getApps, initializeApp} from 'firebase-admin/app';
 import {getSecurityRules} from 'firebase-admin/security-rules';
 
 export const FIRESTORE_RULES = `rules_version = '2';
@@ -71,8 +71,9 @@ service cloud.firestore {
  * NOTE: This function will overwrite any existing rules.
  */
 export async function applySecurityRules(projectId: string) {
-  // TODO(stevenle): check if an app exists first before initializing.
-  const app = initializeApp({projectId});
+  const app =
+    getApps().find((app) => app.options.projectId === projectId) ||
+    initializeApp({projectId}, `root-cms-security-rules-${projectId}`);
   const securityRules = getSecurityRules(app);
   await securityRules.releaseFirestoreRulesetFromSource(FIRESTORE_RULES);
 }

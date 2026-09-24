@@ -368,14 +368,12 @@ export function ExportSheetModal(
   }
 
   async function onSubmit() {
-    console.log(action);
     setLoading(true);
     if (action === 'new-sheet') {
       await notifyErrors(createGoogleSheet);
     } else if (action === 'add-tab') {
       await notifyErrors(addTabInGoogleSheet);
     } else if (action === 'link-sheet') {
-      // TODO
       await notifyErrors(linkGoogleSheet);
     }
     setLoading(false);

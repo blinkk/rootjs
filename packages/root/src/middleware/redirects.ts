@@ -2,6 +2,9 @@ import {RootRedirectConfig} from '../core/config.js';
 import {NextFunction, Request, Response} from '../core/types.js';
 import {RouteTrie} from '../render/route-trie.js';
 
+/** Matches `[key]`, `[...key]` and `[[...key]]` placeholders in a URL path. */
+const PARAM_REGEX = /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g;
+
 export interface RedirectsMiddlewareOptions {
   redirects: RootRedirectConfig[];
 }
@@ -50,8 +53,20 @@ function verifyRedirectConfig(redirect: RootRedirectConfig) {
   if (!testIsRedirectValid(redirect.destination)) {
     return false;
   }
-  // TODO(stevenle): verify all destination params exist within source.
+  const sourceParams = new Set(getParamNames(redirect.source));
+  const destinationParams = getParamNames(redirect.destination);
+  if (!destinationParams.every((param) => sourceParams.has(param))) {
+    return false;
+  }
   return true;
+}
+
+/**
+ * Returns the names of the `[key]` or `[...key]` placeholders in a URL path
+ * format string.
+ */
+function getParamNames(urlPathFormat: string): string[] {
+  return Array.from(urlPathFormat.matchAll(PARAM_REGEX), (match) => match[2]);
 }
 
 /**
@@ -63,7 +78,7 @@ function verifyRedirectConfig(redirect: RootRedirectConfig) {
  */
 function replaceParams(urlPathFormat: string, params: Record<string, string>) {
   const urlPath = urlPathFormat.replaceAll(
-    /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
+    PARAM_REGEX,
     (match: string, _wildcard: string, key: string) => {
       const val = params[key];
       if (!val) {

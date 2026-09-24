@@ -43,7 +43,7 @@ interface ImageMediaQuery {
 const MediaQuery = {
   SM: '(max-width: 499.98px)',
   MD: '(min-width: 500px) and (max-width: 1023.98px)',
-  LG: '(min-width: 1024px) and (max-width: 1439.98)',
+  LG: '(min-width: 1024px) and (max-width: 1439.98px)',
   XL: '(min-width: 1440px)',
 };
 

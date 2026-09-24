@@ -447,20 +447,6 @@ test('pretty mode: inline div elements stay inline', () => {
 `);
 });
 
-// TODO(stevenle): fix this test.
-// test('pretty mode: inline div without whitespace should stay inline', () => {
-//   const vnode = (
-//     <div>
-//       <div>1</div><div>2</div><div>3</div>
-//     </div>
-//   );
-//   const output = renderJsxToString(vnode, {mode: 'pretty'});
-//   expect(output).toBe(`<div>
-// <div>1</div><div>2</div><div>3</div>
-// </div>
-// `);
-// });
-
 test('pretty mode: void block elements get newlines', () => {
   const vnode = (
     <head>
