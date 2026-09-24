@@ -100,3 +100,47 @@
   font-size: 13px;
   color: var(--color-text-gray);
 }
+
+.DocDiffViewer__sys {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocDiffViewer__sys__label {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.DocDiffViewer__sys__locales {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.DocDiffViewer__sys__locale {
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.DocDiffViewer__sys__locale--added {
+  background-color: var(--color-green);
+}
+
+.DocDiffViewer__sys__locale--removed {
+  background-color: var(--color-red);
+}
+
+.DocDiffViewer__sys__unchanged {
+  color: var(--color-text-gray);
+}
+
+.DocDiffViewer__noFieldChanges {
+  padding: 12px 8px;
+  font-size: 12px;
+  color: var(--color-text-gray);
+}

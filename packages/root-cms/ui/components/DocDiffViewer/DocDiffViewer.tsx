@@ -5,6 +5,7 @@ import {IconCircleCheckFilled} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {LocalesDiff, diffDocLocales} from '../../utils/doc-diff.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {stableJsonStringify} from '../../utils/objects.js';
@@ -43,7 +44,10 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   const leftData = stableJsonStringify(cleanData(leftDoc?.fields || {}));
   const rightData = stableJsonStringify(cleanData(rightDoc?.fields || {}));
-  const isIdentical = !loading && leftDoc && rightDoc && leftData === rightData;
+  const fieldsIdentical = leftData === rightData;
+  const localesDiff = diffDocLocales(leftDoc, rightDoc);
+  const isIdentical =
+    !loading && leftDoc && rightDoc && fieldsIdentical && !localesDiff;
 
   const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
     right
@@ -128,11 +132,55 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
               <span>No changes. Both versions are identical.</span>
             </div>
           ) : (
-            <JsDiff oldCode={leftData} newCode={rightData} />
+            <>
+              {localesDiff && <LocalesDiffRow diff={localesDiff} />}
+              {fieldsIdentical ? (
+                <div className="DocDiffViewer__noFieldChanges">
+                  No field changes.
+                </div>
+              ) : (
+                <JsDiff oldCode={leftData} newCode={rightData} />
+              )}
+            </>
           )}
         </div>
       </div>
     </>
+  );
+}
+
+/** Shows the locales added to and removed from a doc between versions. */
+function LocalesDiffRow(props: {diff: LocalesDiff}) {
+  const {added, removed, unchanged} = props.diff;
+  return (
+    <div className="DocDiffViewer__sys">
+      <div className="DocDiffViewer__sys__label">Locales</div>
+      <div className="DocDiffViewer__sys__locales">
+        {added.map((locale) => (
+          <span
+            key={`added-${locale}`}
+            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--added"
+            title="Added"
+          >
+            + {locale}
+          </span>
+        ))}
+        {removed.map((locale) => (
+          <span
+            key={`removed-${locale}`}
+            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--removed"
+            title="Removed"
+          >
+            − {locale}
+          </span>
+        ))}
+        {unchanged.length > 0 && (
+          <span className="DocDiffViewer__sys__unchanged">
+            ({unchanged.join(', ')} unchanged)
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
