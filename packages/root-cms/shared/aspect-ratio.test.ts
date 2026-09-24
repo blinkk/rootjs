@@ -17,6 +17,14 @@ describe('parseAspectRatio', () => {
     expect(parseAspectRatio('2.39:1')).toBeCloseTo(2.39);
   });
 
+  it('accepts full dimensions', () => {
+    expect(parseAspectRatio('1400:600')).toBeCloseTo(7 / 3);
+    expect(parseAspectRatio('1400x600')).toBeCloseTo(7 / 3);
+    expect(parseAspectRatio('1400 x 600')).toBeCloseTo(7 / 3);
+    expect(testAspectRatioMatches(2800, 1200, '1400x600')).toBe(true);
+    expect(testAspectRatioMatches(1600, 900, '1400x600')).toBe(false);
+  });
+
   it('parses numbers', () => {
     expect(parseAspectRatio(1.5)).toBe(1.5);
     expect(parseAspectRatio('1.5')).toBe(1.5);
@@ -44,6 +52,7 @@ describe('formatAspectRatio', () => {
   it('formats aspect ratios', () => {
     expect(formatAspectRatio('16:9')).toBe('16:9');
     expect(formatAspectRatio('16/9')).toBe('16:9');
+    expect(formatAspectRatio('1400x600')).toBe('1400:600');
     expect(formatAspectRatio(1.5)).toBe('3:2');
     expect(formatAspectRatio(16 / 9)).toBe('16:9');
     expect(formatAspectRatio(1.85)).toBe('1.85:1');

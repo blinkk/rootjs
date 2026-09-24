@@ -569,24 +569,36 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
         </div>
 
         <Group position="apart" spacing="xs">
-          <Group spacing="xs">
-            <Text size="sm" className="ImageEditorDialog__OutputSize">
-              {outputCrop
-                ? `${outputCrop.width} × ${outputCrop.height} px · ${formatDimensionsAspectRatio(outputCrop.width, outputCrop.height)}`
-                : 'Loading…'}
-            </Text>
-            {mismatchesRecommended && (
-              <Text
-                size="xs"
-                color="orange"
-                className="ImageEditorDialog__Mismatch"
-              >
-                <IconAlertTriangle size={14} />
-                Recommended:{' '}
-                {recommendedRatios.map((r) => formatAspectRatio(r)).join(', ')}
-              </Text>
-            )}
-          </Group>
+          <dl className="ImageEditorDialog__Details">
+            <div className="ImageEditorDialog__Details__Row">
+              <dt>Image size:</dt>
+              <dd>
+                {outputCrop
+                  ? `${outputCrop.width} × ${outputCrop.height} px`
+                  : 'Loading…'}
+              </dd>
+            </div>
+            <div className="ImageEditorDialog__Details__Row">
+              <dt>Aspect ratio:</dt>
+              <dd>
+                {outputCrop
+                  ? formatDimensionsAspectRatio(
+                      outputCrop.width,
+                      outputCrop.height
+                    )
+                  : '–'}
+                {mismatchesRecommended && (
+                  <span className="ImageEditorDialog__Mismatch">
+                    <IconAlertTriangle size={14} />
+                    Recommended:{' '}
+                    {recommendedRatios
+                      .map((r) => formatAspectRatio(r))
+                      .join(', ')}
+                  </span>
+                )}
+              </dd>
+            </div>
+          </dl>
           <Group spacing="xs">
             <Tooltip label="Center horizontally" withArrow>
               <ActionIcon
@@ -641,7 +653,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
               onClick={props.onClose}
               disabled={saving}
             >
-              Discard
+              Cancel
             </Button>
             <Button
               size="xs"
