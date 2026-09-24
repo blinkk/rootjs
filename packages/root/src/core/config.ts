@@ -217,8 +217,7 @@ export type RootConfig = RootUserConfig & {
  * ```
  */
 export type ElementTagNameMatcher =
-  | Array<string | RegExp>
-  | ((tagName: string) => boolean);
+  Array<string | RegExp> | ((tagName: string) => boolean);
 
 export interface LocaleGroup {
   label?: string;

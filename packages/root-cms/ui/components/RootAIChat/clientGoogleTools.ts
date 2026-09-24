@@ -690,9 +690,9 @@ async function getSlides(
     );
     presentation = await res.json();
   } catch (err) {
-    if (
-      !(err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED')
-    ) {
+    if (!(
+      err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED'
+    )) {
       throw err;
     }
     // The Slides API is not enabled for this project. Fall back to Drive's

@@ -125,14 +125,7 @@ export interface AriaAttributes {
   'aria-colspan'?: number;
   'aria-controls'?: string;
   'aria-current'?:
-    | boolean
-    | 'false'
-    | 'true'
-    | 'page'
-    | 'step'
-    | 'location'
-    | 'date'
-    | 'time';
+    boolean | 'false' | 'true' | 'page' | 'step' | 'location' | 'date' | 'time';
   'aria-describedby'?: string;
   'aria-details'?: string;
   'aria-disabled'?: boolean | 'false' | 'true';

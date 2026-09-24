@@ -41,9 +41,7 @@ interface ReleaseTargetMeta {
 }
 
 type StaticTargetMeta =
-  | CollectionTargetMeta
-  | DataSourceTargetMeta
-  | ReleaseTargetMeta;
+  CollectionTargetMeta | DataSourceTargetMeta | ReleaseTargetMeta;
 
 /**
  * Discriminated payload attached to each SpotlightAction. The Mantine
@@ -137,8 +135,7 @@ function Row(props: RowProps) {
 
 export function GlobalSearchAction(props: SpotlightActionProps) {
   const meta = (props.action as any)?.meta as
-    | GlobalSearchActionMeta
-    | undefined;
+    GlobalSearchActionMeta | undefined;
   if (!meta) {
     return null;
   }

@@ -509,11 +509,7 @@ export type Field =
 export type FieldWithId = Field;
 
 export type ObjectLikeField =
-  | ImageField
-  | FileField
-  | ObjectField
-  | OneOfField
-  | ReferenceField;
+  ImageField | FileField | ObjectField | OneOfField | ReferenceField;
 
 export interface SchemaPreset<T = Record<string, any>> {
   /** Unique identifier for the preset within the schema. */

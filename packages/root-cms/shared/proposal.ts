@@ -154,8 +154,7 @@ export interface ProposalParseError {
 }
 
 export type ParseProposalResult =
-  | {ok: true; proposal: Proposal}
-  | {ok: false; errors: ProposalParseError[]};
+  {ok: true; proposal: Proposal} | {ok: false; errors: ProposalParseError[]};
 
 /**
  * Rejects YAML values that were coerced away from a string.

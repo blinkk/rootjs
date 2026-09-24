@@ -178,8 +178,7 @@ export async function prepareClientModel(
 /** Returns the AI config registered on the CMS plugin, or `null`. */
 export function getAiConfig(rootConfig: RootConfig): AiConfig | null {
   const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
-    | {getConfig: () => {ai?: AiConfig}}
-    | undefined;
+    {getConfig: () => {ai?: AiConfig}} | undefined;
   const ai = cmsPlugin?.getConfig().ai;
   if (!ai || !Array.isArray(ai.models) || ai.models.length === 0) {
     return null;

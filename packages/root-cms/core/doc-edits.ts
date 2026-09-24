@@ -89,8 +89,7 @@ export interface DocEditError {
 }
 
 export type ApplyDocEditsResult =
-  | {ok: true; fields: Record<string, any>}
-  | {ok: false; error: DocEditError};
+  {ok: true; fields: Record<string, any>} | {ok: false; error: DocEditError};
 
 const INDEX_RE = /^(0|[1-9]\d*)$/;
 
