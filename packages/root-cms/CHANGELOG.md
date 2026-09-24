@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.5.2
+
+### Patch Changes
+
+- a494a1c: feat: add "open task" button to task manager action logs
+- 0fbfd95: feat: show locale changes in the doc diff viewer
+- f515c03: fix: drop support for retired imagen image models
+- bfebd16: feat: flexible image cropping with aspect ratios and recommended aspect ratio warnings
+- d35cacd: feat: pin field comment threads to a draggable floating window
+- f515c03: feat: add a google slides tool to root ai and update ai sdk deps
+- 837a7e8: chore: update third-party dependencies
+- Updated dependencies [837a7e8]
+  - @blinkk/root@3.5.2
+
 ## 3.5.1
 
 ### Patch Changes

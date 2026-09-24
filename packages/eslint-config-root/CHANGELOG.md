@@ -1,5 +1,11 @@
 # @blinkk/eslint-config-root
 
+## 1.1.1
+
+### Patch Changes
+
+- 837a7e8: chore: update third-party dependencies
+
 ## 0.1.0
 
 ### Minor Changes
