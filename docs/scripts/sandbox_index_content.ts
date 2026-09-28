@@ -102,9 +102,9 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
           _type: 'TemplateHero',
           id: 'hero',
           eyebrow: 'Root.js · The web platform',
-          title: 'Build the site. Run the content. Ship it together.',
+          title: 'Build, run, ship.',
           body: richtext(
-            'Root.js pairs a fast, TypeScript-first web framework with a CMS your whole team will actually enjoy: live preview, AI, localization and publishing workflows, all built in.'
+            'Root.js pairs a fast web framework with a CMS your whole team will actually enjoy:<br>live preview, AI, localization and publishing workflows, all built in.'
           ),
           buttons: [
             button('Get started', '/guide/'),
@@ -244,7 +244,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
           highlights: list(
             'Per-page translation editor with missing-string alerts',
             'Import and export CSV, Google Sheets and ARB',
-            'Plug in providers like Crowdin'
+            'Plug in custom third-party providers like Crowdin'
           ),
           image: image(screenshots, 'cms-translations'),
         },
@@ -255,9 +255,9 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
           id: 'collaboration',
           options: ['layout:image-left'],
           eyebrow: 'Collaboration',
-          title: 'Feedback right where the words live.',
+          title: 'Real-time editing and feedback right where the words live.',
           body: richtext(
-            'Comment on any field, @mention a teammate and resolve threads when you’re done. See who else is editing, and get notified when it matters.'
+            'Comment on any field, @mention a teammate and resolve threads when you’re done. See who else is editing, receive their updates in real-time, and get notified when it matters.'
           ),
           highlights: list(
             'Field-level comment threads with @mentions',

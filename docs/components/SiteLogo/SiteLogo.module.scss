@@ -19,8 +19,8 @@
   // The beet is pinned to a multiple of its 16px grid so each sprite pixel
   // lands on whole screen pixels.
   .wordmark {
-    --beet-size: 32px;
-    font-size: 22px;
+    --beet-size: 28px;
+    font-size: 20px;
 
     @include breakpoints.sm() {
       --beet-size: 24px;
