@@ -43,6 +43,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import * as esbuild from 'esbuild';
 import {chromium} from 'playwright';
 import type {ManifestEntry, SceneMeta} from '../screenshots/types.ts';
+import {hashScreenshotSources} from './screenshots_sources.ts';
 
 const DOCS_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -271,6 +272,7 @@ async function main() {
 
     const ids = args.scenes.length > 0 ? args.scenes : Object.keys(metas);
     const manifest = await readManifest();
+    const sourceHash = await hashScreenshotSources(SCREENSHOTS_DIR);
     for (const id of ids) {
       const meta = metas[id];
       if (!meta) {
@@ -292,7 +294,12 @@ async function main() {
         clip: {x: 0, y: 0, width: meta.width, height: meta.height},
       });
       await context.close();
-      manifest[id] = {...meta, scale: args.scale, file: `${id}.png`};
+      manifest[id] = {
+        ...meta,
+        scale: args.scale,
+        file: `${id}.png`,
+        sourceHash,
+      };
       console.log(`rendered ${path.relative(DOCS_DIR, outPath)}`);
     }
     await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');

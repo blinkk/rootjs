@@ -18,6 +18,7 @@
     "add-element": "root codegen element",
     "screenshots:render": "node scripts/screenshots_render.ts",
     "screenshots:upload": "node scripts/screenshots_upload.ts",
+    "screenshots:publish": "node scripts/screenshots_render.ts && node scripts/screenshots_upload.ts",
     "seed:sandbox-index": "node scripts/seed_sandbox_index.ts",
     "env:save": "bash scripts/env-save.sh",
     "env:download": "bash scripts/env-download.sh"

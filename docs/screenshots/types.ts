@@ -38,4 +38,9 @@ export type ManifestEntry = SceneMeta & {
   scale: number;
   /** PNG filename within `screenshots/.out/`. */
   file: string;
+  /**
+   * Hash of the scene sources the PNG was rendered from (see
+   * `scripts/screenshots_sources.ts`). Used to catch stale renders.
+   */
+  sourceHash: string;
 };

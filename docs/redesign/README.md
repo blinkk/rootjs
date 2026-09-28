@@ -23,7 +23,9 @@ node scripts/seed_sandbox_index.ts
 ```
 
 The same steps are available as `pnpm screenshots:render`,
-`pnpm screenshots:upload` and `pnpm seed:sandbox-index`. Steps 2 and 3 need
+`pnpm screenshots:upload` and `pnpm seed:sandbox-index`, and
+`pnpm screenshots:publish` runs the first two together. The upload refuses PNGs
+rendered from older scene sources, so pull, then re-render before uploading. Steps 2 and 3 need
 application-default credentials
 (`gcloud auth application-default login`).
 

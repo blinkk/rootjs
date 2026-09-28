@@ -29,6 +29,12 @@
  *   node scripts/screenshots_upload.ts --force     # re-upload unchanged images
  *   node scripts/screenshots_upload.ts --dry-run   # print what would change
  *
+ * Or render and upload in one step with `pnpm screenshots:publish`.
+ *
+ * The upload refuses PNGs rendered from older scene sources (e.g. after
+ * pulling scene changes without re-rendering). Re-render, or pass
+ * `--allow-stale` to upload them anyway.
+ *
  * Requires application-default credentials with write access to the bucket,
  * e.g. `gcloud auth application-default login`.
  */
@@ -45,6 +51,7 @@ import type {
   ScreenshotEntry,
   ScreenshotsMap,
 } from '../screenshots/types.ts';
+import {hashScreenshotSources} from './screenshots_sources.ts';
 
 const DOCS_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -64,11 +71,17 @@ interface Args {
   scenes: string[];
   force: boolean;
   dryRun: boolean;
+  allowStale: boolean;
 }
 
-/** Parses `--scene`, `--force` and `--dry-run` flags from argv. */
+/** Parses `--scene`, `--force`, `--dry-run` and `--allow-stale` from argv. */
 function parseArgs(argv: string[]): Args {
-  const args: Args = {scenes: [], force: false, dryRun: false};
+  const args: Args = {
+    scenes: [],
+    force: false,
+    dryRun: false,
+    allowStale: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const [flag, inlineValue] = arg.split('=');
@@ -78,6 +91,8 @@ function parseArgs(argv: string[]): Args {
       args.force = true;
     } else if (flag === '--dry-run') {
       args.dryRun = true;
+    } else if (flag === '--allow-stale') {
+      args.allowStale = true;
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
@@ -131,6 +146,18 @@ async function main() {
   }
   const map = await readJson<ScreenshotsMap>(MAP_PATH, {});
 
+  const ids = args.scenes.length > 0 ? args.scenes : Object.keys(manifest);
+  const sourceHash = await hashScreenshotSources(SCREENSHOTS_DIR);
+  const stale = ids.filter(
+    (id) => manifest[id] && manifest[id].sourceHash !== sourceHash
+  );
+  if (stale.length > 0 && !args.allowStale) {
+    throw new Error(
+      `rendered screenshots are out of date with the scene sources: ${stale.join(', ')}.\n` +
+        'run scripts/screenshots_render.ts first, or pass --allow-stale.'
+    );
+  }
+
   const rootConfig = await loadRootConfig(DOCS_DIR, {command: 'root-cms'});
   const client = new RootCMSClient(rootConfig);
   const cmsConfig = client.cmsPlugin.getConfig();
@@ -142,7 +169,6 @@ async function main() {
   console.log(`bucket: ${bucketName}`);
   console.log(`gci: ${gciDomain || '(disabled)'}`);
 
-  const ids = args.scenes.length > 0 ? args.scenes : Object.keys(manifest);
   let changed = 0;
   for (const id of ids) {
     const entry = manifest[id];
