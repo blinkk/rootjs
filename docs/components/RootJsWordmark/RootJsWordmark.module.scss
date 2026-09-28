@@ -1,0 +1,26 @@
+@layer component {
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    color: inherit;
+    font-family: var(--font-family-default);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+
+  .beet {
+    display: block;
+    flex: 0 0 auto;
+    height: var(--beet-size, 1.4em);
+    width: auto;
+    // The sprite is 11 columns by 16 rows once cropped.
+    aspect-ratio: 11 / 16;
+  }
+
+  .text {
+    display: block;
+  }
+}

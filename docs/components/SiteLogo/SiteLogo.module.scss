@@ -3,26 +3,28 @@
 
 @layer component {
   .siteLogo {
-    --logo-height: 28px;
     display: inline-flex;
     align-items: center;
     padding: 4px 10px;
     border-radius: 8px;
     color: inherit;
+    text-decoration: none;
     transition: background-color 0.18s ease;
-
-    @include breakpoints.sm() {
-      --logo-height: 24px;
-    }
   }
 
   .siteLogo:hover {
     background-color: tokens.$color-grey-100;
   }
 
+  // The beet is pinned to a multiple of its 16px grid so each sprite pixel
+  // lands on whole screen pixels.
   .wordmark {
-    display: block;
-    width: auto;
-    height: var(--logo-height);
+    --beet-size: 32px;
+    font-size: 22px;
+
+    @include breakpoints.sm() {
+      --beet-size: 24px;
+      font-size: 18px;
+    }
   }
 }
