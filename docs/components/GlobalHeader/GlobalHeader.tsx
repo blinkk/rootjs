@@ -1,17 +1,12 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
 import {IconBrandGithubFilled, IconMenu} from '@tabler/icons-preact';
+import {SiteLogo} from '@/components/SiteLogo/SiteLogo';
 import {SkipLink} from '@/components/SkipLink/SkipLink';
-import {LogoToggle} from '@/islands/LogoToggle/LogoToggle';
 import {joinClassNames} from '@/utils/classes';
 import {UnstyledList} from '../UnstyledList/UnstyledList';
 import styles from './GlobalHeader.module.scss';
 
 const LINKS = [
-  {
-    label: 'CMS',
-    url: '/products/cms',
-    active: (ctx: RequestContext) => ctx.currentPath === '/products/cms',
-  },
   {
     label: 'Guide',
     url: '/guide',
@@ -39,11 +34,6 @@ export interface GlobalHeaderProps {
 export function GlobalHeader(props: GlobalHeaderProps) {
   const t = useTranslations();
   const ctx = useRequestContext();
-  // const logoUrl = ctx.currentPath === '/' ? '#top' : '/';
-  let wordmarkType = 'root.js';
-  if (ctx.currentPath === '/products/cms') {
-    wordmarkType = 'root cms';
-  }
   const isGuide = ctx.currentPath.startsWith('/guide');
   return (
     <root-header
@@ -58,15 +48,7 @@ export function GlobalHeader(props: GlobalHeaderProps) {
     >
       <SkipLink />
       <div className={styles.content}>
-        {/* <a className={styles.logo} href={logoUrl}>
-          LogoToggle
-          {wordmarkType === 'root cms' ? (
-            <RootCmsWordmark />
-          ) : (
-            <RootJsWordmark />
-          )}
-        </a> */}
-        <LogoToggle className={styles.logo} logo={wordmarkType} />
+        <SiteLogo />
 
         <button
           className={styles.burger}

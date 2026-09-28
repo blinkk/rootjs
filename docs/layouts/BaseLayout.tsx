@@ -2,6 +2,7 @@ import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
+import {beetMarkDataUri} from '@/components/RootJsWordmark/RootJsWordmark.js';
 import {useImageService} from '@/hooks/useImageService.js';
 import {GridOverlay} from '@/islands/GridOverlay/GridOverlay.js';
 import '@/styles/global.scss';
@@ -63,11 +64,7 @@ export function BaseLayout(props: BaseLayoutProps) {
           </>
         )}
         {props.noindex && <meta name="robots" content="noindex" />}
-        <link
-          rel="icon"
-          href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
-          type="image/png"
-        />
+        <link rel="icon" href={beetMarkDataUri()} type="image/svg+xml" />
         <style>@layer base, component, template;</style>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

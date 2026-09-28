@@ -1,0 +1,75 @@
+@use 'breakpoints';
+@use 'platform';
+
+@layer template {
+  .hero {
+    // Beige, like the CMS page background, but deep enough to show on white.
+    --hero-glow: rgba(229, 216, 189, 0.2);
+    @include platform.theme-vars();
+
+    &.theme\:dark::before {
+      display: none;
+    }
+
+    @include platform.section-padding();
+    position: relative;
+    overflow: hidden;
+    padding-top: 96px;
+
+    // Soft glow behind the headline.
+    &::before {
+      content: '';
+      position: absolute;
+      top: -240px;
+      left: 50%;
+      width: 1100px;
+      height: 620px;
+      transform: translateX(-50%);
+      background: radial-gradient(closest-side, var(--hero-glow), transparent);
+      pointer-events: none;
+    }
+
+    > * {
+      position: relative;
+    }
+  }
+
+  .header {
+    max-width: 880px;
+  }
+
+  .buttons {
+    margin-top: 32px;
+  }
+
+  .command {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+
+    code {
+      display: inline-flex;
+      gap: 10px;
+      padding: 10px 16px;
+      border: 1px solid var(--platform-border);
+      border-radius: 10px;
+      background: var(--platform-card-bg);
+      font-family: var(--font-family-mono);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  }
+
+  .prompt {
+    color: var(--platform-muted);
+    user-select: none;
+  }
+
+  .media {
+    @include platform.media-frame();
+    margin-top: 64px;
+    @include breakpoints.sm() {
+      margin-top: 40px;
+    }
+  }
+}

@@ -128,20 +128,24 @@
 }
 
 /** Variant styles for primary buttons. */
+// The primary colors can be overridden per section with the
+// `--button-primary-bg` and `--button-primary-bg-hover` custom properties.
 @mixin -button-styles-primary() {
+  $bg: var(--button-primary-bg, #{tokens.$color-blue-600});
+  $bg-hover: var(--button-primary-bg-hover, #{tokens.$color-blue-800});
   @include -button-styles-base-pill();
-  background: tokens.$color-blue-600;
+  background: $bg;
   color: tokens.$color-white;
-  border: 1px solid tokens.$color-blue-600;
+  border: 1px solid $bg;
 
   &:active,
   &:hover {
-    background: tokens.$color-blue-800;
+    background: $bg-hover;
     box-shadow: 0px 1px 4px 0px rgba(tokens.$color-grey-800, 0.25);
   }
 
   &:focus-visible {
-    background: tokens.$color-blue-800;
+    background: $bg-hover;
   }
 
   &::before {
@@ -152,7 +156,7 @@
   }
 
   &:focus-visible::before {
-    border-color: tokens.$color-blue-800;
+    border-color: $bg-hover;
   }
 }
 

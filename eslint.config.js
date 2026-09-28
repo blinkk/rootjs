@@ -8,6 +8,7 @@ export default [
       '**/build/**',
       '**/.next/**',
       '**/*.tsbuildinfo',
+      'docs/screenshots/.out/**',
       'examples/**',
     ],
   },

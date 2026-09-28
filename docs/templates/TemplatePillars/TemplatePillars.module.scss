@@ -1,0 +1,100 @@
+@use 'breakpoints';
+@use 'platform';
+
+@layer template {
+  .pillars {
+    @include platform.theme-vars();
+    @include platform.section-padding();
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--pillar-count), minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 56px;
+    @include breakpoints.md-lt() {
+      grid-template-columns: 1fr;
+      margin-top: 40px;
+    }
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    padding: 32px;
+    border: 1px solid var(--platform-border);
+    border-radius: platform.$radius-card;
+    background: var(--platform-card-bg);
+    @include breakpoints.sm() {
+      padding: 24px;
+    }
+  }
+
+  .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 24px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--platform-accent) 12%, transparent);
+    color: var(--platform-accent);
+  }
+
+  .cardEyebrow {
+    @include platform.eyebrow();
+    margin-bottom: 8px;
+  }
+
+  .cardTitle {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .cardBody {
+    margin-top: 12px;
+    color: var(--platform-muted);
+  }
+
+  .bullets {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+
+    li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    svg {
+      flex: 0 0 auto;
+      margin-top: 2px;
+      color: var(--platform-accent);
+    }
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 28px;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+
+    svg {
+      transition: transform 0.2s ease;
+    }
+
+    &:hover svg {
+      transform: translateX(3px);
+    }
+  }
+}

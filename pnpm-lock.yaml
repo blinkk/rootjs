@@ -214,9 +214,15 @@ importers:
         specifier: 10.29.8
         version: 10.29.8(preact-render-to-string@6.7.0)
     devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       firebase-tools:
         specifier: 15.30.2
         version: 15.30.2(@types/node@25.9.1)(supports-color@10.2.2)
+      playwright:
+        specifier: 1.63.0
+        version: 1.63.0
 
   examples/basepath:
     dependencies:

@@ -2,9 +2,9 @@ import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import Block from '@/components/Block/Block.js';
+import {SiteLogo} from '@/components/SiteLogo/SiteLogo.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
-import {LogoToggle} from '@/islands/LogoToggle/LogoToggle.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {GuideDoc} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
@@ -168,7 +168,7 @@ function Sidebar() {
         aria-label="Guide navigation"
       >
         <div className={styles.sidebarLogo}>
-          <LogoToggle />
+          <SiteLogo />
         </div>
 
         <div className={styles.sidebarSection}>

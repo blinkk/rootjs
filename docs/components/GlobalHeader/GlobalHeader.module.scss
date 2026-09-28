@@ -2,7 +2,7 @@
 @use 'tokens';
 
 :root {
-  --header-height: 64px;
+  --header-height: 60px;
   @include breakpoints.sm() {
     --header-height: 54px;
   }
@@ -163,8 +163,6 @@
       margin-top: 40px;
     }
     @include breakpoints.md-gt() {
-      border-left: 1px solid tokens.$color-grey-300;
-      padding-left: 24px;
       margin-left: 20px;
     }
   }

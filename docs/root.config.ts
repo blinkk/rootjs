@@ -35,6 +35,10 @@ export default defineConfig({
   server: {
     trailingSlash: true,
     sessionCookieSecret: process.env.COOKIE_SECRET,
+    redirects: [
+      // The CMS product page was merged into the home page.
+      {source: '/products/cms', destination: '/', type: 301},
+    ],
   },
   plugins: [
     templatesPod(),

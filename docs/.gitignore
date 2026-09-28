@@ -2,3 +2,6 @@ dist/
 functions/
 .firebase
 .root/
+
+# Rendered screenshots (published to GCS, see scripts/screenshots_upload.ts).
+screenshots/.out/

@@ -1,0 +1,50 @@
+{
+  "cms-editor-preview": {
+    "src": "https://lh3.googleusercontent.com/UkPHPJkkxN4tT6UYRytlyGZJk8rr7dmhe6amNqm6wx5xeKCi3DYTJm4-EvVELEz89iSU8I86IJ3yxSk5z8NWW3LS6ge7KfkyQS2U",
+    "width": 2880,
+    "height": 1800,
+    "alt": "The Root CMS doc editor, with the fields for a garden market landing page on the left and a live desktop and mobile preview of the page on the right.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-editor-preview.62da67adce58ac00.png",
+    "hash": "62da67adce58ac00"
+  },
+  "cms-field-comments": {
+    "src": "https://lh3.googleusercontent.com/uBPYVRAEvw7uOuAMUCfOeiFVFMyswRWGsz7WRW01V2D1tr3kgZ8I63gBYJp6MjBHKaYWEeV_BTTyq6mM0QSA2lOjtaQY4tqh2fY",
+    "width": 1920,
+    "height": 1200,
+    "alt": "A comment thread pinned to a field in the Root CMS editor, with teammates discussing a headline and an @mention.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-field-comments.14e0e88c3f58fca3.png",
+    "hash": "14e0e88c3f58fca3"
+  },
+  "cms-publish-checks": {
+    "src": "https://lh3.googleusercontent.com/uvexgIhOCRxOtiV4KRa0Q7kF8RssDZX6w2Cl0WdGBOHNW-Rq-ZDcp77Rz35XC5zp73sl9IV6Q4Usqaa_j2i_V0tA3xFwm0O4PCk",
+    "width": 1920,
+    "height": 1200,
+    "alt": "The publish dialog in Root CMS, showing a scheduled publish time, an AI-written change summary and passing publishing checks.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-publish-checks.4722a81224c3a3b0.png",
+    "hash": "4722a81224c3a3b0"
+  },
+  "cms-releases": {
+    "src": "https://lh3.googleusercontent.com/W9lDmuANbluvNPFjdtJ1Ef3mdjjjbnbbnYcTtfv7EU4DnSkBrmk1wEuOsUlO9EbmYdURMwQovmhNPsM33iNIVMuzBfX1Whg5lQ",
+    "width": 1920,
+    "height": 1200,
+    "alt": "The Releases page in Root CMS, listing scheduled, published and archived releases that bundle docs and data sources.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-releases.6e9b6fadb78b654f.png",
+    "hash": "6e9b6fadb78b654f"
+  },
+  "cms-root-ai": {
+    "src": "https://lh3.googleusercontent.com/0Ic6jRbOjigJ_1CZSBuFKK_gSEnesk-CaEaRkQg3LKSLB9YAiam0msmV_RI4LC6aI07TgNqVNu-1seoA47t4dx3kKX6sYE5Nkczq",
+    "width": 1920,
+    "height": 1200,
+    "alt": "Root AI chat in the CMS: a request to localize a page and add it to a release, with the tool calls Root AI ran to do it.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-root-ai.e3a9085cba234edd.png",
+    "hash": "e3a9085cba234edd"
+  },
+  "cms-translations": {
+    "src": "https://lh3.googleusercontent.com/a0_TmNjmKyjslODBrsqrI5yb7y952uQ1tryGuSBlA9AoXtNnY5WOsZl30lF-O0iJ2PkGZU1OiOacDoy8lBhdg1rlwIp1GnRKaK0",
+    "width": 1920,
+    "height": 1200,
+    "alt": "The Root CMS translations editor for a page, with source strings alongside German, French and Japanese translations and an AI translate action.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-translations.e2af69683c44ed43.png",
+    "hash": "e2af69683c44ed43"
+  }
+}
