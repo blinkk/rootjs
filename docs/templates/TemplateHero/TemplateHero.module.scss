@@ -4,7 +4,7 @@
 @layer template {
   .hero {
     // Beige, like the CMS page background, but deep enough to show on white.
-    --hero-glow: rgba(229, 216, 189, 0.55);
+    --hero-glow: rgba(229, 216, 189, 0.3);
     @include platform.theme-vars();
 
     &.theme\:dark {

@@ -102,7 +102,7 @@ export default function RootAi() {
                 flex: '0 0 26px',
                 height: '26px',
                 borderRadius: '50%',
-                background: '#1c7ed6',
+                background: '#222',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
@@ -197,7 +197,7 @@ export default function RootAi() {
               }}
             >
               <span className="cms-button cms-button--ghost">
-                Claude Sonnet 5
+                Claude Opus 5.5
                 <IconChevronDown />
               </span>
               <span className="cms-button cms-button--ghost">
