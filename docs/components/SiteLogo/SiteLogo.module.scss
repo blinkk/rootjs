@@ -1,0 +1,28 @@
+@use 'breakpoints';
+@use 'tokens';
+
+@layer component {
+  .siteLogo {
+    --logo-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    color: inherit;
+    transition: background-color 0.18s ease;
+
+    @include breakpoints.sm() {
+      --logo-height: 24px;
+    }
+  }
+
+  .siteLogo:hover {
+    background-color: tokens.$color-grey-100;
+  }
+
+  .wordmark {
+    display: block;
+    width: auto;
+    height: var(--logo-height);
+  }
+}

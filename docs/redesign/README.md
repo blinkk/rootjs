@@ -116,7 +116,8 @@ These carry over from the old `/` page and appear in section 9.
 - **Hero headline.** Options: "Build the site. Run the content. Ship it
   together." (current), "The web platform for teams that ship." or "One
   platform for the code and the content."
-- **Navigation.** The global header still links to `/products/cms`. Once this
-  page replaces `/`, that link (and the logo toggle) should change.
+- **Launch.** The "CMS" nav link and the Root.js / Root CMS logo toggle are
+  gone, and `/products/cms` 301-redirects to `/`. To launch, publish this
+  content as `Pages/index`.
 - **Links.** Buttons point to `/guide/` and GitHub. Deep links into specific
   guide pages can be added once the guide structure is final.
