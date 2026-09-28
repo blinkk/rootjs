@@ -5,7 +5,7 @@ export default schema.define({
   name: 'TemplateHero',
   label: 'Hero',
   description:
-    'Large centered headline with buttons, an optional install command and a product screenshot. Use `layout:banner` for a compact call-to-action card.',
+    'Large centered headline with buttons, an optional install command and a product screenshot.',
   preview: {
     title: ['m{_index:02}: Hero: {title}', 'm{_index:02}: Hero'],
     image: '{image.src}',
@@ -21,7 +21,6 @@ export default schema.define({
       label: 'Module Options',
       help: 'Layout and display options.',
       options: [
-        {value: 'layout:banner'},
         {value: 'theme:dark'},
         {value: 'theme:tint'},
         {value: 'spacing:compact'},

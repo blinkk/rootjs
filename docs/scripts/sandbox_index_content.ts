@@ -364,7 +364,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
         {
           _type: 'TemplateHero',
           id: 'get-started',
-          options: ['layout:banner'],
+          options: ['theme:dark', 'title:h2'],
           eyebrow: 'Get started',
           title: 'Start building on Root.js.',
           body: richtext(

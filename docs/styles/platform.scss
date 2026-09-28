@@ -13,8 +13,9 @@ $color-ink: #0f1115;
 $color-muted: #5f6368;
 $color-accent: #1d3b72;
 $color-accent-2: #1a73e8;
-$color-tint: #f4f6fa;
-$color-border: #e2e6ed;
+// Matches the Root CMS page background (`--page-background`).
+$color-tint: #fbfbf9;
+$color-border: #e4e4e1;
 
 $radius-card: 20px;
 $radius-media: 14px;
