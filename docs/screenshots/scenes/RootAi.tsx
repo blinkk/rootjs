@@ -3,8 +3,8 @@ import {
   IconCircleCheck,
   IconPaperclip,
   IconPlus,
+  IconRobot,
   IconSend,
-  IconSparkles,
 } from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {CmsFrame} from '../ui/cms.js';
@@ -17,17 +17,17 @@ export const meta: SceneMeta = {
 };
 
 const HISTORY = [
-  'Localize spring launch',
-  'Draft summer sale banner',
-  'Audit alt text on /gear',
+  'Localize spring harvest',
+  'Draft seed swap banner',
+  'Audit alt text on /produce',
   'Summarize last week’s edits',
-  'New journal post outline',
+  'Root cellar guide outline',
 ];
 
 const STEPS = [
-  {tool: 'doc_get', detail: 'Pages/spring-launch'},
-  {tool: 'doc_edit', detail: 'Pages/spring-launch · 12 strings → de, fr'},
-  {tool: 'release_update', detail: 'spring-2027 · +1 doc'},
+  {tool: 'doc_get', detail: 'Pages/spring-harvest'},
+  {tool: 'doc_edit', detail: 'Pages/spring-harvest · 12 strings → de, fr'},
+  {tool: 'release_update', detail: 'spring-harvest-2027 · +1 doc'},
 ];
 
 /** The Root AI chat page, mid-conversation. */
@@ -93,8 +93,8 @@ export default function RootAi() {
               lineHeight: 1.5,
             }}
           >
-            Translate the spring launch page into German and French, keep the
-            product names in English, then add it to the Spring 2027 release.
+            Translate the spring harvest page into German and French, keep the
+            variety names as-is, then add it to the Spring Harvest release.
           </div>
           <div style={{display: 'flex', gap: '10px'}}>
             <span
@@ -102,14 +102,14 @@ export default function RootAi() {
                 flex: '0 0 26px',
                 height: '26px',
                 borderRadius: '50%',
-                background: 'linear-gradient(45deg, #7950f2, #15aabf)',
+                background: '#1c7ed6',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <IconSparkles size={15} />
+              <IconRobot size={16} />
             </span>
             <div
               style={{
@@ -145,11 +145,10 @@ export default function RootAi() {
               </div>
               <div style={{lineHeight: 1.6, maxWidth: '540px'}}>
                 Done. I translated all 12 strings on{' '}
-                <strong>Pages/spring-launch</strong> into German and French,
-                leaving “Ridge Shell Jacket”, “Nightfall Tent” and “Trailhead
-                Pack” as-is. The page is now part of the{' '}
-                <strong>Spring 2027</strong> release, scheduled for Mar 3 at
-                9:00 AM.
+                <strong>Pages/spring-harvest</strong> into German and French,
+                leaving “Chioggia”, “Purple Top” and “Garnet” as-is. The page is
+                now part of the <strong>Spring Harvest</strong> release,
+                scheduled for Mar 3 at 7:00 AM.
               </div>
               <div style={{display: 'flex', gap: '6px'}}>
                 <span className="cms-chip">Review translations</span>

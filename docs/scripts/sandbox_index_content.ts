@@ -306,7 +306,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
               body: 'The right hands on the right content, from viewer to admin.',
             },
             {
-              icon: 'plug',
+              icon: 'palette',
               title: 'Make it yours',
               body: 'Custom sidebar tools, themes, hooks and an embeddable editor.',
             },
@@ -364,7 +364,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
         {
           _type: 'TemplateHero',
           id: 'get-started',
-          options: ['theme:dark', 'title:h2'],
+          options: ['layout:banner'],
           eyebrow: 'Get started',
           title: 'Start building on Root.js.',
           body: richtext(

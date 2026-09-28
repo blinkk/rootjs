@@ -1,44 +1,50 @@
 import {
-  IconArrowBackUp,
-  IconArrowForwardUp,
-  IconArrowLeft,
-  IconBraces,
   IconChevronDown,
   IconChevronRight,
   IconDeviceDesktop,
   IconDeviceMobile,
   IconDeviceTablet,
   IconGripVertical,
-  IconMessageCircle,
-  IconPlanet,
   IconRefresh,
-  IconRocket,
-  IconSearch,
-  IconSparkles,
-  IconChecklist,
 } from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {
-  Artwork,
-  Badge,
   CmsFrame,
+  DocStatusBar,
+  EditorHeader,
   Field,
   Input,
+  PROJECT_NAME,
   RichTextInput,
 } from '../ui/cms.js';
-import {SitePreview} from '../ui/site.js';
+import {GardenScene} from '../ui/garden.js';
+import {SITE_COPY, SitePreview} from '../ui/site.js';
 
 export const meta: SceneMeta = {
   id: 'cms-editor-preview',
   width: 1440,
   height: 900,
-  alt: 'The Root CMS doc editor, with the fields for a landing page on the left and a live desktop and mobile preview of the page on the right.',
+  alt: 'The Root CMS doc editor, with the fields for a garden market landing page on the left and a live desktop and mobile preview of the page on the right.',
 };
 
 /** The doc editor with a live, multi-device preview. Used as the hero image. */
 export default function EditorPreview() {
   return (
-    <CmsFrame active="content" viewers={['Ada', 'Kenji', 'Priya']}>
+    <CmsFrame
+      active="content"
+      topRight={
+        <DocStatusBar
+          viewers={['Ada', 'Kenji', 'Priya']}
+          saveState="Saved just now"
+          badges={[
+            ['draft', 'Draft'],
+            ['scheduled', 'Scheduled'],
+          ]}
+          activeTool="comments"
+          comments={3}
+        />
+      }
+    >
       <div
         style={{
           display: 'grid',
@@ -47,56 +53,7 @@ export default function EditorPreview() {
         }}
       >
         <div className="cms-editor">
-          <div className="cms-editor__bar">
-            <span className="cms-icon-button">
-              <IconArrowLeft />
-            </span>
-            <span className="cms-editor__docid">Pages/spring-launch</span>
-            <span className="cms-icon-button">
-              <IconArrowBackUp />
-            </span>
-            <span className="cms-icon-button">
-              <IconArrowForwardUp />
-            </span>
-            <span className="cms-icon-button">
-              <IconBraces />
-            </span>
-          </div>
-          <div className="cms-editor__status">
-            <span className="cms-editor__saved">Saved just now</span>
-            <Badge variant="draft">Draft</Badge>
-            <Badge variant="scheduled">Scheduled</Badge>
-          </div>
-          <div
-            className="cms-editor__status"
-            style={{justifyContent: 'space-between'}}
-          >
-            <div className="cms-button-group">
-              <span className="cms-button">
-                <IconSearch />
-              </span>
-              <span className="cms-button cms-button--active">
-                <IconMessageCircle />3
-              </span>
-              <span className="cms-button">
-                <IconChecklist />
-              </span>
-              <span className="cms-button">
-                <IconSparkles />
-                AI
-              </span>
-            </div>
-            <div style={{display: 'flex', gap: '6px'}}>
-              <span className="cms-button">
-                <IconPlanet />
-                Locales (6)
-              </span>
-              <span className="cms-button cms-button--dark">
-                <IconRocket />
-                Publish
-              </span>
-            </div>
-          </div>
+          <EditorHeader docId="Pages/spring-harvest" />
           <div className="cms-editor__fields">
             <div
               className="cms-drawer"
@@ -106,7 +63,7 @@ export default function EditorPreview() {
                 <IconChevronRight />
                 Meta
                 <span className="cms-muted" style={{fontWeight: 400}}>
-                  — Spring collection · Lumen Outdoor
+                  — Spring harvest · {PROJECT_NAME}
                 </span>
               </div>
             </div>
@@ -124,43 +81,40 @@ export default function EditorPreview() {
                   </span>
                 </div>
                 <Field label="Eyebrow">
-                  <Input>Spring collection</Input>
+                  <Input>{SITE_COPY.eyebrow}</Input>
                 </Field>
                 <Field label="Title" comments={2}>
                   <Input focused textarea>
-                    Chase the first light of spring
+                    {SITE_COPY.title}
                   </Input>
                 </Field>
                 <Field label="Body">
-                  <RichTextInput>
-                    Lightweight layers and trail-tested gear for early mornings,
-                    long switchbacks and everything in between.
-                  </RichTextInput>
+                  <RichTextInput>{SITE_COPY.body}</RichTextInput>
                 </Field>
                 <Field label="Image" help="Recommended: 2400x1200 JPG.">
                   <div className="cms-image-field">
-                    <Artwork
-                      variant="dawn"
-                      className="cms-image-field__thumb"
-                    />
+                    <GardenScene className="cms-image-field__thumb" />
                     <div>
-                      <div style={{fontWeight: 600}}>spring-dawn-hero.jpg</div>
+                      <div style={{fontWeight: 600}}>
+                        spring-harvest-hero.jpg
+                      </div>
                       <div className="cms-muted" style={{fontSize: '11px'}}>
-                        2400×1200 · Alt: Sunrise over a mountain ridge
+                        2400×1200 · Alt: Rows of carrots and beets in a garden
+                        bed
                       </div>
                     </div>
                   </div>
                 </Field>
                 <div className="cms-array-item">
                   <IconGripVertical />
-                  <strong>m01:</strong> Product grid
+                  <strong>m01:</strong> Fresh this week
                   <span className="cms-muted" style={{marginLeft: 'auto'}}>
                     TemplateProductGrid
                   </span>
                 </div>
                 <div className="cms-array-item">
                   <IconGripVertical />
-                  <strong>m02:</strong> Journal highlights
+                  <strong>m02:</strong> Root vegetable recipes
                   <span className="cms-muted" style={{marginLeft: 'auto'}}>
                     TemplateCards
                   </span>
@@ -181,7 +135,7 @@ export default function EditorPreview() {
               <IconDeviceMobile />
             </span>
             <span className="cms-preview__url">
-              lumen.example/spring-launch/?preview=true
+              fernwood.example/spring-harvest/?preview=true
             </span>
             <span className="cms-chip">EN</span>
             <span className="cms-icon-button">
@@ -198,7 +152,7 @@ export default function EditorPreview() {
             <SitePreview
               device="mobile"
               width={260}
-              height={540}
+              height={560}
               highlightTitle
             />
           </div>

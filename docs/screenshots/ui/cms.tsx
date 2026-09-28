@@ -5,19 +5,30 @@
  */
 
 import {
+  IconArrowBackUp,
+  IconArrowForwardUp,
+  IconArrowLeft,
+  IconBraces,
   IconCalendarEvent,
   IconChecklist,
   IconDatabase,
+  IconDeviceFloppy,
   IconFolder,
   IconHome,
   IconLanguage,
+  IconLayoutSidebarRightCollapse,
+  IconMessageCircle,
   IconPhoto,
+  IconRobot,
+  IconRocket,
   IconSearch,
   IconSettings,
-  IconSparkles,
 } from '@tabler/icons-preact';
 import type {ComponentChildren} from 'preact';
 import './cms.css';
+
+/** Name of the fictional project shown in the CMS header. */
+export const PROJECT_NAME = 'Fernwood Market';
 
 /** Ids of the built-in sidebar sections, in the order the CMS shows them. */
 export type NavId =
@@ -38,7 +49,7 @@ const NAV_ITEMS: Array<{id: NavId; label: string; icon: ComponentChildren}> = [
   {id: 'data', label: 'Data', icon: <IconDatabase />},
   {id: 'assets', label: 'Asset Library', icon: <IconPhoto />},
   {id: 'translations', label: 'Translations', icon: <IconLanguage />},
-  {id: 'ai', label: 'Root AI', icon: <IconSparkles />},
+  {id: 'ai', label: 'Root AI', icon: <IconRobot />},
 ];
 
 export interface CmsFrameProps {
@@ -46,8 +57,11 @@ export interface CmsFrameProps {
   active?: NavId;
   /** Whether to show the expanded (labeled) sidebar. */
   expanded?: boolean;
-  /** Avatars shown next to the search bar, e.g. other viewers of a doc. */
-  viewers?: string[];
+  /**
+   * Content for the right side of the top bar. Defaults to the search bar. Doc
+   * pages show a `<DocStatusBar>` here instead.
+   */
+  topRight?: ComponentChildren;
   children?: ComponentChildren;
 }
 
@@ -58,17 +72,12 @@ export function CmsFrame(props: CmsFrameProps) {
       <header className="cms-top">
         <div className="cms-top__logo">Root CMS</div>
         <div className="cms-top__version">v3.5</div>
-        <div className="cms-top__project">Lumen Outdoor</div>
-        <div className="cms-top__search">
-          <IconSearch size={14} />
-          Search
-          <kbd>⌘K</kbd>
-        </div>
-        {props.viewers && (
-          <div className="cms-top__viewers">
-            {props.viewers.map((name) => (
-              <Avatar name={name} />
-            ))}
+        <div className="cms-top__project">{PROJECT_NAME}</div>
+        {props.topRight || (
+          <div className="cms-top__search">
+            <IconSearch size={14} />
+            Search
+            <kbd>⌘K</kbd>
           </div>
         )}
       </header>
@@ -97,11 +106,11 @@ export function CmsFrame(props: CmsFrameProps) {
 
 /** Fixture users, keyed by first name. */
 export const USERS: Record<string, {email: string; color: string}> = {
-  Ada: {email: 'ada@lumen.example', color: '#7950f2'},
-  Kenji: {email: 'kenji@lumen.example', color: '#1c7ed6'},
-  Priya: {email: 'priya@lumen.example', color: '#e8590c'},
-  Sam: {email: 'sam@lumen.example', color: '#2f9e44'},
-  Lea: {email: 'lea@lumen.example', color: '#d6336c'},
+  Ada: {email: 'ada@fernwood.example', color: '#7950f2'},
+  Kenji: {email: 'kenji@fernwood.example', color: '#1c7ed6'},
+  Priya: {email: 'priya@fernwood.example', color: '#e8590c'},
+  Sam: {email: 'sam@fernwood.example', color: '#2f9e44'},
+  Lea: {email: 'lea@fernwood.example', color: '#d6336c'},
 };
 
 export function Avatar(props: {name: string; large?: boolean}) {
@@ -125,6 +134,94 @@ export function Badge(props: {variant: BadgeVariant; children: string}) {
     <span className={`cms-badge cms-badge--${props.variant}`}>
       {props.children}
     </span>
+  );
+}
+
+/** A button in the doc status bar's tool group. */
+export type DocTool = 'search' | 'comments' | 'checks' | 'ai';
+
+export interface DocStatusBarProps {
+  /** Other people viewing the doc. */
+  viewers?: string[];
+  /** Save state text, e.g. "Saved just now". */
+  saveState: string;
+  badges: Array<[BadgeVariant, string]>;
+  /** The tool panel that is open, if any. */
+  activeTool?: DocTool;
+  /** Number of open comments, shown on the comments button. */
+  comments?: number;
+}
+
+/**
+ * The doc status bar that the real CMS pins to the top right of the app header
+ * on doc pages (see `DocEditor.StatusBar`). The localization button is omitted
+ * to keep the mock focused.
+ */
+export function DocStatusBar(props: DocStatusBarProps) {
+  const tool = (id: DocTool) =>
+    `cms-button ${props.activeTool === id ? 'cms-button--active' : ''}`;
+  return (
+    <div className="cms-status">
+      {props.viewers && (
+        <div className="cms-status__viewers">
+          {props.viewers.map((name) => (
+            <Avatar name={name} />
+          ))}
+        </div>
+      )}
+      <span className="cms-status__save">{props.saveState}</span>
+      {props.badges.map(([variant, label]) => (
+        <Badge variant={variant}>{label}</Badge>
+      ))}
+      <div className="cms-button-group">
+        <span className={tool('search')}>
+          <IconSearch />
+        </span>
+        <span className={tool('comments')}>
+          <IconMessageCircle />
+          {!!props.comments && props.comments}
+        </span>
+        <span className={tool('checks')}>
+          <IconChecklist />
+        </span>
+        <span className={tool('ai')}>
+          <IconRobot />
+          AI
+        </span>
+      </div>
+      <span className="cms-button cms-button--dark">
+        <IconRocket />
+        Publish
+      </span>
+    </div>
+  );
+}
+
+/** The editor side's header: back, doc id, undo/redo, save and view toggles. */
+export function EditorHeader(props: {docId: string}) {
+  return (
+    <div className="cms-editor__bar">
+      <span className="cms-icon-button">
+        <IconArrowLeft />
+      </span>
+      <span className="cms-editor__docid">{props.docId}</span>
+      <span className="cms-icon-button">
+        <IconArrowBackUp />
+      </span>
+      <span className="cms-icon-button">
+        <IconArrowForwardUp />
+      </span>
+      <span className="cms-button cms-button--dark" style={{height: '24px'}}>
+        <IconDeviceFloppy />
+        Save
+      </span>
+      <span className="cms-icon-button">
+        <IconBraces />
+      </span>
+      <span className="cms-icon-button">
+        <IconLayoutSidebarRightCollapse />
+      </span>
+    </div>
   );
 }
 
@@ -177,45 +274,5 @@ export function RichTextInput(props: {children?: ComponentChildren}) {
       </div>
       <div className="cms-input__body">{props.children}</div>
     </div>
-  );
-}
-
-/**
- * A decorative "photo" built from gradients, so scenes don't depend on any
- * external image assets.
- */
-export function Artwork(props: {
-  variant?: 'dawn' | 'forest' | 'dusk';
-  className?: string;
-  style?: preact.JSX.CSSProperties;
-}) {
-  const palettes = {
-    dawn: [
-      'radial-gradient(circle at 70% 35%, #ffe8a3 0 9%, transparent 10%)',
-      'linear-gradient(180deg, transparent 58%, #2f4858 58% 70%, #1d3040 70%)',
-      'linear-gradient(160deg, transparent 50%, #3d6b5e 50% 64%, transparent 64%)',
-      'linear-gradient(180deg, #ffb88c 0%, #ffd9a0 45%, #f6f1d3 60%)',
-    ],
-    forest: [
-      'linear-gradient(115deg, transparent 55%, #1b4332 55% 70%, transparent 70%)',
-      'linear-gradient(65deg, transparent 40%, #2d6a4f 40% 62%, transparent 62%)',
-      'linear-gradient(180deg, transparent 62%, #081c15 62%)',
-      'linear-gradient(180deg, #b7e4c7 0%, #d8f3dc 55%)',
-    ],
-    dusk: [
-      'radial-gradient(circle at 30% 40%, #fff3bf 0 6%, transparent 7%)',
-      'linear-gradient(170deg, transparent 55%, #3b2c5c 55% 72%, transparent 72%)',
-      'linear-gradient(180deg, transparent 66%, #1f1633 66%)',
-      'linear-gradient(180deg, #5f3dc4 0%, #e599f7 55%, #ffc9c9 70%)',
-    ],
-  };
-  return (
-    <div
-      className={props.className}
-      style={{
-        backgroundImage: palettes[props.variant || 'dawn'].join(','),
-        ...props.style,
-      }}
-    />
   );
 }

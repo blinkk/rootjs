@@ -41,6 +41,11 @@ re-render one scene, pass `--scene <id>`. PNGs are never committed: the upload
 script names each object by its content hash and skips images that haven't
 changed.
 
+The scenes show a fictional garden store, **Fernwood Market**, selling root
+vegetables (illustrated in `screenshots/ui/garden.tsx`). Keep fixture copy
+consistent across scenes, and use the robot icon (`IconRobot`) for AI features,
+matching the CMS. Avoid sparkles.
+
 To use a screenshot elsewhere on the site, import the map:
 
 ```ts
@@ -61,7 +66,7 @@ const {src, width, height, alt} = screenshots['cms-root-ai'];
 | 7   | `TemplateFeatureSpotlight` | CMS feature #6: collaboration              | `cms-field-comments` |
 | 8   | `TemplateFeatureGrid`      | CMS features #7–14                         | none                 |
 | 9   | `TemplateFeatureGrid`      | Framework features (from the old `/` page) | none                 |
-| 10  | `TemplateHero` (dark)      | Closing CTA                                | none                 |
+| 10  | `TemplateHero` (banner)    | Closing CTA                                | none                 |
 
 CMS feature #1, live preview, is the hero image. `cms-releases` is rendered and
 uploaded too, but isn't placed on the page. Use it if you'd rather show

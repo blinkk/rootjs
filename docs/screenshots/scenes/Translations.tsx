@@ -1,4 +1,4 @@
-import {IconDownload, IconSparkles, IconUpload} from '@tabler/icons-preact';
+import {IconDownload, IconRobot, IconUpload} from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {Badge, CmsFrame} from '../ui/cms.js';
 
@@ -11,40 +11,40 @@ export const meta: SceneMeta = {
 
 const ROWS: Array<{source: string; de: string; fr: string; ja: string}> = [
   {
-    source: 'Spring collection',
-    de: 'Frühjahrskollektion',
-    fr: 'Collection printemps',
-    ja: '春のコレクション',
+    source: 'Spring harvest',
+    de: 'Frühjahrsernte',
+    fr: 'Récolte de printemps',
+    ja: '春の収穫',
   },
   {
-    source: 'Chase the first light of spring',
-    de: 'Dem ersten Licht des Frühlings entgegen',
-    fr: 'À la poursuite des premières lueurs du printemps',
-    ja: '春の最初の光を追いかけて',
+    source: 'Dig into the spring harvest',
+    de: 'Entdecke die Frühjahrsernte',
+    fr: 'Plongez dans la récolte de printemps',
+    ja: '春の収穫を味わおう',
   },
   {
-    source: 'Shop the collection',
-    de: 'Kollektion entdecken',
-    fr: 'Découvrir la collection',
+    source: 'Shop the market',
+    de: 'Zum Marktstand',
+    fr: 'Faire son marché',
     ja: '',
   },
   {
-    source: 'Read the journal',
-    de: 'Zum Journal',
-    fr: 'Lire le journal',
+    source: 'Visit the garden center',
+    de: 'Zum Gartencenter',
+    fr: 'Visiter la jardinerie',
     ja: '',
   },
   {
-    source: 'Lightweight layers and trail-tested gear for early mornings.',
-    de: 'Leichte Schichten und erprobte Ausrüstung für frühe Morgen.',
-    fr: 'Des couches légères et un équipement éprouvé pour les petits matins.',
+    source: 'Heirloom carrots, candy-striped beets and peppery radishes.',
+    de: 'Alte Karottensorten, geringelte Bete und würzige Radieschen.',
+    fr: 'Carottes anciennes, betteraves rayées et radis poivrés.',
     ja: '',
   },
   {
-    source: 'Free returns within 60 days',
-    de: 'Kostenlose Rücksendung innerhalb von 60 Tagen',
-    fr: 'Retours gratuits sous 60 jours',
-    ja: '60日以内の返品は無料',
+    source: 'Picked up the road, sold the same day',
+    de: 'Aus der Nachbarschaft, am selben Tag verkauft',
+    fr: 'Cueilli tout près, vendu le jour même',
+    ja: '近くの畑から、その日のうちに',
   },
 ];
 
@@ -56,7 +56,7 @@ export default function Translations() {
         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <h1 className="cms-h1">Translations</h1>
           <span className="cms-mono cms-muted" style={{fontSize: '12px'}}>
-            Pages/spring-launch
+            Pages/spring-harvest
           </span>
           <Badge variant="draft">3 missing</Badge>
           <span style={{marginLeft: 'auto', display: 'flex', gap: '6px'}}>
@@ -69,13 +69,13 @@ export default function Translations() {
               Import
             </span>
             <span className="cms-button cms-button--dark">
-              <IconSparkles />
+              <IconRobot />
               Translate missing
             </span>
           </span>
         </div>
         <div style={{display: 'flex', gap: '6px', margin: '16px 0 14px'}}>
-          <span className="cms-chip">Tags: Pages/spring-launch</span>
+          <span className="cms-chip">Tags: Pages/spring-harvest</span>
           <span className="cms-chip">Locales: de, fr, ja</span>
         </div>
         <table className="cms-table" style={{tableLayout: 'fixed'}}>

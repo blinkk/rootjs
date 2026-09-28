@@ -20,8 +20,8 @@
       transform: translateX(-50%);
       background: radial-gradient(
         closest-side,
-        rgba(52, 168, 83, 0.14),
-        rgba(26, 115, 232, 0.08) 55%,
+        rgba(29, 59, 114, 0.12),
+        rgba(26, 115, 232, 0.06) 55%,
         transparent
       );
       pointer-events: none;
@@ -36,14 +36,9 @@
     max-width: 880px;
   }
 
-  .buttons {
-    margin-top: 32px;
-  }
-
   .command {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
 
     code {
       display: inline-flex;
@@ -69,5 +64,62 @@
     @include breakpoints.sm() {
       margin-top: 40px;
     }
+  }
+
+  .actions {
+    margin-top: 32px;
+  }
+
+  .buttons + .command {
+    margin-top: 20px;
+  }
+}
+
+// Compact, left-aligned card for calls to action.
+.layout\:banner {
+  padding-top: 96px;
+  padding-bottom: 96px;
+  @include breakpoints.sm() {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  &::before {
+    display: none;
+  }
+
+  .inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 48px;
+    align-items: center;
+    padding: 56px 64px;
+    border: 1px solid
+      color-mix(in srgb, var(--platform-accent) 16%, transparent);
+    border-radius: platform.$radius-card;
+    background:
+      radial-gradient(
+        600px 300px at 100% 0%,
+        color-mix(in srgb, var(--platform-accent) 14%, transparent),
+        transparent
+      ),
+      color-mix(in srgb, var(--platform-accent) 5%, var(--platform-card-bg));
+    @include breakpoints.md-lt() {
+      grid-template-columns: 1fr;
+      gap: 28px;
+      padding: 40px 28px;
+    }
+  }
+
+  .header {
+    max-width: 560px;
+  }
+
+  .actions {
+    margin-top: 0;
+  }
+
+  .command {
+    justify-content: flex-start;
   }
 }

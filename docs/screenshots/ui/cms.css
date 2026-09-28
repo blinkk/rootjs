@@ -106,14 +106,30 @@ body {
   padding: 1px 5px;
 }
 
-.cms-top__viewers {
+/* Doc status bar, pinned to the right of the top bar on doc pages. */
+
+.cms-status {
   display: flex;
-  margin-left: 12px;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-right: 2px;
+}
+
+.cms-status__viewers {
+  display: flex;
   margin-right: 4px;
 }
 
-.cms-top__viewers .cms-avatar + .cms-avatar {
+.cms-status__viewers .cms-avatar + .cms-avatar {
   margin-left: -6px;
+}
+
+.cms-status__save {
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--cms-text-muted);
+  margin-right: 2px;
 }
 
 .cms-side {

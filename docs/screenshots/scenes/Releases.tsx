@@ -20,17 +20,17 @@ const RELEASES: Array<{
   when: string;
 }> = [
   {
-    id: 'spring-2027',
-    description: 'Spring collection launch',
+    id: 'spring-harvest-2027',
+    description: 'Spring harvest launch',
     docs: 14,
     data: 1,
     owner: 'Ada',
     status: ['scheduled', 'Scheduled'],
-    when: 'Mar 3, 9:00 AM',
+    when: 'Mar 3, 7:00 AM',
   },
   {
-    id: 'pricing-refresh',
-    description: 'New pricing tiers + FAQ',
+    id: 'seed-catalog',
+    description: 'Seed catalog + growing guides',
     docs: 6,
     data: 2,
     owner: 'Kenji',
@@ -38,8 +38,8 @@ const RELEASES: Array<{
     when: 'Mar 10, 6:00 AM',
   },
   {
-    id: 'trail-guides-de',
-    description: 'German trail guides',
+    id: 'growing-guides-de',
+    description: 'German growing guides',
     docs: 22,
     data: 0,
     owner: 'Lea',
@@ -47,8 +47,8 @@ const RELEASES: Array<{
     when: '—',
   },
   {
-    id: 'winter-sale',
-    description: 'Winter sale landing pages',
+    id: 'winter-roots-sale',
+    description: 'Winter root cellar sale',
     docs: 9,
     data: 1,
     owner: 'Priya',
@@ -56,8 +56,8 @@ const RELEASES: Array<{
     when: 'Jan 12, 8:00 AM',
   },
   {
-    id: 'holiday-gift-guide',
-    description: 'Holiday gift guide',
+    id: 'holiday-baskets',
+    description: 'Holiday harvest baskets',
     docs: 11,
     data: 0,
     owner: 'Sam',
@@ -65,8 +65,8 @@ const RELEASES: Array<{
     when: 'Nov 28, 7:00 AM',
   },
   {
-    id: 'fall-2026',
-    description: 'Fall collection launch',
+    id: 'fall-harvest-2026',
+    description: 'Fall harvest launch',
     docs: 16,
     data: 1,
     owner: 'Ada',

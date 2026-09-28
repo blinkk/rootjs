@@ -5,7 +5,7 @@ import {
   IconRocket,
 } from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
-import {Badge, CmsFrame, Field, Input} from '../ui/cms.js';
+import {CmsFrame, DocStatusBar, EditorHeader, Field, Input} from '../ui/cms.js';
 
 export const meta: SceneMeta = {
   id: 'cms-publish-checks',
@@ -33,22 +33,24 @@ const CHECKS: Array<{label: string; status: 'pass' | 'warn'; message: string}> =
 /** The publish modal, open on top of the doc editor. */
 export default function PublishChecks() {
   return (
-    <CmsFrame active="content">
+    <CmsFrame
+      active="content"
+      topRight={
+        <DocStatusBar
+          saveState="Saved 2 min ago"
+          badges={[['draft', 'Draft']]}
+        />
+      }
+    >
       <div style={{position: 'relative', height: '100%'}}>
         <div className="cms-editor" style={{width: '420px'}}>
-          <div className="cms-editor__bar">
-            <span className="cms-editor__docid">Pages/spring-launch</span>
-          </div>
-          <div className="cms-editor__status">
-            <span className="cms-editor__saved">Saved 2 min ago</span>
-            <Badge variant="draft">Draft</Badge>
-          </div>
+          <EditorHeader docId="Pages/spring-harvest" />
           <div className="cms-editor__fields">
             <Field label="Title">
-              <Input>Chase the first light of spring</Input>
+              <Input>Dig into the spring harvest</Input>
             </Field>
             <Field label="Eyebrow">
-              <Input>Spring collection</Input>
+              <Input>Spring harvest</Input>
             </Field>
           </div>
         </div>
@@ -56,7 +58,7 @@ export default function PublishChecks() {
           <div className="cms-modal" style={{width: '560px'}}>
             <div className="cms-modal__title">
               <IconRocket size={18} />
-              Publish Pages/spring-launch
+              Publish Pages/spring-harvest
             </div>
             <div
               style={{
@@ -77,10 +79,10 @@ export default function PublishChecks() {
               <Field label="Publish at">
                 <Input>Mar 3, 2027 · 9:00 AM (America/Los_Angeles)</Input>
               </Field>
-              <Field label="Publish message" help="✨ Suggested by Root AI.">
+              <Field label="Publish message" help="Suggested by Root AI.">
                 <Input textarea>
-                  Launch spring hero with new dawn artwork, updated CTAs and
-                  German and French translations.
+                  Launch the spring harvest hero with new garden artwork,
+                  updated CTAs and German and French translations.
                 </Input>
               </Field>
               <div>

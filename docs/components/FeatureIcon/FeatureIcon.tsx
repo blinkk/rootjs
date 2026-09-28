@@ -19,12 +19,12 @@ import {
   IconPalette,
   IconPhoto,
   IconPlug,
+  IconRobot,
   IconRocket,
   IconRoute,
   IconSearch,
   IconServer,
   IconSitemap,
-  IconSparkles,
   IconTerminal2,
   IconUsers,
   IconWorld,
@@ -34,7 +34,7 @@ import type {FeatureIconKey} from '@/fields/featureIconField.js';
 
 /** Icon components for each key in `FEATURE_ICON_KEYS`. */
 const FEATURE_ICONS: Record<FeatureIconKey, FunctionalComponent<any>> = {
-  ai: IconSparkles,
+  ai: IconRobot,
   assets: IconPhoto,
   bolt: IconBolt,
   brain: IconBrain,

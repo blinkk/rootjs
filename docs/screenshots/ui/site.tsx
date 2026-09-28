@@ -1,9 +1,10 @@
 /**
- * A tiny fictional marketing site ("Lumen Outdoor") rendered inside the CMS
- * preview pane in screenshot scenes.
+ * A tiny fictional storefront ("Fernwood Market", a garden store and market)
+ * rendered inside the CMS preview pane in screenshot scenes.
  */
 
-import {Artwork} from './cms.js';
+import {GardenScene, SproutMark, VEGGIE_TINTS, Veggie} from './garden.js';
+import type {VeggieKind} from './garden.js';
 
 export interface SitePreviewProps {
   /** Width of the frame in CSS pixels. */
@@ -18,9 +19,34 @@ export interface SitePreviewProps {
   highlightTitle?: boolean;
 }
 
+/** Default hero copy, shared with the editor fields in the scenes. */
+export const SITE_COPY = {
+  eyebrow: 'Spring harvest',
+  title: 'Dig into the spring harvest',
+  body: 'Heirloom carrots, candy-striped beets and peppery radishes, pulled this morning by growers just down the road.',
+  primaryCta: 'Shop the market',
+  secondaryCta: 'Visit the garden center',
+};
+
+/** Product listings shown below the hero. */
+export const PRODUCTS: Array<{kind: VeggieKind; name: string; price: string}> =
+  [
+    {kind: 'carrot', name: 'Heirloom Carrots', price: '$4.50 / bunch'},
+    {kind: 'beet', name: 'Chioggia Beets', price: '$5.00 / bunch'},
+    {kind: 'radish', name: 'French Radishes', price: '$3.25 / bunch'},
+    {kind: 'turnip', name: 'Purple Top Turnips', price: '$2.75 / lb'},
+    {kind: 'parsnip', name: 'Sweet Parsnips', price: '$3.50 / lb'},
+    {kind: 'sweetPotato', name: 'Garnet Sweet Potatoes', price: '$2.25 / lb'},
+  ];
+
+const INK = '#2b2a24';
+const TERRACOTTA = '#c8553d';
+const CREAM = '#fbf7ef';
+
 export function SitePreview(props: SitePreviewProps) {
   const mobile = props.device === 'mobile';
-  const title = props.title || 'Chase the first light of spring';
+  const title = props.title || SITE_COPY.title;
+  const products = PRODUCTS.slice(0, mobile ? 2 : 3);
   return (
     <div
       className="cms-preview__frame"
@@ -28,7 +54,8 @@ export function SitePreview(props: SitePreviewProps) {
         width: `${props.width}px`,
         height: `${props.height}px`,
         fontFamily: 'Inter, sans-serif',
-        color: '#14213d',
+        color: INK,
+        background: CREAM,
         borderRadius: mobile ? '18px' : '6px',
       }}
     >
@@ -48,41 +75,35 @@ export function SitePreview(props: SitePreviewProps) {
             alignItems: 'center',
             gap: '5px',
             fontSize: mobile ? '12px' : '14px',
+            letterSpacing: '-0.2px',
             marginRight: 'auto',
           }}
         >
-          <span
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              background: 'linear-gradient(90deg, #14213d 50%, #e76f51 50%)',
-            }}
-          />
-          lumen
+          <SproutMark size={mobile ? 13 : 15} />
+          fernwood market
         </strong>
         {!mobile && (
           <>
-            <span>Gear</span>
-            <span>Journal</span>
-            <span>Stores</span>
+            <span>Produce</span>
+            <span>Garden center</span>
+            <span>Recipes</span>
           </>
         )}
         <span
           style={{
             padding: '5px 10px',
             borderRadius: '20px',
-            background: '#14213d',
+            background: '#3f6b3a',
             color: '#fff',
             marginLeft: mobile ? '0' : '6px',
           }}
         >
-          Shop
+          Basket (3)
         </span>
       </div>
       <div
         style={{
-          padding: mobile ? '18px 16px 16px' : '34px 28px 24px',
+          padding: mobile ? '18px 16px 16px' : '30px 28px 22px',
           textAlign: mobile ? 'left' : 'center',
         }}
       >
@@ -92,10 +113,10 @@ export function SitePreview(props: SitePreviewProps) {
             fontWeight: 700,
             letterSpacing: '1.2px',
             textTransform: 'uppercase',
-            color: '#e76f51',
+            color: TERRACOTTA,
           }}
         >
-          Spring collection
+          {SITE_COPY.eyebrow}
         </div>
         <div
           className={props.highlightTitle ? 'cms-highlight' : undefined}
@@ -114,13 +135,12 @@ export function SitePreview(props: SitePreviewProps) {
           style={{
             fontSize: mobile ? '11px' : '12.5px',
             lineHeight: 1.5,
-            color: '#4a5568',
-            maxWidth: mobile ? 'none' : '400px',
+            color: '#5c574b',
+            maxWidth: mobile ? 'none' : '420px',
             margin: '0 auto',
           }}
         >
-          Lightweight layers and trail-tested gear for early mornings, long
-          switchbacks and everything in between.
+          {SITE_COPY.body}
         </div>
         <div
           style={{
@@ -136,56 +156,81 @@ export function SitePreview(props: SitePreviewProps) {
             style={{
               padding: '7px 14px',
               borderRadius: '20px',
-              background: '#e76f51',
+              background: TERRACOTTA,
               color: '#fff',
             }}
           >
-            Shop the collection
+            {SITE_COPY.primaryCta}
           </span>
           {!mobile && (
             <span
               style={{
                 padding: '7px 14px',
                 borderRadius: '20px',
-                border: '1px solid #cbd5e0',
+                border: '1px solid #d8cfbd',
               }}
             >
-              Read the journal
+              {SITE_COPY.secondaryCta}
             </span>
           )}
         </div>
       </div>
-      <Artwork
-        variant="dawn"
+      <GardenScene
         style={{
-          margin: mobile ? '0 16px' : '0 28px',
+          display: 'block',
+          width: mobile ? 'calc(100% - 32px)' : 'calc(100% - 56px)',
           height: mobile ? '160px' : '220px',
+          margin: mobile ? '0 16px' : '0 28px',
           borderRadius: '10px',
         }}
       />
       <div
         style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          padding: mobile ? '16px 16px 0' : '22px 28px 0',
+        }}
+      >
+        <strong style={{fontSize: mobile ? '12px' : '14px'}}>
+          Fresh this week
+        </strong>
+        <span style={{fontSize: '10px', color: TERRACOTTA, fontWeight: 600}}>
+          See all produce →
+        </span>
+      </div>
+      <div
+        style={{
           display: 'grid',
           gridTemplateColumns: mobile ? '1fr 1fr' : '1fr 1fr 1fr',
           gap: '10px',
-          padding: mobile ? '14px 16px' : '18px 28px',
+          padding: mobile ? '10px 16px' : '12px 28px',
         }}
       >
-        {(['forest', 'dusk', 'dawn'] as const)
-          .slice(0, mobile ? 2 : 3)
-          .map((variant, i) => (
-            <div>
-              <Artwork
-                variant={variant}
-                style={{height: mobile ? '70px' : '90px', borderRadius: '8px'}}
-              />
-              <div
-                style={{fontSize: '10.5px', fontWeight: 600, marginTop: '6px'}}
-              >
-                {['Ridge Shell Jacket', 'Nightfall Tent', 'Trailhead Pack'][i]}
-              </div>
+        {products.map((product) => (
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: mobile ? '70px' : '90px',
+                borderRadius: '8px',
+                background: VEGGIE_TINTS[product.kind],
+              }}
+            >
+              <Veggie kind={product.kind} size={mobile ? 44 : 56} />
             </div>
-          ))}
+            <div
+              style={{fontSize: '10.5px', fontWeight: 600, marginTop: '6px'}}
+            >
+              {product.name}
+            </div>
+            <div style={{fontSize: '10px', color: '#7a7466', marginTop: '1px'}}>
+              {product.price}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

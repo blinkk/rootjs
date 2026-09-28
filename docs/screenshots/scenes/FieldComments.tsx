@@ -1,14 +1,10 @@
-import {
-  IconCheck,
-  IconDots,
-  IconHistory,
-  IconMessageCircle,
-} from '@tabler/icons-preact';
+import {IconCheck, IconDots, IconMessageCircle} from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {
   Avatar,
-  Badge,
   CmsFrame,
+  DocStatusBar,
+  EditorHeader,
   Field,
   Input,
   RichTextInput,
@@ -27,8 +23,8 @@ const COMMENTS = [
     time: '10:42 AM',
     body: (
       <>
-        Can we make this punchier? Legal also flagged “trail-tested” — we need a
-        source for that claim.
+        Can we make this punchier? Also, “pulled this morning” is only true for
+        the Saturday market, so let’s soften it.
       </>
     ),
   },
@@ -52,7 +48,18 @@ const COMMENTS = [
 /** A field comment thread next to the doc editor. */
 export default function FieldComments() {
   return (
-    <CmsFrame active="content" viewers={['Priya', 'Kenji', 'Lea']}>
+    <CmsFrame
+      active="content"
+      topRight={
+        <DocStatusBar
+          viewers={['Priya', 'Kenji', 'Lea']}
+          saveState="Kenji edited 1 min ago"
+          badges={[['draft', 'Draft']]}
+          activeTool="comments"
+          comments={4}
+        />
+      }
+    >
       <div
         style={{
           display: 'grid',
@@ -61,34 +68,24 @@ export default function FieldComments() {
         }}
       >
         <div className="cms-editor">
-          <div className="cms-editor__bar">
-            <span className="cms-editor__docid">Pages/spring-launch</span>
-            <span className="cms-button cms-button--ghost">
-              <IconHistory />
-              History
-            </span>
-          </div>
-          <div className="cms-editor__status">
-            <span className="cms-editor__saved">Kenji edited 1 min ago</span>
-            <Badge variant="draft">Draft</Badge>
-          </div>
+          <EditorHeader docId="Pages/spring-harvest" />
           <div className="cms-editor__fields">
             <Field label="Eyebrow">
-              <Input>Spring collection</Input>
+              <Input>Spring harvest</Input>
             </Field>
             <Field label="Title" comments={3}>
               <Input focused textarea>
-                Chase the first light of spring
+                Dig into the spring harvest
               </Input>
             </Field>
             <Field label="Body" comments={1}>
               <RichTextInput>
-                Lightweight layers and trail-tested gear for early mornings,
-                long switchbacks and everything in between.
+                Heirloom carrots, candy-striped beets and peppery radishes,
+                pulled this morning by growers just down the road.
               </RichTextInput>
             </Field>
             <Field label="Button label">
-              <Input>Shop the collection</Input>
+              <Input>Shop the market</Input>
             </Field>
           </div>
         </div>
@@ -182,7 +179,7 @@ export default function FieldComments() {
             <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
               <Avatar name="Sam" />
               <div style={{lineHeight: 1.5}}>
-                <strong>Sam</strong> Swap “switchbacks” for “summit pushes”?
+                <strong>Sam</strong> Swap “peppery” for “crisp”? Sounds fresher.
               </div>
             </div>
           </div>
