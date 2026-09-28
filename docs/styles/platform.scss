@@ -11,8 +11,9 @@
 
 $color-ink: #0f1115;
 $color-muted: #5f6368;
-$color-accent: #2a5298;
-$color-accent-2: #1a73e8;
+// Aubergine.
+$color-accent: #6b2f55;
+$color-accent-hover: #54233f;
 // Matches the Root CMS page background (`--page-background`).
 $color-tint: #fbfbf9;
 $color-border: #e4e4e1;
@@ -29,6 +30,8 @@ $radius-media: 14px;
   --platform-card-bg: #fff;
   --platform-border: #{$color-border};
   --platform-code-bg: #{tokens.$color-grey-50};
+  --button-primary-bg: #{$color-accent};
+  --button-primary-bg-hover: #{$color-accent-hover};
   background: var(--platform-bg);
   color: var(--platform-fg);
 
@@ -40,7 +43,9 @@ $radius-media: 14px;
     --platform-bg: #0d1117;
     --platform-fg: #f1f3f4;
     --platform-muted: #9aa0a6;
-    --platform-accent: #8ab4f8;
+    --platform-accent: #d9a6c8;
+    --button-primary-bg: #9a4a7e;
+    --button-primary-bg-hover: #8a3f6f;
     --platform-card-bg: #161b22;
     --platform-border: #2a313c;
     --platform-code-bg: #0b0f14;
