@@ -1,0 +1,42 @@
+@use 'platform';
+
+@layer component {
+  .header {
+    max-width: 760px;
+  }
+
+  .center {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+
+  .eyebrow {
+    @include platform.eyebrow();
+    margin-bottom: 16px;
+  }
+
+  .title {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+
+  .body {
+    margin-top: 20px;
+    color: var(--platform-muted);
+    text-wrap: pretty;
+
+    p {
+      margin: 0;
+    }
+
+    p + p {
+      margin-top: 12px;
+    }
+
+    a {
+      color: inherit;
+      text-underline-offset: 4px;
+    }
+  }
+}

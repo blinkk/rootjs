@@ -1,0 +1,76 @@
+@use 'breakpoints';
+@use 'platform';
+
+@layer template {
+  .featureGrid {
+    @include platform.theme-vars();
+    @include platform.section-padding();
+    --feature-grid-columns: 3;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--feature-grid-columns), minmax(0, 1fr));
+    gap: 1px;
+    margin: 56px 0 0;
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+    border: 1px solid var(--platform-border);
+    border-radius: platform.$radius-card;
+    // The 1px gap shows this background as hairline dividers between items.
+    background: var(--platform-border);
+    @include breakpoints.md() {
+      --feature-grid-columns: 2;
+    }
+    @include breakpoints.sm() {
+      --feature-grid-columns: 1;
+      margin-top: 40px;
+    }
+  }
+
+  .item {
+    display: block;
+    height: 100%;
+    padding: 32px 28px;
+    background: var(--platform-card-bg);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+  }
+
+  a.item:hover {
+    background: color-mix(
+      in srgb,
+      var(--platform-accent) 5%,
+      var(--platform-card-bg)
+    );
+  }
+
+  .icon {
+    display: block;
+    margin-bottom: 20px;
+    color: var(--platform-accent);
+  }
+
+  .itemTitle {
+    font-weight: 600;
+  }
+
+  .itemBody {
+    margin-top: 8px;
+    color: var(--platform-muted);
+  }
+}
+
+.columns\:2 {
+  @include breakpoints.lg-gt() {
+    --feature-grid-columns: 2;
+  }
+}
+
+.columns\:4 {
+  @include breakpoints.lg-gt() {
+    --feature-grid-columns: 4;
+  }
+}

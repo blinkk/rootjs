@@ -13,8 +13,8 @@
       "@/*": ["./*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-  ]
+  "include": ["**/*.ts", "**/*.tsx"],
+  // Screenshot scenes (Preact, client-side) and scripts (Node) have their own
+  // tsconfig files.
+  "exclude": ["node_modules", "dist", "screenshots", "scripts"]
 }

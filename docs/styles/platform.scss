@@ -1,0 +1,94 @@
+// Shared design tokens and mixins for the "web platform" landing page
+// templates (TemplateHero, TemplatePillars, TemplateFeatureSpotlight,
+// TemplateFeatureGrid and TemplateCodeShowcase).
+//
+// Each template sets its colors through the `--platform-*` custom properties
+// via `theme-vars()`, so adding `theme:dark` or `theme:tint` to a module's
+// options re-themes it without any template-specific CSS.
+
+@use 'breakpoints';
+@use 'tokens';
+
+$color-ink: #0f1115;
+$color-muted: #5f6368;
+$color-accent: #1e8e3e;
+$color-accent-2: #1a73e8;
+$color-tint: #f6f5f0;
+$color-border: #e4e4e1;
+
+$radius-card: 20px;
+$radius-media: 14px;
+
+/** Emits the light theme vars plus the `theme:dark` and `theme:tint` variants. */
+@mixin theme-vars() {
+  --platform-bg: transparent;
+  --platform-fg: #{$color-ink};
+  --platform-muted: #{$color-muted};
+  --platform-accent: #{$color-accent};
+  --platform-card-bg: #fff;
+  --platform-border: #{$color-border};
+  --platform-code-bg: #{tokens.$color-grey-50};
+  background: var(--platform-bg);
+  color: var(--platform-fg);
+
+  &.theme\:tint {
+    --platform-bg: #{$color-tint};
+  }
+
+  &.theme\:dark {
+    --platform-bg: #0d1117;
+    --platform-fg: #f1f3f4;
+    --platform-muted: #9aa0a6;
+    --platform-accent: #5bb974;
+    --platform-card-bg: #161b22;
+    --platform-border: #2a313c;
+    --platform-code-bg: #0b0f14;
+  }
+}
+
+/** Vertical rhythm shared by all platform sections. */
+@mixin section-padding() {
+  padding-top: 112px;
+  padding-bottom: 112px;
+  @include breakpoints.md() {
+    padding-top: 88px;
+    padding-bottom: 88px;
+  }
+  @include breakpoints.sm() {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  &.spacing\:compact {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+}
+
+/** Small uppercase label above titles. */
+@mixin eyebrow() {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--platform-accent);
+}
+
+/** Frame applied to product screenshots. */
+@mixin media-frame() {
+  display: block;
+  overflow: hidden;
+  border-radius: $radius-media;
+  border: 1px solid var(--platform-border);
+  background: var(--platform-card-bg);
+  box-shadow:
+    0 1px 2px rgba(15, 17, 21, 0.06),
+    0 24px 60px -24px rgba(15, 17, 21, 0.28);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
