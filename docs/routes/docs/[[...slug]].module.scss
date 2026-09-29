@@ -8,25 +8,11 @@
 $accent-wash: rgba(platform.$color-accent, 0.08);
 $ink-wash: rgba(platform.$color-ink, 0.04);
 
-// Layout: the navigation fills the left column, and the headline and table
-// of contents lead the right column.
+// Layout: the left column holds the table of contents above the navigation,
+// and the headline leads the right column.
 
 .docs {
   --article-gap: 56px;
-}
-
-.top {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-// Shown in the content column on every screen size, unlike the guides.
-.toc {
-  display: block;
-  padding: 20px 22px;
-  border: 1px solid var(--platform-border);
-  border-radius: platform.$radius-media;
 }
 
 // Navigation.

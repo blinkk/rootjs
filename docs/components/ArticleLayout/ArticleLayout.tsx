@@ -102,25 +102,17 @@ export function ArticleAsideSection(props: ArticleAsideSectionProps) {
 }
 
 export interface ArticleTocProps {
-  className?: string;
   items: Array<{href: string; label: string}>;
 }
 
-/**
- * The "On this page" links. Hidden on narrow screens, unless the page shows
- * them outside the aside (see the docs page).
- */
+/** The "On this page" links. Hidden on narrow screens. */
 export function ArticleToc(props: ArticleTocProps) {
   const t = useTranslations();
   if (props.items.length === 0) {
     return null;
   }
   return (
-    <ArticleAsideSection
-      className={joinClassNames(styles.toc, props.className)}
-      title="On this page"
-      nav
-    >
+    <ArticleAsideSection className={styles.toc} title="On this page" nav>
       <UnstyledList className={styles.tocLinks}>
         {props.items.map((item) => (
           <li>
