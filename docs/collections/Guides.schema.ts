@@ -3,7 +3,7 @@ import {schema} from '@blinkk/root-cms';
 export default schema.collection({
   name: 'Guides',
   description:
-    'Non-technical guides to Root CMS features, written for decision makers.',
+    'Non-technical guides to Root.js features, written for decision makers.',
   url: '/guides/[...slug]',
   preview: {
     title: 'meta.title',
@@ -68,7 +68,7 @@ export default schema.collection({
         schema.richtext({
           id: 'intro',
           label: 'Intro',
-          help: 'Opening paragraph(s): the problem and what Root CMS offers.',
+          help: 'Opening paragraph(s): the problem and what Root.js offers.',
           translate: true,
         }),
         schema.image({
@@ -127,9 +127,8 @@ export default schema.collection({
           }),
         }),
         schema.array({
-          id: 'questions',
-          label: 'Questions to ask',
-          help: 'Questions a team can use when evaluating this area of a CMS.',
+          id: 'faq',
+          label: 'Frequently asked questions',
           preview: ['{question}'],
           of: schema.object({
             fields: [
@@ -140,7 +139,7 @@ export default schema.collection({
               }),
               schema.string({
                 id: 'answer',
-                label: 'How Root CMS answers it',
+                label: 'Answer',
                 variant: 'textarea',
                 translate: true,
               }),

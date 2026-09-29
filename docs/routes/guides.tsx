@@ -31,14 +31,14 @@ export default function Page(props: PageProps) {
   return (
     <BaseLayout
       title="Guides – Root.js"
-      description="Plain-language guides to Root CMS for the people choosing a content platform: editing, publishing, localization, AI, governance and more."
+      description="Plain-language guides to Root.js for the people choosing a content platform: editing, publishing, localization, AI, governance and more."
     >
       <div className={styles.page}>
         <Container>
           <SectionHeader
-            eyebrow="Root CMS guides"
-            title="See how your team would work in Root CMS"
-            body="Short, non-technical tours of each part of Root CMS, with screenshots from the app. Written for the people choosing a content platform, not just the developers building on it."
+            eyebrow="Root.js guides"
+            title="See how your team would work in Root.js"
+            body="Short, non-technical tours of each part of Root.js and its CMS, with screenshots from the app. Written for the people choosing a content platform, not just the developers building on it."
             titleSize="h1"
           />
           <p className={styles.docsLink}>

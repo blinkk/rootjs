@@ -1,5 +1,5 @@
 /**
- * @fileoverview Copy for the non-technical Root CMS guides at `/guides/`,
+ * @fileoverview Copy for the non-technical Root.js guides at `/guides/`,
  * written to the `Guides` collection by `seed_guides.ts`.
  *
  * The guides are written for decision makers (marketing and content leads,
@@ -83,19 +83,20 @@ export interface GuideSource {
     image?: string;
     caption?: string;
   }>;
-  questions: Array<{question: string; answer: string}>;
+  /** Frequently asked questions. */
+  faq: Array<{question: string; answer: string}>;
 }
 
 export const GUIDES: GuideSource[] = [
   {
     slug: 'overview',
-    title: 'Root CMS at a glance',
+    title: 'Root.js at a glance',
     description:
-      'What Root CMS is, who it is for, and how it helps marketing, content and engineering teams ship websites together.',
+      'What Root.js is, who it is for, and how it helps marketing, content and engineering teams ship websites together.',
     eyebrow: 'Overview',
     heading: 'One place for your team to build, edit and ship the website',
     intro: richtext(
-      'Root CMS is the content management system that comes with Root.js, an open-source web platform. Developers build the site and define what content it needs. Everyone else — marketers, writers, designers, translators and reviewers — edits that content in a visual editor, previews it on the real site and publishes it when it is ready.',
+      'Root.js is an open-source web platform with a built-in content management system (CMS). Developers build the site and define what content it needs. Everyone else — marketers, writers, designers, translators and reviewers — edits that content in a visual editor, previews it on the real site and publishes it when it is ready.',
       'This guide is a short tour for the people choosing a platform. Each section links to a more detailed guide.'
     ),
     heroImage: 'cms-editor-preview',
@@ -113,7 +114,7 @@ export const GUIDES: GuideSource[] = [
         id: 'who-its-for',
         title: 'Who it is for',
         body: richtext(
-          'Root CMS is built for organizations whose website is a product: brand and marketing sites, product launches, localized campaigns and content hubs that change every week and have many people involved.',
+          'Root.js is built for organizations whose website is a product: brand and marketing sites, product launches, localized campaigns and content hubs that change every week and have many people involved.',
           bullets(
             '<b>Content and marketing teams</b> get a friendly editor, previews and scheduling, without waiting on a developer for every change.',
             '<b>Localization teams</b> get one place to see what needs translating, with AI and vendor integrations.',
@@ -155,12 +156,12 @@ export const GUIDES: GuideSource[] = [
         id: 'ownership',
         title: 'Open source, and your data stays yours',
         body: richtext(
-          'Root.js and Root CMS are open source under the MIT license, with no per-seat fees. Your content is stored in your organization’s own Google Cloud (Firebase) project, not in a vendor’s shared database, and people sign in with their Google accounts. You decide where the site is hosted and who has access.',
+          'Root.js, including the CMS, is open source under the MIT license, with no per-seat fees. Your content is stored in your organization’s own Google Cloud (Firebase) project, not in a vendor’s shared database, and people sign in with their Google accounts. You decide where the site is hosted and who has access.',
           `For roles, approvals and audit logs, see ${guideLink('governance', 'Roles, permissions and governance')}.`
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can non-technical teams make changes without a developer?',
         answer:
@@ -188,11 +189,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'editing',
     title: 'Editing and live preview',
     description:
-      'How editors create and update pages in Root CMS, preview them on the real site, and find any piece of content in seconds.',
+      'How editors create and update pages in the CMS, preview them on the real site, and find any piece of content in seconds.',
     eyebrow: 'Editing',
     heading: 'Edit the page and see the result as you type',
     intro: richtext(
-      'The hardest part of most content systems is imagining how a form turns into a web page. Root CMS puts the two side by side: fields on the left, the real website on the right, updating as you type.'
+      'The hardest part of most content systems is imagining how a form turns into a web page. The Root.js CMS puts the two side by side: fields on the left, the real website on the right, updating as you type.'
     ),
     heroImage: 'cms-editor-preview',
     takeaways: [
@@ -245,7 +246,7 @@ export const GUIDES: GuideSource[] = [
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can editors see exactly what visitors will see?',
         answer:
@@ -268,11 +269,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'publishing',
     title: 'Publishing, scheduling and releases',
     description:
-      'How Root CMS takes content from draft to live: scheduled publishing, releases that launch many changes at once, automated checks and full version history.',
+      'How Root.js takes content from draft to live: scheduled publishing, releases that launch many changes at once, automated checks and full version history.',
     eyebrow: 'Publishing',
     heading: 'Ship content like you ship code',
     intro: richtext(
-      'Launches rarely involve a single page. A seasonal campaign might touch the home page, a dozen product pages, the navigation and a pricing sheet, in six languages, all at 9:00 AM on a Monday. Root CMS is designed for that moment.'
+      'Launches rarely involve a single page. A seasonal campaign might touch the home page, a dozen product pages, the navigation and a pricing sheet, in six languages, all at 9:00 AM on a Monday. Root.js is designed for that moment.'
     ),
     heroImage: 'cms-publish-checks',
     takeaways: [
@@ -319,14 +320,14 @@ export const GUIDES: GuideSource[] = [
         id: 'history',
         title: 'Every version, recoverable',
         body: richtext(
-          'Root CMS keeps a version every time a doc is saved, and a tagged version every time it is published. Anyone can compare two versions side by side, restore an earlier version, or copy one into a new doc. Individual fields have their own history too, so one paragraph can be rolled back without undoing the rest of the page.'
+          'The CMS keeps a version every time a doc is saved, and a tagged version every time it is published. Anyone can compare two versions side by side, restore an earlier version, or copy one into a new doc. Individual fields have their own history too, so one paragraph can be rolled back without undoing the rest of the page.'
         ),
         image: 'cms-version-history',
         caption:
           'Version history for a page: every save and publish, who made it, and options to compare, restore or copy.',
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can we launch a campaign across many pages at one time?',
         answer:
@@ -354,11 +355,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'localization',
     title: 'Localization and translation',
     description:
-      'How Root CMS helps teams launch and maintain a website in many languages, with AI translation, vendor integrations and clear visibility into what is missing.',
+      'How Root.js helps teams launch and maintain a website in many languages, with AI translation, vendor integrations and clear visibility into what is missing.',
     eyebrow: 'Localization',
     heading: 'Every market, one workflow',
     intro: richtext(
-      'Running a site in many languages usually means spreadsheets emailed back and forth, and pages that quietly go live with missing translations. Root CMS keeps translations next to the content they belong to, shows exactly what is missing, and fills the gaps with AI or your translation vendor.'
+      'Running a site in many languages usually means spreadsheets emailed back and forth, and pages that quietly go live with missing translations. Root.js keeps translations next to the content they belong to, shows exactly what is missing, and fills the gaps with AI or your translation vendor.'
     ),
     heroImage: 'cms-translations',
     takeaways: [
@@ -391,7 +392,7 @@ export const GUIDES: GuideSource[] = [
         id: 'ai-and-vendors',
         title: 'AI translation and your vendors',
         body: richtext(
-          'For speed, Root AI can translate missing strings in one click, and a person reviews the result before it is published. For professional translation, Root CMS connects to translation services such as Crowdin and DeepL, and teams can export strings to Google Sheets or CSV and import the results back.',
+          'For speed, Root AI can translate missing strings in one click, and a person reviews the result before it is published. For professional translation, the CMS connects to translation services such as Crowdin and DeepL, and teams can export strings to Google Sheets or CSV and import the results back.',
           'Many teams mix the two: AI for fast first drafts and low-risk copy, and a vendor or in-market reviewer for launches and legal text.'
         ),
       },
@@ -403,7 +404,7 @@ export const GUIDES: GuideSource[] = [
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'How do we know what still needs translating?',
         answer:
@@ -412,7 +413,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Can we keep our current translation vendor?',
         answer:
-          'Most likely. Root CMS integrates with services such as Crowdin and DeepL, and supports Google Sheets and CSV exchange for everyone else.',
+          'Most likely. Root.js integrates with services such as Crowdin and DeepL, and supports Google Sheets and CSV exchange for everyone else.',
       },
       {
         question: 'Is AI translation reviewed before it goes live?',
@@ -426,11 +427,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'collaboration',
     title: 'Collaboration and review',
     description:
-      'How teams give feedback, review changes and track content work in Root CMS, with comments on fields, live presence and tasks.',
+      'How teams give feedback, review changes and track content work in the CMS, with comments on fields, live presence and tasks.',
     eyebrow: 'Collaboration',
     heading: 'Feedback right where the words live',
     intro: richtext(
-      'Website feedback usually lives everywhere except the website: in chat threads, email chains and screenshots with red circles. Root CMS brings the conversation into the editor, next to the exact field it is about.'
+      'Website feedback usually lives everywhere except the website: in chat threads, email chains and screenshots with red circles. The Root.js CMS brings the conversation into the editor, next to the exact field it is about.'
     ),
     heroImage: 'cms-field-comments',
     takeaways: [
@@ -468,11 +469,11 @@ export const GUIDES: GuideSource[] = [
         id: 'notifications',
         title: 'Notifications',
         body: richtext(
-          'Root CMS can notify people by email when they are mentioned in a comment, or tell admins when content is published. Developers can connect other notification channels, such as your team chat.'
+          'The CMS can notify people by email when they are mentioned in a comment, or tell admins when content is published. Developers can connect other notification channels, such as your team chat.'
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Where does review feedback live?',
         answer:
@@ -495,7 +496,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'root-ai',
     title: 'Root AI',
     description:
-      'How Root AI helps teams draft, translate and manage content inside Root CMS, with guardrails that keep people in control.',
+      'How Root AI helps teams draft, translate and manage content inside the CMS, with guardrails that keep people in control.',
     eyebrow: 'Root AI',
     heading: 'An AI teammate that knows your content',
     intro: richtext(
@@ -551,11 +552,11 @@ export const GUIDES: GuideSource[] = [
         id: 'agents',
         title: 'Ready for AI agents',
         body: richtext(
-          'For teams using AI agents in their engineering workflow, Root CMS includes a command-line tool and agent skills that let an agent propose content changes. Proposals are reviewed and tested like code changes before they are applied, so automation never bypasses review.'
+          'For teams using AI agents in their engineering workflow, Root.js includes a command-line tool and agent skills that let an agent propose content changes. Proposals are reviewed and tested like code changes before they are applied, so automation never bypasses review.'
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can AI publish content by itself?',
         answer:
@@ -578,11 +579,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'governance',
     title: 'Roles, permissions and governance',
     description:
-      'How Root CMS controls who can view, edit and publish content, and keeps a record of every change.',
+      'How Root.js controls who can view, edit and publish content, and keeps a record of every change.',
     eyebrow: 'Governance',
     heading: 'The right hands on the right content',
     intro: richtext(
-      'As more people touch the website, the questions from legal, security and leadership get sharper: who can change the home page, who approved this, and what exactly changed last Tuesday? Root CMS answers them with clear roles, publishing controls and a full activity log.'
+      'As more people touch the website, the questions from legal, security and leadership get sharper: who can change the home page, who approved this, and what exactly changed last Tuesday? Root.js answers them with clear roles, publishing controls and a full activity log.'
     ),
     heroImage: 'cms-roles',
     takeaways: [
@@ -638,7 +639,7 @@ export const GUIDES: GuideSource[] = [
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can freelancers or agencies work without publishing access?',
         answer:
@@ -665,11 +666,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'assets-and-data',
     title: 'Assets and data',
     description:
-      'How Root CMS manages images and files, keeps them in sync with design tools, and brings spreadsheet and API data into the website.',
+      'How Root.js manages images and files, keeps them in sync with design tools, and brings spreadsheet and API data into the website.',
     eyebrow: 'Assets and data',
     heading: 'Images, files and data, in sync',
     intro: richtext(
-      'A website is more than words. It is photos and illustrations from the design team, and data like prices, store hours and inventory that change often. Root CMS keeps both organized and up to date, without copy and paste.'
+      'A website is more than words. It is photos and illustrations from the design team, and data like prices, store hours and inventory that change often. Root.js keeps both organized and up to date, without copy and paste.'
     ),
     heroImage: 'cms-asset-library',
     takeaways: [
@@ -706,14 +707,14 @@ export const GUIDES: GuideSource[] = [
         id: 'data-sources',
         title: 'Bring your data along',
         body: richtext(
-          'Data sources connect the website to information that lives elsewhere: a Google Sheet of prices maintained by the merchandising team, or a feed of store hours from an internal system. Root CMS syncs the data on demand or on a schedule (hourly, daily, weekly and so on), shows when it was last updated, and publishes it on its own, automatically after each sync, or as part of a release, so new prices go live at the same moment as the campaign that announces them.'
+          'Data sources connect the website to information that lives elsewhere: a Google Sheet of prices maintained by the merchandising team, or a feed of store hours from an internal system. The CMS syncs the data on demand or on a schedule (hourly, daily, weekly and so on), shows when it was last updated, and publishes it on its own, automatically after each sync, or as part of a release, so new prices go live at the same moment as the campaign that announces them.'
         ),
         image: 'cms-data-sources',
         caption:
           'Data sources from Google Sheets and an API, with their sync and publish status.',
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can our designers keep working in Figma?',
         answer:
@@ -722,7 +723,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Can non-developers update data such as prices?',
         answer:
-          'Yes. Keep the data in a Google Sheet, and Root CMS syncs and publishes it, including as part of a scheduled release.',
+          'Yes. Keep the data in a Google Sheet, and the CMS syncs and publishes it, including as part of a scheduled release.',
       },
       {
         question: 'Do editors need to resize images?',
@@ -736,11 +737,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'extensibility',
     title: 'Integrations and extensibility',
     description:
-      'How Root CMS fits into your existing tools and workflows, and how developers extend it for your team.',
+      'How Root.js fits into your existing tools and workflows, and how developers extend it for your team.',
     eyebrow: 'Integrations',
     heading: 'Make the CMS your own',
     intro: richtext(
-      'Every organization has its own tools, rules and habits. Root CMS is designed to be extended, so it can fit how your team already works instead of the other way around.'
+      'Every organization has its own tools, rules and habits. The Root.js CMS is designed to be extended, so it can fit how your team already works instead of the other way around.'
     ),
     heroImage: 'cms-sidebar-tools',
     takeaways: [
@@ -774,7 +775,7 @@ export const GUIDES: GuideSource[] = [
         id: 'providers',
         title: 'Bring your own providers',
         body: richtext(
-          'Root CMS connects to the services your organization already uses and approves: AI models from several providers, translation services such as Crowdin and DeepL, and data from Google Sheets or any API.'
+          'Root.js connects to the services your organization already uses and approves: AI models from several providers, translation services such as Crowdin and DeepL, and data from Google Sheets or any API.'
         ),
       },
       {
@@ -788,25 +789,25 @@ export const GUIDES: GuideSource[] = [
         id: 'no-lock-in',
         title: 'No lock-in',
         body: richtext(
-          'Root.js and Root CMS are open source under the MIT license. Content is stored in your own cloud project and can be exported at any time, and the code that renders your website is yours.'
+          'Root.js, including the CMS, is open source under the MIT license. Content is stored in your own cloud project and can be exported at any time, and the code that renders your website is yours.'
         ),
       },
     ],
-    questions: [
+    faq: [
       {
         question: 'Can we add our own internal tools to the CMS?',
         answer:
           'Yes. Developers can add custom pages to the CMS sidebar, and custom publishing checks, notifications and hooks.',
       },
       {
-        question: 'What if we want to move off Root CMS later?',
+        question: 'What if we want to move off Root.js later?',
         answer:
           'Your content is in your own database and can be exported, and the software is open source.',
       },
       {
         question: 'Does it work with our existing providers?',
         answer:
-          'Root CMS supports several AI, translation and data providers out of the box, and developers can add others.',
+          'Root.js supports several AI, translation and data providers out of the box, and developers can add others.',
       },
     ],
   },
@@ -872,7 +873,7 @@ export function buildGuideFields(
         image: image(screenshots, section.image),
         caption: section.image ? section.caption : undefined,
       })),
-      questions: guide.questions,
+      faq: guide.faq,
     },
   };
 }

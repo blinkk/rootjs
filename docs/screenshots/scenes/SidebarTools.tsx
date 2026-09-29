@@ -25,7 +25,7 @@ export const meta: SceneMeta = {
   id: 'cms-sidebar-tools',
   width: 960,
   height: 600,
-  alt: 'A custom "Launch checklist" tool added to the Root CMS sidebar, showing an internal dashboard that tracks the tasks left before a scheduled release.',
+  alt: 'A custom "Launch checklist" tool added to the Root.js CMS sidebar, showing an internal dashboard that tracks the tasks left before a scheduled release.',
 };
 
 const BUILT_IN_NAV: Array<{label: string; icon: ComponentChildren}> = [

@@ -26,7 +26,7 @@ export const meta: SceneMeta = {
   id: 'cms-localization-modal',
   width: 960,
   height: 600,
-  alt: 'The localization settings for a page in Root CMS, with the locales it is published in grouped by region and its source strings next to their Japanese translations, three of which are still missing.',
+  alt: 'The localization settings for a page in the Root.js CMS, with the locales it is published in grouped by region and its source strings next to their Japanese translations, three of which are still missing.',
 };
 
 /** Locale groups, as configured with `i18n.groups` in `root.config.ts`. */

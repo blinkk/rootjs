@@ -11,7 +11,7 @@ export const meta: SceneMeta = {
   id: 'cms-publish-checks',
   width: 960,
   height: 600,
-  alt: 'The publish dialog in Root CMS, showing a scheduled publish time, an AI-written change summary and passing publishing checks.',
+  alt: 'The publish dialog in the Root.js CMS, showing a scheduled publish time, an AI-written change summary and passing publishing checks.',
 };
 
 const CHECKS: Array<{label: string; status: 'pass' | 'warn'; message: string}> =

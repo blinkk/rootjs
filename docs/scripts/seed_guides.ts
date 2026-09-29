@@ -1,5 +1,5 @@
 /**
- * @fileoverview Seeds the `Guides` collection with the non-technical Root CMS
+ * @fileoverview Seeds the `Guides` collection with the non-technical Root.js
  * guides, so they can be reviewed and edited in the CMS at `/guides/`.
  *
  * The copy lives in `guides_content.ts`. Images come from

@@ -24,7 +24,7 @@ export const meta: SceneMeta = {
   id: 'cms-editor-preview',
   width: 1440,
   height: 900,
-  alt: 'The Root CMS doc editor, with the fields for a garden market landing page on the left and a live desktop and mobile preview of the page on the right.',
+  alt: 'The Root.js CMS doc editor, with the fields for a garden market landing page on the left and a live desktop and mobile preview of the page on the right.',
 };
 
 /** The doc editor with a live, multi-device preview. Used as the hero image. */

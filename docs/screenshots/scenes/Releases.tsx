@@ -7,7 +7,7 @@ export const meta: SceneMeta = {
   id: 'cms-releases',
   width: 960,
   height: 600,
-  alt: 'The Releases page in Root CMS, listing scheduled, published and archived releases that bundle docs and data sources.',
+  alt: 'The Releases page in the Root.js CMS, listing scheduled, published and archived releases that bundle docs and data sources.',
 };
 
 const RELEASES: Array<{

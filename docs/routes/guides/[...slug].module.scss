@@ -213,13 +213,13 @@
   color: var(--platform-muted);
 }
 
-.questions {
+.faq {
   display: grid;
   gap: 12px;
-  margin: 24px 0 0;
+  margin: 0;
 }
 
-.question {
+.faqItem {
   padding: 18px 20px;
   border: 1px solid var(--platform-border);
   border-radius: platform.$radius-media;

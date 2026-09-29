@@ -1,6 +1,6 @@
-# Root CMS guides
+# Root.js guides
 
-Non-technical guides to Root CMS, written for decision makers: marketing and
+Non-technical guides to Root.js, written for decision makers: marketing and
 content leads, product owners, and anyone choosing a content platform. They
 explain what each feature does for a team, with screenshots from the app, and
 leave setup to the developer docs.
@@ -50,7 +50,7 @@ The scenes show a fictional garden store, **Fernwood Market**. See
 
 | #   | Slug              | Title                               | Screenshots                                                    |
 | --- | ----------------- | ----------------------------------- | -------------------------------------------------------------- |
-| 1   | `overview`        | Root CMS at a glance                | `cms-editor-preview`, `cms-content-list`, `cms-publish-checks` |
+| 1   | `overview`        | Root.js at a glance                 | `cms-editor-preview`, `cms-content-list`, `cms-publish-checks` |
 | 2   | `editing`         | Editing and live preview            | `cms-editor-preview`, `cms-content-list`, `cms-global-search`  |
 | 3   | `publishing`      | Publishing, scheduling and releases | `cms-publish-checks`, `cms-releases`, `cms-version-history`    |
 | 4   | `localization`    | Localization and translation        | `cms-translations`, `cms-localization-modal`                   |
@@ -61,8 +61,7 @@ The scenes show a fictional garden store, **Fernwood Market**. See
 | 9   | `extensibility`   | Integrations and extensibility      | `cms-sidebar-tools`                                            |
 
 Each guide has an intro, an "At a glance" list of takeaways, sections with an
-optional screenshot and caption, and a "Questions to ask" list that pairs
-evaluation questions with how Root CMS answers them.
+optional screenshot and caption, and a "Frequently asked questions" list.
 
 Keep claims accurate to the product. When describing a feature, check the code
 (`packages/root-cms/`) rather than the marketing copy, and avoid promising

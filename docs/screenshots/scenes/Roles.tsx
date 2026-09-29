@@ -7,7 +7,7 @@ export const meta: SceneMeta = {
   id: 'cms-roles',
   width: 960,
   height: 600,
-  alt: 'The sharing settings in Root CMS, granting people and a whole email domain Admin, Editor or Viewer roles, with a group whose role is limited to specific collections.',
+  alt: 'The sharing settings in the Root.js CMS, granting people and a whole email domain Admin, Editor or Viewer roles, with a group whose role is limited to specific collections.',
 };
 
 /**

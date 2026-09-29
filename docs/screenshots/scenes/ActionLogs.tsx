@@ -6,7 +6,7 @@ export const meta: SceneMeta = {
   id: 'cms-action-logs',
   width: 960,
   height: 600,
-  alt: 'The Action Logs page in Root CMS, an audit trail of who saved, published, scheduled, synced and re-shared what and when, with links to each change.',
+  alt: 'The Action Logs page in the Root.js CMS, an audit trail of who saved, published, scheduled, synced and re-shared what and when, with links to each change.',
 };
 
 interface LogRow {

@@ -7,7 +7,7 @@ export const meta: SceneMeta = {
   id: 'cms-tasks',
   width: 960,
   height: 600,
-  alt: 'The Root CMS task board, with content tasks like writing alt text and reviewing German translations moving from new to in progress to in review, each with a priority, an assignee and a target launch date.',
+  alt: 'The Root.js CMS task board, with content tasks like writing alt text and reviewing German translations moving from new to in progress to in review, each with a priority, an assignee and a target launch date.',
 };
 
 type Priority = 'high' | 'medium' | 'normal';

@@ -6,7 +6,7 @@ export const meta: SceneMeta = {
   id: 'cms-data-sources',
   width: 960,
   height: 600,
-  alt: 'The Data Sources page in Root CMS, listing Google Sheets and HTTP JSON feeds with their publish status and when each was last synced and published.',
+  alt: 'The Data Sources page in the Root.js CMS, listing Google Sheets and HTTP JSON feeds with their publish status and when each was last synced and published.',
 };
 
 type Status = 'published' | 'unpublished';

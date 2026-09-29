@@ -309,7 +309,7 @@ export interface GuidesFields {
     eyebrow?: string;
     /** Title */
     title?: string;
-    /** Intro. Opening paragraph(s): the problem and what Root CMS offers. */
+    /** Intro. Opening paragraph(s): the problem and what Root.js offers. */
     intro?: RootCMSRichText;
     /** Hero image. Product screenshot shown below the intro. */
     heroImage?: RootCMSImage;
@@ -331,11 +331,11 @@ export interface GuidesFields {
       /** Screenshot caption */
       caption?: string;
     }[];
-    /** Questions to ask. Questions a team can use when evaluating this area of a CMS. */
-    questions?: {
+    /** Frequently asked questions */
+    faq?: {
       /** Question */
       question?: string;
-      /** How Root CMS answers it */
+      /** Answer */
       answer?: string;
     }[];
   };

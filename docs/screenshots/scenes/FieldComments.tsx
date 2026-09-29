@@ -14,7 +14,7 @@ export const meta: SceneMeta = {
   id: 'cms-field-comments',
   width: 960,
   height: 600,
-  alt: 'A comment thread pinned to a field in the Root CMS editor, with teammates discussing a headline and an @mention.',
+  alt: 'A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention.',
 };
 
 const COMMENTS = [

@@ -28,7 +28,7 @@ export default function Page(props: PageProps) {
   const content = fields.content || {};
   const sections = content.sections || [];
   const takeaways = content.takeaways || [];
-  const questions = content.questions || [];
+  const faq = content.faq || [];
   const nextGuide = getNextGuide(props.doc, props.guides || []);
 
   return (
@@ -100,9 +100,9 @@ export default function Page(props: PageProps) {
                       </a>
                     </li>
                   ))}
-                  {questions.length > 0 && (
+                  {faq.length > 0 && (
                     <li>
-                      <a href="#questions">{t('Questions to ask')}</a>
+                      <a href="#faq">{t('Frequently asked questions')}</a>
                     </li>
                   )}
                 </UnstyledList>
@@ -115,19 +115,14 @@ export default function Page(props: PageProps) {
               <Section section={section} />
             ))}
 
-            {questions.length > 0 && (
-              <section className={styles.section} id="questions">
+            {faq.length > 0 && (
+              <section className={styles.section} id="faq">
                 <Text as="h2" size="h4" className={styles.sectionTitle}>
-                  {t('Questions to ask')}
+                  {t('Frequently asked questions')}
                 </Text>
-                <Text as="p" size="p" className={styles.sectionBody}>
-                  {t(
-                    'Use these when you compare content platforms. Here is how Root CMS answers each one.'
-                  )}
-                </Text>
-                <dl className={styles.questions}>
-                  {questions.map((item) => (
-                    <div className={styles.question}>
+                <dl className={styles.faq}>
+                  {faq.map((item) => (
+                    <div className={styles.faqItem}>
                       <dt>{t(item.question || '')}</dt>
                       <dd>{t(item.answer || '')}</dd>
                     </div>

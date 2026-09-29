@@ -21,7 +21,7 @@ export const meta: SceneMeta = {
   id: 'cms-asset-library',
   width: 960,
   height: 600,
-  alt: 'The Root CMS asset library, showing a folder of spring harvest images synced from Figma, a subfolder synced from Google Drive, and upload and sync actions.',
+  alt: 'The Root.js CMS asset library, showing a folder of spring harvest images synced from Figma, a subfolder synced from Google Drive, and upload and sync actions.',
 };
 
 /** Height of a thumbnail, matching the CMS asset browser's 4:3 thumbs. */
