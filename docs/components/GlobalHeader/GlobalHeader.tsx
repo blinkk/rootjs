@@ -9,17 +9,17 @@ import styles from './GlobalHeader.module.scss';
 const LINKS = [
   {
     label: 'Guides',
-    url: '/guides',
+    url: '/guides/',
     active: (ctx: RequestContext) => ctx.currentPath.startsWith('/guides'),
   },
   {
     label: 'Docs',
-    url: '/docs',
+    url: '/docs/',
     active: (ctx: RequestContext) => ctx.currentPath.startsWith('/docs'),
   },
   {
     label: 'Blog',
-    url: '/blog',
+    url: '/blog/',
     active: (ctx: RequestContext) => ctx.currentPath.startsWith('/blog'),
   },
 ];

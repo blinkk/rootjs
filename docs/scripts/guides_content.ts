@@ -828,6 +828,7 @@ export const GUIDES: GuideSource[] = [
       'Pages load only the scripts and styles they use.',
       'Compression and security headers are on by default.',
       'An alt text field on images, with AI to write a first draft.',
+      'Structured data in templates, for rich search results and AI.',
       'Publishing checks can enforce your SEO and accessibility rules.',
       'Lighthouse measures the results, page by page.',
     ],
@@ -866,6 +867,16 @@ export const GUIDES: GuideSource[] = [
             '<b>One URL per page:</b> URLs can be normalized with or without a trailing slash, so search engines do not see duplicates.',
             '<b>Real error pages:</b> missing pages return a proper “not found” status, so they drop out of search results instead of being indexed.'
           )
+        ),
+      },
+      {
+        id: 'structured-data',
+        title: 'Structured data for rich results and AI',
+        body: richtext(
+          'Structured data is a short, machine-readable summary of what a page is, written in the standard <a href="https://schema.org/">schema.org</a> vocabulary. It tells search engines and AI tools that a page is an article with an author and a publish date, a product with a price and availability, an event with a date and a location, or where the page sits in the site’s navigation.',
+          'Search engines use it to show rich results, such as product details, event dates, and breadcrumbs, right in the search listing. AI assistants can use it to understand and describe a page accurately, instead of inferring everything from the layout.',
+          'Developers add structured data to page templates as JSON-LD, the format Google recommends, in each page’s HTML. Because Root.js renders pages on the server, it is part of the HTML every crawler receives. The values usually come from fields editors already fill in, like the title, publish date, author, and images, so the structured data stays in sync with the page without extra work for editors.',
+          'To check it, <a href="https://search.google.com/test/rich-results">Google’s Rich Results Test</a> shows which rich results a page is eligible for. Developers can also add a publishing check that flags missing details, such as an article without an author, before the page goes live.'
         ),
       },
       {
@@ -913,6 +924,11 @@ export const GUIDES: GuideSource[] = [
         question: 'Can AI assistants read our pages?',
         answer:
           'Yes. Pages are complete HTML, so AI tools that read the web get the full content. Root.js does not generate AI-specific files such as llms.txt, but developers can add one, just like a robots.txt file.',
+      },
+      {
+        question: 'Does Root.js add structured data automatically?',
+        answer:
+          'No. The right structured data depends on what each page is, so developers add it to your templates, usually filled in from fields editors already manage in the CMS.',
       },
       {
         question: 'Will our site get a perfect Lighthouse score?',
