@@ -58,7 +58,7 @@ const FONTS_CACHE_PATH = path.join(OUT_DIR, '_fonts.css');
 
 /** Fonts used by the scenes, mirroring what the CMS UI uses. */
 const FONTS_URL =
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap';
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap';
 
 interface Args {
   scenes: string[];

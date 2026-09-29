@@ -134,5 +134,13 @@
     "alt": "The version history of a page in the Root.js CMS, listing autosaved and published versions with who made each one, a publish message, and actions to compare, restore, or copy a version.",
     "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-version-history.1aa7a730ad4b162c.png",
     "hash": "1aa7a730ad4b162c"
+  },
+  "meta-image": {
+    "src": "https://lh3.googleusercontent.com/sdCQ6SQzxbiw0CSR4pG3TGaXZNbsFdEKrj8GfZRQlB98zUW68D0qJyUZzwDCh3il5LBIH-pGoK0aMSySR4v-SpyX11sPLehvSw",
+    "width": 2400,
+    "height": 1260,
+    "alt": "Root.js — Build. Edit. Ship.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/meta-image.f11e7329410d8f86.png",
+    "hash": "f11e7329410d8f86"
   }
 }
