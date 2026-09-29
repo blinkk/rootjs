@@ -62,9 +62,10 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
   flex-direction: column;
   gap: 28px;
   padding: 22px 20px 26px;
-  border: 1px solid platform.$color-beige-border;
+  // Matches the "At a glance" box on the guide pages.
+  border: 1px solid var(--platform-border);
   border-radius: platform.$radius-media;
-  background: platform.$color-beige;
+  background: platform.$color-tint;
 
   // On narrow screens, the nav slides in from the left.
   @include breakpoints.md-lt() {

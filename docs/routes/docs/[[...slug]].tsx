@@ -194,7 +194,7 @@ export default function Page(props: PageProps) {
 }
 
 /**
- * The docs navigation. On wide screens it fills the left column in a beige
+ * The docs navigation. On wide screens it fills the left column in a tinted
  * panel; on narrow screens it opens as a drawer from a "Docs menu" button.
  */
 function DocsNav() {
