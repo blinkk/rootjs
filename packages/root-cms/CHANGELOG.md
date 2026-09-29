@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.5.3
+
+### Patch Changes
+
+- e75a1de: fix: preview docs created by a change proposal at nested slugs (e.g. `docs/api/foo`)
+- 13a7c0d: fix: support editing translations for fields inside rich text block and inline components
+- Updated dependencies [afd22ee]
+  - @blinkk/root@3.5.3
+
 ## 3.5.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @blinkk/root-password-protect
 
+## 3.5.3
+
+### Patch Changes
+
+- Updated dependencies [afd22ee]
+  - @blinkk/root@3.5.3
+
 ## 3.5.2
 
 ### Patch Changes
