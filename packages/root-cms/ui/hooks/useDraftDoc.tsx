@@ -877,6 +877,14 @@ export function useDraftDoc(): DraftDocContext {
 }
 
 /**
+ * Returns the draft doc context, or `null` when not used within a
+ * `<DraftDocProvider>`.
+ */
+export function useOptionalDraftDoc(): DraftDocContext | null {
+  return useContext(DRAFT_DOC_CONTEXT);
+}
+
+/**
  * Hook for subscribing to changes to a draft doc's save state.
  */
 export function useDraftDocSaveState(cb: (saveState: SaveState) => void) {

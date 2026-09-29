@@ -5,20 +5,53 @@ import {getNestedValue} from '../../../../utils/objects.js';
 
 export type Listener = (value: any) => void;
 
+/**
+ * The parent doc's draft controller, i.e. the doc that contains the rich text
+ * field being edited.
+ */
+export interface ParentDraftDocController {
+  docId: string;
+  collectionId: string;
+  slug: string;
+  getValue(key: string): any;
+}
+
+export interface InMemoryDraftDocControllerOptions {
+  /**
+   * The parent doc's controller. When set, the parent's doc id and `sys` data
+   * are exposed so that features that operate on the doc as a whole (e.g. the
+   * "Show translations" modal) reference the actual doc instead of the block.
+   */
+  parent?: ParentDraftDocController | null;
+}
+
 export class InMemoryDraftDocController extends EventListener {
   private data: Record<string, any>;
   private listeners = new Map<string, Set<Listener>>();
+  private parent: ParentDraftDocController | null;
 
-  docId = 'custom-block';
-  collectionId = 'custom-block';
-  slug = 'custom-block';
+  docId: string;
+  collectionId: string;
+  slug: string;
 
-  constructor(initialValue: Record<string, any>, rootKey = 'block') {
+  constructor(
+    initialValue: Record<string, any>,
+    rootKey = 'block',
+    options?: InMemoryDraftDocControllerOptions
+  ) {
     super();
     this.data = {[rootKey]: cloneData(initialValue)};
+    this.parent = options?.parent || null;
+    this.docId = this.parent?.docId || 'custom-block';
+    this.collectionId = this.parent?.collectionId || 'custom-block';
+    this.slug = this.parent?.slug || 'custom-block';
   }
 
   getValue(key: string): any {
+    // The doc's `sys` data (e.g. `sys.l10nSheet`) is read from the parent doc.
+    if (this.parent && (key === 'sys' || key.startsWith('sys.'))) {
+      return this.parent.getValue(key);
+    }
     return getNestedValue(this.data, key);
   }
 
@@ -65,12 +98,24 @@ export class InMemoryDraftDocController extends EventListener {
   }
 
   getDataSnapshot() {
-    return cloneData(this.data);
+    const data = cloneData(this.data);
+    const sys = this.getValue('sys');
+    if (sys) {
+      data.sys = cloneData(sys);
+    }
+    return data;
   }
 
   getData() {
     return this.getDataSnapshot();
   }
+
+  /**
+   * No-op. Changes are held in memory and committed to the parent doc when the
+   * block or inline component modal is submitted. Mirrors the
+   * `DraftDocController.flush` API for callers like `EditTranslationsModal`.
+   */
+  async flush() {}
 
   private notify(key: string) {
     this.dispatch(DraftDocEventType.VALUE_CHANGE, key, this.getValue(key));

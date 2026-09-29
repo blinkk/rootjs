@@ -5,6 +5,7 @@ import {
   extractFieldsWithMetadata,
   extractField,
   extractFieldWithMetadata,
+  extractRichTextStrings,
 } from './extract.js';
 
 describe('extract', () => {
@@ -242,6 +243,145 @@ describe('extract', () => {
       expect(stringsWithMeta.get('Item 2')).toEqual({
         description: 'Array items context',
       });
+    });
+  });
+
+  describe('extractRichTextStrings', () => {
+    const richTextField: schema.RichTextField = {
+      type: 'richtext',
+      id: 'body',
+      translate: true,
+      blockComponents: [
+        {
+          name: 'CustomBlock',
+          fields: [
+            {type: 'string', id: 'title', translate: true},
+            {type: 'string', id: 'url', translate: false},
+            {type: 'string', id: 'note', translate: true},
+          ],
+        },
+      ],
+      inlineComponents: [
+        {
+          name: 'Tooltip',
+          fields: [
+            {type: 'string', id: 'label', translate: true},
+            {type: 'string', id: 'href'},
+          ],
+        },
+      ],
+    };
+
+    it('should extract strings from custom block components', () => {
+      const data = {
+        '@body': {},
+        body: {
+          blocks: [
+            {type: 'paragraph', data: {text: 'Intro'}},
+            {
+              type: 'CustomBlock',
+              data: {
+                title: 'Block title',
+                url: 'https://example.com',
+                note: 'Hidden note',
+                '@note': {translate: false},
+              },
+            },
+          ],
+          time: 0,
+          version: '',
+        },
+      };
+      const strings = new Set<string>();
+
+      extractFields(strings, [richTextField], data);
+
+      expect(Array.from(strings).sort()).toEqual(['Block title', 'Intro']);
+    });
+
+    it('should extract strings from inline components using their schema', () => {
+      const data = {
+        body: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Hello {tooltip1}',
+                components: {
+                  tooltip1: {
+                    type: 'Tooltip',
+                    data: {label: 'Tooltip label', href: '/foo'},
+                  },
+                },
+              },
+            },
+          ],
+          time: 0,
+          version: '',
+        },
+      };
+      const strings = new Set<string>();
+
+      extractFields(strings, [richTextField], data);
+
+      expect(Array.from(strings).sort()).toEqual([
+        'Hello {tooltip1}',
+        'Tooltip label',
+      ]);
+    });
+
+    it('should extract image alt text and captions', () => {
+      const strings = new Set<string>();
+
+      extractRichTextStrings(strings, {
+        blocks: [
+          {
+            type: 'image',
+            data: {
+              file: {url: '/img.png', width: 1, height: 1, alt: 'Alt text'},
+              caption: 'Caption text',
+            },
+          },
+        ],
+        time: 0,
+        version: '',
+      });
+
+      expect(Array.from(strings).sort()).toEqual(['Alt text', 'Caption text']);
+    });
+
+    it('should extract custom block strings nested in tables', () => {
+      const strings = new Set<string>();
+
+      extractRichTextStrings(
+        strings,
+        {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                rows: [
+                  {
+                    cells: [
+                      {
+                        type: 'data',
+                        blocks: [
+                          {type: 'CustomBlock', data: {title: 'Cell block'}},
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+          time: 0,
+          version: '',
+        },
+        richTextField
+      );
+
+      expect(Array.from(strings)).toEqual(['Cell block']);
     });
   });
 });

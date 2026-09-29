@@ -41,4 +41,36 @@ describe('InMemoryDraftDocController', () => {
     expect(seen).toEqual(['bar', 'baz']);
     unsubscribe();
   });
+
+  it('should expose a no-op flush method', async () => {
+    // `EditTranslationsModal` calls `draft.controller.flush()` when saving.
+    const controller = new InMemoryDraftDocController({foo: 'bar'});
+    await expect(controller.flush()).resolves.toBeUndefined();
+  });
+
+  it('should use the parent doc id and sys data when provided', () => {
+    const parent = {
+      docId: 'Pages/foo',
+      collectionId: 'Pages',
+      slug: 'foo',
+      getValue: (key: string) =>
+        key === 'sys' ? {l10nSheet: {spreadsheetId: 'abc'}} : undefined,
+    };
+    const controller = new InMemoryDraftDocController({foo: 'bar'}, 'block', {
+      parent,
+    });
+    expect(controller.docId).toBe('Pages/foo');
+    expect(controller.collectionId).toBe('Pages');
+    expect(controller.slug).toBe('foo');
+    expect(controller.getData()).toEqual({
+      block: {foo: 'bar'},
+      sys: {l10nSheet: {spreadsheetId: 'abc'}},
+    });
+  });
+
+  it('should fall back to a placeholder doc id without a parent', () => {
+    const controller = new InMemoryDraftDocController({});
+    expect(controller.docId).toBe('custom-block');
+    expect(controller.getData()).toEqual({block: {}});
+  });
 });
