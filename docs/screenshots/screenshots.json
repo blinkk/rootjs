@@ -1,4 +1,20 @@
 {
+  "blog-introducing-rootjs": {
+    "src": "https://lh3.googleusercontent.com/wPlH54i7W3mlkXMHio0mVcvbZ4EIKoowG2K5fu6fjTX6f__Oo859k9fErrvOqr1WtSUBzGKp66O7Sk9AEVIa3WzhymZ5ln00d7o",
+    "width": 2400,
+    "height": 1260,
+    "alt": "Introducing Root.js — A fast, modern web platform that comes with a CMS.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/blog-introducing-rootjs.255019e60d0eb7ee.png",
+    "hash": "255019e60d0eb7ee"
+  },
+  "blog-rootjs-v3": {
+    "src": "https://lh3.googleusercontent.com/Si_1bpDLJKU9jFPrLpRx_Xe0M21grW73m9FVHn6l-BJSAI3w1yCuvqQ3c-djn2yoW0uY2-ReHfuIzuHiRfnHksjLqiqaJso--Iw",
+    "width": 2400,
+    "height": 1260,
+    "alt": "Announcing Root.js v3.0 — A native JSX renderer, a smarter CMS, and a faster build pipeline.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/blog-rootjs-v3.ed4b6a0106945b9c.png",
+    "hash": "ed4b6a0106945b9c"
+  },
   "cms-action-logs": {
     "src": "https://lh3.googleusercontent.com/Qe1oTrC3u6u1Z3q8g5ROc20GyWg89CWiqPWhJ-5tLSU7dwJjSXkMpTnk9sNzlp50G1-POYhWAvawnP4y_lifsjMtw9ZZBH5LLYI",
     "width": 1920,
