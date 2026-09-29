@@ -1,4 +1,4 @@
-import {useTranslations} from '@blinkk/root';
+import {useRequestContext, useTranslations} from '@blinkk/root';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconArrowRight, IconCheck} from '@tabler/icons-preact';
 import {
@@ -15,6 +15,11 @@ import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {GuidesDoc, GuidesFields} from '@/root-cms.js';
 import {cmsRoute} from '@/utils/cms-route.js';
 import {getGuideUrl, sortGuides} from '@/utils/guides.js';
+import {
+  getAbsoluteUrl,
+  JsonLdNode,
+  WEBSITE_ID,
+} from '@/utils/structured-data.js';
 import styles from './[...slug].module.scss';
 
 export interface PageProps {
@@ -29,6 +34,7 @@ type GuideSection = NonNullable<
 
 export default function Page(props: PageProps) {
   const t = useTranslations();
+  const ctx = useRequestContext();
   const fields = props.doc.fields || {};
   const meta = fields.meta || {};
   const content = fields.content || {};
@@ -45,11 +51,30 @@ export default function Page(props: PageProps) {
     tocItems.push({href: '#faq', label: 'Frequently asked questions'});
   }
 
+  const jsonLd: JsonLdNode[] = [];
+  const faqItems = faq.filter((item) => item.question && item.answer);
+  if (faqItems.length > 0) {
+    jsonLd.push({
+      '@type': 'FAQPage',
+      url: getAbsoluteUrl(ctx.currentPath),
+      isPartOf: {'@id': WEBSITE_ID},
+      mainEntity: faqItems.map((item) => ({
+        '@type': 'Question',
+        name: t(item.question!),
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: t(item.answer!),
+        },
+      })),
+    });
+  }
+
   return (
     <BaseLayout
       title={meta.title ? `${t(meta.title)} – Root.js` : 'Guides – Root.js'}
       description={meta.description}
       image={meta.image?.src}
+      jsonLd={jsonLd}
     >
       <ArticleLayout
         header={
