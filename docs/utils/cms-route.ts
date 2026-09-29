@@ -11,6 +11,7 @@ import {
   resolveLocaleFallbacks,
   translationsForLocale,
 } from '@blinkk/root-cms/client';
+import {createCmsClient} from '@/utils/cms-client.js';
 
 export type CMSRequest = Request & {
   cmsClient: RootCMSClient;
@@ -154,7 +155,7 @@ export function cmsRoute(options: CMSRouteOptions) {
         return {paths: []};
       }
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
+        cmsClient = createCmsClient(ctx.rootConfig);
       }
       // TODO(stevenle): Add support for mode.
       const mode = 'published';
@@ -170,7 +171,7 @@ export function cmsRoute(options: CMSRouteOptions) {
 
     getStaticProps = async (ctx) => {
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
+        cmsClient = createCmsClient(ctx.rootConfig);
       }
       const slug = getSlug(ctx.params);
       // TODO(stevenle): Add support for mode.
@@ -189,7 +190,7 @@ export function cmsRoute(options: CMSRouteOptions) {
     // SSR handler.
     handle: async (req, res) => {
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(req.rootConfig);
+        cmsClient = createCmsClient(req.rootConfig);
       }
       req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;

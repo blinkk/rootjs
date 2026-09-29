@@ -1,5 +1,6 @@
 import type {RootCMSClient} from '@blinkk/root-cms/client';
 import {GuidesDoc} from '@/root-cms.js';
+import {sortByCustomOrder} from '@/utils/custom-order.js';
 
 /** Returns the URL path for a guide, e.g. `/guides/publishing/`. */
 export function getGuideUrl(doc: GuidesDoc) {
@@ -9,29 +10,11 @@ export function getGuideUrl(doc: GuidesDoc) {
 }
 
 /**
- * Sorts guides in the order set in the CMS (the collection uses
- * `customSorting`, which stores each doc's position at `sys.sortKey`). Guides
- * without a position, e.g. ones created by a script, go last, by title.
+ * Sorts guides in the order set in the CMS by dragging docs in the collection's
+ * "Custom order" view.
  */
 export function sortGuides(guides: GuidesDoc[]) {
-  return [...guides].sort((a, b) => {
-    const keyA = a.sys?.sortKey;
-    const keyB = b.sys?.sortKey;
-    if (keyA && keyB && keyA !== keyB) {
-      // Compare by code point, matching Firestore's string ordering (see
-      // `compareSortKeys()` in `@blinkk/root-cms`).
-      return keyA < keyB ? -1 : 1;
-    }
-    if (keyA && !keyB) {
-      return -1;
-    }
-    if (!keyA && keyB) {
-      return 1;
-    }
-    const titleA = a.fields?.meta?.title || a.slug;
-    const titleB = b.fields?.meta?.title || b.slug;
-    return titleA.localeCompare(titleB);
-  });
+  return sortByCustomOrder(guides);
 }
 
 /** Returns true if any module in `value`, at any depth, is `TemplateGuides`. */

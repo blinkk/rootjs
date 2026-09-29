@@ -236,8 +236,10 @@ export interface DocsFields {
     description?: string;
     /** Image. Meta image for social shares. Recommended size: 1200x600. */
     image?: RootCMSImage;
-    /** Category */
+    /** Category. Sidebar group the doc is listed under. */
     category?: string;
+    /** Sidebar label. Short label for the sidebar. Defaults to the content title. */
+    navLabel?: string;
     /** Next Doc. Suggested doc to read next. */
     nextDoc?: RootCMSReference;
   };
@@ -247,6 +249,8 @@ export interface DocsFields {
     title?: string;
     /** Content body. Top content body. */
     body?: RootCMSRichText;
+    /** Generated reference. Adds reference docs generated from the source code after the sections. Regenerate with `node scripts/generate_reference.ts`. */
+    reference?: string;
     /** Sections. Each section is added to the Table of Contents. */
     sections?: {
       /** Section: ID. Section ID (for deeplinking). */

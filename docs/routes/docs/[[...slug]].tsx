@@ -1,4 +1,4 @@
-import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
+import {useTranslations} from '@blinkk/root';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import {
@@ -9,137 +9,21 @@ import {
   ArticleToc,
 } from '@/components/ArticleLayout/ArticleLayout.js';
 import Block from '@/components/Block/Block.js';
+import {Reference} from '@/components/Reference/Reference.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {DocsDoc, DocsFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
 import {cmsRoute} from '@/utils/cms-route.js';
+import {buildDocsNav, DocsNavGroup} from '@/utils/docs.js';
+import {getReference, getReferenceToc} from '@/utils/reference.js';
 import styles from './[[...slug]].module.scss';
-
-const GUIDE_LINKS = [
-  {
-    label: 'Getting Started',
-    href: '/docs',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/';
-    },
-  },
-  {
-    label: 'Project Structure',
-    href: '/docs/project-structure',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/project-structure/';
-    },
-  },
-  {
-    label: 'Routes',
-    href: '/docs/routes',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/routes/';
-    },
-  },
-  {
-    label: 'Interactive Islands',
-    href: '/docs/islands',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/islands/';
-    },
-  },
-  {
-    label: 'Localization',
-    href: '/docs/localization',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/localization/';
-    },
-  },
-  {
-    label: 'Plugins',
-    href: '/docs/plugins',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/plugins/';
-    },
-  },
-  {
-    label: 'Config',
-    href: '/docs/config',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/config/';
-    },
-  },
-  {
-    label: 'v2 Migration Guide',
-    href: '/docs/migration/v2',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/migration/v2/';
-    },
-  },
-  {
-    label: 'v3 Migration Guide',
-    href: '/docs/migration/v3',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/migration/v3/';
-    },
-  },
-];
-
-const CMS_LINKS = [
-  {
-    label: 'Root CMS Setup',
-    href: '/docs/cms',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/cms/';
-    },
-  },
-  {
-    label: 'Schemas',
-    href: '/docs/cms/schemas',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/cms/schemas/';
-    },
-  },
-  {
-    label: 'Data Fetching',
-    href: '/docs/cms/data-fetching',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/cms/data-fetching/';
-    },
-  },
-];
-
-const API_LINKS = [
-  {
-    label: 'API Reference',
-    href: '/docs/api',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/api/';
-    },
-  },
-  {
-    label: 'CLI Reference',
-    href: '/docs/cli',
-    isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/docs/cli/';
-    },
-  },
-];
-
-/** Sidebar sections, in order. The active section is shown as an eyebrow. */
-const NAV_SECTIONS = [
-  {label: 'Framework', links: GUIDE_LINKS},
-  {label: 'CMS', links: CMS_LINKS},
-  {label: 'API', links: API_LINKS},
-];
-
-/** Returns the sidebar section that contains the current page. */
-function getActiveSection(ctx: RequestContext) {
-  return NAV_SECTIONS.find((section) =>
-    section.links.some((link) => link.isActive(ctx))
-  );
-}
 
 export interface PageProps {
   doc: DocsDoc;
+  /** Sidebar groups, built from every doc in the collection. */
+  nav: DocsNavGroup[];
 }
 
 type DocsSection = NonNullable<
@@ -147,12 +31,15 @@ type DocsSection = NonNullable<
 >[number];
 
 export default function Page(props: PageProps) {
-  const ctx = useRequestContext();
   const fields = props.doc.fields || {};
   const meta = fields.meta || {};
   const content = fields.content || {};
   const sections = content.sections || [];
-  const activeSection = getActiveSection(ctx);
+  const reference = getReference(content.reference);
+  const nav = props.nav || [];
+  const activeGroup = nav.find((group) =>
+    group.links.some((link) => link.id === props.doc.id)
+  );
 
   return (
     <BaseLayout
@@ -169,17 +56,20 @@ export default function Page(props: PageProps) {
         aside={
           <>
             <ArticleToc
-              items={sections.map((section) => ({
-                href: `#${section.id || ''}`,
-                label: section.title || '',
-              }))}
+              items={[
+                ...sections.map((section) => ({
+                  href: `#${section.id || ''}`,
+                  label: section.title || '',
+                })),
+                ...getReferenceToc(reference),
+              ]}
             />
-            <DocsNav />
+            <DocsNav nav={nav} activeId={props.doc.id} />
           </>
         }
       >
         <header>
-          <ArticleHeader eyebrow={activeSection?.label} title={content.title} />
+          <ArticleHeader eyebrow={activeGroup?.label} title={content.title} />
         </header>
         {content.body && (
           <Text as="div" size="p" className={styles.body}>
@@ -189,6 +79,7 @@ export default function Page(props: PageProps) {
         {sections.map((section) => (
           <Section section={section} />
         ))}
+        {reference && <Reference reference={reference} />}
       </ArticleLayout>
     </BaseLayout>
   );
@@ -198,9 +89,8 @@ export default function Page(props: PageProps) {
  * The docs navigation. On wide screens it sits in the left column in a tinted
  * panel; on narrow screens it opens as a drawer from a "Docs menu" button.
  */
-function DocsNav() {
+function DocsNav(props: {nav: DocsNavGroup[]; activeId: string}) {
   const t = useTranslations();
-  const ctx = useRequestContext();
   return (
     <div className={styles.nav}>
       <root-drawer className={styles.navDrawer}>
@@ -215,14 +105,14 @@ function DocsNav() {
         </button>
       </root-drawer>
       <nav id="docs-nav" className={styles.navPanel} aria-label={t('Docs')}>
-        {NAV_SECTIONS.map((section) => (
+        {props.nav.map((group) => (
           <ArticleAsideSection
             className={styles.navSection}
-            title={section.label}
+            title={group.label}
           >
             <UnstyledList className={styles.navLinks}>
-              {section.links.map((link) => {
-                const active = link.isActive(ctx);
+              {group.links.map((link) => {
+                const active = link.id === props.activeId;
                 return (
                   <li>
                     <a
@@ -273,4 +163,9 @@ function Section(props: {section: DocsSection}) {
 export const {handle} = cmsRoute({
   collection: 'Docs',
   slugParam: 'slug',
+  fetchData: (ctx) => ({
+    nav: ctx.cmsClient
+      .listDocs<DocsDoc>('Docs', {mode: ctx.mode})
+      .then((res) => buildDocsNav(res.docs)),
+  }),
 });
