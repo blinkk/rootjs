@@ -58,8 +58,9 @@ export function TemplateHero(props: TemplateHeroProps) {
               'image',
               <Image
                 {...(props.image as ImageProps)}
-                sizes={{sm: 500, md: 540, default: 1296}}
-                loading="eager"
+                sizes={{sm: 400, md: 540, default: 1296}}
+                format="webp"
+                preload
               />
             )}
           </div>

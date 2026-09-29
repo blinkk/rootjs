@@ -37,6 +37,12 @@ export type ImageProps = {
 interface ImageMediaQuery {
   srcset: string[];
   mediaQuery?: string;
+  /**
+   * Media query for the source's `<link rel="preload">`, when it differs from
+   * `mediaQuery`. Set for the default source, so it is only preloaded at the
+   * widths where it is used.
+   */
+  preloadMediaQuery?: string;
 }
 
 /** TODO(stevenle): Make these configurable through a context provider. */
@@ -64,8 +70,12 @@ export function Image(props: ImageProps) {
   const sizesMap = getResponsiveValue(sizes || width);
   const imageService = useImageService();
 
-  // Default to the original size of the image.
-  const defaultUrl = imageService.transform(src, {});
+  // The fallback `src`, sized to the default width rather than the full-size
+  // original.
+  const defaultUrl = imageService.transform(src, {
+    width: sizesMap.default || width,
+    format,
+  });
 
   function srcset2x(width: number) {
     return [
@@ -101,10 +111,23 @@ export function Image(props: ImageProps) {
         mediaQuery: MediaQuery.XL,
       });
     }
-    if (sizesMap.default) {
+    // The default source is used at widths no breakpoint covers. Breakpoints
+    // are set from the smallest up, so it applies above the largest one. When
+    // `xl` is set, every width is covered, so the default isn't preloaded.
+    if (sizesMap.default && !sizesMap.xl) {
+      const minWidth = sizesMap.lg
+        ? '1440px'
+        : sizesMap.md
+          ? '1024px'
+          : sizesMap.sm
+            ? '500px'
+            : '';
       sources.push({
         srcset: srcset2x(sizesMap.default),
+        preloadMediaQuery: minWidth ? `(min-width: ${minWidth})` : undefined,
       });
+    } else if (sizesMap.default) {
+      sources.push({srcset: srcset2x(sizesMap.default)});
     }
   }
   const loadingAttr = loading || (preload ? 'eager' : 'lazy');
@@ -112,15 +135,17 @@ export function Image(props: ImageProps) {
     <>
       {preload && (
         <Head>
-          {sources.map((source) => (
-            <link
-              rel="preload"
-              as="image"
-              href={defaultUrl}
-              imagesrcset={source.srcset.join(', ')}
-              media={source.mediaQuery}
-            />
-          ))}
+          {sources
+            .filter((source) => source.mediaQuery || !sizesMap.xl)
+            .map((source) => (
+              <link
+                rel="preload"
+                as="image"
+                href={defaultUrl}
+                imagesrcset={source.srcset.join(', ')}
+                media={source.preloadMediaQuery || source.mediaQuery}
+              />
+            ))}
         </Head>
       )}
       <picture className={className}>

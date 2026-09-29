@@ -1,4 +1,11 @@
-import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
+import {
+  Body,
+  Head,
+  Html,
+  Script,
+  useRequestContext,
+  useTranslations,
+} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
@@ -32,6 +39,7 @@ const ANALYTICS = `
 
 export function BaseLayout(props: BaseLayoutProps) {
   const t = useTranslations();
+  const ctx = useRequestContext();
   const title = props.title || '';
   const description = props.description || '';
   const image = props.image || Meta.IMAGE;
@@ -42,7 +50,7 @@ export function BaseLayout(props: BaseLayoutProps) {
   });
 
   return (
-    <Html>
+    <Html lang={ctx.locale || 'en'}>
       <Head>
         <title>{t(title)}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -53,7 +61,7 @@ export function BaseLayout(props: BaseLayoutProps) {
         {description && (
           <>
             <meta name="description" content={t(description)} />
-            <meta name="og:description" content={t(description)} />
+            <meta property="og:description" content={t(description)} />
           </>
         )}
         {metaImage && (
@@ -71,10 +79,6 @@ export function BaseLayout(props: BaseLayoutProps) {
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
           rel="stylesheet"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
         />
         <script
           async
