@@ -99,7 +99,8 @@ function getPath(obj: any, dottedPath: string) {
 
 /**
  * Removes values the CMS adds on save (array keys, rich text block ids, rich
- * text timestamps), so current and proposed values can be compared.
+ * text timestamps) and sorts object keys, so current and proposed values can
+ * be compared.
  */
 function normalize(value: any): any {
   if (Array.isArray(value)) {
@@ -107,7 +108,9 @@ function normalize(value: any): any {
   }
   if (value && typeof value === 'object') {
     const out: Record<string, any> = {};
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(value).sort(([a], [b]) =>
+      a.localeCompare(b)
+    )) {
       if (key === '_arrayKey' || key === 'time') {
         continue;
       }

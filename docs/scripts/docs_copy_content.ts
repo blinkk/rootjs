@@ -506,6 +506,7 @@ pnpm exec root secrets sync`
           ul(
             `${a('/docs/project-structure/', 'Project structure')}: where routes, components and content models live.`,
             `${a('/docs/routes/', 'Routes')}: file-based routing, data fetching and SSR.`,
+            `${a('/docs/deployment/', 'Deployment')}: ship your site as static HTML or with a server.`,
             `${a('/docs/cms/schemas/', 'Schemas')}: model your content.`,
             `${a('/docs/cli/', 'CLI reference')} and ${a('/docs/api/', 'API reference')}.`
           ),
@@ -2256,10 +2257,289 @@ export default schema.define(...);`
   },
 };
 
+const DEPLOYMENT: DocCopy = {
+  slug: 'deployment',
+  note: 'New page: deploying a site to production, as static HTML (SSG) or with a server (SSR) on App Engine or Firebase Hosting.',
+  fields: {
+    meta: {
+      title: 'Deployment – Root.js',
+      description:
+        'Deploy a Root.js site to production as static HTML, or with a server on App Engine or Firebase Hosting.',
+      category: 'start',
+    },
+    content: {
+      title: 'Deployment',
+      body: richtext(
+        p(`Root.js sites can be deployed in one of two ways:`),
+        ul(
+          `<b>Static (SSG)</b>: ${c('root build')} renders every page to HTML ahead of time. Host the output on any static host or CDN.`,
+          `<b>Server (SSR)</b>: pages are rendered on each request by a Node.js server. Root.js packages the server for ${a('#app-engine', 'App Engine')} and ${a('#firebase', 'Firebase Hosting')}, and it runs anywhere Node.js 24 does.`
+        ),
+        p(
+          `Use SSR if your site uses the CMS: editors sign in to the CMS, preview drafts and publish on the running server. Also use SSR for any route that exports ${c('handle()')}, since those routes are skipped in a static build.`
+        )
+      ),
+      sections: [
+        section(
+          'test-locally',
+          'Test a production build locally',
+          [
+            p(
+              `Before deploying, build the site and serve the output locally. ${c('root preview')} shows detailed error pages, and ${c('root start')} runs the production server that SSR deployments use.`
+            ),
+          ],
+          [
+            code(
+              'bash',
+              `
+# Build the server and client assets, without pre-rendering pages.
+pnpm exec root build --ssr-only
+
+# Serve the build at http://localhost:4007.
+pnpm exec root preview`
+            ),
+          ]
+        ),
+        section(
+          'ssg',
+          'Static (SSG)',
+          [
+            p(
+              `${c('root build')} renders every page to ${c('dist/html/')}, along with the client assets and the files in ${c('public/')}:`
+            ),
+          ],
+          [
+            code('bash', 'pnpm exec root build'),
+            copy(
+              p('A page is rendered when its route:'),
+              ul(
+                `has no URL params, e.g. ${c('routes/about.tsx')}, and doesn't only export ${c('handle()')}; or`,
+                `has params and exports ${a('/docs/routes/#getStaticPaths', c('getStaticPaths()'))}, which lists the values to render.`
+              ),
+              p(
+                `Each page is written as ${c('index.html')} in a folder for its URL, e.g. ${c('dist/html/about/index.html')}, and ${c('routes/404.tsx')} is written to ${c('dist/html/404.html')}. With ${c('sitemap: true')} in ${c('root.config.ts')}, the build also writes ${c('sitemap.xml')}.`
+              ),
+              p(
+                `Then upload ${c('dist/html/')} to your host. For example, with ${a('https://firebase.google.com/docs/hosting', 'Firebase Hosting')}:`
+              )
+            ),
+            code(
+              'json',
+              `
+// @/firebase.json
+
+{
+  "hosting": {
+    "public": "dist/html",
+    "ignore": ["firebase.json", "**/.*"]
+  }
+}`
+            ),
+            code(
+              'bash',
+              `
+pnpm exec root build
+firebase deploy --only hosting`
+            ),
+            copy(
+              p(
+                `Large sites can speed up builds with ${c('--concurrency')} and ${c('--threads')}, or rebuild part of a site with ${c('--filter')}, a regex matched against URL paths. See the ${a('/docs/cli/#root-build', 'CLI reference')}.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'app-engine',
+          'Server (SSR) on App Engine',
+          [
+            p(
+              `The ${c('starter')} template is set up for ${a('https://cloud.google.com/appengine/docs/standard', 'App Engine')}, with a staging and a production ${c('app.yaml')}:`
+            ),
+          ],
+          [
+            code(
+              'bash',
+              `
+# @/app.prod.yaml
+
+runtime: nodejs24
+instance_class: F2
+service: default
+
+handlers:
+- url: /.*
+  secure: always
+  redirect_http_response_code: 301
+  script: auto`
+            ),
+            copy(
+              p(
+                `<b>1. Package the site.</b> ${c('root create-package')} builds the site in SSR mode and writes a self-contained app to the output folder: the build, your ${c('collections/')}, the ${c('app.yaml')}, and a ${c('package.json')} with your dependencies and a ${c('start')} script. In a monorepo, dependencies from other workspace packages are included too.`
+              )
+            ),
+            code(
+              'bash',
+              'pnpm exec root create-package --target=appengine --out=gae-prod --app-yaml=app.prod.yaml'
+            ),
+            copy(
+              p(
+                `<b>2. Deploy it.</b> ${c('root gae-deploy')} deploys the app as a new version with ${c('gcloud')}. With ${c('--promote')}, it sends all traffic to the new version once it's deployed. Without it, the version gets its own URL, which is useful for staging.`
+              )
+            ),
+            code(
+              'bash',
+              `
+pnpm exec root gae-deploy gae-prod/ \\
+  --project=my-project \\
+  --promote \\
+  --healthcheck-url=/ \\
+  --max-versions=10`
+            ),
+            copy(
+              p(
+                `${c('--healthcheck-url')} checks that the new version responds with a 200 before promoting it, and ${c('--max-versions')} deletes old versions so you stay under App Engine's limits. The ${c('starter')} template wraps both steps in ${c('pnpm stage')} and ${c('pnpm deploy')}.`
+              ),
+              p(
+                `<b>Environment variables.</b> Set them in ${c('env_variables')} in ${c('app.yaml')}. To keep secrets out of the file, use a ${c("'{NAME}'")} placeholder, and ${c('gae-deploy')} fills it in from the environment it runs in:`
+              )
+            ),
+            code(
+              'bash',
+              `
+# @/app.prod.yaml
+
+env_variables:
+  SESSION_COOKIE_SECRET: '{SESSION_COOKIE_SECRET}'`
+            ),
+            copy(
+              p(
+                `<b>CMS scheduled jobs.</b> The CMS needs a job that calls ${c('/cms/api/cron.run')} every minute. On App Engine, add a ${c('cron.yaml')} and deploy it once with ${c('gcloud app deploy cron.yaml --project=my-project')}:`
+              )
+            ),
+            code(
+              'bash',
+              `
+# @/cron.yaml
+
+cron:
+- description: CMS scheduled jobs
+  url: /cms/api/cron.run
+  schedule: every 1 minutes`
+            ),
+          ]
+        ),
+        section(
+          'firebase',
+          'Server (SSR) on Firebase Hosting',
+          [
+            p(
+              `On ${a('https://firebase.google.com/docs/hosting', 'Firebase Hosting')}, static files are served from the CDN and every other request is sent to a Cloud Function that runs the Root.js server. This site, rootjs.dev, is deployed this way.`
+            ),
+            p(
+              `<b>1. Export the functions.</b> Add an ${c('index.ts')} to the project that exports the server, and the CMS's scheduled jobs if you use the CMS:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/index.ts
+
+import {server} from '@blinkk/root/functions';
+import {cron} from '@blinkk/root-cms/functions';
+
+export const www = {
+  server: server({
+    mode: 'production',
+    // Options for the Cloud Function, e.g. to keep an instance warm.
+    httpsOptions: {minInstances: 1},
+  }),
+  cron: cron(),
+};`
+            ),
+            copy(
+              p(
+                `Add ${c('firebase-functions')} and ${c('firebase-admin')} to your dependencies, and set ${c('"main": "index.js"')} and ${c('"engines": {"node": "24"}')} in your ${c('package.json')}. These are copied into the packaged function.`
+              ),
+              p(
+                `<b>2. Configure Firebase Hosting.</b> Serve static files from the packaged build, and rewrite every other request to the server function:`
+              )
+            ),
+            code(
+              'json',
+              `
+// @/firebase.json
+
+{
+  "hosting": {
+    "public": "functions/dist/html",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {"source": "**", "function": "www-server", "pinTag": true}
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "ignore": ["node_modules", ".git", "*.local"]
+    }
+  ]
+}`
+            ),
+            copy(
+              p(
+                `<b>3. Package and deploy.</b> ${c('root create-package --target=firebase')} builds the site in SSR mode. When the output folder is named ${c('functions')}, it also compiles ${c('index.ts')} into it.`
+              )
+            ),
+            code(
+              'bash',
+              `
+pnpm exec root create-package --target=firebase --out=functions
+firebase deploy --only hosting,functions`
+            ),
+            copy(
+              p(
+                `<b>Environment variables.</b> Cloud Functions loads a ${c('.env')} file from the functions folder, so copy yours in after packaging, e.g. ${c('cp .env functions/')}. Don't commit it.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'other-hosts',
+          'Other Node.js hosts',
+          [
+            p(
+              `To run the server somewhere else, like Cloud Run or a container, build in SSR mode and start the production server. It listens on the ${c('PORT')} environment variable (default ${c('4007')}).`
+            ),
+          ],
+          [
+            code(
+              'bash',
+              `
+pnpm exec root build --ssr-only
+pnpm exec root start --host=0.0.0.0`
+            ),
+          ]
+        ),
+        section('cms-checklist', 'Checklist for sites with the CMS', [
+          ul(
+            `<b>Credentials</b>: the server accesses Firestore with application default credentials. On App Engine and Cloud Functions, give the runtime's service account access to Firestore (e.g. the Cloud Datastore User role).`,
+            `<b>Sign-in</b>: add your production domain to the authorized domains under Authentication in the Firebase console.`,
+            `<b>Session cookies</b>: set ${a('/docs/config/#server-session-cookie-secret', c('server.sessionCookieSecret'))} from a secret, not a value in source control.`,
+            `<b>Scheduled jobs</b>: schedule ${c('/cms/api/cron.run')} as shown above, or scheduled publishing and version history won't run. See ${a('/docs/cms/#cron-jobs', 'Scheduled jobs')}.`,
+            `<b>Secrets</b>: to share secrets between developers and CI, see ${a('/docs/#secrets', c('root secrets'))}.`
+          ),
+        ]),
+      ],
+    },
+  },
+};
+
 /** Every doc with refreshed copy, in sidebar order. */
 export const DOCS_COPY: DocCopy[] = [
   GETTING_STARTED,
   PROJECT_STRUCTURE,
+  DEPLOYMENT,
   ROUTES,
   ISLANDS,
   LOCALIZATION,
