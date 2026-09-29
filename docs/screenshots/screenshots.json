@@ -1,138 +1,138 @@
 {
   "cms-action-logs": {
-    "src": "https://lh3.googleusercontent.com/BWft--N6a_RMZZVVtiUp6D1YjVeHxKVxtHAJKNyn5EeXcBnv13JxGCl0cg3lz3Aj44Hvv13ioL7_MAH5GN6oMG0YBS9cAIedPHQ",
+    "src": "https://lh3.googleusercontent.com/Qe1oTrC3u6u1Z3q8g5ROc20GyWg89CWiqPWhJ-5tLSU7dwJjSXkMpTnk9sNzlp50G1-POYhWAvawnP4y_lifsjMtw9ZZBH5LLYI",
     "width": 1920,
     "height": 1200,
     "alt": "The Action Logs page in the Root.js CMS, an audit trail of who saved, published, scheduled, synced, and re-shared what and when, with links to each change.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-action-logs.67dc5d27525f6fe5.png",
-    "hash": "67dc5d27525f6fe5"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-action-logs.e64b9cc7af9b4230.png",
+    "hash": "e64b9cc7af9b4230"
   },
   "cms-ai-edit": {
-    "src": "https://lh3.googleusercontent.com/HWFc1sx2HE_Z2phf-NpIsund1Ii5EkJKQ2obtMPLbyhQogQsug3QfGNb4UYfbAcCFcp8PHQq2TxiOehJHAjfJCCJrxR962-xJJQ",
+    "src": "https://lh3.googleusercontent.com/WHcioKIZ68WQZJEUEXT1a9tg8fMkykqsRZ8qal-1vpvjy2_9TF3gdd5chMN079ef9qqT1qh53MD-LOfO0Ggi1RILvuyUQ6vE3g",
     "width": 1920,
     "height": 1200,
     "alt": "Editing a page module with Root AI in the CMS: an editor asks for a punchier headline and image alt text, and reviews the suggested changes as a diff before accepting them.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-ai-edit.4d2ec1bac9984be0.png",
-    "hash": "4d2ec1bac9984be0"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-ai-edit.03ff72d71eac56eb.png",
+    "hash": "03ff72d71eac56eb"
   },
   "cms-asset-library": {
-    "src": "https://lh3.googleusercontent.com/1P6BYkiBWmmUdIzUR0YYScfQome0VtFXIlt0BsRlyRPCPt0DTUk4xUKyXGqEua7eCm-EbBUJWMFWZpnXZMX_NFGAdXnCp2tBEQ",
+    "src": "https://lh3.googleusercontent.com/JehVRTU7nC3UbRe6MCxeqkcOW84Cf14S43RPt6TA7L2S4wRy2KhqpXMyXDA0o_hRXH-cjxCgcVSAuRnHcFEh6e2zali9KJ3LR9s",
     "width": 1920,
     "height": 1200,
     "alt": "The Root.js CMS asset library, showing a folder of spring harvest images synced from Figma, a subfolder synced from Google Drive, and upload and sync actions.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-asset-library.1f3bf1a557e13e7f.png",
-    "hash": "1f3bf1a557e13e7f"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-asset-library.2c77b0ee56eef8e8.png",
+    "hash": "2c77b0ee56eef8e8"
   },
   "cms-content-list": {
-    "src": "https://lh3.googleusercontent.com/gHTqpZ0VDCQBjG3BDC4cIOVpHIfQCtCvpfOt1ILizYOJRW-DpsgwrUyrR9Xk_DAtRK4mcaHI8E-Yh2NT9dVB1HW2Z9ghb0i6z0A",
+    "src": "https://lh3.googleusercontent.com/fzyf5ZyH3m4UmzlvSj2vWzghgp__jQGkTTfDBF2BdcaiCUArUR3gyEkvc15_tFkEa9WMCqpKYtr5PVIn57ViuVE30TFN6XI4cQ",
     "width": 1920,
     "height": 1200,
     "alt": "The Content page in the Root.js CMS, with the site’s collections on the left and the docs in the Pages collection listed with thumbnails, titles, publishing status, and who last edited them.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-content-list.aaf7c1e2328b414b.png",
-    "hash": "aaf7c1e2328b414b"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-content-list.4b652ae0190d7b9d.png",
+    "hash": "4b652ae0190d7b9d"
   },
   "cms-data-sources": {
-    "src": "https://lh3.googleusercontent.com/nZtrqpVR_G2uuX4gWUSGZ-pzM3dciVBxqZ50I46k3ZPQpIczXcY_iBERRXSbUvQ6uRbGa3bIq4pWgqEO122qjzRXISAiDrAhdg",
+    "src": "https://lh3.googleusercontent.com/wFEeuo4F8gD_QKPH7TMHeFXsDNREJRM9f6vwCiuDCKDYABBCCuvSQEUi1q0XtvL7mSOPw6W4Hz7CeVqgH6zEw00iC3nQ_TwFiw",
     "width": 1920,
     "height": 1200,
     "alt": "The Data Sources page in the Root.js CMS, listing Google Sheets and HTTP JSON feeds with their publish status and when each was last synced and published.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-data-sources.4ad2e8ac198541c6.png",
-    "hash": "4ad2e8ac198541c6"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-data-sources.1888b0162a96060f.png",
+    "hash": "1888b0162a96060f"
   },
   "cms-editor-preview": {
-    "src": "https://lh3.googleusercontent.com/UkPHPJkkxN4tT6UYRytlyGZJk8rr7dmhe6amNqm6wx5xeKCi3DYTJm4-EvVELEz89iSU8I86IJ3yxSk5z8NWW3LS6ge7KfkyQS2U",
+    "src": "https://lh3.googleusercontent.com/YMlD_yinxQ5fQhzhdBBN45EWuiIJDDX_4hfa_umwEQjkIM70JPMjNdyBIeItMbn5pP6u35GqIByb4yBdkxDXxkJQ1usgGtV-wA",
     "width": 2880,
     "height": 1800,
     "alt": "The Root.js CMS doc editor, with the fields for a garden market landing page on the left and a live desktop and mobile preview of the page on the right.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-editor-preview.62da67adce58ac00.png",
-    "hash": "62da67adce58ac00"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-editor-preview.0620a62456b3859e.png",
+    "hash": "0620a62456b3859e"
   },
   "cms-field-comments": {
-    "src": "https://lh3.googleusercontent.com/uBPYVRAEvw7uOuAMUCfOeiFVFMyswRWGsz7WRW01V2D1tr3kgZ8I63gBYJp6MjBHKaYWEeV_BTTyq6mM0QSA2lOjtaQY4tqh2fY",
+    "src": "https://lh3.googleusercontent.com/f6vZM5yR_siqSHx0zxQvnjvWjAsGefTiUSePq8FprGTqEOsO1BcJP2F6rBVKzz3KUwwZiacuiUh85zqgL-FBQQAWvGWiqclhbYc",
     "width": 1920,
     "height": 1200,
     "alt": "A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-field-comments.14e0e88c3f58fca3.png",
-    "hash": "14e0e88c3f58fca3"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-field-comments.15299ac2971ab285.png",
+    "hash": "15299ac2971ab285"
   },
   "cms-global-search": {
-    "src": "https://lh3.googleusercontent.com/Oxy4x2ySIk_L9xZLJVAU8p3sHgKpPBcAmyCD6zu0Ny8-ZUMEzLayUmXZLBnacG9wd_fmviUC65MeM9QYM3dWGLbwMV3kTSOBNQ",
+    "src": "https://lh3.googleusercontent.com/snZZqc3SEkcRCU1QYA8h81209BWNov8ZcIprTU7HudDmMpP2lKqj0W7hn_PZC8jdarvEntT1aPev2RnLHN2AaJSvby1OEAWLliSd",
     "width": 1920,
     "height": 1200,
     "alt": "The Root.js CMS ⌘K global search open over the Content page, with results for “carrot” across a data source, docs, and matching text inside doc fields.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-global-search.14c4b54da41ee978.png",
-    "hash": "14c4b54da41ee978"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-global-search.74a035a1fd2076c4.png",
+    "hash": "74a035a1fd2076c4"
   },
   "cms-localization-modal": {
-    "src": "https://lh3.googleusercontent.com/MOgGe-uf6rbQRBsPMvCZ0Tah1A-yIRQSwUZb4sVCqdt2ip8dsfomprMRicOuXbOH18VqQAJ7rQos_1KaXVtrxswGeSUfIKZkJYs",
+    "src": "https://lh3.googleusercontent.com/YFE-_SKt9-AMQxf0DPOz7LWhmkRiY_f8CE2aj8QsuLBQOXhqfCVtFGmiNH5xGDTCRjbkK3BX8SMf5YJ1sq52NzFYOfl7diuRPAkm",
     "width": 1920,
     "height": 1200,
     "alt": "The localization settings for a page in the Root.js CMS, with the locales it is published in grouped by region and its source strings next to their Japanese translations, three of which are still missing.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-localization-modal.4228653db55efe89.png",
-    "hash": "4228653db55efe89"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-localization-modal.501eb1a60ccd9ee8.png",
+    "hash": "501eb1a60ccd9ee8"
   },
   "cms-publish-checks": {
-    "src": "https://lh3.googleusercontent.com/uvexgIhOCRxOtiV4KRa0Q7kF8RssDZX6w2Cl0WdGBOHNW-Rq-ZDcp77Rz35XC5zp73sl9IV6Q4Usqaa_j2i_V0tA3xFwm0O4PCk",
+    "src": "https://lh3.googleusercontent.com/u9QM96hlnSaU3RVCXFLvL4h5lmbUtKJ55c9s4Cf8DOZG5npV5f1fN3FSc2cJmDL2UXE5aa_DsZmT16FXgjlgN4_kDBOpnIpc16s",
     "width": 1920,
     "height": 1200,
     "alt": "The publish dialog in the Root.js CMS, showing a scheduled publish time, an AI-written change summary, and passing publishing checks.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-publish-checks.4722a81224c3a3b0.png",
-    "hash": "4722a81224c3a3b0"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-publish-checks.b5fe6c3eadde816e.png",
+    "hash": "b5fe6c3eadde816e"
   },
   "cms-releases": {
-    "src": "https://lh3.googleusercontent.com/W9lDmuANbluvNPFjdtJ1Ef3mdjjjbnbbnYcTtfv7EU4DnSkBrmk1wEuOsUlO9EbmYdURMwQovmhNPsM33iNIVMuzBfX1Whg5lQ",
+    "src": "https://lh3.googleusercontent.com/RVHiX31nDxu3aerBbZBaeTZET6FCu6Z311TBvl3LQ4ECOg9DeRAsT4_RBFpGX5e7ynjW1LCTDp8_DdcSFN62ERMocjWjgKtSGtY",
     "width": 1920,
     "height": 1200,
     "alt": "The Releases page in the Root.js CMS, listing scheduled, published, and archived releases that bundle docs and data sources.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-releases.6e9b6fadb78b654f.png",
-    "hash": "6e9b6fadb78b654f"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-releases.2f60d7bff901e120.png",
+    "hash": "2f60d7bff901e120"
   },
   "cms-roles": {
-    "src": "https://lh3.googleusercontent.com/wS9bGyNzUEeXqaF7c3wqOcUzxvpI6bf5Y2cdFr89DAeKuLap9iYyi6IpknzNYlakpHeMftdJMd0fllx60GyapslgBo6NSLYvXzM",
+    "src": "https://lh3.googleusercontent.com/T3nD3ij3emkvIJnm5BGcBehfoxiz9fEFSPBDEhpdwPgvR_QRZ3SYgClIF8180wdCmQJCtpAYKbTWHA9BztPKOR1gbRGpPybqbg",
     "width": 1920,
     "height": 1200,
     "alt": "The sharing settings in the Root.js CMS, granting people and a whole email domain Admin, Editor, or Viewer roles, with a group whose role is limited to specific collections.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-roles.e3f0b8ff590a0222.png",
-    "hash": "e3f0b8ff590a0222"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-roles.7891d4049d8c4dac.png",
+    "hash": "7891d4049d8c4dac"
   },
   "cms-root-ai": {
-    "src": "https://lh3.googleusercontent.com/0Ic6jRbOjigJ_1CZSBuFKK_gSEnesk-CaEaRkQg3LKSLB9YAiam0msmV_RI4LC6aI07TgNqVNu-1seoA47t4dx3kKX6sYE5Nkczq",
+    "src": "https://lh3.googleusercontent.com/RFm8Mc_0ZbHxZpb3oZTNMQ6MhjV3kqm11lKfx2hFLoz2djtCK8QwfBupPfU_TmvilHw_fJViVnPYUk-GdyziALPyvpgYJAcFjEfw",
     "width": 1920,
     "height": 1200,
     "alt": "Root AI chat in the CMS: a request to localize a page and add it to a release, with the tool calls Root AI ran to do it.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-root-ai.e3a9085cba234edd.png",
-    "hash": "e3a9085cba234edd"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-root-ai.f0db28f2ae0e8135.png",
+    "hash": "f0db28f2ae0e8135"
   },
   "cms-sidebar-tools": {
-    "src": "https://lh3.googleusercontent.com/swTYMnaRgg52LziTPidBqO1ej9Bopn7IOkyoEZzBxAOeW_ItPzQwfvYWyGB90Ff67YqsjuzYwS_pXNxoknFtFkLTZa08IRqgM14",
+    "src": "https://lh3.googleusercontent.com/fNJ3UIjXnVgRkVuYN_cAYInWULdDyUP3_E5YUcHDUBZCwnm37faycago-g4wPHk0J1Qb9lvQZI4PpscO_m8NA6yMTOe9kYIBOYg",
     "width": 1920,
     "height": 1200,
     "alt": "A custom \"Launch checklist\" tool added to the Root.js CMS sidebar, showing an internal dashboard that tracks the tasks left before a scheduled release.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-sidebar-tools.77f655cbf6583515.png",
-    "hash": "77f655cbf6583515"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-sidebar-tools.78075a283e409469.png",
+    "hash": "78075a283e409469"
   },
   "cms-tasks": {
-    "src": "https://lh3.googleusercontent.com/LSlz6RtjS3SxAcDNbMmMIgGhPYFRL5t1PlrVmLTNDBK02J68cemTtPapBK3lWu9PkjKZRfVKEMbjFKWJCmd6cDN3DGFCR1UYFA",
+    "src": "https://lh3.googleusercontent.com/fpGSD3KCtutIZHTi_jXV0rEjgM4pdhoCoEAR5wQDnsuBgy3fzljBrSy32jtNXaSngb34nHc_021iGh0zSZIPS1OUdZQYs_HNwA",
     "width": 1920,
     "height": 1200,
     "alt": "The Root.js CMS task board, with content tasks like writing alt text and reviewing German translations moving from new to in progress to in review, each with a priority, an assignee, and a target launch date.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-tasks.5711c6b44c4a5123.png",
-    "hash": "5711c6b44c4a5123"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-tasks.8028f8d8629cea75.png",
+    "hash": "8028f8d8629cea75"
   },
   "cms-translations": {
-    "src": "https://lh3.googleusercontent.com/a0_TmNjmKyjslODBrsqrI5yb7y952uQ1tryGuSBlA9AoXtNnY5WOsZl30lF-O0iJ2PkGZU1OiOacDoy8lBhdg1rlwIp1GnRKaK0",
+    "src": "https://lh3.googleusercontent.com/L63BTOe0FYBKOYc_6A-TnLT69DHFXeqcy2iDShFIiPr_xdM8QgQxmnk4t-7So188zN_ldoEj1ZosOmUYnJvz5dMQQSkYv9gruMnt",
     "width": 1920,
     "height": 1200,
     "alt": "The Root.js CMS translations editor for a page, with source strings alongside German, French, and Japanese translations and an AI translate action.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-translations.e2af69683c44ed43.png",
-    "hash": "e2af69683c44ed43"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-translations.96470eac0dcf6da3.png",
+    "hash": "96470eac0dcf6da3"
   },
   "cms-version-history": {
-    "src": "https://lh3.googleusercontent.com/jBL6IGNFQIpe_cGIzfuKdA2L3q-RzuDdP_H_IY0gIuKbBqx1DwKrR2P81pvp0ZjbVCuuq81wZkotKzyvFmHpah_hzp5HfluYJQ",
+    "src": "https://lh3.googleusercontent.com/rnYq7gPNUJn9rKFUqlb4SYUJ5alLIWVnrM82d2cL78O0YWxK57r-Qo9l1HU4GU_Z5D6lkWVFGeciQAM5185ZlkfED0z-wx1AgLiT",
     "width": 1920,
     "height": 1200,
     "alt": "The version history of a page in the Root.js CMS, listing autosaved and published versions with who made each one, a publish message, and actions to compare, restore, or copy a version.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-version-history.63132a608b382fba.png",
-    "hash": "63132a608b382fba"
+    "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-version-history.1aa7a730ad4b162c.png",
+    "hash": "1aa7a730ad4b162c"
   }
 }

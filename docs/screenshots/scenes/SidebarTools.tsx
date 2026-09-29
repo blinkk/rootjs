@@ -426,7 +426,7 @@ export default function SidebarTools() {
   return (
     <div className="cms-app cms-app--expanded">
       <header className="cms-top">
-        <div className="cms-top__logo">Root CMS</div>
+        <div className="cms-top__logo">Root.js</div>
         <div className="cms-top__version">v3.5</div>
         <div className="cms-top__project">{PROJECT_NAME}</div>
         <div className="cms-top__search">
