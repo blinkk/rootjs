@@ -859,8 +859,12 @@ FileField.Preview = () => {
     Number(ctx.value.height) > 0;
   const filename = ctx.value?.filename || '';
   const isVideo = testIsVideoFile(filename);
+  // GCI-served images (`https://lh3...`) are always previewable, even when
+  // the filename has no image extension.
   const supportsCanvasPreview =
-    testIsImageFile(filename) || (isVideo && hasValidDimensions);
+    testIsImageFile(filename) ||
+    testIsGoogleCloudImageFile(ctx.value?.src || '') ||
+    (isVideo && hasValidDimensions);
   const [infoOpened, setInfoOpened] = useState(!supportsCanvasPreview);
 
   // Keep infoOpened in sync when the file type changes (e.g. uploading a PDF
@@ -871,6 +875,7 @@ FileField.Preview = () => {
     const newFilename = ctx.value?.filename || '';
     const newSupportsCanvas =
       testIsImageFile(newFilename) ||
+      testIsGoogleCloudImageFile(ctx.value?.src || '') ||
       (testIsVideoFile(newFilename) && hasValidDimensions);
     if (!newSupportsCanvas && !infoOpened) {
       setInfoOpened(true);

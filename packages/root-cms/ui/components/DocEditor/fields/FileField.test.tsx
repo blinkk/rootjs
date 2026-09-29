@@ -152,6 +152,52 @@ describe('FileField naming mode', () => {
   });
 });
 
+describe('FileField preview', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  function renderWithValue(value: any) {
+    return render(
+      <FileFieldInternal
+        field={{type: 'file', label: 'File'}}
+        value={value}
+        setValue={vi.fn()}
+        loadingState={null}
+        setLoadingState={vi.fn()}
+      />
+    );
+  }
+
+  it('shows the image preview for GCI urls without an image extension', () => {
+    const {container} = renderWithValue({
+      src: 'https://lh3.googleusercontent.com/abc123',
+      filename: 'hero',
+      width: 1600,
+      height: 900,
+    });
+    const img = container.querySelector('img.FileField__Preview__Image');
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute('src')).toBe(
+      'https://lh3.googleusercontent.com/abc123'
+    );
+    expect(
+      container.querySelector('.FileField__Canvas--infoOpened')
+    ).toBeNull();
+  });
+
+  it('shows the info panel for non-previewable files', () => {
+    const {container} = renderWithValue({
+      src: 'https://example.com/doc.pdf',
+      filename: 'doc.pdf',
+    });
+    expect(container.querySelector('img.FileField__Preview__Image')).toBeNull();
+    expect(
+      container.querySelector('.FileField__Canvas--infoOpened')
+    ).not.toBeNull();
+  });
+});
+
 describe('FileField aspect ratio warning', () => {
   afterEach(() => {
     cleanup();
