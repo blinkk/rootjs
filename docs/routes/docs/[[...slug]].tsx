@@ -1,12 +1,18 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
+import {
+  ArticleAsideSection,
+  ArticleHeader,
+  ArticleLayout,
+  ArticleSection,
+  ArticleToc,
+} from '@/components/ArticleLayout/ArticleLayout.js';
 import Block from '@/components/Block/Block.js';
-import {SiteLogo} from '@/components/SiteLogo/SiteLogo.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
-import {DocsDoc} from '@/root-cms.js';
+import {DocsDoc, DocsFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
 import {cmsRoute} from '@/utils/cms-route.js';
 import styles from './[[...slug]].module.scss';
@@ -136,67 +142,88 @@ export interface PageProps {
   doc: DocsDoc;
 }
 
+type DocsSection = NonNullable<
+  NonNullable<DocsFields['content']>['sections']
+>[number];
+
 export default function Page(props: PageProps) {
+  const ctx = useRequestContext();
   const fields = props.doc.fields || {};
-  const title = fields?.meta?.title;
-  const description = fields?.meta?.description;
-  const image = fields.meta?.image?.src;
+  const meta = fields.meta || {};
+  const content = fields.content || {};
+  const sections = content.sections || [];
+  const activeSection = getActiveSection(ctx);
 
   return (
     <BaseLayout
-      title={title}
-      description={description}
-      image={image}
-      hideFooter
+      title={meta.title}
+      description={meta.description}
+      image={meta.image?.src}
     >
-      <div className={styles.guideLayout}>
-        <Sidebar />
-        <Main {...props} />
-      </div>
+      <ArticleLayout
+        header={
+          <ArticleHeader eyebrow={activeSection?.label} title={content.title} />
+        }
+        aside={
+          <>
+            <DocsNav />
+            <ArticleToc
+              items={sections.map((section) => ({
+                href: `#${section.id || ''}`,
+                label: section.title || '',
+              }))}
+            />
+          </>
+        }
+      >
+        {content.body && (
+          <Text as="div" size="p" className={styles.body}>
+            <RichText data={content.body} />
+          </Text>
+        )}
+        {sections.map((section) => (
+          <Section section={section} />
+        ))}
+      </ArticleLayout>
     </BaseLayout>
   );
 }
 
-function Sidebar() {
+/**
+ * The docs navigation. On wide screens it is the first group in the aside
+ * column; on narrow screens it opens as a drawer from a "Docs menu" button.
+ */
+function DocsNav() {
   const t = useTranslations();
   const ctx = useRequestContext();
-
   return (
-    <aside id="sidebar" className={styles.sidebar}>
-      <root-drawer className={styles.sidebarMobileSubnav}>
+    <div className={styles.nav}>
+      <root-drawer className={styles.navDrawer}>
         <button
-          className={styles.sidebarMobileSubnavTrigger}
+          className={styles.navTrigger}
           data-slot="drawer-trigger"
-          aria-controls="docs-sidebar"
+          aria-controls="docs-nav"
           aria-expanded="false"
         >
-          <div className={styles.sidebarMobileSubnavTriggerIcon}>
-            <IconLayoutSidebarLeftExpand />
-          </div>
-          <div className={styles.sidebarMobileSubnavTriggerLabel}>Docs</div>
+          <IconLayoutSidebarLeftExpand size={18} aria-hidden="true" />
+          {t('Docs menu')}
         </button>
       </root-drawer>
-      <nav
-        id="docs-sidebar"
-        className={styles.sidebarContent}
-        aria-label="Docs navigation"
-      >
-        <div className={styles.sidebarLogo}>
-          <SiteLogo />
-        </div>
-
+      <nav id="docs-nav" className={styles.navPanel} aria-label={t('Docs')}>
         {NAV_SECTIONS.map((section) => (
-          <div className={styles.sidebarSection}>
-            <h2 className={styles.sidebarHeading}>{t(section.label)}</h2>
-            <UnstyledList className={styles.sidebarLinks}>
+          <ArticleAsideSection
+            className={styles.navSection}
+            title={section.label}
+          >
+            <UnstyledList className={styles.navLinks}>
               {section.links.map((link) => {
                 const active = link.isActive(ctx);
                 return (
                   <li>
                     <a
                       className={joinClassNames(
-                        styles.sidebarLink,
-                        active && styles.sidebarLinkActive
+                        styles.navLink,
+                        active && styles.navLinkActive
                       )}
                       href={link.href}
                       aria-current={active ? 'page' : undefined}
@@ -207,100 +234,34 @@ function Sidebar() {
                 );
               })}
             </UnstyledList>
-          </div>
+          </ArticleAsideSection>
         ))}
       </nav>
-    </aside>
-  );
-}
-
-function Main(props: PageProps) {
-  const fields = props.doc.fields || {};
-  const content = fields.content || {};
-  const sections = content.sections || [];
-  const t = useTranslations();
-  const ctx = useRequestContext();
-  const activeSection = getActiveSection(ctx);
-  return (
-    <div className={styles.main}>
-      <TableOfContents {...props} />
-      <div className={styles.mainContent}>
-        <div className={styles.mainContentHeader}>
-          {activeSection && (
-            <div className={styles.eyebrow}>{t(activeSection.label)}</div>
-          )}
-          {content.title && (
-            <Text
-              className={styles.mainContentTitle}
-              as="h1"
-              size="h3"
-              weight="semi-bold"
-            >
-              {t(content.title)}
-            </Text>
-          )}
-          {content.body && (
-            <Text className={styles.mainContentBody} size="p">
-              <RichText data={content.body} />
-            </Text>
-          )}
-        </div>
-        {sections.map((section) => (
-          <div className={styles.mainContentSection} id={section.id}>
-            <Text
-              className={styles.mainContentSectionTitle}
-              as="h2"
-              size="h5"
-              weight="semi-bold"
-            >
-              {t(section.title || '')}
-            </Text>
-            {section.body && (
-              <Text className={styles.mainContentSectionBody} size="p">
-                <RichText data={section.body} />
-              </Text>
-            )}
-            {section.blocks &&
-              section.blocks.length > 0 &&
-              section.blocks.map((block) => (
-                <Text
-                  className={styles.mainContentSectionBlock}
-                  size="p"
-                  data-type={block._type}
-                >
-                  <Block {...block} />
-                </Text>
-              ))}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
 
-function TableOfContents(props: PageProps) {
-  const fields = props.doc.fields || {};
-  const content = fields.content || {};
-  const sections = content.sections || [];
-  const t = useTranslations();
-  if (sections.length === 0) {
-    return null;
-  }
+function Section(props: {section: DocsSection}) {
+  const section = props.section;
+  const blocks = section.blocks || [];
   return (
-    <nav className={styles.toc} aria-label={t('On this page')}>
-      <div className={styles.tocContent}>
-        <h2 className={styles.tocHeading}>{t('On this page')}</h2>
-        <UnstyledList className={styles.tocLinks}>
-          {sections.map((section) => (
-            <li>
-              <a className={styles.tocLink} href={`#${section.id || ''}`}>
-                {t(section.title || '')}
-              </a>
-            </li>
-          ))}
-        </UnstyledList>
-      </div>
-    </nav>
+    <ArticleSection id={section.id} title={section.title}>
+      {section.body && (
+        <Text as="div" size="p" className={styles.body}>
+          <RichText data={section.body} />
+        </Text>
+      )}
+      {blocks.map((block) => (
+        <Text
+          as="div"
+          className={styles.block}
+          size="p"
+          data-type={block._type}
+        >
+          <Block {...block} />
+        </Text>
+      ))}
+    </ArticleSection>
   );
 }
 

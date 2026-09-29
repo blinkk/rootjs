@@ -39,16 +39,10 @@ export interface GlobalHeaderProps {
 export function GlobalHeader(props: GlobalHeaderProps) {
   const t = useTranslations();
   const ctx = useRequestContext();
-  const isDocs = ctx.currentPath.startsWith('/docs');
   return (
     <root-header
       id="header"
-      className={joinClassNames(
-        props.className,
-        styles.header,
-        isDocs && styles.headerDocs,
-        'y:top'
-      )}
+      className={joinClassNames(props.className, styles.header, 'y:top')}
       role="banner"
     >
       <SkipLink />

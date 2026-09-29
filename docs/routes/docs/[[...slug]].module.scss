@@ -1,113 +1,65 @@
-// Docs layout: a fixed sidebar, the content column, and a sticky table of
-// contents. Colors, borders and type details come from the shared "platform"
-// tokens (see `styles/platform.scss`) so the docs match the home page and the
-// guides.
+// Docs-specific styles. The page layout, header, aside and table of contents
+// come from `components/ArticleLayout`, shared with the guides.
 
 @use 'breakpoints';
-@use 'buttons';
 @use 'platform';
 
-$guide-max-width: 1440px;
-$guide-sidebar-width: 188px;
-$guide-toc-width: 216px;
-// The accent at low opacity, for hover and active backgrounds.
+// The accent and ink at low opacity, for hover and active backgrounds.
 $accent-wash: rgba(platform.$color-accent, 0.08);
 $ink-wash: rgba(platform.$color-ink, 0.04);
 
-.guideLayout {
-  @include platform.theme-vars();
-  @include breakpoints.sm() {
-    --layout-padding: 16px;
-  }
-  @include breakpoints.md() {
-    --layout-padding: 40px;
-  }
-  @include breakpoints.lg-gt() {
-    --layout-padding: max(40px, 50vw - #{0.5 * $guide-max-width});
-    display: flex;
+// Navigation.
+
+.navDrawer {
+  display: none;
+  @include breakpoints.md-lt() {
+    display: block;
   }
 }
 
-// Sidebar.
+.navTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--platform-border);
+  border-radius: 10px;
+  background: var(--platform-card-bg);
+  color: var(--platform-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 
-.sidebar {
-  @include breakpoints.lg-gt() {
-    padding: 0 32px 0 var(--layout-padding);
-    flex-shrink: 0;
-    background: platform.$color-tint;
-    border-right: 1px solid var(--platform-border);
+  &:hover {
+    background: $ink-wash;
+  }
+}
+
+.navPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+
+  // On narrow screens, the nav slides in from the left.
+  @include breakpoints.md-lt() {
     position: fixed;
-    left: 0;
     top: 0;
     bottom: 0;
-    z-index: 2000;
-    overflow-y: auto;
-  }
-}
-
-.sidebarMobileSubnav {
-  display: block;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--platform-border);
-  @include breakpoints.md() {
-    padding: 8px 40px;
-  }
-  @include breakpoints.lg-gt() {
-    display: none;
-  }
-}
-
-@include buttons.base-styles(
-  $selectors: (
-    'button': '.sidebarMobileSubnavTrigger',
-    'button__leftIcon': '.sidebarMobileSubnavTriggerIcon',
-    'button__label': '.sidebarMobileSubnavTriggerIconLabel',
-    'button__rightIcon': '.sidebarMobileSubnavTriggerIcon',
-  )
-);
-
-.sidebarMobileSubnavTrigger {
-  background: transparent;
-  border-color: transparent;
-  padding: 4px 10px;
-  border-radius: 8px;
-  color: var(--platform-fg);
-}
-
-.sidebarMobileSubnavTrigger:hover {
-  background-color: $ink-wash;
-}
-
-.sidebarMobileSubnavTrigger:active {
-  background-color: $accent-wash;
-}
-
-.sidebarContent {
-  width: $guide-sidebar-width;
-  padding-bottom: 40px;
-
-  @include breakpoints.md-lt() {
-    transform: translateX(-100%);
-    transition: all 0.3s ease;
-    position: fixed;
     left: 0;
-    top: -1px;
-    bottom: 0;
+    z-index: 2000;
     width: calc(100% - 60px);
     max-width: 300px;
-    z-index: 2000;
+    padding: 28px 24px 40px;
     overflow-y: auto;
     background: platform.$color-tint;
-    padding-left: var(--layout-padding);
-    padding-right: 24px;
     border-right: 1px solid var(--platform-border);
-  }
-  @include breakpoints.sm() {
-    padding-left: 24px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
   }
 }
 
-.sidebarContent:global(.expanded) {
+.navPanel:global(.expanded) {
   @include breakpoints.md-lt() {
     transform: translateX(0);
     // Only while open, so the shadow doesn't show at the edge when closed.
@@ -115,32 +67,13 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
   }
 }
 
-.sidebarLogo {
-  display: flex;
-  align-items: center;
-  height: var(--header-height);
-  margin-left: -10px;
-  border-bottom: 1px solid var(--platform-border);
-}
-
-.sidebarSection {
-  margin-top: 28px;
-}
-
-.sidebarHeading {
-  @include platform.nav-heading();
-  padding-left: 10px;
-  margin-left: -10px;
-}
-
-.sidebarLinks {
-  margin-top: 8px;
+.navLinks {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.sidebarLink {
+.navLink {
   display: block;
   margin-left: -10px;
   padding: 6px 10px;
@@ -153,106 +86,23 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+
+  &:hover {
+    background: $ink-wash;
+    color: var(--platform-fg);
+  }
 }
 
-.sidebarLink:hover {
-  background: $ink-wash;
-  color: var(--platform-fg);
-}
-
-.sidebarLinkActive,
-.sidebarLinkActive:hover {
+.navLinkActive,
+.navLinkActive:hover {
   background: $accent-wash;
   color: var(--platform-accent);
   font-weight: 600;
 }
 
-// Table of contents.
+// Content.
 
-.toc {
-  padding-left: 40px;
-  padding-right: var(--layout-padding);
-  padding-top: 64px;
-  flex-shrink: 0;
-  @include breakpoints.md-lt() {
-    display: none;
-  }
-}
-
-.tocContent {
-  width: $guide-toc-width;
-  position: sticky;
-  top: calc(var(--header-height) + 64px);
-}
-
-.tocHeading {
-  @include platform.nav-heading();
-}
-
-.tocLinks {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-left: 14px;
-  border-left: 1px solid var(--platform-border);
-}
-
-.tocLink {
-  display: block;
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--platform-muted);
-  text-decoration: none;
-}
-
-.tocLink:hover {
-  color: var(--platform-accent);
-}
-
-// Main content.
-
-.main {
-  flex: 1;
-  min-width: 0;
-  @include breakpoints.lg-gt() {
-    display: flex;
-    flex-direction: row-reverse;
-    padding-left: calc(var(--layout-padding) + #{$guide-sidebar-width} + 32px);
-  }
-}
-
-.mainContent {
-  flex: 1;
-  min-width: 0;
-  max-width: 820px;
-  padding: 40px var(--grid-padding) 120px;
-  @include breakpoints.lg() {
-    padding: 64px 20px 96px 60px;
-  }
-  @include breakpoints.xl-gt() {
-    padding: 64px 80px 120px;
-  }
-}
-
-.eyebrow {
-  @include platform.eyebrow();
-  margin-bottom: 14px;
-}
-
-.mainContentTitle {
-  text-wrap: balance;
-  letter-spacing: -0.02em;
-}
-
-.mainContentSectionTitle {
-  text-wrap: balance;
-  letter-spacing: -0.01em;
-}
-
-.mainContentBody,
-.mainContentSectionBody {
-  margin-top: 20px;
+.body {
   text-wrap: pretty;
 
   p {
@@ -274,7 +124,6 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
     overflow: auto;
     @include breakpoints.sm() {
       max-width: calc(100vw - 32px);
-      overflow: auto;
     }
   }
 
@@ -318,12 +167,17 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
   }
 }
 
-.mainContentBody {
-  color: var(--platform-muted);
+.block {
+  margin-top: 20px;
+}
+
+.block[data-type='CopyBlock']:has(h2) {
+  margin-top: 30px;
 }
 
 // Links and inline code in rich text, including blocks (e.g. `CopyBlock`).
-.mainContent {
+.body,
+.block {
   a:not([class]) {
     color: var(--platform-accent);
     text-decoration-color: rgba(platform.$color-accent, 0.35);
@@ -344,19 +198,4 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
     font-size: 0.875em;
     color: var(--platform-fg);
   }
-}
-
-.mainContentSection {
-  padding-top: 40px;
-  margin-top: 40px;
-  border-top: 1px solid var(--platform-border);
-  scroll-margin-top: calc(var(--header-height) + 24px);
-}
-
-.mainContentSectionBlock {
-  margin-top: 20px;
-}
-
-.mainContentSectionBlock[data-type='CopyBlock']:has(h2) {
-  margin-top: 30px;
 }

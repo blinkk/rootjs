@@ -1,7 +1,13 @@
 import {useTranslations} from '@blinkk/root';
 import {RichText} from '@blinkk/root-cms/richtext';
-import {IconArrowLeft, IconArrowRight, IconCheck} from '@tabler/icons-preact';
-import {Container} from '@/components/Container/Container.js';
+import {IconArrowRight, IconCheck} from '@tabler/icons-preact';
+import {
+  ArticleAsideSection,
+  ArticleHeader,
+  ArticleLayout,
+  ArticleSection,
+  ArticleToc,
+} from '@/components/ArticleLayout/ArticleLayout.js';
 import {Image, ImageProps} from '@/components/Image/Image.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
@@ -31,35 +37,31 @@ export default function Page(props: PageProps) {
   const faq = content.faq || [];
   const nextGuide = getNextGuide(props.doc, props.guides || []);
 
+  const tocItems = sections.map((section) => ({
+    href: `#${section.id || ''}`,
+    label: section.title || '',
+  }));
+  if (faq.length > 0) {
+    tocItems.push({href: '#faq', label: 'Frequently asked questions'});
+  }
+
   return (
     <BaseLayout
       title={meta.title ? `${t(meta.title)} – Root.js` : 'Guides – Root.js'}
       description={meta.description}
       image={meta.image?.src}
     >
-      <div className={styles.guide}>
-        <Container className={styles.header}>
-          <a className={styles.back} href="/guides/">
-            <IconArrowLeft size={16} aria-hidden="true" />
-            {t('All guides')}
-          </a>
-          {content.eyebrow && (
-            <div className={styles.eyebrow}>{t(content.eyebrow)}</div>
-          )}
-          {content.title && (
-            <Text as="h1" size="h2" className={styles.title}>
-              {t(content.title)}
-            </Text>
-          )}
-          {content.intro && (
-            <Text as="div" size="p-large" className={styles.intro}>
-              <RichText data={content.intro} />
-            </Text>
-          )}
-        </Container>
-
-        {content.heroImage?.src && (
-          <Container className={styles.hero}>
+      <ArticleLayout
+        header={
+          <ArticleHeader
+            back={{href: '/guides/', label: 'All guides'}}
+            eyebrow={content.eyebrow}
+            title={content.title}
+            intro={content.intro && <RichText data={content.intro} />}
+          />
+        }
+        media={
+          content.heroImage?.src && (
             <figure className={styles.frame}>
               <Image
                 {...(content.heroImage as ImageProps)}
@@ -67,14 +69,15 @@ export default function Page(props: PageProps) {
                 loading="eager"
               />
             </figure>
-          </Container>
-        )}
-
-        <Container className={styles.layout}>
-          <aside className={styles.aside}>
+          )
+        }
+        aside={
+          <>
             {takeaways.length > 0 && (
-              <div className={styles.glance}>
-                <h2 className={styles.asideTitle}>{t('At a glance')}</h2>
+              <ArticleAsideSection
+                className={styles.glance}
+                title="At a glance"
+              >
                 <UnstyledList className={styles.takeaways}>
                   {takeaways.map((item) => (
                     <li>
@@ -83,62 +86,39 @@ export default function Page(props: PageProps) {
                     </li>
                   ))}
                 </UnstyledList>
-              </div>
+              </ArticleAsideSection>
             )}
-            {sections.length > 0 && (
-              <nav className={styles.toc} aria-label={t('On this page')}>
-                <h2 className={styles.asideTitle}>{t('On this page')}</h2>
-                <UnstyledList className={styles.tocLinks}>
-                  {sections.map((section) => (
-                    <li>
-                      <a href={`#${section.id || ''}`}>
-                        {t(section.title || '')}
-                      </a>
-                    </li>
-                  ))}
-                  {faq.length > 0 && (
-                    <li>
-                      <a href="#faq">{t('Frequently asked questions')}</a>
-                    </li>
-                  )}
-                </UnstyledList>
-              </nav>
-            )}
-          </aside>
+            <ArticleToc items={tocItems} />
+          </>
+        }
+      >
+        {sections.map((section) => (
+          <Section section={section} />
+        ))}
 
-          <article className={styles.article}>
-            {sections.map((section) => (
-              <Section section={section} />
-            ))}
+        {faq.length > 0 && (
+          <ArticleSection id="faq" title="Frequently asked questions">
+            <dl className={styles.faq}>
+              {faq.map((item) => (
+                <div className={styles.faqItem}>
+                  <dt>{t(item.question || '')}</dt>
+                  <dd>{t(item.answer || '')}</dd>
+                </div>
+              ))}
+            </dl>
+          </ArticleSection>
+        )}
 
-            {faq.length > 0 && (
-              <section className={styles.section} id="faq">
-                <Text as="h2" size="h4" className={styles.sectionTitle}>
-                  {t('Frequently asked questions')}
-                </Text>
-                <dl className={styles.faq}>
-                  {faq.map((item) => (
-                    <div className={styles.faqItem}>
-                      <dt>{t(item.question || '')}</dt>
-                      <dd>{t(item.answer || '')}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            )}
-
-            {nextGuide && (
-              <a className={styles.next} href={getGuideUrl(nextGuide)}>
-                <span className={styles.nextLabel}>{t('Next guide')}</span>
-                <span className={styles.nextTitle}>
-                  {t(nextGuide.fields?.meta?.title || '')}
-                  <IconArrowRight size={20} aria-hidden="true" />
-                </span>
-              </a>
-            )}
-          </article>
-        </Container>
-      </div>
+        {nextGuide && (
+          <a className={styles.next} href={getGuideUrl(nextGuide)}>
+            <span className={styles.nextLabel}>{t('Next guide')}</span>
+            <span className={styles.nextTitle}>
+              {t(nextGuide.fields?.meta?.title || '')}
+              <IconArrowRight size={20} aria-hidden="true" />
+            </span>
+          </a>
+        )}
+      </ArticleLayout>
     </BaseLayout>
   );
 }
@@ -147,12 +127,7 @@ function Section(props: {section: GuideSection}) {
   const t = useTranslations();
   const section = props.section;
   return (
-    <section className={styles.section} id={section.id}>
-      {section.title && (
-        <Text as="h2" size="h4" className={styles.sectionTitle}>
-          {t(section.title)}
-        </Text>
-      )}
+    <ArticleSection id={section.id} title={section.title}>
       {section.body && (
         <Text as="div" size="p" className={styles.sectionBody}>
           <RichText data={section.body} />
@@ -173,7 +148,7 @@ function Section(props: {section: GuideSection}) {
           )}
         </figure>
       )}
-    </section>
+    </ArticleSection>
   );
 }
 
