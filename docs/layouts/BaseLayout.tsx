@@ -43,7 +43,7 @@ const Meta = {
   SITE_NAME: 'Root.js',
   DOMAIN: 'https://rootjs.dev',
   IMAGE:
-    'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
+    'https://lh3.googleusercontent.com/sdCQ6SQzxbiw0CSR4pG3TGaXZNbsFdEKrj8GfZRQlB98zUW68D0qJyUZzwDCh3il5LBIH-pGoK0aMSySR4v-SpyX11sPLehvSw',
 };
 
 const ANALYTICS = `

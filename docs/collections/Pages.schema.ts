@@ -8,7 +8,7 @@ export default schema.collection({
     title: 'meta.title',
     image: 'meta.image',
     defaultImage: {
-      src: 'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
+      src: 'https://lh3.googleusercontent.com/sdCQ6SQzxbiw0CSR4pG3TGaXZNbsFdEKrj8GfZRQlB98zUW68D0qJyUZzwDCh3il5LBIH-pGoK0aMSySR4v-SpyX11sPLehvSw',
     },
   },
   autolock: true,
