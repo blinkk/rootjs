@@ -16,7 +16,11 @@ export function CodeBlock(props: CodeBlockProps) {
       className={joinClassNames(props.className, styles.codeBlock)}
       data-language={props.language}
     >
-      {languageLabel && <div className={styles.language}>{languageLabel}</div>}
+      {languageLabel && (
+        <div className={styles.header}>
+          <span className={styles.language}>{languageLabel}</span>
+        </div>
+      )}
       <pre>
         <code>{props.code || ''}</code>
       </pre>

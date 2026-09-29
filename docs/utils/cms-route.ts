@@ -11,6 +11,7 @@ import {
   resolveLocaleFallbacks,
   translationsForLocale,
 } from '@blinkk/root-cms/client';
+import {createCmsClient} from '@/utils/cms-client.js';
 
 export type CMSRequest = Request & {
   cmsClient: RootCMSClient;
@@ -50,7 +51,9 @@ export interface CMSRouteOptions {
 
   /**
    * Hook for amending any props values before being passed to the page
-   * component.
+   * component. The hook can set `$translationTags` on the returned props to
+   * load translations for tags that depend on the doc, e.g. content fetched
+   * from other collections.
    */
   preRenderHook?: (props: any, context: CMSRouteContext) => any | Promise<any>;
 
@@ -130,14 +133,14 @@ export function cmsRoute(options: CMSRouteOptions) {
       return {notFound: true};
     }
 
-    const translations = translationsForLocale(
-      translationsMap,
-      resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
-    );
     let props: any = {...data, locale, mode, slug, doc};
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
     }
+    const translations = translationsForLocale(
+      await withExtraTranslations(cmsClient, translationsMap, props),
+      resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+    );
 
     return {props, locale, translations};
   }
@@ -152,7 +155,7 @@ export function cmsRoute(options: CMSRouteOptions) {
         return {paths: []};
       }
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
+        cmsClient = createCmsClient(ctx.rootConfig);
       }
       // TODO(stevenle): Add support for mode.
       const mode = 'published';
@@ -168,7 +171,7 @@ export function cmsRoute(options: CMSRouteOptions) {
 
     getStaticProps = async (ctx) => {
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
+        cmsClient = createCmsClient(ctx.rootConfig);
       }
       const slug = getSlug(ctx.params);
       // TODO(stevenle): Add support for mode.
@@ -187,7 +190,7 @@ export function cmsRoute(options: CMSRouteOptions) {
     // SSR handler.
     handle: async (req, res) => {
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(req.rootConfig);
+        cmsClient = createCmsClient(req.rootConfig);
       }
       req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
@@ -234,14 +237,14 @@ export function cmsRoute(options: CMSRouteOptions) {
         req.get('x-country-code') ||
         req.get('x-appengine-country') ||
         null;
-      const translations = translationsForLocale(
-        translationsMap,
-        resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
-      );
       let props: any = {...data, req, locale, mode, slug, doc, country};
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
       }
+      const translations = translationsForLocale(
+        await withExtraTranslations(cmsClient, translationsMap, props),
+        resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+      );
 
       if (props.$redirect) {
         const redirectCode = props.$redirectCode || 302;
@@ -264,6 +267,30 @@ export function cmsRoute(options: CMSRouteOptions) {
       return ctx.render(props, {locale, translations});
     },
   };
+}
+
+/**
+ * Merges translations for any `$translationTags` set by a `preRenderHook` into
+ * the translations map.
+ */
+async function withExtraTranslations(
+  cmsClient: RootCMSClient,
+  translationsMap: Awaited<ReturnType<RootCMSClient['loadTranslations']>>,
+  props: {$translationTags?: string[]}
+) {
+  const tags = props.$translationTags || [];
+  if (tags.length === 0) {
+    return translationsMap;
+  }
+  // `array-contains-any` queries accept up to 30 values.
+  const chunks: string[][] = [];
+  for (let i = 0; i < tags.length; i += 30) {
+    chunks.push(tags.slice(i, i + 30));
+  }
+  const results = await Promise.all(
+    chunks.map((chunk) => cmsClient.loadTranslations({tags: chunk}))
+  );
+  return Object.assign({}, ...results, translationsMap);
 }
 
 export async function resolvePromisesMap(

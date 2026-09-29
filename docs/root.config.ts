@@ -7,6 +7,7 @@ import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
 import {exampleToolPod} from './plugins/example-tools-pod.js';
 import {fieldCommentNotifications} from './plugins/field-comment-notifications.js';
+import {sitemapPlugin} from './plugins/sitemap.js';
 import {templatesPod} from './plugins/templates-pod.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
@@ -38,9 +39,22 @@ export default defineConfig({
     redirects: [
       // The CMS product page was merged into the home page.
       {source: '/products/cms', destination: '/', type: 301},
+      // The technical guide moved from `/guide/` to `/docs/`. The `/guides/`
+      // path now hosts the non-technical feature guides.
+      {source: '/guide', destination: '/docs/', type: 301},
+      {source: '/guide/[...path]', destination: '/docs/[...path]/', type: 301},
     ],
   },
   plugins: [
+    sitemapPlugin({
+      collections: [
+        {id: 'Pages', url: '/[...slug]'},
+        {id: 'Guides', url: '/guides/[...slug]'},
+        {id: 'Docs', url: '/docs/[...slug]'},
+        {id: 'BlogPosts', url: '/blog/[slug]'},
+      ],
+      staticPaths: ['/blog/'],
+    }),
     templatesPod(),
     exampleToolPod('a'),
     exampleToolPod('b'),

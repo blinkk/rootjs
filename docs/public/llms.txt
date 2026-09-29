@@ -1,0 +1,46 @@
+# Root.js
+
+> Root.js is an open-source web platform for building content-driven websites. It pairs a TypeScript web framework, which renders TSX to HTML on the server (SSR) or ahead of time (SSG) with no client-side JavaScript by default, with a built-in CMS for visual editing, live preview, localization, publishing workflows, and AI-assisted editing. Content is stored in the site's own Firebase project, and content models are defined in code.
+
+Root.js is published to npm as `@blinkk/root` (the framework) and `@blinkk/root-cms` (the CMS). Create a project with `pnpm create @blinkk/root`. Node.js 24 or later is required. Source code: https://github.com/blinkk/rootjs
+
+## Docs
+
+- [Getting started](https://rootjs.dev/docs/): Create a Root.js project, run the dev server, and set up the built-in CMS.
+- [Project structure](https://rootjs.dev/docs/project-structure/): The files and folders in a typical Root.js project, and what each one does.
+- [Deployment](https://rootjs.dev/docs/deployment/): Deploy a Root.js site to production as static HTML, or with a server on App Engine or Firebase Hosting.
+- [Routes](https://rootjs.dev/docs/routes/): How file-based routing works in Root.js, and how routes fetch data for SSG and SSR.
+- [Interactive islands](https://rootjs.dev/docs/islands/): Add interactivity to server-rendered pages with custom elements and Preact islands.
+- [Localization](https://rootjs.dev/docs/localization/): Serve localized URLs and translate strings and CMS content in a Root.js project.
+- [Configuration](https://rootjs.dev/docs/config/): The most common options in root.config.ts.
+- [Plugins](https://rootjs.dev/docs/plugins/): Extend the Root.js server and build with plugins in root.config.ts.
+- [CMS configuration](https://rootjs.dev/docs/cms/): Configure the Root.js CMS: plugin options, security rules and roles, Google APIs, AI and scheduled jobs.
+- [CMS schemas](https://rootjs.dev/docs/cms/schemas/): Define CMS collections and reusable content models in .schema.ts files.
+- [CMS data fetching](https://rootjs.dev/docs/cms/data-fetching/): Read CMS content in routes with RootCMSClient: docs, lists, custom ordering and translations.
+
+## Reference
+
+- [CLI reference](https://rootjs.dev/docs/cli/): Every command and option in the create-root, root, root-cms and root-password-protect CLIs.
+- [API overview](https://rootjs.dev/docs/api/): The public packages and entry points of Root.js.
+- [@blinkk/root API](https://rootjs.dev/docs/api/root/): The Root.js framework: config, routing, components, hooks and the server.
+- [@blinkk/root-cms API](https://rootjs.dev/docs/api/root-cms/): The Root.js CMS: the plugin, schemas, RootCMSClient and rich text rendering.
+- [@blinkk/root-password-protect API](https://rootjs.dev/docs/api/root-password-protect/): Password-protected pages for Root.js sites.
+
+## Guides
+
+- [Root.js at a glance](https://rootjs.dev/guides/overview/): One web platform where marketing, content, and engineering teams build and ship websites together.
+- [Editing and live preview](https://rootjs.dev/guides/editing/): How editors build and update pages in the CMS and preview every change on the real site.
+- [Publishing, scheduling, and releases](https://rootjs.dev/guides/publishing/): Scheduling, releases, publishing checks, and version history.
+- [Localization and translation](https://rootjs.dev/guides/localization/): AI translation, vendor integrations, and tracking what's untranslated across locales.
+- [Root AI](https://rootjs.dev/guides/root-ai/): An AI assistant in the CMS that drafts, translates, and organizes content, and never publishes on its own.
+- [Assets and data](https://rootjs.dev/guides/assets-and-data/): Images from Figma and Google Drive, and data from spreadsheets and APIs, kept in sync with the site.
+- [Collaboration and review](https://rootjs.dev/guides/collaboration/): Field-level comments, live presence, and reviewing changes together in the CMS.
+- [Roles, permissions, and governance](https://rootjs.dev/guides/governance/): Roles, permission groups, publishing locks, and an activity log of every change.
+- [Integrations and extensibility](https://rootjs.dev/guides/extensibility/): Custom CMS tools, publishing checks, notifications, and your own AI, translation, and data providers.
+- [SEO, accessibility, and performance](https://rootjs.dev/guides/seo-and-performance/): What Root.js does for search engines, AI crawlers, and visitors, and how to measure it with Lighthouse.
+
+## Optional
+
+- [Blog](https://rootjs.dev/blog/): Release announcements and updates.
+- [Announcing Root v3.0](https://rootjs.dev/blog/rootjs-v3/): A native JSX renderer, a smarter CMS, and a faster build pipeline.
+- [Introducing Root.js](https://rootjs.dev/blog/introducing-rootjs/)

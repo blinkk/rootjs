@@ -70,7 +70,7 @@ export function CmsFrame(props: CmsFrameProps) {
   return (
     <div className={`cms-app ${props.expanded ? 'cms-app--expanded' : ''}`}>
       <header className="cms-top">
-        <div className="cms-top__logo">Root CMS</div>
+        <div className="cms-top__logo">Root.js</div>
         <div className="cms-top__version">v3.5</div>
         <div className="cms-top__project">{PROJECT_NAME}</div>
         {props.topRight || (

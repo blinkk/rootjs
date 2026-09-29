@@ -1,0 +1,877 @@
+{
+  "programs": [
+    {
+      "bin": "create-root",
+      "packageName": "@blinkk/create-root",
+      "version": "3.5.2",
+      "commands": [
+        {
+          "name": "create-root",
+          "aliases": [],
+          "usage": "create-root [dir] [options]",
+          "summary": "",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "dir",
+              "required": false,
+              "variadic": false,
+              "description": "output dir"
+            }
+          ],
+          "options": [
+            {
+              "flags": "--template [template]",
+              "description": "template to use",
+              "defaultValue": "\"starter\""
+            },
+            {
+              "flags": "--repo [repo]",
+              "description": "github repo to pull from",
+              "defaultValue": "\"blinkk/rootjs/examples\""
+            }
+          ],
+          "subcommands": []
+        }
+      ],
+      "globalOptions": []
+    },
+    {
+      "bin": "root",
+      "packageName": "@blinkk/root",
+      "version": "3.5.2",
+      "commands": [
+        {
+          "name": "root build",
+          "aliases": [],
+          "usage": "root build [path] [options]",
+          "summary": "generates a static build",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "path",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--ssr-only",
+              "description": "produce a ssr-only build"
+            },
+            {
+              "flags": "--mode <mode>",
+              "description": "see: https://vitejs.dev/guide/env-and-mode.html#modes",
+              "defaultValue": "\"production\""
+            },
+            {
+              "flags": "-c, --concurrency <num>",
+              "description": "number of files to build concurrently",
+              "defaultValue": "\"10\""
+            },
+            {
+              "flags": "--threads [num]",
+              "description": "renders pages using worker threads; pass a number for exactly N workers, or omit the value (or pass \"auto\") to pick based on cpu cores and page count"
+            },
+            {
+              "flags": "--filter <urlPathRegex>",
+              "description": "builds the url paths that match the given regex, e.g. \"/products/.*\"",
+              "defaultValue": "\"\""
+            },
+            {
+              "flags": "--log <mode>",
+              "description": "build log output: \"progress\" (default) shows a progress indicator and a final summary, \"verbose\" prints one line per output file, \"quiet\" prints only the final summary",
+              "choices": [
+                "progress",
+                "verbose",
+                "quiet"
+              ]
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root codegen",
+          "aliases": [],
+          "usage": "root codegen [type] [name] [options]",
+          "summary": "generates boilerplate code",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "type",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "name",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--out <outdir>",
+              "description": "output dir"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root create-package",
+          "aliases": [
+            "package"
+          ],
+          "usage": "root create-package [path] [options]",
+          "summary": "creates a standalone npm package for deployment to various hosting services",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "path",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--target <target>",
+              "description": "hosting target, i.e. appengine or firebase"
+            },
+            {
+              "flags": "--out <outdir>",
+              "description": "output dir"
+            },
+            {
+              "flags": "--mode <mode>",
+              "description": "deployment mode, i.e. production or preview"
+            },
+            {
+              "flags": "--app-yaml <path>",
+              "description": "for appengine targets, path to app.yaml (defaults to \"app.yaml\")"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root dev",
+          "aliases": [],
+          "usage": "root dev [path] [options]",
+          "summary": "starts the server in development mode",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "path",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--host <host>",
+              "description": "network address the server should listen on, e.g. 127.0.0.1"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root gae-deploy",
+          "aliases": [],
+          "usage": "root gae-deploy <appdir> [options]",
+          "summary": "appengine deploy utility that can optionally run healthchecks before diverting traffic to the new version and clean up old versions",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "appdir",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--project <project>",
+              "description": "GCP project id"
+            },
+            {
+              "flags": "--prefix <prefix>",
+              "description": "prefix to append the version"
+            },
+            {
+              "flags": "--promote",
+              "description": "whether to promote the version (if healthchecks pass)"
+            },
+            {
+              "flags": "--healthcheck-url <url>",
+              "description": "healthcheck url path (e.g. \"/healthcheck\") which should return a 200 status with the text \"OK\""
+            },
+            {
+              "flags": "--max-versions <num>",
+              "description": "the max number of versions to keep"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root preview",
+          "aliases": [],
+          "usage": "root preview [path] [options]",
+          "summary": "starts the server in preview mode",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "path",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--host <host>",
+              "description": "network address the server should listen on, e.g. 127.0.0.1"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root start",
+          "aliases": [],
+          "usage": "root start [path] [options]",
+          "summary": "starts the server in production mode",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "path",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--host <host>",
+              "description": "network address the server should listen on, e.g. 127.0.0.1"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root secrets",
+          "aliases": [],
+          "usage": "root secrets",
+          "summary": "manage shared secrets backed by Google Cloud Secret Manager (requires the gcloud CLI)",
+          "description": "",
+          "examples": [],
+          "arguments": [],
+          "options": [],
+          "subcommands": [
+            {
+              "name": "root secrets init",
+              "aliases": [],
+              "usage": "root secrets init [options]",
+              "summary": "create a secrets manifest",
+              "description": "",
+              "examples": [],
+              "arguments": [],
+              "options": [
+                {
+                  "flags": "--gcp-project <id>",
+                  "description": "GCP project id"
+                },
+                {
+                  "flags": "--gsm-key <key>",
+                  "description": "Secret Manager key for this manifest"
+                },
+                {
+                  "flags": "--manifest <path>",
+                  "description": "manifest path (defaults to ./.root.secrets.json)"
+                },
+                {
+                  "flags": "--import <path>",
+                  "description": "path to a shared manifest to import keys from"
+                },
+                {
+                  "flags": "--import-keys <names>",
+                  "description": "comma-separated subset of shared keys to import"
+                }
+              ],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets set",
+              "aliases": [],
+              "usage": "root secrets set <name> [options]",
+              "summary": "store a secret value, read from a prompt (TTY) or piped stdin",
+              "description": "",
+              "examples": [],
+              "arguments": [
+                {
+                  "name": "name",
+                  "required": true,
+                  "variadic": false,
+                  "description": ""
+                }
+              ],
+              "options": [
+                {
+                  "flags": "--manifest <path>",
+                  "description": "target manifest (defaults to ./.root.secrets.json)"
+                }
+              ],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets rm",
+              "aliases": [],
+              "usage": "root secrets rm <name> [options]",
+              "summary": "remove a secret",
+              "description": "",
+              "examples": [],
+              "arguments": [
+                {
+                  "name": "name",
+                  "required": true,
+                  "variadic": false,
+                  "description": ""
+                }
+              ],
+              "options": [
+                {
+                  "flags": "--manifest <path>",
+                  "description": "target manifest (defaults to ./.root.secrets.json)"
+                }
+              ],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets sync",
+              "aliases": [],
+              "usage": "root secrets sync",
+              "summary": "three-way merge managed secrets into .env",
+              "description": "",
+              "examples": [],
+              "arguments": [],
+              "options": [],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets pull",
+              "aliases": [],
+              "usage": "root secrets pull",
+              "summary": "force-download managed secrets into .env (overwrites local edits)",
+              "description": "",
+              "examples": [],
+              "arguments": [],
+              "options": [],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets push",
+              "aliases": [],
+              "usage": "root secrets push [options]",
+              "summary": "push .env values up to Secret Manager and record them in the manifest",
+              "description": "",
+              "examples": [],
+              "arguments": [],
+              "options": [
+                {
+                  "flags": "--manifest <path>",
+                  "description": "target manifest (defaults to ./.root.secrets.json)"
+                },
+                {
+                  "flags": "--keys <names>",
+                  "description": "comma-separated subset of .env keys (default: all)"
+                },
+                {
+                  "flags": "--yes",
+                  "description": "skip the confirmation prompt"
+                }
+              ],
+              "subcommands": []
+            },
+            {
+              "name": "root secrets status",
+              "aliases": [],
+              "usage": "root secrets status",
+              "summary": "show managed secrets and their sync status (no network)",
+              "description": "",
+              "examples": [],
+              "arguments": [],
+              "options": [],
+              "subcommands": []
+            }
+          ]
+        }
+      ],
+      "globalOptions": [
+        {
+          "flags": "-q, --quiet",
+          "description": "quiet"
+        }
+      ]
+    },
+    {
+      "bin": "root-cms",
+      "packageName": "@blinkk/root-cms",
+      "version": "3.5.2",
+      "commands": [
+        {
+          "name": "root-cms init-firebase",
+          "aliases": [
+            "init"
+          ],
+          "usage": "root-cms init-firebase [options]",
+          "summary": "inits the firebase project proper security rules",
+          "description": "",
+          "examples": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--project <project>",
+              "description": "gcp project id"
+            },
+            {
+              "flags": "--admin <email>",
+              "description": "adds an admin to the project"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms generate-types",
+          "aliases": [
+            "types"
+          ],
+          "usage": "root-cms generate-types",
+          "summary": "generates root-cms.d.ts from *.schema.ts files in the project",
+          "description": "",
+          "examples": [],
+          "arguments": [],
+          "options": [],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms export",
+          "aliases": [],
+          "usage": "root-cms export [options]",
+          "summary": "exports firestore data to a local directory",
+          "description": "By default, all content in the Firestore database associated with the CMS will be exported.\n\nA unique new directory will be created for each export.\n\nFile naming conventions: - Documents that act as containers for subcollections are exported as directories containing a `__data.json` file for the document's own data. - Standalone documents are exported as JSON files named after their document ID (e.g. `page.json`). - For collections like ActionLogs and Translations, the document ID (often a hash) is used as the filename.\n\nExample output: <output>/Collections/Pages/Draft/... <output>/Collections/Pages/Published/... <output>/ActionLogs/...",
+          "examples": [
+            "root-cms export",
+            "root-cms export --filter \"Collections/Pages/**\"",
+            "root-cms export --filter \"Collections/Pages/**,!Collections/Pages/Draft/**\""
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--filter <pattern>",
+              "description": "comma-separated list of glob patterns to filter content (e.g. Collections/Pages/**, !ActionLogs/**)"
+            },
+            {
+              "flags": "--site <siteId>",
+              "description": "site id to export (overrides root config)"
+            },
+            {
+              "flags": "--database <databaseId>",
+              "description": "firestore database id (overrides root config, default: \"(default)\")"
+            },
+            {
+              "flags": "--project <projectId>",
+              "description": "gcp project id (overrides root config)"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms import",
+          "aliases": [],
+          "usage": "root-cms import [options]",
+          "summary": "imports firestore data from a local directory",
+          "description": "",
+          "examples": [
+            "root-cms import --dir export_project_site_20251209t1305",
+            "root-cms import --dir export_project_site_20251209t1305 --filter \"Collections/Pages/**\""
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--dir <directory>",
+              "description": "directory to import from (required)"
+            },
+            {
+              "flags": "--filter <pattern>",
+              "description": "comma-separated list of glob patterns to filter content (e.g. Collections/Pages/**, !ActionLogs/**)"
+            },
+            {
+              "flags": "--site <siteId>",
+              "description": "site id to import to (overrides root config)"
+            },
+            {
+              "flags": "--database <databaseId>",
+              "description": "firestore database id (overrides root config, default: \"(default)\")"
+            },
+            {
+              "flags": "--project <projectId>",
+              "description": "gcp project id (overrides root config)"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms docs.get",
+          "aliases": [],
+          "usage": "root-cms docs.get <docId> [outputPath] [options]",
+          "summary": "fetches a single doc and outputs it as JSON",
+          "description": "If an output path is provided, writes to a file. Otherwise, writes to stdout.",
+          "examples": [
+            "root-cms docs.get Pages/home",
+            "root-cms docs.get Pages/home ./out/home.json",
+            "root-cms docs.get Pages/home --mode published",
+            "root-cms docs.get Pages/home | jq .fields"
+          ],
+          "arguments": [
+            {
+              "name": "docId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "outputPath",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--mode <mode>",
+              "description": "doc mode: \"draft\" or \"published\" (default: \"draft\")"
+            },
+            {
+              "flags": "--raw",
+              "description": "output raw firestore data without unmarshaling"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms docs.set",
+          "aliases": [],
+          "usage": "root-cms docs.set <docId> [filepath] [options]",
+          "summary": "updates a single doc from a JSON file or stdin",
+          "description": "If a filepath is provided, reads from the file. Otherwise, reads from stdin.",
+          "examples": [
+            "root-cms docs.set Pages/home home.json",
+            "root-cms docs.set Pages/home home.json --mode published",
+            "cat data.json | root-cms docs.set Pages/home"
+          ],
+          "arguments": [
+            {
+              "name": "docId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "filepath",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--mode <mode>",
+              "description": "doc mode: \"draft\" or \"published\" (default: \"draft\")"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms docs.download",
+          "aliases": [],
+          "usage": "root-cms docs.download <collection> [outputDir] [options]",
+          "summary": "downloads all docs in a collection to a local directory",
+          "description": "",
+          "examples": [
+            "root-cms docs.download Pages",
+            "root-cms docs.download Pages ./my-pages",
+            "root-cms docs.download Pages --mode published"
+          ],
+          "arguments": [
+            {
+              "name": "collection",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "outputDir",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--mode <mode>",
+              "description": "doc mode: \"draft\" or \"published\" (default: \"draft\")"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms docs.upload",
+          "aliases": [],
+          "usage": "root-cms docs.upload <collection> <dir> [options]",
+          "summary": "uploads docs from a local directory to a collection",
+          "description": "",
+          "examples": [
+            "root-cms docs.upload Pages ./Pages",
+            "root-cms docs.upload Pages ./my-pages --mode published"
+          ],
+          "arguments": [
+            {
+              "name": "collection",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "dir",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--mode <mode>",
+              "description": "doc mode: \"draft\" or \"published\" (default: \"draft\")"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms client.call",
+          "aliases": [],
+          "usage": "root-cms client.call <method> [jsonArgs]",
+          "summary": "calls a method on the RootCMSClient with JSON-encoded arguments",
+          "description": "Designed for AI agents. Arguments are a JSON array of positional args passed on the command line. When jsonArgs is omitted the method is called with no arguments; pass `-` to read the JSON args from stdin. The result is printed to stdout as a JSON envelope: {\"ok\": true, \"result\": <value>} {\"ok\": false, \"error\": \"<message>\"}\n\nRun `root-cms client.methods` to discover available methods and their argument signatures.",
+          "examples": [
+            "root-cms client.call getDoc '[\"Pages\", \"home\", {\"mode\": \"draft\"}]'",
+            "root-cms client.call listDocs '[\"Pages\", {\"mode\": \"published\"}]'",
+            "root-cms client.call publishScheduledDocs",
+            "echo '[\"Pages\", \"home\", {\"mode\": \"draft\"}]' | root-cms client.call getDoc -"
+          ],
+          "arguments": [
+            {
+              "name": "method",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "jsonArgs",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms client.methods",
+          "aliases": [],
+          "usage": "root-cms client.methods [options]",
+          "summary": "lists the methods available on the RootCMSClient",
+          "description": "Designed for AI discovery of available functionality. Prints each method's signature and description.",
+          "examples": [
+            "root-cms client.methods",
+            "root-cms client.methods --json",
+            "root-cms client.methods --json --types"
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            },
+            {
+              "flags": "--types",
+              "description": "include referenced type/interface definitions"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms proposal.check",
+          "aliases": [],
+          "usage": "root-cms proposal.check <file>",
+          "summary": "checks a CMS change proposal without touching the database",
+          "description": "Parses the YAML, checks it against the proposal format, and prints a summary of the changes it describes. Collection schemas are not checked here (that needs db access — use proposal.diff). Exits non-zero on any error, so it works as a CI gate on a pull request.",
+          "examples": [
+            "root-cms proposal.check cms-proposals/hero-refresh.yaml"
+          ],
+          "arguments": [
+            {
+              "name": "file",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms proposal.diff",
+          "aliases": [],
+          "usage": "root-cms proposal.diff <file> [options]",
+          "summary": "resolves a proposal against the live database and reports what it would write, without writing anything",
+          "description": "",
+          "examples": [
+            "root-cms proposal.diff cms-proposals/hero-refresh.yaml"
+          ],
+          "arguments": [
+            {
+              "name": "file",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--skip-validation",
+              "description": "skip collection schema validation"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms proposal.apply",
+          "aliases": [],
+          "usage": "root-cms proposal.apply <file> [options]",
+          "summary": "applies a CMS change proposal to the database",
+          "description": "Writes drafts, release contents, and draft translations only — never publishes, schedules, or deletes. Nothing is written unless every change in the proposal resolves cleanly.\n\nBy default a proposal's recorded `before` values are treated as documentation for the human reviewer and are not checked against the database. Pass --verify-before to fail on drift instead.",
+          "examples": [
+            "root-cms proposal.apply cms-proposals/hero-refresh.yaml",
+            "root-cms proposal.apply cms-proposals/hero-refresh.yaml --dry-run",
+            "root-cms proposal.apply cms-proposals/hero-refresh.yaml --verify-before"
+          ],
+          "arguments": [
+            {
+              "name": "file",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--dry-run",
+              "description": "resolve and validate everything, but write nothing"
+            },
+            {
+              "flags": "--verify-before",
+              "description": "fail if a recorded `before` value no longer matches the database"
+            },
+            {
+              "flags": "--skip-validation",
+              "description": "skip collection schema validation"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms skill.install",
+          "aliases": [],
+          "usage": "root-cms skill.install [dir] [options]",
+          "summary": "installs the bundled agent skills",
+          "description": "Copies the skills (which teach AI coding agents how to use the `root-cms client.*` commands, and how to propose and apply CMS change proposals) into a local skills directory.\n\nWhen no directory is given, existing agent skills directories are auto-detected (e.g. `.claude/skills`, `.agent/skills`, or any `.*/skills` dir already in the project) so Root does not assume a specific AI provider. If none is found, it installs to `.agent/skills`.",
+          "examples": [
+            "root-cms skill.install",
+            "root-cms skill.install ./my-agent/skills",
+            "root-cms skill.install --skill root-cms-propose",
+            "root-cms skill.install --force"
+          ],
+          "arguments": [
+            {
+              "name": "dir",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--force",
+              "description": "overwrite the skill if it is already installed"
+            },
+            {
+              "flags": "--skill <name>",
+              "description": "install only the named skill"
+            }
+          ],
+          "subcommands": []
+        }
+      ],
+      "globalOptions": [
+        {
+          "flags": "-q, --quiet",
+          "description": "quiet"
+        }
+      ]
+    },
+    {
+      "bin": "root-password-protect",
+      "packageName": "@blinkk/root-password-protect",
+      "version": "3.5.2",
+      "commands": [
+        {
+          "name": "root-password-protect generate-hash",
+          "aliases": [],
+          "usage": "root-password-protect generate-hash <password>",
+          "summary": "generates a hash/salt pair from a plain-text password",
+          "description": "",
+          "examples": [],
+          "arguments": [
+            {
+              "name": "password",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [],
+          "subcommands": []
+        }
+      ],
+      "globalOptions": [
+        {
+          "flags": "-q, --quiet",
+          "description": "quiet"
+        }
+      ]
+    }
+  ]
+}

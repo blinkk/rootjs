@@ -651,7 +651,9 @@ export class RootCMSClient {
       return this.overlayDoc(unmarshalData(rawData)) as Doc<Fields>;
     }
     // The proposal may create a doc that does not exist in the db yet.
-    const proposed = this.proposal?.buildNewDoc(`${collectionId}/${slug}`);
+    const proposed = this.proposal?.buildNewDoc(
+      `${collectionId}/${normalizeSlug(slug)}`
+    );
     if (proposed) {
       return proposed as Doc<Fields>;
     }

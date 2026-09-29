@@ -1,4 +1,5 @@
 @use 'breakpoints';
+@use 'platform';
 @use 'tokens';
 
 :root {
@@ -27,12 +28,7 @@
 
   .header:not(:global(.y\:top)) {
     background: tokens.$color-white;
-    border-color: tokens.$color-grey-300;
-  }
-
-  .headerGuide {
-    background: tokens.$color-white;
-    border-color: tokens.$color-grey-300;
+    border-color: platform.$color-border;
   }
 
   .content {
@@ -111,7 +107,7 @@
 
   .links li {
     @include breakpoints.sm() {
-      border-bottom: 1px solid tokens.$color-grey-300;
+      border-bottom: 1px solid platform.$color-border;
       width: 100%;
     }
   }
@@ -138,23 +134,24 @@
 
   .linkActive {
     text-decoration: underline;
+    text-decoration-color: platform.$color-accent;
     text-decoration-thickness: 2px;
     text-underline-offset: 8px;
   }
 
   .link:hover {
-    background-color: tokens.$color-grey-100;
+    background-color: rgba(platform.$color-ink, 0.04);
     @include breakpoints.sm() {
       background-color: transparent;
-      color: tokens.$color-blue-700;
+      color: platform.$color-accent;
     }
   }
 
   .link:active {
-    background-color: tokens.$color-grey-200;
+    background-color: rgba(platform.$color-accent, 0.08);
     @include breakpoints.sm() {
       background-color: transparent;
-      color: tokens.$color-blue-900;
+      color: platform.$color-accent-hover;
     }
   }
 
@@ -182,10 +179,10 @@
   }
 
   .icon:hover {
-    background-color: tokens.$color-grey-100;
+    background-color: rgba(platform.$color-ink, 0.04);
   }
 
   .icon:active {
-    background-color: tokens.$color-grey-200;
+    background-color: rgba(platform.$color-accent, 0.08);
   }
 }

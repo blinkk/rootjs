@@ -1,0 +1,213 @@
+// Docs-specific styles. The page layout, header, aside and table of contents
+// come from `components/ArticleLayout`, shared with the guides.
+
+@use 'breakpoints';
+@use 'platform';
+
+// The accent and ink at low opacity, for hover and active backgrounds.
+$accent-wash: rgba(platform.$color-accent, 0.08);
+$ink-wash: rgba(platform.$color-ink, 0.04);
+
+// Layout: the left column holds the table of contents above the navigation,
+// and the headline leads the right column.
+
+.docs {
+  --article-gap: 56px;
+}
+
+// Navigation.
+
+.navDrawer {
+  display: none;
+  @include breakpoints.md-lt() {
+    display: block;
+  }
+}
+
+.navTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--platform-border);
+  border-radius: 10px;
+  background: var(--platform-card-bg);
+  color: var(--platform-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: $ink-wash;
+  }
+}
+
+.navPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 22px 20px 26px;
+  // Matches the "At a glance" box on the guide pages.
+  border: 1px solid var(--platform-border);
+  border-radius: platform.$radius-media;
+  background: platform.$color-tint;
+
+  // On narrow screens, the nav slides in from the left.
+  @include breakpoints.md-lt() {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2000;
+    width: calc(100% - 60px);
+    max-width: 300px;
+    padding: 28px 24px 40px;
+    overflow-y: auto;
+    border-width: 0 1px 0 0;
+    border-radius: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+}
+
+.navPanel:global(.expanded) {
+  @include breakpoints.md-lt() {
+    transform: translateX(0);
+    // Only while open, so the shadow doesn't show at the edge when closed.
+    box-shadow: 0 24px 60px -24px rgba(platform.$color-ink, 0.28);
+  }
+}
+
+.navLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navLink {
+  display: block;
+  margin-left: -10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--platform-muted);
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: $ink-wash;
+    color: var(--platform-fg);
+  }
+}
+
+.navLinkActive,
+.navLinkActive:hover {
+  background: $accent-wash;
+  color: var(--platform-accent);
+  font-weight: 600;
+}
+
+// Content.
+
+.body {
+  text-wrap: pretty;
+
+  p {
+    margin-top: 20px;
+  }
+
+  li > *:first-child {
+    margin-top: 0;
+  }
+
+  li + li {
+    margin-top: 10px;
+  }
+
+  table {
+    display: block;
+    border-collapse: collapse;
+    margin: 20px 0;
+    overflow: auto;
+    @include breakpoints.sm() {
+      max-width: calc(100vw - 32px);
+    }
+  }
+
+  th {
+    background-color: platform.$color-tint;
+    font-weight: 600;
+  }
+
+  td,
+  th {
+    border: 1px solid var(--platform-border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  table:global(.routes-table) {
+    code {
+      display: inline-block;
+      padding: 4px 8px;
+      @include breakpoints.sm() {
+        font-size: 12px;
+      }
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+
+  > *:first-child {
+    margin-top: 0 !important;
+  }
+
+  > *:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+.block {
+  margin-top: 20px;
+}
+
+.block[data-type='CopyBlock']:has(h2) {
+  margin-top: 30px;
+}
+
+// Links and inline code in rich text, including blocks (e.g. `CopyBlock`).
+.body,
+.block {
+  a:not([class]) {
+    color: var(--platform-accent);
+    text-decoration-color: rgba(platform.$color-accent, 0.35);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s ease;
+  }
+
+  a:not([class]):hover {
+    text-decoration-color: currentColor;
+  }
+
+  :not(pre) > code {
+    padding: 2px 6px;
+    border: 1px solid var(--platform-border);
+    border-radius: 6px;
+    background: platform.$color-tint;
+    font-family: var(--font-family-mono);
+    font-size: 0.875em;
+    color: var(--platform-fg);
+  }
+}

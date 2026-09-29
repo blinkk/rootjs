@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /cms/
+Disallow: /cms-tools/
+Disallow: /sandbox/
+
+Sitemap: https://rootjs.dev/sitemap.xml

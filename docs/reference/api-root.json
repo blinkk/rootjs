@@ -1,0 +1,4673 @@
+{
+  "packages": [
+    {
+      "name": "@blinkk/root",
+      "version": "3.5.2",
+      "entryPoints": [
+        {
+          "importPath": "@blinkk/root",
+          "doc": "",
+          "exports": [
+            {
+              "name": "Body",
+              "kind": "variable",
+              "signature": "const Body: FunctionalComponent<BodyProps>;",
+              "members": [],
+              "doc": "The `<Body>` component can be used to update attrs in the `<body>` tag.\n\nUsage:\n\n```tsx\n<Body className=\"body\">\n  <h1>Hello world</h1>\n</Body>\n```\n\nOutput:\n\n```html\n<body class=\"body\">\n  <h1>Hello world</h1>\n</body>",
+              "examples": []
+            },
+            {
+              "name": "ConfigureServerHook",
+              "kind": "type",
+              "signature": "type ConfigureServerHook = (server: Server, options: ConfigureServerOptions) => MaybePromise<void> | MaybePromise<() => void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ConfigureServerOptions",
+              "kind": "interface",
+              "signature": "interface ConfigureServerOptions",
+              "members": [
+                {
+                  "name": "type",
+                  "signature": "type: 'dev' | 'preview' | 'prod';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "rootConfig",
+                  "signature": "rootConfig: RootConfig;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "configureServerPlugins",
+              "kind": "function",
+              "signature": "function configureServerPlugins(server: Server, callback: () => Promise<void>, plugins: Plugin[], options: ConfigureServerOptions): Promise<void>;",
+              "members": [],
+              "doc": "Runs the pre-hook configureServer method of every plugin, calls a callback\nfunction, and then runs the configureServer's post-hook if provided. Plugins\nprovide a post-hook by returning a callback function from configureServer.",
+              "examples": []
+            },
+            {
+              "name": "ContentSecurityPolicyConfig",
+              "kind": "interface",
+              "signature": "interface ContentSecurityPolicyConfig",
+              "members": [
+                {
+                  "name": "directives",
+                  "signature": "directives?: Record<string, string[]>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "reportOnly",
+                  "signature": "reportOnly?: boolean;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "defineConfig",
+              "kind": "function",
+              "signature": "function defineConfig(config: RootUserConfig): RootUserConfig;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "definePod",
+              "kind": "function",
+              "signature": "function definePod(pod: Pod): Pod;",
+              "members": [],
+              "doc": "Helper to define a pod with type-checking.",
+              "examples": []
+            },
+            {
+              "name": "ElementTagNameMatcher",
+              "kind": "type",
+              "signature": "type ElementTagNameMatcher = Array<string | RegExp> | ((tagName: string) => boolean);",
+              "members": [],
+              "doc": "Matches custom elements by tag name (e.g. `debug-panel`).\n\nAccepts a list of strings (matched exactly) and RegEx patterns (tested\nagainst the tag name), or a predicate function that receives the tag name\nand returns true to match. The function form is useful for logic that a\npattern can't express, e.g. allowlisting a known set of elements.",
+              "examples": [
+                "const ssrOnly = new Set(['help-overlay', 'debug-panel']);\nconst matcher: ElementTagNameMatcher = (tagName) => ssrOnly.has(tagName);"
+              ]
+            },
+            {
+              "name": "GetStaticContent",
+              "kind": "type",
+              "signature": "type GetStaticContent = (props: any) => Promise<StaticContentResult | string> | StaticContentResult | string;",
+              "members": [],
+              "doc": "The `getStaticContent()` function is a SSG handler function for non-HTML\nroutes, e.g. `routes/sitemap.xml.ts`.\n\nIf the route exports a `getStaticProps()` function, the props returned from\nthat function is passed to `getStaticContent()`. Otherwise a default props\nvalue is passed which includes the `rootConfig` and route param values.",
+              "examples": []
+            },
+            {
+              "name": "GetStaticPaths",
+              "kind": "type",
+              "signature": "type GetStaticPaths<T = RouteParams> = (ctx: {\n    rootConfig: RootConfig;\n}) => Promise<{\n    paths: Array<{\n        params: T;\n    }>;\n}>;",
+              "members": [],
+              "doc": "The `getStaticPaths()` is used by the SSG build to determine all of the\npaths that exist for a given route. This should be used alongside a\nparameterized route, e.g. `/routes/blog/[slug].tsx`.",
+              "examples": []
+            },
+            {
+              "name": "GetStaticProps",
+              "kind": "type",
+              "signature": "type GetStaticProps<T = unknown> = (ctx: {\n    rootConfig: RootConfig;\n    params: RouteParams;\n}) => Promise<{\n    props?: T;\n    locale?: string;\n    translations?: Record<string, string>;\n    notFound?: boolean;\n}>;",
+              "members": [],
+              "doc": "The `getStaticProps()` function is an optional function that routes can\ndefine to fetch and transform props before passing it to the route's\ncomponent.",
+              "examples": []
+            },
+            {
+              "name": "getTranslations",
+              "kind": "function",
+              "signature": "function getTranslations(locale: string): Record<string, string>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "getVitePlugins",
+              "kind": "function",
+              "signature": "function getVitePlugins(plugins: Plugin[]): VitePlugin[];",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Handler",
+              "kind": "type",
+              "signature": "type Handler = (req: Request, res: Response, next: NextFunction) => void | Promise<void>;",
+              "members": [],
+              "doc": "The `handle()` function can be exported by a route to define a custom express\nrequest handler. The `req` object will contain a `handlerContext` which\ncontains the route's param values and also a `render()` method that can be\nused to render the route's default component.",
+              "examples": []
+            },
+            {
+              "name": "HandlerContext",
+              "kind": "interface",
+              "signature": "interface HandlerContext<Props = any>",
+              "members": [
+                {
+                  "name": "route",
+                  "signature": "route: Route;",
+                  "doc": "The resolved route.",
+                  "examples": []
+                },
+                {
+                  "name": "params",
+                  "signature": "params: RouteParams;",
+                  "doc": "Param values from the route, e.g. a route like `/route/[slug].tsx` will\npass `{slug: 'foo'}`.",
+                  "examples": []
+                },
+                {
+                  "name": "i18nFallbackLocales",
+                  "signature": "i18nFallbackLocales: string[];",
+                  "doc": "i18n locales to try for the user's http request. The priority order mimics\nthe Firebase Hosting i18n fallback logic.\nhttps://firebase.google.com/docs/hosting/i18n-rewrites#priority-order",
+                  "examples": []
+                },
+                {
+                  "name": "getPreferredLocale",
+                  "signature": "getPreferredLocale: (availableLocales: string[]) => string;",
+                  "doc": "Iterates through the i18nFallbackLocales and returns the first available\nlocale.",
+                  "examples": []
+                },
+                {
+                  "name": "render",
+                  "signature": "render: HandlerRenderFn<Props>;",
+                  "doc": "Renders the default exported component from the route.",
+                  "examples": []
+                },
+                {
+                  "name": "render404",
+                  "signature": "render404: (options?: {\n    nextRoute?: boolean;\n}) => Promise<void>;",
+                  "doc": "Renders a 404 page. When `nextRoute` is true, the next matching route\nhandler will be invoked instead of rendering the default 404 page.",
+                  "examples": []
+                }
+              ],
+              "doc": "A context variable passed to a route's `handle()` method within the req\nobject.",
+              "examples": []
+            },
+            {
+              "name": "HandlerRenderFn",
+              "kind": "type",
+              "signature": "type HandlerRenderFn<Props = any> = (props: Props, options?: HandlerRenderOptions) => Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "HandlerRenderOptions",
+              "kind": "interface",
+              "signature": "interface HandlerRenderOptions",
+              "members": [
+                {
+                  "name": "statusCode",
+                  "signature": "statusCode?: number;",
+                  "doc": "HTTP status code to return. Defaults to 200.",
+                  "examples": []
+                },
+                {
+                  "name": "locale",
+                  "signature": "locale?: string;",
+                  "doc": "The rendered locale.",
+                  "examples": []
+                },
+                {
+                  "name": "translations",
+                  "signature": "translations?: Record<string, string>;",
+                  "doc": "Translations to pass to `useTranslations()`. If provided, the translations\nmap passed here will be merged with the translations from\n`/translations/{locale}.json`.",
+                  "examples": []
+                },
+                {
+                  "name": "renderMode",
+                  "signature": "renderMode?: JsxRenderMode;",
+                  "doc": "Overrides the JSX render mode for this render. `'pretty'` adds newlines\naround block elements; `'minimal'` outputs compact HTML. If not provided,\ndefaults to the `jsxRenderer.mode` specified in `root.config.ts`.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Head",
+              "kind": "variable",
+              "signature": "const Head: FunctionalComponent<HeadProps>;",
+              "members": [],
+              "doc": "The <Head> component can be used for injecting elements into the HTML head\ntag from any part of a page. The <Head> can be added via any component or\nsub-component and will automatically be hoisted to the `<head>` element.\n\nUsage:\n\n```tsx\n<Head>\n  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n</Head>\n```",
+              "examples": []
+            },
+            {
+              "name": "Html",
+              "kind": "variable",
+              "signature": "const Html: FunctionalComponent<HtmlProps>;",
+              "members": [],
+              "doc": "The `<Html>` component can be used to update attrs in the `<html>` tag.\n\nUsage:\n\n```tsx\n<Html lang=\"en-US\">\n  <h1>Hello world</h1>\n</Html>\n```",
+              "examples": []
+            },
+            {
+              "name": "HTML_CONTEXT",
+              "kind": "variable",
+              "signature": "const HTML_CONTEXT: import(\"preact\").Context<HtmlContext | null>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "I18nContext",
+              "kind": "interface",
+              "signature": "interface I18nContext",
+              "members": [
+                {
+                  "name": "locale",
+                  "signature": "locale: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "translations",
+                  "signature": "translations: Record<string, string>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "LocaleGroup",
+              "kind": "interface",
+              "signature": "interface LocaleGroup",
+              "members": [
+                {
+                  "name": "label",
+                  "signature": "label?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "locales",
+                  "signature": "locales: RootLocale[];",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "MultipartFile",
+              "kind": "interface",
+              "signature": "interface MultipartFile",
+              "members": [
+                {
+                  "name": "fieldname",
+                  "signature": "fieldname: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "originalName",
+                  "signature": "originalName: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "encoding",
+                  "signature": "encoding: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mimetype",
+                  "signature": "mimetype: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "buffer",
+                  "signature": "buffer: Buffer;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "Multipart file type for the multipartMiddleware().",
+              "examples": []
+            },
+            {
+              "name": "NextFunction",
+              "kind": "type",
+              "signature": "type NextFunction = ExpressNextFunction;",
+              "members": [],
+              "doc": "Root.js express next function.",
+              "examples": []
+            },
+            {
+              "name": "Plugin",
+              "kind": "interface",
+              "signature": "interface Plugin",
+              "members": [
+                {
+                  "name": "name",
+                  "signature": "name?: string;",
+                  "doc": "The name of the plugin.",
+                  "examples": []
+                },
+                {
+                  "name": "configureServer",
+                  "signature": "configureServer?: ConfigureServerHook;",
+                  "doc": "Configures the root.js express server. Any middleware defined by the plugin\nwill be added to the server first. If a callback fn is returned, it will\nbe called after the root.js middlewares are added.",
+                  "examples": []
+                },
+                {
+                  "name": "onFileChange",
+                  "signature": "onFileChange?: (eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir', path: string) => void;",
+                  "doc": "Hook for file changes.",
+                  "examples": []
+                },
+                {
+                  "name": "ssrInput",
+                  "signature": "ssrInput?: () => {\n    [entryAlias: string]: string;\n};",
+                  "doc": "Returns a list of deps to bundle for ssr. The files will be bundled and\noutput to `dist/server/`. The return value should be a map of\n`{output filename => input filepath}`.\n\nE.g. a value of `{foo: 'path/to/bar.js'}` will output `dist/server/foo.js`.",
+                  "examples": []
+                },
+                {
+                  "name": "vitePlugins",
+                  "signature": "vitePlugins?: VitePlugin[];",
+                  "doc": "Adds vite plugins.",
+                  "examples": []
+                },
+                {
+                  "name": "hooks",
+                  "signature": "hooks?: PluginHooks;",
+                  "doc": "Plugin lifecycle callback hooks.",
+                  "examples": []
+                },
+                {
+                  "name": "handle404",
+                  "signature": "handle404?: (req: Request, res: Response, next: NextFunction) => void | Promise<void>;",
+                  "doc": "Custom 404 handler.",
+                  "examples": []
+                },
+                {
+                  "name": "pod",
+                  "signature": "pod?: Pod | Pod[] | PodFactory;",
+                  "doc": "Registers a pod (a mini root.js site) that gets merged into the parent\nsite at dev/build time. A plugin may return a single pod, an array of\npods, or a factory that receives the rootConfig.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "PluginHooks",
+              "kind": "interface",
+              "signature": "interface PluginHooks",
+              "members": [
+                {
+                  "name": "preBuild",
+                  "signature": "preBuild?: PreBuildHook;",
+                  "doc": "Hook that runs before the build starts.",
+                  "examples": []
+                },
+                {
+                  "name": "postBuild",
+                  "signature": "postBuild?: PostBuildHook;",
+                  "doc": "Hook that runs after the build completes.",
+                  "examples": []
+                },
+                {
+                  "name": "preRender",
+                  "signature": "preRender?: (html: string) => void | MaybePromise<string>;",
+                  "doc": "Post-render hook that's called before the HTML is rendered to the response\nobject. If a string is returned from this hook, it will replace the\nrendered HTML.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Pod",
+              "kind": "interface",
+              "signature": "interface Pod",
+              "members": [
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "Unique pod name, e.g. '@blinkk/root-docs-pod'.",
+                  "examples": []
+                },
+                {
+                  "name": "mount",
+                  "signature": "mount?: string;",
+                  "doc": "URL prefix for pod routes. Routes within the pod are served under this\nmount path. Defaults to '/'.",
+                  "examples": []
+                },
+                {
+                  "name": "priority",
+                  "signature": "priority?: number;",
+                  "doc": "Priority for route conflict resolution. Higher values win when multiple\npods register the same URL path. User-site routes always take precedence\nregardless of priority. Defaults to 0.",
+                  "examples": []
+                },
+                {
+                  "name": "routesDir",
+                  "signature": "routesDir?: string;",
+                  "doc": "Absolute path to the pod's routes/ directory.",
+                  "examples": []
+                },
+                {
+                  "name": "elementsDirs",
+                  "signature": "elementsDirs?: string[];",
+                  "doc": "Absolute path(s) to the pod's elements/ directory(s).",
+                  "examples": []
+                },
+                {
+                  "name": "bundlesDir",
+                  "signature": "bundlesDir?: string;",
+                  "doc": "Absolute path to the pod's bundles/ directory.",
+                  "examples": []
+                },
+                {
+                  "name": "collectionsDir",
+                  "signature": "collectionsDir?: string;",
+                  "doc": "Absolute path to the pod's collections/ directory (root-cms only).",
+                  "examples": []
+                },
+                {
+                  "name": "translationsDir",
+                  "signature": "translationsDir?: string;",
+                  "doc": "Absolute path to the pod's translations/ directory.",
+                  "examples": []
+                },
+                {
+                  "name": "vitePlugins",
+                  "signature": "vitePlugins?: VitePlugin[];",
+                  "doc": "Extra Vite plugins contributed by the pod.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "PodConfig",
+              "kind": "interface",
+              "signature": "interface PodConfig",
+              "members": [
+                {
+                  "name": "enabled",
+                  "signature": "enabled?: boolean;",
+                  "doc": "Whether the pod is enabled. Defaults to true.",
+                  "examples": []
+                },
+                {
+                  "name": "mount",
+                  "signature": "mount?: string;",
+                  "doc": "Override the pod's mount path.",
+                  "examples": []
+                },
+                {
+                  "name": "priority",
+                  "signature": "priority?: number;",
+                  "doc": "Override the pod's priority.",
+                  "examples": []
+                },
+                {
+                  "name": "routes",
+                  "signature": "routes?: {\n    exclude?: (string | RegExp)[];\n};",
+                  "doc": "Filter pod routes.",
+                  "examples": []
+                },
+                {
+                  "name": "collections",
+                  "signature": "collections?: {\n    exclude?: string[];\n    rename?: Record<string, string>;\n};",
+                  "doc": "Configure pod collections.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "PodFactory",
+              "kind": "type",
+              "signature": "type PodFactory = (ctx: {\n    rootConfig: RootConfig;\n}) => Pod | Promise<Pod>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "PostBuildOptions",
+              "kind": "interface",
+              "signature": "interface PostBuildOptions",
+              "members": [
+                {
+                  "name": "ssrOnly",
+                  "signature": "ssrOnly?: boolean;",
+                  "doc": "Whether the build was SSR-only (no SSG pre-rendering).",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "replaceParams",
+              "kind": "function",
+              "signature": "function replaceParams(urlPathFormat: string, params: Record<string, string>): string;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Request",
+              "kind": "type",
+              "signature": "type Request = ExpressRequest & {\n    rootConfig?: RootConfig & {\n        rootDir: string;\n    };\n    viteServer?: ViteDevServer;\n    renderer?: Renderer;\n    user?: {\n        email: string;\n        role?: string | null;\n    };\n    handlerContext?: HandlerContext;\n    hooks: Hooks;\n    session: Session;\n    rawBody?: any;\n    files?: {\n        [fieldname: string]: MultipartFile;\n    };\n};",
+              "members": [],
+              "doc": "Root.js express request.",
+              "examples": []
+            },
+            {
+              "name": "RequestContext",
+              "kind": "interface",
+              "signature": "interface RequestContext",
+              "members": [
+                {
+                  "name": "currentPath",
+                  "signature": "currentPath: string;",
+                  "doc": "The current request path, e.g. `/foo/bar` (default route path) or\n`/{locale}/foo/bar` (localized route path).",
+                  "examples": []
+                },
+                {
+                  "name": "route",
+                  "signature": "route: Route;",
+                  "doc": "The route file.",
+                  "examples": []
+                },
+                {
+                  "name": "routeParams",
+                  "signature": "routeParams: Record<string, string>;",
+                  "doc": "Route param values. E.g. for a route like `routes/blog/[slug].tsx`,\nvisiting `/blog/foo` will pass {slug: 'foo'} here.",
+                  "examples": []
+                },
+                {
+                  "name": "props",
+                  "signature": "props: any;",
+                  "doc": "Props passed to the route's server component.",
+                  "examples": []
+                },
+                {
+                  "name": "locale",
+                  "signature": "locale: string;",
+                  "doc": "The current locale.",
+                  "examples": []
+                },
+                {
+                  "name": "translations",
+                  "signature": "translations: Record<string, string>;",
+                  "doc": "Translations map for the current locale.",
+                  "examples": []
+                },
+                {
+                  "name": "nonce",
+                  "signature": "nonce?: string;",
+                  "doc": "CSP nonce value.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RequestMiddleware",
+              "kind": "type",
+              "signature": "type RequestMiddleware = ((req: Request, res: Response) => any) | ((req: Request, res: Response, next: NextFunction) => any) | ((err: any, req: Request, res: Response, next: NextFunction) => any);",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Response",
+              "kind": "type",
+              "signature": "type Response = ExpressResponse & {\n    session: Session;\n    saveSession: (options?: SaveSessionOptions) => void;\n};",
+              "members": [],
+              "doc": "Root.js express response.",
+              "examples": []
+            },
+            {
+              "name": "RootBuildConfig",
+              "kind": "interface",
+              "signature": "interface RootBuildConfig",
+              "members": [
+                {
+                  "name": "excludeDefaultLocaleFromIntlPaths",
+                  "signature": "excludeDefaultLocaleFromIntlPaths?: boolean;",
+                  "doc": "Excludes the `/intl/{defaultLocale}/...` path from the SSG build.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootConfig",
+              "kind": "type",
+              "signature": "type RootConfig = RootUserConfig & {\n    rootDir: string;\n};",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootHeaderConfig",
+              "kind": "interface",
+              "signature": "interface RootHeaderConfig",
+              "members": [
+                {
+                  "name": "source",
+                  "signature": "source: string;",
+                  "doc": "A glob pattern match (regex not supported yet).",
+                  "examples": []
+                },
+                {
+                  "name": "headers",
+                  "signature": "headers: Array<{\n    key: string;\n    value: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootI18nConfig",
+              "kind": "interface",
+              "signature": "interface RootI18nConfig",
+              "members": [
+                {
+                  "name": "locales",
+                  "signature": "locales?: RootLocale[];",
+                  "doc": "Locales enabled for the site.",
+                  "examples": []
+                },
+                {
+                  "name": "defaultLocale",
+                  "signature": "defaultLocale?: RootLocale;",
+                  "doc": "The default locale to use. Defaults is `en`.",
+                  "examples": []
+                },
+                {
+                  "name": "urlFormat",
+                  "signature": "urlFormat?: string;",
+                  "doc": "URL format for localized content. Default is `/[locale]/[base]/[path]`.",
+                  "examples": []
+                },
+                {
+                  "name": "groups",
+                  "signature": "groups?: Record<string, LocaleGroup>;",
+                  "doc": "Localization groups, to help UIs (like Root.js CMS) logically group\nlocales.",
+                  "examples": []
+                },
+                {
+                  "name": "translationLanguages",
+                  "signature": "translationLanguages?: Record<RootLocale, TranslationLanguage>;",
+                  "doc": "Maps a root locale to the \"translation language\" used by translation\nsystems. Translation systems often use different language identifiers\nthan root locales, and multiple root locales may share the same\ntranslations. For example:\n\n```\ni18n: {\n  locales: ['en', 'es_mx', 'es_co', 'en_gb', 'en_ca', 'fr_ca'],\n  translationLanguages: {\n    es_mx: 'es-419',\n    es_co: 'es-419',\n    en_gb: 'en-GB',\n    en_ca: 'en-GB',\n    fr_ca: 'fr-CA',\n  },\n}\n```\n\nWith the config above, translations for the `es_mx` and `es_co` locales\nare imported and exported using a single `es-419` language. The\nconversion applies anywhere translations are used, e.g. CSV and Google\nSheets import/export, translation services, and the CMS translations\npages. Locales not listed here use the locale id as the translation\nlanguage.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbacks",
+                  "signature": "fallbacks?: Record<RootLocale, RootLocale[]>;",
+                  "doc": "Locale fallback chains for translations. When a translation is missing\nfor a locale, each fallback locale is checked (in order) before falling\nback to `defaultLocale` and finally the source string. Fallbacks are\nresolved recursively, e.g. with the config below, `en-CA` resolves to\n`['en-CA', 'en-GB', 'en']`. For example:\n\n```\ni18n: {\n  locales: ['en', 'en-GB', 'en-CA'],\n  fallbacks: {\n    'en-CA': ['en-GB'],\n  },\n}\n```",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootLocale",
+              "kind": "type",
+              "signature": "type RootLocale = string;",
+              "members": [],
+              "doc": "A site-defined locale identifier, as configured in `i18n.locales`.\nRoot is agnostic to its format.",
+              "examples": []
+            },
+            {
+              "name": "RootRedirectConfig",
+              "kind": "interface",
+              "signature": "interface RootRedirectConfig",
+              "members": [
+                {
+                  "name": "source",
+                  "signature": "source: string;",
+                  "doc": "The source path to redirect. Accepts placeholders in the format\n`[key]` or `[...key]`. Use `[key]` for single segments and\n`[...key]` for multi-segment wildcards.",
+                  "examples": [
+                    "\"/old-path/[id]\" or \"/old-path/[...wildcard]\""
+                  ]
+                },
+                {
+                  "name": "destination",
+                  "signature": "destination: string;",
+                  "doc": "The destination to redirect to. Placeholders from the source can\noptionally be inserted into the destination using the same\nplaceholder format.",
+                  "examples": [
+                    "\"/new-path/[id]\" or \"/new-path/[...wildcard]\""
+                  ]
+                },
+                {
+                  "name": "type",
+                  "signature": "type?: 301 | 302;",
+                  "doc": "The redirect type (`301` = permanent, `302` = temporary). If unspecified,\ndefaults to `302` (temporary).",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootSecurityConfig",
+              "kind": "interface",
+              "signature": "interface RootSecurityConfig",
+              "members": [
+                {
+                  "name": "contentSecurityPolicy",
+                  "signature": "contentSecurityPolicy?: ContentSecurityPolicyConfig | boolean;",
+                  "doc": "Content-Security-Policy config. If enabled, a nonce is auto-generated\nfor every request and appended to script and stylesheet tags. You can\nvalidate your CSP headers using a tool like {@link https://csp-evaluator.withgoogle.com/}.",
+                  "examples": []
+                },
+                {
+                  "name": "strictTransportSecurity",
+                  "signature": "strictTransportSecurity?: boolean;",
+                  "doc": "Strict-Transport-Security config. When enabled, the header value is set\nto `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`.",
+                  "examples": []
+                },
+                {
+                  "name": "xContentTypeOptions",
+                  "signature": "xContentTypeOptions?: boolean;",
+                  "doc": "X-Content-Type-Options config. When enabled, the header value is set to\n`X-Content-Type-Options: nosniff`.",
+                  "examples": []
+                },
+                {
+                  "name": "xFrameOptions",
+                  "signature": "xFrameOptions?: 'DENY' | 'SAMEORIGIN' | boolean;",
+                  "doc": "X-Frame-Options config. Setting this value to `true` will default the\nheader value to `X-Frame-Options: SAMEORIGIN`.",
+                  "examples": []
+                },
+                {
+                  "name": "xXssProtection",
+                  "signature": "xXssProtection?: boolean;",
+                  "doc": "X-XSS-Protection config. When enabled, the header value is set to\n`X-XSS-Protection: 1; mode=block`.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootServerConfig",
+              "kind": "interface",
+              "signature": "interface RootServerConfig",
+              "members": [
+                {
+                  "name": "middlewares",
+                  "signature": "middlewares?: RequestMiddleware[];",
+                  "doc": "An array of middleware to add to the express server. These middleware are\nadded to the beginning of the express app.",
+                  "examples": []
+                },
+                {
+                  "name": "trailingSlash",
+                  "signature": "trailingSlash?: boolean;",
+                  "doc": "The `trailingSlash` config allows you to control how the server handles\ntrailing slashes. This config only affects URLs that do not have a file\nextension (i.e. HTML paths).\n\n- When `true`, the server redirects URLs to add a trailing slash\n- When `false`, the server redirects URLs to remove a trailing slash\n- When unspecified, the server allows URLs with and without trailing slash",
+                  "examples": []
+                },
+                {
+                  "name": "sessionCookieSecret",
+                  "signature": "sessionCookieSecret?: string | string[];",
+                  "doc": "Cookie secret for the session middleware.\n\nGenerate a secure secret with:\n```\nnode -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"\n```",
+                  "examples": []
+                },
+                {
+                  "name": "redirects",
+                  "signature": "redirects?: RootRedirectConfig[];",
+                  "doc": "List of redirects. Supports optional wildcards.",
+                  "examples": [
+                    "redirects: [\n  {\n    source: '/old-path/[id]',\n    destination: '/new-path/[id]',\n    type: 301,\n  },\n  {\n    source: '/old-path/[...wildcard]',\n    destination: '/new-path/[...wildcard]',\n  },\n]"
+                  ]
+                },
+                {
+                  "name": "headers",
+                  "signature": "headers?: RootHeaderConfig[];",
+                  "doc": "HTTP headers to add to a response.",
+                  "examples": []
+                },
+                {
+                  "name": "security",
+                  "signature": "security?: RootSecurityConfig;",
+                  "doc": "HTTP security settings. By default, all security settings are enabled with\ncommonly used default values.",
+                  "examples": []
+                },
+                {
+                  "name": "homePagePath",
+                  "signature": "homePagePath?: string;",
+                  "doc": "Home page URL path, which is printed when the dev server starts.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RootUserConfig",
+              "kind": "interface",
+              "signature": "interface RootUserConfig",
+              "members": [
+                {
+                  "name": "domain",
+                  "signature": "domain?: string;",
+                  "doc": "Canonical domain the website will serve on. Useful for things like the\nsitemap, SEO tags, etc.",
+                  "examples": []
+                },
+                {
+                  "name": "base",
+                  "signature": "base?: string;",
+                  "doc": "The base URL path that the site will serve on. Defaults to `/`;",
+                  "examples": []
+                },
+                {
+                  "name": "elements",
+                  "signature": "elements?: {\n    include?: string[];\n    exclude?: RegExp[];\n    excludeFromSsg?: ElementTagNameMatcher;\n};",
+                  "doc": "Config for auto-injecting custom element dependencies.",
+                  "examples": []
+                },
+                {
+                  "name": "styles",
+                  "signature": "styles?: {\n    entries?: string[];\n};",
+                  "doc": "Config for manually injecting stylesheet entries as\n`<link rel=\"stylesheet\">` tags.",
+                  "examples": []
+                },
+                {
+                  "name": "modulePreload",
+                  "signature": "modulePreload?: boolean;",
+                  "doc": "Whether to auto-inject `<link rel=\"modulepreload\">` tags for the JS chunks\nimported by the page's `<script type=\"module\">` tags. Disabled by default;\npass `modulePreload: true` to opt in.\n\nRoot injects a `<script type=\"module\">` tag for every custom element and\nbundle used on the page, but the shared chunks those scripts import are\nonly discovered once the browser has downloaded and parsed the script.\nPreloading them removes that request waterfall.\n\nChunks that are already injected as `<script>` tags are skipped, and no\ntags are injected by the dev server (where modules are served unbundled).",
+                  "examples": []
+                },
+                {
+                  "name": "i18n",
+                  "signature": "i18n?: RootI18nConfig;",
+                  "doc": "Config options for localization and internationalization.",
+                  "examples": []
+                },
+                {
+                  "name": "server",
+                  "signature": "server?: RootServerConfig;",
+                  "doc": "Config options for the Root.js express server.",
+                  "examples": []
+                },
+                {
+                  "name": "build",
+                  "signature": "build?: RootBuildConfig;",
+                  "doc": "Build options for the `root build` command.",
+                  "examples": []
+                },
+                {
+                  "name": "vite",
+                  "signature": "vite?: ViteUserConfig;",
+                  "doc": "Vite config.",
+                  "examples": []
+                },
+                {
+                  "name": "jsxRenderer",
+                  "signature": "jsxRenderer?: JsxRenderOptions;",
+                  "doc": "Config for the built-in JSX-to-HTML renderer.\n\n- `mode: 'pretty'` (default) — block-level elements render on their own\n  line with no indentation.\n- `mode: 'minimal'` — compact output with no extra whitespace.\n\nUse `blockElements` to specify additional custom element tag names that\nshould be treated as block-level in pretty mode.",
+                  "examples": [
+                    "export default defineConfig({\n  jsxRenderer: {\n    mode: 'pretty',\n    blockElements: ['my-card', 'my-section'],\n  },\n});"
+                  ]
+                },
+                {
+                  "name": "minifyHtml",
+                  "signature": "minifyHtml?: boolean;",
+                  "doc": "Whether to minify HTML output via html-minifier-terser. Disabled by\ndefault; pass `minifyHtml: true` to opt in.\n\nIgnored when the built-in JSX renderer (`jsxRenderer`) is enabled, since\nthat renderer controls its own output formatting via its `mode` option.",
+                  "examples": []
+                },
+                {
+                  "name": "minifyHtmlOptions",
+                  "signature": "minifyHtmlOptions?: HtmlMinifyOptions;",
+                  "doc": "Options to pass to html-minifier-terser.",
+                  "examples": []
+                },
+                {
+                  "name": "prettyHtml",
+                  "signature": "prettyHtml?: boolean;",
+                  "doc": "Whether to pretty print HTML output via js-beautify. Disabled by default;\npass `prettyHtml: true` to opt in. When both `prettyHtml` and `minifyHtml`\nare set, `prettyHtml` takes precedence.\n\nIgnored when the built-in JSX renderer (`jsxRenderer`) is enabled, since\nthat renderer controls its own output formatting via its `mode` option.",
+                  "examples": []
+                },
+                {
+                  "name": "prettyHtmlOptions",
+                  "signature": "prettyHtmlOptions?: HtmlPrettyOptions;",
+                  "doc": "Options to pass to js-beautify.",
+                  "examples": []
+                },
+                {
+                  "name": "sitemap",
+                  "signature": "sitemap?: boolean;",
+                  "doc": "Whether to include a sitemap.xml file to the build output.",
+                  "examples": []
+                },
+                {
+                  "name": "plugins",
+                  "signature": "plugins?: Plugin[];",
+                  "doc": "Plugins.",
+                  "examples": []
+                },
+                {
+                  "name": "pods",
+                  "signature": "pods?: Record<string, PodConfig>;",
+                  "doc": "Per-pod user-level overrides. The key is the pod name as declared in\nPod.name.",
+                  "examples": []
+                },
+                {
+                  "name": "experiments",
+                  "signature": "experiments?: {\n    enableScriptAsync?: boolean;\n};",
+                  "doc": "Experimental config options. Note: these are subject to change at any time.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Route",
+              "kind": "interface",
+              "signature": "interface Route",
+              "members": [
+                {
+                  "name": "src",
+                  "signature": "src: string;",
+                  "doc": "The relative path to the route file, e.g. `routes/index.tsx`.",
+                  "examples": []
+                },
+                {
+                  "name": "module",
+                  "signature": "module: RouteModule;",
+                  "doc": "The imported route module.",
+                  "examples": []
+                },
+                {
+                  "name": "locale",
+                  "signature": "locale: string;",
+                  "doc": "The locale used for the route.",
+                  "examples": []
+                },
+                {
+                  "name": "isDefaultLocale",
+                  "signature": "isDefaultLocale: boolean;",
+                  "doc": "Returns `true` if the route is the default locale route mapped without the\ni18n url prefix. For example, a route may be mapped to `/foo` and\n`/[locale]/foo`. The `/foo` route would have `route.isDefaultLocale` set to\n`true` whereas for `/[locale]/foo` it would be `false`.",
+                  "examples": []
+                },
+                {
+                  "name": "routePath",
+                  "signature": "routePath: string;",
+                  "doc": "The mapped URL path for the route, e.g.:\n\n  routes/index.tsx => `/`.\n  routes/events.tsx => `/events`.\n  routes/blog/[slug].tsx => `/blog/[slug]`.\n\nPer the example above, this value may contain placeholder params.",
+                  "examples": []
+                },
+                {
+                  "name": "localeRoutePath",
+                  "signature": "localeRoutePath: string;",
+                  "doc": "The localized URL path for the route, e.g. `/[locale]/blog/[slug]`.\nPer the example above, this value contains placeholder params.",
+                  "examples": []
+                },
+                {
+                  "name": "podName",
+                  "signature": "podName?: string;",
+                  "doc": "The name of the pod that contributed this route, or undefined if the\nroute is from the user's project.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RouteConfig",
+              "kind": "interface",
+              "signature": "interface RouteConfig",
+              "members": [
+                {
+                  "name": "locales",
+                  "signature": "locales?: string[];",
+                  "doc": "Overrides the site-wide `i18n.locales` for this route. When set, the SSG\nbuild only generates localized paths for the locales listed here instead of\nthe locales defined in `root.config.ts`. The default-locale path is always\ngenerated. Defaults to the site-wide `i18n.locales`.",
+                  "examples": []
+                }
+              ],
+              "doc": "Route-level config that a route module can export to override the site-wide\nserving behavior on a per-route basis.",
+              "examples": []
+            },
+            {
+              "name": "RouteModule",
+              "kind": "interface",
+              "signature": "interface RouteModule",
+              "members": [
+                {
+                  "name": "default",
+                  "signature": "default?: ComponentType<unknown>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "getStaticPaths",
+                  "signature": "getStaticPaths?: GetStaticPaths;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "getStaticProps",
+                  "signature": "getStaticProps?: GetStaticProps;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "handle",
+                  "signature": "handle?: Handler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "getStaticContent",
+                  "signature": "getStaticContent?: GetStaticContent;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "config",
+                  "signature": "config?: RouteConfig;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "RouteParams",
+              "kind": "type",
+              "signature": "type RouteParams = Record<string, string>;",
+              "members": [],
+              "doc": "Param values from the route, e.g. a route like `/route/[slug].tsx` will pass\n`{slug: 'foo'}`.",
+              "examples": []
+            },
+            {
+              "name": "Script",
+              "kind": "variable",
+              "signature": "const Script: FunctionalComponent<ScriptProps>;",
+              "members": [],
+              "doc": "The <Script> component is used for rendering any custom script modules. At\nthe moment, the system only pre-renders and bundles files that are in the\n`/bundles` folder at the root of the project.\n\nUsage:\n\n```tsx\n<Script src=\"/bundles/main.ts\" />\n```",
+              "examples": []
+            },
+            {
+              "name": "Server",
+              "kind": "type",
+              "signature": "type Server = Express & {\n    use(...middlewares: Array<RequestMiddleware | RequestMiddleware[]>): any;\n    use(urlPath: string, ...middlewares: Array<RequestMiddleware | RequestMiddleware[]>): any;\n};",
+              "members": [],
+              "doc": "Root.js express app.",
+              "examples": []
+            },
+            {
+              "name": "Sitemap",
+              "kind": "type",
+              "signature": "type Sitemap = Record<string, SitemapItem>;",
+              "members": [],
+              "doc": "Sitemap is a map of URL path -> route info.",
+              "examples": []
+            },
+            {
+              "name": "SitemapItem",
+              "kind": "interface",
+              "signature": "interface SitemapItem",
+              "members": [
+                {
+                  "name": "urlPath",
+                  "signature": "urlPath: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "route",
+                  "signature": "route: Route;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "params",
+                  "signature": "params: Record<string, string>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "locale",
+                  "signature": "locale: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "hrefLang",
+                  "signature": "hrefLang: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "alts",
+                  "signature": "alts: Record<string, {\n    hrefLang: string;\n    urlPath: string;\n}>;",
+                  "doc": "Hreflang alts.",
+                  "examples": []
+                }
+              ],
+              "doc": "Sitemap route info. The \"default locale\" route provides \"alts\" that can be\nused for outputting the localized url paths.",
+              "examples": []
+            },
+            {
+              "name": "StaticContentResult",
+              "kind": "interface",
+              "signature": "interface StaticContentResult",
+              "members": [
+                {
+                  "name": "body",
+                  "signature": "body: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "contentType",
+                  "signature": "contentType?: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "StringParamsContext",
+              "kind": "type",
+              "signature": "type StringParamsContext = Record<string, string>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "StringParamsProvider",
+              "kind": "variable",
+              "signature": "const StringParamsProvider: FunctionalComponent<StringParamsProviderProps>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "StyleDeps",
+              "kind": "variable",
+              "signature": "const StyleDeps: FunctionalComponent<StyleDepsProps>;",
+              "members": [],
+              "doc": "The `<StyleDeps>` component registers a component's CSS deps for injection\ninto the page `<head>`, even when the component is imported dynamically.\n\nRoot normally collects CSS by walking a route's *static* import graph, so the\n`.module.scss` of a dynamically-imported (`import()`) component is never\nlinked. Rendering `<StyleDeps src=\"...\">` alongside such a component tells\nRoot to resolve that source file's CSS deps (via the asset map) and inject\nthem, so a page loads only the CSS for the components it actually renders.\n\nUsage:\n\n```tsx\n<StyleDeps src=\"templates/Foo/Foo.tsx\" />\n```",
+              "examples": []
+            },
+            {
+              "name": "testPathHasParams",
+              "kind": "function",
+              "signature": "function testPathHasParams(urlPath: string): boolean;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "TranslationLanguage",
+              "kind": "type",
+              "signature": "type TranslationLanguage = string;",
+              "members": [],
+              "doc": "The language identifier used by translation systems (CSV/Sheets columns,\ntranslation services, CMS translations pages), mapped from a root locale\nvia `i18n.translationLanguages`. Defaults to the root locale id.",
+              "examples": []
+            },
+            {
+              "name": "TranslationMiddlewareProvider",
+              "kind": "variable",
+              "signature": "const TranslationMiddlewareProvider: FunctionalComponent<TranslationMiddlewareProviderProps>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "useAsset",
+              "kind": "function",
+              "signature": "function useAsset(src: string): Asset;",
+              "members": [],
+              "doc": "Returns an asset from the project's module graph. Paths are relative to the\nproject root and may optionally start with `/`.",
+              "examples": []
+            },
+            {
+              "name": "useAssetMap",
+              "kind": "function",
+              "signature": "function useAssetMap(): AssetMap;",
+              "members": [],
+              "doc": "Returns the asset map for the current render.",
+              "examples": []
+            },
+            {
+              "name": "useAssetUrl",
+              "kind": "function",
+              "signature": "function useAssetUrl(src: string): string;",
+              "members": [],
+              "doc": "Returns the serving URL for a file compiled from the project's module graph.\n\nUsage:\n\n```tsx\nconst customJs = useAssetUrl('/bundles/foo.ts');\nreturn <div data-custom-js={customJs} />;\n```",
+              "examples": []
+            },
+            {
+              "name": "useI18nContext",
+              "kind": "function",
+              "signature": "function useI18nContext(): I18nContext;",
+              "members": [],
+              "doc": "A hook that returns information about the current i18n context, including the\nlocale for the given route and a map of translations for that locale.",
+              "examples": []
+            },
+            {
+              "name": "useRequestContext",
+              "kind": "function",
+              "signature": "function useRequestContext(): RequestContext;",
+              "members": [],
+              "doc": "A hook that returns information about the current route.\n\nUsage:\n\n```ts\nconst ctx = useRequestContext();\nctx.route.src;\n// => 'routes/index.tsx'\n```",
+              "examples": []
+            },
+            {
+              "name": "useStringParams",
+              "kind": "function",
+              "signature": "function useStringParams(): StringParamsContext;",
+              "members": [],
+              "doc": "A hook that returns a map of string params, configured via the\n`StringParamsProvider` context provider. These params are automatically\napplied to the `useTranslations()` hook.\n\n\nUsage:\n\n```\nexport default function Page() {\n  return (\n    <StringParamsProvider value={{name: 'Alice'}}>\n      <SayHello />\n    </StringParamsProvider>\n  );\n}\n\nfunction SayHello() {\n  const t = useTranslations();\n  return <h1>{t('Hello, {name}!')}</h1>;\n}\n```\n\nThis should render `<h1>Hello, Alice!</h1>`.",
+              "examples": []
+            },
+            {
+              "name": "useTranslationMiddleware",
+              "kind": "function",
+              "signature": "function useTranslationMiddleware(): TranslationMiddlewareContext;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "useTranslations",
+              "kind": "function",
+              "signature": "function useTranslations(): (str: string, params?: Record<string, string | number>) => string;",
+              "members": [],
+              "doc": "A hook that returns a function that can be used to translate a string, and\noptionally replace any parameterized values that are surrounded in curly\nbraces.\n\nUsage:\n\n```ts\nconst t = useTranslations();\nt('Hello {name}', {name: 'Bob'});\n// => 'Bounjour Bob'\n```",
+              "examples": []
+            },
+            {
+              "name": "XFrameOptionsConfig",
+              "kind": "interface",
+              "signature": "interface XFrameOptionsConfig",
+              "members": [
+                {
+                  "name": "action",
+                  "signature": "action: 'DENY' | 'SAMEORIGIN';",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/cli",
+          "doc": "",
+          "exports": [
+            {
+              "name": "build",
+              "kind": "function",
+              "signature": "function build(rootProjectDir?: string, options?: BuildOptions): Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "BuildOptions",
+              "kind": "interface",
+              "signature": "interface BuildOptions",
+              "members": [
+                {
+                  "name": "ssrOnly",
+                  "signature": "ssrOnly?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mode",
+                  "signature": "mode?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "concurrency",
+                  "signature": "concurrency?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "filter",
+                  "signature": "filter?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "threads",
+                  "signature": "threads?: string | boolean;",
+                  "doc": "Renders pages using worker threads. Pass a number to use exactly N\nworkers, or pass without a value (or \"auto\") to pick a worker count\nautomatically based on CPU cores and the number of pages to build.",
+                  "examples": []
+                },
+                {
+                  "name": "log",
+                  "signature": "log?: string;",
+                  "doc": "Build log output mode: \"progress\" (default) shows a progress indicator\nand a final summary, \"verbose\" prints one line per output file, and\n\"quiet\" prints only the final summary.",
+                  "examples": []
+                },
+                {
+                  "name": "quiet",
+                  "signature": "quiet?: boolean;",
+                  "doc": "Global `-q, --quiet` flag; equivalent to `log: 'quiet'`.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "CliRunner",
+              "kind": "class",
+              "signature": "class CliRunner",
+              "members": [
+                {
+                  "name": "run",
+                  "signature": "run(argv: string[]): Promise<void>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "createDevServer",
+              "kind": "function",
+              "signature": "function createDevServer(options?: {\n    rootDir?: string;\n    port?: number;\n}): Promise<Server>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "createPackage",
+              "kind": "function",
+              "signature": "function createPackage(rootProjectDir?: string, options?: CreatePackageOptions): Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "createPreviewServer",
+              "kind": "function",
+              "signature": "function createPreviewServer(options: {\n    rootDir: string;\n}): Promise<Server>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "createProdServer",
+              "kind": "function",
+              "signature": "function createProdServer(options: {\n    rootDir: string;\n}): Promise<Server>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "dev",
+              "kind": "function",
+              "signature": "function dev(rootProjectDir?: string, options?: DevOptions): Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "preview",
+              "kind": "function",
+              "signature": "function preview(rootProjectDir?: string, options?: PreviewOptions): Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "start",
+              "kind": "function",
+              "signature": "function start(rootProjectDir?: string, options?: StartOptions): Promise<void>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/functions",
+          "doc": "",
+          "exports": [
+            {
+              "name": "ProdServerOptions",
+              "kind": "interface",
+              "signature": "interface ProdServerOptions",
+              "members": [
+                {
+                  "name": "rootDir",
+                  "signature": "rootDir?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mode",
+                  "signature": "mode?: 'preview' | 'production';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "httpsOptions",
+                  "signature": "httpsOptions?: HttpsOptions;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "server",
+              "kind": "function",
+              "signature": "function server(options?: ProdServerOptions): import(\"firebase-functions/https\").HttpsFunction;",
+              "members": [],
+              "doc": "Firebase Function that runs a Root.js server running in SSR mode.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/jsx",
+          "doc": "Root.js server-side JSX renderer. A zero-dependency JSX runtime that\nreplaces Preact for server-side rendering (SSR/SSG).\n\n## Quick Start\n\nConfigure your `tsconfig.json`:\n```json\n{\n  \"compilerOptions\": {\n    \"jsx\": \"react-jsx\",\n    \"jsxImportSource\": \"@blinkk/root/jsx\"\n  }\n}\n```\n\nImport hooks and utilities directly:\n```ts\nimport {createContext, useContext, renderJsxToString} from '@blinkk/root/jsx';\n```\n\n## What's included\n\n- `jsx` / `jsxs` / `Fragment` — Automatic JSX transform\n- `createElement` / `h` — Classic JSX transform\n- `createContext` / `useContext` — Context API for SSR\n- `renderJsxToString` — Render VNode trees to HTML strings\n- `options` — VNode lifecycle hook (for nonce injection, etc.)\n- Full TypeScript JSX type definitions",
+          "exports": [
+            {
+              "name": "AriaAttributes",
+              "kind": "interface",
+              "signature": "interface AriaAttributes",
+              "members": [
+                {
+                  "name": "role",
+                  "signature": "role?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-activedescendant'",
+                  "signature": "'aria-activedescendant'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-atomic'",
+                  "signature": "'aria-atomic'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-autocomplete'",
+                  "signature": "'aria-autocomplete'?: 'none' | 'inline' | 'list' | 'both';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-busy'",
+                  "signature": "'aria-busy'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-checked'",
+                  "signature": "'aria-checked'?: boolean | 'false' | 'mixed' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-colcount'",
+                  "signature": "'aria-colcount'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-colindex'",
+                  "signature": "'aria-colindex'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-colspan'",
+                  "signature": "'aria-colspan'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-controls'",
+                  "signature": "'aria-controls'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-current'",
+                  "signature": "'aria-current'?: boolean | 'false' | 'true' | 'page' | 'step' | 'location' | 'date' | 'time';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-describedby'",
+                  "signature": "'aria-describedby'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-details'",
+                  "signature": "'aria-details'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-disabled'",
+                  "signature": "'aria-disabled'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-dropeffect'",
+                  "signature": "'aria-dropeffect'?: 'none' | 'copy' | 'execute' | 'link' | 'move' | 'popup';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-errormessage'",
+                  "signature": "'aria-errormessage'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-expanded'",
+                  "signature": "'aria-expanded'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-flowto'",
+                  "signature": "'aria-flowto'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-grabbed'",
+                  "signature": "'aria-grabbed'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-haspopup'",
+                  "signature": "'aria-haspopup'?: boolean | 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-hidden'",
+                  "signature": "'aria-hidden'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-invalid'",
+                  "signature": "'aria-invalid'?: boolean | 'false' | 'true' | 'grammar' | 'spelling';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-keyshortcuts'",
+                  "signature": "'aria-keyshortcuts'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-label'",
+                  "signature": "'aria-label'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-labelledby'",
+                  "signature": "'aria-labelledby'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-level'",
+                  "signature": "'aria-level'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-live'",
+                  "signature": "'aria-live'?: 'off' | 'assertive' | 'polite';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-modal'",
+                  "signature": "'aria-modal'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-multiline'",
+                  "signature": "'aria-multiline'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-multiselectable'",
+                  "signature": "'aria-multiselectable'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-orientation'",
+                  "signature": "'aria-orientation'?: 'horizontal' | 'vertical';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-owns'",
+                  "signature": "'aria-owns'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-placeholder'",
+                  "signature": "'aria-placeholder'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-posinset'",
+                  "signature": "'aria-posinset'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-pressed'",
+                  "signature": "'aria-pressed'?: boolean | 'false' | 'mixed' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-readonly'",
+                  "signature": "'aria-readonly'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-relevant'",
+                  "signature": "'aria-relevant'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-required'",
+                  "signature": "'aria-required'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-roledescription'",
+                  "signature": "'aria-roledescription'?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-rowcount'",
+                  "signature": "'aria-rowcount'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-rowindex'",
+                  "signature": "'aria-rowindex'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-rowspan'",
+                  "signature": "'aria-rowspan'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-selected'",
+                  "signature": "'aria-selected'?: boolean | 'false' | 'true';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-setsize'",
+                  "signature": "'aria-setsize'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-sort'",
+                  "signature": "'aria-sort'?: 'none' | 'ascending' | 'descending' | 'other';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-valuemax'",
+                  "signature": "'aria-valuemax'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-valuemin'",
+                  "signature": "'aria-valuemin'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-valuenow'",
+                  "signature": "'aria-valuenow'?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "'aria-valuetext'",
+                  "signature": "'aria-valuetext'?: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ComponentChild",
+              "kind": "type",
+              "signature": "type ComponentChild = ComponentChildren;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ComponentChildren",
+              "kind": "type",
+              "signature": "type ComponentChildren = VNode<any> | string | number | bigint | boolean | null | undefined | ComponentChildren[];",
+              "members": [],
+              "doc": "Valid children types for JSX elements.",
+              "examples": []
+            },
+            {
+              "name": "ComponentType",
+              "kind": "type",
+              "signature": "type ComponentType<P = Record<string, unknown>> = FunctionalComponent<P>;",
+              "members": [],
+              "doc": "Generic component type (function components only for SSR).",
+              "examples": []
+            },
+            {
+              "name": "Context",
+              "kind": "interface",
+              "signature": "interface Context<T>",
+              "members": [
+                {
+                  "name": "_defaultValue",
+                  "signature": "_defaultValue: T;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_stack",
+                  "signature": "_stack: T[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "Provider",
+                  "signature": "Provider: FunctionalComponent<{\n    value: T;\n    children?: ComponentChildren;\n}>;",
+                  "doc": "Provider component that supplies a context value to descendants.",
+                  "examples": []
+                }
+              ],
+              "doc": "A context object created by `createContext()`. Provides a `Provider`\ncomponent and can be read via `useContext()`.",
+              "examples": []
+            },
+            {
+              "name": "createContext",
+              "kind": "function",
+              "signature": "function createContext<T>(defaultValue: T): Context<T>;",
+              "members": [],
+              "doc": "Creates a new context with an optional default value. Returns a context\nobject with a `Provider` component.\n\n```ts\nconst ThemeContext = createContext('light');\n\n// In a parent component:\n<ThemeContext.Provider value=\"dark\">\n  <App />\n</ThemeContext.Provider>\n\n// In a child component:\nconst theme = useContext(ThemeContext);\n```",
+              "examples": []
+            },
+            {
+              "name": "createElement",
+              "kind": "function",
+              "signature": "function createElement(type: string | FunctionalComponent<any> | typeof Fragment, props?: Record<string, any> | null, ...children: any[]): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Compatible with the classic `React.createElement` API.\n\n```ts\ncreateElement('div', {className: 'foo'}, 'Hello', ' ', 'World');\n```",
+              "examples": []
+            },
+            {
+              "name": "CSSProperties",
+              "kind": "interface",
+              "signature": "interface CSSProperties extends Partial<Record<CSSPropertyName, string | number>>",
+              "members": [],
+              "doc": "Typed CSS style object accepted by the `style` prop. Each known CSS property\nmaps to a `string` or `number` (a number is emitted verbatim, matching the\nrenderer's `styleToString`), and CSS custom properties (`--my-var`) are also\npermitted.",
+              "examples": []
+            },
+            {
+              "name": "DOMAttributes",
+              "kind": "interface",
+              "signature": "interface DOMAttributes",
+              "members": [
+                {
+                  "name": "children",
+                  "signature": "children?: ComponentChildren;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dangerouslySetInnerHTML",
+                  "signature": "dangerouslySetInnerHTML?: {\n    __html: string;\n};",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onCopy",
+                  "signature": "onCopy?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onCut",
+                  "signature": "onCut?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onPaste",
+                  "signature": "onPaste?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onKeyDown",
+                  "signature": "onKeyDown?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onKeyPress",
+                  "signature": "onKeyPress?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onKeyUp",
+                  "signature": "onKeyUp?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onFocus",
+                  "signature": "onFocus?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onBlur",
+                  "signature": "onBlur?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onChange",
+                  "signature": "onChange?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onInput",
+                  "signature": "onInput?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onSubmit",
+                  "signature": "onSubmit?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onReset",
+                  "signature": "onReset?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onClick",
+                  "signature": "onClick?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onContextMenu",
+                  "signature": "onContextMenu?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDoubleClick",
+                  "signature": "onDoubleClick?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDrag",
+                  "signature": "onDrag?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragEnd",
+                  "signature": "onDragEnd?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragEnter",
+                  "signature": "onDragEnter?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragExit",
+                  "signature": "onDragExit?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragLeave",
+                  "signature": "onDragLeave?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragOver",
+                  "signature": "onDragOver?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDragStart",
+                  "signature": "onDragStart?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onDrop",
+                  "signature": "onDrop?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseDown",
+                  "signature": "onMouseDown?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseEnter",
+                  "signature": "onMouseEnter?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseLeave",
+                  "signature": "onMouseLeave?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseMove",
+                  "signature": "onMouseMove?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseOut",
+                  "signature": "onMouseOut?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseOver",
+                  "signature": "onMouseOver?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onMouseUp",
+                  "signature": "onMouseUp?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onTouchCancel",
+                  "signature": "onTouchCancel?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onTouchEnd",
+                  "signature": "onTouchEnd?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onTouchMove",
+                  "signature": "onTouchMove?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onTouchStart",
+                  "signature": "onTouchStart?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onScroll",
+                  "signature": "onScroll?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onAnimationStart",
+                  "signature": "onAnimationStart?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onAnimationEnd",
+                  "signature": "onAnimationEnd?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onAnimationIteration",
+                  "signature": "onAnimationIteration?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onTransitionEnd",
+                  "signature": "onTransitionEnd?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onLoad",
+                  "signature": "onLoad?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "onError",
+                  "signature": "onError?: EventHandler;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Fragment",
+              "kind": "function",
+              "signature": "function Fragment(props: {\n    children?: ComponentChildren;\n}): any;",
+              "members": [],
+              "doc": "Fragment component. Renders its children without a wrapper DOM element.\nUsed as `<>...</>` or `<Fragment>...</Fragment>` in JSX.",
+              "examples": []
+            },
+            {
+              "name": "FunctionalComponent",
+              "kind": "interface",
+              "signature": "interface FunctionalComponent<P = Record<string, unknown>>",
+              "members": [
+                {
+                  "name": "displayName",
+                  "signature": "displayName?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_isProvider",
+                  "signature": "_isProvider?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_context",
+                  "signature": "_context?: Context<any>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "A function component that receives props and returns a VNode or null.",
+              "examples": []
+            },
+            {
+              "name": "h",
+              "kind": "function",
+              "signature": "function createElement(type: string | FunctionalComponent<any> | typeof Fragment, props?: Record<string, any> | null, ...children: any[]): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Compatible with the classic `React.createElement` API.\n\n```ts\ncreateElement('div', {className: 'foo'}, 'Hello', ' ', 'World');\n```",
+              "examples": []
+            },
+            {
+              "name": "HTMLAttributes",
+              "kind": "interface",
+              "signature": "interface HTMLAttributes<T = HTMLElement> extends DOMAttributes, AriaAttributes",
+              "members": [
+                {
+                  "name": "accept",
+                  "signature": "accept?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "acceptCharset",
+                  "signature": "acceptCharset?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "accessKey",
+                  "signature": "accessKey?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "action",
+                  "signature": "action?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "allow",
+                  "signature": "allow?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "allowFullScreen",
+                  "signature": "allowFullScreen?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "allowTransparency",
+                  "signature": "allowTransparency?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "alt",
+                  "signature": "alt?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "as",
+                  "signature": "as?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "async",
+                  "signature": "async?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "autoComplete",
+                  "signature": "autoComplete?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "autoCorrect",
+                  "signature": "autoCorrect?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "autoFocus",
+                  "signature": "autoFocus?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "autoPlay",
+                  "signature": "autoPlay?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "capture",
+                  "signature": "capture?: boolean | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cellPadding",
+                  "signature": "cellPadding?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cellSpacing",
+                  "signature": "cellSpacing?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "charSet",
+                  "signature": "charSet?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "challenge",
+                  "signature": "challenge?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "checked",
+                  "signature": "checked?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cite",
+                  "signature": "cite?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "class",
+                  "signature": "class?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "className",
+                  "signature": "className?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cols",
+                  "signature": "cols?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "colSpan",
+                  "signature": "colSpan?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "content",
+                  "signature": "content?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "contentEditable",
+                  "signature": "contentEditable?: boolean | 'true' | 'false' | 'inherit';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "contextMenu",
+                  "signature": "contextMenu?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "controls",
+                  "signature": "controls?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "controlsList",
+                  "signature": "controlsList?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "coords",
+                  "signature": "coords?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "crossOrigin",
+                  "signature": "crossOrigin?: boolean | 'anonymous' | 'use-credentials' | (string & {});",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "data",
+                  "signature": "data?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dateTime",
+                  "signature": "dateTime?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "default",
+                  "signature": "default?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "defer",
+                  "signature": "defer?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dir",
+                  "signature": "dir?: 'auto' | 'ltr' | 'rtl';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "disabled",
+                  "signature": "disabled?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "disableRemotePlayback",
+                  "signature": "disableRemotePlayback?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "download",
+                  "signature": "download?: string | boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "decoding",
+                  "signature": "decoding?: 'sync' | 'async' | 'auto';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "draggable",
+                  "signature": "draggable?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "encType",
+                  "signature": "encType?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "enterKeyHint",
+                  "signature": "enterKeyHint?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "for",
+                  "signature": "for?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "form",
+                  "signature": "form?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "formAction",
+                  "signature": "formAction?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "formEncType",
+                  "signature": "formEncType?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "formMethod",
+                  "signature": "formMethod?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "formNoValidate",
+                  "signature": "formNoValidate?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "formTarget",
+                  "signature": "formTarget?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "frameBorder",
+                  "signature": "frameBorder?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "headers",
+                  "signature": "headers?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "height",
+                  "signature": "height?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "hidden",
+                  "signature": "hidden?: boolean | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "high",
+                  "signature": "high?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "href",
+                  "signature": "href?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "hrefLang",
+                  "signature": "hrefLang?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "htmlFor",
+                  "signature": "htmlFor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "httpEquiv",
+                  "signature": "httpEquiv?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "icon",
+                  "signature": "icon?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "id",
+                  "signature": "id?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "importance",
+                  "signature": "importance?: 'auto' | 'high' | 'low';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "inert",
+                  "signature": "inert?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "inputMode",
+                  "signature": "inputMode?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "integrity",
+                  "signature": "integrity?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "is",
+                  "signature": "is?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "key",
+                  "signature": "key?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "kind",
+                  "signature": "kind?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "label",
+                  "signature": "label?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "lang",
+                  "signature": "lang?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "list",
+                  "signature": "list?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "loading",
+                  "signature": "loading?: 'eager' | 'lazy';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "loop",
+                  "signature": "loop?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "low",
+                  "signature": "low?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "manifest",
+                  "signature": "manifest?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "marginHeight",
+                  "signature": "marginHeight?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "marginWidth",
+                  "signature": "marginWidth?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "max",
+                  "signature": "max?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "maxLength",
+                  "signature": "maxLength?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "media",
+                  "signature": "media?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mediaGroup",
+                  "signature": "mediaGroup?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "method",
+                  "signature": "method?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "min",
+                  "signature": "min?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "minLength",
+                  "signature": "minLength?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "multiple",
+                  "signature": "multiple?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "muted",
+                  "signature": "muted?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "noModule",
+                  "signature": "noModule?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "nonce",
+                  "signature": "nonce?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "noValidate",
+                  "signature": "noValidate?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "open",
+                  "signature": "open?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "optimum",
+                  "signature": "optimum?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "part",
+                  "signature": "part?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "pattern",
+                  "signature": "pattern?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "placeholder",
+                  "signature": "placeholder?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "playsInline",
+                  "signature": "playsInline?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "poster",
+                  "signature": "poster?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "preload",
+                  "signature": "preload?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "radioGroup",
+                  "signature": "radioGroup?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "readOnly",
+                  "signature": "readOnly?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "referrerPolicy",
+                  "signature": "referrerPolicy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "rel",
+                  "signature": "rel?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "required",
+                  "signature": "required?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "reversed",
+                  "signature": "reversed?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "rows",
+                  "signature": "rows?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "rowSpan",
+                  "signature": "rowSpan?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "sandbox",
+                  "signature": "sandbox?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "scope",
+                  "signature": "scope?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "scoped",
+                  "signature": "scoped?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "scrolling",
+                  "signature": "scrolling?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "seamless",
+                  "signature": "seamless?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "selected",
+                  "signature": "selected?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "shape",
+                  "signature": "shape?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "size",
+                  "signature": "size?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "sizes",
+                  "signature": "sizes?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "slot",
+                  "signature": "slot?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "span",
+                  "signature": "span?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "spellcheck",
+                  "signature": "spellcheck?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "src",
+                  "signature": "src?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "srcDoc",
+                  "signature": "srcDoc?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "srcLang",
+                  "signature": "srcLang?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "srcSet",
+                  "signature": "srcSet?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "start",
+                  "signature": "start?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "step",
+                  "signature": "step?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "style",
+                  "signature": "style?: string | CSSProperties;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "summary",
+                  "signature": "summary?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "tabIndex",
+                  "signature": "tabIndex?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "target",
+                  "signature": "target?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "title",
+                  "signature": "title?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "translate",
+                  "signature": "translate?: 'yes' | 'no';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "type",
+                  "signature": "type?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "useMap",
+                  "signature": "useMap?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "value",
+                  "signature": "value?: string | string[] | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "volume",
+                  "signature": "volume?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "width",
+                  "signature": "width?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "wmode",
+                  "signature": "wmode?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "wrap",
+                  "signature": "wrap?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "autocapitalize",
+                  "signature": "autocapitalize?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "disablePictureInPicture",
+                  "signature": "disablePictureInPicture?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "results",
+                  "signature": "results?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "security",
+                  "signature": "security?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "unselectable",
+                  "signature": "unselectable?: 'on' | 'off';",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "Common HTML attributes shared by all HTML elements.\nThe type parameter `T` is retained for API compatibility with Preact's\n`HTMLAttributes<HTMLElement>` pattern, but is unused at runtime since\nthis is an SSR-only renderer.",
+              "examples": []
+            },
+            {
+              "name": "jsx",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "JSX",
+              "kind": "namespace",
+              "signature": "namespace JSX",
+              "members": [
+                {
+                  "name": "JSX.Element",
+                  "signature": "type Element = VNode<any>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.ElementChildrenAttribute",
+                  "signature": "interface ElementChildrenAttribute",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.IntrinsicElements",
+                  "signature": "interface IntrinsicElements",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "jsxs",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "Key",
+              "kind": "type",
+              "signature": "type Key = string | number | null;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "options",
+              "kind": "variable",
+              "signature": "const options: {\n    vnode?: (vnode: VNode<any>) => void;\n};",
+              "members": [],
+              "doc": "Global options object. The `vnode` callback is invoked for every VNode\ncreated via `jsx()`, `jsxs()`, or `createElement()`. This is used by the\nrenderer to inject nonce values into script/style tags.",
+              "examples": []
+            },
+            {
+              "name": "renderJsxToString",
+              "kind": "function",
+              "signature": "function renderJsxToString(vnode: VNode, options?: JsxRenderOptions): string;",
+              "members": [],
+              "doc": "Renders a Preact VNode tree to an HTML string.",
+              "examples": []
+            },
+            {
+              "name": "ScriptHTMLAttributes",
+              "kind": "interface",
+              "signature": "interface ScriptHTMLAttributes<T = HTMLScriptElement> extends HTMLAttributes<T>",
+              "members": [
+                {
+                  "name": "async",
+                  "signature": "async?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "crossOrigin",
+                  "signature": "crossOrigin?: boolean | 'anonymous' | 'use-credentials' | (string & {});",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "defer",
+                  "signature": "defer?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "integrity",
+                  "signature": "integrity?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "noModule",
+                  "signature": "noModule?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "nonce",
+                  "signature": "nonce?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "referrerPolicy",
+                  "signature": "referrerPolicy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "src",
+                  "signature": "src?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "type",
+                  "signature": "type?: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "Script-specific HTML attributes (for the `<Script>` component).",
+              "examples": []
+            },
+            {
+              "name": "SVGAttributes",
+              "kind": "interface",
+              "signature": "interface SVGAttributes<T = SVGElement> extends HTMLAttributes<T>",
+              "members": [
+                {
+                  "name": "accentHeight",
+                  "signature": "accentHeight?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "accumulate",
+                  "signature": "accumulate?: 'none' | 'sum';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "additive",
+                  "signature": "additive?: 'replace' | 'sum';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "alignmentBaseline",
+                  "signature": "alignmentBaseline?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "allowReorder",
+                  "signature": "allowReorder?: 'no' | 'yes';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "clipPath",
+                  "signature": "clipPath?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "clipPathUnits",
+                  "signature": "clipPathUnits?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "clipRule",
+                  "signature": "clipRule?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "colorInterpolation",
+                  "signature": "colorInterpolation?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "colorInterpolationFilters",
+                  "signature": "colorInterpolationFilters?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cursor",
+                  "signature": "cursor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cx",
+                  "signature": "cx?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "cy",
+                  "signature": "cy?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "d",
+                  "signature": "d?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dominantBaseline",
+                  "signature": "dominantBaseline?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dx",
+                  "signature": "dx?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "dy",
+                  "signature": "dy?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fill",
+                  "signature": "fill?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fillOpacity",
+                  "signature": "fillOpacity?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fillRule",
+                  "signature": "fillRule?: 'nonzero' | 'evenodd' | 'inherit';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "filter",
+                  "signature": "filter?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "floodColor",
+                  "signature": "floodColor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "floodOpacity",
+                  "signature": "floodOpacity?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fontFamily",
+                  "signature": "fontFamily?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fontSize",
+                  "signature": "fontSize?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fontStyle",
+                  "signature": "fontStyle?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fontVariant",
+                  "signature": "fontVariant?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fontWeight",
+                  "signature": "fontWeight?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fx",
+                  "signature": "fx?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fy",
+                  "signature": "fy?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "gradientTransform",
+                  "signature": "gradientTransform?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "gradientUnits",
+                  "signature": "gradientUnits?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "imageRendering",
+                  "signature": "imageRendering?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "in",
+                  "signature": "in?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "in2",
+                  "signature": "in2?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "k1",
+                  "signature": "k1?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "k2",
+                  "signature": "k2?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "k3",
+                  "signature": "k3?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "k4",
+                  "signature": "k4?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "letterSpacing",
+                  "signature": "letterSpacing?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "lightingColor",
+                  "signature": "lightingColor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerEnd",
+                  "signature": "markerEnd?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerHeight",
+                  "signature": "markerHeight?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerMid",
+                  "signature": "markerMid?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerStart",
+                  "signature": "markerStart?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerUnits",
+                  "signature": "markerUnits?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "markerWidth",
+                  "signature": "markerWidth?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mask",
+                  "signature": "mask?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "offset",
+                  "signature": "offset?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "opacity",
+                  "signature": "opacity?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "operator",
+                  "signature": "operator?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "order",
+                  "signature": "order?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "overflow",
+                  "signature": "overflow?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "paintOrder",
+                  "signature": "paintOrder?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "pathLength",
+                  "signature": "pathLength?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "patternContentUnits",
+                  "signature": "patternContentUnits?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "patternTransform",
+                  "signature": "patternTransform?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "patternUnits",
+                  "signature": "patternUnits?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "pointerEvents",
+                  "signature": "pointerEvents?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "points",
+                  "signature": "points?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "preserveAspectRatio",
+                  "signature": "preserveAspectRatio?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "r",
+                  "signature": "r?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "result",
+                  "signature": "result?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "rx",
+                  "signature": "rx?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "ry",
+                  "signature": "ry?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "shapeRendering",
+                  "signature": "shapeRendering?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "stopColor",
+                  "signature": "stopColor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "stopOpacity",
+                  "signature": "stopOpacity?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "stroke",
+                  "signature": "stroke?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeDasharray",
+                  "signature": "strokeDasharray?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeDashoffset",
+                  "signature": "strokeDashoffset?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeLinecap",
+                  "signature": "strokeLinecap?: 'butt' | 'round' | 'square';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeLinejoin",
+                  "signature": "strokeLinejoin?: 'miter' | 'round' | 'bevel';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeMiterlimit",
+                  "signature": "strokeMiterlimit?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeOpacity",
+                  "signature": "strokeOpacity?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "strokeWidth",
+                  "signature": "strokeWidth?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "textAnchor",
+                  "signature": "textAnchor?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "textDecoration",
+                  "signature": "textDecoration?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "textRendering",
+                  "signature": "textRendering?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "transform",
+                  "signature": "transform?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "vectorEffect",
+                  "signature": "vectorEffect?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "version",
+                  "signature": "version?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "viewBox",
+                  "signature": "viewBox?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "visibility",
+                  "signature": "visibility?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "wordSpacing",
+                  "signature": "wordSpacing?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "writingMode",
+                  "signature": "writingMode?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "x",
+                  "signature": "x?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "x1",
+                  "signature": "x1?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "x2",
+                  "signature": "x2?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkActuate",
+                  "signature": "xlinkActuate?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkArcrole",
+                  "signature": "xlinkArcrole?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkHref",
+                  "signature": "xlinkHref?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkRole",
+                  "signature": "xlinkRole?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkShow",
+                  "signature": "xlinkShow?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkTitle",
+                  "signature": "xlinkTitle?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xlinkType",
+                  "signature": "xlinkType?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xmlns",
+                  "signature": "xmlns?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xmlBase",
+                  "signature": "xmlBase?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xmlLang",
+                  "signature": "xmlLang?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "xmlSpace",
+                  "signature": "xmlSpace?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "y",
+                  "signature": "y?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "y1",
+                  "signature": "y1?: number | string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "y2",
+                  "signature": "y2?: number | string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "SVG-specific attributes.",
+              "examples": []
+            },
+            {
+              "name": "useContext",
+              "kind": "function",
+              "signature": "function useContext<T>(context: Context<T>): T;",
+              "members": [],
+              "doc": "Reads the current value of a context. Must be called during the render\nof a function component that is a descendant of a matching Provider.\nReturns the default value if no Provider is found.\n\n```ts\nconst theme = useContext(ThemeContext);\n```",
+              "examples": []
+            },
+            {
+              "name": "VNode",
+              "kind": "interface",
+              "signature": "interface VNode<P = Record<string, unknown>>",
+              "members": [
+                {
+                  "name": "type",
+                  "signature": "type: string | FunctionalComponent<P> | typeof Fragment | (new (...args: any[]) => any);",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "props",
+                  "signature": "props: P;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "key",
+                  "signature": "key: Key;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "A virtual DOM node representing an element, component, or fragment.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/jsx/jsx-runtime",
+          "doc": "Server-side JSX runtime for Root.js. Replaces Preact as the JSX renderer\nfor server-side rendering (SSR/SSG). This module provides the automatic\nJSX transform entry point (`jsxImportSource`).\n\nSupports:\n- Automatic JSX transform (jsx, jsxs, Fragment)\n- Classic JSX transform (createElement / h)\n- Context API (createContext, useContext)\n- Server-side renderToString",
+          "exports": [
+            {
+              "name": "ComponentChild",
+              "kind": "type",
+              "signature": "type ComponentChild = ComponentChildren;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ComponentChildren",
+              "kind": "type",
+              "signature": "type ComponentChildren = VNode<any> | string | number | bigint | boolean | null | undefined | ComponentChildren[];",
+              "members": [],
+              "doc": "Valid children types for JSX elements.",
+              "examples": []
+            },
+            {
+              "name": "ComponentType",
+              "kind": "type",
+              "signature": "type ComponentType<P = Record<string, unknown>> = FunctionalComponent<P>;",
+              "members": [],
+              "doc": "Generic component type (function components only for SSR).",
+              "examples": []
+            },
+            {
+              "name": "Context",
+              "kind": "interface",
+              "signature": "interface Context<T>",
+              "members": [
+                {
+                  "name": "_defaultValue",
+                  "signature": "_defaultValue: T;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_stack",
+                  "signature": "_stack: T[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "Provider",
+                  "signature": "Provider: FunctionalComponent<{\n    value: T;\n    children?: ComponentChildren;\n}>;",
+                  "doc": "Provider component that supplies a context value to descendants.",
+                  "examples": []
+                }
+              ],
+              "doc": "A context object created by `createContext()`. Provides a `Provider`\ncomponent and can be read via `useContext()`.",
+              "examples": []
+            },
+            {
+              "name": "createContext",
+              "kind": "function",
+              "signature": "function createContext<T>(defaultValue: T): Context<T>;",
+              "members": [],
+              "doc": "Creates a new context with an optional default value. Returns a context\nobject with a `Provider` component.\n\n```ts\nconst ThemeContext = createContext('light');\n\n// In a parent component:\n<ThemeContext.Provider value=\"dark\">\n  <App />\n</ThemeContext.Provider>\n\n// In a child component:\nconst theme = useContext(ThemeContext);\n```",
+              "examples": []
+            },
+            {
+              "name": "createElement",
+              "kind": "function",
+              "signature": "function createElement(type: string | FunctionalComponent<any> | typeof Fragment, props?: Record<string, any> | null, ...children: any[]): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Compatible with the classic `React.createElement` API.\n\n```ts\ncreateElement('div', {className: 'foo'}, 'Hello', ' ', 'World');\n```",
+              "examples": []
+            },
+            {
+              "name": "Fragment",
+              "kind": "function",
+              "signature": "function Fragment(props: {\n    children?: ComponentChildren;\n}): any;",
+              "members": [],
+              "doc": "Fragment component. Renders its children without a wrapper DOM element.\nUsed as `<>...</>` or `<Fragment>...</Fragment>` in JSX.",
+              "examples": []
+            },
+            {
+              "name": "FunctionalComponent",
+              "kind": "interface",
+              "signature": "interface FunctionalComponent<P = Record<string, unknown>>",
+              "members": [
+                {
+                  "name": "displayName",
+                  "signature": "displayName?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_isProvider",
+                  "signature": "_isProvider?: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "_context",
+                  "signature": "_context?: Context<any>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "A function component that receives props and returns a VNode or null.",
+              "examples": []
+            },
+            {
+              "name": "h",
+              "kind": "function",
+              "signature": "function createElement(type: string | FunctionalComponent<any> | typeof Fragment, props?: Record<string, any> | null, ...children: any[]): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Compatible with the classic `React.createElement` API.\n\n```ts\ncreateElement('div', {className: 'foo'}, 'Hello', ' ', 'World');\n```",
+              "examples": []
+            },
+            {
+              "name": "jsx",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "JSX",
+              "kind": "namespace",
+              "signature": "namespace JSX",
+              "members": [
+                {
+                  "name": "JSX.Element",
+                  "signature": "type Element = VNode<any>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.ElementChildrenAttribute",
+                  "signature": "interface ElementChildrenAttribute",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.IntrinsicElements",
+                  "signature": "interface IntrinsicElements",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "jsxs",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "Key",
+              "kind": "type",
+              "signature": "type Key = string | number | null;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "options",
+              "kind": "variable",
+              "signature": "const options: {\n    vnode?: (vnode: VNode<any>) => void;\n};",
+              "members": [],
+              "doc": "Global options object. The `vnode` callback is invoked for every VNode\ncreated via `jsx()`, `jsxs()`, or `createElement()`. This is used by the\nrenderer to inject nonce values into script/style tags.",
+              "examples": []
+            },
+            {
+              "name": "useContext",
+              "kind": "function",
+              "signature": "function useContext<T>(context: Context<T>): T;",
+              "members": [],
+              "doc": "Reads the current value of a context. Must be called during the render\nof a function component that is a descendant of a matching Provider.\nReturns the default value if no Provider is found.\n\n```ts\nconst theme = useContext(ThemeContext);\n```",
+              "examples": []
+            },
+            {
+              "name": "VNode",
+              "kind": "interface",
+              "signature": "interface VNode<P = Record<string, unknown>>",
+              "members": [
+                {
+                  "name": "type",
+                  "signature": "type: string | FunctionalComponent<P> | typeof Fragment | (new (...args: any[]) => any);",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "props",
+                  "signature": "props: P;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "key",
+                  "signature": "key: Key;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "A virtual DOM node representing an element, component, or fragment.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/jsx/jsx-dev-runtime",
+          "doc": "Development JSX runtime entry point. For SSR, this is identical to the\nproduction runtime since there is no client-side diffing or dev warnings\nto add. TypeScript / bundlers look for this module when `jsxImportSource`\nis configured and the build is in development mode.",
+          "exports": [
+            {
+              "name": "Fragment",
+              "kind": "function",
+              "signature": "function Fragment(props: {\n    children?: ComponentChildren;\n}): any;",
+              "members": [],
+              "doc": "Fragment component. Renders its children without a wrapper DOM element.\nUsed as `<>...</>` or `<Fragment>...</Fragment>` in JSX.",
+              "examples": []
+            },
+            {
+              "name": "jsx",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "JSX",
+              "kind": "namespace",
+              "signature": "namespace JSX",
+              "members": [
+                {
+                  "name": "JSX.Element",
+                  "signature": "type Element = VNode<any>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.ElementChildrenAttribute",
+                  "signature": "interface ElementChildrenAttribute",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "JSX.IntrinsicElements",
+                  "signature": "interface IntrinsicElements",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "jsxDEV",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            },
+            {
+              "name": "jsxs",
+              "kind": "function",
+              "signature": "function jsx(type: string | FunctionalComponent<any> | typeof Fragment, props: Record<string, any>, key?: Key): VNode;",
+              "members": [],
+              "doc": "Creates a VNode. Used by the automatic JSX transform for elements with\na single child or no children.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/middleware",
+          "doc": "",
+          "exports": [
+            {
+              "name": "compressionMiddleware",
+              "kind": "function",
+              "signature": "function compressionMiddleware(): (req: Request, res: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Response compression middleware shared by the preview and prod servers.\n\nUses brotli when the client accepts it (`Accept-Encoding: br`), falling\nback to gzip. Brotli quality 4 is used as a balance between compression\nratio and CPU cost for dynamically-rendered responses — it generally\ncompresses better than gzip's default (level 6) at comparable speed.\nPre-compressed static assets should still be served with higher quality\nsettings by a CDN or static file server where possible.",
+              "examples": []
+            },
+            {
+              "name": "headersMiddleware",
+              "kind": "function",
+              "signature": "function headersMiddleware(options: {\n    rootConfig: RootConfig;\n}): (req: Request, res: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Middleware that injects HTTP headers from the `server.headers` config in\nroot.config.ts.",
+              "examples": []
+            },
+            {
+              "name": "multipartMiddleware",
+              "kind": "function",
+              "signature": "function multipartMiddleware(options?: {\n    maxFileSize?: number;\n}): RequestHandler;",
+              "members": [],
+              "doc": "Middleware for parsing multipart file uploads that's compatible with the dev\nserver and Firebase Functions.\n\nContext:\nhttps://stackoverflow.com/questions/47242340/how-to-perform-an-http-file-upload-using-express-on-cloud-functions-for-firebase",
+              "examples": []
+            },
+            {
+              "name": "rootProjectMiddleware",
+              "kind": "function",
+              "signature": "function rootProjectMiddleware(options: {\n    rootConfig: RootConfig;\n}): (req: Request, _: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Middleware that injects the root.js project config into the request context.",
+              "examples": []
+            },
+            {
+              "name": "SaveSessionOptions",
+              "kind": "interface",
+              "signature": "interface SaveSessionOptions",
+              "members": [
+                {
+                  "name": "sameSite",
+                  "signature": "sameSite?: 'strict' | 'lax' | 'none';",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "securityHeadersMiddleware",
+              "kind": "function",
+              "signature": "function securityHeadersMiddleware(options: {\n    rootConfig: RootConfig;\n}): (req: Request, res: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Middleware that sets security-related HTTP headers (e.g.\n`Strict-Transport-Security`) on all responses using the `server.security`\nconfig in root.config.ts.\n\nThe renderer sets these headers on rendered HTML responses, but responses\nthat bypass the renderer (e.g. redirects, static files, plugin-served\nresponses, 404s) would otherwise be served without them. Per\nhttps://hstspreload.org, HSTS preload eligibility requires the HSTS header\non redirects as well.\n\nNOTE: `Content-Security-Policy` is excluded here since the CSP is\ndocument-specific and depends on a per-request nonce, which is generated by\nthe renderer at render time.",
+              "examples": []
+            },
+            {
+              "name": "Session",
+              "kind": "class",
+              "signature": "class Session",
+              "members": [
+                {
+                  "name": "hasChanges",
+                  "signature": "hasChanges: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "fromCookieValue",
+                  "signature": "static fromCookieValue(cookieValue: string): Session;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "getItem",
+                  "signature": "getItem(key: string): string | null;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "setItem",
+                  "signature": "setItem(key: string, value: string): void;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "removeItem",
+                  "signature": "removeItem(key: string): void;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "toString",
+                  "signature": "toString(): string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "SESSION_COOKIE",
+              "kind": "variable",
+              "signature": "const SESSION_COOKIE = \"__session\";",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "sessionMiddleware",
+              "kind": "function",
+              "signature": "function sessionMiddleware(options?: SessionMiddlewareOptions): (req: Request, res: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Middleware for storing session data stored in an http cookie called\n`__session`. This cookie is compatible with Firebase Hosting:\nhttps://firebase.google.com/docs/hosting/manage-cache#using_cookies",
+              "examples": []
+            },
+            {
+              "name": "SessionMiddlewareOptions",
+              "kind": "interface",
+              "signature": "interface SessionMiddlewareOptions",
+              "members": [
+                {
+                  "name": "maxAge",
+                  "signature": "maxAge?: number;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "trailingSlashMiddleware",
+              "kind": "function",
+              "signature": "function trailingSlashMiddleware(options: {\n    rootConfig: RootConfig;\n}): (req: Request, res: Response, next: NextFunction) => void;",
+              "members": [],
+              "doc": "Trailing slash middleware. Handles trailing slash redirects (preserving any\nquery params) using the `server.trailingSlash` config in root.config.ts.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/node",
+          "doc": "",
+          "exports": [
+            {
+              "name": "bundleRootConfig",
+              "kind": "function",
+              "signature": "function bundleRootConfig(rootDir: string, outPath: string): Promise<void>;",
+              "members": [],
+              "doc": "Compiles a root.config.ts file to root.config.js.",
+              "examples": []
+            },
+            {
+              "name": "collectPods",
+              "kind": "function",
+              "signature": "function collectPods(rootConfig: RootConfig): Promise<ResolvedPod[]>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ConfigOptions",
+              "kind": "interface",
+              "signature": "interface ConfigOptions",
+              "members": [
+                {
+                  "name": "command",
+                  "signature": "command: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "createViteServer",
+              "kind": "function",
+              "signature": "function createViteServer(rootConfig: RootConfig, options?: CreateViteServerOptions): Promise<ViteDevServer>;",
+              "members": [],
+              "doc": "Returns a vite dev server.",
+              "examples": []
+            },
+            {
+              "name": "CreateViteServerOptions",
+              "kind": "interface",
+              "signature": "interface CreateViteServerOptions",
+              "members": [
+                {
+                  "name": "hmr",
+                  "signature": "hmr?: boolean;",
+                  "doc": "Override HMR settings.",
+                  "examples": []
+                },
+                {
+                  "name": "port",
+                  "signature": "port?: number;",
+                  "doc": "The port the server will run on.",
+                  "examples": []
+                },
+                {
+                  "name": "optimizeDeps",
+                  "signature": "optimizeDeps?: string[];",
+                  "doc": "List of files to include in the optimizeDeps.include config.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "flattenPackageDepsFromMonorepo",
+              "kind": "function",
+              "signature": "function flattenPackageDepsFromMonorepo(rootDir: string, options?: {\n    ignore?: Set<string>;\n}): Record<string, string>;",
+              "members": [],
+              "doc": "Flattens package.json deps from the root project dir, taking into account any\ndeps from the monorepo root as well as any `workspace:` deps from within the\nmonorepo.",
+              "examples": []
+            },
+            {
+              "name": "getMonorepoPackageDeps",
+              "kind": "function",
+              "signature": "function getMonorepoPackageDeps(rootDir: string): Record<string, string>;",
+              "members": [],
+              "doc": "Returns the top-level monorepo package's deps, if any.",
+              "examples": []
+            },
+            {
+              "name": "invalidatePodCache",
+              "kind": "function",
+              "signature": "function invalidatePodCache(): void;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "loadBundledConfig",
+              "kind": "function",
+              "signature": "function loadBundledConfig(rootDir: string, options: ConfigOptions): Promise<RootConfig>;",
+              "members": [],
+              "doc": "Loads a pre-bundled config file from dist/root.config.js.",
+              "examples": []
+            },
+            {
+              "name": "loadPackageJson",
+              "kind": "function",
+              "signature": "function loadPackageJson(filepath: string): PackageInfo | null;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "loadRootConfig",
+              "kind": "function",
+              "signature": "function loadRootConfig(rootDir: string, options: ConfigOptions): Promise<RootConfig>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "loadRootConfigWithDeps",
+              "kind": "function",
+              "signature": "function loadRootConfigWithDeps(rootDir: string, options: ConfigOptions): Promise<{\n    rootConfig: RootConfig;\n    dependencies: string[];\n}>;",
+              "members": [],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ResolvedPod",
+              "kind": "interface",
+              "signature": "interface ResolvedPod",
+              "members": [
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "enabled",
+                  "signature": "enabled: boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "mount",
+                  "signature": "mount: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "priority",
+                  "signature": "priority: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "routesDir",
+                  "signature": "routesDir?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "elementsDirs",
+                  "signature": "elementsDirs: string[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "bundlesDir",
+                  "signature": "bundlesDir?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "collectionsDir",
+                  "signature": "collectionsDir?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "translationsDir",
+                  "signature": "translationsDir?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "routeFiles",
+                  "signature": "routeFiles: ResolvedPodRoute[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "bundleFiles",
+                  "signature": "bundleFiles: string[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "collectionFiles",
+                  "signature": "collectionFiles: ResolvedPodCollection[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "translationFiles",
+                  "signature": "translationFiles: Array<{\n    locale: string;\n    filePath: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "config",
+                  "signature": "config: PodConfig;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ResolvedPodCollection",
+              "kind": "interface",
+              "signature": "interface ResolvedPodCollection",
+              "members": [
+                {
+                  "name": "filePath",
+                  "signature": "filePath: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "relPath",
+                  "signature": "relPath: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "id",
+                  "signature": "id: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "ResolvedPodRoute",
+              "kind": "interface",
+              "signature": "interface ResolvedPodRoute",
+              "members": [
+                {
+                  "name": "filePath",
+                  "signature": "filePath: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "relPath",
+                  "signature": "relPath: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "routePath",
+                  "signature": "routePath: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "viteSsrLoadModule",
+              "kind": "function",
+              "signature": "function viteSsrLoadModule<T = Record<string, any>>(rootConfig: RootConfig, file: string): Promise<T>;",
+              "members": [],
+              "doc": "Shortcut `viteServer.ssrLoadModule()` without starting an actual dev server.",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/render",
+          "doc": "",
+          "exports": [
+            {
+              "name": "Renderer",
+              "kind": "class",
+              "signature": "class Renderer",
+              "members": [
+                {
+                  "name": "getRoute",
+                  "signature": "getRoute(url: string): [\n    Route | undefined,\n    Record<string, string>\n];",
+                  "doc": "Returns a route from the router.",
+                  "examples": []
+                },
+                {
+                  "name": "getRouteMatches",
+                  "signature": "getRouteMatches(url: string): Array<[\n    Route,\n    Record<string, string>\n]>;",
+                  "doc": "Returns all routes that match a given url path.",
+                  "examples": []
+                },
+                {
+                  "name": "walkRoutes",
+                  "signature": "walkRoutes(cb: (urlPathFormat: string, route: Route) => void | Promise<void>): Promise<void>;",
+                  "doc": "Walks all routes registered with the router.",
+                  "examples": []
+                },
+                {
+                  "name": "handle",
+                  "signature": "handle(req: Request, res: Response, next: NextFunction): Promise<void>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "renderRoute",
+                  "signature": "renderRoute(route: Route, options: {\n    routeParams: Record<string, string>;\n}): Promise<{\n    html?: string;\n    notFound?: boolean;\n}>;",
+                  "doc": "SSG renders a route.",
+                  "examples": []
+                },
+                {
+                  "name": "handleRoute",
+                  "signature": "handleRoute(req: Request, res: Response, next: NextFunction, route: Route, options?: {\n    defaultStatusCode?: number;\n    routeParams?: Record<string, string>;\n    nextRouteHandler?: () => void | Promise<void>;\n}): Promise<void>;",
+                  "doc": "Handles the SSR rendering of a route.",
+                  "examples": []
+                },
+                {
+                  "name": "getSitemap",
+                  "signature": "getSitemap(): Promise<Sitemap>;",
+                  "doc": "Constructs and returns the project's sitemap.\n\nThe sitemap is used to:\n- determine all paths to build in SSG mode\n- display links on the dev server's 404 page\n- construct alternates for localized URL paths",
+                  "examples": []
+                },
+                {
+                  "name": "render404",
+                  "signature": "render404(options?: {\n    currentPath?: string;\n}): Promise<{\n    html: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "renderError",
+                  "signature": "renderError(err: any, options?: {\n    currentPath?: string;\n}): Promise<{\n    html: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "renderDevServer404",
+                  "signature": "renderDevServer404(req: Request): Promise<{\n    html: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "renderDevServer500",
+                  "signature": "renderDevServer500(req: Request, error: unknown): Promise<{\n    html: string;\n}>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            }
+          ]
+        },
+        {
+          "importPath": "@blinkk/root/utils",
+          "doc": "",
+          "exports": [
+            {
+              "name": "jsonStringify",
+              "kind": "function",
+              "signature": "function jsonStringify(value: unknown, options?: JsonStringifyOptions): string;",
+              "members": [],
+              "doc": "Serializes data to a JSON string with Unix (LF) line endings.\n\nUnlike `JSON.stringify()`, this:\n- Recursively normalizes `\\r\\n` and `\\r` to `\\n` in string values, so\n  round-tripping through `JSON.parse` won't yield CRLF line endings.\n- Normalizes line endings in the resulting JSON string itself.",
+              "examples": []
+            },
+            {
+              "name": "JsonStringifyOptions",
+              "kind": "interface",
+              "signature": "interface JsonStringifyOptions",
+              "members": [
+                {
+                  "name": "indent",
+                  "signature": "indent?: number | string;",
+                  "doc": "Indentation passed through to `JSON.stringify`. Accepts a number of\nspaces or an indent string.",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
+              "name": "normalizeLineEndings",
+              "kind": "function",
+              "signature": "function normalizeLineEndings(value: string): string;",
+              "members": [],
+              "doc": "Normalizes line endings in a string to LF (`\\n`).\n\nConverts CRLF (`\\r\\n`) and lone CR (`\\r`) to LF.",
+              "examples": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

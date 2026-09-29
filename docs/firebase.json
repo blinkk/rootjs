@@ -2,15 +2,22 @@
   "hosting": {
     "site": "rootjs-dev",
     "public": "functions/dist/html",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "i18n": {
       "root": "/"
     },
     "trailingSlash": false,
+    "headers": [
+      {
+        "source": "/{assets,chunks}/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      }
+    ],
     "rewrites": [
       {
         "source": "**",

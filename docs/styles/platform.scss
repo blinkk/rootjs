@@ -81,6 +81,17 @@ $radius-media: 14px;
   color: var(--platform-accent);
 }
 
+/** Small uppercase label for navigation headings, e.g. "On this page". */
+@mixin nav-heading() {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--platform-muted);
+}
+
 /** Frame applied to product screenshots. */
 @mixin media-frame() {
   display: block;
@@ -97,4 +108,15 @@ $radius-media: 14px;
     width: 100%;
     height: auto;
   }
+}
+
+/**
+ * Centers a `<Container>`'s content in a column at most `$width` wide. Widens
+ * the container's side padding instead of setting a `max-width`, since the
+ * grid padding (`--grid-padding`) assumes a full-width container.
+ */
+@mixin narrow-container($width) {
+  max-width: none;
+  padding-left: max(var(--grid-padding), (100% - #{$width}) / 2);
+  padding-right: max(var(--grid-padding), (100% - #{$width}) / 2);
 }

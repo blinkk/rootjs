@@ -1,10 +1,23 @@
-import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
+import {
+  Body,
+  Head,
+  Html,
+  Script,
+  useRequestContext,
+  useTranslations,
+} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
+import {JsonLd} from '@/components/JsonLd/JsonLd.js';
 import {beetMarkDataUri} from '@/components/RootJsWordmark/RootJsWordmark.js';
 import {useImageService} from '@/hooks/useImageService.js';
 import {GridOverlay} from '@/islands/GridOverlay/GridOverlay.js';
+import {
+  getAbsoluteUrl,
+  getSiteNodes,
+  JsonLdNode,
+} from '@/utils/structured-data.js';
 import '@/styles/global.scss';
 
 export interface BaseLayoutProps {
@@ -12,7 +25,17 @@ export interface BaseLayoutProps {
   description?: string;
   image?: string;
   noindex?: boolean;
+  /**
+   * Absolute canonical URL. Defaults to the current page's path on
+   * rootjs.dev. Omitted on `noindex` pages.
+   */
+  canonicalUrl?: string;
   hideFooter?: boolean;
+  /**
+   * Page-level schema.org nodes, rendered as JSON-LD alongside the site-wide
+   * nodes that describe Root.js.
+   */
+  jsonLd?: JsonLdNode[];
   children?: ComponentChildren;
 }
 
@@ -32,9 +55,13 @@ const ANALYTICS = `
 
 export function BaseLayout(props: BaseLayoutProps) {
   const t = useTranslations();
+  const ctx = useRequestContext();
   const title = props.title || '';
   const description = props.description || '';
   const image = props.image || Meta.IMAGE;
+  const canonicalUrl = props.noindex
+    ? ''
+    : props.canonicalUrl || getAbsoluteUrl(ctx.currentPath);
   const imageService = useImageService();
   const metaImage = imageService.transform(image, {
     width: 1200,
@@ -42,7 +69,7 @@ export function BaseLayout(props: BaseLayoutProps) {
   });
 
   return (
-    <Html>
+    <Html lang={ctx.locale || 'en'}>
       <Head>
         <title>{t(title)}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -53,7 +80,7 @@ export function BaseLayout(props: BaseLayoutProps) {
         {description && (
           <>
             <meta name="description" content={t(description)} />
-            <meta name="og:description" content={t(description)} />
+            <meta property="og:description" content={t(description)} />
           </>
         )}
         {metaImage && (
@@ -61,6 +88,12 @@ export function BaseLayout(props: BaseLayoutProps) {
             {metaImage && <meta content={metaImage} property="og:image" />}
             {metaImage && <meta content={metaImage} name="twitter:image" />}
             <meta content="summary_large_image" name="twitter:card" />
+          </>
+        )}
+        {canonicalUrl && (
+          <>
+            <link rel="canonical" href={canonicalUrl} />
+            <meta content={canonicalUrl} property="og:url" />
           </>
         )}
         {props.noindex && <meta name="robots" content="noindex" />}
@@ -72,15 +105,12 @@ export function BaseLayout(props: BaseLayoutProps) {
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
           rel="stylesheet"
         />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
-        />
         <script
           async
           src="https://www.googletagmanager.com/gtag/js?id=G-5JTQHSPWBB"
         ></script>
         <script dangerouslySetInnerHTML={{__html: ANALYTICS}} />
+        <JsonLd nodes={[...getSiteNodes(), ...(props.jsonLd || [])]} />
       </Head>
       <Body>
         <div id="root">

@@ -226,6 +226,48 @@ export interface DividerFields {
   };
 }
 
+/** Generated from `/collections/Docs.schema.ts`. */
+export interface DocsFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+    /** Category. Sidebar group the doc is listed under. */
+    category?: string;
+    /** Sidebar label. Short label for the sidebar. Defaults to the content title. */
+    navLabel?: string;
+    /** Next Doc. Suggested doc to read next. */
+    nextDoc?: RootCMSReference;
+  };
+  /** Content */
+  content?: {
+    /** Content title. Top content title. */
+    title?: string;
+    /** Content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Generated reference. Adds reference docs generated from the source code after the sections. Regenerate with `node scripts/generate_reference.ts`. */
+    reference?: string;
+    /** Sections. Each section is added to the Table of Contents. */
+    sections?: {
+      /** Section: ID. Section ID (for deeplinking). */
+      id?: string;
+      /** Section: Title. Title for the section. */
+      title?: string;
+      /** Section: Content body. Main content body for the section. */
+      body?: RootCMSRichText;
+      /** Section: Blocks. Add blocks to embed various content types to the section. */
+      blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+    }[];
+  };
+}
+
+/** Generated from `/collections/Docs.schema.ts`. */
+export type DocsDoc = RootCMSDoc<DocsFields>;
+
 /** Generated from `/components/Emoji/Emoji.schema.ts`. */
 export interface EmojiFields {
   /** Emoji */
@@ -250,43 +292,59 @@ export interface GlobalModulesFields {
 /** Generated from `/collections/GlobalModules.schema.ts`. */
 export type GlobalModulesDoc = RootCMSDoc<GlobalModulesFields>;
 
-/** Generated from `/collections/Guide.schema.ts`. */
-export interface GuideFields {
+/** Generated from `/collections/Guides.schema.ts`. */
+export interface GuidesFields {
   /** Meta */
   meta?: {
     /** Title */
     title?: string;
-    /** Description. Description for SEO and social shares. */
+    /** Description. Description for SEO, social shares, and the guides index. */
     description?: string;
-    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    /** Image. Meta image for social shares and the guides index card. */
     image?: RootCMSImage;
-    /** Category */
-    category?: string;
-    /** Next Guide. Suggested reading next guide. */
+    /** Next guide. Suggested guide to read next. */
     nextGuide?: RootCMSReference;
   };
   /** Content */
   content?: {
-    /** Content title. Top content title. */
+    /** Eyebrow. Short label above the title, e.g. 'Publishing'. */
+    eyebrow?: string;
+    /** Title */
     title?: string;
-    /** Content body. Top content body. */
-    body?: RootCMSRichText;
-    /** Sections. Each section is added to the Table of Contents. */
+    /** Intro. Opening paragraph(s): the problem and what Root.js offers. */
+    intro?: RootCMSRichText;
+    /** Hero image. Product screenshot shown below the intro. */
+    heroImage?: RootCMSImage;
+    /** Key takeaways. Short, scannable benefits shown in an 'At a glance' box. */
+    takeaways?: {
+      /** Text */
+      text?: string;
+    }[];
+    /** Sections. Each section is added to the table of contents. */
     sections?: {
-      /** Section: ID. Section ID (for deeplinking). */
+      /** ID. Section ID (for deeplinking). */
       id?: string;
-      /** Section: Title. Title for the section. */
+      /** Title */
       title?: string;
-      /** Section: Content body. Main content body for the section. */
+      /** Body */
       body?: RootCMSRichText;
-      /** Section: Blocks. Add blocks to embed various content types to the section. */
-      blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+      /** Screenshot */
+      image?: RootCMSImage;
+      /** Screenshot caption */
+      caption?: string;
+    }[];
+    /** Frequently asked questions */
+    faq?: {
+      /** Question */
+      question?: string;
+      /** Answer */
+      answer?: string;
     }[];
   };
 }
 
-/** Generated from `/collections/Guide.schema.ts`. */
-export type GuideDoc = RootCMSDoc<GuideFields>;
+/** Generated from `/collections/Guides.schema.ts`. */
+export type GuidesDoc = RootCMSDoc<GuidesFields>;
 
 /** Generated from `/templates/If/If.schema.ts`. */
 export interface IfFields {
@@ -295,9 +353,9 @@ export interface IfFields {
   /** Conditions. Nested modules render only when all of these conditions pass. */
   conditions?: RootCMSOneOf<RootCMSOneOfOption<'IsFeatureFlag', IsFeatureFlagFields> | RootCMSOneOfOption<'IsLocale', IsLocaleFields>>[];
   /** Modules (if TRUE). Rendered when all conditions are satisfied. */
-  modulesIfTrue?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modulesIfTrue?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   /** Modules (if FALSE). Rendered when the conditions are NOT satisfied. */
-  modulesIfFalse?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modulesIfFalse?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
 
 /** Generated from `/blocks/ImageBlock/ImageBlock.schema.ts`. */
@@ -349,7 +407,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -370,7 +428,7 @@ export interface SandboxFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -386,7 +444,7 @@ export interface SectionFields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
 
 /** Generated from `/templates/Spacer/Spacer.schema.ts`. */
@@ -409,6 +467,18 @@ export interface Template50x50Fields {
   leftSection?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>;
   /** Right Section */
   rightSection?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>;
+}
+
+/** Generated from `/templates/TemplateBlogPosts/TemplateBlogPosts.schema.ts`. */
+export interface TemplateBlogPostsFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
+  /** Eyebrow */
+  eyebrow?: string;
+  /** Title */
+  title?: string;
+  /** Body copy */
+  body?: RootCMSRichText;
 }
 
 /** Generated from `/templates/TemplateCodeShowcase/TemplateCodeShowcase.schema.ts`. */
@@ -491,6 +561,20 @@ export interface TemplateFeatureSpotlightFields {
   }[];
   /** Image. Product screenshot. Recommended: 1920x1200 PNG. */
   image?: RootCMSImage;
+}
+
+/** Generated from `/templates/TemplateGuides/TemplateGuides.schema.ts`. */
+export interface TemplateGuidesFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
+  /** Eyebrow */
+  eyebrow?: string;
+  /** Title */
+  title?: string;
+  /** Body copy */
+  body?: RootCMSRichText;
+  /** Docs link. Line below the header that points developers to the docs. */
+  docsLink?: RootCMSRichText;
 }
 
 /** Generated from `/templates/TemplateHeadline/TemplateHeadline.schema.ts`. */
@@ -656,5 +740,5 @@ export interface TemplateSandboxFields {
   /** RichTextField */
   richtext?: RootCMSRichText;
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }

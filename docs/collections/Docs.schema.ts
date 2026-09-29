@@ -1,9 +1,13 @@
 import {schema} from '@blinkk/root-cms';
+import {DOCS_CATEGORIES} from '@/utils/docs-categories.js';
 
 export default schema.collection({
-  name: 'Guide',
-  description: 'How-to Guides',
-  url: '/guide/[slug]',
+  name: 'Docs',
+  description: 'Technical documentation for developers.',
+  url: '/docs/[...slug]',
+  // Editors set the order of the docs in the sidebar by dragging docs in the
+  // collection's "Custom order" view.
+  customSorting: true,
   preview: {
     title: 'meta.title',
     image: 'meta.image',
@@ -37,18 +41,23 @@ export default schema.collection({
         schema.select({
           id: 'category',
           label: 'Category',
-          help: '',
-          options: [
-            {value: 'guide', label: 'Guide'},
-            {value: 'cms', label: 'CMS'},
-            {value: 'api', label: 'API'},
-          ],
+          help: 'Sidebar group the doc is listed under.',
+          options: DOCS_CATEGORIES.map((category) => ({
+            value: category.id,
+            label: category.label,
+          })),
+        }),
+        schema.string({
+          id: 'navLabel',
+          label: 'Sidebar label',
+          help: 'Short label for the sidebar. Defaults to the content title.',
+          translate: true,
         }),
         schema.reference({
-          id: 'nextGuide',
-          label: 'Next Guide',
-          help: 'Suggested reading next guide.',
-          collections: ['Guide'],
+          id: 'nextDoc',
+          label: 'Next Doc',
+          help: 'Suggested doc to read next.',
+          collections: ['Docs'],
         }),
       ],
     }),
@@ -69,6 +78,20 @@ export default schema.collection({
           label: 'Content body',
           help: 'Top content body.',
           translate: true,
+        }),
+        schema.select({
+          id: 'reference',
+          label: 'Generated reference',
+          help: 'Adds reference docs generated from the source code after the sections. Regenerate with `node scripts/generate_reference.ts`.',
+          options: [
+            {value: 'cli', label: 'CLI reference'},
+            {value: 'api-root', label: 'API reference: @blinkk/root'},
+            {value: 'api-root-cms', label: 'API reference: @blinkk/root-cms'},
+            {
+              value: 'api-root-password-protect',
+              label: 'API reference: @blinkk/root-password-protect',
+            },
+          ],
         }),
         schema.array({
           id: 'sections',

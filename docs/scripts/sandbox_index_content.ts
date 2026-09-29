@@ -107,7 +107,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
             'Root.js pairs a fast web framework with a CMS your whole team will actually enjoy:<br>live preview, AI, localization and publishing workflows, all built in.'
           ),
           buttons: [
-            button('Get started', '/guide/'),
+            button('Get started', '/docs/'),
             button(
               'View on GitHub',
               'https://github.com/blinkk/rootjs',
@@ -137,7 +137,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
                 'i18n routing and sitemaps built in',
                 'Deploy to Firebase or App Engine'
               ),
-              link: {label: 'Read the guide', href: '/guide/'},
+              link: {label: 'Read the docs', href: '/docs/'},
             },
             {
               icon: 'preview',
@@ -371,7 +371,7 @@ export function buildSandboxIndexFields(screenshots: ScreenshotsMap) {
             'Create a project in minutes, then invite your team into the CMS.'
           ),
           buttons: [
-            button('Read the guide', '/guide/'),
+            button('Read the docs', '/docs/'),
             button(
               'Star on GitHub',
               'https://github.com/blinkk/rootjs',

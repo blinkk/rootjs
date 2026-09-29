@@ -1,6 +1,7 @@
 @use 'base';
 @use 'buttons';
 @use 'grid';
+@use 'highlight';
 @use 'tokens';
 @use 'type';
 
@@ -18,8 +19,7 @@
     color: tokens.$color-text-default;
     font-optical-sizing: auto;
     font-style: normal;
-    font-variation-settings:
-      "slnt" 0;
+    font-variation-settings: 'slnt' 0;
   }
 
   root-island {

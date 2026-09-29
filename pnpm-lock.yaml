@@ -223,6 +223,9 @@ importers:
       playwright:
         specifier: 1.63.0
         version: 1.63.0
+      typescript-api:
+        specifier: npm:typescript@6.0.3
+        version: typescript@6.0.3
 
   examples/basepath:
     dependencies:

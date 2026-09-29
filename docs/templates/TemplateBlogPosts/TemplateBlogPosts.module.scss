@@ -1,0 +1,80 @@
+@use 'breakpoints';
+@use 'platform';
+
+@layer template {
+  .blogPosts {
+    @include platform.theme-vars();
+    padding-top: 72px;
+    padding-bottom: 120px;
+    @include breakpoints.sm() {
+      padding-top: 40px;
+      padding-bottom: 80px;
+    }
+  }
+
+  // A single, centered reading column.
+  .inner {
+    @include platform.narrow-container(760px);
+  }
+
+  .posts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 56px;
+    @include breakpoints.sm() {
+      gap: 16px;
+      margin-top: 40px;
+    }
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px 32px 30px;
+    border: 1px solid var(--platform-border);
+    border-radius: platform.$radius-card;
+    background: var(--platform-card-bg);
+    color: var(--platform-fg);
+    text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+    @include breakpoints.sm() {
+      padding: 22px 22px 24px;
+    }
+
+    &:hover {
+      border-color: var(--platform-accent);
+      box-shadow: 0 16px 40px -24px rgba(15, 17, 21, 0.35);
+    }
+  }
+
+  .cardDate {
+    @include platform.eyebrow();
+    font-size: 12px;
+  }
+
+  .cardTitle {
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .cardDescription {
+    margin: 0;
+    color: var(--platform-muted);
+    text-wrap: pretty;
+  }
+
+  .cardLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--platform-accent);
+  }
+}

@@ -6,7 +6,7 @@ export const meta: SceneMeta = {
   id: 'cms-translations',
   width: 960,
   height: 600,
-  alt: 'The Root CMS translations editor for a page, with source strings alongside German, French and Japanese translations and an AI translate action.',
+  alt: 'The Root.js CMS translations editor for a page, with source strings alongside German, French, and Japanese translations and an AI translate action.',
 };
 
 const ROWS: Array<{source: string; de: string; fr: string; ja: string}> = [
