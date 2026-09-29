@@ -4,6 +4,7 @@ import * as schema from '../../../../../core/schema.js';
 import {
   DraftDocContext,
   DraftDocContextProvider,
+  useOptionalDraftDoc,
 } from '../../../../hooks/useDraftDoc.js';
 import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {cloneData} from '../../../../utils/objects.js';
@@ -20,9 +21,15 @@ interface BlockComponentModalProps {
 }
 
 export function BlockComponentModal(props: BlockComponentModalProps) {
+  // Preserve the parent doc's id so that translations are loaded and saved
+  // for the actual doc rather than the block.
+  const parentController = useOptionalDraftDoc()?.controller || null;
   const controller = useMemo(
-    () => new InMemoryDraftDocController(props.initialValue || {}),
-    [props.schema, props.initialValue]
+    () =>
+      new InMemoryDraftDocController(props.initialValue || {}, 'block', {
+        parent: parentController,
+      }),
+    [props.schema, props.initialValue, parentController]
   );
 
   const draftContext: DraftDocContext = useMemo(

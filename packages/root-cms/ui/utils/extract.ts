@@ -3,6 +3,7 @@ import * as schema from '../../core/schema.js';
 import {
   RichTextBlock,
   RichTextData,
+  RichTextInlineComponentsMap,
   RichTextListItem,
   RichTextTableRow,
 } from '../../shared/richtext.js';
@@ -171,7 +172,7 @@ export function extractField(
     }
   } else if (field.type === 'richtext') {
     if (field.translate) {
-      extractRichTextStrings(strings, fieldValue);
+      extractRichTextStrings(strings, fieldValue, field, types);
     }
   } else {
     console.log(`extract: ignoring field, id=${field.id}, type=${field.type}`);
@@ -262,23 +263,59 @@ export function extractFieldWithMetadata(
     if (field.translate) {
       // For richtext, we still use the simple extraction without metadata
       const strings = new Set<string>();
-      extractRichTextStrings(strings, fieldValue);
+      extractRichTextStrings(strings, fieldValue, field, types);
       strings.forEach((str) => addStringWithMeta(str));
     }
   }
 }
 
+/**
+ * Extracts translatable strings from rich text data. When the rich text
+ * `field` is provided, strings from custom block and inline components are
+ * extracted using the component schemas defined by the field's
+ * `blockComponents` and `inlineComponents`.
+ */
 export function extractRichTextStrings(
   strings: Set<string>,
-  data: RichTextData
+  data: RichTextData,
+  field?: schema.RichTextField,
+  types: Record<string, schema.Schema> = {}
 ) {
+  const ctx: RichTextExtractContext = {
+    blockComponents: toSchemaMap(field?.blockComponents),
+    inlineComponents: toSchemaMap(field?.inlineComponents),
+    types,
+  };
   const blocks = data?.blocks || [];
   blocks.forEach((block) => {
-    extractBlockStrings(strings, block);
+    extractBlockStrings(strings, block, ctx);
   });
 }
 
-function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
+interface RichTextExtractContext {
+  /** Custom block component schemas, keyed by schema name. */
+  blockComponents: Map<string, schema.Schema>;
+  /** Custom inline component schemas, keyed by schema name. */
+  inlineComponents: Map<string, schema.Schema>;
+  /** Schema types used for resolving `oneof` fields. */
+  types: Record<string, schema.Schema>;
+}
+
+function toSchemaMap(schemas?: schema.Schema[]) {
+  const map = new Map<string, schema.Schema>();
+  (schemas || []).forEach((s) => {
+    if (s?.name) {
+      map.set(s.name, s);
+    }
+  });
+  return map;
+}
+
+function extractBlockStrings(
+  strings: Set<string>,
+  block: RichTextBlock,
+  ctx: RichTextExtractContext
+) {
   if (!block?.type) {
     return;
   }
@@ -293,12 +330,23 @@ function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
     }
   }
 
-  function addComponentStrings(components?: Record<string, any>) {
+  function addComponentStrings(components?: RichTextInlineComponentsMap) {
     if (!components) {
       return;
     }
     Object.values(components).forEach((component) => {
-      collectComponentStrings(component);
+      const componentSchema =
+        component?.type && ctx.inlineComponents.get(component.type);
+      if (componentSchema) {
+        extractFields(
+          strings,
+          componentSchema.fields || [],
+          component.data || {},
+          ctx.types
+        );
+      } else {
+        collectComponentStrings(component);
+      }
     });
   }
 
@@ -327,13 +375,13 @@ function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
     });
   }
 
+  const blockSchema = ctx.blockComponents.get(block.type);
+
   if (block.type === 'heading' || block.type === 'paragraph') {
     addString(block.data?.text);
     addComponentStrings(block.data?.components);
   } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
     extractList(block.data?.items);
-  } else if (block.type === 'html') {
-    addString(block.data?.html);
   } else if (block.type === 'table') {
     // Extract strings from table cells
     const rows = block.data?.rows || [];
@@ -343,9 +391,22 @@ function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
         // Each cell contains an array of blocks
         const cellBlocks = cell.blocks || [];
         cellBlocks.forEach((cellBlock) => {
-          extractBlockStrings(strings, cellBlock);
+          extractBlockStrings(strings, cellBlock, ctx);
         });
       });
     });
+  } else if (blockSchema) {
+    // Custom block components store their field values in `block.data`.
+    extractFields(
+      strings,
+      blockSchema.fields || [],
+      block.data || {},
+      ctx.types
+    );
+  } else if (block.type === 'html') {
+    addString(block.data?.html);
+  } else if (block.type === 'image') {
+    addString(block.data?.file?.alt);
+    addString(block.data?.caption);
   }
 }
