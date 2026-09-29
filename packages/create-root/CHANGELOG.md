@@ -1,5 +1,7 @@
 # @blinkk/create-root
 
+## 3.5.3
+
 ## 3.5.2
 
 ### Patch Changes

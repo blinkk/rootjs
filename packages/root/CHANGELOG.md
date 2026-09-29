@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.5.3
+
+### Patch Changes
+
+- afd22ee: fix: create the firebase functions server once per instance on cold start
+
 ## 3.5.2
 
 ### Patch Changes
