@@ -59,6 +59,9 @@
     &:hover {
       border-color: var(--platform-accent);
       box-shadow: 0 16px 40px -24px rgba(15, 17, 21, 0.35);
+      @include breakpoints.sm() {
+        box-shadow: none;
+      }
     }
   }
 
