@@ -118,6 +118,20 @@ const API_LINKS = [
   },
 ];
 
+/** Sidebar sections, in order. The active section is shown as an eyebrow. */
+const NAV_SECTIONS = [
+  {label: 'Framework', links: GUIDE_LINKS},
+  {label: 'CMS', links: CMS_LINKS},
+  {label: 'API', links: API_LINKS},
+];
+
+/** Returns the sidebar section that contains the current page. */
+function getActiveSection(ctx: RequestContext) {
+  return NAV_SECTIONS.find((section) =>
+    section.links.some((link) => link.isActive(ctx))
+  );
+}
+
 export interface PageProps {
   doc: DocsDoc;
 }
@@ -171,77 +185,30 @@ function Sidebar() {
           <SiteLogo />
         </div>
 
-        <div className={styles.sidebarSection}>
-          <Text as="h2" size="p" weight="semi-bold">
-            {t('Framework')}
-          </Text>
-          {/* TODO(stevenle): create a system for this. */}
-          <UnstyledList className={styles.sidebarLinks}>
-            {GUIDE_LINKS.map((link) => (
-              <li>
-                <Text
-                  className={joinClassNames(
-                    styles.sidebarLink,
-                    link.isActive(ctx) && styles.sidebarLinkActive
-                  )}
-                  as="a"
-                  size="small"
-                  href={link.href}
-                >
-                  {t(link.label)}
-                </Text>
-              </li>
-            ))}
-          </UnstyledList>
-        </div>
-
-        <div className={styles.sidebarSection}>
-          <Text as="h2" size="p" weight="semi-bold">
-            {t('CMS')}
-          </Text>
-          {/* TODO(stevenle): create a system for this. */}
-          <UnstyledList className={styles.sidebarLinks}>
-            {CMS_LINKS.map((link) => (
-              <li>
-                <Text
-                  className={joinClassNames(
-                    styles.sidebarLink,
-                    link.isActive(ctx) && styles.sidebarLinkActive
-                  )}
-                  as="a"
-                  size="small"
-                  href={link.href}
-                >
-                  {t(link.label)}
-                </Text>
-              </li>
-            ))}
-          </UnstyledList>
-        </div>
-
-        <div className={styles.sidebarSection}>
-          <Text as="h2" size="p" weight="semi-bold">
-            {t('API')}
-          </Text>
-          {/* TODO(stevenle): create a system for this. */}
-          <UnstyledList className={styles.sidebarLinks}>
-            {API_LINKS.map((link) => (
-              <li>
-                <Text
-                  className={joinClassNames(
-                    styles.sidebarLink,
-                    link.isActive(ctx) && styles.sidebarLinkActive
-                  )}
-                  as="a"
-                  size="small"
-                  href={link.href}
-                >
-                  {t(link.label)}
-                </Text>
-              </li>
-            ))}
-          </UnstyledList>
-        </div>
+        {NAV_SECTIONS.map((section) => (
+          <div className={styles.sidebarSection}>
+            <h2 className={styles.sidebarHeading}>{t(section.label)}</h2>
+            <UnstyledList className={styles.sidebarLinks}>
+              {section.links.map((link) => {
+                const active = link.isActive(ctx);
+                return (
+                  <li>
+                    <a
+                      className={joinClassNames(
+                        styles.sidebarLink,
+                        active && styles.sidebarLinkActive
+                      )}
+                      href={link.href}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {t(link.label)}
+                    </a>
+                  </li>
+                );
+              })}
+            </UnstyledList>
+          </div>
+        ))}
       </nav>
     </aside>
   );
@@ -252,16 +219,21 @@ function Main(props: PageProps) {
   const content = fields.content || {};
   const sections = content.sections || [];
   const t = useTranslations();
+  const ctx = useRequestContext();
+  const activeSection = getActiveSection(ctx);
   return (
     <div className={styles.main}>
       <TableOfContents {...props} />
       <div className={styles.mainContent}>
         <div className={styles.mainContentHeader}>
+          {activeSection && (
+            <div className={styles.eyebrow}>{t(activeSection.label)}</div>
+          )}
           {content.title && (
             <Text
               className={styles.mainContentTitle}
               as="h1"
-              size="h4"
+              size="h3"
               weight="semi-bold"
             >
               {t(content.title)}
@@ -315,27 +287,20 @@ function TableOfContents(props: PageProps) {
     return null;
   }
   return (
-    <div className={styles.toc}>
+    <nav className={styles.toc} aria-label={t('On this page')}>
       <div className={styles.tocContent}>
-        <Text as="h2" size="small" weight="semi-bold">
-          {t('On this page')}
-        </Text>
+        <h2 className={styles.tocHeading}>{t('On this page')}</h2>
         <UnstyledList className={styles.tocLinks}>
           {sections.map((section) => (
             <li>
-              <Text
-                className={styles.tocLink}
-                as="a"
-                size="small"
-                href={`#${section.id || ''}`}
-              >
-                {t(section.title)}
-              </Text>
+              <a className={styles.tocLink} href={`#${section.id || ''}`}>
+                {t(section.title || '')}
+              </a>
             </li>
           ))}
         </UnstyledList>
       </div>
-    </div>
+    </nav>
   );
 }
 

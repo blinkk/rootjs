@@ -1,33 +1,47 @@
+// Matches the code cards in `TemplateCodeShowcase` on the home page.
+
 @use 'breakpoints';
-@use 'tokens';
+@use 'platform';
 
 .codeBlock {
   display: block;
-  position: relative;
+  overflow: hidden;
+  border: 1px solid platform.$color-border;
+  border-radius: platform.$radius-media;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid platform.$color-border;
+  background: platform.$color-tint;
+}
+
+.language {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: platform.$color-muted;
 }
 
 .codeBlock pre {
-  border-radius: 8px;
-  border: 1px solid tokens.$color-grey-300;
-  background: tokens.$color-grey-50;
   font-family: var(--font-family-mono);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 13.5px;
+  line-height: 1.6;
   margin: 0;
   padding: 16px;
   height: 100%;
   white-space: pre-wrap;
   overflow: auto;
+  background: transparent;
   @include breakpoints.sm() {
     font-size: 12px;
   }
 }
 
-.language {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 12px;
-  line-height: 1;
-  color: tokens.$color-grey-600;
+// Let highlight.js colors show without its theme background.
+.codeBlock :global(.hljs) {
+  background: transparent;
 }

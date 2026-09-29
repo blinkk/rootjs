@@ -92,11 +92,8 @@
 }
 
 .asideTitle {
-  margin: 0 0 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--platform-muted);
+  @include platform.nav-heading();
+  margin-bottom: 12px;
 }
 
 .glance {

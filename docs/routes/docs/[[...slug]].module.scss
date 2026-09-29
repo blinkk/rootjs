@@ -1,12 +1,21 @@
+// Docs layout: a fixed sidebar, the content column, and a sticky table of
+// contents. Colors, borders and type details come from the shared "platform"
+// tokens (see `styles/platform.scss`) so the docs match the home page and the
+// guides.
+
 @use 'breakpoints';
 @use 'buttons';
-@use 'tokens';
+@use 'platform';
 
 $guide-max-width: 1440px;
-$guide-sidebar-width: 180px;
+$guide-sidebar-width: 188px;
 $guide-toc-width: 216px;
+// The accent at low opacity, for hover and active backgrounds.
+$accent-wash: rgba(platform.$color-accent, 0.08);
+$ink-wash: rgba(platform.$color-ink, 0.04);
 
 .guideLayout {
+  @include platform.theme-vars();
   @include breakpoints.sm() {
     --layout-padding: 16px;
   }
@@ -19,23 +28,27 @@ $guide-toc-width: 216px;
   }
 }
 
+// Sidebar.
+
 .sidebar {
   @include breakpoints.lg-gt() {
-    padding: 0 40px 0 var(--layout-padding);
+    padding: 0 32px 0 var(--layout-padding);
     flex-shrink: 0;
-    background: tokens.$color-grey-100;
+    background: platform.$color-tint;
+    border-right: 1px solid var(--platform-border);
     position: fixed;
     left: 0;
     top: 0;
     bottom: 0;
     z-index: 2000;
+    overflow-y: auto;
   }
 }
 
 .sidebarMobileSubnav {
   display: block;
   padding: 8px 16px;
-  border-bottom: 1px solid tokens.$color-grey-300;
+  border-bottom: 1px solid var(--platform-border);
   @include breakpoints.md() {
     padding: 8px 40px;
   }
@@ -58,20 +71,20 @@ $guide-toc-width: 216px;
   border-color: transparent;
   padding: 4px 10px;
   border-radius: 8px;
+  color: var(--platform-fg);
 }
 
 .sidebarMobileSubnavTrigger:hover {
-  background-color: tokens.$color-grey-100;
+  background-color: $ink-wash;
 }
 
 .sidebarMobileSubnavTrigger:active {
-  background-color: tokens.$color-grey-200;
+  background-color: $accent-wash;
 }
 
 .sidebarContent {
   width: $guide-sidebar-width;
-  border-top: 1px solid tokens.$color-grey-300;
-  // padding-top: 40px;
+  padding-bottom: 40px;
 
   @include breakpoints.md-lt() {
     transform: translateX(-100%);
@@ -83,18 +96,22 @@ $guide-toc-width: 216px;
     width: calc(100% - 60px);
     max-width: 300px;
     z-index: 2000;
-    background: tokens.$color-grey-100;
+    overflow-y: auto;
+    background: platform.$color-tint;
     padding-left: var(--layout-padding);
-    border-right: 1px solid tokens.$color-grey-300;
+    padding-right: 24px;
+    border-right: 1px solid var(--platform-border);
   }
   @include breakpoints.sm() {
-    padding-left: 30px;
+    padding-left: 24px;
   }
 }
 
 .sidebarContent:global(.expanded) {
   @include breakpoints.md-lt() {
     transform: translateX(0);
+    // Only while open, so the shadow doesn't show at the edge when closed.
+    box-shadow: 0 24px 60px -24px rgba(platform.$color-ink, 0.28);
   }
 }
 
@@ -103,41 +120,59 @@ $guide-toc-width: 216px;
   align-items: center;
   height: var(--header-height);
   margin-left: -10px;
-  border-bottom: 1px solid tokens.$color-grey-300;
+  border-bottom: 1px solid var(--platform-border);
 }
 
 .sidebarSection {
-  margin-top: 30px;
+  margin-top: 28px;
+}
+
+.sidebarHeading {
+  @include platform.nav-heading();
+  padding-left: 10px;
+  margin-left: -10px;
 }
 
 .sidebarLinks {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sidebarLink {
+  display: block;
+  margin-left: -10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.35;
+  color: var(--platform-muted);
   text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .sidebarLink:hover {
-  // text-decoration: underline;
-  // text-underline-offset: 4px;
-
-  color: tokens.$color-blue-700;
+  background: $ink-wash;
+  color: var(--platform-fg);
 }
 
-.sidebarLinkActive {
-  font-weight: 700;
-  color: tokens.$color-blue-900;
+.sidebarLinkActive,
+.sidebarLinkActive:hover {
+  background: $accent-wash;
+  color: var(--platform-accent);
+  font-weight: 600;
 }
+
+// Table of contents.
 
 .toc {
   padding-left: 40px;
   padding-right: var(--layout-padding);
-  padding-top: 60px;
+  padding-top: 64px;
   flex-shrink: 0;
   @include breakpoints.md-lt() {
     display: none;
@@ -146,64 +181,82 @@ $guide-toc-width: 216px;
 
 .tocContent {
   width: $guide-toc-width;
-  padding-left: 20px;
-  border-left: 1px solid tokens.$color-grey-300;
   position: sticky;
-  top: calc(var(--header-height) + 60px);
+  top: calc(var(--header-height) + 64px);
+}
+
+.tocHeading {
+  @include platform.nav-heading();
 }
 
 .tocLinks {
-  margin-top: 4px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding-left: 14px;
+  border-left: 1px solid var(--platform-border);
 }
 
 .tocLink {
   display: block;
-  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--platform-muted);
   text-decoration: none;
 }
 
 .tocLink:hover {
-  color: tokens.$color-blue-700;
+  color: var(--platform-accent);
 }
+
+// Main content.
 
 .main {
   flex: 1;
+  min-width: 0;
   @include breakpoints.lg-gt() {
     display: flex;
     flex-direction: row-reverse;
-    padding-left: calc(var(--layout-padding) + #{$guide-sidebar-width} + 40px);
+    padding-left: calc(var(--layout-padding) + #{$guide-sidebar-width} + 32px);
   }
 }
 
 .mainContent {
   flex: 1;
+  min-width: 0;
+  max-width: 820px;
   padding: 40px var(--grid-padding) 120px;
   @include breakpoints.lg() {
-    padding: 60px 20px 60px 60px;
+    padding: 64px 20px 96px 60px;
   }
   @include breakpoints.xl-gt() {
-    padding: 60px 80px;
+    padding: 64px 80px 120px;
   }
+}
+
+.eyebrow {
+  @include platform.eyebrow();
+  margin-bottom: 14px;
+}
+
+.mainContentTitle {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+.mainContentSectionTitle {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
 }
 
 .mainContentBody,
 .mainContentSectionBody {
   margin-top: 20px;
+  text-wrap: pretty;
 
   p {
     margin-top: 20px;
-  }
-
-  a {
-    text-underline-offset: 4px;
-    transition: all 0.18s ease;
-  }
-
-  a:hover {
-    color: tokens.$color-blue-700;
   }
 
   li > *:first-child {
@@ -226,24 +279,21 @@ $guide-toc-width: 216px;
   }
 
   th {
-    background-color: tokens.$color-grey-100;
+    background-color: platform.$color-tint;
+    font-weight: 600;
   }
 
   td,
   th {
-    border: 1px solid tokens.$color-grey-300;
-    padding: 8px;
+    border: 1px solid var(--platform-border);
+    padding: 8px 12px;
     text-align: left;
   }
 
   table:global(.routes-table) {
     code {
-      font-family: var(--font-family-mono);
-      font-size: 14px;
       display: inline-block;
       padding: 4px 8px;
-      border-radius: 2px;
-      background: tokens.$color-grey-50;
       @include breakpoints.sm() {
         font-size: 12px;
       }
@@ -268,10 +318,39 @@ $guide-toc-width: 216px;
   }
 }
 
+.mainContentBody {
+  color: var(--platform-muted);
+}
+
+// Links and inline code in rich text, including blocks (e.g. `CopyBlock`).
+.mainContent {
+  a:not([class]) {
+    color: var(--platform-accent);
+    text-decoration-color: rgba(platform.$color-accent, 0.35);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s ease;
+  }
+
+  a:not([class]):hover {
+    text-decoration-color: currentColor;
+  }
+
+  :not(pre) > code {
+    padding: 2px 6px;
+    border: 1px solid var(--platform-border);
+    border-radius: 6px;
+    background: platform.$color-tint;
+    font-family: var(--font-family-mono);
+    font-size: 0.875em;
+    color: var(--platform-fg);
+  }
+}
+
 .mainContentSection {
   padding-top: 40px;
   margin-top: 40px;
-  border-top: 1px solid tokens.$color-grey-300;
+  border-top: 1px solid var(--platform-border);
+  scroll-margin-top: calc(var(--header-height) + 24px);
 }
 
 .mainContentSectionBlock {

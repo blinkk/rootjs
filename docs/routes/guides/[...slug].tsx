@@ -74,9 +74,7 @@ export default function Page(props: PageProps) {
           <aside className={styles.aside}>
             {takeaways.length > 0 && (
               <div className={styles.glance}>
-                <Text as="h2" size="small" className={styles.asideTitle}>
-                  {t('At a glance')}
-                </Text>
+                <h2 className={styles.asideTitle}>{t('At a glance')}</h2>
                 <UnstyledList className={styles.takeaways}>
                   {takeaways.map((item) => (
                     <li>
@@ -89,9 +87,7 @@ export default function Page(props: PageProps) {
             )}
             {sections.length > 0 && (
               <nav className={styles.toc} aria-label={t('On this page')}>
-                <Text as="h2" size="small" className={styles.asideTitle}>
-                  {t('On this page')}
-                </Text>
+                <h2 className={styles.asideTitle}>{t('On this page')}</h2>
                 <UnstyledList className={styles.tocLinks}>
                   {sections.map((section) => (
                     <li>
