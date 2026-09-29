@@ -38,7 +38,7 @@ export default function Page(props: PageProps) {
           <SectionHeader
             eyebrow="Root.js guides"
             title="See how your team would work in Root.js"
-            body="Short, non-technical tours of each part of Root.js and its CMS, with screenshots from the app. Written for the people choosing a content platform, not just the developers building on it."
+            body="Explore the various features of Root.js and how different parts of your team may collaborate with it between developers, designers, marketers, copy writers, and translators."
             titleSize="h1"
           />
           <p className={styles.docsLink}>
