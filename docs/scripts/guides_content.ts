@@ -92,11 +92,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'overview',
     title: 'Root.js at a glance',
     description:
-      'What Root.js is, who it is for, and how it helps marketing, content and engineering teams ship websites together.',
+      'What Root.js is, who it is for, and how it helps marketing, content, and engineering teams ship websites together.',
     eyebrow: 'Overview',
-    heading: 'One place for your team to build, edit and ship the website',
+    heading: 'One place for your team to build, edit, and ship the website',
     intro: richtext(
-      'Root.js is an open-source web platform with a built-in content management system (CMS). Developers build the site and define what content it needs. Everyone else — marketers, writers, designers, translators and reviewers — edits that content in a visual editor, previews it on the real site and publishes it when it is ready.',
+      'Root.js is an open-source web platform with a built-in content management system (CMS). Developers build the site and define what content it needs. Everyone else — marketers, writers, designers, translators, and reviewers — edits that content in a visual editor, previews it on the real site, and publishes it when it is ready.',
       'This guide is a short tour for the people choosing a platform. Each section links to a more detailed guide.'
     ),
     heroImage: 'cms-editor-preview',
@@ -114,12 +114,12 @@ export const GUIDES: GuideSource[] = [
         id: 'who-its-for',
         title: 'Who it is for',
         body: richtext(
-          'Root.js is built for organizations whose website is a product: brand and marketing sites, product launches, localized campaigns and content hubs that change every week and have many people involved.',
+          'Root.js is built for organizations whose website is a product: brand and marketing sites, product launches, localized campaigns, and content hubs that change every week and have many people involved.',
           bullets(
-            '<b>Content and marketing teams</b> get a friendly editor, previews and scheduling, without waiting on a developer for every change.',
+            '<b>Content and marketing teams</b> get a friendly editor, previews, and scheduling, without waiting on a developer for every change.',
             '<b>Localization teams</b> get one place to see what needs translating, with AI and vendor integrations.',
             '<b>Engineering teams</b> keep the content model in code, reviewed and versioned like the rest of the site.',
-            '<b>Leaders</b> get governance: roles, approvals, publishing checks and a full audit trail.'
+            '<b>Leaders</b> get governance: roles, approvals, publishing checks, and a full audit trail.'
           )
         ),
       },
@@ -127,8 +127,8 @@ export const GUIDES: GuideSource[] = [
         id: 'how-content-is-organized',
         title: 'How content is organized',
         body: richtext(
-          'Content lives in <b>collections</b>, such as Pages, Recipes or Products. Each collection has a clear structure that developers define for the site: a product page has a name, price and photos; a landing page is built from a set of approved sections. Editors fill in the blanks and rearrange sections, so every page stays on brand and nothing breaks the layout.',
-          `Every doc shows at a glance whether it is a draft, published or scheduled, and who changed it last. See ${guideLink('editing', 'Editing and live preview')}.`
+          'Content lives in <b>collections</b>, such as Pages, Recipes, or Products. Each collection has a clear structure that developers define for the site: a product page has a name, price, and photos; a landing page is built from a set of approved sections. Editors fill in the blanks and rearrange sections, so every page stays on brand and nothing breaks the layout.',
+          `Every doc shows at a glance whether it is a draft, published, or scheduled, and who changed it last. See ${guideLink('editing', 'Editing and live preview')}.`
         ),
         image: 'cms-content-list',
         caption:
@@ -139,7 +139,7 @@ export const GUIDES: GuideSource[] = [
         title: 'From draft to live',
         body: richtext(
           'Every change starts as a draft. Editors preview it on the real site, share a preview link, and publish when it is approved — right away, at a scheduled time, or together with other changes in a release. Automated checks can catch missing translations or other problems before anything goes live, and every version is kept so any mistake can be undone.',
-          `See ${guideLink('publishing', 'Publishing, scheduling and releases')}.`
+          `See ${guideLink('publishing', 'Publishing, scheduling, and releases')}.`
         ),
         image: 'cms-publish-checks',
         caption:
@@ -149,7 +149,7 @@ export const GUIDES: GuideSource[] = [
         id: 'ai-built-in',
         title: 'AI, built in',
         body: richtext(
-          `Root AI is an assistant inside the CMS that understands your site’s content structure. It can answer questions about your content, draft copy, translate pages, write image descriptions and prepare releases. Editors choose whether it can only read, must ask before changing anything, or may edit drafts on its own. It never publishes by itself. See ${guideLink('root-ai', 'Root AI')}.`
+          `Root AI is an assistant inside the CMS that understands your site’s content structure. It can answer questions about your content, draft copy, translate pages, write image descriptions, and prepare releases. Editors choose whether it can only read, must ask before changing anything, or may edit drafts on its own. It never publishes by itself. See ${guideLink('root-ai', 'Root AI')}.`
         ),
       },
       {
@@ -157,7 +157,7 @@ export const GUIDES: GuideSource[] = [
         title: 'Open source, and your data stays yours',
         body: richtext(
           'Root.js, including the CMS, is open source under the MIT license, with no per-seat fees. Your content is stored in your organization’s own Google Cloud (Firebase) project, not in a vendor’s shared database, and people sign in with their Google accounts. You decide where the site is hosted and who has access.',
-          `For roles, approvals and audit logs, see ${guideLink('governance', 'Roles, permissions and governance')}.`
+          `For roles, approvals, and audit logs, see ${guideLink('governance', 'Roles, permissions, and governance')}.`
         ),
       },
     ],
@@ -170,7 +170,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Where does our content live?',
         answer:
-          'In a Firestore database in your own Google Cloud project. You control access, backups and retention.',
+          'In a Firestore database in your own Google Cloud project. You control access, backups, and retention.',
       },
       {
         question: 'What does it cost?',
@@ -198,7 +198,7 @@ export const GUIDES: GuideSource[] = [
     heroImage: 'cms-editor-preview',
     takeaways: [
       'Side-by-side editor and live preview.',
-      'Desktop, tablet and mobile previews at once.',
+      'Desktop, tablet, and mobile previews at once.',
       'Click anything in the preview to jump to its field.',
       'Pages are built from approved, on-brand sections.',
       'Find any doc or field with ⌘K search.',
@@ -208,7 +208,7 @@ export const GUIDES: GuideSource[] = [
         id: 'live-preview',
         title: 'A live preview of the real site',
         body: richtext(
-          'The preview is not an approximation. It is the actual website, rendered with the draft content, so what editors see is what visitors will get. Editors can view desktop, tablet and mobile sizes side by side, switch languages, and click any element in the preview to jump straight to the field that controls it.',
+          'The preview is not an approximation. It is the actual website, rendered with the draft content, so what editors see is what visitors will get. Editors can view desktop, tablet, and mobile sizes side by side, switch languages, and click any element in the preview to jump straight to the field that controls it.',
           'Preview links can be shared with anyone who has access to the CMS. Stakeholders who only need to review can be given the read-only Viewer role.'
         ),
       },
@@ -216,9 +216,9 @@ export const GUIDES: GuideSource[] = [
         id: 'structured-content',
         title: 'Flexible pages, consistent brand',
         body: richtext(
-          'Developers define the building blocks for each kind of page, such as a hero, a product grid or a set of cards. Editors add, remove and reorder those blocks to build new pages without writing code. Because each block has a fixed design, pages stay on brand and accessible, and editors cannot accidentally break a layout.',
+          'Developers define the building blocks for each kind of page, such as a hero, a product grid, or a set of cards. Editors add, remove, and reorder those blocks to build new pages without writing code. Because each block has a fixed design, pages stay on brand and accessible, and editors cannot accidentally break a layout.',
           bullets(
-            'Rich text with formatting, links and embedded components.',
+            'Rich text with formatting, links, and embedded components.',
             'Image fields with alt text, and a shared asset library.',
             'References between docs, such as a page that features a set of products.',
             'Help text on every field, so editors know what goes where.'
@@ -226,7 +226,7 @@ export const GUIDES: GuideSource[] = [
         ),
         image: 'cms-content-list',
         caption:
-          'Collections keep content organized. Each doc shows its status, last editor and a preview thumbnail.',
+          'Collections keep content organized. Each doc shows its status, last editor, and a preview thumbnail.',
       },
       {
         id: 'search',
@@ -242,7 +242,7 @@ export const GUIDES: GuideSource[] = [
         id: 'safety-nets',
         title: 'Safety nets while you work',
         body: richtext(
-          `Drafts save automatically, and nothing reaches the live site until someone publishes it. Undo and redo work across fields, every save is kept in the version history, and any field can be rolled back to an earlier value. See ${guideLink('publishing', 'Publishing, scheduling and releases')}.`
+          `Drafts save automatically, and nothing reaches the live site until someone publishes it. Undo and redo work across fields, every save is kept in the version history, and any field can be rolled back to an earlier value. See ${guideLink('publishing', 'Publishing, scheduling, and releases')}.`
         ),
       },
     ],
@@ -250,7 +250,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Can editors see exactly what visitors will see?',
         answer:
-          'Yes. The preview renders the real site with draft content, at desktop, tablet and mobile sizes and in any language.',
+          'Yes. The preview renders the real site with draft content, at desktop, tablet, and mobile sizes, and in any language.',
       },
       {
         question: 'Can editors build new pages without a developer?',
@@ -267,13 +267,13 @@ export const GUIDES: GuideSource[] = [
 
   {
     slug: 'publishing',
-    title: 'Publishing, scheduling and releases',
+    title: 'Publishing, scheduling, and releases',
     description:
-      'How Root.js takes content from draft to live: scheduled publishing, releases that launch many changes at once, automated checks and full version history.',
+      'How Root.js takes content from draft to live: scheduled publishing, releases that launch many changes at once, automated checks, and full version history.',
     eyebrow: 'Publishing',
     heading: 'Ship content like you ship code',
     intro: richtext(
-      'Launches rarely involve a single page. A seasonal campaign might touch the home page, a dozen product pages, the navigation and a pricing sheet, in six languages, all at 9:00 AM on a Monday. Root.js is designed for that moment.'
+      'Launches rarely involve a single page. A seasonal campaign might touch the home page, a dozen product pages, the navigation, and a pricing sheet, in six languages, all at 9:00 AM on a Monday. Root.js is designed for that moment.'
     ),
     heroImage: 'cms-publish-checks',
     takeaways: [
@@ -324,7 +324,7 @@ export const GUIDES: GuideSource[] = [
         ),
         image: 'cms-version-history',
         caption:
-          'Version history for a page: every save and publish, who made it, and options to compare, restore or copy.',
+          'Version history for a page: every save and publish, who made it, and options to compare, restore, or copy.',
       },
     ],
     faq: [
@@ -355,7 +355,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'localization',
     title: 'Localization and translation',
     description:
-      'How Root.js helps teams launch and maintain a website in many languages, with AI translation, vendor integrations and clear visibility into what is missing.',
+      'How Root.js helps teams launch and maintain a website in many languages, with AI translation, vendor integrations, and clear visibility into what is missing.',
     eyebrow: 'Localization',
     heading: 'Every market, one workflow',
     intro: richtext(
@@ -374,7 +374,7 @@ export const GUIDES: GuideSource[] = [
         id: 'markets',
         title: 'Choose where each page is live',
         body: richtext(
-          'Each page chooses which languages and markets it is published in. A product page might launch in English, German and French first, and add Japanese later. Visitors are sent to their preferred language automatically, and search engines are told about every translated version.'
+          'Each page chooses which languages and markets it is published in. A product page might launch in English, German, and French first, and add Japanese later. Visitors are sent to their preferred language automatically, and search engines are told about every translated version.'
         ),
         image: 'cms-localization-modal',
         caption:
@@ -427,11 +427,11 @@ export const GUIDES: GuideSource[] = [
     slug: 'collaboration',
     title: 'Collaboration and review',
     description:
-      'How teams give feedback, review changes and track content work in the CMS, with comments on fields, live presence and tasks.',
+      'How teams give feedback, review changes, and track content work in the CMS, with comments on fields, live presence, and tasks.',
     eyebrow: 'Collaboration',
     heading: 'Feedback right where the words live',
     intro: richtext(
-      'Website feedback usually lives everywhere except the website: in chat threads, email chains and screenshots with red circles. The Root.js CMS brings the conversation into the editor, next to the exact field it is about.'
+      'Website feedback usually lives everywhere except the website: in chat threads, email chains, and screenshots with red circles. The Root.js CMS brings the conversation into the editor, next to the exact field it is about.'
     ),
     heroImage: 'cms-field-comments',
     takeaways: [
@@ -445,7 +445,7 @@ export const GUIDES: GuideSource[] = [
         id: 'comments',
         title: 'Comments on the field, not in the chat',
         body: richtext(
-          'Anyone can start a comment thread on a specific field, such as a headline, an image or a call to action. Mention a teammate with @ and they are notified. Threads can be resolved when the change is made, and important ones can be pinned to the top of the doc, so decisions stay attached to the content they shaped.'
+          'Anyone can start a comment thread on a specific field, such as a headline, an image, or a call to action. Mention a teammate with @ and they are notified. Threads can be resolved when the change is made, and important ones can be pinned to the top of the doc, so decisions stay attached to the content they shaped.'
         ),
       },
       {
@@ -459,7 +459,7 @@ export const GUIDES: GuideSource[] = [
         id: 'tasks',
         title: 'Track content work with tasks',
         body: richtext(
-          'The task manager (currently an experimental feature) tracks the work behind a launch: writing copy, reviewing translations, replacing images. Tasks link to the docs they are about and have assignees, statuses and due dates, so the whole team can see what is left before a release.'
+          'The task manager (currently an experimental feature) tracks the work behind a launch: writing copy, reviewing translations, replacing images. Tasks link to the docs they are about and have assignees, statuses, and due dates, so the whole team can see what is left before a release.'
         ),
         image: 'cms-tasks',
         caption:
@@ -496,16 +496,16 @@ export const GUIDES: GuideSource[] = [
     slug: 'root-ai',
     title: 'Root AI',
     description:
-      'How Root AI helps teams draft, translate and manage content inside the CMS, with guardrails that keep people in control.',
+      'How Root AI helps teams draft, translate, and manage content inside the CMS, with guardrails that keep people in control.',
     eyebrow: 'Root AI',
     heading: 'An AI teammate that knows your content',
     intro: richtext(
-      'Most AI writing tools work on a blank page. Root AI works inside the CMS, with the same understanding of your site’s structure, content and workflow that your team has. It can do real work, such as updating a page, translating it and adding it to a release, while your team stays in control of what is published.'
+      'Most AI writing tools work on a blank page. Root AI works inside the CMS, with the same understanding of your site’s structure, content, and workflow that your team has. It can do real work, such as updating a page, translating it, and adding it to a release, while your team stays in control of what is published.'
     ),
     heroImage: 'cms-root-ai',
     takeaways: [
       'Chat with an assistant that can read and edit your content.',
-      'Choose read-only, ask-first or auto-edit modes.',
+      'Choose read-only, ask-first, or auto-edit modes.',
       'AI never publishes on its own.',
       'Help in the editor: rewrites, alt text, summaries.',
       'Use the AI model and provider of your choice.',
@@ -545,7 +545,7 @@ export const GUIDES: GuideSource[] = [
         id: 'your-models',
         title: 'Your choice of AI provider',
         body: richtext(
-          'Root AI is not tied to one vendor. Teams connect the models they have approved, from providers such as Anthropic, OpenAI and Google, or a self-hosted model, using their own accounts and keys. Editors pick a model in the chat, and admins decide which ones are offered.'
+          'Root AI is not tied to one vendor. Teams connect the models they have approved, from providers such as Anthropic, OpenAI, and Google, or a self-hosted model, using their own accounts and keys. Editors pick a model in the chat, and admins decide which ones are offered.'
         ),
       },
       {
@@ -577,21 +577,21 @@ export const GUIDES: GuideSource[] = [
 
   {
     slug: 'governance',
-    title: 'Roles, permissions and governance',
+    title: 'Roles, permissions, and governance',
     description:
-      'How Root.js controls who can view, edit and publish content, and keeps a record of every change.',
+      'How Root.js controls who can view, edit, and publish content, and keeps a record of every change.',
     eyebrow: 'Governance',
     heading: 'The right hands on the right content',
     intro: richtext(
-      'As more people touch the website, the questions from legal, security and leadership get sharper: who can change the home page, who approved this, and what exactly changed last Tuesday? Root.js answers them with clear roles, publishing controls and a full activity log.'
+      'As more people touch the website, the questions from legal, security, and leadership get sharper: who can change the home page, who approved this, and what exactly changed last Tuesday? Root.js answers them with clear roles, publishing controls, and a full activity log.'
     ),
     heroImage: 'cms-roles',
     takeaways: [
-      'Four roles: Admin, Editor, Contributor and Viewer.',
+      'Four roles: Admin, Editor, Contributor, and Viewer.',
       'Grant access to people or to a whole company domain.',
       'Groups that grant a role for selected collections only.',
       'Lock publishing on docs during a freeze.',
-      'An activity log of saves, publishes and sharing changes.',
+      'An activity log of saves, publishes, and sharing changes.',
     ],
     sections: [
       {
@@ -600,7 +600,7 @@ export const GUIDES: GuideSource[] = [
         body: richtext(
           bullets(
             '<b>Viewer:</b> can see content and previews, but not change anything. Good for stakeholders and reviewers.',
-            '<b>Contributor:</b> can create and edit drafts, but not publish. Good for writers, agencies and freelancers.',
+            '<b>Contributor:</b> can create and edit drafts, but not publish. Good for writers, agencies, and freelancers.',
             '<b>Editor:</b> can edit and publish content, and manage releases.',
             '<b>Admin:</b> can do everything, including managing people and project settings.'
           ),
@@ -618,14 +618,14 @@ export const GUIDES: GuideSource[] = [
         id: 'locks',
         title: 'Publishing locks',
         body: richtext(
-          'During a code freeze, a legal review or a big launch, publishing can be locked on a doc, with a reason and an optional end date. The lock is visible to everyone, and lifts automatically when the date passes.'
+          'During a code freeze, a legal review, or a big launch, publishing can be locked on a doc, with a reason and an optional end date. The lock is visible to everyone, and lifts automatically when the date passes.'
         ),
       },
       {
         id: 'audit-log',
         title: 'A record of every change',
         body: richtext(
-          'The activity log records who did what, and when: saves, publishes, releases, translation imports, data syncs, publishing locks and sharing changes. Combined with version history, teams can always answer what changed, who changed it, and what it looked like before.'
+          'The activity log records who did what, and when: saves, publishes, releases, translation imports, data syncs, publishing locks, and sharing changes. Combined with version history, teams can always answer what changed, who changed it, and what it looked like before.'
         ),
         image: 'cms-action-logs',
         caption:
@@ -668,9 +668,9 @@ export const GUIDES: GuideSource[] = [
     description:
       'How Root.js manages images and files, keeps them in sync with design tools, and brings spreadsheet and API data into the website.',
     eyebrow: 'Assets and data',
-    heading: 'Images, files and data, in sync',
+    heading: 'Images, files, and data, all in sync',
     intro: richtext(
-      'A website is more than words. It is photos and illustrations from the design team, and data like prices, store hours and inventory that change often. Root.js keeps both organized and up to date, without copy and paste.'
+      'A website is more than words. It is photos and illustrations from the design team, and data like prices, store hours, and inventory that change often. Root.js keeps both organized and up to date, without copy and paste.'
     ),
     heroImage: 'cms-asset-library',
     takeaways: [
@@ -707,7 +707,7 @@ export const GUIDES: GuideSource[] = [
         id: 'data-sources',
         title: 'Bring your data along',
         body: richtext(
-          'Data sources connect the website to information that lives elsewhere: a Google Sheet of prices maintained by the merchandising team, or a feed of store hours from an internal system. The CMS syncs the data on demand or on a schedule (hourly, daily, weekly and so on), shows when it was last updated, and publishes it on its own, automatically after each sync, or as part of a release, so new prices go live at the same moment as the campaign that announces them.'
+          'Data sources connect the website to information that lives elsewhere: a Google Sheet of prices maintained by the merchandising team, or a feed of store hours from an internal system. The CMS syncs the data on demand or on a schedule (hourly, daily, weekly, and so on), shows when it was last updated, and publishes it on its own, automatically after each sync, or as part of a release, so new prices go live at the same moment as the campaign that announces them.'
         ),
         image: 'cms-data-sources',
         caption:
@@ -741,13 +741,13 @@ export const GUIDES: GuideSource[] = [
     eyebrow: 'Integrations',
     heading: 'Make the CMS your own',
     intro: richtext(
-      'Every organization has its own tools, rules and habits. The Root.js CMS is designed to be extended, so it can fit how your team already works instead of the other way around.'
+      'Every organization has its own tools, rules, and habits. The Root.js CMS is designed to be extended, so it can fit how your team already works instead of the other way around.'
     ),
     heroImage: 'cms-sidebar-tools',
     takeaways: [
       'Add your own tools to the CMS sidebar.',
       'Custom publishing checks and notifications.',
-      'Connect AI, translation and data providers.',
+      'Connect AI, translation, and data providers.',
       'Content structure defined in code, with version control.',
       'Open source, with no vendor lock-in.',
     ],
@@ -756,7 +756,7 @@ export const GUIDES: GuideSource[] = [
         id: 'custom-tools',
         title: 'Your tools, inside the CMS',
         body: richtext(
-          'Developers can add custom tools to the CMS sidebar, such as a launch checklist, an SEO dashboard or an internal reporting page, so editors do not have to leave the CMS to use them.'
+          'Developers can add custom tools to the CMS sidebar, such as a launch checklist, an SEO dashboard, or an internal reporting page, so editors do not have to leave the CMS to use them.'
         ),
       },
       {
@@ -782,7 +782,7 @@ export const GUIDES: GuideSource[] = [
         id: 'content-as-code',
         title: 'Content structure as code',
         body: richtext(
-          'The structure of your content is defined in code alongside the website. Changes to it are reviewed, tested and versioned like any other change, and developers get type checking that catches mistakes before they reach editors. The editor can also be embedded in other internal apps.'
+          'The structure of your content is defined in code alongside the website. Changes to it are reviewed, tested, and versioned like any other change, and developers get type checking that catches mistakes before they reach editors. The editor can also be embedded in other internal apps.'
         ),
       },
       {
@@ -797,7 +797,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Can we add our own internal tools to the CMS?',
         answer:
-          'Yes. Developers can add custom pages to the CMS sidebar, and custom publishing checks, notifications and hooks.',
+          'Yes. Developers can add custom pages to the CMS sidebar, and custom publishing checks, notifications, and hooks.',
       },
       {
         question: 'What if we want to move off Root.js later?',
@@ -807,7 +807,7 @@ export const GUIDES: GuideSource[] = [
       {
         question: 'Does it work with our existing providers?',
         answer:
-          'Root.js supports several AI, translation and data providers out of the box, and developers can add others.',
+          'Root.js supports several AI, translation, and data providers out of the box, and developers can add others.',
       },
     ],
   },

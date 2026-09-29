@@ -29,7 +29,7 @@ export default schema.collection({
         schema.string({
           id: 'description',
           label: 'Description',
-          help: 'Description for SEO, social shares and the guides index.',
+          help: 'Description for SEO, social shares, and the guides index.',
           translate: true,
           variant: 'textarea',
         }),

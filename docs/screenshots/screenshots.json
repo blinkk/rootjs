@@ -19,7 +19,7 @@
     "src": "https://lh3.googleusercontent.com/uvexgIhOCRxOtiV4KRa0Q7kF8RssDZX6w2Cl0WdGBOHNW-Rq-ZDcp77Rz35XC5zp73sl9IV6Q4Usqaa_j2i_V0tA3xFwm0O4PCk",
     "width": 1920,
     "height": 1200,
-    "alt": "The publish dialog in the Root.js CMS, showing a scheduled publish time, an AI-written change summary and passing publishing checks.",
+    "alt": "The publish dialog in the Root.js CMS, showing a scheduled publish time, an AI-written change summary, and passing publishing checks.",
     "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-publish-checks.4722a81224c3a3b0.png",
     "hash": "4722a81224c3a3b0"
   },
@@ -27,7 +27,7 @@
     "src": "https://lh3.googleusercontent.com/W9lDmuANbluvNPFjdtJ1Ef3mdjjjbnbbnYcTtfv7EU4DnSkBrmk1wEuOsUlO9EbmYdURMwQovmhNPsM33iNIVMuzBfX1Whg5lQ",
     "width": 1920,
     "height": 1200,
-    "alt": "The Releases page in the Root.js CMS, listing scheduled, published and archived releases that bundle docs and data sources.",
+    "alt": "The Releases page in the Root.js CMS, listing scheduled, published, and archived releases that bundle docs and data sources.",
     "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-releases.6e9b6fadb78b654f.png",
     "hash": "6e9b6fadb78b654f"
   },
@@ -43,7 +43,7 @@
     "src": "https://lh3.googleusercontent.com/a0_TmNjmKyjslODBrsqrI5yb7y952uQ1tryGuSBlA9AoXtNnY5WOsZl30lF-O0iJ2PkGZU1OiOacDoy8lBhdg1rlwIp1GnRKaK0",
     "width": 1920,
     "height": 1200,
-    "alt": "The Root.js CMS translations editor for a page, with source strings alongside German, French and Japanese translations and an AI translate action.",
+    "alt": "The Root.js CMS translations editor for a page, with source strings alongside German, French, and Japanese translations and an AI translate action.",
     "gcsPath": "/rootjs-dev.appspot.com/www/screenshots/cms-translations.e2af69683c44ed43.png",
     "hash": "e2af69683c44ed43"
   }

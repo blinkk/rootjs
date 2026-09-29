@@ -26,7 +26,7 @@ export const meta: SceneMeta = {
   id: 'cms-version-history',
   width: 960,
   height: 600,
-  alt: 'The version history of a page in the Root.js CMS, listing autosaved and published versions with who made each one, a publish message, and actions to compare, restore or copy a version.',
+  alt: 'The version history of a page in the Root.js CMS, listing autosaved and published versions with who made each one, a publish message, and actions to compare, restore, or copy a version.',
 };
 
 const VERSIONS: Array<{

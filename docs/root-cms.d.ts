@@ -294,7 +294,7 @@ export interface GuidesFields {
   meta?: {
     /** Title */
     title?: string;
-    /** Description. Description for SEO, social shares and the guides index. */
+    /** Description. Description for SEO, social shares, and the guides index. */
     description?: string;
     /** Image. Meta image for social shares and the guides index card. */
     image?: RootCMSImage;

@@ -15,7 +15,7 @@ export const meta: SceneMeta = {
   id: 'cms-content-list',
   width: 960,
   height: 600,
-  alt: 'The Content page in the Root.js CMS, with the site’s collections on the left and the docs in the Pages collection listed with thumbnails, titles, publishing status and who last edited them.',
+  alt: 'The Content page in the Root.js CMS, with the site’s collections on the left and the docs in the Pages collection listed with thumbnails, titles, publishing status, and who last edited them.',
 };
 
 const COLLECTIONS: Array<{name: string; description: string}> = [

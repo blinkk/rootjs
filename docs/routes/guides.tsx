@@ -31,7 +31,7 @@ export default function Page(props: PageProps) {
   return (
     <BaseLayout
       title="Guides – Root.js"
-      description="Plain-language guides to Root.js for the people choosing a content platform: editing, publishing, localization, AI, governance and more."
+      description="Plain-language guides to Root.js for the people choosing a content platform: editing, publishing, localization, AI, governance, and more."
     >
       <div className={styles.page}>
         <Container>

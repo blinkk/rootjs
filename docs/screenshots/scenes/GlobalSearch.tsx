@@ -13,7 +13,7 @@ export const meta: SceneMeta = {
   id: 'cms-global-search',
   width: 960,
   height: 600,
-  alt: 'The Root.js CMS ⌘K global search open over the Content page, with results for “carrot” across a data source, docs and matching text inside doc fields.',
+  alt: 'The Root.js CMS ⌘K global search open over the Content page, with results for “carrot” across a data source, docs, and matching text inside doc fields.',
 };
 
 const QUERY = 'carrot';

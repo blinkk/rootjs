@@ -56,17 +56,17 @@ The scenes show a fictional garden store, **Fernwood Market**. See
 
 ## Guides
 
-| #   | Slug              | Title                               | Screenshots                                                    |
-| --- | ----------------- | ----------------------------------- | -------------------------------------------------------------- |
-| 1   | `overview`        | Root.js at a glance                 | `cms-editor-preview`, `cms-content-list`, `cms-publish-checks` |
-| 2   | `editing`         | Editing and live preview            | `cms-editor-preview`, `cms-content-list`, `cms-global-search`  |
-| 3   | `publishing`      | Publishing, scheduling and releases | `cms-publish-checks`, `cms-releases`, `cms-version-history`    |
-| 4   | `localization`    | Localization and translation        | `cms-translations`, `cms-localization-modal`                   |
-| 5   | `collaboration`   | Collaboration and review            | `cms-field-comments`, `cms-tasks`                              |
-| 6   | `root-ai`         | Root AI                             | `cms-root-ai`, `cms-ai-edit`                                   |
-| 7   | `governance`      | Roles, permissions and governance   | `cms-roles`, `cms-action-logs`                                 |
-| 8   | `assets-and-data` | Assets and data                     | `cms-asset-library`, `cms-data-sources`                        |
-| 9   | `extensibility`   | Integrations and extensibility      | `cms-sidebar-tools`                                            |
+| #   | Slug              | Title                                | Screenshots                                                    |
+| --- | ----------------- | ------------------------------------ | -------------------------------------------------------------- |
+| 1   | `overview`        | Root.js at a glance                  | `cms-editor-preview`, `cms-content-list`, `cms-publish-checks` |
+| 2   | `editing`         | Editing and live preview             | `cms-editor-preview`, `cms-content-list`, `cms-global-search`  |
+| 3   | `publishing`      | Publishing, scheduling, and releases | `cms-publish-checks`, `cms-releases`, `cms-version-history`    |
+| 4   | `localization`    | Localization and translation         | `cms-translations`, `cms-localization-modal`                   |
+| 5   | `collaboration`   | Collaboration and review             | `cms-field-comments`, `cms-tasks`                              |
+| 6   | `root-ai`         | Root AI                              | `cms-root-ai`, `cms-ai-edit`                                   |
+| 7   | `governance`      | Roles, permissions, and governance   | `cms-roles`, `cms-action-logs`                                 |
+| 8   | `assets-and-data` | Assets and data                      | `cms-asset-library`, `cms-data-sources`                        |
+| 9   | `extensibility`   | Integrations and extensibility       | `cms-sidebar-tools`                                            |
 
 Each guide has an intro, an "At a glance" list of takeaways, sections with an
 optional screenshot and caption, and a "Frequently asked questions" list.
