@@ -83,6 +83,11 @@ $aside-top: 96px;
     }
   }
 
+  // Without a header or media, the columns start at the top of the page.
+  .columns:first-child {
+    margin-top: 0;
+  }
+
   .header + .columns {
     @include breakpoints.lg-gt() {
       margin-top: 56px;
@@ -144,11 +149,12 @@ $aside-top: 96px;
   .article {
     display: flex;
     flex-direction: column;
-    gap: 72px;
+    // Pages can tighten or loosen the space between blocks.
+    gap: var(--article-gap, 72px);
     min-width: 0;
     max-width: 820px;
     @include breakpoints.sm() {
-      gap: 56px;
+      gap: min(var(--article-gap, 72px), 56px);
     }
   }
 

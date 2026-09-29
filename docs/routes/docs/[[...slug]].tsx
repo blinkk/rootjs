@@ -160,22 +160,26 @@ export default function Page(props: PageProps) {
       description={meta.description}
       image={meta.image?.src}
     >
-      <ArticleLayout
-        header={
-          <ArticleHeader eyebrow={activeSection?.label} title={content.title} />
-        }
-        aside={
-          <>
-            <DocsNav />
-            <ArticleToc
-              items={sections.map((section) => ({
-                href: `#${section.id || ''}`,
-                label: section.title || '',
-              }))}
+      {/*
+        Unlike the guides, the docs keep only the navigation in the left
+        column. The headline and table of contents lead the right column.
+      */}
+      <ArticleLayout className={styles.docs} aside={<DocsNav />}>
+        <div className={styles.top}>
+          <header>
+            <ArticleHeader
+              eyebrow={activeSection?.label}
+              title={content.title}
             />
-          </>
-        }
-      >
+          </header>
+          <ArticleToc
+            className={styles.toc}
+            items={sections.map((section) => ({
+              href: `#${section.id || ''}`,
+              label: section.title || '',
+            }))}
+          />
+        </div>
         {content.body && (
           <Text as="div" size="p" className={styles.body}>
             <RichText data={content.body} />
@@ -190,8 +194,8 @@ export default function Page(props: PageProps) {
 }
 
 /**
- * The docs navigation. On wide screens it is the first group in the aside
- * column; on narrow screens it opens as a drawer from a "Docs menu" button.
+ * The docs navigation. On wide screens it fills the left column in a beige
+ * panel; on narrow screens it opens as a drawer from a "Docs menu" button.
  */
 function DocsNav() {
   const t = useTranslations();

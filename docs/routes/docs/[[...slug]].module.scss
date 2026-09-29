@@ -8,6 +8,27 @@
 $accent-wash: rgba(platform.$color-accent, 0.08);
 $ink-wash: rgba(platform.$color-ink, 0.04);
 
+// Layout: the navigation fills the left column, and the headline and table
+// of contents lead the right column.
+
+.docs {
+  --article-gap: 56px;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// Shown in the content column on every screen size, unlike the guides.
+.toc {
+  display: block;
+  padding: 20px 22px;
+  border: 1px solid var(--platform-border);
+  border-radius: platform.$radius-media;
+}
+
 // Navigation.
 
 .navDrawer {
@@ -40,6 +61,10 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
   display: flex;
   flex-direction: column;
   gap: 28px;
+  padding: 22px 20px 26px;
+  border: 1px solid platform.$color-beige-border;
+  border-radius: platform.$radius-media;
+  background: platform.$color-beige;
 
   // On narrow screens, the nav slides in from the left.
   @include breakpoints.md-lt() {
@@ -52,8 +77,8 @@ $ink-wash: rgba(platform.$color-ink, 0.04);
     max-width: 300px;
     padding: 28px 24px 40px;
     overflow-y: auto;
-    background: platform.$color-tint;
-    border-right: 1px solid var(--platform-border);
+    border-width: 0 1px 0 0;
+    border-radius: 0;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
