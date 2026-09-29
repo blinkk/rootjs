@@ -811,6 +811,126 @@ export const GUIDES: GuideSource[] = [
       },
     ],
   },
+
+  {
+    slug: 'seo-and-performance',
+    title: 'SEO, accessibility, and performance',
+    description:
+      'Fast pages, readable HTML, and accessible content are where every Root.js site starts. Here is what that means for search engines, AI, and visitors.',
+    eyebrow: 'Web standards',
+    heading: 'Built on web fundamentals',
+    intro: richtext(
+      'Search rankings, answers from AI assistants, and visitor trust all depend on the same foundations: pages that load quickly, HTML that software can read, and content that works for everyone. Root.js is built on web standards, so every site starts from sound defaults, and developers have the controls to meet your own targets.'
+    ),
+    heroImage: 'cms-publish-checks',
+    takeaways: [
+      'Every page arrives as complete HTML, readable without JavaScript.',
+      'Pages load only the scripts and styles they use.',
+      'Compression and security headers are on by default.',
+      'An alt text field on images, with AI to write a first draft.',
+      'Publishing checks can enforce your SEO and accessibility rules.',
+      'Lighthouse measures the results, page by page.',
+    ],
+    sections: [
+      {
+        id: 'readable-html',
+        title: 'Content that search engines and AI can read',
+        body: richtext(
+          'Root.js renders every page to complete HTML, either on the server when it is requested or ahead of time as static files. Search engine crawlers, social media previews, and AI assistants that read web pages all receive the full text and links right away, with nothing to run first.',
+          'That matters because many crawlers, including many AI crawlers, do not run JavaScript. On sites that build their pages in the browser, those crawlers can see an empty page. On a Root.js site, what visitors read is what crawlers read.'
+        ),
+      },
+      {
+        id: 'performance',
+        title: 'Fast by default',
+        body: richtext(
+          'Root.js sends no JavaScript to the browser unless a page needs it. When a page does need interactivity, like a carousel or a signup form, only the code for that piece is loaded, and only on the pages that use it. Page speed depends less on how large the site grows.',
+          bullets(
+            'Each page loads only the styles and scripts it uses.',
+            'Files are minified and named by their content, so browsers and CDNs can cache them safely.',
+            'Responses are compressed before they are sent.',
+            'Published CMS pages can be cached by a CDN for a few seconds, so traffic spikes are served quickly and new content still appears within a minute.'
+          ),
+          'Images are often the largest part of a page. The CMS records the size of every uploaded image, so pages can reserve space for it and avoid content jumping around as it loads. With the image service turned on, developers can also serve each image at the size and format that each screen needs.'
+        ),
+      },
+      {
+        id: 'seo',
+        title: 'Search-friendly structure',
+        body: richtext(
+          'Editors manage page titles, descriptions, and social sharing images in the CMS, alongside the content itself. Developers decide how those fields appear in each page’s HTML, so every template follows your SEO guidelines.',
+          bullets(
+            '<b>Clear URLs:</b> every page and every language gets its own address.',
+            '<b>Sitemap:</b> developers can turn on a sitemap that lists every page and tells search engines about its translated versions.',
+            '<b>Redirects:</b> moved pages can redirect permanently, so links and rankings carry over.',
+            '<b>One URL per page:</b> URLs can be normalized with or without a trailing slash, so search engines do not see duplicates.',
+            '<b>Real error pages:</b> missing pages return a proper “not found” status, so they drop out of search results instead of being indexed.'
+          )
+        ),
+      },
+      {
+        id: 'accessibility',
+        title: 'Accessible content',
+        body: richtext(
+          'Accessibility starts with the HTML itself. Root.js templates are plain HTML components with no hidden framework markup, so developers have full control over headings, landmarks, and labels, and accessibility reviews look at the same HTML that visitors get.',
+          'In the CMS, every image upload has an alt text field for describing the image to people who use screen readers. When AI is turned on, Root AI can write a first draft of the alt text for an editor to review.'
+        ),
+        image: 'cms-ai-edit',
+        caption:
+          'Root AI drafting a new headline and alt text for a hero image, for the editor to review.',
+      },
+      {
+        id: 'publishing-checks',
+        title: 'Guardrails before publishing',
+        body: richtext(
+          'Developers can add publishing checks that turn your standards into a step in the publishing flow: a missing meta description, an image without alt text, a broken link, or a title that is too long for search results. Each check can block publishing or show a warning, and results are shown to the editor before the page goes live.',
+          `Checks are a guardrail rather than a hard lock: Admins can publish anyway when needed, and the decision is recorded. See ${guideLink('publishing', 'Publishing, scheduling, and releases')}.`
+        ),
+      },
+      {
+        id: 'security',
+        title: 'Security best practices',
+        body: richtext(
+          'Every response from a Root.js server includes the standard security headers browsers look for: requiring secure HTTPS connections, stopping other sites from framing your pages, and preventing browsers from guessing file types. A Content Security Policy is included too. It starts in report-only mode, so developers can see what it would block before they enforce it.'
+        ),
+      },
+      {
+        id: 'lighthouse',
+        title: 'Measure with Lighthouse',
+        body: richtext(
+          '<a href="https://developer.chrome.com/docs/lighthouse/overview">Lighthouse</a>, built into Chrome, scores any page for performance, accessibility, best practices, and SEO, and explains what to fix. It is the quickest way to see how a page is doing.',
+          'Root.js takes care of the foundations, but the final score also depends on choices each site makes: the size and format of images, web fonts, color contrast, and third-party scripts like analytics and tag managers. We recommend running Lighthouse on your main page templates, on mobile, before launch and after major changes.'
+        ),
+      },
+    ],
+    faq: [
+      {
+        question: 'Do search engines see content from the CMS?',
+        answer:
+          'Yes. Published content is part of the HTML of each page, so crawlers see it without running any code.',
+      },
+      {
+        question: 'Can AI assistants read our pages?',
+        answer:
+          'Yes. Pages are complete HTML, so AI tools that read the web get the full content. Root.js does not generate AI-specific files such as llms.txt, but developers can add one, just like a robots.txt file.',
+      },
+      {
+        question: 'Will our site get a perfect Lighthouse score?',
+        answer:
+          'Root.js removes many common causes of slow pages, but scores also depend on your images, fonts, and third-party scripts. Measure early and often.',
+      },
+      {
+        question: 'Is alt text required for every image?',
+        answer:
+          'Every image has an alt text field, and Root AI can draft it. To require it, developers can add a publishing check that flags images without alt text.',
+      },
+      {
+        question: 'Do we get a sitemap?',
+        answer:
+          'Developers can turn one on. It lists every page, and the translated versions of each one.',
+      },
+    ],
+  },
 ];
 
 /** Scene id → image field value, or undefined when it hasn't been uploaded. */
