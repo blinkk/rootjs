@@ -1,9 +1,9 @@
 import {schema} from '@blinkk/root-cms';
 
 export default schema.collection({
-  name: 'Guide',
-  description: 'How-to Guides',
-  url: '/guide/[slug]',
+  name: 'Docs',
+  description: 'Technical documentation for developers.',
+  url: '/docs/[...slug]',
   preview: {
     title: 'meta.title',
     image: 'meta.image',
@@ -45,10 +45,10 @@ export default schema.collection({
           ],
         }),
         schema.reference({
-          id: 'nextGuide',
-          label: 'Next Guide',
-          help: 'Suggested reading next guide.',
-          collections: ['Guide'],
+          id: 'nextDoc',
+          label: 'Next Doc',
+          help: 'Suggested doc to read next.',
+          collections: ['Docs'],
         }),
       ],
     }),

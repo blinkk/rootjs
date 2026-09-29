@@ -8,9 +8,14 @@ import styles from './GlobalHeader.module.scss';
 
 const LINKS = [
   {
-    label: 'Guide',
-    url: '/guide',
-    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/guide'),
+    label: 'Guides',
+    url: '/guides',
+    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/guides'),
+  },
+  {
+    label: 'Docs',
+    url: '/docs',
+    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/docs'),
   },
   {
     label: 'Blog',
@@ -34,14 +39,14 @@ export interface GlobalHeaderProps {
 export function GlobalHeader(props: GlobalHeaderProps) {
   const t = useTranslations();
   const ctx = useRequestContext();
-  const isGuide = ctx.currentPath.startsWith('/guide');
+  const isDocs = ctx.currentPath.startsWith('/docs');
   return (
     <root-header
       id="header"
       className={joinClassNames(
         props.className,
         styles.header,
-        isGuide && styles.headerGuide,
+        isDocs && styles.headerDocs,
         'y:top'
       )}
       role="banner"

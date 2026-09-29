@@ -6,73 +6,73 @@ import {SiteLogo} from '@/components/SiteLogo/SiteLogo.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
-import {GuideDoc} from '@/root-cms.js';
+import {DocsDoc} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
 import {cmsRoute} from '@/utils/cms-route.js';
-import styles from './[[...guide]].module.scss';
+import styles from './[[...slug]].module.scss';
 
 const GUIDE_LINKS = [
   {
     label: 'Getting Started',
-    href: '/guide',
+    href: '/docs',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/';
+      return ctx.currentPath === '/docs/';
     },
   },
   {
     label: 'Project Structure',
-    href: '/guide/project-structure',
+    href: '/docs/project-structure',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/project-structure/';
+      return ctx.currentPath === '/docs/project-structure/';
     },
   },
   {
     label: 'Routes',
-    href: '/guide/routes',
+    href: '/docs/routes',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/routes/';
+      return ctx.currentPath === '/docs/routes/';
     },
   },
   {
     label: 'Interactive Islands',
-    href: '/guide/islands',
+    href: '/docs/islands',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/islands/';
+      return ctx.currentPath === '/docs/islands/';
     },
   },
   {
     label: 'Localization',
-    href: '/guide/localization',
+    href: '/docs/localization',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/localization/';
+      return ctx.currentPath === '/docs/localization/';
     },
   },
   {
     label: 'Plugins',
-    href: '/guide/plugins',
+    href: '/docs/plugins',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/plugins/';
+      return ctx.currentPath === '/docs/plugins/';
     },
   },
   {
     label: 'Config',
-    href: '/guide/config',
+    href: '/docs/config',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/config/';
+      return ctx.currentPath === '/docs/config/';
     },
   },
   {
     label: 'v2 Migration Guide',
-    href: '/guide/migration/v2',
+    href: '/docs/migration/v2',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/migration/v2/';
+      return ctx.currentPath === '/docs/migration/v2/';
     },
   },
   {
     label: 'v3 Migration Guide',
-    href: '/guide/migration/v3',
+    href: '/docs/migration/v3',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/migration/v3/';
+      return ctx.currentPath === '/docs/migration/v3/';
     },
   },
 ];
@@ -80,23 +80,23 @@ const GUIDE_LINKS = [
 const CMS_LINKS = [
   {
     label: 'Root CMS Setup',
-    href: '/guide/cms',
+    href: '/docs/cms',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/cms';
+      return ctx.currentPath === '/docs/cms/';
     },
   },
   {
     label: 'Schemas',
-    href: '/guide/cms/schemas',
+    href: '/docs/cms/schemas',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/cms/schemas';
+      return ctx.currentPath === '/docs/cms/schemas/';
     },
   },
   {
     label: 'Data Fetching',
-    href: '/guide/cms/data-fetching',
+    href: '/docs/cms/data-fetching',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/cms/data-fetching';
+      return ctx.currentPath === '/docs/cms/data-fetching/';
     },
   },
 ];
@@ -104,22 +104,22 @@ const CMS_LINKS = [
 const API_LINKS = [
   {
     label: 'API Reference',
-    href: '/guide/api',
+    href: '/docs/api',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/api';
+      return ctx.currentPath === '/docs/api/';
     },
   },
   {
     label: 'CLI Reference',
-    href: '/guide/cli',
+    href: '/docs/cli',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/cli';
+      return ctx.currentPath === '/docs/cli/';
     },
   },
 ];
 
 export interface PageProps {
-  doc: GuideDoc;
+  doc: DocsDoc;
 }
 
 export default function Page(props: PageProps) {
@@ -153,19 +153,19 @@ function Sidebar() {
         <button
           className={styles.sidebarMobileSubnavTrigger}
           data-slot="drawer-trigger"
-          aria-controls="guide-sidebar"
+          aria-controls="docs-sidebar"
           aria-expanded="false"
         >
           <div className={styles.sidebarMobileSubnavTriggerIcon}>
             <IconLayoutSidebarLeftExpand />
           </div>
-          <div className={styles.sidebarMobileSubnavTriggerLabel}>Guide</div>
+          <div className={styles.sidebarMobileSubnavTriggerLabel}>Docs</div>
         </button>
       </root-drawer>
       <nav
-        id="guide-sidebar"
+        id="docs-sidebar"
         className={styles.sidebarContent}
-        aria-label="Guide navigation"
+        aria-label="Docs navigation"
       >
         <div className={styles.sidebarLogo}>
           <SiteLogo />
@@ -173,7 +173,7 @@ function Sidebar() {
 
         <div className={styles.sidebarSection}>
           <Text as="h2" size="p" weight="semi-bold">
-            {t('Guide')}
+            {t('Framework')}
           </Text>
           {/* TODO(stevenle): create a system for this. */}
           <UnstyledList className={styles.sidebarLinks}>
@@ -340,6 +340,6 @@ function TableOfContents(props: PageProps) {
 }
 
 export const {handle} = cmsRoute({
-  collection: 'Guide',
-  slugParam: 'guide',
+  collection: 'Docs',
+  slugParam: 'slug',
 });

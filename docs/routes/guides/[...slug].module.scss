@@ -1,0 +1,267 @@
+@use 'breakpoints';
+@use 'platform';
+
+.guide {
+  @include platform.theme-vars();
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-top: 64px;
+  padding-bottom: 120px;
+  @include breakpoints.sm() {
+    padding-top: 40px;
+    padding-bottom: 80px;
+  }
+}
+
+.header {
+  max-width: 880px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--platform-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--platform-fg);
+  }
+}
+
+.eyebrow {
+  @include platform.eyebrow();
+  margin-bottom: 16px;
+}
+
+.title {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+.intro {
+  margin-top: 20px;
+  color: var(--platform-muted);
+  text-wrap: pretty;
+
+  p {
+    margin: 0;
+  }
+
+  p + p {
+    margin-top: 12px;
+  }
+}
+
+.hero {
+  margin-top: 56px;
+  @include breakpoints.sm() {
+    margin-top: 40px;
+  }
+}
+
+.frame {
+  @include platform.media-frame();
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 72px;
+  margin-top: 72px;
+  @include breakpoints.md-lt() {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    margin-top: 48px;
+  }
+}
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  @include breakpoints.lg-gt() {
+    position: sticky;
+    top: 96px;
+    align-self: start;
+  }
+}
+
+.asideTitle {
+  margin: 0 0 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--platform-muted);
+}
+
+.glance {
+  padding: 20px 22px;
+  border: 1px solid var(--platform-border);
+  border-radius: platform.$radius-media;
+  background: platform.$color-tint;
+}
+
+.takeaways {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  svg {
+    flex: 0 0 auto;
+    margin-top: 3px;
+    color: var(--platform-accent);
+  }
+}
+
+.toc {
+  @include breakpoints.md-lt() {
+    display: none;
+  }
+}
+
+.tocLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 14px;
+  border-left: 1px solid var(--platform-border);
+
+  a {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--platform-muted);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--platform-accent);
+    }
+  }
+}
+
+.article {
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+  max-width: 820px;
+  @include breakpoints.sm() {
+    gap: 56px;
+  }
+}
+
+.section {
+  scroll-margin-top: 96px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+.sectionBody {
+  color: var(--platform-fg);
+  text-wrap: pretty;
+
+  p,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  * + p,
+  * + ul,
+  * + ol {
+    margin-top: 14px;
+  }
+
+  ul,
+  ol {
+    padding-left: 22px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  a {
+    color: var(--platform-accent);
+    text-underline-offset: 3px;
+  }
+}
+
+.figure {
+  margin: 32px 0 0;
+}
+
+.caption {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--platform-muted);
+}
+
+.questions {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0 0;
+}
+
+.question {
+  padding: 18px 20px;
+  border: 1px solid var(--platform-border);
+  border-radius: platform.$radius-media;
+
+  dt {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  dd {
+    margin: 6px 0 0;
+    line-height: 1.55;
+    color: var(--platform-muted);
+  }
+}
+
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px 28px;
+  border-radius: platform.$radius-card;
+  background: platform.$color-tint;
+  border: 1px solid var(--platform-border);
+  color: var(--platform-fg);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--platform-accent);
+  }
+}
+
+.nextLabel {
+  @include platform.eyebrow();
+}
+
+.nextTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

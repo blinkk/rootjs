@@ -226,6 +226,44 @@ export interface DividerFields {
   };
 }
 
+/** Generated from `/collections/Docs.schema.ts`. */
+export interface DocsFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+    /** Category */
+    category?: string;
+    /** Next Doc. Suggested doc to read next. */
+    nextDoc?: RootCMSReference;
+  };
+  /** Content */
+  content?: {
+    /** Content title. Top content title. */
+    title?: string;
+    /** Content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Sections. Each section is added to the Table of Contents. */
+    sections?: {
+      /** Section: ID. Section ID (for deeplinking). */
+      id?: string;
+      /** Section: Title. Title for the section. */
+      title?: string;
+      /** Section: Content body. Main content body for the section. */
+      body?: RootCMSRichText;
+      /** Section: Blocks. Add blocks to embed various content types to the section. */
+      blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+    }[];
+  };
+}
+
+/** Generated from `/collections/Docs.schema.ts`. */
+export type DocsDoc = RootCMSDoc<DocsFields>;
+
 /** Generated from `/components/Emoji/Emoji.schema.ts`. */
 export interface EmojiFields {
   /** Emoji */
@@ -250,43 +288,61 @@ export interface GlobalModulesFields {
 /** Generated from `/collections/GlobalModules.schema.ts`. */
 export type GlobalModulesDoc = RootCMSDoc<GlobalModulesFields>;
 
-/** Generated from `/collections/Guide.schema.ts`. */
-export interface GuideFields {
+/** Generated from `/collections/Guides.schema.ts`. */
+export interface GuidesFields {
   /** Meta */
   meta?: {
     /** Title */
     title?: string;
-    /** Description. Description for SEO and social shares. */
+    /** Description. Description for SEO, social shares and the guides index. */
     description?: string;
-    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    /** Image. Meta image for social shares and the guides index card. */
     image?: RootCMSImage;
-    /** Category */
-    category?: string;
-    /** Next Guide. Suggested reading next guide. */
+    /** Order. Position on the guides index (ascending). */
+    order?: number;
+    /** Next guide. Suggested guide to read next. */
     nextGuide?: RootCMSReference;
   };
   /** Content */
   content?: {
-    /** Content title. Top content title. */
+    /** Eyebrow. Short label above the title, e.g. 'Publishing'. */
+    eyebrow?: string;
+    /** Title */
     title?: string;
-    /** Content body. Top content body. */
-    body?: RootCMSRichText;
-    /** Sections. Each section is added to the Table of Contents. */
+    /** Intro. Opening paragraph(s): the problem and what Root CMS offers. */
+    intro?: RootCMSRichText;
+    /** Hero image. Product screenshot shown below the intro. */
+    heroImage?: RootCMSImage;
+    /** Key takeaways. Short, scannable benefits shown in an 'At a glance' box. */
+    takeaways?: {
+      /** Text */
+      text?: string;
+    }[];
+    /** Sections. Each section is added to the table of contents. */
     sections?: {
-      /** Section: ID. Section ID (for deeplinking). */
+      /** ID. Section ID (for deeplinking). */
       id?: string;
-      /** Section: Title. Title for the section. */
+      /** Title */
       title?: string;
-      /** Section: Content body. Main content body for the section. */
+      /** Body */
       body?: RootCMSRichText;
-      /** Section: Blocks. Add blocks to embed various content types to the section. */
-      blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+      /** Screenshot */
+      image?: RootCMSImage;
+      /** Screenshot caption */
+      caption?: string;
+    }[];
+    /** Questions to ask. Questions a team can use when evaluating this area of a CMS. */
+    questions?: {
+      /** Question */
+      question?: string;
+      /** How Root CMS answers it */
+      answer?: string;
     }[];
   };
 }
 
-/** Generated from `/collections/Guide.schema.ts`. */
-export type GuideDoc = RootCMSDoc<GuideFields>;
+/** Generated from `/collections/Guides.schema.ts`. */
+export type GuidesDoc = RootCMSDoc<GuidesFields>;
 
 /** Generated from `/templates/If/If.schema.ts`. */
 export interface IfFields {

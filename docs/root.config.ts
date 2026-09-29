@@ -38,6 +38,10 @@ export default defineConfig({
     redirects: [
       // The CMS product page was merged into the home page.
       {source: '/products/cms', destination: '/', type: 301},
+      // The technical guide moved from `/guide/` to `/docs/`. The `/guides/`
+      // path now hosts the non-technical feature guides.
+      {source: '/guide', destination: '/docs/', type: 301},
+      {source: '/guide/[...path]', destination: '/docs/[...path]/', type: 301},
     ],
   },
   plugins: [
