@@ -1,6 +1,5 @@
 @use 'base';
 @use 'buttons';
-@use 'grid';
 @use 'highlight';
 @use 'tokens';
 @use 'type';
@@ -10,7 +9,6 @@
 :root {
   --font-family-default: #{tokens.$font-family-default};
   --font-family-mono: #{tokens.$font-family-mono};
-  @include grid.vars();
 }
 
 @layer base {
