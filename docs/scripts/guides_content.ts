@@ -92,7 +92,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'overview',
     title: 'Root.js at a glance',
     description:
-      'What Root.js is, who it is for, and how it helps marketing, content, and engineering teams ship websites together.',
+      'Meet Root.js: one web platform where marketing, content, and engineering teams build and ship websites together.',
     eyebrow: 'Overview',
     heading: 'One place for your team to build, edit, and ship the website',
     intro: richtext(
@@ -189,7 +189,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'editing',
     title: 'Editing and live preview',
     description:
-      'How editors create and update pages in the CMS, preview them on the real site, and find any piece of content in seconds.',
+      'Editors build and update pages in the CMS, preview every change on the real site, and can find any piece of content in seconds.',
     eyebrow: 'Editing',
     heading: 'Edit the page and see the result as you type',
     intro: richtext(
@@ -269,7 +269,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'publishing',
     title: 'Publishing, scheduling, and releases',
     description:
-      'How Root.js takes content from draft to live: scheduled publishing, releases that launch many changes at once, automated checks, and full version history.',
+      'From first draft to launch day: schedule changes, bundle updates into releases, catch mistakes with automated checks, and restore any past version.',
     eyebrow: 'Publishing',
     heading: 'Ship content like you ship code',
     intro: richtext(
@@ -355,7 +355,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'localization',
     title: 'Localization and translation',
     description:
-      'How Root.js helps teams launch and maintain a website in many languages, with AI translation, vendor integrations, and clear visibility into what is missing.',
+      "Launching in a new language shouldn't mean starting over. AI translation, vendor integrations, and a clear view of what's untranslated keep locales current.",
     eyebrow: 'Localization',
     heading: 'Every market, one workflow',
     intro: richtext(
@@ -427,7 +427,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'collaboration',
     title: 'Collaboration and review',
     description:
-      'How teams give feedback, review changes, and track content work in the CMS, with comments on fields, live presence, and tasks.',
+      "Leave feedback on the exact field it's about, see who else is editing, and review changes together without leaving the CMS.",
     eyebrow: 'Collaboration',
     heading: 'Feedback right where the words live',
     intro: richtext(
@@ -496,7 +496,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'root-ai',
     title: 'Root AI',
     description:
-      'How Root AI helps teams draft, translate, and manage content inside the CMS, with guardrails that keep people in control.',
+      'An AI assistant that knows your content. Root AI drafts, translates, and organizes pages in the CMS, but it never publishes on its own.',
     eyebrow: 'Root AI',
     heading: 'An AI teammate that knows your content',
     intro: richtext(
@@ -579,7 +579,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'governance',
     title: 'Roles, permissions, and governance',
     description:
-      'How Root.js controls who can view, edit, and publish content, and keeps a record of every change.',
+      'Who can view, edit, or publish your content? Set it with roles and permissions, and keep a complete record of every change.',
     eyebrow: 'Governance',
     heading: 'The right hands on the right content',
     intro: richtext(
@@ -666,7 +666,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'assets-and-data',
     title: 'Assets and data',
     description:
-      'How Root.js manages images and files, keeps them in sync with design tools, and brings spreadsheet and API data into the website.',
+      'Images from Figma and Google Drive, plus data from spreadsheets and APIs, stay in sync with your site without manual exports or copy and paste.',
     eyebrow: 'Assets and data',
     heading: 'Images, files, and data, all in sync',
     intro: richtext(
@@ -737,7 +737,7 @@ export const GUIDES: GuideSource[] = [
     slug: 'extensibility',
     title: 'Integrations and extensibility',
     description:
-      'How Root.js fits into your existing tools and workflows, and how developers extend it for your team.',
+      "Whether it's an AI provider, a translation vendor, or an internal tool, Root.js plugs into the way your team already works, with no lock-in.",
     eyebrow: 'Integrations',
     heading: 'Make the CMS your own',
     intro: richtext(
