@@ -1,6 +1,7 @@
 import type {RootCMSClient} from '@blinkk/root-cms/client';
 import {GuidesDoc} from '@/root-cms.js';
 import {sortByCustomOrder} from '@/utils/custom-order.js';
+import {hasModule} from '@/utils/modules.js';
 
 /** Returns the URL path for a guide, e.g. `/guides/publishing/`. */
 export function getGuideUrl(doc: GuidesDoc) {
@@ -17,30 +18,16 @@ export function sortGuides(guides: GuidesDoc[]) {
   return sortByCustomOrder(guides);
 }
 
-/** Returns true if any module in `value`, at any depth, is `TemplateGuides`. */
-function hasGuidesModule(value: unknown): boolean {
-  if (Array.isArray(value)) {
-    return value.some(hasGuidesModule);
-  }
-  if (value && typeof value === 'object') {
-    if ((value as {_type?: string})._type === 'TemplateGuides') {
-      return true;
-    }
-    return Object.values(value).some(hasGuidesModule);
-  }
-  return false;
-}
-
 /**
  * A `cmsRoute()` pre-render hook that, when the doc has a `TemplateGuides`
  * module, adds the sorted guides to the page props (as `guides`) and requests
  * the translations for their card copy.
  */
 export async function fetchGuidesForModules(
-  props: {doc?: {fields?: {content?: unknown}}},
+  props: {doc?: {fields?: {content?: unknown}}; $translationTags?: string[]},
   context: {cmsClient: RootCMSClient; mode: 'draft' | 'published'}
 ) {
-  if (!hasGuidesModule(props.doc?.fields?.content)) {
+  if (!hasModule(props.doc?.fields?.content, 'TemplateGuides')) {
     return props;
   }
   const res = await context.cmsClient.listDocs<GuidesDoc>('Guides', {
@@ -50,6 +37,9 @@ export async function fetchGuidesForModules(
   return {
     ...props,
     guides,
-    $translationTags: guides.map((guide) => `Guides/${guide.slug}`),
+    $translationTags: [
+      ...(props.$translationTags || []),
+      ...guides.map((guide) => `Guides/${guide.slug}`),
+    ],
   };
 }

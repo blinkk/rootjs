@@ -1,73 +1,97 @@
+// Blog-specific styles. The page layout, header and section titles come from
+// `components/ArticleLayout`, shared with the guides and docs.
+
 @use 'breakpoints';
+@use 'platform';
 
-.content {
-  padding: 60px 0 120px;
-  max-width: 800px;
-  margin: 0 auto;
-  @include breakpoints.lg-gt() {
-    padding-bottom: 200px;
+// A single, centered reading column.
+.blogPost {
+  --article-gap: 48px;
+  max-width: none;
+
+  // The header and article containers.
+  > * {
+    @include platform.narrow-container(760px);
   }
 }
 
-.headline {
-  text-wrap: pretty;
-  margin-bottom: 40px;
-}
-
-.headlineLink {
-  color: inherit;
-  text-decoration: none;
-
-  &:hover,
-  &:focus-visible {
-    text-decoration: underline;
-    text-underline-offset: 6px;
-  }
-}
-
-.headlinePublishDate {
-  margin-top: 10px;
-}
-
-.sectionTitle {
-  margin-top: 40px;
-  margin-bottom: 20px;
-}
-
+// Rich text, including blocks (e.g. `CodeBlock` and `ImageBlock`).
 .body,
-.sectionBody {
-  > *:first-child {
+.block {
+  color: var(--platform-fg);
+  text-wrap: pretty;
+
+  p,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  * + p,
+  * + ul,
+  * + ol {
+    margin-top: 20px;
+  }
+
+  ul,
+  ol {
+    padding-left: 22px;
+  }
+
+  li + li {
+    margin-top: 8px;
+  }
+
+  li > *:first-child {
     margin-top: 0;
   }
 
-  > *:last-child {
-    margin-bottom: 0;
-  }
-
-  p {
-    margin-top: 10px;
+  h2,
+  h3 {
+    margin: 40px 0 16px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
   }
 
   a:not([class]) {
-    text-underline-offset: 4px;
+    color: var(--platform-accent);
+    text-decoration-color: rgba(platform.$color-accent, 0.35);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s ease;
   }
 
-  code {
-    display: inline-block;
-    border: 1px solid #DADCE0;
-    background: #F8F9FA;
-    padding: 2px 4px;
-    border-radius: 4px;
-    font-size: 13px;
+  a:not([class]):hover {
+    text-decoration-color: currentColor;
   }
 
-  :global(.CodeBlock) {
-    margin-top: 20px;
-    margin-bottom: 20px;
+  :not(pre) > code {
+    padding: 2px 6px;
+    border: 1px solid var(--platform-border);
+    border-radius: 6px;
+    background: platform.$color-tint;
+    font-family: var(--font-family-mono);
+    font-size: 0.875em;
+    color: var(--platform-fg);
   }
 
+  blockquote {
+    margin: 24px 0 0;
+    padding: 4px 0 4px 20px;
+    border-left: 3px solid var(--platform-accent);
+    color: var(--platform-muted);
+  }
+
+  :global(.CodeBlock),
   :global(.ImageBlock) {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin-top: 28px;
+    margin-bottom: 28px;
+  }
+
+  > *:first-child {
+    margin-top: 0 !important;
+  }
+
+  > *:last-child {
+    margin-bottom: 0 !important;
   }
 }

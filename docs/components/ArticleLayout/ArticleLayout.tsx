@@ -13,15 +13,19 @@ export interface ArticleLayoutProps {
   header?: ComponentChildren;
   /** Full-width media between the header and the columns. */
   media?: ComponentChildren;
-  /** The sticky left column, e.g. navigation and a table of contents. */
+  /**
+   * The sticky left column, e.g. navigation and a table of contents. Without
+   * it, the article renders in a single column.
+   */
   aside?: ComponentChildren;
   /** The article column. */
   children?: ComponentChildren;
 }
 
 /**
- * The two-column page layout shared by the guides and the docs: a header, an
- * optional full-width media slot, then a sticky aside next to the article.
+ * The page layout shared by the guides, docs, and blog: a header, an optional
+ * full-width media slot, then a sticky aside next to the article (or the
+ * article alone, in a single column).
  * Uses the "platform" design tokens, like the home page templates.
  */
 export function ArticleLayout(props: ArticleLayoutProps) {
@@ -33,7 +37,12 @@ export function ArticleLayout(props: ArticleLayoutProps) {
       {props.media && (
         <Container className={styles.media}>{props.media}</Container>
       )}
-      <Container className={styles.columns}>
+      <Container
+        className={joinClassNames(
+          styles.columns,
+          !props.aside && styles.singleColumn
+        )}
+      >
         {props.aside && <aside className={styles.aside}>{props.aside}</aside>}
         <article className={styles.article}>{props.children}</article>
       </Container>

@@ -109,3 +109,14 @@ $radius-media: 14px;
     height: auto;
   }
 }
+
+/**
+ * Centers a `<Container>`'s content in a column at most `$width` wide. Widens
+ * the container's side padding instead of setting a `max-width`, since the
+ * grid padding (`--grid-padding`) assumes a full-width container.
+ */
+@mixin narrow-container($width) {
+  max-width: none;
+  padding-left: max(var(--grid-padding), (100% - #{$width}) / 2);
+  padding-right: max(var(--grid-padding), (100% - #{$width}) / 2);
+}

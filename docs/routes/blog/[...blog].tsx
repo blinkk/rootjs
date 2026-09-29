@@ -1,5 +1,5 @@
+import {useTranslations} from '@blinkk/root';
 import {BlogPost} from '@/components/BlogPost/BlogPost.js';
-import {Container} from '@/components/Container/Container.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {BlogPostsDoc} from '@/root-cms.js';
 import {cmsRoute} from '@/utils/cms-route.js';
@@ -9,16 +9,17 @@ export interface PageProps {
 }
 
 export default function Page(props: PageProps) {
+  const t = useTranslations();
   const fields = props.doc.fields || {};
-  const title = fields?.meta?.title;
-  const description = fields?.meta?.description;
-  const image = fields.meta?.image?.src;
+  const meta = fields.meta || {};
 
   return (
-    <BaseLayout title={title} description={description} image={image}>
-      <Container>
-        <BlogPost doc={props.doc} />
-      </Container>
+    <BaseLayout
+      title={meta.title ? `${t(meta.title)} – Root.js` : 'Blog – Root.js'}
+      description={meta.description}
+      image={meta.image?.src}
+    >
+      <BlogPost doc={props.doc} />
     </BaseLayout>
   );
 }

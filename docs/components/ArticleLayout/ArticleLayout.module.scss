@@ -83,6 +83,10 @@ $aside-top: 96px;
     }
   }
 
+  .singleColumn {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   // Without a header or media, the columns start at the top of the page.
   .columns:first-child {
     margin-top: 0;

@@ -5,7 +5,7 @@ import {
 import {BaseLayout} from '@/layouts/BaseLayout';
 import {PagesDoc} from '@/root-cms';
 import {cmsRoute} from '@/utils/cms-route';
-import {fetchGuidesForModules} from '@/utils/guides';
+import {fetchModuleData} from '@/utils/module-data';
 
 export interface PageProps {
   doc: PagesDoc;
@@ -27,5 +27,5 @@ export default function Page(props: PageProps) {
 export const {handle} = cmsRoute({
   collection: 'Pages',
   slugParam: 'page',
-  preRenderHook: fetchGuidesForModules,
+  preRenderHook: fetchModuleData,
 });
