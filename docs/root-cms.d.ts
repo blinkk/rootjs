@@ -298,8 +298,6 @@ export interface GuidesFields {
     description?: string;
     /** Image. Meta image for social shares and the guides index card. */
     image?: RootCMSImage;
-    /** Order. Position on the guides index (ascending). */
-    order?: number;
     /** Next guide. Suggested guide to read next. */
     nextGuide?: RootCMSReference;
   };

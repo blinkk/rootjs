@@ -32,12 +32,20 @@ node scripts/seed_guides.ts --guide publishing --force
 # 4. Publish the guides in the CMS once they've been reviewed.
 ```
 
+## Ordering
+
+The `Guides` collection uses `customSorting`, so the order on the `/guides/`
+index (and the "Next guide" fallback) is managed in the CMS: open the
+collection, pick the "Custom order" sort, and drag the docs. Like any edit, a
+new order goes live when the moved docs are published. Newly seeded guides are
+added at the end, in the order they're listed in `scripts/guides_content.ts`.
+
 `pnpm screenshots:publish` runs steps 1 and 2, and `pnpm seed:guides` runs step 3. To preview a scene while you work on it, run
 `node scripts/screenshots_render.ts --serve` and open the printed URL.
 
 | What                                     | Where                                              |
 | ---------------------------------------- | -------------------------------------------------- |
-| Guide copy, screenshots and order        | `scripts/guides_content.ts`                        |
+| Guide copy and screenshots               | `scripts/guides_content.ts`                        |
 | Screenshot scenes (one TSX file per PNG) | `screenshots/scenes/*.tsx`                         |
 | Shared CMS UI mockup kit                 | `screenshots/ui/`                                  |
 | Guide page and index templates           | `routes/guides/[...slug].tsx`, `routes/guides.tsx` |

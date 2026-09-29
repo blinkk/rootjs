@@ -850,7 +850,6 @@ export function listGuideScenes(guides: GuideSource[] = GUIDES) {
 /** Returns the `fields` for a `Guides/<slug>` doc. */
 export function buildGuideFields(
   guide: GuideSource,
-  order: number,
   screenshots: ScreenshotsMap
 ) {
   return {
@@ -858,7 +857,6 @@ export function buildGuideFields(
       title: guide.title,
       description: guide.description,
       image: image(screenshots, guide.cardImage || guide.heroImage),
-      order,
     },
     content: {
       eyebrow: guide.eyebrow,

@@ -7,13 +7,25 @@ export function getGuideUrl(doc: GuidesDoc) {
   return `/guides/${slug}/`;
 }
 
-/** Sorts guides by `meta.order`, then by title. */
+/**
+ * Sorts guides in the order set in the CMS (the collection uses
+ * `customSorting`, which stores each doc's position at `sys.sortKey`). Guides
+ * without a position, e.g. ones created by a script, go last, by title.
+ */
 export function sortGuides(guides: GuidesDoc[]) {
   return [...guides].sort((a, b) => {
-    const orderA = a.fields?.meta?.order ?? Number.MAX_SAFE_INTEGER;
-    const orderB = b.fields?.meta?.order ?? Number.MAX_SAFE_INTEGER;
-    if (orderA !== orderB) {
-      return orderA - orderB;
+    const keyA = a.sys?.sortKey;
+    const keyB = b.sys?.sortKey;
+    if (keyA && keyB && keyA !== keyB) {
+      // Compare by code point, matching Firestore's string ordering (see
+      // `compareSortKeys()` in `@blinkk/root-cms`).
+      return keyA < keyB ? -1 : 1;
+    }
+    if (keyA && !keyB) {
+      return -1;
+    }
+    if (!keyA && keyB) {
+      return 1;
     }
     const titleA = a.fields?.meta?.title || a.slug;
     const titleB = b.fields?.meta?.title || b.slug;

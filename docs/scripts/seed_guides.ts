@@ -18,6 +18,11 @@
  * in the CMS aren't lost. With `--force`, each previous draft is first backed
  * up to a JSON file in the OS temp dir.
  *
+ * The collection uses `customSorting`, so the order on the `/guides/` index is
+ * set by dragging docs in the CMS. Guides that don't have a position yet are
+ * added after the existing ones, in the order they're listed in
+ * `guides_content.ts`. Existing positions are never changed.
+ *
  * Requires application-default credentials for the project's Firestore, e.g.
  * `gcloud auth application-default login`.
  */
@@ -27,7 +32,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {loadRootConfig} from '@blinkk/root/node';
-import {RootCMSClient} from '@blinkk/root-cms';
+import {RootCMSClient, generateKeyAfter} from '@blinkk/root-cms';
 import type {ScreenshotsMap} from '../screenshots/types.ts';
 import {GUIDES, buildGuideFields, listGuideScenes} from './guides_content.ts';
 
@@ -93,16 +98,14 @@ async function main() {
     );
   }
 
-  const selected = GUIDES.map((guide, i) => ({guide, order: i + 1})).filter(
-    ({guide}) => args.guides.length === 0 || args.guides.includes(guide.slug)
+  const selected = GUIDES.filter(
+    (guide) => args.guides.length === 0 || args.guides.includes(guide.slug)
   );
   // Round-trip through JSON to drop `undefined` values (e.g. images that
   // haven't been uploaded yet), which Firestore rejects.
-  const docs = selected.map(({guide, order}) => ({
+  const docs = selected.map((guide) => ({
     slug: guide.slug,
-    fields: JSON.parse(
-      JSON.stringify(buildGuideFields(guide, order, screenshots))
-    ),
+    fields: JSON.parse(JSON.stringify(buildGuideFields(guide, screenshots))),
   }));
 
   if (args.dryRun) {
@@ -115,6 +118,7 @@ async function main() {
 
   const rootConfig = await loadRootConfig(DOCS_DIR, {command: 'root-cms'});
   const client = new RootCMSClient(rootConfig);
+  let lastSortKey = await getLastSortKey(client);
   for (const doc of docs) {
     const docId = `${COLLECTION}/${doc.slug}`;
     const existing = await client.getRawDoc(COLLECTION, doc.slug, {
@@ -132,9 +136,28 @@ async function main() {
       await writeFile(backupPath, JSON.stringify(existing, null, 2));
       console.log(`backed up existing draft to ${backupPath}`);
     }
+    // `saveDraftData()` keeps the existing `sys`, including `sys.sortKey`.
     await client.saveDraftData(docId, doc.fields, {modifiedBy: MODIFIED_BY});
     console.log(`saved draft: ${docId} (preview: /guides/${doc.slug}/)`);
+    if (!existing?.sys?.sortKey) {
+      lastSortKey = generateKeyAfter(lastSortKey);
+      await client
+        .dbDocRef(COLLECTION, doc.slug, {mode: 'draft'})
+        .update({'sys.sortKey': lastSortKey});
+    }
   }
+}
+
+/** Returns the largest `sys.sortKey` among the collection's drafts. */
+async function getLastSortKey(client: RootCMSClient): Promise<string | null> {
+  const res = await client.listDocs<any>(COLLECTION, {
+    mode: 'draft',
+    orderBy: 'sys.sortKey',
+    orderByDirection: 'desc',
+    limit: 1,
+    raw: true,
+  });
+  return res.docs[0]?.sys?.sortKey || null;
 }
 
 main().then(

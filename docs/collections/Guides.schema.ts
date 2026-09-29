@@ -5,6 +5,9 @@ export default schema.collection({
   description:
     'Non-technical guides to Root.js features, written for decision makers.',
   url: '/guides/[...slug]',
+  // Editors set the order of the guides on the `/guides/` index by dragging
+  // docs in the collection's "Custom order" view.
+  customSorting: true,
   preview: {
     title: 'meta.title',
     image: 'meta.image',
@@ -34,11 +37,6 @@ export default schema.collection({
           id: 'image',
           label: 'Image',
           help: 'Meta image for social shares and the guides index card.',
-        }),
-        schema.number({
-          id: 'order',
-          label: 'Order',
-          help: 'Position on the guides index (ascending).',
         }),
         schema.reference({
           id: 'nextGuide',
