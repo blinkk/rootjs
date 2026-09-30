@@ -1,13 +1,12 @@
-import {useTranslations} from '@blinkk/root';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
-import strings from '@/strings.json';
 
-export default function Page() {
-  const t = useTranslations();
+export default function NotFound() {
   return (
-    <BaseLayout title={strings['404.meta.title']}>
-      <h1>{t(strings['404.title'])}</h1>
-      <p>{t(strings['404.body'])}</p>
+    <BaseLayout title="Not found" noindex>
+      <section style={{padding: '80px 24px', textAlign: 'center'}}>
+        <h1>404: Page not found</h1>
+        <p>The page you are looking for was not found.</p>
+      </section>
     </BaseLayout>
   );
 }

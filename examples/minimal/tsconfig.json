@@ -6,14 +6,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
     "types": ["@blinkk/root/client"],
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "jsxImportSource": "@blinkk/root/jsx"
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
