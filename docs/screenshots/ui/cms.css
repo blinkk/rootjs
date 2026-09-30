@@ -11,7 +11,7 @@
   --cms-page-bg: #fbfbf9;
   --cms-surface: #fff;
   --cms-chip: #efefef;
-  --cms-accent: lightblue;
+  --cms-accent: #d9a6c8;
   --cms-active-bg: #e7f5ff;
   --cms-active-fg: #1c7ed6;
   --cms-font:
@@ -61,10 +61,23 @@ body {
 }
 
 .cms-top__logo {
-  font-size: 15px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
   padding: 4px 10px;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.cms-top__logo__beet {
+  display: block;
+  flex: 0 0 auto;
+  /* The sprite is 11 columns by 16 rows once cropped. */
+  height: 16px;
+  width: 11px;
 }
 
 .cms-top__version {

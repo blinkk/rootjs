@@ -1,5 +1,5 @@
 /**
- * Building blocks for recreating the Root CMS UI in screenshot scenes. The
+ * Building blocks for recreating the Root.js CMS UI in screenshot scenes. The
  * markup and class names are simplified, but sizes, colors and iconography
  * follow the real CMS (see `packages/root-cms/ui/layout/Layout.tsx`).
  */
@@ -25,6 +25,7 @@ import {
   IconSettings,
 } from '@tabler/icons-preact';
 import type {ComponentChildren} from 'preact';
+import {BEET_CROP, BEET_PATHS} from '../../../packages/root-cms/shared/beet.ts';
 import './cms.css';
 
 /** Name of the fictional project shown in the CMS header. */
@@ -70,7 +71,19 @@ export function CmsFrame(props: CmsFrameProps) {
   return (
     <div className={`cms-app ${props.expanded ? 'cms-app--expanded' : ''}`}>
       <header className="cms-top">
-        <div className="cms-top__logo">Root.js</div>
+        <div className="cms-top__logo">
+          <svg
+            className="cms-top__logo__beet"
+            viewBox={`${BEET_CROP.x} 0 ${BEET_CROP.width} 16`}
+            shape-rendering="crispEdges"
+            aria-hidden="true"
+          >
+            {BEET_PATHS.map((path) => (
+              <path key={path.fill} d={path.d} fill={path.fill} />
+            ))}
+          </svg>
+          Root.js
+        </div>
         <div className="cms-top__version">v3.5</div>
         <div className="cms-top__project">{PROJECT_NAME}</div>
         {props.topRight || (
