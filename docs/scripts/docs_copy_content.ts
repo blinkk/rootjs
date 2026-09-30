@@ -239,8 +239,7 @@ const STARTER_TREE = `my-site/
 │   ├── [[...slug]].tsx   # Renders Pages docs by slug
 │   └── 404.tsx
 ├── templates/
-│   ├── Hero/             # Hero.schema.ts, Hero.tsx, Hero.module.scss
-│   └── Text/             # Text.schema.ts, Text.tsx, Text.module.scss
+│   └── TemplateHero/     # TemplateHero.schema.ts, .tsx, .module.scss
 ├── root-cms.d.ts         # Generated types for your schemas
 └── root.config.ts`;
 
@@ -368,7 +367,7 @@ gcloud auth application-default login`
               ),
               p(`<b>5. Create your home page</b>`),
               p(
-                `Restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')}. In the ${c('Pages')} collection, create a doc with the slug ${c('index')}, add a <b>Hero</b> and a <b>Text</b> module, and publish it. It replaces the setup page at ${c('/')}. Other slugs map to their own URL, e.g. ${c('about')} renders at ${c('/about')}.`
+                `Restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')}. In the ${c('Pages')} collection, create a doc with the slug ${c('index')}, add a <b>TemplateHero</b> module, and publish it. It replaces the setup page at ${c('/')}. Other slugs map to their own URL, e.g. ${c('about')} renders at ${c('/about')}.`
               )
             ),
           ]
@@ -388,11 +387,11 @@ gcloud auth application-default login`
                 `The route at ${c('routes/[[...slug]].tsx')} loads the doc for the URL with ${c('RootCMSClient')}, and ${c('PageModules')} renders each module with the component that matches its template name. Editors can preview drafts by adding ${c('?preview=true')} to the URL.`
               ),
               p(
-                `To add a template, create a folder in ${c('templates/')} with a schema and a component of the same name. For example, here's the starter's ${c('Text')} template:`
+                `To add a template, create a folder in ${c('templates/')} with a schema and a component of the same name. For example, here's the starter's ${c('TemplateHero')} template:`
               )
             ),
-            code('ts', starterFile('templates/Text/Text.schema.ts')),
-            code('tsx', starterFile('templates/Text/Text.tsx')),
+            code('ts', starterFile('templates/TemplateHero/TemplateHero.schema.ts')),
+            code('tsx', starterFile('templates/TemplateHero/TemplateHero.tsx')),
             copy(
               p(
                 `Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:`

@@ -2,7 +2,7 @@ import {FunctionalComponent} from '@blinkk/root/jsx';
 
 /**
  * Fields for a single module. `_type` is the name of the template schema that
- * was picked in the CMS, e.g. "Hero".
+ * was picked in the CMS, e.g. "TemplateHero".
  */
 export type PageModuleFields = {
   [key: string]: any;
@@ -10,7 +10,7 @@ export type PageModuleFields = {
 };
 
 // Load every `templates/<Name>/<Name>.tsx` file. Each file should export a
-// component with the same name as the template, e.g. `export function Hero()`.
+// component with the same name as the template, e.g. `export function TemplateHero()`.
 // This mirrors `schema.glob('/templates/*/*.schema.ts')` in the `Pages`
 // collection, so adding a new template folder makes it available in the CMS
 // and on the page.

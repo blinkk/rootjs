@@ -86,7 +86,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more templates. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Hero', HeroFields> | RootCMSOneOfOption<'Text', TextFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'TemplateHero', TemplateHeroFields>>[];
   };
 }
 
