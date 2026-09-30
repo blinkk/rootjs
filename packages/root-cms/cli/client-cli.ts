@@ -25,6 +25,9 @@ export interface ClientMethodsOptions {
  *   echo '["Pages", "home", {"mode": "draft"}]' | root-cms client.call getDoc -
  */
 export async function clientCall(method: string, jsonArgs: string | undefined) {
+  // Client methods may log progress to stdout (e.g. `logAction()`), so route
+  // console output to stderr to keep stdout limited to the JSON envelope.
+  const restoreConsole = redirectConsoleToStderr();
   try {
     const args = await parseJsonArgs(jsonArgs);
 
@@ -61,7 +64,24 @@ export async function clientCall(method: string, jsonArgs: string | undefined) {
     const message = err?.message || String(err);
     process.stdout.write(JSON.stringify({ok: false, error: message}) + '\n');
     process.exitCode = 1;
+  } finally {
+    restoreConsole();
   }
+}
+
+/**
+ * Redirects `console.log()` and `console.info()` to stderr. Returns a function
+ * that restores the original methods.
+ */
+function redirectConsoleToStderr(): () => void {
+  const originalLog = console.log;
+  const originalInfo = console.info;
+  console.log = console.error;
+  console.info = console.error;
+  return () => {
+    console.log = originalLog;
+    console.info = originalInfo;
+  };
 }
 
 /**

@@ -9,6 +9,11 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {
+  extractAssetIds,
+  type AssetSyncResult,
+  type UploadedFile,
+} from '../shared/assets.js';
+import {
   GsheetDataFormat,
   marshalDataSourceData,
   unmarshalDataSourceData,
@@ -16,6 +21,11 @@ import {
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {verifyPassword, type PasswordHash} from '../shared/password.js';
 
+export type {
+  AssetFieldValue,
+  AssetSyncResult,
+  UploadedFile,
+} from '../shared/assets.js';
 export {
   resolveLocaleFallbacks,
   type LocaleFallbacksI18nConfig,
@@ -31,6 +41,7 @@ export {
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
+import {AssetLibrary} from './assets.js';
 import {isCronDue} from './cron-schedule.js';
 import type {
   DependencyGraph,
@@ -93,7 +104,8 @@ export interface Doc<Fields = any> {
     locales?: string[];
     /**
      * Reverse index of asset library ids embedded in the doc's fields,
-     * (re)computed whenever the doc draft is saved in the CMS UI.
+     * (re)computed whenever the doc draft is saved in the CMS UI or written
+     * through the client (see `setRawDoc()`).
      */
     assets?: string[];
     /**
@@ -363,6 +375,100 @@ export interface SendEmailOptions {
   emailService?: string | boolean;
 }
 
+/**
+ * An entry in the CMS asset library, stored at
+ * `Projects/${projectId}/Assets/${assetId}`. Files and folders live in the
+ * same collection and are organized by their `parent` folder path.
+ */
+export interface Asset {
+  /** Unique id of the asset within the project. */
+  id: string;
+  type: 'file' | 'folder';
+  /** Parent folder path, e.g. `''` (root) or `'marketing/q1'`. */
+  parent: string;
+  /** Display name, e.g. `hero.png` for files or `q1` for folders. */
+  name: string;
+  /** The uploaded file data (same shape stored in image/file fields). */
+  file?: UploadedFile;
+  /**
+   * For folders, whether uploaded files keep their original filename in the
+   * GCS object path (`{hash}/{filename}.{ext}` instead of `{hash}.{ext}`).
+   */
+  preserveFilename?: boolean;
+  createdAt: Timestamp;
+  createdBy: string;
+  modifiedAt: Timestamp;
+  modifiedBy: string;
+}
+
+/** Options for `RootCMSClient.uploadAsset()`. */
+export interface UploadAssetOptions {
+  /**
+   * Asset library folder to upload into, e.g. `marketing/q1`. Missing folders
+   * are created. Defaults to the root folder. Ignored when `assetId` is set.
+   */
+  folder?: string;
+  /**
+   * Asset display name. Defaults to the filename. If the folder already
+   * contains a file with this name, that asset's file is replaced.
+   */
+  name?: string;
+  /**
+   * The uploaded file's name, e.g. `hero.png`. Defaults to the basename of
+   * the file path. Required when uploading raw bytes.
+   */
+  filename?: string;
+  /**
+   * Id of an existing asset whose file should be replaced, regardless of its
+   * name or folder.
+   */
+  assetId?: string;
+  /**
+   * Alt text for the file. When replacing a file and this is omitted, the
+   * asset's existing alt text is kept.
+   */
+  alt?: string;
+  /**
+   * GCS object naming strategy. Defaults to `hash` (`{hash}.{ext}`), or
+   * `hash-path` (`{hash}/{filename}`) when the destination folder has the
+   * "preserve filename" setting enabled. `clean` keeps the original filename
+   * and can overwrite existing files.
+   */
+  namingMode?: 'hash' | 'hash-path' | 'clean';
+  /** Cache-Control header for the GCS object. Defaults to 365 days. */
+  cacheControl?: string;
+  /** Skips registering images with the Google Cloud Image service. */
+  disableGci?: boolean;
+  /**
+   * Whether to fan out a replaced file to the draft docs that use the asset.
+   * Defaults to `true`.
+   */
+  syncDocs?: boolean;
+  /** Email of the user making the change. Defaults to `root-cms-client`. */
+  modifiedBy?: string;
+}
+
+/** Result of `RootCMSClient.uploadAsset()`. */
+export interface UploadAssetResult {
+  /** The created or updated asset. */
+  asset: Asset;
+  /** Whether a new asset was created or an existing asset's file was replaced. */
+  status: 'created' | 'replaced';
+  /** Docs updated with the new file, when an existing asset was replaced. */
+  sync?: AssetSyncResult;
+}
+
+/** Options for `RootCMSClient.syncAssetToDocs()`. */
+export interface SyncAssetToDocsOptions {
+  /**
+   * The asset's file data before the change. Used to detect doc-level alt
+   * text and canvas bg color customizations, which are preserved.
+   */
+  previousFile?: UploadedFile;
+  /** Email of the user making the change. Defaults to `root-cms-client`. */
+  modifiedBy?: string;
+}
+
 /** Options for constructing a `RootCMSClient`. */
 export interface RootCMSClientOptions {
   /**
@@ -591,6 +697,7 @@ export class RootCMSClient {
    * before accepting it. Reads only — writes never fold the proposal in.
    */
   readonly proposal?: ProposalOverlay;
+  private assetLibrary?: AssetLibrary;
 
   constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
     this.rootConfig = rootConfig;
@@ -872,6 +979,10 @@ export class RootCMSClient {
    * - `sys.firstPublishedBy` - String identifier
    * - `sys.publishingLocked` - Object with optional `until` Timestamp
    *
+   * ### Computed Fields
+   * - `sys.assets` - Recomputed from the asset library ids embedded in
+   *   `fields`, so that asset updates fan out to the doc
+   *
    * ### Document Identity
    * The `id`, `collection`, and `slug` fields are always set to match the
    * provided parameters, overwriting any existing values to prevent data
@@ -937,6 +1048,18 @@ export class RootCMSClient {
 
     // Validate and normalize sys fields to prevent data integrity issues.
     data.sys = validateSysFields(data.sys || {});
+
+    // Keep the asset library's reverse index (`sys.assets`) in sync with the
+    // fields, e.g. when a doc is copied or its fields are rewritten, so that
+    // asset updates fan out to this doc.
+    if (data.fields && typeof data.fields === 'object') {
+      const assetIds = extractAssetIds(data.fields);
+      if (assetIds.length > 0) {
+        data.sys.assets = assetIds;
+      } else {
+        delete data.sys.assets;
+      }
+    }
 
     const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
@@ -1546,6 +1669,68 @@ export class RootCMSClient {
     }
 
     return publishedDocs;
+  }
+
+  private getAssetLibrary(): AssetLibrary {
+    if (!this.assetLibrary) {
+      this.assetLibrary = new AssetLibrary(this);
+    }
+    return this.assetLibrary;
+  }
+
+  /**
+   * Uploads a file to the asset library, from a local file path or raw bytes
+   * (which require `options.filename`). The file is uploaded to the project's
+   * GCS bucket and, for images when `gci` is enabled, registered with the
+   * Google Cloud Image service. If the destination folder already contains a
+   * file with the same name (or `options.assetId` is set), the existing
+   * asset's file is replaced and the change is fanned out to every draft doc
+   * that uses the asset.
+   *
+   * Example:
+   * `uploadAsset('./hero.png', {folder: 'marketing', alt: 'Hero image'})`
+   */
+  async uploadAsset(
+    file: string | Uint8Array,
+    options?: UploadAssetOptions
+  ): Promise<UploadAssetResult> {
+    return this.getAssetLibrary().uploadAsset(file, options);
+  }
+
+  /**
+   * Retrieves an asset library file or folder by id, or null if it does not
+   * exist.
+   */
+  async getAsset(assetId: string): Promise<Asset | null> {
+    return this.getAssetLibrary().getAsset(assetId);
+  }
+
+  /**
+   * Lists the assets (folders first, then files) directly within an asset
+   * library folder, e.g. `marketing/q1`. Defaults to the root folder.
+   */
+  async listAssets(folder?: string): Promise<Asset[]> {
+    return this.getAssetLibrary().listAssets(folder);
+  }
+
+  /**
+   * Returns the ids of the draft docs that embed an asset library file (e.g.
+   * `["Pages/home"]`), found via each doc's `sys.assets` index.
+   */
+  async findDocsUsingAsset(assetId: string): Promise<string[]> {
+    return this.getAssetLibrary().findDocsUsingAsset(assetId);
+  }
+
+  /**
+   * Updates the embedded copies of an asset's file data in every draft doc
+   * that uses the asset. Called automatically by `uploadAsset()` when a file
+   * is replaced; call it directly to retry docs that failed to update.
+   */
+  async syncAssetToDocs(
+    assetId: string,
+    options?: SyncAssetToDocsOptions
+  ): Promise<AssetSyncResult> {
+    return this.getAssetLibrary().syncAssetToDocs(assetId, options);
   }
 
   /**

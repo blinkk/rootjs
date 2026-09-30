@@ -31,11 +31,42 @@ import {
   writeBatch,
   setDoc,
 } from 'firebase/firestore';
+import {
+  buildReplacedAssetFile,
+  buildSyncedFieldValue,
+  collectAssetFieldPaths,
+  getFileExt,
+  getFolderId,
+  isDescendantPath,
+  joinFolderPath,
+  normalizeParentPath,
+  parseFolderPath,
+  removeUndefinedValues,
+  replaceFileExt,
+  validateAssetName,
+  type AssetSyncResult,
+} from '../../shared/assets.js';
 import {logAction} from './actions.js';
 import {removeDocsFromCache} from './doc-cache.js';
 import type {CMSDoc} from './doc.js';
-import {UploadFileOptions, UploadedFile, getFileExt} from './gcs.js';
+import {UploadFileOptions, UploadedFile} from './gcs.js';
 import {autokey} from './rand.js';
+
+export {
+  AssetNameError,
+  buildAssetFieldValue,
+  buildSyncedFieldValue,
+  collectAssetFieldPaths,
+  containsAssetId,
+  extractAssetIds,
+  getFolderId,
+  joinFolderPath,
+  parseFolderPath,
+  replaceFileExt,
+  validateAssetName,
+  validateFolderPath,
+} from '../../shared/assets.js';
+export type {AssetFieldValue, AssetSyncResult} from '../../shared/assets.js';
 
 export type AssetType = 'file' | 'folder';
 
@@ -166,31 +197,12 @@ export interface AssetFolder extends AssetBase {
 
 export type Asset = AssetFile | AssetFolder;
 
-/** The value stored in a doc's image/file field when linked to an asset. */
-export type AssetFieldValue = UploadedFile & {assetId: string};
-
-/** Result of fanning out an asset update to docs that use it. */
-export interface AssetSyncResult {
-  /** Doc ids that were updated. */
-  updatedDocIds: string[];
-  /** Doc ids that failed to update (eventual consistency; retry by re-syncing). */
-  failedDocIds: string[];
-}
-
-export class AssetNameError extends Error {}
-
 /**
  * Thrown when deleting a folder that still contains assets. Callers can
  * re-run the delete with `recursive: true` to remove the folder's contents
  * along with it (see {@link deleteAsset}).
  */
 export class FolderNotEmptyError extends Error {}
-
-const MAX_NAME_LENGTH = 200;
-
-/** Folder and file names must not contain slashes or control chars. */
-// eslint-disable-next-line no-control-regex
-const INVALID_NAME_RE = /[/\\\u0000-\u001f]/;
 
 export function getAssetsDbCollection() {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -261,68 +273,6 @@ export async function resolveAssetPickerFolder(
     console.warn('failed to resolve linked asset folder:', err);
     return '';
   }
-}
-
-/**
- * Validates a file or folder display name. Returns the trimmed name or throws
- * an `AssetNameError`.
- */
-export function validateAssetName(name: string): string {
-  const trimmed = (name || '').trim();
-  if (!trimmed) {
-    throw new AssetNameError('Name is required.');
-  }
-  if (trimmed.length > MAX_NAME_LENGTH) {
-    throw new AssetNameError(
-      `Name is too long (max ${MAX_NAME_LENGTH} chars).`
-    );
-  }
-  if (INVALID_NAME_RE.test(trimmed)) {
-    throw new AssetNameError('Name cannot contain slashes.');
-  }
-  if (trimmed === '.' || trimmed === '..') {
-    throw new AssetNameError('Invalid name.');
-  }
-  return trimmed;
-}
-
-/**
- * Joins a parent folder path and a name into a folder path. An empty `name`
- * resolves to the parent path itself, e.g. the destination of a file uploaded
- * directly into a folder rather than into a subfolder of it.
- */
-export function joinFolderPath(parent: string, name: string): string {
-  if (!name) {
-    return parent || '';
-  }
-  return parent ? `${parent}/${name}` : name;
-}
-
-/**
- * Normalizes a stored `parent` path. Files uploaded into a folder by an
- * earlier version of the folder upload flow were stored with a trailing slash
- * (e.g. `marketing/` instead of `marketing`), which hid them from the folder
- * listing. See {@link listAssets}.
- */
-function normalizeParentPath(parent: string): string {
-  return (parent || '').replace(/\/+$/, '');
-}
-
-/** Splits a folder path into its segments, e.g. `'a/b'` -> `['a', 'b']`. */
-export function parseFolderPath(folderPath: string): string[] {
-  if (!folderPath) {
-    return [];
-  }
-  return folderPath.split('/').filter(Boolean);
-}
-
-/**
- * Returns the deterministic db doc id for a folder path. Using a
- * deterministic id prevents two users from creating duplicate folders with
- * the same path.
- */
-export function getFolderId(folderPath: string): string {
-  return `folder-${encodeURIComponent(folderPath)}`;
 }
 
 /** Column an asset listing can be sorted by. */
@@ -674,15 +624,6 @@ export async function resolveFolderUploadOptions(
 const MAX_UPLOAD_FOLDERS = 200;
 
 /**
- * Validates every segment of a relative folder path (e.g. the folder path of a
- * file within a folder upload), returning the normalized path. Throws an
- * `AssetNameError` if any segment is invalid.
- */
-export function validateFolderPath(folderPath: string): string {
-  return parseFolderPath(folderPath).map(validateAssetName).join('/');
-}
-
-/**
  * Ensures a set of folder paths, relative to a parent folder, exist in the
  * asset library, creating any missing folders (and their ancestors) along the
  * way. Used by folder uploads, which mirror the uploaded directory structure.
@@ -841,11 +782,6 @@ export async function moveAsset(asset: Asset, toFolder: string) {
   logAction('asset.move', {
     metadata: {assetId: asset.id, from: asset.parent, to: newParent},
   });
-}
-
-/** Returns true if `path` is the same as or nested below `parentPath`. */
-function isDescendantPath(path: string, parentPath: string) {
-  return path === parentPath || path.startsWith(`${parentPath}/`);
 }
 
 /**
@@ -1152,13 +1088,7 @@ export async function replaceAssetFile(
     source?: AssetSource;
   }
 ): Promise<AssetFile> {
-  const file = removeUndefinedValues(newFile);
-  if (!file.alt && asset.file?.alt) {
-    file.alt = asset.file.alt;
-  }
-  if (asset.file?.altDisabled) {
-    file.altDisabled = true;
-  }
+  const file = buildReplacedAssetFile(asset.file, newFile);
   const docRef = doc(getAssetsDbCollection(), asset.id);
   const updates: Record<string, any> = {
     file: file,
@@ -1178,21 +1108,6 @@ export async function replaceAssetFile(
   await updateDoc(docRef, updates);
   logAction('asset.replace', {metadata: {assetId: asset.id, name: asset.name}});
   return (await getAsset(asset.id)) as AssetFile;
-}
-
-/**
- * Swaps a filename's extension, e.g. `replaceFileExt('hero.png', 'webp')`
- * returns `'hero.webp'`. Names without an extension are returned unchanged.
- */
-export function replaceFileExt(name: string, newExt: string): string {
-  const dotIndex = (name || '').lastIndexOf('.');
-  if (!newExt || dotIndex <= 0) {
-    return name;
-  }
-  if (getFileExt(name) === newExt) {
-    return name;
-  }
-  return `${name.slice(0, dotIndex)}.${newExt}`;
 }
 
 /**
@@ -1233,95 +1148,6 @@ export async function updateAssetAltDisabled(
     metadata: {assetId: asset.id, name: asset.name, disabled},
   });
   return (await getAsset(asset.id)) as AssetFile;
-}
-
-/**
- * Builds the field value to embed in a doc when an asset is selected from the
- * asset library. The full file data is copied into the doc (so fetching the
- * doc requires no extra RPCs) along with an `assetId` backlink used to keep
- * the copy in sync.
- */
-export function buildAssetFieldValue(asset: AssetFile): AssetFieldValue {
-  const value: AssetFieldValue = {
-    ...removeUndefinedValues(asset.file),
-    assetId: asset.id,
-  };
-  // When alt text handling is disabled, the alt text stored on the asset is
-  // kept on the asset itself but not propagated to docs.
-  if (value.altDisabled) {
-    value.alt = '';
-  }
-  return value;
-}
-
-/**
- * Recursively extracts the asset ids embedded within a doc's fields data.
- * Works with both marshaled (db) and unmarshaled data. The result is sorted
- * so it can be compared/stored deterministically.
- */
-export function extractAssetIds(data: any): string[] {
-  const ids = new Set<string>();
-  collectAssetIds(data, ids);
-  return Array.from(ids).sort();
-}
-
-function collectAssetIds(data: any, ids: Set<string>) {
-  if (!data || typeof data !== 'object') {
-    return;
-  }
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      collectAssetIds(item, ids);
-    }
-    return;
-  }
-  // Ignore non-plain objects (e.g. Timestamps).
-  if (typeof data.toMillis === 'function') {
-    return;
-  }
-  if (isAssetFieldValue(data)) {
-    ids.add(data.assetId);
-    return;
-  }
-  for (const key of Object.keys(data)) {
-    collectAssetIds(data[key], ids);
-  }
-}
-
-/** Checks if a value looks like an asset-linked image/file field value. */
-function isAssetFieldValue(data: any): data is AssetFieldValue {
-  return typeof data?.assetId === 'string' && typeof data?.src === 'string';
-}
-
-/**
- * Returns true if `data` contains any asset-linked field value at any nesting
- * depth. Short-circuits on the first match.
- */
-export function containsAssetId(data: any): boolean {
-  if (!data || typeof data !== 'object') {
-    return false;
-  }
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      if (containsAssetId(item)) {
-        return true;
-      }
-    }
-    return false;
-  }
-  // Ignore non-plain objects (e.g. Timestamps).
-  if (typeof data.toMillis === 'function') {
-    return false;
-  }
-  if (isAssetFieldValue(data)) {
-    return true;
-  }
-  for (const key of Object.keys(data)) {
-    if (containsAssetId(data[key])) {
-      return true;
-    }
-  }
-  return false;
 }
 
 /**
@@ -1429,82 +1255,6 @@ export async function syncAssetToDocs(
     });
   }
   return {updatedDocIds, failedDocIds};
-}
-
-/**
- * Walks a doc's marshaled fields data collecting the dot-notation db paths of
- * all embedded copies of an asset. Marshaled data stores arrays as keyed
- * objects (see `marshalArray()`), so every node is addressable with a
- * dot-notation path that can be used directly with `updateDoc()`.
- */
-export function collectAssetFieldPaths(
-  data: any,
-  assetId: string,
-  basePath: string,
-  found: Array<{path: string; value: any}>
-) {
-  if (!data || typeof data !== 'object') {
-    return;
-  }
-  // True arrays should not appear in marshaled draft data, and array items
-  // cannot be addressed with a dot-notation path, so skip them.
-  if (Array.isArray(data)) {
-    return;
-  }
-  // Ignore non-plain objects (e.g. Timestamps).
-  if (typeof data.toMillis === 'function') {
-    return;
-  }
-  if (isAssetFieldValue(data)) {
-    if (data.assetId === assetId) {
-      found.push({path: basePath, value: data});
-    }
-    return;
-  }
-  for (const key of Object.keys(data)) {
-    collectAssetFieldPaths(data[key], assetId, `${basePath}.${key}`, found);
-  }
-}
-
-/**
- * Builds the new embedded field value for a doc when syncing an asset update,
- * preserving doc-level customizations (alt text, canvas bg color) that differ
- * from the asset's previous values.
- */
-export function buildSyncedFieldValue(
-  asset: AssetFile,
-  existingValue: any,
-  previousFile?: UploadedFile
-): AssetFieldValue {
-  const next = buildAssetFieldValue(asset);
-  // Doc-level alt customizations are dropped when the asset disables alt
-  // text handling.
-  if (!asset.file?.altDisabled) {
-    const prevAlt = previousFile?.alt ?? asset.file?.alt ?? '';
-    const docAlt = existingValue?.alt || '';
-    if (docAlt && docAlt !== prevAlt) {
-      next.alt = docAlt;
-    }
-  }
-  const prevBgColor = previousFile?.canvasBgColor ?? asset.file?.canvasBgColor;
-  if (
-    existingValue?.canvasBgColor &&
-    existingValue.canvasBgColor !== prevBgColor
-  ) {
-    next.canvasBgColor = existingValue.canvasBgColor;
-  }
-  return next;
-}
-
-/** Returns a copy of an object with `undefined` values removed. */
-function removeUndefinedValues<T extends Record<string, any>>(obj: T): T {
-  const result: Record<string, any> = {};
-  Object.entries(obj || {}).forEach(([key, value]) => {
-    if (value !== undefined) {
-      result[key] = value;
-    }
-  });
-  return result as T;
 }
 
 function basename(path: string): string {

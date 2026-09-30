@@ -5,36 +5,25 @@ import {
   uploadBytesResumable,
   deleteObject,
 } from 'firebase/storage';
+import {
+  GCI_SUPPORTED_EXTS,
+  IMAGE_EXTS,
+  PREVIEW_IMAGE_EXTS,
+  VIDEO_EXTS,
+  getFileExt,
+  normalizeExt,
+  type UploadedFile,
+} from '../../shared/assets.js';
 
-/**
- * Extensions supported by the Google Image Service.
- * @see {@link https://cloud.google.com/appengine/docs/standard/services/images?tab=go#image-formats}
- */
-export const GCI_SUPPORTED_EXTS = [
-  'bmp',
-  'gif',
-  'ico',
-  'jpeg',
-  'jpg',
-  'png',
-  'tiff',
-  'webp',
-];
-
-/** Extensions compatible with the image field. */
-export const IMAGE_EXTS = [...GCI_SUPPORTED_EXTS, 'svg'];
-
-/**
- * Image extensions that preview as images in the CMS but are excluded from
- * the image field's default accept list. To accept one of these, a field
- * must opt in via its `exts` config, e.g. `exts: ['image/avif']`.
- */
-export const OPT_IN_IMAGE_EXTS = ['avif'];
-
-/** All extensions that are previewed as images in the CMS UI. */
-export const PREVIEW_IMAGE_EXTS = [...IMAGE_EXTS, ...OPT_IN_IMAGE_EXTS];
-
-export const VIDEO_EXTS = ['mp4', 'webm'];
+export {
+  GCI_SUPPORTED_EXTS,
+  IMAGE_EXTS,
+  OPT_IN_IMAGE_EXTS,
+  PREVIEW_IMAGE_EXTS,
+  VIDEO_EXTS,
+  getFileExt,
+} from '../../shared/assets.js';
+export type {UploadedFile} from '../../shared/assets.js';
 
 export const GCI_URL_PREFIX = 'https://lh3.googleusercontent.com/';
 
@@ -51,32 +40,6 @@ export interface UploadFileOptions {
   cacheControl?: string;
   disableGci?: boolean;
   checkExists?: boolean;
-}
-
-export interface UploadedFile {
-  src: string;
-  filename?: string;
-  gcsPath?: string;
-  width?: number;
-  height?: number;
-  alt?: string;
-  uploadedBy?: string;
-  uploadedAt?: string | number;
-  canvasBgColor?: 'light' | 'dark';
-  /**
-   * When true, alt text handling is disabled for the file (e.g. decorative
-   * images). The alt text input is hidden in docs that use the file and no
-   * alt text is propagated from the asset library.
-   */
-  altDisabled?: boolean;
-  /** The original source URL if the image has been edited. */
-  originalSrc?: string;
-  /**
-   * When the file was selected from the asset library, the id of the asset at
-   * `Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to
-   * docs that embed it (see `ui/utils/assets.ts`).
-   */
-  assetId?: string;
 }
 
 /** Uploads a File object to GCS. */
@@ -239,21 +202,6 @@ async function finalizeUpload(
     ...meta,
     src: fileUrl,
   };
-}
-
-export function getFileExt(filename: string) {
-  return normalizeExt(filename.split('.').at(-1) || '');
-}
-
-/**
- * Normalizes file extensions like `.PNG` to `.png` and `.JPEG` to `.jpg`.
- */
-function normalizeExt(ext: string) {
-  let output = String(ext).toLowerCase();
-  if (output === 'jpeg') {
-    output = 'jpg';
-  }
-  return output;
 }
 
 async function getGciUrl(gcsPath: string) {
