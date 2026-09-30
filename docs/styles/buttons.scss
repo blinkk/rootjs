@@ -167,13 +167,15 @@
   color: tokens.$color-grey-800;
   border: 1px solid tokens.$color-grey-300;
 
+  // Hover/active backgrounds must be opaque so the button remains legible
+  // when placed on dark backgrounds.
   &:hover {
-    background: rgba(tokens.$color-grey-600, 0.04);
+    background: tokens.$color-grey-50;
     border: 1px solid tokens.$color-grey-400;
   }
 
   &:active {
-    background: rgba(tokens.$color-grey-600, 0.12);
+    background: tokens.$color-grey-100;
     color: tokens.$color-grey-900;
     border: 1px solid tokens.$color-grey-400;
   }
