@@ -1,8 +1,8 @@
 import {useTranslations} from '@blinkk/root';
-import {HeroFields} from '@/root-cms.js';
+import {TemplateHeroFields} from '@/root-cms.js';
 import styles from './Hero.module.scss';
 
-export function Hero(props: HeroFields) {
+export function TemplateHero(props: HeroFields) {
   const t = useTranslations();
   return (
     <section className={styles.hero}>

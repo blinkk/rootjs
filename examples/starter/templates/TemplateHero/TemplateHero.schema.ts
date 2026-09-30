@@ -1,7 +1,7 @@
 import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
-  name: 'Hero',
+  name: 'TemplateHero',
   description: 'Large page heading with an optional image.',
   fields: [
     schema.string({

@@ -1,0 +1,855 @@
+version: 1
+id: "2026-09-30-docs-copy-refresh"
+title: "Refresh the developer docs copy"
+generated: "2026-09-30T01:06:49.082Z"
+author: "scripts/propose_docs_copy.ts"
+summary: |-
+  Refreshes the copy across the developer docs:
+  - Refers to the product as "Root.js", with the CMS as one of its
+    features, instead of a separate "Root CMS" product.
+  - Folds the CMS setup steps into "Getting started", and turns the
+    old setup page into a CMS configuration page.
+  - Updates the onboarding steps for the current `create-root` flow.
+  - Raises the Node.js requirement to v24 (the current LTS).
+  - Sets a sidebar category on every doc.
+changes:
+  - kind: "doc.edit"
+    docId: "Docs/index"
+    note: "Rewrites the page around the new starter template (the CMS, a Pages collection and templates), with a short mention of the minimal template. The cms, blog and basepath templates were removed from create-root."
+    ops:
+      - op: "set"
+        path: "meta.description"
+        before: "Create a Root.js project, run the dev server, and set up the built-in CMS."
+        after: "Create a Root.js project from the starter template, connect the CMS to Firebase, and build pages from templates."
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site."
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on <a href=\"https://vite.dev/\">Vite</a> and <a href=\"https://preactjs.com/\">Preact</a>, and it ships no client-side JavaScript unless you add it."
+                        items: []
+                      - content: "<b>The CMS</b> adds visual editing with live preview, localization, releases and publishing workflows. Content is stored in your own <a href=\"https://firebase.google.com/\">Firebase</a> project, and content models are defined in code."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "The CMS is optional. You can start with the framework and add the CMS at any time."
+              time: 1790683246734
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "WYsrWh"
+          - id: "requirements"
+            title: "Requirements"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"https://nodejs.org/\">Node.js</a> 24 (the current LTS) or later."
+                        items: []
+                      - content: "A package manager. We recommend <a href=\"https://pnpm.io/\">pnpm</a>, which you can enable with Corepack."
+                        items: []
+                      - content: "For the CMS: a Google Cloud project with Firebase, and the <a href=\"https://cloud.google.com/sdk/docs/install\">gcloud CLI</a>."
+                        items: []
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  node --version  # v24 or later
+                  corepack enable
+                _arrayKey: "zpbllo"
+            _arrayKey: "AF5cCa"
+          - id: "create-project"
+            title: "Create a project"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scaffold a new project with <code>create-root</code>, then install its dependencies:"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  pnpm create @blinkk/root my-site
+                  cd my-site
+                  pnpm install
+                _arrayKey: "lEmJWq"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "By default, the project is created from the <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/starter\">starter</a> template. To start from another <a href=\"https://github.com/blinkk/rootjs/tree/main/examples\">example</a>, pass <code>--template</code>:"
+                    - type: "unorderedList"
+                      data:
+                        style: "unordered"
+                        items:
+                          - content: "<code>starter</code>: the framework with a layout, components and App Engine deploy scripts."
+                            items: []
+                          - content: "<code>minimal</code>: the smallest possible project."
+                            items: []
+                          - content: "<code>cms</code>: the framework with the CMS set up."
+                            items: []
+                          - content: "<code>blog</code>: a localized blog that uses the CMS."
+                            items: []
+                          - content: "<code>basepath</code>: a site served from a sub-path, e.g. <code>/about/</code>."
+                            items: []
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "HlDXJe"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm create @blinkk/root --template=cms my-site"
+                _arrayKey: "H6keE1"
+            _arrayKey: "IzpnLF"
+          - id: "dev-server"
+            title: "Run the dev server"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Start the dev server from the project directory:"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm dev"
+                _arrayKey: "7SDPI6"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The site runs at <a href=\"http://localhost:4007\">http://localhost:4007</a>, and pages reload as you edit them. To use a different port, set the <code>PORT</code> environment variable."
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "ZREIb8"
+            _arrayKey: "rRgvo7"
+          - id: "set-up-cms"
+            title: "Set up the CMS"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS runs inside your site at <code>/cms/</code> and stores content in Firestore. If you started from the <code>cms</code> or <code>blog</code> template, the plugin is already installed, but the template points at a sample Firebase project, so follow the steps below to connect your own."
+                - type: "paragraph"
+                  data:
+                    text: "<b>1. Create a Firebase project</b>"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "Create a project in the <a href=\"https://console.firebase.google.com/\">Firebase console</a>, or add Firebase to an existing Google Cloud project."
+                        items: []
+                      - content: "Create a Firestore database in <b>Native mode</b>."
+                        items: []
+                      - content: "Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains."
+                        items: []
+                      - content: "Under <b>Project settings</b>, register a web app and copy its <code>firebaseConfig</code> values for the next step."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "<b>2. Add the CMS plugin</b>"
+                - type: "paragraph"
+                  data:
+                    text: "Install the CMS and the Firebase Admin SDK (skip this if you used the <code>cms</code> template):"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm add @blinkk/root-cms firebase-admin"
+                _arrayKey: "ySUZ8z"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then add the plugin to <code>root.config.ts</code>:"
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "HarB6f"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+                  import {cmsPlugin} from '@blinkk/root-cms/plugin';
+
+                  export default defineConfig({
+                    domain: 'https://example.com',
+                    server: {
+                      // Signs the CMS session cookie. Generate a random value with:
+                      // node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+                      sessionCookieSecret: process.env.SESSION_COOKIE_SECRET,
+                    },
+                    plugins: [
+                      cmsPlugin({
+                        id: 'my-site',
+                        name: 'My Site',
+                        // From Project settings > Your apps in the Firebase console.
+                        firebaseConfig: {
+                          apiKey: '...',
+                          authDomain: 'my-project.firebaseapp.com',
+                          projectId: 'my-project',
+                          storageBucket: 'my-project.appspot.com',
+                        },
+                      }),
+                    ],
+                  });
+                _arrayKey: "ORrFLb"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The <code>id</code> namespaces your content in Firestore, so several sites can share one Firebase project. See <a href=\"/docs/cms/\">CMS configuration</a> for every option."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>3. Sign in to Google Cloud</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "The server reads and writes Firestore with <a href=\"https://cloud.google.com/docs/authentication/application-default-credentials\">application default credentials</a>. For local development, sign in with the gcloud CLI:"
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "yixpsA"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  gcloud auth login
+                  gcloud auth application-default login
+                _arrayKey: "0Vl1vP"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "<b>4. Secure the database and add yourself as an admin</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Run <code>init-firebase</code> to apply the CMS's Firestore security rules and give your account the ADMIN role:"
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "sxZ0JJ"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+                _arrayKey: "xyUGR6"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "This replaces any existing Firestore rules in the project. To review the rules or apply them by hand, see <a href=\"/docs/cms/#security-rules\">Security rules</a>."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>5. Add a collection</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Content models are <code>.schema.ts</code> files in the <code>collections/</code> folder. Each file defines a collection of docs that share the same fields:"
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "TkbB54"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/collections/Pages.schema.ts
+
+                  import {schema} from '@blinkk/root-cms';
+
+                  export default schema.collection({
+                    name: 'Pages',
+                    description: 'Landing pages',
+                    url: '/[...slug]',
+                    preview: {
+                      title: 'meta.title',
+                      image: 'meta.image',
+                    },
+                    fields: [
+                      schema.object({
+                        id: 'meta',
+                        label: 'Meta',
+                        fields: [
+                          schema.string({id: 'title', label: 'Title', translate: true}),
+                          schema.string({
+                            id: 'description',
+                            label: 'Description',
+                            translate: true,
+                            variant: 'textarea',
+                          }),
+                          schema.image({id: 'image', label: 'Image'}),
+                        ],
+                      }),
+                      schema.object({
+                        id: 'content',
+                        label: 'Content',
+                        fields: [
+                          schema.richtext({id: 'body', label: 'Body', translate: true}),
+                        ],
+                      }),
+                    ],
+                  });
+                _arrayKey: "sHKujU"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Generate TypeScript types for your schemas, then restart the dev server and open <a href=\"http://localhost:4007/cms/\">http://localhost:4007/cms/</a> to create your first doc:"
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "n9KE9x"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms generate-types"
+                _arrayKey: "pjBPI2"
+            _arrayKey: "3Yf0YY"
+          - id: "render-content"
+            title: "Render CMS content"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Routes read content with <code>RootCMSClient</code>. This route renders any doc in the <code>Pages</code> collection at its slug, and shows drafts when the URL has <code>?preview=true</code>:"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/[[...slug]].tsx
+
+                  import {Handler, HandlerContext} from '@blinkk/root';
+                  import {RootCMSClient} from '@blinkk/root-cms';
+                  import {RichText} from '@blinkk/root-cms/richtext';
+                  import {PagesDoc} from '@/root-cms';
+
+                  interface PageProps {
+                    doc: PagesDoc;
+                  }
+
+                  export default function Page(props: PageProps) {
+                    const fields = props.doc.fields || {};
+                    return (
+                      <main>
+                        <h1>{fields.meta?.title}</h1>
+                        <RichText data={fields.content?.body} />
+                      </main>
+                    );
+                  }
+
+                  export const handle: Handler = async (req) => {
+                    const ctx = req.handlerContext as HandlerContext<PageProps>;
+                    const slug = ctx.params.slug || 'index';
+                    // Editors preview drafts by adding ?preview=true to the URL.
+                    const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+                    const cmsClient = new RootCMSClient(req.rootConfig);
+                    const doc = await cmsClient.getDoc<PagesDoc>('Pages', slug, {mode});
+                    if (!doc) {
+                      return ctx.render404();
+                    }
+                    return ctx.render({doc});
+                  };
+                _arrayKey: "Ku2SnE"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Learn more in <a href=\"/docs/cms/schemas/\">Schemas</a> and <a href=\"/docs/cms/data-fetching/\">Data fetching</a>."
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "P7uqcz"
+            _arrayKey: "3QmMyx"
+          - id: "secrets"
+            title: "Share environment variables"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "API keys and other secrets belong in a <code>.env</code> file, which shouldn't be committed. To share them with your team, <code>root secrets</code> stores them in <a href=\"https://cloud.google.com/secret-manager\">Google Cloud Secret Manager</a> and keeps each developer's <code>.env</code> in sync:"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  # Create a manifest (.root.secrets.json) and commit it.
+                  pnpm exec root secrets init --gcp-project=my-project --gsm-key=my-site-env
+
+                  # Upload the values in your .env file.
+                  pnpm exec root secrets push
+
+                  # Teammates download them into their own .env.
+                  pnpm exec root secrets sync
+                _arrayKey: "Pr5kWg"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Once a project has a manifest, <code>root dev</code> syncs the secrets when it starts. See the <a href=\"/docs/cli/#root-secrets\">CLI reference</a> for every command."
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "BbNdcr"
+            _arrayKey: "IHVkF1"
+          - id: "ai-agents"
+            title: "Work with AI agents"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js includes skills that teach AI coding agents, such as Claude Code, how to read and edit your CMS content from the command line. Install them into your project:"
+              time: 1790683246734
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms skill.install"
+                _arrayKey: "SJ06XS"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "With the skills installed, an agent can look up docs with <code>root-cms client.call</code>, and propose content changes as a YAML file that your team reviews in a pull request before it's applied with <code>root-cms proposal.apply</code>."
+                  time: 1790683246734
+                  version: "2.28.2"
+                _arrayKey: "3vBxT8"
+            _arrayKey: "wdQobe"
+          - id: "next-steps"
+            title: "Next steps"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"/docs/project-structure/\">Project structure</a>: where routes, components and content models live."
+                        items: []
+                      - content: "<a href=\"/docs/routes/\">Routes</a>: file-based routing, data fetching and SSR."
+                        items: []
+                      - content: "<a href=\"/docs/deployment/\">Deployment</a>: ship your site as static HTML or with a server."
+                        items: []
+                      - content: "<a href=\"/docs/cms/schemas/\">Schemas</a>: model your content."
+                        items: []
+                      - content: "<a href=\"/docs/cli/\">CLI reference</a> and <a href=\"/docs/api/\">API reference</a>."
+                        items: []
+              time: 1790683246734
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "K6dc25"
+        after:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site."
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on <a href=\"https://vite.dev/\">Vite</a>, and it ships no client-side JavaScript unless you add it."
+                        items: []
+                      - content: "<b>The CMS</b> adds visual editing with live preview, localization, releases and publishing workflows. Content is stored in your own <a href=\"https://firebase.google.com/\">Firebase</a> project, and content models are defined in code."
+                        items: []
+              time: 1790730406815
+              version: "2.28.2"
+            blocks: []
+          - id: "requirements"
+            title: "Requirements"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"https://nodejs.org/\">Node.js</a> 24 (the current LTS) or later."
+                        items: []
+                      - content: "A package manager. We recommend <a href=\"https://pnpm.io/\">pnpm</a>, which you can enable with Corepack."
+                        items: []
+                      - content: "For the CMS: a Google Cloud project with Firebase, and the <a href=\"https://cloud.google.com/sdk/docs/install\">gcloud CLI</a>."
+                        items: []
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  node --version  # v24 or later
+                  corepack enable
+          - id: "create-project"
+            title: "Create a project"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scaffold a new project from the <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/starter\">starter</a> template, then install its dependencies and start the dev server:"
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  pnpm create @blinkk/root my-site
+                  cd my-site
+                  pnpm install
+                  pnpm dev
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The site runs at <a href=\"http://localhost:4007\">http://localhost:4007</a>, and pages reload as you edit them. To use a different port, set the <code>PORT</code> environment variable."
+                    - type: "paragraph"
+                      data:
+                        text: "The starter comes with the CMS, a <code>Pages</code> collection, and a route that builds each page from a list of templates:"
+                    - type: "html"
+                      data:
+                        html: |-
+                          <pre><code>my-site/
+                          ├── collections/
+                          │   └── Pages.schema.ts   # The Pages collection
+                          ├── components/
+                          │   └── PageModules/      # Renders each module with its template
+                          ├── layouts/
+                          │   └── BaseLayout.tsx    # &lt;html&gt;, &lt;head&gt;, header and footer
+                          ├── routes/
+                          │   ├── [[...slug]].tsx   # Renders Pages docs by slug
+                          │   └── 404.tsx
+                          ├── templates/
+                          │   ├── Hero/             # Hero.schema.ts, Hero.tsx, Hero.module.scss
+                          │   └── Text/             # Text.schema.ts, Text.tsx, Text.module.scss
+                          ├── root-cms.d.ts         # Generated types for your schemas
+                          └── root.config.ts</code></pre>
+                    - type: "paragraph"
+                      data:
+                        text: "Until you connect a Firebase project, the home page shows the setup steps below."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>Just the framework?</b> The <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/minimal\">minimal</a> template is a plain Root.js project with a single \"Hello, Root.js\" page at <code>routes/index.tsx</code>, and no CMS. It's a good fit for static sites. To add the CMS to it later, install <code>@blinkk/root-cms</code> and <code>firebase-admin</code>, and add <code>cmsPlugin()</code> as described in <a href=\"/docs/cms/\">CMS configuration</a>:"
+                  time: 1790730406815
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm create @blinkk/root --template=minimal my-site"
+          - id: "set-up-cms"
+            title: "Connect the CMS to Firebase"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS runs inside your site at <code>/cms/</code> and stores content in Firestore. The starter's <code>root.config.ts</code> has placeholder Firebase values, so connect your own project first."
+                - type: "paragraph"
+                  data:
+                    text: "<b>1. Create a Firebase project</b>"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "Create a project in the <a href=\"https://console.firebase.google.com/\">Firebase console</a>, or add Firebase to an existing Google Cloud project."
+                        items: []
+                      - content: "Create a Firestore database in <b>Native mode</b>."
+                        items: []
+                      - content: "Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains."
+                        items: []
+                      - content: "Under <b>Project settings</b>, register a web app and copy its <code>firebaseConfig</code> values for the next step."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "<b>2. Add your Firebase config</b>"
+                - type: "paragraph"
+                  data:
+                    text: "Replace the placeholder values in <code>root.config.ts</code> with your web app's config:"
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  cmsPlugin({
+                    id: 'starter',
+                    name: 'Starter',
+                    // From Project settings > Your apps in the Firebase console.
+                    firebaseConfig: {
+                      apiKey: '...',
+                      authDomain: 'my-project.firebaseapp.com',
+                      projectId: 'my-project',
+                      storageBucket: 'my-project.appspot.com',
+                    },
+                  }),
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The <code>id</code> namespaces your content in Firestore, so several sites can share one Firebase project. Before you deploy, also replace <code>sessionCookieSecret</code> with a long random value. See <a href=\"/docs/cms/\">CMS configuration</a> for every option."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>3. Sign in to Google Cloud</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "The server reads and writes Firestore with <a href=\"https://cloud.google.com/docs/authentication/application-default-credentials\">application default credentials</a>. For local development, sign in with the gcloud CLI:"
+                  time: 1790730406815
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  gcloud auth login
+                  gcloud auth application-default login
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "<b>4. Secure the database and add yourself as an admin</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Run <code>init-firebase</code> to apply the CMS's Firestore security rules and give your account the ADMIN role:"
+                  time: 1790730406815
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "This replaces any existing Firestore rules in the project. To review the rules or apply them by hand, see <a href=\"/docs/cms/#security-rules\">Security rules</a>."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>5. Create your home page</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Restart the dev server and open <a href=\"http://localhost:4007/cms/\">http://localhost:4007/cms/</a>. In the <code>Pages</code> collection, create a doc with the slug <code>index</code>, add a <b>Hero</b> and a <b>Text</b> module, and publish it. It replaces the setup page at <code>/</code>. Other slugs map to their own URL, e.g. <code>about</code> renders at <code>/about</code>."
+                  time: 1790730406815
+                  version: "2.28.2"
+          - id: "templates"
+            title: "Build pages from templates"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Each page in the starter is a list of modules. The <code>Pages</code> collection offers every template schema in the <code>templates/</code> folder with <code>schema.glob()</code>:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/collections/Pages.schema.ts
+
+                  schema.array({
+                    id: 'modules',
+                    label: 'Modules',
+                    of: schema.oneOf({
+                      // Every `templates/<Name>/<Name>.schema.ts` file is available here.
+                      types: schema.glob('/templates/*/*.schema.ts'),
+                    }),
+                  }),
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The route at <code>routes/[[...slug]].tsx</code> loads the doc for the URL with <code>RootCMSClient</code>, and <code>PageModules</code> renders each module with the component that matches its template name. Editors can preview drafts by adding <code>?preview=true</code> to the URL."
+                    - type: "paragraph"
+                      data:
+                        text: "To add a template, create a folder in <code>templates/</code> with a schema and a component of the same name. For example, here's the starter's <code>Text</code> template:"
+                  time: 1790730406815
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/templates/Text/Text.schema.ts
+
+                  import {schema} from '@blinkk/root-cms';
+
+                  export default schema.define({
+                    name: 'Text',
+                    description: 'Heading and body copy.',
+                    fields: [
+                      schema.string({
+                        id: 'title',
+                        label: 'Title',
+                        translate: true,
+                      }),
+                      schema.string({
+                        id: 'body',
+                        label: 'Body',
+                        help: 'Separate paragraphs with a blank line.',
+                        translate: true,
+                        variant: 'textarea',
+                      }),
+                    ],
+                  });
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/templates/Text/Text.tsx
+
+                  import {useTranslations} from '@blinkk/root';
+                  import {TextFields} from '@/root-cms.js';
+                  import styles from './Text.module.scss';
+
+                  export function Text(props: TextFields) {
+                    const t = useTranslations();
+                    const paragraphs = t(props.body || '')
+                      .split(/\n\s*\n/)
+                      .filter((paragraph) => paragraph.trim());
+                    return (
+                      <section className={styles.text}>
+                        {props.title && <h2 className={styles.title}>{t(props.title)}</h2>}
+                        {paragraphs.map((paragraph) => (
+                          <p>{paragraph}</p>
+                        ))}
+                      </section>
+                    );
+                  }
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:"
+                  time: 1790730406816
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms generate-types"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Learn more in <a href=\"/docs/cms/schemas/\">Schemas</a> and <a href=\"/docs/cms/data-fetching/\">Data fetching</a>."
+                  time: 1790730406816
+                  version: "2.28.2"
+          - id: "secrets"
+            title: "Share environment variables"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "API keys and other secrets belong in a <code>.env</code> file, which shouldn't be committed. To share them with your team, <code>root secrets</code> stores them in <a href=\"https://cloud.google.com/secret-manager\">Google Cloud Secret Manager</a> and keeps each developer's <code>.env</code> in sync:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  # Create a manifest (.root.secrets.json) and commit it.
+                  pnpm exec root secrets init --gcp-project=my-project --gsm-key=my-site-env
+
+                  # Upload the values in your .env file.
+                  pnpm exec root secrets push
+
+                  # Teammates download them into their own .env.
+                  pnpm exec root secrets sync
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Once a project has a manifest, <code>root dev</code> syncs the secrets when it starts. See the <a href=\"/docs/cli/#root-secrets\">CLI reference</a> for every command."
+                  time: 1790730406816
+                  version: "2.28.2"
+          - id: "ai-agents"
+            title: "Work with AI agents"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js includes skills that teach AI coding agents, such as Claude Code, how to read and edit your CMS content from the command line. Install them into your project:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms skill.install"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "With the skills installed, an agent can look up docs with <code>root-cms client.call</code>, and propose content changes as a YAML file that your team reviews in a pull request before it's applied with <code>root-cms proposal.apply</code>."
+                  time: 1790730406816
+                  version: "2.28.2"
+          - id: "next-steps"
+            title: "Next steps"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"/docs/project-structure/\">Project structure</a>: where routes, components and content models live."
+                        items: []
+                      - content: "<a href=\"/docs/routes/\">Routes</a>: file-based routing, data fetching and SSR."
+                        items: []
+                      - content: "<a href=\"/docs/deployment/\">Deployment</a>: ship your site as static HTML or with a server."
+                        items: []
+                      - content: "<a href=\"/docs/cms/schemas/\">Schemas</a>: model your content."
+                        items: []
+                      - content: "<a href=\"/docs/cli/\">CLI reference</a> and <a href=\"/docs/api/\">API reference</a>."
+                        items: []
+              time: 1790730406816
+              version: "2.28.2"
+            blocks: []
+  - kind: "doc.edit"
+    docId: "Docs/deployment"
+    note: "New page: deploying a site to production, as static HTML (SSG) or with a server (SSR) on App Engine or Firebase Hosting."
+    ops:
+      - op: "set"
+        path: "content.body"
+        before:
+          time: 1790683389294
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Root.js sites can be deployed in one of two ways:"
+            - type: "unorderedList"
+              data:
+                style: "unordered"
+                items:
+                  - content: "<b>Static (SSG)</b>: <code>root build</code> renders every page to HTML ahead of time. Host the output on any static host or CDN."
+                  - content: "<b>Server (SSR)</b>: pages are rendered on each request by a Node.js server. Root.js packages the server for <a href=\"#app-engine\">App Engine</a> and <a href=\"#firebase\">Firebase Hosting</a>, and it runs anywhere Node.js 24 does."
+          version: "lexical-0.31.2"
+        after:
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Root.js sites can be deployed in one of two ways:"
+            - type: "unorderedList"
+              data:
+                style: "unordered"
+                items:
+                  - content: "<b>Static (SSG)</b>: <code>root build</code> renders every page to HTML ahead of time. Host the output on any static host or CDN."
+                    items: []
+                  - content: "<b>Server (SSR)</b>: pages are rendered on each request by a Node.js server. Root.js packages the server for <a href=\"#app-engine\">App Engine</a> and <a href=\"#firebase\">Firebase Hosting</a>, and it runs anywhere Node.js 24 does."
+                    items: []
+            - type: "paragraph"
+              data:
+                text: "Use SSR if your site uses the CMS: editors sign in to the CMS, preview drafts and publish on the running server. Also use SSR for any route that exports <code>handle()</code>, since those routes are skipped in a static build."
+          time: 1790730406816
+          version: "2.28.2"

@@ -72,16 +72,6 @@ export interface RootCMSDoc<Fields extends {}> {
   fields?: Fields;
 }
 
-/** Generated from `/templates/Hero/Hero.schema.ts`. */
-export interface HeroFields {
-  /** Title */
-  title?: string;
-  /** Body */
-  body?: string;
-  /** Image */
-  image?: RootCMSImage;
-}
-
 /** Generated from `/collections/Pages.schema.ts`. */
 export interface PagesFields {
   /** Meta */
@@ -103,10 +93,12 @@ export interface PagesFields {
 /** Generated from `/collections/Pages.schema.ts`. */
 export type PagesDoc = RootCMSDoc<PagesFields>;
 
-/** Generated from `/templates/Text/Text.schema.ts`. */
-export interface TextFields {
+/** Generated from `/templates/TemplateHero/TemplateHero.schema.ts`. */
+export interface TemplateHeroFields {
   /** Title */
   title?: string;
-  /** Body. Separate paragraphs with a blank line. */
+  /** Body */
   body?: string;
+  /** Image */
+  image?: RootCMSImage;
 }
