@@ -1912,15 +1912,60 @@ DocEditor.ArrayField = (props: FieldProps) => {
     return false;
   };
 
+  // For arrays of oneOf fields using the "picker" variant, adding an item
+  // opens the component picker first and the item is created with the
+  // selected type. Skipped when `itemDefault` already sets a `_type`.
+  const collectionTypes = useCollectionSchemaTypes();
+  const componentPickerModal = useComponentPickerModal();
+  const usePickerOnAdd =
+    field.of?.type === 'oneof' &&
+    getOneOfVariant(field.of as schema.OneOfField) === 'picker' &&
+    !field.itemDefault?._type;
+
+  /**
+   * Resolves the default value for a new item, then calls `callback` with it.
+   * When the picker is enabled, the callback only fires once a type has been
+   * selected (dismissing the picker adds nothing).
+   */
+  const withNewItemValue = (
+    callback: (defaultValue: Record<string, any>) => void
+  ) => {
+    if (!usePickerOnAdd) {
+      callback(field.itemDefault || {});
+      return;
+    }
+    const {typesMap, orderedSchemas} = resolveOneOfTypes(
+      field.of as schema.OneOfField,
+      collectionTypes
+    );
+    componentPickerModal.open({
+      options: buildOneOfPickerOptions(orderedSchemas),
+      onSelect: (opt) => {
+        const typeName = opt.schema.name;
+        callback(
+          buildOneOfTypeValue(
+            typeName,
+            typesMap[typeName] || opt.schema,
+            collectionTypes,
+            opt.preset?.data
+          )
+        );
+        componentPickerModal.close();
+      },
+    });
+  };
+
   const add = () => {
     if (!testCanAddItem()) {
       return;
     }
-    dispatch({
-      type: 'add',
-      draft: draft,
-      deepKey: props.deepKey,
-      defaultValue: field.itemDefault || {},
+    withNewItemValue((defaultValue) => {
+      dispatch({
+        type: 'add',
+        draft: draft,
+        deepKey: props.deepKey,
+        defaultValue: defaultValue,
+      });
     });
   };
 
@@ -1962,12 +2007,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
     if (!testCanAddItem()) {
       return;
     }
-    dispatch({
-      type: 'insertBefore',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      defaultValue: field.itemDefault || {},
+    withNewItemValue((defaultValue) => {
+      dispatch({
+        type: 'insertBefore',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        defaultValue: defaultValue,
+      });
     });
   };
 
@@ -1975,12 +2022,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
     if (!testCanAddItem()) {
       return;
     }
-    dispatch({
-      type: 'insertAfter',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      defaultValue: field.itemDefault || {},
+    withNewItemValue((defaultValue) => {
+      dispatch({
+        type: 'insertAfter',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        defaultValue: defaultValue,
+      });
     });
   };
 
@@ -2568,35 +2617,17 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
-  const variant =
-    field.variant || window.__ROOT_CTX.defaultOneOfVariant || 'dropdown';
+  const variant = getOneOfVariant(field);
   const [type, setType] = useState('');
   const collectionTypes = useCollectionSchemaTypes();
-  const oneOfTypes = Array.isArray(field.types) ? field.types : [];
-  const typesMap: Record<string, schema.Schema> = {};
-  const orderedSchemas: schema.Schema[] = [];
+  const {typeNames, typesMap, orderedSchemas} = resolveOneOfTypes(
+    field,
+    collectionTypes
+  );
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
+    ...typeNames.map((name) => ({value: name, label: name})),
   ];
-  oneOfTypes.forEach((typedef) => {
-    let resolved: schema.Schema | undefined;
-    let name: string;
-    if (typeof typedef === 'string') {
-      resolved = collectionTypes[typedef];
-      name = typedef;
-    } else {
-      resolved = typedef;
-      name = typedef.name;
-    }
-    if (!name) {
-      return;
-    }
-    if (resolved) {
-      typesMap[name] = resolved;
-      orderedSchemas.push(resolved);
-    }
-    dropdownValues.push({value: name, label: name});
-  });
   const selectedType = typesMap[type || ''];
   const draft = useDraftDoc().controller;
   const componentPickerModal = useComponentPickerModal();
@@ -2606,30 +2637,19 @@ DocEditor.OneOfField = (props: FieldProps) => {
   }, []);
 
   async function applyType(newType: string, prefill?: Record<string, any>) {
-    const newValue: any = {};
-    if (newType) {
-      const typeSchema = typesMap[newType];
-      if (prefill && typeSchema) {
-        // Preset path: normalize prefill so any plain `[]` arrays in the
-        // preset's data become array-maps for proper CMS rendering, then
-        // deep-merge over schema defaults so nested objects merge instead of
-        // clobbering each other.
-        const defaults = getDefaultFieldValue(typeSchema);
-        const normalized = normalizePresetData(
-          typeSchema,
-          prefill,
-          collectionTypes
-        );
-        Object.assign(newValue, deepMerge(defaults, normalized));
-      } else if (newType in cachedValues) {
-        // When swapping to a previously selected type, reset to the previous
-        // value.
-        Object.assign(newValue, cachedValues[newType]);
-      } else if (typeSchema) {
-        Object.assign(newValue, getDefaultFieldValue(typeSchema));
-      }
+    let newValue: any;
+    if (newType && !prefill && newType in cachedValues) {
+      // When swapping to a previously selected type, reset to the previous
+      // value.
+      newValue = {...cachedValues[newType], _type: newType};
+    } else {
+      newValue = buildOneOfTypeValue(
+        newType,
+        typesMap[newType],
+        collectionTypes,
+        prefill
+      );
     }
-    newValue._type = newType;
 
     await draft.updateKey(props.deepKey, newValue);
     setType(newType);
@@ -2656,24 +2676,9 @@ DocEditor.OneOfField = (props: FieldProps) => {
     }
   }
 
-  function buildPickerOptions(): ComponentPickerOption[] {
-    const options: ComponentPickerOption[] = [];
-    orderedSchemas.forEach((s) => {
-      options.push({key: `${s.name}::__blank__`, schema: s});
-      (s.presets || []).forEach((preset) => {
-        options.push({
-          key: `${s.name}::${preset.id}`,
-          schema: s,
-          preset,
-        });
-      });
-    });
-    return options;
-  }
-
   function openPicker() {
     componentPickerModal.open({
-      options: buildPickerOptions(),
+      options: buildOneOfPickerOptions(orderedSchemas),
       onSelect: async (opt) => {
         await applyType(opt.schema.name, opt.preset?.data);
         componentPickerModal.close();
@@ -2752,6 +2757,96 @@ DocEditor.OneOfField = (props: FieldProps) => {
     </div>
   );
 };
+
+/** Returns the effective UI variant for a oneOf field. */
+function getOneOfVariant(field: schema.OneOfField): 'dropdown' | 'picker' {
+  return field.variant || window.__ROOT_CTX.defaultOneOfVariant || 'dropdown';
+}
+
+/**
+ * Resolves a oneOf field's `types` (which may be inline schemas or names of
+ * collection-level schemas) into their schema definitions.
+ */
+function resolveOneOfTypes(
+  field: schema.OneOfField,
+  collectionTypes: Record<string, schema.Schema>
+) {
+  const oneOfTypes = Array.isArray(field.types) ? field.types : [];
+  /** All declared type names, including ones that failed to resolve. */
+  const typeNames: string[] = [];
+  const typesMap: Record<string, schema.Schema> = {};
+  const orderedSchemas: schema.Schema[] = [];
+  oneOfTypes.forEach((typedef) => {
+    let resolved: schema.Schema | undefined;
+    let name: string;
+    if (typeof typedef === 'string') {
+      resolved = collectionTypes[typedef];
+      name = typedef;
+    } else {
+      resolved = typedef;
+      name = typedef.name;
+    }
+    if (!name) {
+      return;
+    }
+    if (resolved) {
+      typesMap[name] = resolved;
+      orderedSchemas.push(resolved);
+    }
+    typeNames.push(name);
+  });
+  return {typeNames, typesMap, orderedSchemas};
+}
+
+/** Builds the component picker cards (blank + presets) for oneOf schemas. */
+function buildOneOfPickerOptions(
+  schemas: schema.Schema[]
+): ComponentPickerOption[] {
+  const options: ComponentPickerOption[] = [];
+  schemas.forEach((s) => {
+    options.push({key: `${s.name}::__blank__`, schema: s});
+    (s.presets || []).forEach((preset) => {
+      options.push({
+        key: `${s.name}::${preset.id}`,
+        schema: s,
+        preset,
+      });
+    });
+  });
+  return options;
+}
+
+/**
+ * Builds the initial value for a oneOf field when a type is selected, using
+ * the schema's defaults and an optional preset's data.
+ */
+function buildOneOfTypeValue(
+  typeName: string,
+  typeSchema: schema.Schema | undefined,
+  collectionTypes: Record<string, schema.Schema>,
+  prefill?: Record<string, any>
+): Record<string, any> {
+  const newValue: Record<string, any> = {};
+  if (typeName && typeSchema) {
+    if (prefill) {
+      // Preset path: normalize prefill so any plain `[]` arrays in the
+      // preset's data become array-maps for proper CMS rendering, then
+      // deep-merge over schema defaults so nested objects merge instead of
+      // clobbering each other.
+      const defaults = getDefaultFieldValue(typeSchema);
+      const normalized = normalizePresetData(
+        typeSchema,
+        prefill,
+        collectionTypes
+      );
+      Object.assign(newValue, deepMerge(defaults, normalized));
+    } else {
+      Object.assign(newValue, getDefaultFieldValue(typeSchema));
+    }
+  }
+  newValue._type = typeName;
+  return newValue;
+}
 
 /**
  * Swaps two elements in an array at the specified indices.
