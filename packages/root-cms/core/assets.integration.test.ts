@@ -208,6 +208,35 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(res.asset.file?.width).toBeUndefined();
     });
 
+    it('records video dimensions', async () => {
+      // A minimal WebM with a single 1280x720 video track.
+      const webm = Buffer.from(
+        [
+          '1a45dfa3 87 4282 84 7765626d',
+          '18538067 94',
+          '1654ae6b 8f',
+          'ae 8d 83 81 01',
+          'e0 88 b0 82 0500 ba 82 02d0',
+        ]
+          .join('')
+          .replace(/\s/g, ''),
+        'hex'
+      );
+      const res = await client.uploadAsset(webm, {filename: 'intro.webm'});
+      const saved = storageMocks.saved[0];
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(saved.opts.contentType).toBe('video/webm');
+      expect(saved.opts.metadata.metadata).toMatchObject({
+        width: '1280',
+        height: '720',
+      });
+      expect(res.asset.file).toMatchObject({
+        src: `https://storage.googleapis.com/${BUCKET}/${saved.path}`,
+        width: 1280,
+        height: 720,
+      });
+    });
+
     it('preserves the filename in folders with preserveFilename', async () => {
       await db.doc(`Projects/${projectId}/Assets/folder-brand`).set({
         id: 'folder-brand',

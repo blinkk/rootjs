@@ -16,6 +16,7 @@ import {Timestamp} from 'firebase-admin/firestore';
 import {
   GCI_SUPPORTED_EXTS,
   PREVIEW_IMAGE_EXTS,
+  VIDEO_EXTS,
   buildReplacedAssetFile,
   buildSyncedFieldValue,
   collectAssetFieldPaths,
@@ -37,7 +38,8 @@ import type {
   UploadAssetOptions,
   UploadAssetResult,
 } from './client.js';
-import {getImageSize} from './image-size.js';
+import {getImageSize, type ImageSize} from './image-size.js';
+import {getVideoSize} from './video-size.js';
 
 /** Default hosted GCI service used when the plugin config sets `gci: true`. */
 const DEFAULT_GCI_DOMAIN = 'https://services.rootjs.dev';
@@ -388,12 +390,15 @@ export class AssetLibrary {
       uploadedBy: options.uploadedBy || DEFAULT_MODIFIED_BY,
       uploadedAt: String(Date.now()),
     };
+    let size: ImageSize | null = null;
     if (PREVIEW_IMAGE_EXTS.includes(ext)) {
-      const size = getImageSize(bytes, ext);
-      if (size) {
-        meta.width = size.width;
-        meta.height = size.height;
-      }
+      size = getImageSize(bytes, ext);
+    } else if (VIDEO_EXTS.includes(ext)) {
+      size = getVideoSize(bytes);
+    }
+    if (size) {
+      meta.width = size.width;
+      meta.height = size.height;
     }
 
     const bucket = await this.getBucket(bucketName);
