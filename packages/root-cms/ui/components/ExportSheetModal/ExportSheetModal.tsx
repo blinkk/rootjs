@@ -121,8 +121,7 @@ export function ExportSheetModal(
 
     // Create Google Sheet.
     const rootConfig = window.__ROOT_CTX.rootConfig;
-    const project =
-      rootConfig.projectName || rootConfig.projectId || 'Root CMS';
+    const project = rootConfig.projectName || rootConfig.projectId || 'Root.js';
     let gspreadsheet: GSpreadsheet;
     let gsheet: GSheet;
     const notificationId = 'create-google-sheet';

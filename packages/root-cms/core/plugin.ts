@@ -456,7 +456,7 @@ export type CMSPluginOptions = {
   favicon?: string;
 
   /**
-   * Enables minimal branding mode in the CMS header. This hides the Root CMS
+   * Enables minimal branding mode in the CMS header. This hides the Root.js
    * logo and displays the project name on the top-right.
    */
   minimalBranding?: boolean;
@@ -1333,7 +1333,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               res
                 .status(503)
                 .send(
-                  'Root CMS was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
+                  'Root.js was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
                 );
             }
             return;

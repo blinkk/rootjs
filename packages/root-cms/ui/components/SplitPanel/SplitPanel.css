@@ -37,7 +37,7 @@
 }
 
 .SplitPanel__divider:hover::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .SplitPanel__item {

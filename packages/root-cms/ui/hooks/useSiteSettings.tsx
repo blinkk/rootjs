@@ -8,7 +8,7 @@ import {useFirebase} from './useFirebase.js';
 
 /** Project level settings. Keys are stored in the database. */
 interface SiteSettings {
-  /** The Google Drive folder where files created by Root CMS are stored. If unspecified, files will be created in your "My Drive". */
+  /** The Google Drive folder where files created by Root.js are stored. If unspecified, files will be created in your "My Drive". */
   googleDriveFolder?: string;
   /** The default assignee for new tasks created within the CMS. */
   defaultAssignee?: string;
@@ -37,7 +37,7 @@ export const SITE_SETTINGS: Setting[] = [
     key: 'googleDriveFolder',
     placeholder: 'https://drive.google.com/drive/folders/...',
     description:
-      'Where Google Sheets created by Root CMS\'s localization process are stored. If unspecified, they will be created in your "My Drive".',
+      'Where Google Sheets created by Root.js\'s localization process are stored. If unspecified, they will be created in your "My Drive".',
     ui: (value) => {
       return (
         <Button

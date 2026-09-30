@@ -221,7 +221,7 @@
 }
 
 .DocumentPage__checksDivider:hover::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .DocumentPage__checks {
@@ -261,7 +261,7 @@
 }
 
 .DocumentPage__commentsDivider:hover::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .DocumentPage__comments {
@@ -302,7 +302,7 @@
 }
 
 .DocumentPage__searchDivider:hover::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .DocumentPage__search {
@@ -343,7 +343,7 @@
 }
 
 .DocumentPage__aiDivider:hover::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .DocumentPage__ai {

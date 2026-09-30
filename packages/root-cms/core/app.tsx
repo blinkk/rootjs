@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
+import {beetMarkDataUri} from '../shared/beet.js';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
@@ -11,8 +12,19 @@ import {Collection} from './schema.js';
 import {getServerVersion} from './server-version.js';
 import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 
-const DEFAULT_FAVICON_URL =
-  'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
+/** The default favicon: the Root.js beet mark. */
+const DEFAULT_FAVICON_URL = beetMarkDataUri();
+
+/**
+ * Renders the favicon `<link>`. The type is omitted for custom favicons so
+ * the browser can sniff it from the response.
+ */
+function Favicon(props: {url?: string}) {
+  if (props.url) {
+    return <link rel="icon" href={props.url} />;
+  }
+  return <link rel="icon" href={DEFAULT_FAVICON_URL} type="image/svg+xml" />;
+}
 
 interface AppProps {
   title: string;
@@ -45,11 +57,7 @@ function App(props: AppProps) {
           href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
           nonce="{NONCE}"
         />
-        <link
-          rel="icon"
-          href={props.favicon || DEFAULT_FAVICON_URL}
-          type="image/png"
-        />
+        <Favicon url={props.favicon} />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
@@ -97,14 +105,14 @@ interface RenderOptions {
 
 function getCmsTitle(projectName: string, minimalBranding?: boolean): string {
   if (!projectName) {
-    return 'Root CMS';
+    return 'Root.js';
   }
 
   if (minimalBranding) {
     return projectName;
   }
 
-  return `${projectName} – Root CMS`;
+  return `${projectName} – Root.js`;
 }
 
 export async function renderApp(
@@ -260,11 +268,7 @@ function SignIn(props: SignInProps) {
           href="https://fonts.googleapis.com/css?family=Google+Sans:400,500&display=swap"
           nonce="{NONCE}"
         />
-        <link
-          rel="icon"
-          href={props.favicon || DEFAULT_FAVICON_URL}
-          type="image/png"
-        />
+        <Favicon url={props.favicon} />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
       </head>
       <body>

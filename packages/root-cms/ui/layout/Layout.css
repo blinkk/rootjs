@@ -178,7 +178,7 @@
 }
 
 .Layout__side__button a.active::after {
-  background-color: lightblue;
+  background-color: var(--cms-accent);
 }
 
 .Layout__side__button img,

@@ -128,7 +128,7 @@ Options:
   default recipient list.
 - `to`: extra recipients, static or computed per action (e.g. doc watchers).
 - `filter`: skip notifications, e.g. for certain collections.
-- `cmsUrl`: base URL used for the "Open in Root CMS" link. Defaults to
+- `cmsUrl`: base URL used for the "Open in Root.js" link. Defaults to
   `rootConfig.domain`.
 - `template`: `{placeholder}` templates or a function. Placeholders include
   `{summary}`, `{by}`, `{fieldLabel}`, `{content}`, `{docId}`, and `{url}`.

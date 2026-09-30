@@ -33,8 +33,10 @@
   --cms-drawer-indent: 0;
   /* A rule down that space (a `border` shorthand). */
   --cms-drawer-rule: none;
-  /* The structural accent: open list items, inline groups. */
-  --cms-accent: lightblue;
+  /* The accent color: active tabs and nav items, open list items, inline
+   * groups, and divider hovers.
+   */
+  --cms-accent: #d9a6c8;
 
   /* --- Type and rhythm ------------------------------------------------- */
 

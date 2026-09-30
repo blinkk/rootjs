@@ -27,7 +27,7 @@ import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' with {type: 'json'};
 import {clearLastSignIn} from '../../shared/auth-hints.js';
-import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
+import {RootJsLogo} from '../components/RootJsLogo/RootJsLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
 import {useLocalStorage} from '../hooks/useLocalStorage.js';
 import {testAiEnabled} from '../utils/ai.js';
@@ -112,7 +112,7 @@ Layout.Top = () => {
       {!minimalBranding ? (
         <>
           <a className="Layout__top__logo" href="/cms">
-            <RootCMSLogo />
+            <RootJsLogo />
           </a>
           <Layout.Version />
           <div className="Layout__top__project">{projectName}</div>
@@ -135,7 +135,7 @@ Layout.Top = () => {
 };
 
 /**
- * The Root CMS version badge in the top bar, which links to the changelog.
+ * The Root.js version badge in the top bar, which links to the changelog.
  * When the app is prebuilt (i.e. deployed, not the dev server), a tooltip
  * shows when the server was built.
  */

@@ -5,7 +5,7 @@
 
 .mantine-Tabs-tabControl[aria-selected="true"] {
   color: var(--color-text-default);
-  border-bottom-color: lightblue;
+  border-bottom-color: var(--cms-accent);
 }
 
 .mantine-Notification-description {

@@ -118,7 +118,7 @@ describe('emailNotifications', () => {
     expect(sendEmail).toHaveBeenCalledOnce();
     const email = sendEmail.mock.calls[0][0];
     expect(email.to).toEqual(['a@example.com']);
-    expect(email.subject).toBe('[Root CMS] doc.publish by user@example.com');
+    expect(email.subject).toBe('[Root.js] doc.publish by user@example.com');
     expect(email.body).toContain('Action: doc.publish');
     expect(email.body).toContain('By: user@example.com');
     expect(email.body).toContain('Time: 2026-07-21T12:00:00.000Z');
@@ -331,7 +331,7 @@ describe('emailNotifications', () => {
     await service.onAction!(ctx, testAction());
 
     const email = sendEmail.mock.calls[0][0];
-    expect(email.subject).toBe('[Root CMS] doc.publish by user@example.com');
+    expect(email.subject).toBe('[Root.js] doc.publish by user@example.com');
     expect(email.body).toContain('Action: doc.publish');
     expect(email.htmlBody).toBeUndefined();
   });
