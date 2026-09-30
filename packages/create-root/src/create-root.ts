@@ -10,6 +10,8 @@ import degit from 'degit';
 import {bgGreen, black} from 'kleur/colors';
 import {dim} from 'kleur/colors';
 
+import {detectPackageManager, maybeRunGcpSetup} from './gcp-setup.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const packageJson = require(path.join(__dirname, '../package.json'));
@@ -31,6 +33,10 @@ async function main() {
     'github repo to pull from',
     'blinkk/rootjs/examples'
   );
+  program.option(
+    '--skip-gcp-setup',
+    "don't offer to set up Google Cloud for Root CMS templates"
+  );
   program.action(async (dir, options) => {
     if (!dir) {
       dir = process.cwd();
@@ -51,12 +57,18 @@ async function main() {
     });
     await emitter.clone(outputDir);
     await updatePackageJson(path.join(outputDir, 'package.json'));
+    const ranSetup = await maybeRunGcpSetup(outputDir, {
+      skip: options.skipGcpSetup,
+      packageManager: detectPackageManager(),
+    });
     console.log('done! next steps:');
     console.log();
     if (outputDir !== process.cwd()) {
       console.log(`  cd ${maybeRelativePath(outputDir)}`);
     }
-    console.log('  pnpm install');
+    if (!ranSetup) {
+      console.log('  pnpm install');
+    }
     console.log('  pnpm dev');
   });
   await program.parseAsync(process.argv);

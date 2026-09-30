@@ -8,6 +8,7 @@ import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
 import {initFirebase} from './init-firebase.js';
 import {proposalApply, proposalCheck, proposalDiff} from './proposal.js';
+import {setup} from './setup/setup.js';
 import {installSkill} from './skill.js';
 
 class CliRunner {
@@ -44,6 +45,26 @@ class CliRunner {
       .option('--project <project>', 'gcp project id')
       .option('--admin <email>', 'adds an admin to the project')
       .action(initFirebase);
+    program
+      .command('setup')
+      .description(
+        'sets up a google cloud project for root cms: checks gcloud sign-in, then configures firebase, firestore, storage, iam and secrets'
+      )
+      .option(
+        '--project <project>',
+        'gcp project id (skips the new/existing question)'
+      )
+      .option(
+        '--site-id <siteId>',
+        'site id, used to keep sites on one gcp project apart'
+      )
+      .option(
+        '--location <location>',
+        'region for a new firestore database and storage bucket'
+      )
+      .option('--dry-run', 'print what would change without changing anything')
+      .option('--yes', 'accept the default answer to every question')
+      .action(setup);
     program
       .command('generate-types')
       .alias('types')
@@ -314,4 +335,5 @@ export {
   proposalApply,
   proposalCheck,
   proposalDiff,
+  setup,
 };
