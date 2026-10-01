@@ -147,6 +147,62 @@ describe('cmsCopyDoc', () => {
     );
   });
 
+  it('keeps asset library links and indexes them on the copy', async () => {
+    const image = {
+      src: 'https://example.com/hero.png',
+      width: 10,
+      height: 10,
+      assetId: 'asset1',
+    };
+    const fields = {
+      hero: {image},
+      // Marshaled arrays are stored as keyed objects.
+      modules: {
+        _array: ['k1'],
+        k1: {_type: 'Card', image: {...image, assetId: 'asset2'}},
+      },
+    };
+    mocks.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          fields,
+          // A stale index on the source must not leak into the copy.
+          sys: {locales: ['en'], assets: ['stale']},
+        }),
+      })
+      .mockResolvedValueOnce({
+        exists: () => false,
+      });
+
+    await cmsCopyDoc('pages/source', 'pages/copy');
+
+    expect(mocks.setDoc).toHaveBeenCalledWith(
+      'doc:Projects/test-project/Collections/pages/Drafts/copy',
+      expect.objectContaining({
+        fields,
+        sys: expect.objectContaining({assets: ['asset1', 'asset2']}),
+      })
+    );
+  });
+
+  it('re-indexes asset links when overwriting a doc', async () => {
+    mocks.getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({fields: {title: 'No images'}, sys: {locales: ['en']}}),
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({sys: {locales: ['en'], assets: ['old-asset']}}),
+      });
+
+    await cmsCopyDoc('pages/source', 'pages/copy', {overwrite: true});
+
+    const data = mocks.setDoc.mock.calls[0][1];
+    expect(data.sys.assets).toBeUndefined();
+  });
+
   it('defaults locales when overwriting a doc without locales', async () => {
     mocks.getDoc
       .mockResolvedValueOnce({

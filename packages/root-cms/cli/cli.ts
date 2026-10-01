@@ -1,5 +1,6 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
+import {assetsUpload} from './assets.js';
 import {clientCall, clientMethods} from './client-cli.js';
 import {docsGet, docsSet, docsDownload, docsUpload} from './docs.js';
 import {exportData} from './export.js';
@@ -160,6 +161,40 @@ class CliRunner {
       )
       .action(docsUpload);
     program
+      .command('assets.upload <paths...>')
+      .description(
+        'uploads files to the asset library\n\n' +
+          'Files are uploaded to the GCS bucket (and registered with the Google\n' +
+          'Cloud Image service for images when `gci` is enabled). If the folder\n' +
+          'already has a file with the same name, the asset is replaced and the\n' +
+          'new file is synced to every draft doc that uses it. Directories are\n' +
+          'uploaded recursively, mirroring their structure as subfolders.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms assets.upload ./hero.png\n' +
+          '  $ root-cms assets.upload ./hero.png --folder marketing --alt "Hero image"\n' +
+          '  $ root-cms assets.upload ./new-hero.png --asset-id AbC123dEf456\n' +
+          '  $ root-cms assets.upload ./icons --folder brand'
+      )
+      .option(
+        '--folder <folder>',
+        'asset library folder to upload into, e.g. "marketing/q1" (default: root)'
+      )
+      .option('--name <name>', 'asset name (single file only)')
+      .option(
+        '--asset-id <assetId>',
+        'id of an existing asset whose file should be replaced (single file only)'
+      )
+      .option('--alt <text>', 'alt text for the uploaded file(s)')
+      .option(
+        '--naming-mode <mode>',
+        'gcs object naming: "hash", "hash-path" or "clean" (default: folder setting)'
+      )
+      .option('--cache-control <value>', 'cache-control header for the file(s)')
+      .option('--no-gci', 'skip registering images with the gci service')
+      .option('--no-sync', 'skip updating docs that use a replaced asset')
+      .option('--modified-by <email>', 'email attributed as the author')
+      .action(assetsUpload);
+    program
       .command('client.call <method> [jsonArgs]')
       .description(
         'calls a method on the RootCMSClient with JSON-encoded arguments\n\n' +
@@ -264,6 +299,7 @@ class CliRunner {
 
 export {
   CliRunner,
+  assetsUpload,
   clientCall,
   clientMethods,
   docsGet,

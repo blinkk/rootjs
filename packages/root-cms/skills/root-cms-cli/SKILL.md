@@ -149,6 +149,37 @@ npx root-cms client.call getDocsCount '["Pages", {"mode": "draft"}]'
 npx root-cms client.call getUserRole '["someone@example.com"]'
 ```
 
+### Asset library
+
+Upload files to the asset library with the dedicated `assets.upload` command
+(or `client.call uploadAsset`). Files are uploaded to the project's GCS bucket
+and images get a Google Cloud Image serving URL when `gci` is enabled. If the
+folder already has a file with the same name (or `--asset-id` is given), the
+asset is replaced and every draft doc that uses it is updated with the new
+file.
+
+```bash
+# Upload (or replace) a file in a folder
+npx root-cms assets.upload ./hero.png --folder marketing --alt "Hero image"
+
+# Replace a specific asset's file by id
+npx root-cms assets.upload ./new-hero.png --asset-id AbC123dEf456
+
+# Upload a directory, mirroring its structure as subfolders
+npx root-cms assets.upload ./icons --folder brand
+
+# Same via the client (JSON result envelope)
+npx root-cms client.call uploadAsset '["./hero.png", {"folder": "marketing"}]'
+
+# Browse the library and find the docs that use an asset
+npx root-cms client.call listAssets '["marketing"]'
+npx root-cms client.call findDocsUsingAsset '["AbC123dEf456"]'
+```
+
+To use an asset in a doc, set the image/file field to the asset's `file` data
+plus an `assetId` backlink (e.g. `{...asset.file, "assetId": asset.id}`).
+Saving the draft indexes the link so future asset updates reach the doc.
+
 Note: for a method like `publishDocs(docIds: string[], options?)`, the first
 positional argument is itself an array, so the JSON args array is
 `[["Pages/home", "Pages/about"]]` — an array containing the `docIds` array.
@@ -160,7 +191,8 @@ positional argument is itself an array, so the JSON args array is
 - The JSON args array is **positional and ordered** — match the signature
   exactly. Optional trailing arguments (`options?`) may be omitted.
 - Treat writes (`saveDraftData`, `setRawDoc`, `publishDocs`, `unpublishDocs`,
-  `archiveDataSource`, etc.) as side-effecting. Confirm intent before running
+  `archiveDataSource`, `uploadAsset`, etc.) as side-effecting. Replacing an
+  asset's file updates every draft doc that uses it. Confirm intent before running
   them, and prefer `mode: "draft"` when reading to avoid touching published
   content unintentionally.
 - Parse the stdout JSON envelope; never assume success from exit code alone.
