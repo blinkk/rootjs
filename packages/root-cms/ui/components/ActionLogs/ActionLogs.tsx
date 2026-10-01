@@ -8,7 +8,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import {useDebouncedValue} from '@mantine/hooks';
-import {IconSearch} from '@tabler/icons-preact';
+import {IconCompass, IconExternalLink, IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {usePagination} from '../../hooks/usePagination.js';
@@ -46,6 +46,9 @@ const DOC_CHANGE_ACTIONS = [
   'doc.revert',
 ];
 
+/** URL to the Root.js guides, linked from the onboarding message. */
+const GUIDES_URL = 'https://rootjs.dev/guides/';
+
 /** Time filter options. */
 const TIME_FILTERS = [
   {value: 'all', label: 'All time'},
@@ -57,6 +60,7 @@ const TIME_FILTERS = [
 
 function useActions(limit?: number) {
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [actions, setActions] = useState<Action[]>([]);
 
   useEffect(() => {
@@ -69,13 +73,14 @@ function useActions(limit?: number) {
           'loading action logs'
         );
         setActions(actions);
+        setLoaded(true);
       });
       setLoading(false);
     };
     init();
   }, [limit]);
 
-  return {loading, actions};
+  return {loading, loaded, actions};
 }
 
 export function ActionLogs(props: ActionLogsProps) {
@@ -554,7 +559,7 @@ function toCompareUrlParam(docId: string, versionId: string) {
  * Compact variant of the action logs. Used primarily by the main ProjectPage.
  */
 function ActionLogsCompact(props: ActionLogsProps) {
-  const {actions, loading} = useActions(props.limit || 10);
+  const {actions, loading, loaded} = useActions(props.limit || 10);
 
   if (loading) {
     return (
@@ -566,6 +571,16 @@ function ActionLogsCompact(props: ActionLogsProps) {
         )}
       >
         <Loader color="gray" size="xl" />
+      </div>
+    );
+  }
+
+  // Show an onboarding message for projects with no activity yet. If loading
+  // failed, an error notification is shown instead.
+  if (loaded && actions.length === 0) {
+    return (
+      <div className={joinClassNames(props.className, 'ActionLogsCompact')}>
+        <ActionLogsOnboarding />
       </div>
     );
   }
@@ -582,6 +597,41 @@ function ActionLogsCompact(props: ActionLogsProps) {
           </Accordion.Item>
         ))}
       </Accordion>
+    </div>
+  );
+}
+
+/**
+ * Onboarding message shown in place of the compact action logs when a project
+ * has no actions yet (e.g. a newly created project).
+ */
+function ActionLogsOnboarding() {
+  return (
+    <div className="ActionLogsOnboarding">
+      <div className="ActionLogsOnboarding__icon">
+        <IconCompass size={28} stroke={1.5} />
+      </div>
+      <div className="ActionLogsOnboarding__title">Welcome to Root.js!</div>
+      <div className="ActionLogsOnboarding__body">
+        Nothing has happened in this project yet. As your team creates, edits,
+        and publishes content, recent activity will show up here.
+      </div>
+      <div className="ActionLogsOnboarding__body">
+        New to Root? The guides cover everything from defining schemas and
+        collections to translations, releases, and deploying your site.
+      </div>
+      <Button
+        className="ActionLogsOnboarding__button"
+        component="a"
+        variant="default"
+        size="xs"
+        href={GUIDES_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        rightIcon={<IconExternalLink size={14} />}
+      >
+        Explore the guides
+      </Button>
     </div>
   );
 }
