@@ -1,7 +1,7 @@
 .RootJsLogo {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--color-text-default);
   font-weight: 800;
   line-height: 1;
@@ -13,11 +13,11 @@
   display: block;
   flex: 0 0 auto;
   /* The sprite is 11 columns by 16 rows once cropped. */
-  height: 16px;
-  width: 11px;
+  width: 14px;
+  height: auto;
 }
 
 .RootJsLogo__text {
   display: block;
-  font-size: 18px;
+  font-size: 16px;
 }

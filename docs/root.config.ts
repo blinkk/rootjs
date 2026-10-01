@@ -74,9 +74,11 @@ export default defineConfig({
       gci: true,
       sidebar: {
         tools: {
-          templates: {label: 'Templates', iframeUrl: '/cms-tools/templates/'},
-          a: {label: 'Example Tool A', iframeUrl: '/cms-tools/a/'},
-          b: {label: 'Example Tool B', iframeUrl: '/cms-tools/b/'},
+          templates: {
+            label: 'Templates',
+            iframeUrl: '/cms-tools/templates/',
+            icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgNWExIDEgMCAwIDEgMS0xaDRhMSAxIDAgMCAxIDEgMXY0YTEgMSAwIDAgMS0xIDFINWExIDEgMCAwIDEtMS0xem0xMCAwYTEgMSAwIDAgMSAxLTFoNGExIDEgMCAwIDEgMSAxdjRhMSAxIDAgMCAxLTEgMWgtNGExIDEgMCAwIDEtMS0xek00IDE1YTEgMSAwIDAgMSAxLTFoNGExIDEgMCAwIDEgMSAxdjRhMSAxIDAgMCAxLTEgMUg1YTEgMSAwIDAgMS0xLTF6bTEwIDBhMSAxIDAgMCAxIDEtMWg0YTEgMSAwIDAgMSAxIDF2NGExIDEgMCAwIDEtMSAxaC00YTEgMSAwIDAgMS0xLTF6Ii8+PC9zdmc+',
+          },
         },
       },
       ai: {
