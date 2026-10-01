@@ -8,7 +8,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import {useDebouncedValue} from '@mantine/hooks';
-import {IconCompass, IconExternalLink, IconSearch} from '@tabler/icons-preact';
+import {IconExternalLink, IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {usePagination} from '../../hooks/usePagination.js';
@@ -18,6 +18,7 @@ import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
+import {RootJsBeet} from '../RootJsLogo/RootJsLogo.js';
 import {Surface} from '../Surface/Surface.js';
 import {Tooltip} from '../Tooltip/Tooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
@@ -608,13 +609,11 @@ function ActionLogsCompact(props: ActionLogsProps) {
 function ActionLogsOnboarding() {
   return (
     <div className="ActionLogsOnboarding">
-      <div className="ActionLogsOnboarding__icon">
-        <IconCompass size={28} stroke={1.5} />
-      </div>
+      <RootJsBeet className="ActionLogsOnboarding__logo" />
       <div className="ActionLogsOnboarding__title">Welcome to Root.js!</div>
       <div className="ActionLogsOnboarding__body">
-        Nothing has happened in this project yet. As your team creates, edits,
-        and publishes content, recent activity will show up here.
+        As your team creates, edits, and publishes content, recent activity will
+        show up here.
       </div>
       <div className="ActionLogsOnboarding__body">
         New to Root? The guides cover everything from defining schemas and

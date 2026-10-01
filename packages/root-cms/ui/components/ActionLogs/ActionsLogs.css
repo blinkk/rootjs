@@ -241,16 +241,12 @@
   text-align: center;
 }
 
-.ActionLogsOnboarding__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 8px;
-  border-radius: 50%;
-  background: var(--chip-background);
-  color: var(--color-text-default);
+.ActionLogsOnboarding__logo {
+  display: block;
+  /* The sprite is 11 columns by 16 rows once cropped. */
+  width: 33px;
+  height: 48px;
+  margin-bottom: 12px;
 }
 
 .ActionLogsOnboarding__title {
