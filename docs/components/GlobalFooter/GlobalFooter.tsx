@@ -6,7 +6,7 @@ export function GlobalFooter() {
   return (
     <Container as="footer" id="footer" className={styles.footer}>
       <Text className={styles.builtBy} size="small">
-        Built by the team at <a href="https://blinkk.com/">Blinkk</a>. Released
+        Built by the team at <a href="https://blinkk.com/?utm_source=rootjs&utm_medium=website&utm_campaign=rootjs-footer">Blinkk</a>. Released
         under the MIT License.
       </Text>
       <Text className={styles.copyright} size="small">
