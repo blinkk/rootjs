@@ -29,6 +29,8 @@ export interface UserAvatarProps {
    * inactive (e.g. disconnected from a viewing session).
    */
   inactive?: boolean;
+  /** Optional extra line shown in the tooltip, e.g. the field being edited. */
+  tooltipNote?: string;
 }
 
 /**
@@ -84,7 +86,11 @@ export function UserAvatar(props: UserAvatarProps) {
     return avatar;
   }
   return (
-    <UserAvatar.Tooltip email={email} displayName={displayName}>
+    <UserAvatar.Tooltip
+      email={email}
+      displayName={displayName}
+      note={props.tooltipNote}
+    >
       {avatar}
     </UserAvatar.Tooltip>
   );
@@ -93,6 +99,7 @@ export function UserAvatar(props: UserAvatarProps) {
 UserAvatar.Tooltip = function UserAvatarTooltip(props: {
   email: string;
   displayName?: string;
+  note?: string;
   children: ComponentChildren;
 }) {
   if (!props.email && !props.displayName) {
@@ -105,6 +112,9 @@ UserAvatar.Tooltip = function UserAvatarTooltip(props: {
       )}
       {props.email && (
         <div className="UserAvatar__tooltip__email">{props.email}</div>
+      )}
+      {props.note && (
+        <div className="UserAvatar__tooltip__note">{props.note}</div>
       )}
     </div>
   );

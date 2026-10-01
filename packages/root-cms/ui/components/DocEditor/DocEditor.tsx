@@ -74,6 +74,7 @@ import {
   DeeplinkProvider,
   scrollToDeeplink,
   useDeeplink,
+  whenDeeplinkElementReady,
 } from '../../hooks/useDeeplink.js';
 import {
   DraftDocContext,
@@ -96,6 +97,12 @@ import {
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePinnedCommentThreads} from '../../hooks/usePinnedCommentThreads.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {
+  Viewer,
+  ViewersProvider,
+  useFieldViewers,
+  useViewersController,
+} from '../../hooks/useViewers.js';
 import {
   ClipboardData,
   useVirtualClipboard,
@@ -149,6 +156,7 @@ import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal
 import {clampPinnedWindowPosition} from '../PinnedCommentThreads/PinnedCommentThreads.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
+import {UserAvatarGroup} from '../UserAvatar/UserAvatar.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateField} from './fields/DateField.js';
@@ -254,7 +262,7 @@ export function DocEditor(props: DocEditorProps) {
     );
   }
 
-  return (
+  const editor = (
     <COLLECTION_SCHEMA_CONTEXT.Provider value={collection?.schema || null}>
       <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
         value={collection?.schema?.types || {}}
@@ -269,6 +277,7 @@ export function DocEditor(props: DocEditorProps) {
               loaderProps={{color: 'gray', size: 'xl'}}
             />
             <DocEditor.HistoryDeeplink rootRef={rootRef} />
+            <DocEditor.FocusTracker rootRef={rootRef} />
             {!loading && !props.hideStatusBar && (
               <DocEditor.StatusBar
                 {...props}
@@ -290,6 +299,13 @@ export function DocEditor(props: DocEditorProps) {
       </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
     </COLLECTION_SCHEMA_CONTEXT.Provider>
   );
+
+  // Presence is only tracked for the full editor (i.e. on the document page),
+  // not for embedded editors like the reference field editor modal.
+  if (props.hideStatusBar) {
+    return editor;
+  }
+  return <ViewersProvider id={`doc/${props.docId}`}>{editor}</ViewersProvider>;
 }
 
 type StatusBarProps = DocEditorProps & {
@@ -364,6 +380,24 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       },
     });
   }, [canEdit, data?.sys?.publishingLocked, lockPublishingModal]);
+
+  const deeplink = useDeeplink();
+  const onViewerClick = useCallback(
+    (_viewer: Viewer, focusedField: string) => {
+      deeplink.setUrlValue(focusedField);
+      whenDeeplinkElementReady(focusedField, (element) => {
+        scrollToDeeplink(element, {behavior: 'smooth', force: true});
+      });
+    },
+    [deeplink.setUrlValue]
+  );
+  const getFieldLabel = useCallback(
+    (deepKey: string) =>
+      formatFieldPath(props.collection, deepKey, (key) =>
+        draft.controller.getValue(key)
+      ),
+    [props.collection, draft.controller]
+  );
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
@@ -462,7 +496,11 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   return (
     <div className="DocEditor__statusBar">
       <div className="DocEditor__statusBar__viewers">
-        <Viewers id={`doc/${props.docId}`} />
+        <Viewers
+          id={`doc/${props.docId}`}
+          onViewerClick={onViewerClick}
+          getFieldLabel={getFieldLabel}
+        />
       </div>
       <DocEditor.SaveState />
       {data?.sys && (
@@ -815,6 +853,67 @@ DocEditor.HistoryDeeplink = (props: {rootRef: RefObject<HTMLDivElement>}) => {
   return null;
 };
 
+/**
+ * Returns the deep key of the field that owns the focused element. Focus is
+ * attributed to the closest field that renders a field header, since that's
+ * where other users see the presence indicator.
+ */
+function getFocusedFieldKey(
+  root: HTMLElement,
+  target: HTMLElement
+): string | null {
+  let innermostKey: string | null = null;
+  let field = target.closest<HTMLElement>('.DocEditor__field');
+  while (field && root.contains(field)) {
+    const deepKey = field.id;
+    if (deepKey) {
+      if (!innermostKey) {
+        innermostKey = deepKey;
+      }
+      const header = field.querySelector(
+        `[data-field-header-for="${CSS.escape(deepKey)}"]`
+      );
+      if (header) {
+        return deepKey;
+      }
+    }
+    field =
+      field.parentElement?.closest<HTMLElement>('.DocEditor__field') || null;
+  }
+  return innermostKey;
+}
+
+/**
+ * Headless component that reports the field the current user is focused on
+ * to the `ViewersProvider`, so other users can see which field is being
+ * edited. Focus moving outside of the editor (e.g. into a modal or the
+ * preview) keeps the last focused field.
+ */
+DocEditor.FocusTracker = (props: {rootRef: RefObject<HTMLDivElement>}) => {
+  const controller = useViewersController();
+
+  useEffect(() => {
+    const root = props.rootRef.current;
+    if (!controller || !root) {
+      return;
+    }
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) {
+        return;
+      }
+      controller.setFocusedField(getFocusedFieldKey(root, target));
+    };
+    root.addEventListener('focusin', onFocusIn);
+    return () => {
+      root.removeEventListener('focusin', onFocusIn);
+      controller.setFocusedField(null);
+    };
+  }, [controller]);
+
+  return null;
+};
+
 DocEditor.Field = (props: FieldProps) => {
   if (props.field.deprecated) {
     return <DocEditor.DeprecatedField {...props} />;
@@ -930,9 +1029,17 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
     () => buildDeeplinkUrl(props.deepKey || ''),
     [props.deepKey]
   );
+  const fieldViewers = useFieldViewers(props.deepKey);
 
   return (
-    <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
+    <div
+      className={joinClassNames(
+        props.className,
+        'DocEditor__FieldHeader',
+        fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers'
+      )}
+      data-field-header-for={props.deepKey}
+    >
       {field.deprecated ? (
         <div className="DocEditor__FieldHeader__label">DEPRECATED: {label}</div>
       ) : (
@@ -958,6 +1065,14 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
         <div className="DocEditor__FieldHeader__help">{field.help}</div>
       )}
       <div className="DocEditor__FieldHeader__actions">
+        {fieldViewers.length > 0 && (
+          <UserAvatarGroup
+            className="DocEditor__FieldHeader__viewers"
+            emails={fieldViewers.map((viewer) => viewer.email)}
+            size={20}
+            max={3}
+          />
+        )}
         <DocEditor.FieldHeaderCommentActionIcon
           field={field}
           deepKey={props.deepKey}
