@@ -103,16 +103,8 @@ interface RenderOptions {
   cmsConfig: CMSPluginOptions;
 }
 
-function getCmsTitle(projectName: string, minimalBranding?: boolean): string {
-  if (!projectName) {
-    return 'Root.js';
-  }
-
-  if (minimalBranding) {
-    return projectName;
-  }
-
-  return `${projectName} – Root.js`;
+function getCmsTitle(projectName: string): string {
+  return projectName || 'Root.js';
 }
 
 export async function renderApp(
@@ -188,7 +180,7 @@ export async function renderApp(
     },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
-  const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
+  const title = getCmsTitle(projectName);
 
   const mainHtml = renderJsxToString(
     <App
