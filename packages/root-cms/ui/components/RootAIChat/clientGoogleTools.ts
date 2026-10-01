@@ -1,7 +1,7 @@
 /**
  * Browser-side backend for the Root AI Google tools (`core/ai-tools-google.ts`).
  *
- * Calls the Drive, Sheets and Slides REST APIs directly with the signed-in user's own
+ * Calls the Drive, Docs, Sheets and Slides REST APIs directly with the signed-in user's own
  * OAuth token (see `ui/utils/google-auth.ts`), so the model can only read
  * files the user personally has access to and no Google credential is ever
  * stored server-side. The REST APIs are used instead of `gapi.client` so the
@@ -15,7 +15,11 @@ import {
   createGoogleTools,
   GoogleToolError,
   throwGoogleAuthRequired,
+  type GoogleDocComment,
   type GoogleDocContent,
+  type GoogleDocFeedback,
+  type GoogleDocSuggestedEdit,
+  type GoogleDocSuggestionChange,
   type GoogleDriveFileContent,
   type GoogleFileMeta,
   type GoogleSheetContent,
@@ -33,6 +37,7 @@ import {
 } from '../../utils/google-auth.js';
 
 const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
+const DOCS_API_ORIGIN = 'https://docs.googleapis.com';
 const SHEETS_API_ORIGIN = 'https://sheets.googleapis.com';
 const SLIDES_API_ORIGIN = 'https://slides.googleapis.com';
 
@@ -50,6 +55,18 @@ const FILE_FIELDS = 'id,name,mimeType,modifiedTime,size,webViewLink';
  */
 const SLIDES_FIELDS =
   'slides(objectId,pageElements,slideProperties(isSkipped,notesPage(notesProperties,pageElements)))';
+
+/** Drive comment fields requested by `gdoc_getFeedback`. */
+const COMMENT_FIELDS =
+  'nextPageToken,comments(id,author(displayName),content,createdTime,resolved,deleted,quotedFileContent(value),replies(author(displayName),content,action,createdTime,deleted))';
+
+/**
+ * Docs API fields requested by `gdoc_getFeedback`.
+ */
+const DOC_SUGGESTIONS_FIELDS = 'tabs';
+
+/** Page size used when listing Drive comments. */
+const COMMENTS_PAGE_SIZE = 100;
 
 /** Placeholder types treated as a slide's title. */
 const TITLE_PLACEHOLDER_TYPES = ['TITLE', 'CENTERED_TITLE'];
@@ -343,6 +360,244 @@ async function getDoc(
     : await readNonNativeFileAsText(file, meta);
   const {text, truncated} = truncate(raw, options.maxChars);
   return {...meta, text, truncated};
+}
+
+async function getDocFeedback(
+  fileRef: string,
+  options: {includeResolved: boolean; maxItems: number}
+): Promise<GoogleDocFeedback> {
+  const {fileId} = requireFileRef(fileRef);
+  const file = await fetchFileMetadata(fileId);
+  const meta = shapeFileMeta(file);
+  if (meta.mimeType !== DOC_MIME_TYPE) {
+    throw new GoogleToolError(
+      'GOOGLE_UNSUPPORTED_FILE',
+      `"${meta.name}" is not a Google Doc (${meta.mimeType}). Only Google Docs have suggested edits.`,
+      {
+        hint:
+          meta.mimeType === SHEET_MIME_TYPE
+            ? 'Call `gsheet_get` for this file instead.'
+            : meta.mimeType === SLIDES_MIME_TYPE
+              ? 'Call `gslides_get` for this file instead.'
+              : 'Call `gdrive_getFile` for this file instead.',
+      }
+    );
+  }
+
+  const {comments, truncated: commentsTruncated} = await fetchDocComments(
+    fileId,
+    options
+  );
+
+  let suggestedEdits: GoogleDocSuggestedEdit[] = [];
+  let suggestedEditsTruncated = false;
+  let suggestionsError: string | undefined;
+  try {
+    const res = await googleFetch(
+      `${DOCS_API_ORIGIN}/v1/documents/${encodeURIComponent(
+        fileId
+      )}?suggestionsViewMode=SUGGESTIONS_INLINE&includeTabsContent=true&fields=${encodeURIComponent(
+        DOC_SUGGESTIONS_FIELDS
+      )}`
+    );
+    const allEdits = extractDocSuggestions(await res.json());
+    suggestedEditsTruncated = allEdits.length > options.maxItems;
+    suggestedEdits = allEdits.slice(0, options.maxItems);
+  } catch (err) {
+    if (
+      !(err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED')
+    ) {
+      throw err;
+    }
+    // Comments come from the Drive API, so they are still useful without the
+    // Docs API. Report why suggestions are missing instead of failing.
+    suggestionsError = `${err.message} Suggested edits could not be read; a CMS admin needs to enable the Google Docs API.`;
+  }
+
+  return {
+    ...meta,
+    comments,
+    commentsTruncated,
+    suggestedEdits,
+    suggestedEditsTruncated,
+    ...(suggestionsError ? {suggestionsError} : {}),
+  };
+}
+
+/** Lists a Drive file's comment threads, newest last, skipping deleted ones. */
+async function fetchDocComments(
+  fileId: string,
+  options: {includeResolved: boolean; maxItems: number}
+): Promise<{comments: GoogleDocComment[]; truncated: boolean}> {
+  const comments: GoogleDocComment[] = [];
+  let pageToken = '';
+  do {
+    const params = new URLSearchParams({
+      fields: COMMENT_FIELDS,
+      pageSize: String(COMMENTS_PAGE_SIZE),
+      includeDeleted: 'false',
+    });
+    if (pageToken) {
+      params.set('pageToken', pageToken);
+    }
+    const res = await googleFetch(
+      `${DRIVE_API_ORIGIN}/drive/v3/files/${encodeURIComponent(
+        fileId
+      )}/comments?${params}`
+    );
+    const body = await res.json();
+    for (const raw of body?.comments || []) {
+      const comment = shapeComment(raw);
+      if (!comment || (comment.resolved && !options.includeResolved)) {
+        continue;
+      }
+      if (comments.length >= options.maxItems) {
+        return {comments, truncated: true};
+      }
+      comments.push(comment);
+    }
+    pageToken = String(body?.nextPageToken || '');
+  } while (pageToken);
+  return {comments, truncated: false};
+}
+
+/** Converts a Drive API comment resource into a `GoogleDocComment`. */
+function shapeComment(raw: any): GoogleDocComment | null {
+  if (!raw || raw.deleted) {
+    return null;
+  }
+  const comment: GoogleDocComment = {
+    id: String(raw.id || ''),
+    author: String(raw.author?.displayName || 'Unknown'),
+    content: String(raw.content || ''),
+    resolved: Boolean(raw.resolved),
+    replies: [],
+  };
+  const quotedText = String(raw.quotedFileContent?.value || '').trim();
+  if (quotedText) {
+    comment.quotedText = quotedText;
+  }
+  if (raw.createdTime) {
+    comment.createdTime = String(raw.createdTime);
+  }
+  for (const reply of raw.replies || []) {
+    if (!reply || reply.deleted) {
+      continue;
+    }
+    const content = String(reply.content || '');
+    const action = reply.action;
+    if (!content && !action) {
+      continue;
+    }
+    comment.replies.push({
+      author: String(reply.author?.displayName || 'Unknown'),
+      content,
+      ...(action === 'resolve' || action === 'reopen' ? {action} : {}),
+      ...(reply.createdTime ? {createdTime: String(reply.createdTime)} : {}),
+    });
+  }
+  return comment;
+}
+
+/**
+ * Extracts the paragraphs containing suggested edits from a Docs API
+ * `Document` fetched with `suggestionsViewMode=SUGGESTIONS_INLINE`. Walks
+ * every tab (including child tabs) and table cell.
+ */
+export function extractDocSuggestions(document: any): GoogleDocSuggestedEdit[] {
+  const edits: GoogleDocSuggestedEdit[] = [];
+  const tabs = flattenDocTabs(document?.tabs || []);
+  if (tabs.length === 0) {
+    collectSuggestions(document?.body?.content || [], undefined, edits);
+    return edits;
+  }
+  const multiTab = tabs.length > 1;
+  for (const tab of tabs) {
+    collectSuggestions(
+      tab?.documentTab?.body?.content || [],
+      multiTab
+        ? String(tab?.tabProperties?.title || '') || undefined
+        : undefined,
+      edits
+    );
+  }
+  return edits;
+}
+
+/** Flattens a doc's tab tree into document order. */
+function flattenDocTabs(tabs: any[]): any[] {
+  return tabs.flatMap((tab) => [tab, ...flattenDocTabs(tab?.childTabs || [])]);
+}
+
+/** Walks structural elements, recording paragraphs that have suggestions. */
+function collectSuggestions(
+  content: any[],
+  tab: string | undefined,
+  edits: GoogleDocSuggestedEdit[]
+) {
+  for (const element of content) {
+    if (element?.paragraph) {
+      const edit = paragraphSuggestions(element.paragraph);
+      if (edit) {
+        edits.push(tab ? {...edit, tab} : edit);
+      }
+    } else if (element?.table) {
+      for (const row of element.table.tableRows || []) {
+        for (const cell of row?.tableCells || []) {
+          collectSuggestions(cell?.content || [], tab, edits);
+        }
+      }
+    } else if (element?.tableOfContents) {
+      collectSuggestions(element.tableOfContents.content || [], tab, edits);
+    }
+  }
+}
+
+/**
+ * Builds the before/after text of a paragraph with suggestions, or returns
+ * `null` when the paragraph has no suggested insertions or deletions.
+ */
+function paragraphSuggestions(paragraph: any): GoogleDocSuggestedEdit | null {
+  let original = '';
+  let suggested = '';
+  const changes = new Map<string, GoogleDocSuggestionChange>();
+  const change = (suggestionId: string) => {
+    let entry = changes.get(suggestionId);
+    if (!entry) {
+      entry = {suggestionId};
+      changes.set(suggestionId, entry);
+    }
+    return entry;
+  };
+  for (const element of paragraph?.elements || []) {
+    const run = element?.textRun;
+    if (!run?.content) {
+      continue;
+    }
+    const content = String(run.content);
+    const insertionIds: string[] = run.suggestedInsertionIds || [];
+    const deletionIds: string[] = run.suggestedDeletionIds || [];
+    if (insertionIds.length === 0) {
+      original += content;
+    }
+    if (deletionIds.length === 0) {
+      suggested += content;
+    }
+    for (const id of insertionIds) {
+      const entry = change(id);
+      entry.inserted = (entry.inserted || '') + content;
+    }
+    for (const id of deletionIds) {
+      const entry = change(id);
+      entry.deleted = (entry.deleted || '') + content;
+    }
+  }
+  original = original.replace(/\n$/, '');
+  suggested = suggested.replace(/\n$/, '');
+  if (changes.size === 0 || original === suggested) {
+    return null;
+  }
+  return {original, suggested, changes: Array.from(changes.values())};
 }
 
 /** Reads an uploaded (non-native) Drive file as text, or fails clearly. */
@@ -690,9 +945,9 @@ async function getSlides(
     );
     presentation = await res.json();
   } catch (err) {
-    if (!(
-      err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED'
-    )) {
+    if (
+      !(err instanceof GoogleToolError && err.code === 'GOOGLE_NOT_CONFIGURED')
+    ) {
       throw err;
     }
     // The Slides API is not enabled for this project. Fall back to Drive's
@@ -750,9 +1005,9 @@ async function getFile(
   return {...result, text, truncated};
 }
 
-/** Builds a `GoogleToolBackend` backed by the Drive and Sheets REST APIs. */
+/** Builds a `GoogleToolBackend` backed by the Google Workspace REST APIs. */
 export function createClientGoogleToolBackend(): GoogleToolBackend {
-  return {getDoc, getSheet, getSlides, getFile};
+  return {getDoc, getDocFeedback, getSheet, getSlides, getFile};
 }
 
 /** Matches a Google Docs/Sheets/Drive link inside chat text. */

@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createGoogleTools} from '../../../core/ai-tools-google.js';
 import {
   createClientGoogleToolBackend,
+  extractDocSuggestions,
   extractSlides,
   limitSlides,
   parseGoogleFileRef,
@@ -347,6 +348,287 @@ describe('gslides_get', () => {
     expect(result).toMatchObject({
       success: false,
       error: 'GOOGLE_NOT_CONFIGURED',
+    });
+  });
+});
+
+describe('extractDocSuggestions', () => {
+  /** Builds a Docs API text run element. */
+  function run(
+    content: string,
+    options?: {insert?: string[]; remove?: string[]}
+  ) {
+    return {
+      textRun: {
+        content,
+        ...(options?.insert ? {suggestedInsertionIds: options.insert} : {}),
+        ...(options?.remove ? {suggestedDeletionIds: options.remove} : {}),
+      },
+    };
+  }
+
+  it('returns before/after text for paragraphs with suggestions', () => {
+    const edits = extractDocSuggestions({
+      body: {
+        content: [
+          {paragraph: {elements: [run('Untouched paragraph.\n')]}},
+          {
+            paragraph: {
+              elements: [run('Split here.'), run('\n', {insert: ['split']})],
+            },
+          },
+          {
+            paragraph: {
+              elements: [
+                run('Build '),
+                run('fast', {remove: ['suggest.1']}),
+                run('faster', {insert: ['suggest.1']}),
+                run(' sites.'),
+                run(' Today.', {insert: ['suggest.2']}),
+                run('\n'),
+              ],
+            },
+          },
+          {
+            table: {
+              tableRows: [
+                {
+                  tableCells: [
+                    {
+                      content: [
+                        {
+                          paragraph: {
+                            elements: [
+                              run('Old cell', {remove: ['suggest.3']}),
+                              run('\n'),
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(edits).toEqual([
+      {
+        original: 'Build fast sites.',
+        suggested: 'Build faster sites. Today.',
+        changes: [
+          {suggestionId: 'suggest.1', deleted: 'fast', inserted: 'faster'},
+          {suggestionId: 'suggest.2', inserted: ' Today.'},
+        ],
+      },
+      {
+        original: 'Old cell',
+        suggested: '',
+        changes: [{suggestionId: 'suggest.3', deleted: 'Old cell'}],
+      },
+    ]);
+  });
+
+  it('walks child tabs and labels edits with the tab title', () => {
+    const tab = (title: string, text: string, childTabs: any[] = []) => ({
+      tabProperties: {title},
+      documentTab: {
+        body: {
+          content: [
+            {paragraph: {elements: [run(text, {insert: [`s-${title}`]})]}},
+          ],
+        },
+      },
+      childTabs,
+    });
+    const edits = extractDocSuggestions({
+      tabs: [tab('Intro', 'A'), tab('FAQ', 'B', [tab('More', 'C')])],
+    });
+    expect(edits.map((edit) => [edit.tab, edit.suggested])).toEqual([
+      ['Intro', 'A'],
+      ['FAQ', 'B'],
+      ['More', 'C'],
+    ]);
+  });
+});
+
+describe('gdoc_getFeedback', () => {
+  const fetchMock = vi.fn();
+  const DOC_ID = SLIDES_ID;
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  function jsonResponse(body: any, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: {'Content-Type': 'application/json'},
+    });
+  }
+
+  const driveMetadata = {
+    id: DOC_ID,
+    name: 'Homepage copy',
+    mimeType: 'application/vnd.google-apps.document',
+    webViewLink: `https://docs.google.com/document/d/${DOC_ID}/edit`,
+  };
+
+  const commentsPage = {
+    comments: [
+      {
+        id: 'c1',
+        author: {displayName: 'Ada'},
+        content: 'Make this punchier.',
+        quotedFileContent: {value: 'Build fast sites.'},
+        resolved: false,
+        replies: [
+          {author: {displayName: 'Bo'}, content: 'Agreed.'},
+          {author: {displayName: 'Cy'}, content: '', deleted: true},
+        ],
+      },
+      {
+        id: 'c2',
+        author: {displayName: 'Ada'},
+        content: 'Done already.',
+        resolved: true,
+        replies: [
+          {author: {displayName: 'Bo'}, content: '', action: 'resolve'},
+        ],
+      },
+      {id: 'c3', deleted: true},
+    ],
+  };
+
+  async function runTool(input: Record<string, unknown>) {
+    const tools = createGoogleTools(createClientGoogleToolBackend());
+    return await (tools.gdoc_getFeedback as any).execute(
+      {url: DOC_ID, includeResolved: false, maxItems: 100, ...input},
+      {toolCallId: 'call-1', messages: []}
+    );
+  }
+
+  it('returns open comments and suggested edits', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/comments?')) {
+        return jsonResponse(commentsPage);
+      }
+      if (url.startsWith('https://www.googleapis.com/drive/v3/files/')) {
+        return jsonResponse(driveMetadata);
+      }
+      if (url.startsWith('https://docs.googleapis.com/v1/documents/')) {
+        expect(url).toContain('suggestionsViewMode=SUGGESTIONS_INLINE');
+        return jsonResponse({
+          tabs: [
+            {
+              documentTab: {
+                body: {
+                  content: [
+                    {
+                      paragraph: {
+                        elements: [
+                          {
+                            textRun: {
+                              content: 'Hello',
+                              suggestedInsertionIds: ['s1'],
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    const result = await runTool({});
+    expect(result).toEqual({
+      success: true,
+      feedback: {
+        fileId: DOC_ID,
+        name: 'Homepage copy',
+        mimeType: 'application/vnd.google-apps.document',
+        url: driveMetadata.webViewLink,
+        comments: [
+          {
+            id: 'c1',
+            author: 'Ada',
+            content: 'Make this punchier.',
+            quotedText: 'Build fast sites.',
+            resolved: false,
+            replies: [{author: 'Bo', content: 'Agreed.'}],
+          },
+        ],
+        commentsTruncated: false,
+        suggestedEdits: [
+          {
+            original: '',
+            suggested: 'Hello',
+            changes: [{suggestionId: 's1', inserted: 'Hello'}],
+          },
+        ],
+        suggestedEditsTruncated: false,
+      },
+    });
+  });
+
+  it('includes resolved threads on request and still returns comments when the Docs API is disabled', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/comments?')) {
+        return jsonResponse(commentsPage);
+      }
+      if (url.startsWith('https://www.googleapis.com/drive/v3/files/')) {
+        return jsonResponse(driveMetadata);
+      }
+      return jsonResponse(
+        {
+          error: {
+            code: 403,
+            message: 'Google Docs API has not been used in project 123.',
+            errors: [{reason: 'accessNotConfigured'}],
+          },
+        },
+        403
+      );
+    });
+
+    const result = await runTool({includeResolved: true});
+    expect(result.success).toBe(true);
+    expect(result.feedback.comments.map((c: any) => c.id)).toEqual([
+      'c1',
+      'c2',
+    ]);
+    expect(result.feedback.comments[1].replies).toEqual([
+      {author: 'Bo', content: '', action: 'resolve'},
+    ]);
+    expect(result.feedback.suggestedEdits).toEqual([]);
+    expect(result.feedback.suggestionsError).toContain('Google Docs API');
+  });
+
+  it('rejects files that are not Google Docs', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        ...driveMetadata,
+        mimeType: 'application/vnd.google-apps.spreadsheet',
+      })
+    );
+    const result = await runTool({});
+    expect(result).toMatchObject({
+      success: false,
+      error: 'GOOGLE_UNSUPPORTED_FILE',
+      hint: 'Call `gsheet_get` for this file instead.',
     });
   });
 });
