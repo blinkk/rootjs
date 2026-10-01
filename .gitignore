@@ -11,3 +11,6 @@ out/
 .vitest-attachments/
 .claude/
 .root/
+
+# Visual test screenshots (generated locally by `pnpm test:visual`).
+__screenshots__/
