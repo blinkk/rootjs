@@ -125,6 +125,22 @@
   top: 0;
 }
 
+.DocEditor__FieldHeader--hasViewers {
+  padding-right: 116px;
+}
+
+.DocEditor__FieldHeader__viewers {
+  margin-right: 2px;
+}
+
+.DocEditor__FieldHeader__viewers > * {
+  margin-left: -6px;
+}
+
+.DocEditor__FieldHeader__viewers > *:first-child {
+  margin-left: 0;
+}
+
 .DocEditor__FieldHeader__comments__button {
   align-items: center;
   background: none;

@@ -59,7 +59,7 @@ function replaceDeeplinkInUrl(deepKey: string) {
  * navigation also switches docs), so the element is polled for a short while.
  * Returns a function that cancels the wait.
  */
-function whenDeeplinkElementReady(
+export function whenDeeplinkElementReady(
   deepKey: string,
   callback: (element: HTMLElement) => void
 ): () => void {
