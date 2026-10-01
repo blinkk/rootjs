@@ -22,20 +22,19 @@
  * `gcloud auth application-default login`.
  */
 
-import {readFile, writeFile} from 'node:fs/promises';
+import {writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {loadRootConfig} from '@blinkk/root/node';
 import {RootCMSClient} from '@blinkk/root-cms';
-import type {ScreenshotsMap} from '../screenshots/types.ts';
 import {buildSandboxIndexFields} from './sandbox_index_content.ts';
+import {readScreenshots} from './screenshots_map.ts';
 
 const DOCS_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..'
 );
-const SCREENSHOTS_PATH = path.join(DOCS_DIR, 'screenshots/screenshots.json');
 const COLLECTION = 'Sandbox';
 /** Recorded as the doc's `modifiedBy`. */
 const MODIFIED_BY = 'seed_sandbox_index.ts';
@@ -67,17 +66,6 @@ function parseArgs(argv: string[]): Args {
     }
   }
   return args;
-}
-
-async function readScreenshots(): Promise<ScreenshotsMap> {
-  try {
-    return JSON.parse(await readFile(SCREENSHOTS_PATH, 'utf8'));
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      return {};
-    }
-    throw err;
-  }
 }
 
 async function main() {

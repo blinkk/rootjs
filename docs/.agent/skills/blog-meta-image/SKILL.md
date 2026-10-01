@@ -22,7 +22,7 @@ All commands below run from the `docs/` directory.
 | `docs/screenshots/ui/blog.tsx` | Shared `<BlogMetaImage>` component and pixel-art `<BeetIcon>` |
 | `docs/screenshots/scenes/Blog<PascalSlug>.tsx` | One scene file per blog post (`meta.id = "blog-<slug>"`) |
 | `docs/screenshots/.out/blog-<slug>.png` | Rendered `2400×1260` PNG (gitignored) |
-| `docs/screenshots/screenshots.json` | Checked-in map of uploaded GCS / GCI URLs (`lh3.googleusercontent.com/...`) |
+| `docs/screenshots/screenshots.json` | Checked-in map of uploaded screenshots (asset library `assetId` and GCI URL) |
 
 ## Step 1 — Read the blog post from the CMS
 
@@ -92,7 +92,7 @@ Always inspect the rendered file at `docs/screenshots/.out/blog-<slug>.png` befo
 - Verify the `pills` array stays on **one horizontal row** (shorten individual pill labels if they wrap to a second line).
 - Verify the `badge` text fits comfortably inside the dark aubergine pill in the right tile.
 
-## Step 4 — Upload to GCS and update `screenshots.json`
+## Step 4 — Upload to the asset library and update `screenshots.json`
 
 Once the visual check passes, upload the rendered PNG (requires Application Default Credentials via `gcloud auth application-default login`):
 
@@ -102,7 +102,7 @@ node scripts/screenshots_upload.ts --scene blog-<slug>
 
 If `screenshots_upload.ts` reports that rendered screenshots are stale relative to the scene sources, run a full render first (`node scripts/screenshots_render.ts`) so `docs/screenshots/.out/manifest.json` has the current `sourceHash`, then re-run the upload.
 
-This writes the entry (`src`, `width`, `height`, `alt`, `gcsPath`, `hash`) to `docs/screenshots/screenshots.json`.
+This uploads the PNG to the CMS asset library as `screenshots/blog-<slug>.png` and writes the entry (`assetId`, `src`, `width`, `height`, `alt`, `gcsPath`, `hash`) to `docs/screenshots/screenshots.json`. When re-uploading an existing image, every draft whose `meta.image` is linked to the asset is updated automatically, so Step 5 can be skipped (publish the post to make it live).
 
 ## Step 5 — Attach `meta.image` to the blog post
 
@@ -114,6 +114,7 @@ Read the uploaded entry from `docs/screenshots/screenshots.json` under `"blog-<s
     "BlogPosts/<slug>",
     "meta.image",
     {
+      "assetId": "<assetId>",
       "src": "https://lh3.googleusercontent.com/...",
       "width": 2400,
       "height": 1260,

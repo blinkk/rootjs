@@ -7,7 +7,8 @@
  * feature ranking and alternate taglines are in `docs/redesign/README.md`.
  */
 
-import type {ScreenshotEntry, ScreenshotsMap} from '../screenshots/types.ts';
+import type {ScreenshotsMap} from '../screenshots/types.ts';
+import {screenshotImage} from './screenshots_map.ts';
 
 /** Rich text value as stored by `schema.richtext()` fields. */
 interface RichTextValue {
@@ -35,16 +36,7 @@ function list(...items: string[]) {
 
 /** Scene id → screenshot, or an empty image when it hasn't been uploaded. */
 function image(screenshots: ScreenshotsMap, id: string) {
-  const entry: ScreenshotEntry | undefined = screenshots[id];
-  if (!entry) {
-    return undefined;
-  }
-  return {
-    src: entry.src,
-    width: entry.width,
-    height: entry.height,
-    alt: entry.alt,
-  };
+  return screenshotImage(screenshots[id]);
 }
 
 const SCHEMA_EXAMPLE = `import {schema} from '@blinkk/root-cms';
