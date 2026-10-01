@@ -67,6 +67,35 @@ service cloud.firestore {
 `;
 
 /**
+ * Firebase Storage rules for CMS uploads. Files are stored under
+ * `{siteId}/uploads/...` and anyone who can edit drafts on that site can
+ * upload. Reading the site's roles from Firestore requires the Firebase
+ * Storage service agent to have `roles/firebaserules.firestoreServiceAgent`.
+ */
+export const STORAGE_RULES = `rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    match /{site}/uploads/{allPaths=**} {
+      allow read;
+      allow write:
+        if request.auth != null && userCanEdit(site);
+    }
+
+    function userCanEdit(site) {
+      let roles = firestore.get(/databases/(default)/documents/Projects/$(site)).data.roles;
+      let email = request.auth.token.email;
+      let domain = '*@' + email.split('@')[1];
+      return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+    }
+  }
+}
+`;
+
+/**
  * Adds the root-cms security rules to a Firebase project.
  * NOTE: This function will overwrite any existing rules.
  */
