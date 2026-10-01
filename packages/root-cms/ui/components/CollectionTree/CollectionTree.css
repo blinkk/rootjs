@@ -33,7 +33,7 @@
 
 .CollectionTree__collection.active {
   background: #fff;
-  border-color: #000;
+  border-color: #999;
 }
 
 .CollectionTree__collection:hover {
