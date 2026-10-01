@@ -38,7 +38,8 @@ Tests use `vitest`. `pnpm test` builds first, then runs `turbo run test`.
   `firebase-tools` >= 15 requires **Java 21 or above**.
 - **Visual tests are a separate suite**: files named `*.visual.test.tsx`, run
   with `pnpm test:visual` (Playwright/Chromium). Goldens live in a colocated
-  `__screenshots__/`; regenerate with `pnpm test:visual --update`.
+  `__screenshots__/` (gitignored, local only); regenerate with
+  `pnpm test:visual --update`.
 
 ## Architecture Notes
 
