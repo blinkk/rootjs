@@ -20,7 +20,8 @@ Run everything from `docs/`. Steps 2–4 need application-default credentials
 # 1. Render the UI screenshots (TSX scenes → PNGs in screenshots/.out/).
 node scripts/screenshots_render.ts
 
-# 2. Upload them to GCS and update screenshots/screenshots.json.
+# 2. Upload them to the CMS asset library (screenshots/ folder) and update
+#    screenshots/screenshots.json. Drafts that use a screenshot are updated.
 node scripts/screenshots_upload.ts
 
 # 3. Write the guides to the Guides collection. Existing drafts are skipped
@@ -39,6 +40,12 @@ index (and the "Next guide" fallback) is managed in the CMS: open the
 collection, pick the "Custom order" sort, and drag the docs. Like any edit, a
 new order goes live when the moved docs are published. Newly seeded guides are
 added at the end, in the order they're listed in `scripts/guides_content.ts`.
+
+Re-uploading a screenshot updates every draft whose image is linked to it in
+the asset library, so updating screenshots doesn't need a re-seed: run steps 1
+and 2, then publish the updated guides. Images that hold a screenshot URL
+without being linked to the asset library can be linked with
+`pnpm screenshots:link-docs` (pass `--dry-run` first).
 
 `pnpm screenshots:publish` runs steps 1 and 2, and `pnpm seed:guides` runs step 3. To preview a scene while you work on it, run
 `node scripts/screenshots_render.ts --serve` and open the printed URL.

@@ -19,6 +19,7 @@
     "screenshots:render": "node scripts/screenshots_render.ts",
     "screenshots:upload": "node scripts/screenshots_upload.ts",
     "screenshots:publish": "node scripts/screenshots_render.ts && node scripts/screenshots_upload.ts",
+    "screenshots:link-docs": "node scripts/screenshots_link_docs.ts",
     "seed:sandbox-index": "node scripts/seed_sandbox_index.ts",
     "seed:guides": "node scripts/seed_guides.ts",
     "seed:guides-index": "node scripts/seed_guides_index.ts",

@@ -1,25 +1,27 @@
 /**
- * @fileoverview Uploads rendered screenshots to GCS and updates the JSON map.
+ * @fileoverview Uploads rendered screenshots to the CMS asset library and
+ * updates the JSON map.
  *
  * Reads the PNGs rendered by `scripts/screenshots_render.ts` (listed in
- * `screenshots/.out/manifest.json`), uploads each to the project's Firebase
- * Storage bucket under a content-hashed name, and records the public URL in
+ * `screenshots/.out/manifest.json`) and uploads each to the asset library as
+ * `screenshots/<scene-id>.png`, recording the asset id and public URL in
  * `screenshots/screenshots.json`. That JSON file is checked in and can be
  * imported by the docs site or read by seed scripts, e.g.:
  *
  * ```ts
  * import screenshots from '@/screenshots/screenshots.json';
  * const hero = screenshots['cms-editor-preview'];
- * // => {src, width, height, alt, gcsPath, hash}
+ * // => {assetId, src, width, height, alt, gcsPath, hash}
  * ```
  *
  * The PNGs themselves are never committed to the repo.
  *
- * When the CMS plugin has `gci` enabled, the image is registered with the
- * Google Cloud Image service (the same thing the CMS does on upload) so `src`
- * is an `lh3.googleusercontent.com` URL that supports resizing and format
- * conversion (see `hooks/useImageService.ts`). Otherwise `src` is the plain
- * `storage.googleapis.com` URL.
+ * Re-uploading a screenshot replaces the asset's file, and the asset library
+ * fans the new file out to every draft doc whose image field embeds the asset
+ * (e.g. guides, blog posts and pages seeded with `screenshots.json`, or images
+ * picked from the asset library in the CMS). The updated drafts still need to
+ * be published. Image fields that point at a screenshot URL without linking to
+ * the asset can be linked with `scripts/screenshots_link_docs.ts`.
  *
  * Usage (from the `docs/` dir):
  *
@@ -35,8 +37,8 @@
  * pulling scene changes without re-rendering). Re-render, or pass
  * `--allow-stale` to upload them anyway.
  *
- * Requires application-default credentials with write access to the bucket,
- * e.g. `gcloud auth application-default login`.
+ * Requires application-default credentials with access to the project's
+ * Firestore and Storage bucket, e.g. `gcloud auth application-default login`.
  */
 
 import crypto from 'node:crypto';
@@ -45,7 +47,6 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {loadRootConfig} from '@blinkk/root/node';
 import {RootCMSClient} from '@blinkk/root-cms';
-import {getStorage} from 'firebase-admin/storage';
 import type {
   ManifestEntry,
   ScreenshotEntry,
@@ -62,9 +63,9 @@ const OUT_DIR = path.join(SCREENSHOTS_DIR, '.out');
 const MANIFEST_PATH = path.join(OUT_DIR, 'manifest.json');
 const MAP_PATH = path.join(SCREENSHOTS_DIR, 'screenshots.json');
 
-/** Default GCI service used by the CMS when `gci: true`. */
-const DEFAULT_GCI_DOMAIN = 'https://services.rootjs.dev';
-/** Recorded in the object metadata as the uploader. */
+/** Asset library folder that screenshots are uploaded to. */
+const ASSET_FOLDER = 'screenshots';
+/** Recorded in the asset library as the uploader. */
 const UPLOADED_BY = 'screenshots_upload.ts';
 
 interface Args {
@@ -111,26 +112,12 @@ async function readJson<T>(filepath: string, fallback: T): Promise<T> {
   }
 }
 
-/** Reads the pixel dimensions from a PNG's IHDR chunk. */
-function getPngSize(data: Buffer) {
-  const PNG_SIGNATURE = '89504e470d0a1a0a';
-  if (data.subarray(0, 8).toString('hex') !== PNG_SIGNATURE) {
-    throw new Error('not a png file');
-  }
-  return {width: data.readUInt32BE(16), height: data.readUInt32BE(20)};
-}
-
-/** Returns a GCI serving URL for an uploaded object, or '' if unavailable. */
-async function getGciUrl(gciDomain: string, gcsPath: string) {
-  const params = new URLSearchParams({gcs: gcsPath});
-  const url = `${gciDomain}/_/serving_url?${params.toString()}`;
-  const res = await fetch(url);
-  if (res.status !== 200) {
-    console.warn(`failed to get gci url (${res.status}): ${await res.text()}`);
-    return '';
-  }
-  const data = (await res.json()) as {servingUrl?: string};
-  return data.servingUrl || '';
+/** Writes `screenshots.json`, sorted by scene id. */
+async function writeMap(map: ScreenshotsMap) {
+  const sorted = Object.fromEntries(
+    Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
+  );
+  await writeFile(MAP_PATH, JSON.stringify(sorted, null, 2) + '\n');
 }
 
 async function main() {
@@ -160,16 +147,11 @@ async function main() {
 
   const rootConfig = await loadRootConfig(DOCS_DIR, {command: 'root-cms'});
   const client = new RootCMSClient(rootConfig);
-  const cmsConfig = client.cmsPlugin.getConfig();
-  const bucketName = cmsConfig.firebaseConfig.storageBucket;
-  const gciDomain =
-    cmsConfig.gci === true ? DEFAULT_GCI_DOMAIN : cmsConfig.gci || '';
-  const bucket = getStorage(client.app).bucket(bucketName);
-
-  console.log(`bucket: ${bucketName}`);
-  console.log(`gci: ${gciDomain || '(disabled)'}`);
+  console.log(`project: ${client.projectId}`);
+  console.log(`asset folder: ${ASSET_FOLDER}`);
 
   let changed = 0;
+  const failedDocIds = new Set<string>();
   for (const id of ids) {
     const entry = manifest[id];
     if (!entry) {
@@ -182,62 +164,78 @@ async function main() {
       .digest('hex')
       .slice(0, 16);
     const existing = map[id];
-    if (existing?.hash === hash && existing.alt === entry.alt && !args.force) {
+    if (
+      existing?.assetId &&
+      existing.hash === hash &&
+      existing.alt === entry.alt &&
+      !args.force
+    ) {
       console.log(`unchanged: ${id}`);
       continue;
     }
 
-    const {width, height} = getPngSize(data);
-    const destination = `${client.projectId}/screenshots/${id}.${hash}.png`;
-    const gcsPath = `/${bucketName}/${destination}`;
+    // Replace the asset recorded in `screenshots.json` when it still exists
+    // (even if it was renamed or moved in the CMS), otherwise upload to
+    // `screenshots/<id>.png`, which replaces an existing file by that name.
+    const filename = `${id}.png`;
+    const asset = existing?.assetId
+      ? await client.getAsset(existing.assetId)
+      : null;
+    const assetId = asset?.type === 'file' ? asset.id : undefined;
     if (args.dryRun) {
-      console.log(`[dry-run] would upload ${id} -> gs:/${gcsPath}`);
+      const target = assetId
+        ? `asset ${assetId}`
+        : `${ASSET_FOLDER}/${filename}`;
+      console.log(`[dry-run] would upload ${id} -> ${target}`);
       changed++;
       continue;
     }
 
-    await bucket.file(destination).save(data, {
-      resumable: false,
-      contentType: 'image/png',
-      metadata: {
-        cacheControl: 'public, max-age=31536000',
-        metadata: {
-          filename: `${id}.png`,
-          width: String(width),
-          height: String(height),
-          uploadedBy: UPLOADED_BY,
-          uploadedAt: String(Date.now()),
-        },
-      },
-    });
-    let src = `https://storage.googleapis.com${gcsPath}`;
-    if (gciDomain) {
-      src = (await getGciUrl(gciDomain, gcsPath)) || src;
-    }
-    const screenshot: ScreenshotEntry = {
-      src,
-      width,
-      height,
+    const res = await client.uploadAsset(data, {
+      folder: ASSET_FOLDER,
+      name: filename,
+      filename: filename,
+      assetId: assetId,
       alt: entry.alt,
-      gcsPath,
+      modifiedBy: UPLOADED_BY,
+    });
+    const file = res.asset.file!;
+    const screenshot: ScreenshotEntry = {
+      assetId: res.asset.id,
+      src: file.src,
+      width: file.width!,
+      height: file.height!,
+      alt: entry.alt,
+      gcsPath: file.gcsPath,
       hash,
     };
     map[id] = screenshot;
+    // Save after each upload so a later failure doesn't lose the asset ids.
+    await writeMap(map);
     changed++;
-    console.log(`uploaded: ${id} -> ${src}`);
+    console.log(`${res.status}: ${id} (asset ${res.asset.id}) -> ${file.src}`);
+    if (res.sync) {
+      const {updatedDocIds} = res.sync;
+      if (updatedDocIds.length > 0) {
+        console.log(`  updated draft(s): ${updatedDocIds.join(', ')}`);
+      }
+      res.sync.failedDocIds.forEach((docId) => failedDocIds.add(docId));
+    }
   }
 
   if (args.dryRun) {
     console.log(`[dry-run] ${changed} screenshot(s) would change`);
     return;
   }
-  const sorted = Object.fromEntries(
-    Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
-  );
-  await writeFile(MAP_PATH, JSON.stringify(sorted, null, 2) + '\n');
   console.log(
     `done: ${changed} screenshot(s) updated in ${path.relative(DOCS_DIR, MAP_PATH)}`
   );
+  if (failedDocIds.size > 0) {
+    throw new Error(
+      `failed to update draft(s): ${Array.from(failedDocIds).join(', ')}. ` +
+        'retry with `root-cms client.call syncAssetToDocs \'["<assetId>"]\'`.'
+    );
+  }
 }
 
 main().then(

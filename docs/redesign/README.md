@@ -14,7 +14,8 @@ Run everything from `docs/`.
 # 1. Render the UI screenshots (TSX scenes → PNGs in screenshots/.out/).
 node scripts/screenshots_render.ts
 
-# 2. Upload them to GCS and update screenshots/screenshots.json.
+# 2. Upload them to the CMS asset library (screenshots/ folder) and update
+#    screenshots/screenshots.json. Drafts that use a screenshot are updated.
 node scripts/screenshots_upload.ts
 
 # 3. Write the page to Sandbox/index (refuses to overwrite without --force).
@@ -40,8 +41,14 @@ application-default credentials
 To preview a scene while you work on it, run
 `node scripts/screenshots_render.ts --serve` and open the printed URL. To
 re-render one scene, pass `--scene <id>`. PNGs are never committed: the upload
-script names each object by its content hash and skips images that haven't
-changed.
+script skips images that haven't changed.
+
+Screenshots live in the CMS asset library under `screenshots/`, and seeded
+image fields link to them by `assetId`. Re-uploading a screenshot updates every
+draft that uses it, so after an upload, publish the updated drafts to make the
+new screenshots live. Image fields that hold a screenshot URL without an
+`assetId` (e.g. set before the asset library was used) can be linked with
+`pnpm screenshots:link-docs` (pass `--dry-run` first).
 
 The scenes show a fictional garden store, **Fernwood Market**, selling root
 vegetables (illustrated in `screenshots/ui/garden.tsx`). Keep fixture copy
@@ -52,7 +59,7 @@ To use a screenshot elsewhere on the site, import the map:
 
 ```ts
 import screenshots from '@/screenshots/screenshots.json';
-const {src, width, height, alt} = screenshots['cms-root-ai'];
+const {assetId, src, width, height, alt} = screenshots['cms-root-ai'];
 ```
 
 ## Page outline

@@ -11,7 +11,8 @@
  * scene id. See `docs/guides/README.md` for the workflow.
  */
 
-import type {ScreenshotEntry, ScreenshotsMap} from '../screenshots/types.ts';
+import type {ScreenshotsMap} from '../screenshots/types.ts';
+import {screenshotImage} from './screenshots_map.ts';
 
 /** A rich text block, as stored by `schema.richtext()` fields. */
 type RichTextBlock =
@@ -951,19 +952,7 @@ export const GUIDES: GuideSource[] = [
 
 /** Scene id → image field value, or undefined when it hasn't been uploaded. */
 function image(screenshots: ScreenshotsMap, id: string | undefined) {
-  if (!id) {
-    return undefined;
-  }
-  const entry: ScreenshotEntry | undefined = screenshots[id];
-  if (!entry) {
-    return undefined;
-  }
-  return {
-    src: entry.src,
-    width: entry.width,
-    height: entry.height,
-    alt: entry.alt,
-  };
+  return id ? screenshotImage(screenshots[id]) : undefined;
 }
 
 /** Returns every scene id referenced by the guides. */

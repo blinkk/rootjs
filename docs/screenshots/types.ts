@@ -12,6 +12,12 @@ export interface SceneMeta {
 
 /** A single entry in `screenshots.json`. */
 export interface ScreenshotEntry {
+  /**
+   * Id of the CMS asset library file the screenshot is uploaded to. Image
+   * fields that embed the asset are updated whenever the screenshot is
+   * re-uploaded.
+   */
+  assetId: string;
   /** Public image URL (a GCI serving URL when available). */
   src: string;
   /** Rendered image width in pixels. */
@@ -20,8 +26,8 @@ export interface ScreenshotEntry {
   height: number;
   /** Alt text for the image. */
   alt: string;
-  /** Path of the uploaded object, e.g. `/bucket/www/screenshots/foo.abc123.png`. */
-  gcsPath: string;
+  /** Path of the uploaded object, e.g. `/bucket/www/uploads/abc123.png`. */
+  gcsPath?: string;
   /** Content hash of the PNG, used to skip re-uploading unchanged images. */
   hash: string;
 }
