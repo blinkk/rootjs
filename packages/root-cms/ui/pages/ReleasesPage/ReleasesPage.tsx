@@ -1,6 +1,13 @@
 import './ReleasesPage.css';
 
 import {Button, Loader, SegmentedControl, Table} from '@mantine/core';
+import {
+  IconCalendarTime,
+  IconFilePlus,
+  IconRocket,
+  IconStack2,
+} from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
@@ -51,13 +58,13 @@ export function ReleasesPage() {
             </ConditionalTooltip>
           </div>
         </div>
-        <ReleasesPage.ReleasesTable />
+        <ReleasesPage.ReleasesTable canPublish={canPublish} />
       </div>
     </Layout>
   );
 }
 
-ReleasesPage.ReleasesTable = () => {
+ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<Release[]>([]);
   const [filter, setFilter] = useState<ReleaseListFilter>('active');
@@ -98,7 +105,10 @@ ReleasesPage.ReleasesTable = () => {
   return (
     <div className="ReleasesPage__ReleasesTable">
       {loading && <Loader color="gray" size="xl" />}
-      {!loading && (
+      {!loading && tableData.length === 0 && (
+        <ReleasesPage.EmptyState canPublish={props.canPublish} />
+      )}
+      {!loading && tableData.length > 0 && (
         <>
           <div className="ReleasesPage__ReleasesTable__filters">
             <SegmentedControl
@@ -156,10 +166,98 @@ ReleasesPage.ReleasesTable = () => {
             </Surface>
           )}
           {filteredReleases.length === 0 && (
-            <Text as="p">No releases found for this filter.</Text>
+            <Surface>
+              <Text
+                className="ReleasesPage__ReleasesTable__noResults"
+                size="body-sm"
+                color="gray"
+              >
+                No {filter === 'active' ? '' : `${filter} `}releases.
+              </Text>
+            </Surface>
           )}
         </>
       )}
     </div>
+  );
+};
+
+/** A single step in the empty state's "how it works" list. */
+interface EmptyStateStep {
+  icon: ComponentChildren;
+  title: string;
+  description: string;
+}
+
+const EMPTY_STATE_STEPS: EmptyStateStep[] = [
+  {
+    icon: <IconStack2 size={20} stroke={1.5} />,
+    title: 'Create a release',
+    description: 'Give it an id and a short description of what it ships.',
+  },
+  {
+    icon: <IconFilePlus size={20} stroke={1.5} />,
+    title: 'Add documents',
+    description: 'Pick the docs and data sources that should go live together.',
+  },
+  {
+    icon: <IconCalendarTime size={20} stroke={1.5} />,
+    title: 'Publish or schedule',
+    description: 'Publish everything at once, or schedule it for a set time.',
+  },
+];
+
+/** Shown in place of the releases table when a project has no releases. */
+ReleasesPage.EmptyState = (props: {canPublish: boolean}) => {
+  return (
+    <Surface className="ReleasesPage__EmptyState">
+      <div className="ReleasesPage__EmptyState__icon">
+        <IconRocket size={32} stroke={1.5} />
+      </div>
+      <Heading size="h2" className="ReleasesPage__EmptyState__title">
+        No releases yet
+      </Heading>
+      <Text
+        as="p"
+        size="body-sm"
+        color="gray"
+        className="ReleasesPage__EmptyState__description"
+      >
+        Releases group changes across multiple documents so they go live
+        together, either right away or at a scheduled time.
+      </Text>
+      <ol className="ReleasesPage__EmptyState__steps">
+        {EMPTY_STATE_STEPS.map((step, i) => (
+          <li className="ReleasesPage__EmptyState__step" key={step.title}>
+            <div className="ReleasesPage__EmptyState__step__icon">
+              {step.icon}
+            </div>
+            <div className="ReleasesPage__EmptyState__step__body">
+              <Text size="body-sm" weight="semi-bold">
+                {i + 1}. {step.title}
+              </Text>
+              <Text size="body-sm" color="gray">
+                {step.description}
+              </Text>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <ConditionalTooltip
+        label="You don't have access to create new releases"
+        condition={!props.canPublish}
+      >
+        <Button
+          component="a"
+          color="blue"
+          size="sm"
+          href="/cms/releases/new"
+          disabled={!props.canPublish}
+          style={!props.canPublish ? {pointerEvents: 'none'} : undefined}
+        >
+          Create your first release
+        </Button>
+      </ConditionalTooltip>
+    </Surface>
   );
 };
