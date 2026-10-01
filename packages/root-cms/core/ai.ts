@@ -87,7 +87,7 @@ export const ROOT_MD_FILENAME = 'ROOT.md';
 
 /** Default base system prompt for the Root AI chat. */
 export const DEFAULT_CHAT_SYSTEM_PROMPT = [
-  'You are an assistant embedded in the Root CMS admin UI.',
+  'You are an assistant embedded in the Root.js CMS admin UI.',
   'Help the user explore and edit content, answer questions about the',
   'project, and use the provided tools to read and write CMS docs and',
   'organize releases. Be concise and use markdown for rich responses.',

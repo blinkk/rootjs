@@ -121,7 +121,7 @@ export interface EmailNotificationsOptions<T = any> {
 export const DEFAULT_EMAIL_TEMPLATE: Readonly<
   Required<EmailNotificationTemplate>
 > = Object.freeze({
-  subject: '[Root CMS] {action} by {by}',
+  subject: '[Root.js] {action} by {by}',
   body: [
     'Action: {action}',
     'By: {by}',

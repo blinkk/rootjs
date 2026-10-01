@@ -17,7 +17,7 @@
  *   id: 'cms-editor-preview',
  *   width: 1440,
  *   height: 900,
- *   alt: 'The Root CMS editor next to a live preview of the page.',
+ *   alt: 'The Root.js CMS editor next to a live preview of the page.',
  * };
  *
  * export default function Scene() {

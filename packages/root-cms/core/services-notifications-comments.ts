@@ -211,12 +211,12 @@ function describeCommentAction(
 export const DEFAULT_COMMENT_EMAIL_TEMPLATE: Readonly<
   Required<EmailNotificationTemplate>
 > = Object.freeze({
-  subject: '[Root CMS] {summary}',
+  subject: '[Root.js] {summary}',
   body: ['{summary}', '', '{content}', '', '{url}'].join('\n'),
   html: [
     '<p>{summary}</p>',
     '<blockquote style="white-space: pre-wrap; border-left: 3px solid #ddd; margin: 12px 0; padding: 4px 12px;">{content}</blockquote>',
-    '<p><a href="{url}">Open in Root CMS</a></p>',
+    '<p><a href="{url}">Open in Root.js</a></p>',
   ].join('\n'),
 });
 

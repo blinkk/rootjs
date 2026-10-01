@@ -83,13 +83,13 @@ describe('commentEmailNotifications', () => {
       'mentioned@example.com',
     ]);
     expect(email.subject).toBe(
-      '[Root CMS] author@example.com commented on "Hero › Title" in Pages/foo'
+      '[Root.js] author@example.com commented on "Hero › Title" in Pages/foo'
     );
     expect(email.body).toContain('Can we shorten this?');
     expect(email.body).toContain(
       'https://example.com/cms/content/Pages/foo?deeplink=fields.hero.title'
     );
-    expect(email.htmlBody).toContain('Open in Root CMS');
+    expect(email.htmlBody).toContain('Open in Root.js');
   });
 
   it('skips when there is nobody to notify', async () => {

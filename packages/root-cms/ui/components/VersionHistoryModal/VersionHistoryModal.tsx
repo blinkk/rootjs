@@ -251,8 +251,7 @@ export function VersionHistoryModal(
         <Text className="VersionHistoryModal__versionsEmpty" size="body">
           <p>No versions found.</p>
           <p className="VersionHistoryModal__versionsEmpty__developer">
-            For developers: Configure the Root CMS cron job to populate
-            versions.
+            For developers: Configure the Root.js cron job to populate versions.
           </p>
         </Text>
       ) : (

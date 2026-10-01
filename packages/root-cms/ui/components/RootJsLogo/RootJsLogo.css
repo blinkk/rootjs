@@ -1,0 +1,23 @@
+.RootJsLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-default);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.RootJsLogo__beet {
+  display: block;
+  flex: 0 0 auto;
+  /* The sprite is 11 columns by 16 rows once cropped. */
+  width: 14px;
+  height: auto;
+}
+
+.RootJsLogo__text {
+  display: block;
+  font-size: 16px;
+}

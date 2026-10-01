@@ -291,7 +291,7 @@ function Changes() {
         gap: '6px',
         height: '34px',
         marginBottom: '-2px',
-        borderBottom: `2px solid ${active ? 'lightblue' : 'transparent'}`,
+        borderBottom: `2px solid ${active ? 'var(--cms-accent)' : 'transparent'}`,
         color: active ? 'var(--cms-text)' : '#868e96',
         fontSize: '12.5px',
         fontWeight: 500,
