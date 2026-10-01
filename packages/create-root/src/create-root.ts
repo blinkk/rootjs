@@ -21,7 +21,11 @@ async function main() {
   const program = new Command('create-root');
   program.version(packageJson.version);
   program.argument('[dir]', 'output dir');
-  program.option('--template [template]', 'template to use', 'starter');
+  program.option(
+    '--template [template]',
+    'template to use: "starter" (Root CMS) or "minimal" (hello world)',
+    'starter'
+  );
   program.option(
     '--repo [repo]',
     'github repo to pull from',
@@ -47,8 +51,13 @@ async function main() {
     });
     await emitter.clone(outputDir);
     await updatePackageJson(path.join(outputDir, 'package.json'));
-    console.log('done!');
-    console.log('next: run `pnpm install` or `yarn install`');
+    console.log('done! next steps:');
+    console.log();
+    if (outputDir !== process.cwd()) {
+      console.log(`  cd ${maybeRelativePath(outputDir)}`);
+    }
+    console.log('  pnpm install');
+    console.log('  pnpm dev');
   });
   await program.parseAsync(process.argv);
 }

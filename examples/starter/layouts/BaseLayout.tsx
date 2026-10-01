@@ -1,5 +1,5 @@
-import {Head, Html, Script} from '@blinkk/root';
-import {ComponentChildren} from 'preact';
+import {Body, Head, Html} from '@blinkk/root';
+import {ComponentChildren} from '@blinkk/root/jsx';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
 import '@/styles/global.scss';
@@ -16,29 +16,24 @@ export function BaseLayout(props: BaseLayoutProps) {
   const title = props.title || '';
   const description = props.description || '';
   const image = props.image || '';
-  const noindex = props.noindex || false;
   return (
     <Html>
       <Head>
         <title>{title}</title>
-        <meta content="website" property="og:type" />
-        <meta content="" property="og:site_name" />
-        <meta content="summary_large_image" name="twitter:card" />
-        <meta content={title} property="og:title" />
-        <meta content={title} name="twitter:title" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content={description} />
-        <meta name="og:description" content={description} />
-        {image && <meta content={image} property="og:image" />}
-        {image && <meta content={image} name="twitter:image" />}
-        {image && <meta content="summary_large_image" name="twitter:card" />}
-        {noindex && <meta name="robots" content="noindex" />}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        {image && <meta property="og:image" content={image} />}
+        {image && <meta name="twitter:card" content="summary_large_image" />}
+        {props.noindex && <meta name="robots" content="noindex" />}
       </Head>
-      <div id="root">
+      <Body>
         <GlobalHeader />
-        <main id="main">{props.children}</main>
+        <main>{props.children}</main>
         <GlobalFooter />
-      </div>
-      <Script type="module" src="/bundles/main.ts" />
+      </Body>
     </Html>
   );
 }

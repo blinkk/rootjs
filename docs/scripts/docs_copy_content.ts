@@ -189,117 +189,70 @@ const ROUTES_TABLE = `<table class="routes-table">
 </tbody>
 </table>`;
 
-const CMS_PLUGIN_CONFIG = `
+/**
+ * Reads a file from the `starter` template, prefixed with its path, so the
+ * snippets on the Getting started page match what `create-root` scaffolds.
+ */
+function starterFile(filePath: string): string {
+  const source = readFileSync(
+    path.join(REPO_DIR, 'examples/starter', filePath),
+    'utf8'
+  );
+  return `// @/${filePath}\n\n${source}`;
+}
+
+const STARTER_FIREBASE_CONFIG = `
 // @/root.config.ts
 
-import {defineConfig} from '@blinkk/root';
-import {cmsPlugin} from '@blinkk/root-cms/plugin';
-
-export default defineConfig({
-  domain: 'https://example.com',
-  server: {
-    // Signs the CMS session cookie. Generate a random value with:
-    // node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-    sessionCookieSecret: process.env.SESSION_COOKIE_SECRET,
+cmsPlugin({
+  id: 'starter',
+  name: 'Starter',
+  // From Project settings > Your apps in the Firebase console.
+  firebaseConfig: {
+    apiKey: '...',
+    authDomain: 'my-project.firebaseapp.com',
+    projectId: 'my-project',
+    storageBucket: 'my-project.appspot.com',
   },
-  plugins: [
-    cmsPlugin({
-      id: 'my-site',
-      name: 'My Site',
-      // From Project settings > Your apps in the Firebase console.
-      firebaseConfig: {
-        apiKey: '...',
-        authDomain: 'my-project.firebaseapp.com',
-        projectId: 'my-project',
-        storageBucket: 'my-project.appspot.com',
-      },
-    }),
-  ],
-});`;
+}),`;
 
-const PAGES_SCHEMA = `
+const STARTER_MODULES_FIELD = `
 // @/collections/Pages.schema.ts
 
-import {schema} from '@blinkk/root-cms';
+schema.array({
+  id: 'modules',
+  label: 'Modules',
+  of: schema.oneOf({
+    // Every \`templates/<Name>/<Name>.schema.ts\` file is available here.
+    types: schema.glob('/templates/*/*.schema.ts'),
+  }),
+}),`;
 
-export default schema.collection({
-  name: 'Pages',
-  description: 'Landing pages',
-  url: '/[...slug]',
-  preview: {
-    title: 'meta.title',
-    image: 'meta.image',
-  },
-  fields: [
-    schema.object({
-      id: 'meta',
-      label: 'Meta',
-      fields: [
-        schema.string({id: 'title', label: 'Title', translate: true}),
-        schema.string({
-          id: 'description',
-          label: 'Description',
-          translate: true,
-          variant: 'textarea',
-        }),
-        schema.image({id: 'image', label: 'Image'}),
-      ],
-    }),
-    schema.object({
-      id: 'content',
-      label: 'Content',
-      fields: [
-        schema.richtext({id: 'body', label: 'Body', translate: true}),
-      ],
-    }),
-  ],
-});`;
-
-const PAGE_ROUTE = `
-// @/routes/[[...slug]].tsx
-
-import {Handler, HandlerContext} from '@blinkk/root';
-import {RootCMSClient} from '@blinkk/root-cms';
-import {RichText} from '@blinkk/root-cms/richtext';
-import {PagesDoc} from '@/root-cms';
-
-interface PageProps {
-  doc: PagesDoc;
-}
-
-export default function Page(props: PageProps) {
-  const fields = props.doc.fields || {};
-  return (
-    <main>
-      <h1>{fields.meta?.title}</h1>
-      <RichText data={fields.content?.body} />
-    </main>
-  );
-}
-
-export const handle: Handler = async (req) => {
-  const ctx = req.handlerContext as HandlerContext<PageProps>;
-  const slug = ctx.params.slug || 'index';
-  // Editors preview drafts by adding ?preview=true to the URL.
-  const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
-  const cmsClient = new RootCMSClient(req.rootConfig);
-  const doc = await cmsClient.getDoc<PagesDoc>('Pages', slug, {mode});
-  if (!doc) {
-    return ctx.render404();
-  }
-  return ctx.render({doc});
-};`;
+const STARTER_TREE = `my-site/
+├── collections/
+│   └── Pages.schema.ts   # The Pages collection
+├── components/
+│   └── PageModules/      # Renders each module with its template
+├── layouts/
+│   └── BaseLayout.tsx    # &lt;html&gt;, &lt;head&gt;, header and footer
+├── routes/
+│   ├── [[...slug]].tsx   # Renders Pages docs by slug
+│   └── 404.tsx
+├── templates/
+│   └── TemplateHero/     # TemplateHero.schema.ts, .tsx, .module.scss
+├── root-cms.d.ts         # Generated types for your schemas
+└── root.config.ts`;
 
 // The docs, in sidebar order.
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Rewrites the intro around Root.js as one product, updates the requirements to Node 24, adds the create-root templates, and folds in the CMS setup steps (previously on /docs/cms/).',
+  note: 'Rewrites the page around the new starter template (the CMS, a Pages collection and templates), with a short mention of the minimal template. The cms, blog and basepath templates were removed from create-root.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
       description:
-        'Create a Root.js project, run the dev server, and set up the built-in CMS.',
+        'Create a Root.js project from the starter template, connect the CMS to Firebase, and build pages from templates.',
       category: 'start',
       navLabel: 'Getting started',
     },
@@ -311,11 +264,8 @@ const GETTING_STARTED: DocCopy = {
             `Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site.`
           ),
           ul(
-            `<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on ${a('https://vite.dev/', 'Vite')} and ${a('https://preactjs.com/', 'Preact')}, and it ships no client-side JavaScript unless you add it.`,
+            `<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on ${a('https://vite.dev/', 'Vite')}, and it ships no client-side JavaScript unless you add it.`,
             `<b>The CMS</b> adds visual editing with live preview, localization, releases and publishing workflows. Content is stored in your own ${a('https://firebase.google.com/', 'Firebase')} project, and content models are defined in code.`
-          ),
-          p(
-            `The CMS is optional. You can start with the framework and add the CMS at any time.`
           ),
         ]),
         section(
@@ -335,7 +285,7 @@ const GETTING_STARTED: DocCopy = {
           'Create a project',
           [
             p(
-              `Scaffold a new project with ${c('create-root')}, then install its dependencies:`
+              `Scaffold a new project from the ${a('https://github.com/blinkk/rootjs/tree/main/examples/starter', 'starter')} template, then install its dependencies and start the dev server:`
             ),
           ],
           [
@@ -344,42 +294,33 @@ const GETTING_STARTED: DocCopy = {
               `
 pnpm create @blinkk/root my-site
 cd my-site
-pnpm install`
+pnpm install
+pnpm dev`
             ),
-            copy(
-              p(
-                `By default, the project is created from the ${a('https://github.com/blinkk/rootjs/tree/main/examples/starter', 'starter')} template. To start from another ${a('https://github.com/blinkk/rootjs/tree/main/examples', 'example')}, pass ${c('--template')}:`
-              ),
-              ul(
-                `${c('starter')}: the framework with a layout, components and App Engine deploy scripts.`,
-                `${c('minimal')}: the smallest possible project.`,
-                `${c('cms')}: the framework with the CMS set up.`,
-                `${c('blog')}: a localized blog that uses the CMS.`,
-                `${c('basepath')}: a site served from a sub-path, e.g. ${c('/about/')}.`
-              )
-            ),
-            code('bash', 'pnpm create @blinkk/root --template=cms my-site'),
-          ]
-        ),
-        section(
-          'dev-server',
-          'Run the dev server',
-          [p('Start the dev server from the project directory:')],
-          [
-            code('bash', 'pnpm dev'),
             copy(
               p(
                 `The site runs at ${a('http://localhost:4007', 'http://localhost:4007')}, and pages reload as you edit them. To use a different port, set the ${c('PORT')} environment variable.`
+              ),
+              p(
+                `The starter comes with the CMS, a ${c('Pages')} collection, and a route that builds each page from a list of templates:`
+              ),
+              html(`<pre><code>${STARTER_TREE}</code></pre>`),
+              p(
+                `Until you connect a Firebase project, the home page shows the setup steps below.`
+              ),
+              p(
+                `<b>Just the framework?</b> The ${a('https://github.com/blinkk/rootjs/tree/main/examples/minimal', 'minimal')} template is a plain Root.js project with a single "Hello, Root.js" page at ${c('routes/index.tsx')}, and no CMS. It's a good fit for static sites. To add the CMS to it later, install ${c('@blinkk/root-cms')} and ${c('firebase-admin')}, and add ${c('cmsPlugin()')} as described in ${a('/docs/cms/', 'CMS configuration')}:`
               )
             ),
+            code('bash', 'pnpm create @blinkk/root --template=minimal my-site'),
           ]
         ),
         section(
           'set-up-cms',
-          'Set up the CMS',
+          'Connect the CMS to Firebase',
           [
             p(
-              `The CMS runs inside your site at ${c('/cms/')} and stores content in Firestore. If you started from the ${c('cms')} or ${c('blog')} template, the plugin is already installed, but the template points at a sample Firebase project, so follow the steps below to connect your own.`
+              `The CMS runs inside your site at ${c('/cms/')} and stores content in Firestore. The starter's ${c('root.config.ts')} has placeholder Firebase values, so connect your own project first.`
             ),
             p(`<b>1. Create a Firebase project</b>`),
             ol(
@@ -388,18 +329,16 @@ pnpm install`
               `Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains.`,
               `Under <b>Project settings</b>, register a web app and copy its ${c('firebaseConfig')} values for the next step.`
             ),
-            p(`<b>2. Add the CMS plugin</b>`),
+            p(`<b>2. Add your Firebase config</b>`),
             p(
-              `Install the CMS and the Firebase Admin SDK (skip this if you used the ${c('cms')} template):`
+              `Replace the placeholder values in ${c('root.config.ts')} with your web app's config:`
             ),
           ],
           [
-            code('bash', 'pnpm add @blinkk/root-cms firebase-admin'),
-            copy(p(`Then add the plugin to ${c('root.config.ts')}:`)),
-            code('ts', CMS_PLUGIN_CONFIG),
+            code('ts', STARTER_FIREBASE_CONFIG),
             copy(
               p(
-                `The ${c('id')} namespaces your content in Firestore, so several sites can share one Firebase project. See ${a('/docs/cms/', 'CMS configuration')} for every option.`
+                `The ${c('id')} namespaces your content in Firestore, so several sites can share one Firebase project. Before you deploy, also replace ${c('sessionCookieSecret')} with a long random value. See ${a('/docs/cms/', 'CMS configuration')} for every option.`
               ),
               p(`<b>3. Sign in to Google Cloud</b>`),
               p(
@@ -426,30 +365,39 @@ gcloud auth application-default login`
               p(
                 `This replaces any existing Firestore rules in the project. To review the rules or apply them by hand, see ${a('/docs/cms/#security-rules', 'Security rules')}.`
               ),
-              p(`<b>5. Add a collection</b>`),
+              p(`<b>5. Create your home page</b>`),
               p(
-                `Content models are ${c('.schema.ts')} files in the ${c('collections/')} folder. Each file defines a collection of docs that share the same fields:`
+                `Restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')}. In the ${c('Pages')} collection, create a doc with the slug ${c('index')}, add a <b>TemplateHero</b> module, and publish it. It replaces the setup page at ${c('/')}. Other slugs map to their own URL, e.g. ${c('about')} renders at ${c('/about')}.`
               )
             ),
-            code('ts', PAGES_SCHEMA),
-            copy(
-              p(
-                `Generate TypeScript types for your schemas, then restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')} to create your first doc:`
-              )
-            ),
-            code('bash', 'pnpm exec root-cms generate-types'),
           ]
         ),
         section(
-          'render-content',
-          'Render CMS content',
+          'templates',
+          'Build pages from templates',
           [
             p(
-              `Routes read content with ${c('RootCMSClient')}. This route renders any doc in the ${c('Pages')} collection at its slug, and shows drafts when the URL has ${c('?preview=true')}:`
+              `Each page in the starter is a list of modules. The ${c('Pages')} collection offers every template schema in the ${c('templates/')} folder with ${c('schema.glob()')}:`
             ),
           ],
           [
-            code('tsx', PAGE_ROUTE),
+            code('ts', STARTER_MODULES_FIELD),
+            copy(
+              p(
+                `The route at ${c('routes/[[...slug]].tsx')} loads the doc for the URL with ${c('RootCMSClient')}, and ${c('PageModules')} renders each module with the component that matches its template name. Editors can preview drafts by adding ${c('?preview=true')} to the URL.`
+              ),
+              p(
+                `To add a template, create a folder in ${c('templates/')} with a schema and a component of the same name. For example, here's the starter's ${c('TemplateHero')} template:`
+              )
+            ),
+            code('ts', starterFile('templates/TemplateHero/TemplateHero.schema.ts')),
+            code('tsx', starterFile('templates/TemplateHero/TemplateHero.tsx')),
+            copy(
+              p(
+                `Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:`
+              )
+            ),
+            code('bash', 'pnpm exec root-cms generate-types'),
             copy(
               p(
                 `Learn more in ${a('/docs/cms/schemas/', 'Schemas')} and ${a('/docs/cms/data-fetching/', 'Data fetching')}.`

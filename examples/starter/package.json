@@ -1,5 +1,6 @@
 {
   "name": "@examples/starter",
+  "description": "Root.js starter project with Root CMS.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,16 +8,19 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "rm -rf dist/ && root build",
     "dev": "root dev",
+    "build": "rm -rf dist/ && root build",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
-    "stage": "root create-package --target=appengine --out=gae-staging --app-yaml=app.staging.yaml && root gae-deploy --project=example-project --promote --max-versions=10 gae-staging/",
-    "deploy": "root create-package --target=appengine --out=gae-prod --app-yaml=app.prod.yaml && root gae-deploy --project=example-project --promote --max-versions=10 gae-prod/",
-    "start": "root start --host=0.0.0.0",
-    "test": "pnpm run build"
+    "start": "root start",
+    "test": "pnpm run build",
+    "types": "root-cms generate-types"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "preact": "10.29.8"
+    "@blinkk/root-cms": "workspace:*",
+    "firebase-admin": "14.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6"
   }
 }

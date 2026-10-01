@@ -31,6 +31,11 @@
       color: tokens.$color-blue-700;
     }
 
+    pre code {
+      font-family: var(--font-family-mono);
+      font-size: 14px;
+    }
+
     > *:first-child {
       margin-top: 0 !important;
     }
