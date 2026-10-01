@@ -1,5 +1,5 @@
 /**
- * Result types that the global search filter chips can narrow results down
+ * Result types that the global search filter tabs can narrow results down
  * to. `all` shows every group.
  */
 export type GlobalSearchFilter =
@@ -7,11 +7,11 @@ export type GlobalSearchFilter =
 
 export interface GlobalSearchFilterOption {
   id: GlobalSearchFilter;
-  /** Chip label. */
+  /** Tab label. */
   label: string;
 }
 
-/** Filter chips in display order. */
+/** Filter tabs in display order. */
 export const GLOBAL_SEARCH_FILTERS: GlobalSearchFilterOption[] = [
   {id: 'all', label: 'All'},
   {id: 'docs', label: 'Documents'},
@@ -21,7 +21,7 @@ export const GLOBAL_SEARCH_FILTERS: GlobalSearchFilterOption[] = [
   {id: 'releases', label: 'Releases'},
 ];
 
-/** Returns the chip label for a filter. */
+/** Returns the tab label for a filter. */
 export function getGlobalSearchFilterLabel(filter: GlobalSearchFilter): string {
   const option = GLOBAL_SEARCH_FILTERS.find((f) => f.id === filter);
   return option?.label || 'All';

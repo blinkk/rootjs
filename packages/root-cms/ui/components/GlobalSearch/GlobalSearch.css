@@ -1,182 +1,3 @@
-.GlobalSearchAction {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-  width: 100%;
-  padding: 10px 16px;
-  background: transparent;
-  border: 0;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-  color: inherit;
-}
-
-.GlobalSearchAction--hovered {
-  background: var(--mantine-color-gray-1, #f1f3f5);
-}
-
-.GlobalSearchAction__crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--mantine-color-gray-6, #868e96);
-}
-
-.GlobalSearchAction__docId {
-  font-weight: 600;
-  color: var(--mantine-color-dark-9, #25262b);
-}
-
-.GlobalSearchAction__field {
-  font-style: italic;
-  color: var(--mantine-color-gray-7, #495057);
-}
-
-.GlobalSearchAction__snippet {
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--mantine-color-dark-7, #343a40);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.GlobalSearchAction__mark {
-  background: #fff3bf;
-  color: inherit;
-  padding: 0 2px;
-  border-radius: 2px;
-}
-
-.GlobalSearchAction__row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.GlobalSearchAction__icon {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--mantine-color-gray-2, #e9ecef);
-  color: var(--mantine-color-dark-7, #343a40);
-}
-
-.GlobalSearchAction__icon--muted {
-  background: var(--mantine-color-gray-1, #f1f3f5);
-  color: var(--mantine-color-gray-6, #868e96);
-}
-
-.GlobalSearchAction__body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.GlobalSearchAction__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--mantine-color-dark-9, #25262b);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.GlobalSearchAction__sub {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--mantine-color-gray-6, #868e96);
-  margin-top: 2px;
-}
-
-.GlobalSearchAction__subText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.GlobalSearchAction__subIcon {
-  display: inline-flex;
-  align-items: center;
-  color: var(--mantine-color-gray-5, #adb5bd);
-}
-
-.GlobalSearchAction__tag {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  background: var(--mantine-color-gray-2, #e9ecef);
-  color: var(--mantine-color-gray-7, #495057);
-}
-
-.GlobalSearchAction--header {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--mantine-color-gray-6, #868e96);
-  padding: 8px 16px 4px;
-  background: transparent;
-  cursor: default;
-}
-
-.GlobalSearchAction--footer {
-  font-size: 11px;
-  color: var(--mantine-color-gray-6, #868e96);
-  text-align: center;
-  padding: 8px 16px;
-  border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
-  background: var(--mantine-color-gray-0, #f8f9fa);
-}
-
-.GlobalSearchAction--tips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--mantine-color-gray-6, #868e96);
-  padding: 8px 16px;
-  border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
-  background: var(--mantine-color-gray-0, #f8f9fa);
-}
-
-.GlobalSearchAction__tipItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.GlobalSearchAction__tipSep {
-  color: var(--mantine-color-gray-4, #ced4da);
-}
-
-.GlobalSearchAction__kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--mantine-color-gray-2, #e9ecef);
-  color: var(--mantine-color-gray-8, #343a40);
-  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
-  border-bottom-width: 2px;
-}
-
 /*
  * The spotlight paper has no max height of its own, so long result lists
  * used to overflow the viewport with no way to scroll. Cap the paper to the
@@ -187,11 +8,38 @@
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 144px);
+  color: var(--color-text-default, #333);
 }
 
 /* Keep the search input at its natural height; only the body flexes. */
 .GlobalSearch__spotlight > :not(.GlobalSearch__body) {
   flex: 0 0 auto;
+}
+
+.GlobalSearch__spotlight .GlobalSearch__input {
+  height: 52px;
+  padding-right: 56px;
+  font-size: 15px;
+  color: var(--color-text-default, #333);
+}
+
+.GlobalSearch__spotlight .GlobalSearch__input::placeholder {
+  color: var(--color-text-gray, #6b7280);
+}
+
+.GlobalSearch__esc {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--chip-background, #efefef);
+  font-family: var(--font-family-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--color-text-gray, #6b7280);
+  pointer-events: none;
 }
 
 .GlobalSearch__body {
@@ -208,98 +56,297 @@
   overscroll-behavior: contain;
 }
 
+.GlobalSearch__spotlight .GlobalSearch__actions {
+  padding: 4px 0 6px;
+  border-top: 1px solid var(--color-border, #e4e4e1);
+}
+
+/* The filter tabs already draw a rule between the input and the results. */
+.GlobalSearchFilters + .GlobalSearch__results .GlobalSearch__actions {
+  border-top: 0;
+}
+
+.GlobalSearch__spotlight .GlobalSearch__nothingFound {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--color-text-gray, #6b7280);
+}
+
 .GlobalSearch__resetFilter {
   padding: 0;
   border: 0;
   background: transparent;
   font: inherit;
-  color: var(--mantine-color-blue-6, #228be6);
+  color: var(--color-text-default, #333);
   text-decoration: underline;
+  text-decoration-color: var(--cms-accent, #d9a6c8);
+  text-underline-offset: 2px;
   cursor: pointer;
 }
+
+.GlobalSearch__footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 34px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--color-border, #e4e4e1);
+  background: var(--page-background, #fbfbf9);
+  font-size: 11.5px;
+  color: var(--color-text-gray, #6b7280);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.GlobalSearch__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.GlobalSearch__kbd {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--chip-background, #efefef);
+  font-family: var(--font-family-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-default, #333);
+}
+
+.GlobalSearch__indexed {
+  margin-left: auto;
+  color: #9ca3af;
+}
+
+/* Filter tabs. */
 
 .GlobalSearchFilters {
   display: flex;
-  align-items: center;
+  flex: 0 0 auto;
+  align-items: stretch;
   gap: 8px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
+  height: 38px;
+  padding: 0 12px 0 16px;
+  border-top: 1px solid var(--color-border, #e4e4e1);
+  border-bottom: 1px solid var(--color-border, #e4e4e1);
 }
 
-.GlobalSearchFilters__chips {
+.GlobalSearchFilters__tabs {
   display: flex;
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  gap: 18px;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.GlobalSearchFilters__chip {
+.GlobalSearchFilters__tab {
+  position: relative;
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
-  border-radius: 999px;
-  background: var(--mantine-color-white, #fff);
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  line-height: 1.4;
-  color: var(--mantine-color-dark-7, #343a40);
+  color: var(--color-text-gray, #6b7280);
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.GlobalSearchFilters__chip:hover {
-  background: var(--mantine-color-gray-0, #f8f9fa);
+.GlobalSearchFilters__tab:hover {
+  color: var(--color-text-default, #333);
 }
 
-.GlobalSearchFilters__chip--empty {
-  color: var(--mantine-color-gray-6, #868e96);
+.GlobalSearchFilters__tab--empty {
+  color: #b4b4ae;
 }
 
-.GlobalSearchFilters__chip--active,
-.GlobalSearchFilters__chip--active:hover {
-  border-color: var(--mantine-color-dark-7, #343a40);
-  background: var(--mantine-color-dark-7, #343a40);
-  color: var(--mantine-color-white, #fff);
+.GlobalSearchFilters__tab--active,
+.GlobalSearchFilters__tab--active:hover {
+  font-weight: 600;
+  color: var(--color-text-default, #333);
+}
+
+.GlobalSearchFilters__tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--cms-accent, #d9a6c8);
 }
 
 .GlobalSearchFilters__count {
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--mantine-color-gray-2, #e9ecef);
   font-size: 11px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-7, #495057);
+  font-weight: 500;
+  color: #9ca3af;
 }
 
-.GlobalSearchFilters__chip--active .GlobalSearchFilters__count {
-  background: rgba(255, 255, 255, 0.2);
-  color: inherit;
+.GlobalSearchFilters__tab--active .GlobalSearchFilters__count {
+  color: var(--color-text-gray, #6b7280);
 }
 
 .GlobalSearchFilters__copy {
   display: inline-flex;
   flex: 0 0 auto;
+  align-self: center;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  height: 26px;
+  padding: 0 6px;
   border: 0;
   border-radius: 4px;
   background: transparent;
   font-family: inherit;
   font-size: 12px;
-  color: var(--mantine-color-gray-6, #868e96);
+  color: var(--color-text-gray, #6b7280);
   cursor: pointer;
 }
 
 .GlobalSearchFilters__copy:hover {
-  background: var(--mantine-color-gray-1, #f1f3f5);
-  color: var(--mantine-color-dark-7, #343a40);
+  background: var(--button-background-hover, #f5f5f5);
+  color: var(--color-text-default, #333);
 }
 
 .GlobalSearchFilters__copy--copied {
   color: var(--mantine-color-green-7, #2f9e44);
+}
+
+/* Result rows. */
+
+.GlobalSearchAction {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 16px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.GlobalSearchAction--multiline {
+  align-items: flex-start;
+}
+
+.GlobalSearchAction--hovered {
+  background: #f6f6f3;
+}
+
+/* Marks the selected row like the active sidebar item. */
+.GlobalSearchAction--hovered::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--cms-accent, #d9a6c8);
+}
+
+.GlobalSearch__spotlight .GlobalSearch__group {
+  padding: 12px 16px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-gray, #6b7280);
+  cursor: default;
+}
+
+.GlobalSearchAction__icon {
+  display: flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border: 1px solid var(--color-border, #e4e4e1);
+  border-radius: 6px;
+  background: var(--surface-background, #fff);
+  color: var(--color-text-default, #333);
+}
+
+.GlobalSearchAction__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.GlobalSearchAction--multiline .GlobalSearchAction__body {
+  padding-top: 1px;
+}
+
+.GlobalSearchAction__title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-default, #333);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.GlobalSearchAction__field {
+  font-weight: 400;
+  color: var(--color-text-gray, #6b7280);
+}
+
+.GlobalSearchAction__subtitle {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-gray, #6b7280);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.GlobalSearchAction__snippet {
+  display: -webkit-box;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #4b5058;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.GlobalSearchAction__mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: #f6e3ef;
+  font-weight: 600;
+  color: var(--color-text-default, #333);
+}
+
+.GlobalSearchAction__kind,
+.GlobalSearchAction__enter {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.GlobalSearchAction--multiline .GlobalSearchAction__kind,
+.GlobalSearchAction--multiline .GlobalSearchAction__enter {
+  align-self: center;
+}
+
+.GlobalSearchAction__enter {
+  color: var(--color-text-gray, #6b7280);
 }
