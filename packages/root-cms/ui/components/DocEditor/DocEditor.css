@@ -469,7 +469,7 @@
 }
 
 .DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
-  border-bottom: 2px solid var(--cms-accent);
+  border-bottom: 2px solid var(--color-border);
   border-radius: 0;
 }
 
@@ -590,13 +590,13 @@
 }
 
 .DocEditor__ArrayField__item:not([open]) .DocEditor__ArrayField__item__header {
-  border-left: 2px solid var(--cms-accent);
+  border-left: 2px solid var(--color-border);
   padding-left: 8px;
 }
 
 .DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__body {
   padding: 16px;
-  border: 2px solid var(--cms-accent);
+  border: 2px solid var(--color-border);
 }
 
 .DocEditor__ArrayField__item__header:focus {
