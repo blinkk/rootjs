@@ -34,6 +34,17 @@ const MOCK_ACTIONS = vi.hoisted(() => {
       metadata: {taskId: '42', status: 'done'},
       timestamp: timestamp,
     },
+    // Renders the asset's file path instead of its id.
+    {
+      action: 'asset.upload',
+      by: 'test@example.com',
+      metadata: {
+        assetId: 'a1b2c3d4e5f6',
+        name: 'hero.png',
+        path: 'images/home/hero.png',
+      },
+      timestamp: timestamp,
+    },
   ];
 });
 
@@ -121,6 +132,19 @@ describe('ActionLogs', () => {
     expect(button).not.toBeNull();
     expect(button.getAttribute('href')).toBe('/cms/tasks/42');
     expect(button.textContent).toBe('Open');
+  });
+
+  it('shows the file path for asset actions', async () => {
+    const {container} = renderCompact();
+    const rows = await waitForRows(container);
+    const label = rows[3].querySelector(
+      '.ActionLogsCompactItemPreview__actionMetaId'
+    );
+    expect(label?.textContent).toBe('images/home/hero.png');
+    const button = rows[3].querySelector(
+      '.ActionLogsCompactItemPreview__buttons a'
+    ) as HTMLAnchorElement;
+    expect(button.getAttribute('href')).toBe('/cms/assets?asset=a1b2c3d4e5f6');
   });
 
   it('keeps the timestamp in place when its tooltip opens', async () => {

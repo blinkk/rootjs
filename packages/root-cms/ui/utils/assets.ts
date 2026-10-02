@@ -723,7 +723,13 @@ export async function createAssetFile(options: {
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email,
   });
-  logAction('asset.upload', {metadata: {assetId, name}});
+  logAction('asset.upload', {
+    metadata: {
+      assetId,
+      name,
+      path: joinFolderPath(normalizeParentPath(options.parent), name),
+    },
+  });
   return (await getAsset(assetId)) as AssetFile;
 }
 
@@ -751,7 +757,12 @@ export async function renameAsset(asset: Asset, newName: string) {
     modifiedBy: window.firebase.user.email,
   });
   logAction('asset.rename', {
-    metadata: {assetId: asset.id, from: asset.name, to: name},
+    metadata: {
+      assetId: asset.id,
+      path: joinFolderPath(asset.parent, name),
+      from: asset.name,
+      to: name,
+    },
   });
 }
 
@@ -780,7 +791,12 @@ export async function moveAsset(asset: Asset, toFolder: string) {
     modifiedBy: window.firebase.user.email,
   });
   logAction('asset.move', {
-    metadata: {assetId: asset.id, from: asset.parent, to: newParent},
+    metadata: {
+      assetId: asset.id,
+      path: joinFolderPath(newParent, asset.name),
+      from: asset.parent,
+      to: newParent,
+    },
   });
 }
 
@@ -951,7 +967,11 @@ export async function deleteAsset(
   asset: Asset,
   options?: {recursive?: boolean}
 ) {
-  const metadata: Record<string, any> = {assetId: asset.id, name: asset.name};
+  const metadata: Record<string, any> = {
+    assetId: asset.id,
+    name: asset.name,
+    path: joinFolderPath(asset.parent, asset.name),
+  };
   if (asset.type === 'folder') {
     const folderPath = joinFolderPath(asset.parent, asset.name);
     const descendants = await listFolderDescendants(folderPath);
@@ -1106,7 +1126,13 @@ export async function replaceAssetFile(
     updates.name = newName;
   }
   await updateDoc(docRef, updates);
-  logAction('asset.replace', {metadata: {assetId: asset.id, name: asset.name}});
+  logAction('asset.replace', {
+    metadata: {
+      assetId: asset.id,
+      name: asset.name,
+      path: joinFolderPath(asset.parent, updates.name || asset.name),
+    },
+  });
   return (await getAsset(asset.id)) as AssetFile;
 }
 
@@ -1145,7 +1171,12 @@ export async function updateAssetAltDisabled(
     modifiedBy: window.firebase.user.email,
   });
   logAction('asset.alt_disabled', {
-    metadata: {assetId: asset.id, name: asset.name, disabled},
+    metadata: {
+      assetId: asset.id,
+      name: asset.name,
+      path: joinFolderPath(asset.parent, asset.name),
+      disabled,
+    },
   });
   return (await getAsset(asset.id)) as AssetFile;
 }
@@ -1250,6 +1281,7 @@ export async function syncAssetToDocs(
       metadata: {
         assetId: asset.id,
         name: asset.name,
+        path: joinFolderPath(asset.parent, asset.name),
         docIds: updatedDocIds,
       },
     });
