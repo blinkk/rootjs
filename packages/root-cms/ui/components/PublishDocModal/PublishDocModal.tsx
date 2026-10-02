@@ -1,6 +1,6 @@
 import './PublishDocModal.css';
 
-import {Button, Checkbox, Loader} from '@mantine/core';
+import {ActionIcon, Button, Checkbox, Loader, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -382,34 +382,43 @@ export function PublishDocModal(
               ? 'Suggested by Root AI. Review it before publishing.'
               : 'Optional. Describes the changes in the doc’s publish history.'
           }
-          action={
-            aiAvailable && (
-              <Button
-                variant="subtle"
-                color="dark"
-                size="xs"
-                compact
-                leftIcon={<IconRobot size={15} stroke={1.75} />}
-                loading={generatingMessage}
-                onClick={() => generatePublishMessage()}
-              >
-                Write with AI
-              </Button>
-            )
-          }
         >
-          <textarea
-            className="PublishDocModal__input PublishDocModal__input--textarea"
-            placeholder="What changed?"
-            aria-label="Publish message"
-            value={publishMessage}
-            rows={2}
-            onInput={(e: Event) => {
-              const target = e.target as HTMLTextAreaElement;
-              setPublishMessage(target.value);
-              setMessageFromAi(false);
-            }}
-          />
+          <div className="PublishDocModal__message">
+            <textarea
+              className={joinClassNames(
+                'PublishDocModal__input',
+                'PublishDocModal__input--textarea',
+                aiAvailable && 'PublishDocModal__input--withAction'
+              )}
+              placeholder="What changed?"
+              aria-label="Publish message"
+              value={publishMessage}
+              rows={2}
+              onInput={(e: Event) => {
+                const target = e.target as HTMLTextAreaElement;
+                setPublishMessage(target.value);
+                setMessageFromAi(false);
+              }}
+            />
+            {aiAvailable && (
+              <Tooltip
+                className="PublishDocModal__message__action"
+                label="Suggest a publish message with Root AI"
+                position="left"
+                withArrow
+              >
+                <ActionIcon
+                  variant="default"
+                  size="sm"
+                  aria-label="Suggest a publish message with Root AI"
+                  loading={generatingMessage}
+                  onClick={() => generatePublishMessage()}
+                >
+                  <IconRobot size={15} stroke={1.75} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </div>
         </PublishField>
 
         <PublishField label="Changes">

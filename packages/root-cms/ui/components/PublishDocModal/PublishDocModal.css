@@ -122,6 +122,20 @@
   resize: vertical;
 }
 
+.PublishDocModal__input--withAction {
+  padding-right: 40px;
+}
+
+.PublishDocModal__message {
+  position: relative;
+}
+
+.PublishDocModal__message__action {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
 .PublishDocModal__skipChecks {
   margin-top: 4px;
 }

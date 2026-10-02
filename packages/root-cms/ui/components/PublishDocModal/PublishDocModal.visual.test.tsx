@@ -267,6 +267,9 @@ describe('PublishDocModal', () => {
     await page.getByRole('button', {name: 'View diff'}).click();
     await page.getByRole('button', {name: 'Summarize'}).click();
     await page.getByRole('button', {name: 'Run checks'}).click();
+    await page
+      .getByRole('button', {name: 'Suggest a publish message with Root AI'})
+      .hover();
 
     await expect.element(page.getByText('/garden').first()).toBeVisible();
     await expect

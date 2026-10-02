@@ -125,24 +125,31 @@ export default function PublishChecks() {
                 <Input>Mar 3, 2027 · 9:00 AM (America/Los_Angeles)</Input>
               </Field>
               <Field
-                label={
-                  <>
-                    Publish message
-                    <span
-                      className="cms-button cms-button--ghost"
-                      style={{marginLeft: 'auto', height: '20px'}}
-                    >
-                      <IconRobot />
-                      Write with AI
-                    </span>
-                  </>
-                }
+                label="Publish message"
                 help="Suggested by Root AI. Review it before publishing."
               >
-                <Input textarea>
-                  Launch the spring harvest hero with new garden artwork,
-                  updated CTAs and German and French translations.
-                </Input>
+                <div style={{position: 'relative'}}>
+                  <Input textarea>
+                    <span style={{paddingRight: '32px'}}>
+                      Launch the spring harvest hero with new garden artwork,
+                      updated CTAs and German and French translations.
+                    </span>
+                  </Input>
+                  <span
+                    className="cms-button"
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      width: '24px',
+                      height: '24px',
+                      padding: 0,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <IconRobot />
+                  </span>
+                </div>
               </Field>
               <div>
                 <div className="cms-field__label" style={{marginBottom: '6px'}}>
