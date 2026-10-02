@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Names of the bundled skill directories, in install order. */
 export const SKILL_NAMES = [
+  'root-cms-setup',
   'root-cms-cli',
   'root-cms-propose',
   'root-cms-apply',

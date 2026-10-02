@@ -91,11 +91,17 @@ function code(language: Language, value: string) {
   return {_type: 'CodeBlock', language, code: value.trim()};
 }
 
+/** A code block without a language label, e.g. a prompt to copy. */
+function plain(value: string) {
+  return {_type: 'CodeBlock', code: value.trim()};
+}
+
 function copy(...blocks: RichTextBlock[]) {
   return {_type: 'CopyBlock', body: richtext(...blocks)};
 }
 
-type Block = ReturnType<typeof code> | ReturnType<typeof copy>;
+type Block =
+  ReturnType<typeof code> | ReturnType<typeof plain> | ReturnType<typeof copy>;
 
 interface Section {
   id: string;
@@ -247,12 +253,12 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Rewrites the page around the new starter template (the CMS, a Pages collection and templates), with a short mention of the minimal template. The cms, blog and basepath templates were removed from create-root.',
+  note: "Adds a copy-paste prompt for setting up a site with an AI agent, replaces the manual Firebase steps with the `root-cms setup` wizard (the manual steps move to CMS configuration), and fixes the home page step to use the starter's TemplateHero template.",
   fields: {
     meta: {
       title: 'Getting started – Root.js',
       description:
-        'Create a Root.js project from the starter template, connect the CMS to Firebase, and build pages from templates.',
+        'Create a Root.js project from the starter template, by hand or with an AI agent, connect the CMS to Google Cloud, and build pages from templates.',
       category: 'start',
       navLabel: 'Getting started',
     },
@@ -275,24 +281,56 @@ const GETTING_STARTED: DocCopy = {
             ul(
               `${a('https://nodejs.org/', 'Node.js')} 24 (the current LTS) or later.`,
               `A package manager. We recommend ${a('https://pnpm.io/', 'pnpm')}, which you can enable with Corepack.`,
-              `For the CMS: a Google Cloud project with Firebase, and the ${a('https://cloud.google.com/sdk/docs/install', 'gcloud CLI')}.`
+              `For the CMS: the ${a('https://cloud.google.com/sdk/docs/install', 'gcloud CLI')} and a Google Cloud billing account. The CMS needs Secret Manager and a storage bucket, which require billing, but low-traffic sites usually stay in the free tier.`
             ),
           ],
           [code('bash', 'node --version  # v24 or later\ncorepack enable')]
+        ),
+        section(
+          'ai-setup',
+          'Set up with an AI agent',
+          [
+            p(
+              `The quickest way to a working site is to let a coding agent, such as ${a('https://claude.com/claude-code', 'Claude Code')}, run the steps on this page for you. Start it in the folder where you keep your projects and paste this prompt:`
+            ),
+          ],
+          [
+            plain(
+              `
+Set up a new Root.js site with the CMS in ./my-site. Follow the instructions at
+https://rootjs.dev/skills/root-cms-setup.md`
+            ),
+            copy(
+              p(
+                `The agent asks a few questions up front: the folder name, whether to use a new or existing Google Cloud project, and a site id. It then creates the project, runs ${c('root-cms setup')} (after showing you a dry run), starts the dev server and installs the Root.js skills, so later sessions know how to work with your content.`
+              ),
+              p(
+                `A few steps need you, because they happen in a browser or pick who pays: signing in with ${c('gcloud')}, choosing a billing account for a new project, and turning on Google sign-in in the Firebase console. The agent tells you when.`
+              ),
+              p(
+                `If you'd rather do it yourself, the rest of this page covers the same steps.`
+              )
+            ),
+          ]
         ),
         section(
           'create-project',
           'Create a project',
           [
             p(
-              `Scaffold a new project from the ${a('https://github.com/blinkk/rootjs/tree/main/examples/starter', 'starter')} template, then install its dependencies and start the dev server:`
+              `Scaffold a new project from the ${a('https://github.com/blinkk/rootjs/tree/main/examples/starter', 'starter')} template:`
             ),
           ],
           [
+            code('bash', 'pnpm create @blinkk/root my-site'),
+            copy(
+              p(
+                `It offers to install the dependencies and set up Google Cloud for the CMS right away. Say yes to run the setup wizard described ${a('#set-up-cms', 'below')}, or say no and run it later. Either way, start the dev server from the new folder:`
+              )
+            ),
             code(
               'bash',
               `
-pnpm create @blinkk/root my-site
 cd my-site
 pnpm install
 pnpm dev`
@@ -306,7 +344,7 @@ pnpm dev`
               ),
               html(`<pre><code>${STARTER_TREE}</code></pre>`),
               p(
-                `Until you connect a Firebase project, the home page shows the setup steps below.`
+                `Until the CMS is connected to Google Cloud, the home page shows the setup steps.`
               ),
               p(
                 `<b>Just the framework?</b> The ${a('https://github.com/blinkk/rootjs/tree/main/examples/minimal', 'minimal')} template is a plain Root.js project with a single "Hello, Root.js" page at ${c('routes/index.tsx')}, and no CMS. It's a good fit for static sites. To add the CMS to it later, install ${c('@blinkk/root-cms')} and ${c('firebase-admin')}, and add ${c('cmsPlugin()')} as described in ${a('/docs/cms/', 'CMS configuration')}:`
@@ -317,57 +355,36 @@ pnpm dev`
         ),
         section(
           'set-up-cms',
-          'Connect the CMS to Firebase',
+          'Connect the CMS to Google Cloud',
           [
             p(
-              `The CMS runs inside your site at ${c('/cms/')} and stores content in Firestore. The starter's ${c('root.config.ts')} has placeholder Firebase values, so connect your own project first.`
-            ),
-            p(`<b>1. Create a Firebase project</b>`),
-            ol(
-              `Create a project in the ${a('https://console.firebase.google.com/', 'Firebase console')}, or add Firebase to an existing Google Cloud project.`,
-              `Create a Firestore database in <b>Native mode</b>.`,
-              `Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains.`,
-              `Under <b>Project settings</b>, register a web app and copy its ${c('firebaseConfig')} values for the next step.`
-            ),
-            p(`<b>2. Add your Firebase config</b>`),
-            p(
-              `Replace the placeholder values in ${c('root.config.ts')} with your web app's config:`
+              `The CMS runs inside your site at ${c('/cms/')} and stores content in Firestore, in a Google Cloud project you own. The ${c('root-cms setup')} wizard sets up that project. If you said yes in ${c('create-root')}, it has already run; otherwise run it from your project:`
             ),
           ],
           [
-            code('ts', STARTER_FIREBASE_CONFIG),
+            code('bash', 'pnpm exec root-cms setup'),
             copy(
-              p(
-                `The ${c('id')} namespaces your content in Firestore, so several sites can share one Firebase project. Before you deploy, also replace ${c('sessionCookieSecret')} with a long random value. See ${a('/docs/cms/', 'CMS configuration')} for every option.`
+              p(`It asks for a new or existing project and a site id, then:`),
+              ul(
+                `Signs you in with ${c('gcloud')}, if needed, and links a billing account.`,
+                `Adds Firebase, creates the Firestore database and storage bucket, and applies the CMS's security rules.`,
+                `Makes you an ADMIN of the CMS.`,
+                `Creates a service account for the site to run as in production.`,
+                `Stores a session secret in Secret Manager, and creates a ${c('.root.secrets.json')} manifest to commit (see ${a('#secrets', 'Share environment variables')}).`,
+                `Writes the site id and Firebase config into ${c('root.config.ts')}.`
               ),
-              p(`<b>3. Sign in to Google Cloud</b>`),
               p(
-                `The server reads and writes Firestore with ${a('https://cloud.google.com/docs/authentication/application-default-credentials', 'application default credentials')}. For local development, sign in with the gcloud CLI:`
-              )
-            ),
-            code(
-              'bash',
-              `
-gcloud auth login
-gcloud auth application-default login`
-            ),
-            copy(
-              p(`<b>4. Secure the database and add yourself as an admin</b>`),
-              p(
-                `Run ${c('init-firebase')} to apply the CMS's Firestore security rules and give your account the ADMIN role:`
-              )
-            ),
-            code(
-              'bash',
-              'pnpm exec root-cms init-firebase --admin=you@example.com'
-            ),
-            copy(
-              p(
-                `This replaces any existing Firestore rules in the project. To review the rules or apply them by hand, see ${a('/docs/cms/#security-rules', 'Security rules')}.`
+                `One step is manual, because Google has no API for it: the wizard asks you to turn on Google sign-in in the Firebase console, links you to the page, and checks that it worked.`
               ),
-              p(`<b>5. Create your home page</b>`),
+              p(
+                `The site id keeps this site's content, uploads and secrets apart, so several sites can share one Google Cloud project. The wizard is safe to run again: it skips anything that's already set up, so if a step fails, fix it and re-run. Pass ${c('--dry-run')} to see what it would change first.`
+              ),
+              p(`<b>Create your home page</b>`),
               p(
                 `Restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')}. In the ${c('Pages')} collection, create a doc with the slug ${c('index')}, add a <b>TemplateHero</b> module, and publish it. It replaces the setup page at ${c('/')}. Other slugs map to their own URL, e.g. ${c('about')} renders at ${c('/about')}.`
+              ),
+              p(
+                `To set up Firebase without the wizard, or to see every option the CMS supports, see ${a('/docs/cms/', 'CMS configuration')}.`
               )
             ),
           ]
@@ -390,7 +407,10 @@ gcloud auth application-default login`
                 `To add a template, create a folder in ${c('templates/')} with a schema and a component of the same name. For example, here's the starter's ${c('TemplateHero')} template:`
               )
             ),
-            code('ts', starterFile('templates/TemplateHero/TemplateHero.schema.ts')),
+            code(
+              'ts',
+              starterFile('templates/TemplateHero/TemplateHero.schema.ts')
+            ),
             code('tsx', starterFile('templates/TemplateHero/TemplateHero.tsx')),
             copy(
               p(
@@ -410,7 +430,7 @@ gcloud auth application-default login`
           'Share environment variables',
           [
             p(
-              `API keys and other secrets belong in a ${c('.env')} file, which shouldn't be committed. To share them with your team, ${c('root secrets')} stores them in ${a('https://cloud.google.com/secret-manager', 'Google Cloud Secret Manager')} and keeps each developer's ${c('.env')} in sync:`
+              `API keys and other secrets belong in a ${c('.env')} file, which shouldn't be committed. To share them with your team, ${c('root secrets')} stores them in ${a('https://cloud.google.com/secret-manager', 'Google Cloud Secret Manager')} and keeps each developer's ${c('.env')} in sync. ${c('root-cms setup')} creates the ${c('.root.secrets.json')} manifest for you; for a project without the CMS, create it with ${c('root secrets init')}:`
             ),
           ],
           [
@@ -438,14 +458,20 @@ pnpm exec root secrets sync`
           'Work with AI agents',
           [
             p(
-              `Root.js includes skills that teach AI coding agents, such as Claude Code, how to read and edit your CMS content from the command line. Install them into your project:`
+              `Root.js includes skills that teach AI coding agents, such as Claude Code, how to set up the CMS and how to read and edit your content from the command line. If an agent set up your project, they're already installed. Otherwise, install them into your project and commit them:`
             ),
           ],
           [
             code('bash', 'pnpm exec root-cms skill.install'),
             copy(
+              p(`With the skills installed, you can ask an agent to:`),
+              ul(
+                `Look up or update content, e.g. "list the pages that don't have a meta description".`,
+                `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
+                `Connect a teammate's checkout, or a new environment, to Google Cloud with ${c('root-cms setup')}.`
+              ),
               p(
-                `With the skills installed, an agent can look up docs with ${c('root-cms client.call')}, and propose content changes as a YAML file that your team reviews in a pull request before it's applied with ${c('root-cms proposal.apply')}.`
+                `The skills install to an existing agent skills folder, such as ${c('.claude/skills')}, or to ${c('.agent/skills')} if there isn't one. Re-run the command with ${c('--force')} after upgrading ${c('@blinkk/root-cms')} to pick up new versions.`
               )
             ),
           ]
@@ -1381,7 +1407,7 @@ export function blogRedirectPlugin(): Plugin {
 
 const CMS_CONFIGURATION: DocCopy = {
   slug: 'cms',
-  note: 'The setup steps moved to "Getting started". This page becomes a reference for configuring the CMS: plugin options, security rules and roles, Google APIs, AI and cron jobs. The security rules now come from the source code.',
+  note: 'Adds a "Setting up Firebase by hand" section with the manual steps that "Getting started" replaced with the `root-cms setup` wizard.',
   fields: {
     meta: {
       title: 'CMS configuration – Root.js',
@@ -1440,6 +1466,40 @@ export default defineConfig({
     }),
   ],
 });`
+            ),
+          ]
+        ),
+        section(
+          'manual-setup',
+          'Setting up Firebase by hand',
+          [
+            p(
+              `${c('root-cms setup')} does all of this for you (see ${a('/docs/#set-up-cms', 'Getting started')}). To set up a project by hand instead:`
+            ),
+            ol(
+              `Create a project in the ${a('https://console.firebase.google.com/', 'Firebase console')}, or add Firebase to an existing Google Cloud project.`,
+              `Create a Firestore database in <b>Native mode</b>.`,
+              `Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains.`,
+              `Under <b>Project settings</b>, register a web app and copy its ${c('firebaseConfig')} values into ${c('cmsPlugin()')}:`
+            ),
+          ],
+          [
+            code('ts', STARTER_FIREBASE_CONFIG),
+            copy(
+              p(
+                `Before you deploy, also replace ${c('sessionCookieSecret')} with a long random value. The server reads and writes Firestore with ${a('https://cloud.google.com/docs/authentication/application-default-credentials', 'application default credentials')}; for local development, sign in with the gcloud CLI:`
+              )
+            ),
+            code(
+              'bash',
+              `
+gcloud auth login
+gcloud auth application-default login`
+            ),
+            copy(
+              p(
+                `Finally, apply the security rules and add yourself as an admin, as described ${a('#security-rules', 'below')}.`
+              )
             ),
           ]
         ),

@@ -1,0 +1,1340 @@
+version: 1
+id: "2026-10-01-getting-started-ai-setup"
+title: "Update the developer docs: index, cms"
+generated: "2026-10-02T01:46:26.462Z"
+author: "scripts/propose_docs_copy.ts"
+summary: |-
+  - Docs/index: Adds a copy-paste prompt for setting up a site with an AI agent, replaces the manual Firebase steps with the `root-cms setup` wizard (the manual steps move to CMS configuration), and fixes the home page step to use the starter's TemplateHero template.
+  - Docs/cms: Adds a "Setting up Firebase by hand" section with the manual steps that "Getting started" replaced with the `root-cms setup` wizard.
+changes:
+  - kind: "doc.edit"
+    docId: "Docs/index"
+    note: "Adds a copy-paste prompt for setting up a site with an AI agent, replaces the manual Firebase steps with the `root-cms setup` wizard (the manual steps move to CMS configuration), and fixes the home page step to use the starter's TemplateHero template."
+    ops:
+      - op: "set"
+        path: "meta.description"
+        before: "Create a Root.js project from the starter template, connect the CMS to Firebase, and build pages from templates."
+        after: "Create a Root.js project from the starter template, by hand or with an AI agent, connect the CMS to Google Cloud, and build pages from templates."
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site."
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on <a href=\"https://vite.dev/\">Vite</a>, and it ships no client-side JavaScript unless you add it."
+                        items: []
+                      - content: "<b>The CMS</b> adds visual editing with live preview, localization, releases and publishing workflows. Content is stored in your own <a href=\"https://firebase.google.com/\">Firebase</a> project, and content models are defined in code."
+                        items: []
+              time: 1790730406815
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "umVFRl"
+          - id: "requirements"
+            title: "Requirements"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"https://nodejs.org/\">Node.js</a> 24 (the current LTS) or later."
+                        items: []
+                      - content: "A package manager. We recommend <a href=\"https://pnpm.io/\">pnpm</a>, which you can enable with Corepack."
+                        items: []
+                      - content: "For the CMS: a Google Cloud project with Firebase, and the <a href=\"https://cloud.google.com/sdk/docs/install\">gcloud CLI</a>."
+                        items: []
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  node --version  # v24 or later
+                  corepack enable
+                _arrayKey: "YAmy6v"
+            _arrayKey: "SwkWgn"
+          - id: "create-project"
+            title: "Create a project"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scaffold a new project from the <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/starter\">starter</a> template, then install its dependencies and start the dev server:"
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  pnpm create @blinkk/root my-site
+                  cd my-site
+                  pnpm install
+                  pnpm dev
+                _arrayKey: "5NpX6D"
+              - _type: "CopyBlock"
+                body:
+                  time: 1790731049903
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The site runs at <a href=\"http://localhost:4007\">http://localhost:4007</a>, and pages reload as you edit them. To use a different port, set the <code>PORT</code> environment variable."
+                    - type: "paragraph"
+                      data:
+                        text: "The starter comes with the CMS, a <code>Pages</code> collection, and a route that builds each page from a list of templates:"
+                    - type: "html"
+                      data:
+                        html: |-
+                          <pre><code>my-site/
+                          ├── collections/
+                          │   └── Pages.schema.ts   # The Pages collection
+                          ├── components/
+                          │   └── PageModules/      # Renders each module with its template
+                          ├── layouts/
+                          │   └── BaseLayout.tsx    # &lt;html&gt;, &lt;head&gt;, header and footer
+                          ├── routes/
+                          │   ├── [[...slug]].tsx   # Renders Pages docs by slug
+                          │   └── 404.tsx
+                          ├── templates/
+                          │   └── TemplateHero/     # Hero.schema.ts, Hero.tsx, Hero.module.scss
+                          ├── root-cms.d.ts         # Generated types for your schemas
+                          └── root.config.ts</code></pre>
+                    - type: "paragraph"
+                      data:
+                        text: "Until you connect a Firebase project, the home page shows the setup steps below."
+                    - type: "paragraph"
+                      data:
+                        text: "For a plain Root.js project without any bells and whistles, use the <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/minimal\">minimal</a> template:"
+                  version: "lexical-0.31.2"
+                _arrayKey: "QQVfvU"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm create @blinkk/root --template=minimal my-site"
+                _arrayKey: "VWvNGX"
+            _arrayKey: "gMPLb9"
+          - id: "set-up-cms"
+            title: "Connect the CMS to Firebase"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS runs inside your site at <code>/cms/</code> and stores content in Firestore. The starter's <code>root.config.ts</code> has placeholder Firebase values, so connect your own project first."
+                - type: "paragraph"
+                  data:
+                    text: "<b>1. Create a Firebase project</b>"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "Create a project in the <a href=\"https://console.firebase.google.com/\">Firebase console</a>, or add Firebase to an existing Google Cloud project."
+                        items: []
+                      - content: "Create a Firestore database in <b>Native mode</b>."
+                        items: []
+                      - content: "Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains."
+                        items: []
+                      - content: "Under <b>Project settings</b>, register a web app and copy its <code>firebaseConfig</code> values for the next step."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "<b>2. Add your Firebase config</b>"
+                - type: "paragraph"
+                  data:
+                    text: "Replace the placeholder values in <code>root.config.ts</code> with your web app's config:"
+              time: 1790730406815
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  cmsPlugin({
+                    id: 'starter',
+                    name: 'Starter',
+                    // From Project settings > Your apps in the Firebase console.
+                    firebaseConfig: {
+                      apiKey: '...',
+                      authDomain: 'my-project.firebaseapp.com',
+                      projectId: 'my-project',
+                      storageBucket: 'my-project.appspot.com',
+                    },
+                  }),
+                _arrayKey: "HqEvgl"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The <code>id</code> namespaces your content in Firestore, so several sites can share one Firebase project. Before you deploy, also replace <code>sessionCookieSecret</code> with a long random value. See <a href=\"/docs/cms/\">CMS configuration</a> for every option."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>3. Sign in to Google Cloud</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "The server reads and writes Firestore with <a href=\"https://cloud.google.com/docs/authentication/application-default-credentials\">application default credentials</a>. For local development, sign in with the gcloud CLI:"
+                  time: 1790730406815
+                  version: "2.28.2"
+                _arrayKey: "F6jvGT"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  gcloud auth login
+                  gcloud auth application-default login
+                _arrayKey: "HtMLH9"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "<b>4. Secure the database and add yourself as an admin</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Run <code>init-firebase</code> to apply the CMS's Firestore security rules and give your account the ADMIN role:"
+                  time: 1790730406815
+                  version: "2.28.2"
+                _arrayKey: "3VoxMD"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+                _arrayKey: "CNxN7D"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "This replaces any existing Firestore rules in the project. To review the rules or apply them by hand, see <a href=\"/docs/cms/#security-rules\">Security rules</a>."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>5. Create your home page</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Restart the dev server and open <a href=\"http://localhost:4007/cms/\">http://localhost:4007/cms/</a>. In the <code>Pages</code> collection, create a doc with the slug <code>index</code>, add a <b>Hero</b> and a <b>Text</b> module, and publish it. It replaces the setup page at <code>/</code>. Other slugs map to their own URL, e.g. <code>about</code> renders at <code>/about</code>."
+                  time: 1790730406815
+                  version: "2.28.2"
+                _arrayKey: "xF9Tdh"
+            _arrayKey: "DilB9F"
+          - id: "templates"
+            title: "Build pages from templates"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Each page in the starter is a list of modules. The <code>Pages</code> collection offers every template schema in the <code>templates/</code> folder with <code>schema.glob()</code>:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/collections/Pages.schema.ts
+
+                  schema.array({
+                    id: 'modules',
+                    label: 'Modules',
+                    of: schema.oneOf({
+                      // Every `templates/<Name>/<Name>.schema.ts` file is available here.
+                      types: schema.glob('/templates/*/*.schema.ts'),
+                    }),
+                  }),
+                _arrayKey: "ndQQlN"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The route at <code>routes/[[...slug]].tsx</code> loads the doc for the URL with <code>RootCMSClient</code>, and <code>PageModules</code> renders each module with the component that matches its template name. Editors can preview drafts by adding <code>?preview=true</code> to the URL."
+                    - type: "paragraph"
+                      data:
+                        text: "To add a template, create a folder in <code>templates/</code> with a schema and a component of the same name. For example, here's the starter's <code>Text</code> template:"
+                  time: 1790730406815
+                  version: "2.28.2"
+                _arrayKey: "XFChp5"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/templates/Text/Text.schema.ts
+
+                  import {schema} from '@blinkk/root-cms';
+
+                  export default schema.define({
+                    name: 'Text',
+                    description: 'Heading and body copy.',
+                    fields: [
+                      schema.string({
+                        id: 'title',
+                        label: 'Title',
+                        translate: true,
+                      }),
+                      schema.string({
+                        id: 'body',
+                        label: 'Body',
+                        help: 'Separate paragraphs with a blank line.',
+                        translate: true,
+                        variant: 'textarea',
+                      }),
+                    ],
+                  });
+                _arrayKey: "3VBBxr"
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/templates/Text/Text.tsx
+
+                  import {useTranslations} from '@blinkk/root';
+                  import {TextFields} from '@/root-cms.js';
+                  import styles from './Text.module.scss';
+
+                  export function Text(props: TextFields) {
+                    const t = useTranslations();
+                    const paragraphs = t(props.body || '')
+                      .split(/\n\s*\n/)
+                      .filter((paragraph) => paragraph.trim());
+                    return (
+                      <section className={styles.text}>
+                        {props.title && <h2 className={styles.title}>{t(props.title)}</h2>}
+                        {paragraphs.map((paragraph) => (
+                          <p>{paragraph}</p>
+                        ))}
+                      </section>
+                    );
+                  }
+                _arrayKey: "OrpfaV"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:"
+                  time: 1790730406816
+                  version: "2.28.2"
+                _arrayKey: "Z9exLa"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms generate-types"
+                _arrayKey: "DEOqSx"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Learn more in <a href=\"/docs/cms/schemas/\">Schemas</a> and <a href=\"/docs/cms/data-fetching/\">Data fetching</a>."
+                  time: 1790730406816
+                  version: "2.28.2"
+                _arrayKey: "pZR1gQ"
+            _arrayKey: "BeTPhx"
+          - id: "secrets"
+            title: "Share environment variables"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "API keys and other secrets belong in a <code>.env</code> file, which shouldn't be committed. To share them with your team, <code>root secrets</code> stores them in <a href=\"https://cloud.google.com/secret-manager\">Google Cloud Secret Manager</a> and keeps each developer's <code>.env</code> in sync:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  # Create a manifest (.root.secrets.json) and commit it.
+                  pnpm exec root secrets init --gcp-project=my-project --gsm-key=my-site-env
+
+                  # Upload the values in your .env file.
+                  pnpm exec root secrets push
+
+                  # Teammates download them into their own .env.
+                  pnpm exec root secrets sync
+                _arrayKey: "fYcKKY"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Once a project has a manifest, <code>root dev</code> syncs the secrets when it starts. See the <a href=\"/docs/cli/#root-secrets\">CLI reference</a> for every command."
+                  time: 1790730406816
+                  version: "2.28.2"
+                _arrayKey: "j9dhC7"
+            _arrayKey: "7RlgFx"
+          - id: "ai-agents"
+            title: "Work with AI agents"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js includes skills that teach AI coding agents, such as Claude Code, how to read and edit your CMS content from the command line. Install them into your project:"
+              time: 1790730406816
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms skill.install"
+                _arrayKey: "TlnWl4"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "With the skills installed, an agent can look up docs with <code>root-cms client.call</code>, and propose content changes as a YAML file that your team reviews in a pull request before it's applied with <code>root-cms proposal.apply</code>."
+                  time: 1790730406816
+                  version: "2.28.2"
+                _arrayKey: "abUiC3"
+            _arrayKey: "YSmUpr"
+          - id: "next-steps"
+            title: "Next steps"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"/docs/project-structure/\">Project structure</a>: where routes, components and content models live."
+                        items: []
+                      - content: "<a href=\"/docs/routes/\">Routes</a>: file-based routing, data fetching and SSR."
+                        items: []
+                      - content: "<a href=\"/docs/deployment/\">Deployment</a>: ship your site as static HTML or with a server."
+                        items: []
+                      - content: "<a href=\"/docs/cms/schemas/\">Schemas</a>: model your content."
+                        items: []
+                      - content: "<a href=\"/docs/cli/\">CLI reference</a> and <a href=\"/docs/api/\">API reference</a>."
+                        items: []
+              time: 1790730406816
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "AJsXxe"
+        after:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site."
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on <a href=\"https://vite.dev/\">Vite</a>, and it ships no client-side JavaScript unless you add it."
+                        items: []
+                      - content: "<b>The CMS</b> adds visual editing with live preview, localization, releases and publishing workflows. Content is stored in your own <a href=\"https://firebase.google.com/\">Firebase</a> project, and content models are defined in code."
+                        items: []
+              time: 1790905585768
+              version: "2.28.2"
+            blocks: []
+          - id: "requirements"
+            title: "Requirements"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"https://nodejs.org/\">Node.js</a> 24 (the current LTS) or later."
+                        items: []
+                      - content: "A package manager. We recommend <a href=\"https://pnpm.io/\">pnpm</a>, which you can enable with Corepack."
+                        items: []
+                      - content: "For the CMS: the <a href=\"https://cloud.google.com/sdk/docs/install\">gcloud CLI</a> and a Google Cloud billing account. The CMS needs Secret Manager and a storage bucket, which require billing, but low-traffic sites usually stay in the free tier."
+                        items: []
+              time: 1790905585768
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  node --version  # v24 or later
+                  corepack enable
+          - id: "ai-setup"
+            title: "Set up with an AI agent"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The quickest way to a working site is to let a coding agent, such as <a href=\"https://claude.com/claude-code\">Claude Code</a>, run the steps on this page for you. Start it in the folder where you keep your projects and paste this prompt:"
+              time: 1790905585768
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                code: |-
+                  Set up a new Root.js site with the CMS in ./my-site. Follow the instructions at
+                  https://raw.githubusercontent.com/blinkk/rootjs/main/packages/root-cms/skills/root-cms-setup/SKILL.md
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The agent asks a few questions up front: the folder name, whether to use a new or existing Google Cloud project, and a site id. It then creates the project, runs <code>root-cms setup</code> (after showing you a dry run), starts the dev server and installs the Root.js skills, so later sessions know how to work with your content."
+                    - type: "paragraph"
+                      data:
+                        text: "A few steps need you, because they happen in a browser or pick who pays: signing in with <code>gcloud</code>, choosing a billing account for a new project, and turning on Google sign-in in the Firebase console. The agent tells you when."
+                    - type: "paragraph"
+                      data:
+                        text: "If you'd rather do it yourself, the rest of this page covers the same steps."
+                  time: 1790905585768
+                  version: "2.28.2"
+          - id: "create-project"
+            title: "Create a project"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scaffold a new project from the <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/starter\">starter</a> template:"
+              time: 1790905585768
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm create @blinkk/root my-site"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "It offers to install the dependencies and set up Google Cloud for the CMS right away. Say yes to run the setup wizard described <a href=\"#set-up-cms\">below</a>, or say no and run it later. Either way, start the dev server from the new folder:"
+                  time: 1790905585768
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  cd my-site
+                  pnpm install
+                  pnpm dev
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The site runs at <a href=\"http://localhost:4007\">http://localhost:4007</a>, and pages reload as you edit them. To use a different port, set the <code>PORT</code> environment variable."
+                    - type: "paragraph"
+                      data:
+                        text: "The starter comes with the CMS, a <code>Pages</code> collection, and a route that builds each page from a list of templates:"
+                    - type: "html"
+                      data:
+                        html: |-
+                          <pre><code>my-site/
+                          ├── collections/
+                          │   └── Pages.schema.ts   # The Pages collection
+                          ├── components/
+                          │   └── PageModules/      # Renders each module with its template
+                          ├── layouts/
+                          │   └── BaseLayout.tsx    # &lt;html&gt;, &lt;head&gt;, header and footer
+                          ├── routes/
+                          │   ├── [[...slug]].tsx   # Renders Pages docs by slug
+                          │   └── 404.tsx
+                          ├── templates/
+                          │   └── TemplateHero/     # TemplateHero.schema.ts, .tsx, .module.scss
+                          ├── root-cms.d.ts         # Generated types for your schemas
+                          └── root.config.ts</code></pre>
+                    - type: "paragraph"
+                      data:
+                        text: "Until the CMS is connected to Google Cloud, the home page shows the setup steps."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>Just the framework?</b> The <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/minimal\">minimal</a> template is a plain Root.js project with a single \"Hello, Root.js\" page at <code>routes/index.tsx</code>, and no CMS. It's a good fit for static sites. To add the CMS to it later, install <code>@blinkk/root-cms</code> and <code>firebase-admin</code>, and add <code>cmsPlugin()</code> as described in <a href=\"/docs/cms/\">CMS configuration</a>:"
+                  time: 1790905585768
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm create @blinkk/root --template=minimal my-site"
+          - id: "set-up-cms"
+            title: "Connect the CMS to Google Cloud"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS runs inside your site at <code>/cms/</code> and stores content in Firestore, in a Google Cloud project you own. The <code>root-cms setup</code> wizard sets up that project. If you said yes in <code>create-root</code>, it has already run; otherwise run it from your project:"
+              time: 1790905585768
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms setup"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "It asks for a new or existing project and a site id, then:"
+                    - type: "unorderedList"
+                      data:
+                        style: "unordered"
+                        items:
+                          - content: "Signs you in with <code>gcloud</code>, if needed, and links a billing account."
+                            items: []
+                          - content: "Adds Firebase, creates the Firestore database and storage bucket, and applies the CMS's security rules."
+                            items: []
+                          - content: "Makes you an ADMIN of the CMS."
+                            items: []
+                          - content: "Creates a service account for the site to run as in production."
+                            items: []
+                          - content: "Stores a session secret in Secret Manager, and creates a <code>.root.secrets.json</code> manifest to commit (see <a href=\"#secrets\">Share environment variables</a>)."
+                            items: []
+                          - content: "Writes the site id and Firebase config into <code>root.config.ts</code>."
+                            items: []
+                    - type: "paragraph"
+                      data:
+                        text: "One step is manual, because Google has no API for it: the wizard asks you to turn on Google sign-in in the Firebase console, links you to the page, and checks that it worked."
+                    - type: "paragraph"
+                      data:
+                        text: "The site id keeps this site's content, uploads and secrets apart, so several sites can share one Google Cloud project. The wizard is safe to run again: it skips anything that's already set up, so if a step fails, fix it and re-run. Pass <code>--dry-run</code> to see what it would change first."
+                    - type: "paragraph"
+                      data:
+                        text: "<b>Create your home page</b>"
+                    - type: "paragraph"
+                      data:
+                        text: "Restart the dev server and open <a href=\"http://localhost:4007/cms/\">http://localhost:4007/cms/</a>. In the <code>Pages</code> collection, create a doc with the slug <code>index</code>, add a <b>TemplateHero</b> module, and publish it. It replaces the setup page at <code>/</code>. Other slugs map to their own URL, e.g. <code>about</code> renders at <code>/about</code>."
+                    - type: "paragraph"
+                      data:
+                        text: "To set up Firebase without the wizard, or to see every option the CMS supports, see <a href=\"/docs/cms/\">CMS configuration</a>."
+                  time: 1790905585768
+                  version: "2.28.2"
+          - id: "templates"
+            title: "Build pages from templates"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Each page in the starter is a list of modules. The <code>Pages</code> collection offers every template schema in the <code>templates/</code> folder with <code>schema.glob()</code>:"
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/collections/Pages.schema.ts
+
+                  schema.array({
+                    id: 'modules',
+                    label: 'Modules',
+                    of: schema.oneOf({
+                      // Every `templates/<Name>/<Name>.schema.ts` file is available here.
+                      types: schema.glob('/templates/*/*.schema.ts'),
+                    }),
+                  }),
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "The route at <code>routes/[[...slug]].tsx</code> loads the doc for the URL with <code>RootCMSClient</code>, and <code>PageModules</code> renders each module with the component that matches its template name. Editors can preview drafts by adding <code>?preview=true</code> to the URL."
+                    - type: "paragraph"
+                      data:
+                        text: "To add a template, create a folder in <code>templates/</code> with a schema and a component of the same name. For example, here's the starter's <code>TemplateHero</code> template:"
+                  time: 1790905585768
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/templates/TemplateHero/TemplateHero.schema.ts
+
+                  import {schema} from '@blinkk/root-cms';
+
+                  export default schema.define({
+                    name: 'TemplateHero',
+                    description: 'Large page heading with an optional image.',
+                    fields: [
+                      schema.string({
+                        id: 'title',
+                        label: 'Title',
+                        translate: true,
+                      }),
+                      schema.string({
+                        id: 'body',
+                        label: 'Body',
+                        translate: true,
+                        variant: 'textarea',
+                      }),
+                      schema.image({
+                        id: 'image',
+                        label: 'Image',
+                      }),
+                    ],
+                  });
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/templates/TemplateHero/TemplateHero.tsx
+
+                  import {useTranslations} from '@blinkk/root';
+                  import {TemplateHeroFields} from '@/root-cms.js';
+                  import styles from './TemplateHero.module.scss';
+
+                  export function TemplateHero(props: TemplateHeroFields) {
+                    const t = useTranslations();
+                    return (
+                      <section className={styles.hero}>
+                        {props.title && <h1 className={styles.title}>{t(props.title)}</h1>}
+                        {props.body && <p className={styles.body}>{t(props.body)}</p>}
+                        {props.image?.src && (
+                          <img
+                            className={styles.image}
+                            src={props.image.src}
+                            width={props.image.width}
+                            height={props.image.height}
+                            alt={props.image.alt || ''}
+                          />
+                        )}
+                      </section>
+                    );
+                  }
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:"
+                  time: 1790905585769
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms generate-types"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Learn more in <a href=\"/docs/cms/schemas/\">Schemas</a> and <a href=\"/docs/cms/data-fetching/\">Data fetching</a>."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "secrets"
+            title: "Share environment variables"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "API keys and other secrets belong in a <code>.env</code> file, which shouldn't be committed. To share them with your team, <code>root secrets</code> stores them in <a href=\"https://cloud.google.com/secret-manager\">Google Cloud Secret Manager</a> and keeps each developer's <code>.env</code> in sync. <code>root-cms setup</code> creates the <code>.root.secrets.json</code> manifest for you; for a project without the CMS, create it with <code>root secrets init</code>:"
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  # Create a manifest (.root.secrets.json) and commit it.
+                  pnpm exec root secrets init --gcp-project=my-project --gsm-key=my-site-env
+
+                  # Upload the values in your .env file.
+                  pnpm exec root secrets push
+
+                  # Teammates download them into their own .env.
+                  pnpm exec root secrets sync
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Once a project has a manifest, <code>root dev</code> syncs the secrets when it starts. See the <a href=\"/docs/cli/#root-secrets\">CLI reference</a> for every command."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "ai-agents"
+            title: "Work with AI agents"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js includes skills that teach AI coding agents, such as Claude Code, how to set up the CMS and how to read and edit your content from the command line. If an agent set up your project, they're already installed. Otherwise, install them into your project and commit them:"
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms skill.install"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "With the skills installed, you can ask an agent to:"
+                    - type: "unorderedList"
+                      data:
+                        style: "unordered"
+                        items:
+                          - content: "Look up or update content, e.g. \"list the pages that don't have a meta description\"."
+                            items: []
+                          - content: "Propose content changes as a YAML file that your team reviews in a pull request, then applies with <code>root-cms proposal.apply</code>."
+                            items: []
+                          - content: "Connect a teammate's checkout, or a new environment, to Google Cloud with <code>root-cms setup</code>."
+                            items: []
+                    - type: "paragraph"
+                      data:
+                        text: "The skills install to an existing agent skills folder, such as <code>.claude/skills</code>, or to <code>.agent/skills</code> if there isn't one. Re-run the command with <code>--force</code> after upgrading <code>@blinkk/root-cms</code> to pick up new versions."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "next-steps"
+            title: "Next steps"
+            body:
+              blocks:
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<a href=\"/docs/project-structure/\">Project structure</a>: where routes, components and content models live."
+                        items: []
+                      - content: "<a href=\"/docs/routes/\">Routes</a>: file-based routing, data fetching and SSR."
+                        items: []
+                      - content: "<a href=\"/docs/deployment/\">Deployment</a>: ship your site as static HTML or with a server."
+                        items: []
+                      - content: "<a href=\"/docs/cms/schemas/\">Schemas</a>: model your content."
+                        items: []
+                      - content: "<a href=\"/docs/cli/\">CLI reference</a> and <a href=\"/docs/api/\">API reference</a>."
+                        items: []
+              time: 1790905585769
+              version: "2.28.2"
+            blocks: []
+  - kind: "doc.edit"
+    docId: "Docs/cms"
+    note: "Adds a \"Setting up Firebase by hand\" section with the manual steps that \"Getting started\" replaced with the `root-cms setup` wizard."
+    ops:
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "plugin-options"
+            title: "Plugin options"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Only <code>firebaseConfig</code> is required. Common options include:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<code>id</code>: namespaces the site's content in Firestore, so several sites can share one Firebase project. Defaults to <code>default</code>."
+                        items: []
+                      - content: "<code>name</code>: the site name shown in the CMS."
+                        items: []
+                      - content: "<code>firebaseConfig</code>: the web app config from the Firebase console."
+                        items: []
+                      - content: "<code>gapi</code>: a Google API key and OAuth client id, for the Google Drive and Sheets features."
+                        items: []
+                      - content: "<code>ai</code>: the models available to Root AI."
+                        items: []
+                      - content: "<code>isUserAuthorized</code>: a custom check for whether a user can access the CMS."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "See <code>CMSPluginOptions</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions\">API reference</a> for every option."
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+                  import {cmsPlugin} from '@blinkk/root-cms/plugin';
+
+                  export default defineConfig({
+                    plugins: [
+                      cmsPlugin({
+                        id: 'my-site',
+                        name: 'My Site',
+                        firebaseConfig: {
+                          apiKey: '...',
+                          authDomain: 'my-project.firebaseapp.com',
+                          projectId: 'my-project',
+                          storageBucket: 'my-project.appspot.com',
+                        },
+                      }),
+                    ],
+                  });
+                _arrayKey: "qjE4Km"
+            _arrayKey: "aAnO2n"
+          - id: "security-rules"
+            title: "Security rules and roles"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Content access is controlled by Firestore security rules and a list of roles per site. The easiest way to set both up is with <code>init-firebase</code>, which applies the rules and makes you an ADMIN:"
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+                _arrayKey: "oImb7n"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:"
+                  time: 1790660317218
+                  version: "2.28.2"
+                _arrayKey: "tkdhOQ"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  rules_version = '2';
+                  service cloud.firestore {
+                    match /databases/{database}/documents {
+                      match /{document=**} {
+                        allow read, write: if false;
+                      }
+
+                      match /Projects/{project} {
+                        allow write:
+                          if isSignedIn() && userIsAdmin();
+                        allow read:
+                          if isSignedIn() && userCanRead();
+
+                        match /{collection}/{document=**} {
+                          allow write:
+                            if isSignedIn() && userCanPublish();
+                          allow read:
+                            if isSignedIn() && userCanRead();
+                        }
+
+                        match /Collections/{collectionId}/Drafts/{document=**} {
+                          allow write:
+                            if isSignedIn() && userCanEdit();
+                        }
+
+                        function isSignedIn() {
+                          return request.auth != null;
+                        }
+
+                        function getRoles() {
+                          return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+                        }
+
+                        function userCanRead() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
+                        }
+
+                        function userCanPublish() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+                        }
+
+                        function userCanEdit() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+                        }
+
+                        function userIsAdmin() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
+                        }
+                      }
+                    }
+                  }
+                _arrayKey: "pyGCev"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then, in Firestore, create a doc at <code>Projects/&lt;id&gt;</code> (where <code>&lt;id&gt;</code> is the plugin's <code>id</code>) with a <code>roles</code> map from your email to <code>ADMIN</code>. After that, manage users from the CMS's settings page."
+                    - type: "paragraph"
+                      data:
+                        text: "The roles are:"
+                    - type: "unorderedList"
+                      data:
+                        style: "unordered"
+                        items:
+                          - content: "<b>ADMIN</b>: everything, including managing users and settings."
+                            items: []
+                          - content: "<b>EDITOR</b>: edit and publish content."
+                            items: []
+                          - content: "<b>CONTRIBUTOR</b>: edit drafts, but not publish."
+                            items: []
+                          - content: "<b>VIEWER</b>: read-only access."
+                            items: []
+                    - type: "paragraph"
+                      data:
+                        text: "A role can be granted to a whole domain with an entry like <code>*@example.com</code>. Anyone with a verified email on that domain gets the role, so use it sparingly, never with a free email provider, and prefer per-email grants for ADMIN and EDITOR."
+                  time: 1790660317218
+                  version: "2.28.2"
+                _arrayKey: "vG7Brj"
+            _arrayKey: "1jHbhC"
+          - id: "google-apis"
+            title: "Google Drive and Sheets"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Some CMS features, like importing from Google Sheets and Drive, use Google APIs on the editor's behalf. To enable them:"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "In the Google Cloud console, enable the Google Sheets API and Google Drive API."
+                        items: []
+                      - content: "Create an <a href=\"https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow\">OAuth client id</a> (web application) and an API key."
+                        items: []
+                      - content: "Pass them to the plugin as <code>gapi: {clientId, apiKey}</code>, e.g. from environment variables."
+                        items: []
+              time: 1790660317218
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "pgYtaP"
+          - id: "ai"
+            title: "Root AI"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root AI lets editors chat with, draft and translate content in the CMS. Enable it with the <code>ai</code> option, listing the models editors can choose from and their API keys. See the <a href=\"/docs/migration/v3/#ai\">v3 migration guide</a> for an example."
+              time: 1790660317218
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "dQuhWl"
+          - id: "cron-jobs"
+            title: "Scheduled jobs"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scheduled publishing, version history and a few other features rely on a job that calls the <code>/cms/api/cron.run</code> endpoint every few minutes."
+                - type: "paragraph"
+                  data:
+                    text: "<b>Firebase</b>: if your site is deployed to Cloud Functions for Firebase, export the <code>cron</code> function from <code>@blinkk/root-cms/functions</code>:"
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/index.ts
+
+                  import {server} from '@blinkk/root/functions';
+                  import {cron} from '@blinkk/root-cms/functions';
+
+                  export const www = {
+                    server: server({mode: 'production'}),
+                    cron: cron(),
+                  };
+                _arrayKey: "F4PoZ4"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "<b>Other hosting</b>: on App Engine, Cloud Run or elsewhere, create a <a href=\"https://cloud.google.com/scheduler/docs/creating\">Cloud Scheduler</a> job that calls <code>/cms/api/cron.run</code> on your site every few minutes."
+                  time: 1790660317218
+                  version: "2.28.2"
+                _arrayKey: "aX4UNb"
+            _arrayKey: "hwkziB"
+          - id: "credentials"
+            title: "Credentials in production"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The server accesses Firestore with application default credentials. On Google Cloud (App Engine, Cloud Run, Cloud Functions), the runtime's service account is used, so give it access to Firestore. Elsewhere, set <code>GOOGLE_APPLICATION_CREDENTIALS</code> to a service account key file."
+              time: 1790660317218
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "NqSzJ4"
+        after:
+          - id: "plugin-options"
+            title: "Plugin options"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Only <code>firebaseConfig</code> is required. Common options include:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<code>id</code>: namespaces the site's content in Firestore, so several sites can share one Firebase project. Defaults to <code>default</code>."
+                        items: []
+                      - content: "<code>name</code>: the site name shown in the CMS."
+                        items: []
+                      - content: "<code>firebaseConfig</code>: the web app config from the Firebase console."
+                        items: []
+                      - content: "<code>gapi</code>: a Google API key and OAuth client id, for the Google Drive and Sheets features."
+                        items: []
+                      - content: "<code>ai</code>: the models available to Root AI."
+                        items: []
+                      - content: "<code>isUserAuthorized</code>: a custom check for whether a user can access the CMS."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "See <code>CMSPluginOptions</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions\">API reference</a> for every option."
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+                  import {cmsPlugin} from '@blinkk/root-cms/plugin';
+
+                  export default defineConfig({
+                    plugins: [
+                      cmsPlugin({
+                        id: 'my-site',
+                        name: 'My Site',
+                        firebaseConfig: {
+                          apiKey: '...',
+                          authDomain: 'my-project.firebaseapp.com',
+                          projectId: 'my-project',
+                          storageBucket: 'my-project.appspot.com',
+                        },
+                      }),
+                    ],
+                  });
+          - id: "manual-setup"
+            title: "Setting up Firebase by hand"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>root-cms setup</code> does all of this for you (see <a href=\"/docs/#set-up-cms\">Getting started</a>). To set up a project by hand instead:"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "Create a project in the <a href=\"https://console.firebase.google.com/\">Firebase console</a>, or add Firebase to an existing Google Cloud project."
+                        items: []
+                      - content: "Create a Firestore database in <b>Native mode</b>."
+                        items: []
+                      - content: "Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains."
+                        items: []
+                      - content: "Under <b>Project settings</b>, register a web app and copy its <code>firebaseConfig</code> values into <code>cmsPlugin()</code>:"
+                        items: []
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  cmsPlugin({
+                    id: 'starter',
+                    name: 'Starter',
+                    // From Project settings > Your apps in the Firebase console.
+                    firebaseConfig: {
+                      apiKey: '...',
+                      authDomain: 'my-project.firebaseapp.com',
+                      projectId: 'my-project',
+                      storageBucket: 'my-project.appspot.com',
+                    },
+                  }),
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Before you deploy, also replace <code>sessionCookieSecret</code> with a long random value. The server reads and writes Firestore with <a href=\"https://cloud.google.com/docs/authentication/application-default-credentials\">application default credentials</a>; for local development, sign in with the gcloud CLI:"
+                  time: 1790905585769
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "bash"
+                code: |-
+                  gcloud auth login
+                  gcloud auth application-default login
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Finally, apply the security rules and add yourself as an admin, as described <a href=\"#security-rules\">below</a>."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "security-rules"
+            title: "Security rules and roles"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Content access is controlled by Firestore security rules and a list of roles per site. The easiest way to set both up is with <code>init-firebase</code>, which applies the rules and makes you an ADMIN:"
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "bash"
+                code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:"
+                  time: 1790905585769
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  rules_version = '2';
+                  service cloud.firestore {
+                    match /databases/{database}/documents {
+                      match /{document=**} {
+                        allow read, write: if false;
+                      }
+
+                      match /Projects/{project} {
+                        allow write:
+                          if isSignedIn() && userIsAdmin();
+                        allow read:
+                          if isSignedIn() && userCanRead();
+
+                        match /{collection}/{document=**} {
+                          allow write:
+                            if isSignedIn() && userCanPublish();
+                          allow read:
+                            if isSignedIn() && userCanRead();
+                        }
+
+                        match /Collections/{collectionId}/Drafts/{document=**} {
+                          allow write:
+                            if isSignedIn() && userCanEdit();
+                        }
+
+                        function isSignedIn() {
+                          return request.auth != null;
+                        }
+
+                        function getRoles() {
+                          return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+                        }
+
+                        function userCanRead() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
+                        }
+
+                        function userCanPublish() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+                        }
+
+                        function userCanEdit() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+                        }
+
+                        function userIsAdmin() {
+                          let roles = getRoles();
+                          let email = request.auth.token.email;
+                          let domain = '*@' + email.split('@')[1];
+                          return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
+                        }
+                      }
+                    }
+                  }
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Then, in Firestore, create a doc at <code>Projects/&lt;id&gt;</code> (where <code>&lt;id&gt;</code> is the plugin's <code>id</code>) with a <code>roles</code> map from your email to <code>ADMIN</code>. After that, manage users from the CMS's settings page."
+                    - type: "paragraph"
+                      data:
+                        text: "The roles are:"
+                    - type: "unorderedList"
+                      data:
+                        style: "unordered"
+                        items:
+                          - content: "<b>ADMIN</b>: everything, including managing users and settings."
+                            items: []
+                          - content: "<b>EDITOR</b>: edit and publish content."
+                            items: []
+                          - content: "<b>CONTRIBUTOR</b>: edit drafts, but not publish."
+                            items: []
+                          - content: "<b>VIEWER</b>: read-only access."
+                            items: []
+                    - type: "paragraph"
+                      data:
+                        text: "A role can be granted to a whole domain with an entry like <code>*@example.com</code>. Anyone with a verified email on that domain gets the role, so use it sparingly, never with a free email provider, and prefer per-email grants for ADMIN and EDITOR."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "google-apis"
+            title: "Google Drive and Sheets"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Some CMS features, like importing from Google Sheets and Drive, use Google APIs on the editor's behalf. To enable them:"
+                - type: "orderedList"
+                  data:
+                    style: "ordered"
+                    items:
+                      - content: "In the Google Cloud console, enable the Google Sheets API and Google Drive API."
+                        items: []
+                      - content: "Create an <a href=\"https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow\">OAuth client id</a> (web application) and an API key."
+                        items: []
+                      - content: "Pass them to the plugin as <code>gapi: {clientId, apiKey}</code>, e.g. from environment variables."
+                        items: []
+              time: 1790905585769
+              version: "2.28.2"
+            blocks: []
+          - id: "ai"
+            title: "Root AI"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root AI lets editors chat with, draft and translate content in the CMS. Enable it with the <code>ai</code> option, listing the models editors can choose from and their API keys. See the <a href=\"/docs/migration/v3/#ai\">v3 migration guide</a> for an example."
+              time: 1790905585769
+              version: "2.28.2"
+            blocks: []
+          - id: "cron-jobs"
+            title: "Scheduled jobs"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Scheduled publishing, version history and a few other features rely on a job that calls the <code>/cms/api/cron.run</code> endpoint every few minutes."
+                - type: "paragraph"
+                  data:
+                    text: "<b>Firebase</b>: if your site is deployed to Cloud Functions for Firebase, export the <code>cron</code> function from <code>@blinkk/root-cms/functions</code>:"
+              time: 1790905585769
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/index.ts
+
+                  import {server} from '@blinkk/root/functions';
+                  import {cron} from '@blinkk/root-cms/functions';
+
+                  export const www = {
+                    server: server({mode: 'production'}),
+                    cron: cron(),
+                  };
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "<b>Other hosting</b>: on App Engine, Cloud Run or elsewhere, create a <a href=\"https://cloud.google.com/scheduler/docs/creating\">Cloud Scheduler</a> job that calls <code>/cms/api/cron.run</code> on your site every few minutes."
+                  time: 1790905585769
+                  version: "2.28.2"
+          - id: "credentials"
+            title: "Credentials in production"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The server accesses Firestore with application default credentials. On Google Cloud (App Engine, Cloud Run, Cloud Functions), the runtime's service account is used, so give it access to Firestore. Elsewhere, set <code>GOOGLE_APPLICATION_CREDENTIALS</code> to a service account key file."
+              time: 1790905585769
+              version: "2.28.2"
+            blocks: []

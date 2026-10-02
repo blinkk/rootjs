@@ -11,7 +11,11 @@
  *
  *   node scripts/propose_docs_copy.ts               # write the proposal
  *   node scripts/propose_docs_copy.ts --id <id>     # custom proposal id
+ *   node scripts/propose_docs_copy.ts --only index,cms
  *   node scripts/propose_docs_copy.ts --assign-order
+ *
+ * `--only` limits the proposal to the listed doc slugs, so a change to a few
+ * pages doesn't sweep in unrelated edits made in the CMS since the last run.
  *
  * The proposal is written to `cms-proposals/<id>.yaml` and checked against the
  * collection schema (a dry run of `proposal.apply`). Once it's approved, apply
@@ -57,12 +61,18 @@ const AUTHOR = 'scripts/propose_docs_copy.ts';
 interface Args {
   id: string;
   assignOrder: boolean;
+  /** Doc slugs to include. Empty means every doc in `DOCS_COPY`. */
+  only: string[];
 }
 
-/** Parses `--id` and `--assign-order` flags from argv. */
+/** Parses `--id`, `--only` and `--assign-order` flags from argv. */
 function parseArgs(argv: string[]): Args {
   const today = new Date().toISOString().slice(0, 10);
-  const args: Args = {id: `${today}-docs-copy-refresh`, assignOrder: false};
+  const args: Args = {
+    id: `${today}-docs-copy-refresh`,
+    assignOrder: false,
+    only: [],
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const [flag, inlineValue] = arg.split('=');
@@ -72,6 +82,16 @@ function parseArgs(argv: string[]): Args {
         throw new Error(`invalid --id value: ${arg}`);
       }
       args.id = id;
+    } else if (flag === '--only') {
+      const value = inlineValue ?? argv[++i];
+      const slugs = (value || '').split(',').filter(Boolean);
+      const unknown = slugs.filter(
+        (slug) => !DOCS_COPY.some((doc) => doc.slug === slug)
+      );
+      if (slugs.length === 0 || unknown.length > 0) {
+        throw new Error(`invalid --only value: ${arg}`);
+      }
+      args.only = slugs;
     } else if (flag === '--assign-order') {
       args.assignOrder = true;
     } else {
@@ -163,8 +183,12 @@ async function main() {
   const rootConfig = await loadRootConfig(DOCS_DIR, {command: 'root-cms'});
   const client = new RootCMSClient(rootConfig);
 
+  const docs =
+    args.only.length > 0
+      ? DOCS_COPY.filter((doc) => args.only.includes(doc.slug))
+      : DOCS_COPY;
   const changes: ProposalChange[] = [];
-  for (const doc of DOCS_COPY) {
+  for (const doc of docs) {
     const current = await client.getDoc(COLLECTION, doc.slug, {mode: 'draft'});
     const change = buildChange(doc, current?.fields || null);
     if (change) {
@@ -179,19 +203,25 @@ async function main() {
     const proposal: Proposal = {
       version: 1,
       id: args.id,
-      title: 'Refresh the developer docs copy',
+      title:
+        args.only.length > 0
+          ? `Update the developer docs: ${args.only.join(', ')}`
+          : 'Refresh the developer docs copy',
       author: AUTHOR,
       generated: new Date().toISOString(),
-      summary: [
-        'Refreshes the copy across the developer docs:',
-        '- Refers to the product as "Root.js", with the CMS as one of its',
-        '  features, instead of a separate "Root CMS" product.',
-        '- Folds the CMS setup steps into "Getting started", and turns the',
-        '  old setup page into a CMS configuration page.',
-        '- Updates the onboarding steps for the current `create-root` flow.',
-        '- Raises the Node.js requirement to v24 (the current LTS).',
-        '- Sets a sidebar category on every doc.',
-      ].join('\n'),
+      summary:
+        args.only.length > 0
+          ? summarizeNotes(changes)
+          : [
+              'Refreshes the copy across the developer docs:',
+              '- Refers to the product as "Root.js", with the CMS as one of its',
+              '  features, instead of a separate "Root CMS" product.',
+              '- Folds the CMS setup steps into "Getting started", and turns the',
+              '  old setup page into a CMS configuration page.',
+              '- Updates the onboarding steps for the current `create-root` flow.',
+              '- Raises the Node.js requirement to v24 (the current LTS).',
+              '- Sets a sidebar category on every doc.',
+            ].join('\n'),
       changes,
     };
     const yaml = serializeProposal(proposal);
@@ -219,6 +249,16 @@ async function main() {
   if (args.assignOrder) {
     await assignOrder(client);
   }
+}
+
+/** Lists each change's note, for proposals limited with `--only`. */
+function summarizeNotes(changes: ProposalChange[]): string {
+  return changes
+    .map(
+      (change) =>
+        `- ${'docId' in change ? change.docId : change.kind}: ${change.note || ''}`
+    )
+    .join('\n');
 }
 
 /**
