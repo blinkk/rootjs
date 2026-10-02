@@ -3,7 +3,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {GLOBAL_SEARCH_FILTERS, GlobalSearchFilter} from './search-filters.js';
 
-/** Number of results available for each filter chip. */
+/** Number of results available for each filter tab. */
 export type GlobalSearchCounts = Partial<
   Record<Exclude<GlobalSearchFilter, 'all'>, number>
 >;
@@ -12,7 +12,7 @@ export interface GlobalSearchFiltersProps {
   /** The active filter. */
   value: GlobalSearchFilter;
   onChange: (filter: GlobalSearchFilter) => void;
-  /** Result counts per type, used to annotate the chips. */
+  /** Result counts per type, used to annotate the tabs. */
   counts: GlobalSearchCounts;
   /** Called when the user clicks "Copy link". Resolves to true on success. */
   onCopyLink: () => Promise<boolean>;
@@ -22,7 +22,7 @@ export interface GlobalSearchFiltersProps {
 const COPIED_FEEDBACK_MS = 1500;
 
 /**
- * Row of result-type chips rendered between the global search input and the
+ * Row of result-type tabs rendered between the global search input and the
  * results list, plus a "Copy link" button that copies a shareable deep link
  * to the current search.
  */
@@ -51,7 +51,7 @@ export function GlobalSearchFilters(props: GlobalSearchFiltersProps) {
       role="group"
       aria-label="Filter results"
     >
-      <div className="GlobalSearchFilters__chips">
+      <div className="GlobalSearchFilters__tabs">
         {GLOBAL_SEARCH_FILTERS.map((option) => {
           const count =
             option.id === 'all' ? total : props.counts[option.id] || 0;
@@ -61,9 +61,9 @@ export function GlobalSearchFilters(props: GlobalSearchFiltersProps) {
               key={option.id}
               type="button"
               className={joinClassNames(
-                'GlobalSearchFilters__chip',
-                active && 'GlobalSearchFilters__chip--active',
-                count === 0 && 'GlobalSearchFilters__chip--empty'
+                'GlobalSearchFilters__tab',
+                active && 'GlobalSearchFilters__tab--active',
+                count === 0 && 'GlobalSearchFilters__tab--empty'
               )}
               aria-pressed={active}
               // Keep focus in the search input so typing continues to work
@@ -86,6 +86,7 @@ export function GlobalSearchFilters(props: GlobalSearchFiltersProps) {
           copied && 'GlobalSearchFilters__copy--copied'
         )}
         title="Copy a link to this search"
+        aria-label={copied ? 'Copied' : 'Copy link'}
         onMouseDown={(e) => e.preventDefault()}
         onClick={async () => {
           if (await props.onCopyLink()) {
@@ -94,7 +95,7 @@ export function GlobalSearchFilters(props: GlobalSearchFiltersProps) {
         }}
       >
         {copied ? <IconCheck size={14} /> : <IconLink size={14} />}
-        <span>{copied ? 'Copied' : 'Copy link'}</span>
+        {copied && <span>Copied</span>}
       </button>
     </div>
   );

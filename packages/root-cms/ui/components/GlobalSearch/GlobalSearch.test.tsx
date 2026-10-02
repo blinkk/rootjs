@@ -1,4 +1,5 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
+import {Fragment} from 'preact';
 import {LocationProvider} from 'preact-iso';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {DocSlugHit, GlobalSearchHit} from '../../hooks/useGlobalSearch.js';
@@ -10,7 +11,7 @@ const docSlugHits: DocSlugHit[] = [];
 // Mantine components can't render under jsdom here (their hooks run outside
 // the test's Preact instance), so the inner Spotlight is replaced with a
 // minimal stand-in that honors the same props contract: a controlled input,
-// the actions wrapper, and the action component.
+// the actions wrapper, group labels, and the action component.
 vi.mock('@mantine/spotlight/esm/Spotlight/Spotlight.js', () => ({
   Spotlight: (props: any) => {
     if (!props.opened) {
@@ -35,14 +36,20 @@ vi.mock('@mantine/spotlight/esm/Spotlight/Spotlight.js', () => ({
         />
         <Wrapper>
           {actions.length > 0 ? (
-            actions.map((action: any) => (
-              <Action
-                key={action.id}
-                action={action}
-                query={props.query}
-                hovered={false}
-                onTrigger={() => action.onTrigger(action)}
-              />
+            actions.map((action: any, i: number) => (
+              <Fragment key={action.id}>
+                {action.group && action.group !== actions[i - 1]?.group && (
+                  <div className={props.classNames?.actionsGroup}>
+                    {action.group}
+                  </div>
+                )}
+                <Action
+                  action={action}
+                  query={props.query}
+                  hovered={false}
+                  onTrigger={() => action.onTrigger(action)}
+                />
+              </Fragment>
             ))
           ) : (
             <div>{props.nothingFoundMessage}</div>
@@ -87,33 +94,33 @@ function getInput(): HTMLInputElement {
   ) as HTMLInputElement;
 }
 
-/** Finds a filter chip by label, e.g. `getChip('Documents')`. */
-function getChip(label: string): HTMLButtonElement {
-  const chips = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('.GlobalSearchFilters__chip')
+/** Finds a filter tab by label, e.g. `getTab('Documents')`. */
+function getTab(label: string): HTMLButtonElement {
+  const tabs = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('.GlobalSearchFilters__tab')
   );
-  const chip = chips.find(
+  const tab = tabs.find(
     (el) => el.querySelector('span')?.textContent === label
   );
-  if (!chip) {
-    throw new Error(`chip not found: ${label}`);
+  if (!tab) {
+    throw new Error(`tab not found: ${label}`);
   }
-  return chip;
+  return tab;
 }
 
-/** Returns the count badge of a filter chip, or null when it has none. */
-function chipCount(label: string): string | null {
+/** Returns the count of a filter tab, or null when it has none. */
+function tabCount(label: string): string | null {
   return (
-    getChip(label).querySelector('.GlobalSearchFilters__count')?.textContent ??
+    getTab(label).querySelector('.GlobalSearchFilters__count')?.textContent ??
     null
   );
 }
 
 /** Returns true if a result group header (e.g. "Documents") is rendered. */
 function hasHeader(label: string): boolean {
-  return Array.from(
-    document.querySelectorAll('.GlobalSearchAction--header')
-  ).some((el) => el.textContent === label);
+  return Array.from(document.querySelectorAll('.GlobalSearch__group')).some(
+    (el) => el.textContent === label
+  );
 }
 
 /** Flushes pending timers (URL sync debounce, close transition). */
@@ -169,8 +176,8 @@ describe('GlobalSearch', () => {
     window.history.replaceState({}, '', '/cms/?modal=search&q=pages&type=docs');
     renderSearch();
     expect(getInput().value).toBe('pages');
-    expect(getChip('Documents').getAttribute('aria-pressed')).toBe('true');
-    expect(getChip('All').getAttribute('aria-pressed')).toBe('false');
+    expect(getTab('Documents').getAttribute('aria-pressed')).toBe('true');
+    expect(getTab('All').getAttribute('aria-pressed')).toBe('false');
     // Only the "Documents" group is shown.
     expect(hasHeader('Documents')).toBe(true);
     expect(hasHeader('Field matches')).toBe(false);
@@ -181,12 +188,12 @@ describe('GlobalSearch', () => {
     window.history.replaceState({}, '', '/cms/?modal=search&q=pages');
     renderSearch();
     // "Pages" matches the collection, the doc slug hit, and the field hit.
-    expect(getChip('All').getAttribute('aria-pressed')).toBe('true');
-    expect(chipCount('All')).toBe('3');
-    expect(chipCount('Documents')).toBe('1');
-    expect(chipCount('Field matches')).toBe('1');
-    expect(chipCount('Collections')).toBe('1');
-    expect(chipCount('Releases')).toBeNull();
+    expect(getTab('All').getAttribute('aria-pressed')).toBe('true');
+    expect(tabCount('All')).toBe('3');
+    expect(tabCount('Documents')).toBe('1');
+    expect(tabCount('Field matches')).toBe('1');
+    expect(tabCount('Collections')).toBe('1');
+    expect(tabCount('Releases')).toBeNull();
     expect(hasHeader('Jump to')).toBe(true);
     expect(hasHeader('Documents')).toBe(true);
     expect(hasHeader('Field matches')).toBe(true);
@@ -195,7 +202,7 @@ describe('GlobalSearch', () => {
   it('filters results and mirrors the filter into the URL', async () => {
     window.history.replaceState({}, '', '/cms/?modal=search&q=pages');
     renderSearch();
-    fireEvent.click(getChip('Collections'));
+    fireEvent.click(getTab('Collections'));
     expect(hasHeader('Jump to')).toBe(true);
     expect(hasHeader('Documents')).toBe(false);
     await flush();
@@ -214,7 +221,7 @@ describe('GlobalSearch', () => {
     expect(screen.getByText('No releases match.')).toBeTruthy();
     fireEvent.click(screen.getByText('Show all results'));
     expect(hasHeader('Documents')).toBe(true);
-    expect(getChip('All').getAttribute('aria-pressed')).toBe('true');
+    expect(getTab('All').getAttribute('aria-pressed')).toBe('true');
   });
 
   it('removes the search params from the URL on close', async () => {
@@ -246,7 +253,7 @@ describe('GlobalSearch', () => {
     expect(window.location.search).toBe('?modal=search&q=hello+world');
   });
 
-  it('hides the filter chips while the query is empty', () => {
+  it('hides the filter tabs while the query is empty', () => {
     window.history.replaceState({}, '', '/cms/?modal=search');
     renderSearch();
     expect(getInput().value).toBe('');

@@ -1,5 +1,6 @@
 import {
-  IconChevronRight,
+  IconAlignLeft,
+  IconCornerDownLeft,
   IconDatabase,
   IconFile,
   IconLink,
@@ -28,8 +29,8 @@ const FILTERS: Array<[string, number]> = [
 ];
 
 const DOC_HITS = [
-  {slug: 'roasted-carrot-salad', docId: 'Recipes/roasted-carrot-salad'},
-  {slug: 'carrots', docId: 'GrowingGuides/carrots'},
+  {slug: 'roasted-carrot-salad', collection: 'Recipes'},
+  {slug: 'carrots', collection: 'GrowingGuides'},
 ];
 
 /**
@@ -57,21 +58,46 @@ const FIELD_HITS = [
   },
 ];
 
-/** Search syntax tips shown below the results. */
-const TIPS: Array<[string, string]> = [
+/** Keyboard and search syntax hints shown in the footer. */
+const HINTS: Array<[string, string]> = [
+  ['↑↓', 'navigate'],
+  ['↵', 'open'],
   ['"…"', 'exact phrase'],
   ['-word', 'exclude'],
-  ['coll/slug', 'jump by id'],
+  ['coll/slug', 'jump to doc'],
 ];
 
-const MUTED = '#868e96';
+const TEXT = '#333';
+const MUTED = '#6b7280';
+const FAINT = '#9ca3af';
+const BORDER = '#e4e4e1';
+const ACCENT = '#d9a6c8';
 
-/** A section header in the results list. */
+/** A small key cap, used for the `esc` and footer hints. */
+function Kbd(props: {children: string}) {
+  return (
+    <kbd
+      className="cms-mono"
+      style={{
+        padding: '1px 5px',
+        borderRadius: '4px',
+        background: '#efefef',
+        color: TEXT,
+        fontSize: '10px',
+        fontWeight: 600,
+      }}
+    >
+      {props.children}
+    </kbd>
+  );
+}
+
+/** A group header in the results list. */
 function Header(props: {children: string}) {
   return (
     <div
       style={{
-        padding: '10px 16px 4px',
+        padding: '12px 16px 4px',
         fontSize: '10.5px',
         fontWeight: 600,
         letterSpacing: '0.05em',
@@ -84,22 +110,28 @@ function Header(props: {children: string}) {
   );
 }
 
-/** A result row with an icon, title and a tagged subtitle. */
+/**
+ * A result row: an icon tile, a title and a subtitle, with the result type
+ * (or an "Open" hint on the selected row) on the right.
+ */
 function Row(props: {
   icon: ComponentChildren;
-  title: string;
-  tag: string;
-  sub: string;
-  hovered?: boolean;
+  title: ComponentChildren;
+  sub: ComponentChildren;
+  kind?: string;
+  selected?: boolean;
+  multiline?: boolean;
 }) {
   return (
     <div
       style={{
+        position: 'relative',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: props.multiline ? 'flex-start' : 'center',
         gap: '12px',
-        padding: '8px 16px',
-        background: props.hovered ? '#f1f3f5' : undefined,
+        padding: '7px 16px',
+        background: props.selected ? '#f6f6f3' : undefined,
+        boxShadow: props.selected ? `inset 3px 0 0 ${ACCENT}` : undefined,
       }}
     >
       <span
@@ -107,46 +139,42 @@ function Row(props: {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flex: '0 0 28px',
-          height: '28px',
+          flex: '0 0 30px',
+          height: '30px',
+          border: `1px solid ${BORDER}`,
           borderRadius: '6px',
-          background: '#e9ecef',
-          color: '#343a40',
+          background: '#fff',
+          color: TEXT,
         }}
       >
         {props.icon}
       </span>
-      <span style={{minWidth: 0}}>
-        <div style={{fontSize: '13px', fontWeight: 600, color: '#25262b'}}>
+      <span style={{flex: 1, minWidth: 0}}>
+        <div style={{fontSize: '13px', fontWeight: 600, color: TEXT}}>
           {props.title}
         </div>
-        <div
+        <div style={{fontSize: '12px', color: MUTED}}>{props.sub}</div>
+      </span>
+      {props.selected ? (
+        <span
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            marginTop: '2px',
+            alignSelf: 'center',
+            gap: '4px',
             fontSize: '11.5px',
             color: MUTED,
           }}
         >
-          <span
-            style={{
-              padding: '1px 6px',
-              borderRadius: '4px',
-              background: '#e9ecef',
-              color: '#495057',
-              fontSize: '10px',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {props.tag}
+          Open <IconCornerDownLeft size={13} />
+        </span>
+      ) : (
+        props.kind && (
+          <span style={{alignSelf: 'center', fontSize: '11.5px', color: FAINT}}>
+            {props.kind}
           </span>
-          {props.sub}
-        </div>
-      </span>
+        )
+      )}
     </div>
   );
 }
@@ -154,15 +182,23 @@ function Row(props: {
 /** Renders a snippet, highlighting the segments wrapped in `*`. */
 function Snippet(props: {text: string}) {
   return (
-    <div style={{fontSize: '13px', lineHeight: 1.45, color: '#343a40'}}>
+    <div
+      style={{
+        marginTop: '2px',
+        fontSize: '12.5px',
+        lineHeight: 1.45,
+        color: '#4b5058',
+      }}
+    >
       {props.text.split('*').map((part, i) =>
         i % 2 ? (
           <mark
             style={{
-              background: '#fff3bf',
-              color: 'inherit',
               padding: '0 2px',
-              borderRadius: '2px',
+              borderRadius: '3px',
+              background: '#f6e3ef',
+              color: TEXT,
+              fontWeight: 600,
             }}
           >
             {part}
@@ -202,7 +238,7 @@ export default function GlobalSearch() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              height: '50px',
+              height: '52px',
               padding: '0 16px',
               fontSize: '15px',
             }}
@@ -217,49 +253,45 @@ export default function GlobalSearch() {
                   height: '18px',
                   marginLeft: '1px',
                   verticalAlign: '-3px',
-                  background: '#228be6',
+                  background: TEXT,
                 }}
               />
+            </span>
+            <span style={{marginLeft: 'auto'}}>
+              <Kbd>esc</Kbd>
             </span>
           </div>
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              borderTop: '1px solid #e9ecef',
-              borderBottom: '1px solid #e9ecef',
+              alignItems: 'stretch',
+              gap: '18px',
+              height: '38px',
+              padding: '0 16px',
+              borderTop: `1px solid ${BORDER}`,
+              borderBottom: `1px solid ${BORDER}`,
             }}
           >
             {FILTERS.map(([label, count], i) => (
               <span
                 style={{
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  border: `1px solid ${i === 0 ? '#343a40' : '#dee2e6'}`,
-                  background: i === 0 ? '#343a40' : '#fff',
-                  color: i === 0 ? '#fff' : count ? '#343a40' : MUTED,
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  lineHeight: 1.4,
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: i === 0 ? 600 : 500,
+                  color: i === 0 ? TEXT : count ? MUTED : '#b4b4ae',
                   whiteSpace: 'nowrap',
+                  boxShadow: i === 0 ? `inset 0 -2px 0 ${ACCENT}` : undefined,
                 }}
               >
                 {label}
                 {count > 0 && (
                   <span
                     style={{
-                      padding: '0 5px',
-                      borderRadius: '999px',
-                      background:
-                        i === 0 ? 'rgba(255, 255, 255, 0.2)' : '#e9ecef',
-                      color: i === 0 ? 'inherit' : '#495057',
-                      fontSize: '10.5px',
-                      fontWeight: 600,
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: i === 0 ? MUTED : FAINT,
                     }}
                   >
                     {count}
@@ -269,105 +301,73 @@ export default function GlobalSearch() {
             ))}
             <span
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
                 marginLeft: 'auto',
                 color: MUTED,
-                fontSize: '11px',
-                whiteSpace: 'nowrap',
               }}
             >
-              <IconLink size={13} />
-              Copy link
+              <IconLink size={14} />
             </span>
           </div>
-          <div style={{paddingBottom: '2px'}}>
+          <div style={{paddingBottom: '6px'}}>
             <Header>Jump to</Header>
             <Row
               icon={<IconDatabase size={16} />}
               title="carrot-varieties"
-              tag="Data source"
               sub="Heirloom carrot varieties from the growers’ sheet"
-              hovered
+              kind="Data source"
+              selected
             />
             <Header>Documents</Header>
             {DOC_HITS.map((hit) => (
               <Row
                 icon={<IconFile size={16} />}
                 title={hit.slug}
-                tag="Doc"
-                sub={hit.docId}
+                sub={hit.collection}
               />
             ))}
             <Header>Field matches</Header>
-            {FIELD_HITS.map((hit) => (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '3px',
-                  padding: '8px 16px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '11.5px',
-                    color: MUTED,
-                  }}
-                >
-                  <span style={{fontWeight: 600, color: '#25262b'}}>
+            {FIELD_HITS.slice(0, 2).map((hit) => (
+              <Row
+                icon={<IconAlignLeft size={16} />}
+                title={
+                  <>
                     {hit.docId}
-                  </span>
-                  <IconChevronRight size={14} />
-                  <span style={{fontStyle: 'italic', color: '#495057'}}>
-                    {hit.field}
-                  </span>
-                </div>
-                <Snippet text={hit.snippet} />
-              </div>
+                    <span style={{fontWeight: 400, color: MUTED}}>
+                      {' '}
+                      · {hit.field}
+                    </span>
+                  </>
+                }
+                sub={<Snippet text={hit.snippet} />}
+                multiline
+              />
             ))}
           </div>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderTop: '1px solid #e9ecef',
-              background: '#f8f9fa',
+              gap: '14px',
+              height: '34px',
+              padding: '0 16px',
+              borderTop: `1px solid ${BORDER}`,
+              background: '#fbfbf9',
               fontSize: '11px',
               color: MUTED,
+              whiteSpace: 'nowrap',
             }}
           >
-            {TIPS.map(([key, label], i) => (
-              <>
-                {i > 0 && <span style={{color: '#ced4da'}}>·</span>}
-                <span
-                  style={{display: 'flex', alignItems: 'center', gap: '4px'}}
-                >
-                  <kbd
-                    className="cms-mono"
-                    style={{
-                      padding: '0 5px',
-                      borderRadius: '3px',
-                      border: '1px solid #dee2e6',
-                      borderBottomWidth: '2px',
-                      background: '#e9ecef',
-                      color: '#343a40',
-                      fontSize: '10.5px',
-                    }}
-                  >
-                    {key}
-                  </kbd>
-                  {label}
-                </span>
-              </>
+            {HINTS.map(([key, label]) => (
+              <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                <Kbd>{key}</Kbd>
+                {label}
+              </span>
             ))}
+            <span style={{marginLeft: 'auto', color: FAINT}}>
+              Indexed 4m ago
+            </span>
           </div>
         </div>
       </div>

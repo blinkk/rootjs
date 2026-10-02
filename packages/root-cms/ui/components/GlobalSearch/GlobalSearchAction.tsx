@@ -1,7 +1,7 @@
 import {SpotlightActionProps} from '@mantine/spotlight';
 import {
-  IconChevronRight,
-  IconClock,
+  IconAlignLeft,
+  IconCornerDownLeft,
   IconDatabase,
   IconFile,
   IconFolder,
@@ -10,6 +10,7 @@ import {
 import {ComponentChild} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
 import type {DocSlugHit, GlobalSearchHit} from '../../hooks/useGlobalSearch.js';
+import {joinClassNames} from '../../utils/classes.js';
 import type {RecentView, RecentViewKind} from '../../utils/recent-views.js';
 import {buildSnippet} from './snippet.js';
 
@@ -52,22 +53,9 @@ export type GlobalSearchActionMeta =
   | {kind: 'field'; hit: GlobalSearchHit}
   | {kind: 'doc'; hit: DocSlugHit}
   | {kind: 'target'; target: StaticTargetMeta}
-  | {kind: 'recent'; view: RecentView}
-  | {kind: 'header'; label: string}
-  | {kind: 'footer'; lastIndexed: string}
-  | {kind: 'tips'};
+  | {kind: 'recent'; view: RecentView};
 
-function targetIcon(kind: StaticTargetMeta['kind']): ComponentChild {
-  if (kind === 'collection') {
-    return <IconFolder size={16} />;
-  }
-  if (kind === 'data-source') {
-    return <IconDatabase size={16} />;
-  }
-  return <IconRocket size={16} />;
-}
-
-function recentIcon(kind: RecentViewKind): ComponentChild {
+function kindIcon(kind: RecentViewKind): ComponentChild {
   if (kind === 'collection') {
     return <IconFolder size={16} />;
   }
@@ -80,13 +68,7 @@ function recentIcon(kind: RecentViewKind): ComponentChild {
   return <IconFile size={16} />;
 }
 
-function targetLabel(kind: StaticTargetMeta['kind']): string {
-  if (kind === 'collection') return 'Collection';
-  if (kind === 'data-source') return 'Data source';
-  return 'Release';
-}
-
-function recentKindLabel(kind: RecentViewKind): string {
+function kindLabel(kind: RecentViewKind): string {
   if (kind === 'collection') return 'Collection';
   if (kind === 'data-source') return 'Data source';
   if (kind === 'release') return 'Release';
@@ -96,10 +78,20 @@ function recentKindLabel(kind: RecentViewKind): string {
 interface RowProps {
   hovered: boolean;
   onTrigger: () => void;
-  className?: string;
-  children: ComponentChild;
+  icon: ComponentChild;
+  title: ComponentChild;
+  /** Secondary line shown below the title. */
+  subtitle?: ComponentChild;
+  /** Muted label shown on the right, e.g. the result type. */
+  kind?: string;
+  /** Top-aligns the icon for rows with multi-line content. */
+  multiline?: boolean;
 }
 
+/**
+ * A selectable result row: an icon tile, a title and an optional subtitle.
+ * Every result type shares this layout so the list reads as one surface.
+ */
 function Row(props: RowProps) {
   const ref = useRef<HTMLButtonElement>(null);
   // Keep the keyboard-selected row visible now that long result lists
@@ -110,25 +102,37 @@ function Row(props: RowProps) {
       ref.current?.scrollIntoView?.({block: 'nearest'});
     }
   }, [props.hovered]);
-  const className = [
-    'GlobalSearchAction',
-    props.className || '',
-    props.hovered ? 'GlobalSearchAction--hovered' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
   return (
     <button
       ref={ref}
       type="button"
-      className={className}
+      className={joinClassNames(
+        'GlobalSearchAction',
+        props.multiline && 'GlobalSearchAction--multiline',
+        props.hovered && 'GlobalSearchAction--hovered'
+      )}
       onMouseDown={(e) => {
         // mousedown so the click registers before Spotlight closes the modal.
         e.preventDefault();
         props.onTrigger();
       }}
     >
-      {props.children}
+      <div className="GlobalSearchAction__icon">{props.icon}</div>
+      <div className="GlobalSearchAction__body">
+        <div className="GlobalSearchAction__title">{props.title}</div>
+        {props.subtitle && (
+          <div className="GlobalSearchAction__subtitle">{props.subtitle}</div>
+        )}
+      </div>
+      {props.hovered ? (
+        <div className="GlobalSearchAction__enter">
+          Open <IconCornerDownLeft size={13} />
+        </div>
+      ) : (
+        props.kind && (
+          <div className="GlobalSearchAction__kind">{props.kind}</div>
+        )
+      )}
     </button>
   );
 }
@@ -140,135 +144,79 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
     return null;
   }
 
-  if (meta.kind === 'header') {
-    return (
-      <div className="GlobalSearchAction GlobalSearchAction--header">
-        {meta.label}
-      </div>
-    );
-  }
-
-  if (meta.kind === 'footer') {
-    return (
-      <div className="GlobalSearchAction GlobalSearchAction--footer">
-        Last indexed {meta.lastIndexed}
-      </div>
-    );
-  }
-
-  if (meta.kind === 'tips') {
-    return (
-      <div className="GlobalSearchAction GlobalSearchAction--tips">
-        <span className="GlobalSearchAction__tipItem">
-          <kbd className="GlobalSearchAction__kbd">"…"</kbd>
-          <span>exact phrase</span>
-        </span>
-        <span className="GlobalSearchAction__tipSep">·</span>
-        <span className="GlobalSearchAction__tipItem">
-          <kbd className="GlobalSearchAction__kbd">-word</kbd>
-          <span>exclude</span>
-        </span>
-        <span className="GlobalSearchAction__tipSep">·</span>
-        <span className="GlobalSearchAction__tipItem">
-          <kbd className="GlobalSearchAction__kbd">coll/slug</kbd>
-          <span>jump by id</span>
-        </span>
-      </div>
-    );
-  }
-
   if (meta.kind === 'field') {
     const hit = meta.hit;
     const segments = buildSnippet(hit);
     return (
-      <Row hovered={props.hovered} onTrigger={props.onTrigger}>
-        <div className="GlobalSearchAction__crumbs">
-          <span className="GlobalSearchAction__docId">{hit.docId}</span>
-          <span className="GlobalSearchAction__sep">
-            <IconChevronRight size={16} />
-          </span>
-          <span className="GlobalSearchAction__field">{hit.fieldLabel}</span>
-        </div>
-        <div className="GlobalSearchAction__snippet">
-          {segments.map((seg, i) =>
-            seg.kind === 'mark' ? (
-              <mark key={i} className="GlobalSearchAction__mark">
-                {seg.value}
-              </mark>
-            ) : (
-              <span key={i}>{seg.value}</span>
-            )
-          )}
-        </div>
-      </Row>
+      <Row
+        hovered={props.hovered}
+        onTrigger={props.onTrigger}
+        multiline
+        icon={<IconAlignLeft size={16} />}
+        title={
+          <>
+            {hit.docId}
+            <span className="GlobalSearchAction__field">
+              {' '}
+              · {hit.fieldLabel}
+            </span>
+          </>
+        }
+        subtitle={
+          <div className="GlobalSearchAction__snippet">
+            {segments.map((seg, i) =>
+              seg.kind === 'mark' ? (
+                <mark key={i} className="GlobalSearchAction__mark">
+                  {seg.value}
+                </mark>
+              ) : (
+                <span key={i}>{seg.value}</span>
+              )
+            )}
+          </div>
+        }
+      />
     );
   }
 
   if (meta.kind === 'doc') {
     const hit = meta.hit;
     return (
-      <Row hovered={props.hovered} onTrigger={props.onTrigger}>
-        <div className="GlobalSearchAction__row">
-          <div className="GlobalSearchAction__icon">
-            <IconFile size={16} />
-          </div>
-          <div className="GlobalSearchAction__body">
-            <div className="GlobalSearchAction__title">{hit.slug}</div>
-            <div className="GlobalSearchAction__sub">
-              <span className="GlobalSearchAction__tag">Doc</span>
-              <span className="GlobalSearchAction__subText">{hit.docId}</span>
-            </div>
-          </div>
-        </div>
-      </Row>
+      <Row
+        hovered={props.hovered}
+        onTrigger={props.onTrigger}
+        icon={<IconFile size={16} />}
+        title={hit.slug}
+        subtitle={hit.collection}
+      />
     );
   }
 
   if (meta.kind === 'target') {
     const t = meta.target;
     return (
-      <Row hovered={props.hovered} onTrigger={props.onTrigger}>
-        <div className="GlobalSearchAction__row">
-          <div className="GlobalSearchAction__icon">{targetIcon(t.kind)}</div>
-          <div className="GlobalSearchAction__body">
-            <div className="GlobalSearchAction__title">{t.label}</div>
-            <div className="GlobalSearchAction__sub">
-              <span className="GlobalSearchAction__tag">
-                {targetLabel(t.kind)}
-              </span>
-              {t.description && (
-                <span className="GlobalSearchAction__subText">
-                  {t.description}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </Row>
+      <Row
+        hovered={props.hovered}
+        onTrigger={props.onTrigger}
+        icon={kindIcon(t.kind)}
+        title={t.label}
+        subtitle={t.description}
+        kind={kindLabel(t.kind)}
+      />
     );
   }
 
   if (meta.kind === 'recent') {
     const view = meta.view;
     return (
-      <Row hovered={props.hovered} onTrigger={props.onTrigger}>
-        <div className="GlobalSearchAction__row">
-          <div className="GlobalSearchAction__icon GlobalSearchAction__icon--muted">
-            <IconClock size={16} />
-          </div>
-          <div className="GlobalSearchAction__body">
-            <div className="GlobalSearchAction__title">{view.label}</div>
-            <div className="GlobalSearchAction__sub">
-              <span className="GlobalSearchAction__tag">
-                {recentKindLabel(view.kind)}
-              </span>
-              <span className="GlobalSearchAction__subIcon">
-                {recentIcon(view.kind)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </Row>
+      <Row
+        hovered={props.hovered}
+        onTrigger={props.onTrigger}
+        icon={kindIcon(view.kind)}
+        title={view.label}
+        subtitle={view.description}
+        kind={kindLabel(view.kind)}
+      />
     );
   }
 

@@ -161,6 +161,15 @@ function filterStaticTargets(
   return [...prefix, ...substr];
 }
 
+/**
+ * Result group labels. Mantine renders these as non-selectable headers above
+ * each group, in the order the groups first appear in the actions list.
+ */
+const GROUP_RECENT = 'Recently viewed';
+const GROUP_STATIC = 'Jump to';
+const GROUP_DOCS = 'Documents';
+const GROUP_FIELDS = 'Field matches';
+
 function buildFieldHitAction(
   hit: GlobalSearchHit,
   onTrigger: () => void
@@ -168,6 +177,7 @@ function buildFieldHitAction(
   const meta: GlobalSearchActionMeta = {kind: 'field', hit};
   return {
     id: `field:${hit.id}`,
+    group: GROUP_FIELDS,
     title: hit.text || hit.fieldLabel,
     description: `${hit.collection} · ${hit.slug} · ${hit.fieldLabel}`,
     keywords: [hit.collection, hit.slug, hit.fieldLabel],
@@ -183,6 +193,7 @@ function buildDocSlugAction(
   const meta: GlobalSearchActionMeta = {kind: 'doc', hit};
   return {
     id: `doc:${hit.docId}`,
+    group: GROUP_DOCS,
     title: hit.slug,
     description: hit.collection,
     keywords: [hit.collection, hit.slug, hit.docId],
@@ -198,6 +209,7 @@ function buildStaticAction(
   const meta: GlobalSearchActionMeta = {kind: 'target', target};
   return {
     id: `${target.kind}:${target.id}`,
+    group: GROUP_STATIC,
     title: target.label,
     description: target.description || target.id,
     keywords: [target.id, target.label, target.description || ''],
@@ -213,46 +225,11 @@ function buildRecentAction(
   const meta: GlobalSearchActionMeta = {kind: 'recent', view};
   return {
     id: `recent:${view.url}`,
+    group: GROUP_RECENT,
     title: view.label,
     description: view.description || '',
     keywords: [view.label, view.description || '', view.url],
     onTrigger,
-    meta,
-  };
-}
-
-function buildHeader(id: string, label: string): SpotlightAction {
-  const meta: GlobalSearchActionMeta = {kind: 'header', label};
-  return {
-    id: `header:${id}`,
-    title: label,
-    description: '',
-    keywords: '__internal__',
-    onTrigger: () => {},
-    meta,
-  };
-}
-
-function buildFooter(lastIndexed: string): SpotlightAction {
-  const meta: GlobalSearchActionMeta = {kind: 'footer', lastIndexed};
-  return {
-    id: '__last-indexed__',
-    title: '',
-    description: '',
-    keywords: '__internal__',
-    onTrigger: () => {},
-    meta,
-  };
-}
-
-function buildTipsRow(): SpotlightAction {
-  const meta: GlobalSearchActionMeta = {kind: 'tips'};
-  return {
-    id: '__syntax-tips__',
-    title: '',
-    description: '',
-    keywords: '__internal__',
-    onTrigger: () => {},
     meta,
   };
 }
@@ -306,28 +283,45 @@ function clearSearchUrlState() {
   }
 }
 
-interface FiltersContextValue {
-  /** Whether the chip bar should render (only when there's a query). */
-  visible: boolean;
+interface BodyContextValue {
+  /** Whether the filter tabs should render (only when there's a query). */
+  filtersVisible: boolean;
   filter: GlobalSearchFilter;
   onFilterChange: (filter: GlobalSearchFilter) => void;
   counts: GlobalSearchCounts;
   onCopyLink: () => Promise<boolean>;
+  /** Whether the footer should render (only when there's a list above it). */
+  footerVisible: boolean;
+  /** Human-readable age of the search index, e.g. "4m ago". */
+  lastIndexed: string | null;
 }
 
-const FILTERS_CONTEXT = createContext<FiltersContextValue | null>(null);
+const BODY_CONTEXT = createContext<BodyContextValue | null>(null);
+
+/** Keyboard and search syntax hints shown in the footer. */
+const FOOTER_HINTS: Array<[string, string]> = [
+  ['↑↓', 'navigate'],
+  ['↵', 'open'],
+  ['"…"', 'exact phrase'],
+  ['-word', 'exclude'],
+  ['coll/slug', 'jump to doc'],
+];
 
 /**
- * Wraps the spotlight's action list. Renders the filter chips above the
- * results and makes the results scrollable so long lists no longer overflow
- * the viewport. Passed to `Spotlight` as `actionsWrapperComponent`, which is
- * why it reads its state from context rather than props.
+ * Wraps the spotlight's action list. Renders the filter tabs above the
+ * results, makes the results scrollable so long lists no longer overflow the
+ * viewport, and pins a hints footer below them. Passed to `Spotlight` as
+ * `actionsWrapperComponent`, which is why it reads its state from context
+ * rather than props.
  */
 function GlobalSearchBody(props: {children?: ComponentChildren}) {
-  const ctx = useContext(FILTERS_CONTEXT);
+  const ctx = useContext(BODY_CONTEXT);
   return (
     <div className="GlobalSearch__body">
-      {ctx?.visible && (
+      <kbd className="GlobalSearch__esc" aria-hidden="true">
+        esc
+      </kbd>
+      {ctx?.filtersVisible && (
         <GlobalSearchFilters
           value={ctx.filter}
           onChange={ctx.onFilterChange}
@@ -336,6 +330,21 @@ function GlobalSearchBody(props: {children?: ComponentChildren}) {
         />
       )}
       <div className="GlobalSearch__results">{props.children}</div>
+      {ctx?.footerVisible && (
+        <div className="GlobalSearch__footer">
+          {FOOTER_HINTS.map(([key, label]) => (
+            <span key={key} className="GlobalSearch__hint">
+              <kbd className="GlobalSearch__kbd">{key}</kbd>
+              {label}
+            </span>
+          ))}
+          {ctx.lastIndexed && (
+            <span className="GlobalSearch__indexed">
+              Indexed {ctx.lastIndexed}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -418,7 +427,7 @@ function GlobalSearchInner(props: {
 
   const navigate = (url: string) => location.route(url);
 
-  // Static matches split by kind so the filter chips can count and select
+  // Static matches split by kind so the filter tabs can count and select
   // them individually.
   const matchedStatic = useMemo(() => {
     const matched = filterStaticTargets(staticTargets, trimmedQuery);
@@ -449,12 +458,9 @@ function GlobalSearchInner(props: {
       if (recentViews.length === 0) {
         return [];
       }
-      return [
-        buildHeader('recent', 'Recently viewed'),
-        ...recentViews.map((view) =>
-          buildRecentAction(view, () => navigate(view.url))
-        ),
-      ];
+      return recentViews.map((view) =>
+        buildRecentAction(view, () => navigate(view.url))
+      );
     }
 
     const show = (kind: Exclude<GlobalSearchFilter, 'all'>) =>
@@ -466,15 +472,11 @@ function GlobalSearchInner(props: {
       ...(show('data-sources') ? matchedStatic.dataSources : []),
       ...(show('releases') ? matchedStatic.releases : []),
     ];
-    if (statics.length > 0) {
-      result.push(buildHeader('static', 'Jump to'));
-      for (const target of statics) {
-        result.push(buildStaticAction(target, () => navigate(target.url)));
-      }
+    for (const target of statics) {
+      result.push(buildStaticAction(target, () => navigate(target.url)));
     }
 
-    if (show('docs') && docSlugHits.length > 0) {
-      result.push(buildHeader('docs', 'Documents'));
+    if (show('docs')) {
       for (const hit of docSlugHits) {
         const url = `/cms/content/${hit.collection}/${encodeURIComponent(
           hit.slug
@@ -483,8 +485,7 @@ function GlobalSearchInner(props: {
       }
     }
 
-    if (show('fields') && fieldHits.length > 0) {
-      result.push(buildHeader('fields', 'Field matches'));
+    if (show('fields')) {
       for (const hit of fieldHits) {
         const url = `/cms/content/${hit.collection}/${encodeURIComponent(
           hit.slug
@@ -504,22 +505,6 @@ function GlobalSearchInner(props: {
   ]);
 
   const lastIndexed = formatLastIndexed(status);
-  const augmented = useMemo(() => {
-    // Footers only render when there's at least one real action above them —
-    // otherwise Mantine would show them in place of the "nothing found"
-    // message and the surface would feel cluttered.
-    if (actions.length === 0) {
-      return actions;
-    }
-    const out = [...actions];
-    if (trimmedQuery) {
-      out.push(buildTipsRow());
-    }
-    if (lastIndexed && trimmedQuery) {
-      out.push(buildFooter(lastIndexed));
-    }
-    return out;
-  }, [actions, lastIndexed, trimmedQuery]);
 
   // Compose the "nothing found" message based on state.
   const loading = fieldLoading || slugLoading;
@@ -528,7 +513,7 @@ function GlobalSearchInner(props: {
       return 'Searching…';
     }
     if (!trimmedQuery) {
-      return 'Type to search · "quotes" for exact match · -word to exclude';
+      return 'Type to search docs, collections, data sources and releases.';
     }
     if (filter !== 'all' && totalCount > 0) {
       return (
@@ -553,15 +538,27 @@ function GlobalSearchInner(props: {
     [trimmedQuery, filter]
   );
 
-  const filtersCtx = useMemo<FiltersContextValue>(
+  const bodyCtx = useMemo<BodyContextValue>(
     () => ({
-      visible: !!trimmedQuery,
+      filtersVisible: !!trimmedQuery,
       filter,
       onFilterChange,
       counts,
       onCopyLink,
+      // Mantine renders the results area when there are actions or a
+      // "nothing found" message, i.e. whenever there's a query.
+      footerVisible: !!trimmedQuery || actions.length > 0,
+      lastIndexed: trimmedQuery ? lastIndexed : null,
     }),
-    [trimmedQuery, filter, onFilterChange, counts, onCopyLink]
+    [
+      trimmedQuery,
+      filter,
+      onFilterChange,
+      counts,
+      onCopyLink,
+      actions,
+      lastIndexed,
+    ]
   );
 
   // Pass-through filter: server already ranks/filters and our static-target
@@ -570,15 +567,26 @@ function GlobalSearchInner(props: {
   const filterAll = (_q: string, list: SpotlightAction[]) => list;
 
   return (
-    <FILTERS_CONTEXT.Provider value={filtersCtx}>
+    <BODY_CONTEXT.Provider value={bodyCtx}>
       <Spotlight
         opened={opened}
         onClose={props.onClose}
         query={query}
         onQueryChange={onQueryChange}
-        actions={augmented}
+        actions={actions}
         transitionDuration={TRANSITION_MS}
-        classNames={{spotlight: 'GlobalSearch__spotlight'}}
+        classNames={{
+          spotlight: 'GlobalSearch__spotlight',
+          searchInput: 'GlobalSearch__input',
+          actions: 'GlobalSearch__actions',
+          actionsGroup: 'GlobalSearch__group',
+          nothingFound: 'GlobalSearch__nothingFound',
+        }}
+        radius="md"
+        shadow="xl"
+        overlayOpacity={0.28}
+        overlayBlur={2}
+        maxWidth={640}
         searchPlaceholder="Search docs, collections, releases…"
         searchIcon={<IconSearch size={18} />}
         nothingFoundMessage={nothingFoundMessage}
@@ -589,7 +597,7 @@ function GlobalSearchInner(props: {
         withinPortal
       />
       {props.children}
-    </FILTERS_CONTEXT.Provider>
+    </BODY_CONTEXT.Provider>
   );
 }
 
@@ -600,7 +608,7 @@ function GlobalSearchInner(props: {
  *  - Documents by slug or `<collection>/<slug>` id
  *  - Field text hits from the server-side MiniSearch index
  *
- * Results can be narrowed by type with the filter chips, and the open state,
+ * Results can be narrowed by type with the filter tabs, and the open state,
  * query, and filter are mirrored into the URL so a search can be deep linked
  * and shared, e.g. `/cms/?modal=search&q=foo&type=docs`.
  *
