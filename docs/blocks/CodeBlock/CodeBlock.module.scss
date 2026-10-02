@@ -41,6 +41,56 @@
   }
 }
 
+// Holds the code and the copy button, which sits in its top right corner.
+.content {
+  position: relative;
+}
+
+// Keeps the code clear of the copy button.
+.content pre {
+  padding-right: 48px;
+}
+
+.copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: platform.$color-muted;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: platform.$color-border;
+    color: platform.$color-ink;
+  }
+
+  &:focus-visible {
+    outline: 2px solid platform.$color-accent;
+    outline-offset: 1px;
+  }
+}
+
+.copiedIcon,
+.copy[data-copied] .copyIcon {
+  display: none;
+}
+
+.copy[data-copied] .copiedIcon {
+  display: block;
+  color: platform.$color-accent;
+}
+
 // Let highlight.js colors show without its theme background.
 .codeBlock :global(.hljs) {
   background: transparent;
