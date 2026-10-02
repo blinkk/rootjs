@@ -157,9 +157,6 @@ export default defineConfig({
           },
         },
       ],
-      experiments: {
-        taskManager: true,
-      },
       preview: {
         channel: true,
       },

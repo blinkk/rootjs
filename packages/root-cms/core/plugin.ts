@@ -596,8 +596,8 @@ export type CMSPluginOptions = {
     v2TranslationsManager?: boolean;
 
     /**
-     * Enables the task manager (sidebar entry, home page card, and
-     * `/cms/tasks` routes).
+     * Enables the task manager (sidebar entry and `/cms/tasks` routes).
+     * Enabled by default; set to `false` to hide it.
      */
     taskManager?: boolean;
   };

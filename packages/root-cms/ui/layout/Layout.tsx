@@ -223,7 +223,7 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {experiments.taskManager && (
+        {experiments.taskManager !== false && (
           <Layout.SideButton
             label="Tasks"
             url="/cms/tasks"

@@ -2020,6 +2020,25 @@ export default defineConfig({
             ),
           ]
         ),
+        section(
+          'task-manager',
+          'Task manager',
+          [
+            p(
+              `The task manager is now on by default, with a Tasks page in the CMS sidebar. It no longer appears on the CMS home page. If you set ${c('experiments: {taskManager: true}')}, you can remove it.`
+            ),
+          ],
+          [
+            copy(p('To hide it:')),
+            code(
+              'ts',
+              `
+cmsPlugin({
+  experiments: {taskManager: false},
+});`
+            ),
+          ]
+        ),
         section('editorjs', 'EditorJS removed', [
           p(
             `The legacy EditorJS rich text editor and its "Enable EditorJS Editor (legacy)" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated.`
