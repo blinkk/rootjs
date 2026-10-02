@@ -10,6 +10,9 @@
   Its product screenshots are rendered from code; see
   `docs/screenshots/README.md` to update them.
 - `examples/` — example projects. `apps/` — internal, unpublished.
+- `docker/` — an Ubuntu image (Node + pnpm + gcloud) for running a Root CMS
+  project against Firestore with persisted gcloud credentials, plus a child
+  image (`Dockerfile.claude`) that adds the Claude Code CLI.
 
 ## Development
 

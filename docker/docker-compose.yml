@@ -1,0 +1,102 @@
+# Convenience wrapper around ./Dockerfile. Set ROOT_PROJECT_DIR to the Root.js
+# project you want to run (defaults to this repo). See ./README.md.
+#
+# `UID`/`GID` are not exported by the shell, so pass them explicitly if your
+# host user isn't 1000: `UID=$(id -u) GID=$(id -g) docker compose ... build`.
+#
+#   docker compose -f docker/docker-compose.yml run --rm root \
+#     gcloud auth application-default login --no-launch-browser
+#   docker compose -f docker/docker-compose.yml up
+#
+# The `claude` service builds FROM the `root` image, so build that one first. It
+# sits behind a profile, so `up` never starts an agent by surprise:
+#
+#   docker compose -f docker/docker-compose.yml build root
+#   docker compose -f docker/docker-compose.yml build claude
+#   docker compose -f docker/docker-compose.yml run --rm claude
+
+name: root
+
+services:
+  root:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: root
+    init: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
+    ports:
+      - '${PORT:-4007}:4007'
+    environment:
+      # Passed through only when set on the host, so git never sees an empty
+      # identity (which it rejects more loudly than a missing one).
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - GIT_COMMITTER_NAME
+      - GIT_COMMITTER_EMAIL
+    env_file:
+      - path: ${ROOT_PROJECT_DIR:-..}/.env
+        required: false
+    volumes:
+      - ${ROOT_PROJECT_DIR:-..}:/workspace
+      # Persists `gcloud auth login` and `gcloud auth application-default
+      # login` between runs.
+      - gcloud-config:/home/rootjs/.config/gcloud
+      # Persists the pnpm content-addressable store between runs.
+      - pnpm-store:/home/rootjs/.pnpm-store
+
+  # Claude Code with Remote Control, running against the same project. Started
+  # explicitly (`run --rm claude`), never by `docker compose up`.
+  claude:
+    profiles: ['claude']
+    build:
+      context: .
+      dockerfile: Dockerfile.claude
+      args:
+        BASE_IMAGE: root
+    image: root-ai-claude
+    init: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace${ROOT_PROJECT_SUBDIR:+/}${ROOT_PROJECT_SUBDIR:-}
+    # Each session gets its own git worktree under .claude/worktrees/, which is
+    # inside the bind mount, so the work survives the container. Without this,
+    # every session edits the same files in /workspace.
+    command: ['claude', 'remote-control', '--spawn', 'worktree']
+    ports:
+      # A range, not a single port: `root dev` scans upward from 4007 for a free
+      # port, so a second concurrent session's dev server lands on 4008 inside
+      # the container and would otherwise be unreachable. Host ports are offset
+      # by one so they don't collide with the `root` service.
+      - '4008-4013:4007-4012'
+    environment:
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - GIT_COMMITTER_NAME
+      - GIT_COMMITTER_EMAIL
+      # Lets the container push and open pull requests. Prefer a fine-grained
+      # token scoped to this repository; see README.md.
+      - GH_TOKEN
+      - GH_HOST
+    env_file:
+      - path: ${ROOT_PROJECT_DIR:-..}/.env
+        required: false
+    volumes:
+      - ${ROOT_PROJECT_DIR:-..}:/workspace
+      # Persists the claude.ai login, settings and history. Separate from the
+      # gcloud volume so each can be granted independently.
+      - claude-config:/home/rootjs/.claude
+      # Persists an interactive `gh auth login`, as an alternative to GH_TOKEN.
+      - gh-config:/home/rootjs/.config/gh
+      - gcloud-config:/home/rootjs/.config/gcloud
+      - pnpm-store:/home/rootjs/.pnpm-store
+
+volumes:
+  claude-config:
+  gcloud-config:
+  gh-config:
+  pnpm-store:
