@@ -230,6 +230,7 @@ describe('deleteAsset', () => {
         assetId: 'folder-marketing',
         name: 'marketing',
         folder: 'marketing',
+        path: 'marketing',
         numDescendants: 1,
       },
     });
