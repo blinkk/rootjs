@@ -298,7 +298,7 @@ const GETTING_STARTED: DocCopy = {
             plain(
               `
 Set up a new Root.js site with the CMS in ./my-site. Follow the instructions at
-https://raw.githubusercontent.com/blinkk/rootjs/main/packages/root-cms/skills/root-cms-setup/SKILL.md`
+https://rootjs.dev/skills/root-cms-setup.md`
             ),
             copy(
               p(
