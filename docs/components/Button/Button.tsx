@@ -1,5 +1,6 @@
 import {useTranslations} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
+import {useCtaAttrs} from '@/hooks/useCtaAttrs.js';
 import {joinClassNames} from '@/utils/classes';
 import styles from './Button.module.scss';
 
@@ -19,11 +20,13 @@ export type ButtonProps = preact.JSX.HTMLAttributes<any> & {
 export function Button(props: ButtonProps) {
   const {className, label, leftIcon, rightIcon, children, ...attrs} = props;
   const t = useTranslations();
+  const ctaAttrs = useCtaAttrs(label || props.ariaLabel);
 
   const Component = props.href ? 'a' : 'button';
 
   return (
     <Component
+      {...ctaAttrs}
       {...attrs}
       href={props.href}
       className={joinClassNames(
