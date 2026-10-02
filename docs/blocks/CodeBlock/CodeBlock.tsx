@@ -14,11 +14,7 @@ export function CodeBlock(props: CodeBlockProps) {
   }
   return (
     <root-code
-      className={joinClassNames(
-        props.className,
-        styles.codeBlock,
-        !languageLabel && styles.noHeader
-      )}
+      className={joinClassNames(props.className, styles.codeBlock)}
       data-language={props.language}
     >
       {languageLabel && (
@@ -26,19 +22,21 @@ export function CodeBlock(props: CodeBlockProps) {
           <span className={styles.language}>{languageLabel}</span>
         </div>
       )}
-      <button
-        className={styles.copy}
-        type="button"
-        aria-label="Copy code"
-        title="Copy"
-        data-copy
-      >
-        <IconCopy className={styles.copyIcon} size={16} stroke={1.75} />
-        <IconCheck className={styles.copiedIcon} size={16} stroke={1.75} />
-      </button>
-      <pre>
-        <code>{props.code || ''}</code>
-      </pre>
+      <div className={styles.content}>
+        <pre>
+          <code>{props.code || ''}</code>
+        </pre>
+        <button
+          className={styles.copy}
+          type="button"
+          aria-label="Copy code"
+          title="Copy"
+          data-copy
+        >
+          <IconCopy className={styles.copyIcon} size={16} stroke={1.75} />
+          <IconCheck className={styles.copiedIcon} size={16} stroke={1.75} />
+        </button>
+      </div>
     </root-code>
   );
 }

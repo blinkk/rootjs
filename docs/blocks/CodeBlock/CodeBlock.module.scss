@@ -4,7 +4,6 @@
 @use 'platform';
 
 .codeBlock {
-  position: relative;
   display: block;
   overflow: hidden;
   border: 1px solid platform.$color-border;
@@ -42,15 +41,19 @@
   }
 }
 
-// Without a header, keep the code clear of the copy button.
-.noHeader pre {
+// Holds the code and the copy button, which sits in its top right corner.
+.content {
+  position: relative;
+}
+
+// Keeps the code clear of the copy button.
+.content pre {
   padding-right: 48px;
 }
 
-// Sits in the top right corner, inside the header when there is one.
 .copy {
   position: absolute;
-  top: 4px;
+  top: 8px;
   right: 8px;
   display: flex;
   align-items: center;
@@ -76,10 +79,6 @@
     outline: 2px solid platform.$color-accent;
     outline-offset: 1px;
   }
-}
-
-.noHeader .copy {
-  top: 8px;
 }
 
 .copiedIcon,
