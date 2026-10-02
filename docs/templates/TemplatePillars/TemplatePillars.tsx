@@ -6,6 +6,7 @@ import {node} from '@/components/RootNode/RootNode.js';
 import {SectionHeader} from '@/components/SectionHeader/SectionHeader.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
+import {useCtaAttrs} from '@/hooks/useCtaAttrs.js';
 import {TemplatePillarsFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
 import styles from './TemplatePillars.module.scss';
@@ -18,6 +19,7 @@ export function TemplatePillars(props: TemplatePillarsProps) {
   const t = useTranslations();
   const options = props.options || [];
   const pillars = props.pillars || [];
+  const ctaAttrs = useCtaAttrs();
   return (
     <div
       id={props.id}
@@ -71,7 +73,12 @@ export function TemplatePillars(props: TemplatePillarsProps) {
                 </UnstyledList>
               )}
               {pillar.link?.href && pillar.link?.label && (
-                <a className={styles.link} href={pillar.link.href}>
+                <a
+                  {...ctaAttrs}
+                  data-cta={pillar.link.label}
+                  className={styles.link}
+                  href={pillar.link.href}
+                >
                   {t(pillar.link.label)}
                   <IconArrowRight size={18} aria-hidden="true" />
                 </a>

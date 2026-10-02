@@ -3,6 +3,8 @@ function main() {
   const isPreview = urlParams.get('preview') === 'true';
   if (isPreview) {
     updatePreview();
+  } else {
+    trackCtaClicks();
   }
 }
 
@@ -22,6 +24,32 @@ function updatePreview() {
   if (isInIframe()) {
     preserveScrollY();
   }
+}
+
+/**
+ * Reports clicks on elements marked with `data-cta` (see `useCtaAttrs()`) to
+ * Google Analytics as `cta_click` events.
+ */
+function trackCtaClicks() {
+  document.addEventListener('click', (e) => {
+    const target = e.target as Element | null;
+    const cta = target?.closest<HTMLElement>('[data-cta]');
+    if (!cta) {
+      return;
+    }
+    const gtag = (window as {gtag?: (...args: unknown[]) => void}).gtag;
+    if (typeof gtag !== 'function') {
+      return;
+    }
+    const label = cta.dataset.cta || cta.textContent?.trim() || '';
+    // GA4 truncates event parameter values longer than 100 characters.
+    gtag('event', 'cta_click', {
+      cta_label: label.slice(0, 100),
+      cta_url: cta instanceof HTMLAnchorElement ? cta.href : undefined,
+      cta_module: cta.dataset.ctaModule,
+      cta_template: cta.dataset.ctaTemplate,
+    });
+  });
 }
 
 function isInIframe() {
