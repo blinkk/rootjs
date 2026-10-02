@@ -1,226 +1,257 @@
-.PublishDocModal .mantine-Modal-title {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.PublishDocModal__content {
-  font-size: 12px;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-.PublishDocModal__form__publishOptions__label {
-  margin-bottom: 8px;
-}
-
-.PublishDocModal__form__publishOptions__options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.PublishDocModal__form__publishOptions__option {
-  border: 1px solid var(--color-border);
-  padding: 24px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  opacity: 1;
-  transition: all 0.3s ease;
-}
-
-.PublishDocModal__form__publishOptions__option--unselected {
-  opacity: 0.4;
-}
-
-.PublishDocModal__form__publishOptions__option--unselected:hover {
-  opacity: 0.6;
-}
-
-.PublishDocModal__form__publishOptions__option--selected {
-  border-color: #339af0;
-}
-
-.PublishDocModal__form__publishOptions__option__help {
-  padding-left: 24px;
-  font-size: 10px;
-  font-weight: 400;
-  margin-top: 4px;
-}
-
-.PublishDocModal__form__publishOptions__option__input {
+.PublishDocModal__title {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-/* .PublishDocModal__form__publishOptions__option__input input {
-} */
-
-.PublishDocModal__form__publishOptions__option__input2 {
-  padding-left: 20px;
+.PublishDocModal__title svg {
+  flex-shrink: 0;
 }
 
-.PublishDocModal__form__publishOptions__option__input2 input {
-  margin-top: 16px;
-  display: block;
-  width: 100%;
-  border: 1px solid #dedede;
-  padding: 6px 8px;
-  font-family: inherit;
+.PublishDocModal__title__text {
+  overflow-wrap: anywhere;
+}
+
+.PublishDocModal {
   font-size: 12px;
+  line-height: 1.5;
 }
 
-.PublishDocModal__form__publishOptions__option__input2__help {
-  font-size: 10px;
-  font-weight: 400;
-  margin-top: 4px;
-  text-align: right;
-}
-
-.PublishDocModal__form__checks {
-  margin-top: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+.PublishDocModal__form {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+/* Publish type toggles. */
+
+.PublishDocModal__types {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.PublishDocModal__form__checks__note {
+.PublishDocModal__type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: var(--surface-background);
+  color: var(--color-text-default);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.PublishDocModal__type:hover {
+  background: var(--button-background-hover);
+}
+
+.PublishDocModal__type:focus-visible {
+  outline: 2px solid #339af0;
+  outline-offset: 1px;
+}
+
+.PublishDocModal__type--selected,
+.PublishDocModal__type--selected:hover {
+  border-color: #a5d8ff;
+  background: #e7f5ff;
+  color: #1971c2;
+}
+
+/* Fields. */
+
+.PublishDocModal__field {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 6px;
 }
 
-.PublishDocModal__form__checks__note svg {
-  flex-shrink: 0;
-  margin-top: 1px;
+.PublishDocModal__field__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
 }
 
-.PublishDocModal__form__publishMessage {
-  margin-top: 16px;
+.PublishDocModal__field__label {
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.PublishDocModal__form__publishMessage__wrapper {
+.PublishDocModal__field__help {
+  margin-top: -4px;
+  font-size: 11.5px;
+  color: var(--color-text-gray);
+}
+
+.PublishDocModal__input {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: var(--surface-background);
+  color: inherit;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.PublishDocModal__input:focus {
+  outline: none;
+  border-color: #228be6;
+  box-shadow: 0 0 0 3px rgba(34, 139, 230, 0.15);
+}
+
+.PublishDocModal__input--textarea {
+  min-height: 56px;
+  resize: vertical;
+}
+
+.PublishDocModal__input--withAction {
+  padding-right: 40px;
+}
+
+.PublishDocModal__message {
   position: relative;
 }
 
-.PublishDocModal__form__publishMessage__textarea {
-  width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 8px 40px 8px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-.PublishDocModal__form__publishMessage__textarea:focus {
-  outline: none;
-  border-color: #339af0;
-}
-
-.PublishDocModal__form__publishMessage__sparkle {
+.PublishDocModal__message__action {
   position: absolute;
-  right: 6px;
   top: 6px;
-  background: white;
+  right: 6px;
+}
+
+.PublishDocModal__skipChecks {
+  margin-top: 4px;
+}
+
+/* Panels made up of rows, used for the changes and the checks. */
+
+.PublishDocModal__panel {
   border: 1px solid var(--color-border);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  border-radius: 8px;
+  background: var(--surface-background);
+  overflow: hidden;
+}
+
+.PublishDocModal__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
+.PublishDocModal__panel > * + .PublishDocModal__row {
+  border-top: 1px solid #f1f3f5;
+}
+
+.PublishDocModal__row__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  color: inherit;
+  flex-shrink: 0;
+  width: 17px;
 }
 
-.PublishDocModal__form__publishMessage__sparkle:hover:not(:disabled) {
-  background: rgba(51, 154, 240, 0.05);
-  border-color: #339af0;
+.PublishDocModal__row__label {
+  flex-shrink: 0;
+  width: 128px;
+  font-weight: 600;
 }
 
-.PublishDocModal__form__publishMessage__sparkle:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.PublishDocModal__row__message {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-gray);
+  overflow-wrap: anywhere;
 }
 
-.PublishDocModal__form__buttons {
-  margin-top: 24px;
+.PublishDocModal__row__message--wide {
+  color: var(--color-text-default);
+}
+
+.PublishDocModal__row__markdown p {
+  margin: 0;
+}
+
+.PublishDocModal__row__markdown p + p,
+.PublishDocModal__row__markdown ul,
+.PublishDocModal__row__markdown ol {
+  margin: 4px 0 0;
+}
+
+.PublishDocModal__row__markdown ul,
+.PublishDocModal__row__markdown ol {
+  padding-left: 18px;
+}
+
+.PublishDocModal__row__button {
+  flex-shrink: 0;
+}
+
+.PublishDocModal__diff .DocDiffViewer__diff {
+  /* The diff modal sizes to its content instead of reserving space. */
+  min-height: 0;
+}
+
+.PublishDocModal__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.PublishDocModal__summary__body {
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.PublishDocModal__summary__body .AiSummaryResult {
+  padding-top: 0;
+}
+
+.PublishDocModal__refDocs {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #f1f3f5;
+}
+
+.PublishDocModal__refDocs > * {
+  padding: 8px 12px 8px 39px;
+}
+
+.PublishDocModal__refDocs > *:not(:last-child) {
+  border-bottom: 1px solid #f1f3f5;
+}
+
+/* Footer. */
+
+.PublishDocModal__buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-}
-
-.PublishDocModal__DiffWrapper {
-  margin-top: 24px;
-}
-
-.PublishDocModal__ShowChanges {
-  margin-top: 8px;
-}
-
-.PublishDocModal__ShowChanges + .PublishDocModal__ShowChanges {
-  margin-top: 12px;
-}
-
-.PublishDocModal__ShowChanges .mantine-Accordion-control[aria-expanded="true"] {
-  background: #fff;
-}
-
-.PublishDocModal__ShowChanges .mantine-Accordion-item {
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-.PublishDocModal__ShowChanges .mantine-Accordion-contentInner {
-  padding: 0;
-}
-
-.PublishDocModal__ShowChanges .mantine-Accordion-content {
-  padding-left: 0;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .PublishDocModal__confirmText {
   text-wrap: pretty;
-}
-
-.PublishDocModal__ReferenceDocs {
-  margin-bottom: 16px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-border);
-}
-
-.PublishDocModal__ReferenceDocs__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.PublishDocModal__ReferenceDocs__header__label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #868e96;
-}
-
-.PublishDocModal__ReferenceDocs__list {
-  display: flex;
-  flex-direction: column;
-  border-radius: 4px;
-}
-
-.PublishDocModal__ReferenceDocs__list > *:not(:last-child) {
-  border-bottom: 1px solid var(--color-border);
-}
-
-.PublishDocModal__ReferenceDocs__list > * {
-  padding: 8px 12px;
 }

@@ -13,7 +13,7 @@ import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconExternalLink,
   IconInfoCircle,
-  IconSparkles,
+  IconRobot,
   IconLoader2,
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
@@ -414,11 +414,7 @@ export function EditTranslationsModal(
                               {aiGenerating ? (
                                 <IconLoader2 size={16} />
                               ) : (
-                                <IconSparkles
-                                  size={16}
-                                  fill="currentColor"
-                                  stroke={1.5}
-                                />
+                                <IconRobot size={16} stroke={1.5} />
                               )}
                             </ActionIcon>
                           </Tooltip>

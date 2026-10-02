@@ -10,7 +10,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconSparkles} from '@tabler/icons-preact';
+import {IconRobot} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {testAiImageGenerationEnabled} from '../../../utils/ai.js';
 import {UploadedFile} from '../../../utils/gcs.js';
@@ -197,7 +197,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
             {
               label: (
                 <Group gap={5}>
-                  <IconSparkles size={16} />
+                  <IconRobot size={16} />
                   <span>Generate with AI</span>
                 </Group>
               ),
@@ -274,7 +274,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
               onClick={handleGenerate}
               loading={generating}
               disabled={saving || !prompt}
-              leftIcon={<IconSparkles size={16} />}
+              leftIcon={<IconRobot size={16} />}
             >
               {generating ? 'Generating...' : 'Preview'}
             </Button>
