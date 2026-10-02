@@ -22,6 +22,7 @@ import {
   collectAssetFieldPaths,
   getFileExt,
   getFolderId,
+  joinFolderPath,
   normalizeParentPath,
   parseFolderPath,
   removeUndefinedValues,
@@ -324,7 +325,7 @@ export class AssetLibrary {
     await this.assetsCollection().doc(assetId).set(asset);
     await this.cmsClient.logAction('asset.upload', {
       by: options.modifiedBy,
-      metadata: {assetId, name},
+      metadata: {assetId, name, path: joinFolderPath(asset.parent, name)},
     });
     return asset;
   }
@@ -352,7 +353,14 @@ export class AssetLibrary {
     await this.assetsCollection().doc(asset.id).update(updates);
     await this.cmsClient.logAction('asset.replace', {
       by: options.modifiedBy,
-      metadata: {assetId: asset.id, name: asset.name},
+      metadata: {
+        assetId: asset.id,
+        name: asset.name,
+        path: joinFolderPath(
+          normalizeParentPath(asset.parent),
+          updates.name || asset.name
+        ),
+      },
     });
     return {...asset, ...updates} as Asset;
   }
@@ -536,7 +544,12 @@ export class AssetLibrary {
     if (updatedDocIds.length > 0) {
       await this.cmsClient.logAction('asset.sync', {
         by: modifiedBy,
-        metadata: {assetId: asset.id, name: asset.name, docIds: updatedDocIds},
+        metadata: {
+          assetId: asset.id,
+          name: asset.name,
+          path: joinFolderPath(normalizeParentPath(asset.parent), asset.name),
+          docIds: updatedDocIds,
+        },
       });
     }
     return {updatedDocIds, failedDocIds};

@@ -465,6 +465,26 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
     );
   }
 
+  if (action.action !== 'asset.delete' && action.metadata?.assetId) {
+    links.push(
+      <Tooltip
+        key="asset"
+        transition="pop"
+        label={action.metadata.path || action.metadata.assetId}
+      >
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          compact
+          href={`/cms/assets?asset=${action.metadata.assetId}`}
+        >
+          {label('Open asset')}
+        </Button>
+      </Tooltip>
+    );
+  }
+
   // Tasks are soft-deleted, so the task page is still viewable (and
   // restorable) after a `tasks.delete` action.
   if (action.action.startsWith('tasks.') && action.metadata?.taskId) {
@@ -642,7 +662,7 @@ function ActionLogsOnboarding() {
 
 function ActionLogsCompactItemPreview(props: {action: Action}) {
   const action = props.action;
-  const actionMetaId = getFirstMetadataId(action);
+  const actionMetaId = getPreviewLabel(action);
   const actionBy = props.action.by || '';
 
   return (
@@ -678,6 +698,41 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
       <QuickLinks action={action} />
     </div>
   );
+}
+
+/**
+ * Returns the label shown in the compact preview row. For asset library
+ * actions, this is the asset's human-friendly file path rather than its id.
+ */
+function getPreviewLabel(action: Action) {
+  if (action.action.startsWith('asset.')) {
+    const label = getAssetLabel(action.metadata || {});
+    if (label) {
+      return label;
+    }
+  }
+  return getFirstMetadataId(action);
+}
+
+/**
+ * Returns a human-friendly label for an asset action. Older logs predate the
+ * `path` metadata, so this falls back to the folder path or asset name.
+ */
+function getAssetLabel(metadata: Record<string, any>): string {
+  if (metadata.path) {
+    return metadata.path;
+  }
+  if (metadata.folder) {
+    return metadata.folder;
+  }
+  // Folder renames and moves log the folder's new path as `to`.
+  if (!metadata.assetId && typeof metadata.to === 'string') {
+    return metadata.to;
+  }
+  if (Array.isArray(metadata.folders)) {
+    return formatMetadataValue(metadata.folders);
+  }
+  return metadata.name || '';
 }
 
 function getFirstMetadataId(action: Action) {
