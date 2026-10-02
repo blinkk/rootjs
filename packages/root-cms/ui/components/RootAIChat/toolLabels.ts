@@ -43,6 +43,8 @@ export function prettyToolName(toolName: string, input: any): string {
       return `Update release ${input?.releaseId || ''}`.trim();
     case 'gdoc_get':
       return 'Read Google Doc';
+    case 'gdoc_getFeedback':
+      return 'Read Google Doc comments and suggestions';
     case 'gsheet_get':
       return `Read Google Sheet${input?.sheet ? ` (${input.sheet})` : ''}`;
     case 'gslides_get':
