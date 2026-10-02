@@ -11,7 +11,7 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconCheck, IconSparkles} from '@tabler/icons-preact';
+import {IconCheck, IconRobot} from '@tabler/icons-preact';
 import {useMemo, useState} from 'preact/hooks';
 import {getAiImageEditingModels} from '../../../utils/ai.js';
 import {joinClassNames} from '../../../utils/classes.js';
@@ -223,7 +223,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
             variant="light"
             loading={generating}
             disabled={saving || !prompt.trim()}
-            leftIcon={<IconSparkles size={16} />}
+            leftIcon={<IconRobot size={16} />}
             onClick={handleGenerate}
           >
             {generating ? 'Generating...' : 'Generate'}

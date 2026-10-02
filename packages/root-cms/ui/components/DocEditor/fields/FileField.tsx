@@ -33,7 +33,7 @@ import {
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
-  IconSparkles,
+  IconRobot,
   IconSquareCheck,
   IconSquareCheckFilled,
   IconTrash,
@@ -969,7 +969,7 @@ FileField.Preview = () => {
                     {aiImageEditingEnabled && (
                       <Menu.Item
                         disabled={!ctx.value?.src}
-                        icon={<IconSparkles size={16} />}
+                        icon={<IconRobot size={16} />}
                         closeMenuOnClick
                         onClick={() => {
                           ctx.requestAiImageEditorOpen();
@@ -1320,7 +1320,7 @@ FileField.Preview = () => {
                     }}
                     disabled={ctx.loadingState === 'loading'}
                   >
-                    <IconSparkles size={20} stroke="1.75" />
+                    <IconRobot size={20} stroke="1.75" />
                   </ActionIcon>
                 </Tooltip>
               )}

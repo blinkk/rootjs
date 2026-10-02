@@ -1,16 +1,23 @@
 import './PublishDocModal.css';
 
-import {Accordion, Button, Checkbox, Loader, Tooltip} from '@mantine/core';
+import {Button, Checkbox, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
-  IconChecklist,
+  IconAlertTriangle,
+  IconCalendarEvent,
+  IconCircleCheck,
+  IconCircleDashed,
+  IconCircleX,
   IconGitCompare,
   IconPackage,
-  IconSparkles,
+  IconPlayerPlay,
+  IconRobot,
+  IconRocket,
 } from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
-import {useState, useRef, useEffect} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
@@ -23,20 +30,26 @@ import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
-import {getCollectionPublishChecks} from '../../utils/publish-checks.js';
+import {
+  getCollectionPublishChecks,
+  runPublishChecks,
+  type PublishCheckResult,
+  type ResolvedPublishCheck,
+} from '../../utils/publish-checks.js';
 import {extractReferenceDocIds} from '../../utils/references.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
-import {AiSummary} from '../AiSummary/AiSummary.js';
+import {AiSummaryResult, useAiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
+import {Markdown} from '../Markdown/Markdown.js';
 import {Text} from '../Text/Text.js';
 
 const MODAL_ID = 'PublishDocModal';
 
-export type PublishType = 'now' | 'scheduled' | '';
+export type PublishType = 'now' | 'scheduled';
 
 export interface PublishDocModalProps {
   [key: string]: unknown;
@@ -52,9 +65,16 @@ export function usePublishDocModal(props: PublishDocModalProps) {
     open: () => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
-        title: `Publish ${props.docId}`,
+        title: (
+          <span className="PublishDocModal__title">
+            <IconRocket size={18} stroke={1.75} />
+            <span className="PublishDocModal__title__text">
+              Publish {props.docId}
+            </span>
+          </span>
+        ),
         innerProps: props,
-        size: '850px',
+        size: '640px',
       });
     },
   };
@@ -64,17 +84,22 @@ export function PublishDocModal(
   modalProps: ContextModalProps<PublishDocModalProps>
 ) {
   const {innerProps: props, context, id} = modalProps;
-  const [publishType, setPublishType] = useState<PublishType>('');
+  const [publishType, setPublishType] = useState<PublishType>('now');
   const [scheduledDate, setScheduledDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [publishMessage, setPublishMessage] = useState('');
+  const [messageFromAi, setMessageFromAi] = useState(false);
   const [generatingMessage, setGeneratingMessage] = useState(false);
   const [skipChecks, setSkipChecks] = useState(false);
   const [checksRunning, setChecksRunning] = useState(false);
+  const [checkResults, setCheckResults] = useState<PublishCheckResult[] | null>(
+    null
+  );
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
   const aiAvailable = testAiEnabled();
+  const addToReleaseModal = useAddToReleaseModal({docIds: [props.docId]});
 
   const {roles, loading: rolesLoading} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
@@ -86,6 +111,12 @@ export function PublishDocModal(
   const hasChecks = configuredChecks.length > 0;
 
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
+
+  useEffect(() => {
+    if (publishType === 'scheduled') {
+      dateTimeRef.current?.focus();
+    }
+  }, [publishType]);
 
   async function publish(decision: PublishChecksDecision) {
     try {
@@ -161,6 +192,7 @@ export function PublishDocModal(
       const data = await res.json();
       if (data.success && data.message) {
         setPublishMessage(data.message);
+        setMessageFromAi(true);
       } else {
         showNotification({
           title: 'Generation failed',
@@ -179,6 +211,24 @@ export function PublishDocModal(
       });
     } finally {
       setGeneratingMessage(false);
+    }
+  }
+
+  /** Runs the publishing checks to preview the results before publishing. */
+  async function previewChecks() {
+    try {
+      setChecksRunning(true);
+      setCheckResults(await runPublishChecks([props.docId]));
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Checks failed',
+        message: `Failed to run publishing checks: ${errorMessage(err)}`,
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setChecksRunning(false);
     }
   }
 
@@ -206,6 +256,9 @@ export function PublishDocModal(
       return;
     } finally {
       setChecksRunning(false);
+    }
+    if (!decision.skipped && decision.results.length > 0) {
+      setCheckResults(decision.results);
     }
     // Publishing was halted by a failed required check.
     if (!decision.proceed) {
@@ -257,235 +310,394 @@ export function PublishDocModal(
     });
   }
 
-  let disabled = true;
-  if (publishType === 'now') {
-    disabled = false;
-  } else if (publishType === 'scheduled' && scheduledDate) {
-    disabled = false;
+  let disabled = false;
+  if (publishType === 'scheduled' && !scheduledDate) {
+    disabled = true;
   }
-
   if (rolesLoading || !canPublish) {
     disabled = true;
   }
 
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   return (
     <div className="PublishDocModal">
-      <div className="PublishDocModal__content">
-        <form
-          className="PublishDocModal__form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit();
-          }}
+      <form
+        className="PublishDocModal__form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        <div
+          className="PublishDocModal__types"
+          role="radiogroup"
+          aria-label="Publish type"
         >
-          <div className="PublishDocModal__form__publishOptions">
-            <div className="PublishDocModal__form__publishOptions__options">
-              <label
-                className={joinClassNames(
-                  'PublishDocModal__form__publishOptions__option',
-                  publishType === 'now' &&
-                    'PublishDocModal__form__publishOptions__option--selected',
-                  publishType &&
-                    publishType !== 'now' &&
-                    'PublishDocModal__form__publishOptions__option--unselected'
-                )}
+          <PublishTypeButton
+            selected={publishType === 'now'}
+            onClick={() => setPublishType('now')}
+          >
+            <IconRocket size={15} stroke={1.75} />
+            Publish now
+          </PublishTypeButton>
+          <PublishTypeButton
+            selected={publishType === 'scheduled'}
+            onClick={() => setPublishType('scheduled')}
+          >
+            <IconCalendarEvent size={15} stroke={1.75} />
+            Schedule
+          </PublishTypeButton>
+          <button
+            type="button"
+            className="PublishDocModal__type"
+            onClick={() => addToReleaseModal.open()}
+          >
+            <IconPackage size={15} stroke={1.75} />
+            Add to release
+          </button>
+        </div>
+
+        {publishType === 'scheduled' && (
+          <PublishField label="Publish at" help={`Timezone: ${timezone}.`}>
+            <input
+              ref={dateTimeRef}
+              className="PublishDocModal__input"
+              type="datetime-local"
+              value={scheduledDate}
+              min={getLocalISOString()}
+              aria-label="Publish at"
+              onChange={(e: Event) => {
+                const target = e.target as HTMLInputElement;
+                setScheduledDate(target.value);
+              }}
+            />
+          </PublishField>
+        )}
+
+        <PublishField
+          label="Publish message"
+          help={
+            messageFromAi
+              ? 'Suggested by Root AI. Review it before publishing.'
+              : 'Optional. Describes the changes in the doc’s publish history.'
+          }
+          action={
+            aiAvailable && (
+              <Button
+                variant="subtle"
+                color="dark"
+                size="xs"
+                compact
+                leftIcon={<IconRobot size={15} stroke={1.75} />}
+                loading={generatingMessage}
+                onClick={() => generatePublishMessage()}
               >
-                <div className="PublishDocModal__form__publishOptions__option__input">
-                  <input
-                    type="radio"
-                    name="publish-option"
-                    value="now"
-                    checked={publishType === 'now'}
-                    onChange={() => setPublishType('now')}
-                  />{' '}
-                  Now
-                </div>
-                <div className="PublishDocModal__form__publishOptions__option__help">
-                  Content will go live immediately.
-                </div>
-              </label>
+                Write with AI
+              </Button>
+            )
+          }
+        >
+          <textarea
+            className="PublishDocModal__input PublishDocModal__input--textarea"
+            placeholder="What changed?"
+            aria-label="Publish message"
+            value={publishMessage}
+            rows={2}
+            onInput={(e: Event) => {
+              const target = e.target as HTMLTextAreaElement;
+              setPublishMessage(target.value);
+              setMessageFromAi(false);
+            }}
+          />
+        </PublishField>
 
-              <label
-                className={joinClassNames(
-                  'PublishDocModal__form__publishOptions__option',
-                  publishType === 'scheduled' &&
-                    'PublishDocModal__form__publishOptions__option--selected',
-                  publishType &&
-                    publishType !== 'scheduled' &&
-                    'PublishDocModal__form__publishOptions__option--unselected'
-                )}
+        <PublishField label="Changes">
+          <ChangesPanel docId={props.docId} aiAvailable={aiAvailable} />
+        </PublishField>
+
+        <ReferenceDocs docId={props.docId} />
+
+        {hasChecks && (
+          <PublishField
+            label="Publishing checks"
+            help={
+              skipChecks
+                ? 'Checks will be skipped.'
+                : 'Checks run automatically before the doc goes live.'
+            }
+            action={
+              <Button
+                variant="subtle"
+                color="dark"
+                size="xs"
+                compact
+                leftIcon={<IconPlayerPlay size={13} stroke={1.75} />}
+                loading={checksRunning}
+                onClick={() => previewChecks()}
               >
-                <div className="PublishDocModal__form__publishOptions__option__input">
-                  <input
-                    type="radio"
-                    name="publish-option"
-                    value="scheduled"
-                    checked={publishType === 'scheduled'}
-                    onChange={() => setPublishType('scheduled')}
-                  />
-                  <div>Scheduled</div>
-                </div>
-                <div className="PublishDocModal__form__publishOptions__option__help">
-                  Content will go live at the date and time specified below.
-                </div>
-                <div className="PublishDocModal__form__publishOptions__option__input2">
-                  <input
-                    ref={dateTimeRef}
-                    type="datetime-local"
-                    disabled={publishType !== 'scheduled'}
-                    value={scheduledDate}
-                    min={getLocalISOString()}
-                    onChange={(e: Event) => {
-                      const target = e.target as HTMLInputElement;
-                      setScheduledDate(target.value);
-                    }}
-                  />
-                  <div className="PublishDocModal__form__publishOptions__option__input2__help">
-                    timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {testV2TranslationsEnabled() && (
-            <div className="PublishDocModal__form__translationsNote">
-              <Text size="body-sm" color="gray">
-                The doc's translations will be published together with the doc.
-              </Text>
-            </div>
-          )}
-
-          {hasChecks && (
-            <div className="PublishDocModal__form__checks">
-              <div className="PublishDocModal__form__checks__note">
-                <IconChecklist size={16} stroke={1.5} />
-                <Text size="body-sm" color="gray">
-                  {configuredChecks.length} publishing check
-                  {configuredChecks.length === 1 ? '' : 's'} will run first:{' '}
-                  {configuredChecks.map((check) => check.label).join(', ')}.
-                </Text>
-              </div>
-              {publishChecks.isAdmin && (
-                <Checkbox
-                  label="Skip publishing checks (admins only)"
-                  size="xs"
-                  checked={skipChecks}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    setSkipChecks(e.currentTarget.checked);
-                  }}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="PublishDocModal__form__publishMessage">
-            <div className="PublishDocModal__form__publishMessage__wrapper">
-              <textarea
-                className="PublishDocModal__form__publishMessage__textarea"
-                placeholder="Optional: Add a message to describe the changes"
-                value={publishMessage}
-                rows={3}
-                onInput={(e: Event) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  setPublishMessage(target.value);
+                {checkResults ? 'Run again' : 'Run checks'}
+              </Button>
+            }
+          >
+            <PublishChecksList
+              docId={props.docId}
+              checks={configuredChecks}
+              results={checkResults}
+              running={checksRunning}
+            />
+            {publishChecks.isAdmin && (
+              <Checkbox
+                className="PublishDocModal__skipChecks"
+                label="Skip publishing checks (admins only)"
+                size="xs"
+                checked={skipChecks}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setSkipChecks(e.currentTarget.checked);
                 }}
               />
-              {aiAvailable && (
-                <button
-                  type="button"
-                  className="PublishDocModal__form__publishMessage__sparkle"
-                  onClick={generatePublishMessage}
-                  disabled={generatingMessage}
-                >
-                  <Tooltip
-                    label="Generate message"
-                    withArrow
-                    position="left"
-                    allowPointerEvents
-                    wrapLines
-                  >
-                    {generatingMessage ? (
-                      <Loader size={16} />
-                    ) : (
-                      <IconSparkles size={16} stroke={1.5} />
-                    )}
-                  </Tooltip>
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </PublishField>
+        )}
 
-          <div className="PublishDocModal__form__buttons">
-            <Button
-              variant="outline"
-              onClick={() => context.closeModal(id)}
-              type="button"
-              size="xs"
-              color="dark"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="filled"
-              size="xs"
-              color="dark"
-              disabled={disabled}
-              loading={loading || checksRunning}
-              type="submit"
-            >
-              {checksRunning ? 'Running checks' : buttonLabel}
-            </Button>
-          </div>
-        </form>
-        <div className="PublishDocModal__DiffWrapper">
-          <ReferenceDocs docId={props.docId} />
-          {aiAvailable && (
-            <AiSummary
-              docId={props.docId}
-              beforeVersion="published"
-              afterVersion="draft"
-            />
-          )}
-          <ShowChanges docId={props.docId} />
+        {testV2TranslationsEnabled() && (
+          <Text size="body-sm" color="gray">
+            The doc's translations will be published together with the doc.
+          </Text>
+        )}
+
+        <div className="PublishDocModal__buttons">
+          <Button
+            variant="default"
+            onClick={() => context.closeModal(id)}
+            type="button"
+            size="xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="filled"
+            size="xs"
+            color="dark"
+            disabled={disabled}
+            loading={loading || checksRunning}
+            leftIcon={
+              publishType === 'scheduled' ? (
+                <IconCalendarEvent size={15} stroke={1.75} />
+              ) : (
+                <IconRocket size={15} stroke={1.75} />
+              )
+            }
+            type="submit"
+          >
+            {checksRunning
+              ? 'Running checks'
+              : publishType === 'scheduled'
+                ? 'Schedule publish'
+                : 'Publish'}
+          </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
-function ShowChanges(props: {docId: string}) {
-  const docId = props.docId;
-  const [toggled, setToggled] = useState(false);
-
-  function toggle() {
-    setToggled(true);
-  }
-
+/** A toggle button for choosing how the doc is published. */
+function PublishTypeButton(props: {
+  selected: boolean;
+  onClick: () => void;
+  children: ComponentChildren;
+}) {
   return (
-    <div className="PublishDocModal__ShowChanges">
-      <Accordion
-        iconPosition="right"
-        onChange={() => toggle()}
-        disableIconRotation={true}
-      >
-        <Accordion.Item
-          label="Compare JSON data"
-          icon={<IconGitCompare stroke={1.5} />}
-          iconPosition="left"
-        >
-          {toggled && (
-            <DocDiffViewer
-              left={{docId, versionId: 'published'}}
-              right={{docId, versionId: 'draft'}}
-              showExpandButton={true}
-              showAiSummary={false}
-            />
-          )}
-        </Accordion.Item>
-      </Accordion>
+    <button
+      type="button"
+      role="radio"
+      aria-checked={props.selected}
+      className={joinClassNames(
+        'PublishDocModal__type',
+        props.selected && 'PublishDocModal__type--selected'
+      )}
+      onClick={props.onClick}
+    >
+      {props.children}
+    </button>
+  );
+}
+
+/** A labeled section of the publish form. */
+function PublishField(props: {
+  label: string;
+  help?: string;
+  action?: ComponentChildren;
+  children: ComponentChildren;
+}) {
+  return (
+    <div className="PublishDocModal__field">
+      <div className="PublishDocModal__field__header">
+        <div className="PublishDocModal__field__label">{props.label}</div>
+        {props.action && (
+          <div className="PublishDocModal__field__action">{props.action}</div>
+        )}
+      </div>
+      {props.help && (
+        <div className="PublishDocModal__field__help">{props.help}</div>
+      )}
+      {props.children}
     </div>
   );
+}
+
+/**
+ * Shows what changed between the published doc and the draft, as a JSON diff
+ * and, if AI is enabled, a Root AI summary. Nothing loads until the user asks
+ * for it.
+ */
+function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
+  const docId = props.docId;
+  const [showDiff, setShowDiff] = useState(false);
+  const aiSummary = useAiSummary({
+    docId: docId,
+    beforeVersion: 'published',
+    afterVersion: 'draft',
+  });
+
+  return (
+    <div className="PublishDocModal__panel">
+      <div className="PublishDocModal__row">
+        <IconGitCompare
+          className="PublishDocModal__row__icon"
+          size={17}
+          stroke={1.75}
+        />
+        <div className="PublishDocModal__row__label">Diff</div>
+        <div className="PublishDocModal__row__message">
+          Compare the draft to the published version.
+        </div>
+        <Button
+          className="PublishDocModal__row__button"
+          variant="default"
+          size="xs"
+          compact
+          onClick={() => setShowDiff(!showDiff)}
+        >
+          {showDiff ? 'Hide diff' : 'View diff'}
+        </Button>
+      </div>
+      {showDiff && (
+        <div className="PublishDocModal__row__expanded PublishDocModal__diff">
+          <DocDiffViewer
+            left={{docId, versionId: 'published'}}
+            right={{docId, versionId: 'draft'}}
+            showExpandButton={true}
+            showAiSummary={false}
+          />
+        </div>
+      )}
+      {props.aiAvailable && (
+        <>
+          <div className="PublishDocModal__row">
+            <IconRobot
+              className="PublishDocModal__row__icon"
+              size={17}
+              stroke={1.75}
+            />
+            <div className="PublishDocModal__row__label">AI summary</div>
+            <div className="PublishDocModal__row__message">
+              Summarize the changes with Root AI.
+            </div>
+            <Button
+              className="PublishDocModal__row__button"
+              variant="default"
+              size="xs"
+              compact
+              loading={aiSummary.status === 'loading'}
+              onClick={() => aiSummary.generate()}
+            >
+              {aiSummary.status === 'success' ? 'Regenerate' : 'Summarize'}
+            </Button>
+          </div>
+          {aiSummary.status !== 'idle' && (
+            <div className="PublishDocModal__row__expanded">
+              <AiSummaryResult
+                status={aiSummary.status}
+                summary={aiSummary.summary}
+                error={aiSummary.error}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Lists the publishing checks configured on the doc's collection, along with
+ * the results of the latest run.
+ */
+function PublishChecksList(props: {
+  docId: string;
+  checks: ResolvedPublishCheck[];
+  results: PublishCheckResult[] | null;
+  running: boolean;
+}) {
+  return (
+    <div className="PublishDocModal__panel">
+      {props.checks.map((check) => {
+        const result = props.results?.find(
+          (r) => r.docId === props.docId && r.checkId === check.id
+        );
+        return (
+          <div className="PublishDocModal__row" key={check.id}>
+            <span className="PublishDocModal__row__icon">
+              <CheckStatusIcon
+                result={result}
+                level={check.level}
+                running={props.running}
+              />
+            </span>
+            <div className="PublishDocModal__row__label">{check.label}</div>
+            <div className="PublishDocModal__row__message">
+              {result ? (
+                <Markdown
+                  className="PublishDocModal__row__markdown"
+                  code={result.message}
+                />
+              ) : props.running ? (
+                'Running...'
+              ) : (
+                check.description || 'Not run yet.'
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The status icon for a single publishing check. */
+function CheckStatusIcon(props: {
+  result?: PublishCheckResult;
+  level: 'required' | 'warning';
+  running: boolean;
+}) {
+  if (props.running) {
+    return <Loader size={15} color="gray" />;
+  }
+  const result = props.result;
+  if (!result) {
+    return <IconCircleDashed size={17} stroke={1.75} color="#adb5bd" />;
+  }
+  if (result.status === 'success') {
+    return <IconCircleCheck size={17} stroke={1.75} color="#2f9e44" />;
+  }
+  // Errors from warning-level checks don't block publishing, so they're shown
+  // as warnings.
+  if (result.status === 'error' && props.level === 'required') {
+    return <IconCircleX size={17} stroke={1.75} color="#e03131" />;
+  }
+  return <IconAlertTriangle size={17} stroke={1.75} color="#f08c00" />;
 }
 
 /** Checks if a doc has unpublished changes (draft is newer than published). */
@@ -554,46 +766,49 @@ function ReferenceDocs(props: {docId: string}) {
   const allDocIds = [props.docId, ...unpublishedRefDocs];
   const addToReleaseModal = useAddToReleaseModal({docIds: allDocIds});
 
-  if (loading) {
-    return (
-      <div className="PublishDocModal__ReferenceDocs">
-        <Loader color="gray" size="sm" />
-      </div>
-    );
-  }
-
-  if (unpublishedRefDocs.length === 0) {
+  if (loading || unpublishedRefDocs.length === 0) {
     return null;
   }
 
+  const count = unpublishedRefDocs.length;
   return (
-    <div className="PublishDocModal__ReferenceDocs">
-      <div className="PublishDocModal__ReferenceDocs__header">
-        <div className="PublishDocModal__ReferenceDocs__header__label">
-          Referenced docs with unpublished changes ({unpublishedRefDocs.length})
-        </div>
-        <Button
-          variant="outline"
-          size="xs"
-          color="dark"
-          leftIcon={<IconPackage size={16} />}
-          onClick={() => addToReleaseModal.open()}
-        >
-          Bundle all docs into a release
-        </Button>
-      </div>
-      <div className="PublishDocModal__ReferenceDocs__list">
-        {unpublishedRefDocs.map((refId) => (
-          <DocPreviewCard
-            key={refId}
-            docId={refId}
-            variant="compact"
-            statusBadges
-            clickable
+    <PublishField label="Referenced docs">
+      <div className="PublishDocModal__panel">
+        <div className="PublishDocModal__row">
+          <IconAlertTriangle
+            className="PublishDocModal__row__icon"
+            size={17}
+            stroke={1.75}
+            color="#f08c00"
           />
-        ))}
+          <div className="PublishDocModal__row__message PublishDocModal__row__message--wide">
+            {count === 1
+              ? '1 referenced doc has unpublished changes.'
+              : `${count} referenced docs have unpublished changes.`}
+          </div>
+          <Button
+            className="PublishDocModal__row__button"
+            variant="default"
+            size="xs"
+            compact
+            onClick={() => addToReleaseModal.open()}
+          >
+            Bundle into a release
+          </Button>
+        </div>
+        <div className="PublishDocModal__refDocs">
+          {unpublishedRefDocs.map((refId) => (
+            <DocPreviewCard
+              key={refId}
+              docId={refId}
+              variant="compact"
+              statusBadges
+              clickable
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </PublishField>
   );
 }
 

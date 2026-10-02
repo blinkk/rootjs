@@ -34,7 +34,7 @@ import {
   IconTool,
   IconPlayerStop,
   IconScissors,
-  IconSparkles,
+  IconRobot,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
@@ -1413,7 +1413,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                           size="sm"
                           onClick={generateAiTranslations}
                         >
-                          <IconSparkles size={14} fill="black" />
+                          <IconRobot size={14} />
                         </ActionIcon>
                       </Tooltip>
                     )}

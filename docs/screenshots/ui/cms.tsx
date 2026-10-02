@@ -248,7 +248,7 @@ export function EditorHeader(props: {docId: string}) {
 }
 
 export interface FieldProps {
-  label: string;
+  label: ComponentChildren;
   help?: string;
   /** Number of open comments, rendered as a blue bubble. */
   comments?: number;
