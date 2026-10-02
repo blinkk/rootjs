@@ -42,20 +42,24 @@ export function useAddToReleaseModal(props: AddToReleaseModalProps) {
   };
 }
 
-export function AddToReleaseModal(
-  modalProps: ContextModalProps<AddToReleaseModalProps>
-) {
-  const {innerProps: props, context, id} = modalProps;
-  const modals = useModals();
-  const [mode, setMode] = useState<Mode>('');
+/**
+ * Lists the pending releases and adds docs to a new or existing release.
+ * Shared by `AddToReleaseModal` and the publish modal's "Add to release" tab.
+ */
+export function useAddToRelease(options?: {
+  /** Whether to load the releases. Defaults to true. */
+  enabled?: boolean;
+}) {
+  const enabled = options?.enabled ?? true;
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
-  const [selectedReleaseId, setSelectedReleaseId] = useState('');
-  const [newReleaseId, setNewReleaseId] = useState(generateReleaseId());
-  const [newReleaseDescription, setNewReleaseDescription] = useState('');
 
   useEffect(() => {
+    if (!enabled || loaded) {
+      return;
+    }
     async function fetchReleases() {
       setLoading(true);
       await notifyErrors(async () => {
@@ -64,94 +68,131 @@ export function AddToReleaseModal(
         setReleases(allReleases.filter(isPendingRelease));
       });
       setLoading(false);
+      setLoaded(true);
     }
     fetchReleases();
-  }, []);
+  }, [enabled]);
 
-  async function onSubmit() {
-    if (mode === 'new') {
-      await createNewRelease();
-    } else if (mode === 'existing') {
-      await addToExistingRelease();
-    }
-  }
-
-  async function createNewRelease() {
-    if (!newReleaseId) {
+  /** Creates a new release with the docs. Resolves to true on success. */
+  async function createRelease(
+    releaseId: string,
+    docIds: string[],
+    description?: string
+  ): Promise<boolean> {
+    if (!releaseId) {
       showNotification({
         title: 'Missing ID',
         message: 'Please enter a release ID.',
         color: 'red',
         autoClose: 5000,
       });
-      return;
+      return false;
     }
-    if (!isSlugValid(newReleaseId)) {
+    if (!isSlugValid(releaseId)) {
       showNotification({
         title: 'Invalid ID',
         message: 'Release ID must use alphanumeric characters and dashes only.',
         color: 'red',
         autoClose: 5000,
       });
-      return;
+      return false;
     }
 
+    let success = false;
     setSubmitting(true);
     await notifyErrors(async () => {
-      const release: Partial<Release> = {docIds: props.docIds};
-      if (newReleaseDescription) {
-        release.description = newReleaseDescription;
+      const release: Partial<Release> = {docIds: docIds};
+      if (description) {
+        release.description = description;
       }
-      await addRelease(newReleaseId, release);
+      await addRelease(releaseId, release);
       showNotification({
-        title: `Release created: ${newReleaseId}`,
+        title: `Release created: ${releaseId}`,
         message: (
           <span>
-            Created release with {props.docIds.length} doc(s).{' '}
-            <a href={`/cms/releases/${newReleaseId}`}>View release</a>
+            Created release with {docIds.length} doc(s).{' '}
+            <a href={`/cms/releases/${releaseId}`}>View release</a>
           </span>
         ),
         autoClose: 10000,
       });
-      modals.closeAll();
+      success = true;
     });
     setSubmitting(false);
+    return success;
   }
 
-  async function addToExistingRelease() {
-    if (!selectedReleaseId) {
+  /** Adds the docs to an existing release. Resolves to true on success. */
+  async function addToRelease(
+    releaseId: string,
+    docIds: string[]
+  ): Promise<boolean> {
+    if (!releaseId) {
       showNotification({
         title: 'No release selected',
         message: 'Please select a release.',
         color: 'red',
         autoClose: 5000,
       });
-      return;
+      return false;
     }
 
+    let success = false;
     setSubmitting(true);
     await notifyErrors(async () => {
-      const release = releases.find((r) => r.id === selectedReleaseId);
+      const release = releases.find((r) => r.id === releaseId);
       const existingDocIds = release?.docIds || [];
       // Merge doc IDs, avoiding duplicates.
       const mergedDocIds = Array.from(
-        new Set([...existingDocIds, ...props.docIds])
+        new Set([...existingDocIds, ...docIds])
       ).sort();
-      await updateRelease(selectedReleaseId, {docIds: mergedDocIds});
+      await updateRelease(releaseId, {docIds: mergedDocIds});
       const addedCount = mergedDocIds.length - existingDocIds.length;
       showNotification({
-        title: `Docs added to release: ${selectedReleaseId}`,
+        title: `Docs added to release: ${releaseId}`,
         message: (
           <span>
             Added {addedCount} new doc(s) to release.{' '}
-            <a href={`/cms/releases/${selectedReleaseId}`}>View release</a>
+            <a href={`/cms/releases/${releaseId}`}>View release</a>
           </span>
         ),
         autoClose: 10000,
       });
-      modals.closeAll();
+      success = true;
     });
     setSubmitting(false);
+    return success;
+  }
+
+  return {releases, loading, loaded, submitting, createRelease, addToRelease};
+}
+
+export function AddToReleaseModal(
+  modalProps: ContextModalProps<AddToReleaseModalProps>
+) {
+  const {innerProps: props, context, id} = modalProps;
+  const modals = useModals();
+  const [mode, setMode] = useState<Mode>('');
+  const [selectedReleaseId, setSelectedReleaseId] = useState('');
+  const [newReleaseId, setNewReleaseId] = useState(generateReleaseId());
+  const [newReleaseDescription, setNewReleaseDescription] = useState('');
+  const {releases, loading, submitting, createRelease, addToRelease} =
+    useAddToRelease();
+
+  async function onSubmit() {
+    let success = false;
+    if (mode === 'new') {
+      success = await createRelease(
+        newReleaseId,
+        props.docIds,
+        newReleaseDescription
+      );
+    } else if (mode === 'existing') {
+      success = await addToRelease(selectedReleaseId, props.docIds);
+    }
+    if (success) {
+      modals.closeAll();
+    }
   }
 
   let disabled = true;

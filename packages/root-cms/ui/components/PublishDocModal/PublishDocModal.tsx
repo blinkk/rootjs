@@ -44,9 +44,10 @@ import {
   type ResolvedPublishCheck,
 } from '../../utils/publish-checks.js';
 import {extractReferenceDocIds} from '../../utils/references.js';
+import {type Release, generateReleaseId} from '../../utils/release.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
-import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
+import {useAddToRelease} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {AiSummaryResult, useAiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
@@ -56,7 +57,7 @@ import {Text} from '../Text/Text.js';
 
 const MODAL_ID = 'PublishDocModal';
 
-export type PublishType = 'now' | 'scheduled';
+export type PublishType = 'now' | 'scheduled' | 'release';
 
 export interface PublishDocModalProps {
   [key: string]: unknown;
@@ -106,7 +107,18 @@ export function PublishDocModal(
   const modals = useModals();
   const modalTheme = useModalTheme();
   const aiAvailable = testAiEnabled();
-  const addToReleaseModal = useAddToReleaseModal({docIds: [props.docId]});
+  const isRelease = publishType === 'release';
+  const [releaseChoice, setReleaseChoice] = useState('');
+  const [newReleaseId, setNewReleaseId] = useState(() => generateReleaseId());
+  const [newReleaseDescription, setNewReleaseDescription] = useState('');
+  const [includeRefDocs, setIncludeRefDocs] = useState(false);
+  // Releases are only loaded once the "Add to release" tab is opened.
+  const [releaseTabOpened, setReleaseTabOpened] = useState(false);
+  const releaseActions = useAddToRelease({enabled: releaseTabOpened});
+  const refDocs = useUnpublishedReferences(props.docId);
+  const releaseDocIds = includeRefDocs
+    ? [props.docId, ...refDocs.docIds]
+    : [props.docId];
 
   const {roles, loading: rolesLoading} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
@@ -123,7 +135,35 @@ export function PublishDocModal(
     if (publishType === 'scheduled') {
       dateTimeRef.current?.focus();
     }
+    if (publishType === 'release') {
+      setReleaseTabOpened(true);
+    }
   }, [publishType]);
+
+  // Default to creating a new release when there are none to add to.
+  useEffect(() => {
+    if (
+      releaseActions.loaded &&
+      releaseActions.releases.length === 0 &&
+      !releaseChoice
+    ) {
+      setReleaseChoice(NEW_RELEASE);
+    }
+  }, [releaseActions.loaded]);
+
+  async function submitRelease() {
+    const success =
+      releaseChoice === NEW_RELEASE
+        ? await releaseActions.createRelease(
+            newReleaseId.trim(),
+            releaseDocIds,
+            newReleaseDescription.trim()
+          )
+        : await releaseActions.addToRelease(releaseChoice, releaseDocIds);
+    if (success) {
+      modals.closeAll();
+    }
+  }
 
   async function publish(decision: PublishChecksDecision) {
     try {
@@ -244,6 +284,10 @@ export function PublishDocModal(
    * asks the user to confirm.
    */
   async function onSubmit() {
+    if (isRelease) {
+      await submitRelease();
+      return;
+    }
     let decision: PublishChecksDecision;
     try {
       setChecksRunning(true);
@@ -324,8 +368,24 @@ export function PublishDocModal(
   if (rolesLoading || !canPublish) {
     disabled = true;
   }
+  if (isRelease) {
+    disabled =
+      !releaseChoice || (releaseChoice === NEW_RELEASE && !newReleaseId.trim());
+  }
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  function getSubmitLabel() {
+    if (publishType === 'release') {
+      return releaseChoice === NEW_RELEASE
+        ? 'Create release'
+        : 'Add to release';
+    }
+    if (checksRunning) {
+      return 'Running checks';
+    }
+    return publishType === 'scheduled' ? 'Schedule publish' : 'Publish';
+  }
 
   return (
     <div className="PublishDocModal">
@@ -355,14 +415,13 @@ export function PublishDocModal(
             <IconCalendarEvent size={15} stroke={1.75} />
             Schedule
           </PublishTypeButton>
-          <button
-            type="button"
-            className="PublishDocModal__type"
-            onClick={() => addToReleaseModal.open()}
+          <PublishTypeButton
+            selected={publishType === 'release'}
+            onClick={() => setPublishType('release')}
           >
             <IconPackage size={15} stroke={1.75} />
             Add to release
-          </button>
+          </PublishTypeButton>
         </div>
 
         {publishType === 'scheduled' && (
@@ -382,59 +441,86 @@ export function PublishDocModal(
           </PublishField>
         )}
 
-        <PublishField
-          label="Publish message"
-          help={
-            messageFromAi
-              ? 'Suggested by Root AI. Review it before publishing.'
-              : 'Optional. Describes the changes in the doc’s publish history.'
-          }
-        >
-          <div className="PublishDocModal__message">
-            <textarea
-              className={joinClassNames(
-                'PublishDocModal__input',
-                'PublishDocModal__input--textarea',
-                aiAvailable && 'PublishDocModal__input--withAction'
-              )}
-              placeholder="What changed?"
-              aria-label="Publish message"
-              value={publishMessage}
-              rows={2}
-              onInput={(e: Event) => {
-                const target = e.target as HTMLTextAreaElement;
-                setPublishMessage(target.value);
-                setMessageFromAi(false);
-              }}
-            />
-            {aiAvailable && (
-              <Tooltip
-                className="PublishDocModal__message__action"
-                label="Suggest a publish message with Root AI"
-                position="left"
-                withArrow
-              >
-                <ActionIcon
-                  variant="default"
-                  size="sm"
-                  aria-label="Suggest a publish message with Root AI"
-                  loading={generatingMessage}
-                  onClick={() => generatePublishMessage()}
+        {isRelease && (
+          <ReleaseFields
+            releases={releaseActions.releases}
+            loading={releaseActions.loading || !releaseActions.loaded}
+            choice={releaseChoice}
+            onChoiceChange={setReleaseChoice}
+            newReleaseId={newReleaseId}
+            onNewReleaseIdChange={setNewReleaseId}
+            newReleaseDescription={newReleaseDescription}
+            onNewReleaseDescriptionChange={setNewReleaseDescription}
+            docIds={releaseDocIds}
+            refDocIds={refDocs.docIds}
+            includeRefDocs={includeRefDocs}
+            onIncludeRefDocsChange={setIncludeRefDocs}
+          />
+        )}
+
+        {!isRelease && (
+          <PublishField
+            label="Publish message"
+            help={
+              messageFromAi
+                ? 'Suggested by Root AI. Review it before publishing.'
+                : 'Optional. Describes the changes in the doc’s publish history.'
+            }
+          >
+            <div className="PublishDocModal__message">
+              <textarea
+                className={joinClassNames(
+                  'PublishDocModal__input',
+                  'PublishDocModal__input--textarea',
+                  aiAvailable && 'PublishDocModal__input--withAction'
+                )}
+                placeholder="What changed?"
+                aria-label="Publish message"
+                value={publishMessage}
+                rows={2}
+                onInput={(e: Event) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  setPublishMessage(target.value);
+                  setMessageFromAi(false);
+                }}
+              />
+              {aiAvailable && (
+                <Tooltip
+                  className="PublishDocModal__message__action"
+                  label="Suggest a publish message with Root AI"
+                  position="left"
+                  withArrow
                 >
-                  <IconRobot size={15} stroke={1.75} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </div>
-        </PublishField>
+                  <ActionIcon
+                    variant="default"
+                    size="sm"
+                    aria-label="Suggest a publish message with Root AI"
+                    loading={generatingMessage}
+                    onClick={() => generatePublishMessage()}
+                  >
+                    <IconRobot size={15} stroke={1.75} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </div>
+          </PublishField>
+        )}
 
         <PublishField label="Changes">
           <ChangesPanel docId={props.docId} aiAvailable={aiAvailable} />
         </PublishField>
 
-        <ReferenceDocs docId={props.docId} />
+        {!isRelease && (
+          <ReferenceDocs
+            docIds={refDocs.docIds}
+            onBundle={() => {
+              setIncludeRefDocs(true);
+              setPublishType('release');
+            }}
+          />
+        )}
 
-        {hasChecks && (
+        {!isRelease && hasChecks && (
           <PublishField
             label="Publishing checks"
             help={
@@ -476,7 +562,7 @@ export function PublishDocModal(
           </PublishField>
         )}
 
-        {testV2TranslationsEnabled() && (
+        {!isRelease && testV2TranslationsEnabled() && (
           <Text size="body-sm" color="gray">
             The doc's translations will be published together with the doc.
           </Text>
@@ -496,21 +582,19 @@ export function PublishDocModal(
             size="xs"
             color="dark"
             disabled={disabled}
-            loading={loading || checksRunning}
+            loading={loading || checksRunning || releaseActions.submitting}
             leftIcon={
               publishType === 'scheduled' ? (
                 <IconCalendarEvent size={15} stroke={1.75} />
+              ) : publishType === 'release' ? (
+                <IconPackage size={15} stroke={1.75} />
               ) : (
                 <IconRocket size={15} stroke={1.75} />
               )
             }
             type="submit"
           >
-            {checksRunning
-              ? 'Running checks'
-              : publishType === 'scheduled'
-                ? 'Schedule publish'
-                : 'Publish'}
+            {getSubmitLabel()}
           </Button>
         </div>
       </form>
@@ -794,30 +878,19 @@ function docHasUnpublishedChanges(doc: any): boolean {
   return false;
 }
 
-/**
- * Shows referenced docs with unpublished changes and provides an option to
- * add all docs to a release.
- */
-function ReferenceDocs(props: {docId: string}) {
+/** Loads the docs referenced by a doc that have unpublished changes. */
+function useUnpublishedReferences(docId: string) {
   const [loading, setLoading] = useState(true);
-  const [unpublishedRefDocs, setUnpublishedRefDocs] = useState<string[]>([]);
+  const [docIds, setDocIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchReferences() {
       setLoading(true);
       try {
-        const docData = await getDocFromCacheOrFetch(props.docId);
-        if (!docData?.fields) {
-          setLoading(false);
-          return;
-        }
-        const refDocIds = extractReferenceDocIds(docData.fields).filter(
-          (id) => id !== props.docId
-        );
-        if (refDocIds.length === 0) {
-          setLoading(false);
-          return;
-        }
+        const docData = await getDocFromCacheOrFetch(docId);
+        const refDocIds = docData?.fields
+          ? extractReferenceDocIds(docData.fields).filter((id) => id !== docId)
+          : [];
         // Fetch each referenced doc to check for unpublished changes.
         const unpublished: string[] = [];
         await Promise.all(
@@ -833,23 +906,27 @@ function ReferenceDocs(props: {docId: string}) {
             }
           })
         );
-        setUnpublishedRefDocs(unpublished.sort());
+        setDocIds(unpublished.sort());
       } catch (err) {
         console.error('Failed to load reference docs', err);
       }
       setLoading(false);
     }
     fetchReferences();
-  }, [props.docId]);
+  }, [docId]);
 
-  const allDocIds = [props.docId, ...unpublishedRefDocs];
-  const addToReleaseModal = useAddToReleaseModal({docIds: allDocIds});
+  return {loading, docIds};
+}
 
-  if (loading || unpublishedRefDocs.length === 0) {
+/**
+ * Shows referenced docs with unpublished changes and provides an option to
+ * bundle them into a release with the doc.
+ */
+function ReferenceDocs(props: {docIds: string[]; onBundle: () => void}) {
+  const count = props.docIds.length;
+  if (count === 0) {
     return null;
   }
-
-  const count = unpublishedRefDocs.length;
   return (
     <PublishField label="Referenced docs">
       <div className="PublishDocModal__panel">
@@ -870,24 +947,200 @@ function ReferenceDocs(props: {docId: string}) {
             variant="default"
             size="xs"
             compact
-            onClick={() => addToReleaseModal.open()}
+            onClick={() => props.onBundle()}
           >
             Bundle into a release
           </Button>
         </div>
-        <div className="PublishDocModal__refDocs">
-          {unpublishedRefDocs.map((refId) => (
-            <DocPreviewCard
-              key={refId}
-              docId={refId}
-              variant="compact"
-              statusBadges
-              clickable
-            />
-          ))}
-        </div>
+        <DocList docIds={props.docIds} />
       </div>
     </PublishField>
+  );
+}
+
+/** A compact list of doc preview cards. */
+function DocList(props: {docIds: string[]}) {
+  return (
+    <div className="PublishDocModal__docs">
+      {props.docIds.map((docId) => (
+        <DocPreviewCard
+          key={docId}
+          docId={docId}
+          variant="compact"
+          statusBadges
+          clickable
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Value of `releaseChoice` when the user is creating a new release. */
+const NEW_RELEASE = '__new__';
+
+interface ReleaseFieldsProps {
+  releases: Release[];
+  loading: boolean;
+  /** The selected release ID, or `NEW_RELEASE`. */
+  choice: string;
+  onChoiceChange: (choice: string) => void;
+  newReleaseId: string;
+  onNewReleaseIdChange: (id: string) => void;
+  newReleaseDescription: string;
+  onNewReleaseDescriptionChange: (description: string) => void;
+  /** The docs that will be added to the release. */
+  docIds: string[];
+  /** Referenced docs with unpublished changes. */
+  refDocIds: string[];
+  includeRefDocs: boolean;
+  onIncludeRefDocsChange: (include: boolean) => void;
+}
+
+/** The fields of the publish modal's "Add to release" tab. */
+function ReleaseFields(props: ReleaseFieldsProps) {
+  const refCount = props.refDocIds.length;
+  return (
+    <>
+      <PublishField
+        label="Release"
+        help="Docs in a release go live together when the release is published."
+      >
+        <div
+          className="PublishDocModal__panel"
+          role="radiogroup"
+          aria-label="Release"
+        >
+          {(props.loading || props.releases.length > 0) && (
+            <div className="PublishDocModal__releases">
+              {props.loading ? (
+                <div className="PublishDocModal__row">
+                  <span className="PublishDocModal__row__icon">
+                    <Loader size={15} color="gray" />
+                  </span>
+                  <div className="PublishDocModal__row__message">
+                    Loading releases...
+                  </div>
+                </div>
+              ) : (
+                props.releases.map((release) => (
+                  <ReleaseOption
+                    key={release.id}
+                    selected={props.choice === release.id}
+                    onSelect={() => props.onChoiceChange(release.id)}
+                    label={release.id}
+                    message={release.description || ''}
+                    meta={`${release.docIds?.length || 0} doc(s)`}
+                  />
+                ))
+              )}
+            </div>
+          )}
+          <ReleaseOption
+            selected={props.choice === NEW_RELEASE}
+            onSelect={() => props.onChoiceChange(NEW_RELEASE)}
+            label="New release"
+            message={
+              !props.loading && props.releases.length === 0
+                ? 'There are no unpublished releases. Create one with these docs.'
+                : 'Create a new release with these docs.'
+            }
+          />
+          {props.choice === NEW_RELEASE && (
+            <div className="PublishDocModal__newRelease">
+              <label className="PublishDocModal__newRelease__field">
+                <span className="PublishDocModal__field__label">
+                  Release ID
+                </span>
+                <input
+                  className="PublishDocModal__input"
+                  type="text"
+                  placeholder="e.g. my-release"
+                  value={props.newReleaseId}
+                  onInput={(e: Event) => {
+                    props.onNewReleaseIdChange(
+                      (e.target as HTMLInputElement).value
+                    );
+                  }}
+                />
+              </label>
+              <label className="PublishDocModal__newRelease__field">
+                <span className="PublishDocModal__field__label">
+                  Description (optional)
+                </span>
+                <textarea
+                  className="PublishDocModal__input PublishDocModal__input--textarea"
+                  rows={2}
+                  placeholder="Describe this release"
+                  value={props.newReleaseDescription}
+                  onInput={(e: Event) => {
+                    props.onNewReleaseDescriptionChange(
+                      (e.target as HTMLTextAreaElement).value
+                    );
+                  }}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      </PublishField>
+
+      <PublishField label={`Docs to add (${props.docIds.length})`}>
+        <div className="PublishDocModal__panel">
+          <DocList docIds={props.docIds} />
+        </div>
+        {refCount > 0 && (
+          <Checkbox
+            className="PublishDocModal__includeRefs"
+            label={
+              refCount === 1
+                ? 'Include 1 referenced doc with unpublished changes'
+                : `Include ${refCount} referenced docs with unpublished changes`
+            }
+            size="xs"
+            checked={props.includeRefDocs}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              props.onIncludeRefDocsChange(e.currentTarget.checked);
+            }}
+          />
+        )}
+      </PublishField>
+    </>
+  );
+}
+
+/** A selectable row in the list of releases. */
+function ReleaseOption(props: {
+  selected: boolean;
+  onSelect: () => void;
+  label: string;
+  message: string;
+  meta?: string;
+}) {
+  return (
+    <label
+      className={joinClassNames(
+        'PublishDocModal__row',
+        'PublishDocModal__row--option',
+        props.selected && 'PublishDocModal__row--selected'
+      )}
+    >
+      <input
+        className="PublishDocModal__row__icon"
+        type="radio"
+        name="publish-release"
+        checked={props.selected}
+        onChange={() => props.onSelect()}
+      />
+      <div className="PublishDocModal__row__label PublishDocModal__row__label--auto">
+        {props.label}
+      </div>
+      <div className="PublishDocModal__row__message PublishDocModal__row__message--truncate">
+        {props.message}
+      </div>
+      {props.meta && (
+        <div className="PublishDocModal__row__meta">{props.meta}</div>
+      )}
+    </label>
   );
 }
 
