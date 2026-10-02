@@ -1,17 +1,30 @@
 import './DocDiffViewer.css';
 
-import {Button, Loader} from '@mantine/core';
+import {Button, Loader, SegmentedControl} from '@mantine/core';
 import {IconCircleCheckFilled} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useMemo, useState} from 'preact/hooks';
+import * as schema from '../../../core/schema.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {fetchCollectionSchema} from '../../utils/collection.js';
+import {diffDocFields} from '../../utils/doc-changes.js';
 import {LocalesDiff, diffDocLocales} from '../../utils/doc-diff.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {stableJsonStringify} from '../../utils/objects.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
+import {DocChanges} from '../DocChanges/DocChanges.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
+
+/**
+ * How the diff is shown: field-by-field changes labeled using the schema, or
+ * the raw JSON.
+ */
+export type DocDiffView = 'changes' | 'json';
+
+const VIEW_STORAGE_KEY = 'root::DocDiffViewer::view';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -36,6 +49,13 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [loading, setLoading] = useState(false);
   const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
+  const [collection, setCollection] = useState<schema.Collection | null>(null);
+  // The user's last choice of view is remembered across sessions.
+  const [storedView, setStoredView] = useLocalStorage<DocDiffView>(
+    VIEW_STORAGE_KEY,
+    'changes'
+  );
+  const view: DocDiffView = storedView === 'json' ? 'json' : 'changes';
 
   const showAiSummary =
     testAiEnabled() &&
@@ -48,6 +68,11 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const localesDiff = diffDocLocales(leftDoc, rightDoc);
   const isIdentical =
     !loading && leftDoc && rightDoc && fieldsIdentical && !localesDiff;
+
+  const changes = useMemo(
+    () => diffDocFields(collection, leftDoc?.fields, rightDoc?.fields),
+    [collection, leftDoc, rightDoc]
+  );
 
   const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
     right
@@ -67,7 +92,26 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
       setLeftDoc(leftDoc);
       setRightDoc(rightDoc);
     });
+    setCollection(await loadCollection());
     setLoading(false);
+  }
+
+  /**
+   * Loads the schema used to label the changes. Without it, changes are still
+   * shown but labeled by their raw field keys.
+   */
+  async function loadCollection(): Promise<schema.Collection | null> {
+    const leftCollectionId = left.docId.split('/')[0];
+    const rightCollectionId = right.docId.split('/')[0];
+    if (leftCollectionId !== rightCollectionId) {
+      return null;
+    }
+    try {
+      return await fetchCollectionSchema(rightCollectionId);
+    } catch (err) {
+      console.warn(`failed to load schema for ${rightCollectionId}`, err);
+      return null;
+    }
   }
 
   useEffect(() => {
@@ -93,9 +137,25 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
         />
       )}
       <div className={joinClassNames(props.className, 'DocDiffViewer')}>
-        {props.showExpandButton && (
-          <div className="DocDiffViewer__expand">
+        <div className="DocDiffViewer__toolbar">
+          <SegmentedControl
+            className="DocDiffViewer__toolbar__views"
+            size="xs"
+            value={view}
+            onChange={(value: string) => setStoredView(value as DocDiffView)}
+            data={[
+              {value: 'changes', label: 'Changes'},
+              {value: 'json', label: 'JSON'},
+            ]}
+          />
+          {view === 'changes' && !isIdentical && (
+            <div className="DocDiffViewer__toolbar__count">
+              {changes.length === 1 ? '1 change' : `${changes.length} changes`}
+            </div>
+          )}
+          {props.showExpandButton && (
             <Button
+              className="DocDiffViewer__toolbar__expand"
               component="a"
               variant="default"
               size="xs"
@@ -105,8 +165,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
             >
               Open in new tab
             </Button>
-          </div>
-        )}
+          )}
+        </div>
         <div className="DocDiffViewer__header">
           <div className="DocDiffViewer__header__label">
             <div className="DocDiffViewer__header__label__title">
@@ -138,6 +198,16 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
                 <div className="DocDiffViewer__noFieldChanges">
                   No field changes.
                 </div>
+              ) : view === 'changes' ? (
+                changes.length > 0 ? (
+                  <DocChanges changes={changes} />
+                ) : (
+                  <div className="DocDiffViewer__noFieldChanges">
+                    No content changes. Only hidden data changed, such as field
+                    settings or editor metadata. Switch to the JSON view to see
+                    it.
+                  </div>
+                )
               ) : (
                 <JsDiff oldCode={leftData} newCode={rightData} />
               )}
