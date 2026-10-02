@@ -126,7 +126,38 @@ vi.mock('../../utils/doc.js', () => ({
 
 // Mock the doc cache used to look up referenced docs.
 vi.mock('../../utils/doc-cache.js', () => ({
-  getDocFromCacheOrFetch: vi.fn(() => Promise.resolve({fields: {}})),
+  getDocFromCacheOrFetch: vi.fn(() => Promise.resolve({sys: {}, fields: {}})),
+}));
+
+// Mock the pending releases shown in doc status badges.
+vi.mock('../../hooks/usePendingReleases.js', () => ({
+  usePendingReleases: () => ({
+    releases: [],
+    loading: false,
+    getReleasesForDoc: () => [],
+  }),
+}));
+
+// Mock the releases API.
+vi.mock('../../utils/release.js', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
+  generateReleaseId: vi.fn(() => '2027-03-03-spring-launch'),
+  listReleases: vi.fn(() =>
+    Promise.resolve([
+      {
+        id: 'spring-harvest-launch',
+        description: 'Spring harvest landing pages and promos.',
+        docIds: ['Pages/spring-harvest', 'Pages/index', 'Pages/garden'],
+      },
+      {
+        id: 'seed-catalog-refresh',
+        description: 'New seed catalog pages.',
+        docIds: ['Pages/seeds'],
+      },
+    ])
+  ),
+  addRelease: vi.fn(() => Promise.resolve()),
+  updateRelease: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock the publishing checks API.
@@ -281,6 +312,45 @@ describe('PublishDocModal', () => {
     await expect
       .element(page.getByTestId('wrapper'))
       .toMatchScreenshot('publish-doc-modal-scheduled.png');
+  });
+
+  it('switches to the add to release tab and back', async () => {
+    await page.viewport(680, 760);
+    renderModal('Pages/spring-harvest', {width: 640, height: 720});
+
+    await page
+      .getByLabelText('Publish message', {exact: true})
+      .fill('Spring launch copy.');
+    await page.getByRole('radio', {name: 'Add to release'}).click();
+    await page.getByText('spring-harvest-launch').click();
+
+    // The publish type tabs stay visible.
+    await expect
+      .element(page.getByRole('radio', {name: 'Publish now'}))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('button', {name: 'Add to release'}))
+      .toBeEnabled();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-release.png');
+
+    await page.getByText('New release', {exact: true}).click();
+    await expect
+      .element(page.getByRole('button', {name: 'Create release'}))
+      .toBeEnabled();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-new-release.png');
+
+    // Switching back keeps the publish message.
+    await page.getByRole('radio', {name: 'Publish now'}).click();
+    await expect
+      .element(page.getByLabelText('Publish message', {exact: true}))
+      .toHaveValue('Spring launch copy.');
+    await expect
+      .element(page.getByRole('button', {name: 'Publish', exact: true}))
+      .toBeVisible();
   });
 
   it('opens the diff in a modal', async () => {

@@ -229,18 +229,92 @@
   padding-top: 0;
 }
 
-.PublishDocModal__refDocs {
+.PublishDocModal__docs {
   display: flex;
   flex-direction: column;
+}
+
+.PublishDocModal__docs > * {
+  padding: 8px 12px;
+}
+
+.PublishDocModal__docs > *:not(:last-child) {
+  border-bottom: 1px solid #f1f3f5;
+}
+
+/* Indent the docs under the row that describes them. */
+.PublishDocModal__row + .PublishDocModal__docs {
   border-top: 1px solid #f1f3f5;
 }
 
-.PublishDocModal__refDocs > * {
-  padding: 8px 12px 8px 39px;
+.PublishDocModal__row + .PublishDocModal__docs > * {
+  padding-left: 39px;
 }
 
-.PublishDocModal__refDocs > *:not(:last-child) {
-  border-bottom: 1px solid #f1f3f5;
+.PublishDocModal__includeRefs {
+  margin-top: 4px;
+}
+
+/* The "Add to release" tab. */
+
+.PublishDocModal__releases {
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.PublishDocModal__releases > * + * {
+  border-top: 1px solid #f1f3f5;
+}
+
+.PublishDocModal__row--option {
+  cursor: pointer;
+}
+
+.PublishDocModal__row--option:hover {
+  background: var(--surface-background-hover);
+}
+
+.PublishDocModal__row--selected,
+.PublishDocModal__row--selected:hover {
+  background: #e7f5ff;
+}
+
+.PublishDocModal__row--option input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.PublishDocModal__row__label--auto {
+  width: auto;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.PublishDocModal__row__message--truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.PublishDocModal__row__meta {
+  flex-shrink: 0;
+  color: var(--color-text-gray);
+  font-size: 11px;
+}
+
+.PublishDocModal__newRelease {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 12px 12px 39px;
+}
+
+.PublishDocModal__newRelease__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* Footer. */
