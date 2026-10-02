@@ -2,9 +2,9 @@ import '../../styles/global.css';
 import '../../styles/mantine.css';
 import '../../styles/theme.css';
 import {MantineProvider} from '@mantine/core';
-import {render, waitFor} from '@testing-library/preact';
-import {describe, expect, it, vi} from 'vitest';
-import {userEvent} from 'vitest/browser';
+import {cleanup, render, waitFor} from '@testing-library/preact';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {page, userEvent} from 'vitest/browser';
 import {ActionLogs} from './ActionLogs.js';
 
 const MOCK_ACTIONS = vi.hoisted(() => {
@@ -37,16 +37,26 @@ const MOCK_ACTIONS = vi.hoisted(() => {
   ];
 });
 
+const listActions = vi.hoisted(() => vi.fn());
+
 vi.mock('../../utils/actions.js', () => ({
-  listActions: async () => MOCK_ACTIONS,
+  listActions: listActions,
 }));
 
 describe('ActionLogs', () => {
-  function renderCompact() {
+  beforeEach(() => {
+    listActions.mockResolvedValue(MOCK_ACTIONS);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  function renderCompact(props: {showOnboarding?: boolean} = {}) {
     return render(
       <MantineProvider>
         <div style={{width: '900px'}}>
-          <ActionLogs compact />
+          <ActionLogs compact {...props} />
         </div>
       </MantineProvider>
     );
@@ -140,5 +150,32 @@ describe('ActionLogs', () => {
     expect(after.top).toBeCloseTo(before.top, 1);
     expect(after.height).toBeCloseTo(before.height, 1);
     expect(after.rowHeight).toBeCloseTo(before.rowHeight, 1);
+  });
+
+  it('shows an onboarding message when there are no actions', async () => {
+    await page.viewport(1000, 600);
+    listActions.mockResolvedValue([]);
+    const {container} = renderCompact();
+    const onboarding = await waitFor(() => {
+      const el = container.querySelector('.ActionLogsOnboarding');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(container.querySelector('.ActionLogsCompact__table')).toBeNull();
+    const link = onboarding.querySelector('a') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('https://rootjs.dev/guides/');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    await expect
+      .element(onboarding)
+      .toMatchScreenshot('ActionLogs-onboarding.png');
+  });
+
+  it('shows the onboarding message when forced, even with actions', async () => {
+    const {container} = renderCompact({showOnboarding: true});
+    await waitFor(() => {
+      expect(container.querySelector('.ActionLogsOnboarding')).not.toBeNull();
+    });
+    expect(container.querySelector('.ActionLogsCompact__table')).toBeNull();
   });
 });

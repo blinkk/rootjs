@@ -7,6 +7,7 @@ import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js'
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskManager} from '../../components/TaskManager/TaskManager.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
+import {useBooleanParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 
 export function ProjectPage() {
@@ -50,6 +51,9 @@ ProjectPage.Collections = () => {
 };
 
 ProjectPage.ActionLogs = () => {
+  // Use `?welcome=true` to show the onboarding message, e.g. for testing or
+  // when linking new users to the CMS.
+  const [showOnboarding] = useBooleanParam('welcome');
   return (
     <div className="ProjectPage__actionLogs">
       <div className="ProjectPage__actionLogs__header">
@@ -65,7 +69,7 @@ ProjectPage.ActionLogs = () => {
         </Button>
       </div>
       <Surface>
-        <ActionLogs limit={10} compact />
+        <ActionLogs limit={10} compact showOnboarding={showOnboarding} />
       </Surface>
     </div>
   );

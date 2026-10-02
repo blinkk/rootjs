@@ -231,3 +231,37 @@
 .ActionLogsCompactItemDetails .ActionsLogs__table__buttons {
   margin-top: 8px;
 }
+
+.ActionLogsOnboarding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.ActionLogsOnboarding__logo {
+  display: block;
+  /* The sprite is 11 columns by 16 rows once cropped. */
+  width: 33px;
+  height: 48px;
+  margin-bottom: 12px;
+}
+
+.ActionLogsOnboarding__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-default);
+}
+
+.ActionLogsOnboarding__body {
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-gray);
+}
+
+.ActionLogsOnboarding__button {
+  margin-top: 12px;
+}

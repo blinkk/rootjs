@@ -8,7 +8,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import {useDebouncedValue} from '@mantine/hooks';
-import {IconSearch} from '@tabler/icons-preact';
+import {IconExternalLink, IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {usePagination} from '../../hooks/usePagination.js';
@@ -18,6 +18,7 @@ import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
+import {RootJsBeet} from '../RootJsLogo/RootJsLogo.js';
 import {Surface} from '../Surface/Surface.js';
 import {Tooltip} from '../Tooltip/Tooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
@@ -29,6 +30,11 @@ export interface ActionLogsProps {
   limit?: number;
   /** When true, hides filters, summary, and pagination. */
   compact?: boolean;
+  /**
+   * When true, shows the onboarding message in place of the actions, even if
+   * the project has activity. Only applies to the compact variant.
+   */
+  showOnboarding?: boolean;
 }
 
 /** Number of actions to display per page. */
@@ -46,6 +52,9 @@ const DOC_CHANGE_ACTIONS = [
   'doc.revert',
 ];
 
+/** URL to the Root.js guides, linked from the onboarding message. */
+const GUIDES_URL = 'https://rootjs.dev/guides/';
+
 /** Time filter options. */
 const TIME_FILTERS = [
   {value: 'all', label: 'All time'},
@@ -57,6 +66,7 @@ const TIME_FILTERS = [
 
 function useActions(limit?: number) {
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [actions, setActions] = useState<Action[]>([]);
 
   useEffect(() => {
@@ -69,13 +79,14 @@ function useActions(limit?: number) {
           'loading action logs'
         );
         setActions(actions);
+        setLoaded(true);
       });
       setLoading(false);
     };
     init();
   }, [limit]);
 
-  return {loading, actions};
+  return {loading, loaded, actions};
 }
 
 export function ActionLogs(props: ActionLogsProps) {
@@ -554,9 +565,9 @@ function toCompareUrlParam(docId: string, versionId: string) {
  * Compact variant of the action logs. Used primarily by the main ProjectPage.
  */
 function ActionLogsCompact(props: ActionLogsProps) {
-  const {actions, loading} = useActions(props.limit || 10);
+  const {actions, loading, loaded} = useActions(props.limit || 10);
 
-  if (loading) {
+  if (loading && !props.showOnboarding) {
     return (
       <div
         className={joinClassNames(
@@ -566,6 +577,16 @@ function ActionLogsCompact(props: ActionLogsProps) {
         )}
       >
         <Loader color="gray" size="xl" />
+      </div>
+    );
+  }
+
+  // Show an onboarding message for projects with no activity yet. If loading
+  // failed, an error notification is shown instead.
+  if (props.showOnboarding || (loaded && actions.length === 0)) {
+    return (
+      <div className={joinClassNames(props.className, 'ActionLogsCompact')}>
+        <ActionLogsOnboarding />
       </div>
     );
   }
@@ -582,6 +603,39 @@ function ActionLogsCompact(props: ActionLogsProps) {
           </Accordion.Item>
         ))}
       </Accordion>
+    </div>
+  );
+}
+
+/**
+ * Onboarding message shown in place of the compact action logs when a project
+ * has no actions yet (e.g. a newly created project).
+ */
+function ActionLogsOnboarding() {
+  return (
+    <div className="ActionLogsOnboarding">
+      <RootJsBeet className="ActionLogsOnboarding__logo" />
+      <div className="ActionLogsOnboarding__title">Welcome to Root.js!</div>
+      <div className="ActionLogsOnboarding__body">
+        As your team creates, edits, and publishes content, recent activity will
+        show up here.
+      </div>
+      <div className="ActionLogsOnboarding__body">
+        New to Root? The guides cover everything from defining schemas and
+        collections to translations, releases, and deploying your site.
+      </div>
+      <Button
+        className="ActionLogsOnboarding__button"
+        component="a"
+        variant="default"
+        size="xs"
+        href={GUIDES_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        rightIcon={<IconExternalLink size={14} />}
+      >
+        Explore the guides
+      </Button>
     </div>
   );
 }
