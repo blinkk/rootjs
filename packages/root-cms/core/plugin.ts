@@ -226,6 +226,18 @@ function isGcloudReauthError(err: unknown): boolean {
   );
 }
 
+/**
+ * Returns true if the Firebase project ID is still the placeholder from the
+ * starter template (e.g. `YOUR_FIREBASE_PROJECT_ID`), i.e. the project hasn't
+ * been connected to a Firebase project yet.
+ */
+export function isPlaceholderFirebaseProject(
+  firebaseConfig?: Record<string, any>
+): boolean {
+  const projectId = firebaseConfig?.projectId;
+  return typeof projectId === 'string' && projectId.startsWith('YOUR_');
+}
+
 function logGcloudReauthHint() {
   console.log('\n');
   console.log('==================================================');
@@ -1070,8 +1082,13 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
         // When the v2 translations manager is enabled (the default), migrate
         // v1 translations before the build (SSG reads translations at build
-        // time). A failure fails the build.
-        if (options.experiments?.v2TranslationsManager !== false) {
+        // time). A failure fails the build. Projects that haven't been
+        // connected to Firebase yet (e.g. a new project from the starter
+        // template) have nothing to migrate, so they're skipped.
+        if (
+          options.experiments?.v2TranslationsManager !== false &&
+          !isPlaceholderFirebaseProject(options.firebaseConfig)
+        ) {
           const {migrateV1TranslationsIfNeeded} =
             await import('./translations-migration.js');
           const cmsClient = new RootCMSClient(rootConfig);
@@ -1133,9 +1150,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // When the v2 translations manager is enabled (the default), migrate v1
       // translations on dev server startup. Fire-and-forget so dev startup isn't blocked;
       // prod servers never migrate (the migration runs at build time via the
-      // preBuild hook).
+      // preBuild hook). Projects not yet connected to Firebase are skipped.
       if (
         options.experiments?.v2TranslationsManager !== false &&
+        !isPlaceholderFirebaseProject(options.firebaseConfig) &&
         serverOptions.type === 'dev'
       ) {
         import('./translations-migration.js')
