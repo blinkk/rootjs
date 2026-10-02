@@ -46,12 +46,12 @@
   },
   "cms-content-list": {
     "assetId": "9aFbTJ5hfYfT",
-    "src": "https://lh3.googleusercontent.com/kI5rQ2HJNwGNmFGXzFuFCu_49Ai89bUUT7IjyjcQSRhmLhC8mYy6CmRYzI9cATvppsaFl9-PcCnDNpnp1kQ-ASCicEiHB5YY6bWe",
+    "src": "https://lh3.googleusercontent.com/s6meFAaNbQx_Ui_f3ow7MMGHkkR4waD7u2E6fr2U0yebyJhqfjQEiK1ve1dmVusdfudp4CppihYoTFGqDCiQ17CuFJXFHmguHA",
     "width": 1920,
     "height": 1200,
     "alt": "The Content page in the Root.js CMS, with the site’s collections on the left and the docs in the Pages collection listed with thumbnails, titles, publishing status, and who last edited them.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/54f622538a225025b3d2eb7ba782e5ddf88933d1.png",
-    "hash": "68977319ad86c15f"
+    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/257754b2963abfa50f55bc1c76aa3f78797fd908.png",
+    "hash": "63f2b4d5801e0b02"
   },
   "cms-data-sources": {
     "assetId": "155heUG3kdxk",
@@ -73,21 +73,21 @@
   },
   "cms-field-comments": {
     "assetId": "0GauFmHwNpCx",
-    "src": "https://lh3.googleusercontent.com/1vATUTNR4YH7Cy97LdfODRWQCBD7E5PDxgz3WAm94kTydaRKOZ_9foGXzZGAgJ7Wcwdf_fj6UZtGCBcjPyJzzrqzuFU8Dl6sSQ",
+    "src": "https://lh3.googleusercontent.com/XMLvddhZYSMlnQrekv6PItFR1drsRpZLryn9gB4DsymvDzY00uU8z80nk9i8IJzAY5XIKZc3ZdbR9u4LPc0ysB9i5TrA5qFuig",
     "width": 1920,
     "height": 1200,
-    "alt": "A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/55715b01520737aadfc8aac89db5a65d66af87c0.png",
-    "hash": "a034c9ccf9aa995a"
+    "alt": "A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention, and an avatar showing a teammate editing the body field.",
+    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/6d1312910cd6fb340cf979bd83b20a0e1f168931.png",
+    "hash": "883b19c22c480f22"
   },
   "cms-global-search": {
     "assetId": "y8FnZUaC0n3k",
-    "src": "https://lh3.googleusercontent.com/nGj3oEtRsGnBtKl7l7BNjABSKaou8Frz3Rlgbl4zyb2Il4AoKfTGxar-CNJqGZGerkxAK09zQchsAoEVG02Q73fE2XBj_-k-3Q",
+    "src": "https://lh3.googleusercontent.com/dGXk-se_q70UjwWFof3irtLHEipWHLWndWUGfD4eak7lTfo1gREWRdkrV0QkIwR3OlNCadRa4hI_Z6qw4SXDnbyZfvacoBGzaqU",
     "width": 1920,
     "height": 1200,
     "alt": "The Root.js CMS ⌘K global search open over the Content page, with results for “carrot” across a data source, docs, and matching text inside doc fields.",
-    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/a2cfb229b20bde611e3b285b94bdcde6aa4f2a12.png",
-    "hash": "8d3a710efc98ebfb"
+    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/152d9468d1ebd2a71c8de464babd075d1b926ae1.png",
+    "hash": "9027ba307eeb9fd3"
   },
   "cms-localization-modal": {
     "assetId": "gEdszW0uwkJI",

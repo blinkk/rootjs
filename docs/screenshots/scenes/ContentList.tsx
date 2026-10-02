@@ -159,7 +159,8 @@ export default function ContentList() {
                 alignItems: 'center',
                 gap: '10px',
                 padding: '9px 10px',
-                borderColor: i === 0 ? '#222' : undefined,
+                background: i === 0 ? '#fff' : undefined,
+                borderColor: i === 0 ? '#999' : undefined,
               }}
             >
               <span

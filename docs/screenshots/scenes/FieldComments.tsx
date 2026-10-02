@@ -14,7 +14,7 @@ export const meta: SceneMeta = {
   id: 'cms-field-comments',
   width: 960,
   height: 600,
-  alt: 'A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention.',
+  alt: 'A comment thread pinned to a field in the Root.js CMS editor, with teammates discussing a headline and an @mention, and an avatar showing a teammate editing the body field.',
 };
 
 const COMMENTS = [
@@ -78,7 +78,7 @@ export default function FieldComments() {
                 Dig into the spring harvest
               </Input>
             </Field>
-            <Field label="Body" comments={1}>
+            <Field label="Body" comments={1} viewers={['Priya']}>
               <RichTextInput>
                 Heirloom carrots, candy-striped beets and peppery radishes,
                 pulled this morning by growers just down the road.

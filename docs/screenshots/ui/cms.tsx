@@ -126,11 +126,20 @@ export const USERS: Record<string, {email: string; color: string}> = {
   Lea: {email: 'lea@fernwood.example', color: '#d6336c'},
 };
 
-export function Avatar(props: {name: string; large?: boolean}) {
+export function Avatar(props: {
+  name: string;
+  large?: boolean;
+  small?: boolean;
+}) {
   const user = USERS[props.name];
+  const size = props.large
+    ? 'cms-avatar--lg'
+    : props.small
+      ? 'cms-avatar--sm'
+      : '';
   return (
     <span
-      className={`cms-avatar ${props.large ? 'cms-avatar--lg' : ''}`}
+      className={`cms-avatar ${size}`}
       style={{background: user?.color || '#868e96'}}
       title={props.name}
     >
@@ -243,6 +252,8 @@ export interface FieldProps {
   help?: string;
   /** Number of open comments, rendered as a blue bubble. */
   comments?: number;
+  /** Teammates editing the field, shown as avatars on the right. */
+  viewers?: string[];
   children?: ComponentChildren;
 }
 
@@ -252,6 +263,13 @@ export function Field(props: FieldProps) {
     <div className="cms-field">
       <div className="cms-field__label">
         {props.label}
+        {!!props.viewers?.length && (
+          <span className="cms-field__viewers">
+            {props.viewers.map((name) => (
+              <Avatar name={name} small />
+            ))}
+          </span>
+        )}
         {!!props.comments && (
           <span className="cms-field__comments">{props.comments}</span>
         )}
