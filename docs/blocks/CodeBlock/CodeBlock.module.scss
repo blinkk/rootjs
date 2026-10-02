@@ -70,9 +70,14 @@
     background-color 0.15s,
     color 0.15s;
 
+  // Matches the icon buttons in `GlobalHeader`.
   &:hover {
-    background: platform.$color-border;
+    background: rgba(platform.$color-ink, 0.04);
     color: platform.$color-ink;
+  }
+
+  &:active {
+    background: rgba(platform.$color-accent, 0.08);
   }
 
   &:focus-visible {
