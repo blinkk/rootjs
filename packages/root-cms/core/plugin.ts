@@ -590,7 +590,8 @@ export type CMSPluginOptions = {
     ai?: boolean | CMSAIConfig;
 
     /**
-     * Enables the v2 `TranslationsManager`.
+     * Enables the v2 `TranslationsManager`. Enabled by default; set to `false`
+     * to use the legacy v1 translations system.
      */
     v2TranslationsManager?: boolean;
 
@@ -726,13 +727,13 @@ export type CMSPluginOptions = {
    * `RootCMSClient.getDependencyGraph()` to resolve the full set of
    * referenced docs that need to be fetched when fetching one or more docs.
    *
-   * Disabled by default. Pass `true` to enable with default options, or a
-   * config object to scope the graph to specific collections.
+   * Enabled by default. Pass `false` to disable, or a config object to scope
+   * the graph to specific collections.
    *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   dependencyGraph: true,
+   *   dependencyGraph: false,
    * });
    * ```
    */
@@ -1067,10 +1068,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
 
-        // When the v2 translations manager is enabled, migrate v1
-        // translations before the build (SSG reads translations at build
+        // When the v2 translations manager is enabled (the default), migrate
+        // v1 translations before the build (SSG reads translations at build
         // time). A failure fails the build.
-        if (options.experiments?.v2TranslationsManager) {
+        if (options.experiments?.v2TranslationsManager !== false) {
           const {migrateV1TranslationsIfNeeded} =
             await import('./translations-migration.js');
           const cmsClient = new RootCMSClient(rootConfig);
@@ -1084,7 +1085,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
                 'requires Firestore access when `v2TranslationsManager` is ' +
                 'enabled — ensure application default credentials (ADC) are ' +
                 'available, e.g. run `gcloud auth application-default login` ' +
-                'or set GOOGLE_APPLICATION_CREDENTIALS.'
+                'or set GOOGLE_APPLICATION_CREDENTIALS. to use the legacy v1 ' +
+                'translations system, set ' +
+                '`{experiments: {v2TranslationsManager: false}}`.'
             );
             throw err;
           }
@@ -1127,12 +1130,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
       }
 
-      // When the v2 translations manager is enabled, migrate v1 translations
-      // on dev server startup. Fire-and-forget so dev startup isn't blocked;
+      // When the v2 translations manager is enabled (the default), migrate v1
+      // translations on dev server startup. Fire-and-forget so dev startup isn't blocked;
       // prod servers never migrate (the migration runs at build time via the
       // preBuild hook).
       if (
-        options.experiments?.v2TranslationsManager &&
+        options.experiments?.v2TranslationsManager !== false &&
         serverOptions.type === 'dev'
       ) {
         import('./translations-migration.js')

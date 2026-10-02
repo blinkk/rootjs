@@ -1,8 +1,9 @@
 import {defineConfig} from '../../../dist/core.js';
 
-// Same project as the `module-preload` fixture, minus the `modulePreload`
-// option, to verify that the tags are opt-in.
+// Same project as the `module-preload` fixture, with `modulePreload: false`,
+// to verify that the tags can be disabled.
 export default defineConfig({
+  modulePreload: false,
   jsxRenderer: {
     mode: 'pretty',
     blockElements: ['root-a', 'root-b'],

@@ -1930,6 +1930,116 @@ function apiPackageDoc(
   };
 }
 
+const MIGRATION_V4: DocCopy = {
+  slug: 'migration--v4',
+  note: 'Adds the v4 migration guide.',
+  fields: {
+    meta: {
+      title: 'Migrating to Root.js v4 – Root.js',
+      description:
+        'Breaking changes and tips for updating a project to Root.js v4.',
+      category: 'migration',
+      navLabel: 'Migrating to v4',
+    },
+    content: {
+      title: 'Migrating to Root.js v4',
+      body: richtext(
+        p(
+          `Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if your build runs without Firestore access or you relied on the old defaults.`
+        )
+      ),
+      sections: [
+        section(
+          'translations',
+          'Translations manager v2',
+          [
+            p(
+              `The v2 translations manager is now on by default. On the first dev server start or ${c('root build')}, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup.`
+            ),
+            p(
+              `The migration runs before each build, so <b>${c('root build')} now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. ${c('gcloud auth application-default login')} or ${c('GOOGLE_APPLICATION_CREDENTIALS')}.`
+            ),
+          ],
+          [
+            copy(
+              p(
+                `If you set ${c('experiments: {v2TranslationsManager: true}')}, you can remove it. To stay on the v1 translations system, opt out:`
+              )
+            ),
+            code(
+              'ts',
+              `
+cmsPlugin({
+  experiments: {v2TranslationsManager: false},
+});`
+            ),
+          ]
+        ),
+        section(
+          'dependency-graph',
+          'Dependency graph',
+          [
+            p(
+              `The dependency graph, which tracks references between docs, is now on by default. If you set ${c('dependencyGraph: true')}, you can remove it.`
+            ),
+            p(
+              `The graph and global search are kept up to date by the CMS cron job. If you haven't set one up, see ${a('/docs/cms/#cron-jobs', 'cron jobs')}.`
+            ),
+          ],
+          [
+            copy(p('To opt out:')),
+            code(
+              'ts',
+              `
+cmsPlugin({
+  dependencyGraph: false,
+});`
+            ),
+          ]
+        ),
+        section(
+          'module-preload',
+          'Module preloading',
+          [
+            p(
+              `Root.js now adds ${c('&lt;link rel="modulepreload"&gt;')} tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel. Your pages' HTML will include these new tags. If you set ${c('modulePreload: true')}, you can remove it.`
+            ),
+          ],
+          [
+            copy(p('To opt out:')),
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+import {defineConfig} from '@blinkk/root';
+
+export default defineConfig({
+  modulePreload: false,
+});`
+            ),
+          ]
+        ),
+        section('editorjs', 'EditorJS removed', [
+          p(
+            `The legacy EditorJS rich text editor and its "Enable EditorJS Editor (legacy)" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated.`
+          ),
+        ]),
+        section('branding', 'CMS branding', [
+          p(
+            `The CMS UI now uses the Root.js name and the beet logo. The default accent color is now pink instead of light blue, and the default favicon is the beet. To change the look, use the ${c('favicon')} and ${c('minimalBranding')} cmsPlugin options, or ${c('themes')} to override the ${c('--cms-*')} CSS properties, such as ${c('--cms-accent')}.`
+          ),
+        ]),
+        section('other', 'Other issues', [
+          p(
+            `Found an issue that isn't covered here? ${a('https://github.com/blinkk/rootjs/issues', 'File an issue')} on GitHub.`
+          ),
+        ]),
+      ],
+    },
+  },
+};
+
 const MIGRATION_V3: DocCopy = {
   slug: 'migration--v3',
   note: 'Adds the Node 24 requirement, fixes typos, and replaces "Root CMS" with "the CMS".',
@@ -2573,6 +2683,7 @@ export const DOCS_COPY: DocCopy[] = [
     '@blinkk/root-password-protect',
     'Password-protected pages for Root.js sites.'
   ),
+  MIGRATION_V4,
   MIGRATION_V3,
   MIGRATION_V2,
 ];

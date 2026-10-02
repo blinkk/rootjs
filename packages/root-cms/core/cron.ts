@@ -83,8 +83,8 @@ async function runSaveVersions(rootConfig: RootConfig) {
 }
 
 /**
- * Incrementally updates the dependency graph. No-op unless the feature is
- * enabled via the `dependencyGraph` cmsPlugin option.
+ * Incrementally updates the dependency graph. No-op when the feature is
+ * disabled via `cmsPlugin({dependencyGraph: false})`.
  */
 async function runUpdateDependencyGraph(rootConfig: RootConfig) {
   const service = new DependencyGraphService(rootConfig);

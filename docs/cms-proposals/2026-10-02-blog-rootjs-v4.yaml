@@ -1,0 +1,211 @@
+version: 1
+id: "2026-10-02-blog-rootjs-v4"
+title: "Draft the Root.js v4.0 blog post"
+generated: "2026-10-02T15:47:46.661Z"
+author: "stevenle08@gmail.com"
+summary: "- BlogPosts/rootjs-v4: Announces Root.js v4.0."
+changes:
+  - kind: "doc.create"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Announces Root.js v4.0."
+    after:
+      meta:
+        title: "Announcing Root.js v4.0"
+        description: "A redesigned CMS, a new look, and themes to make it your own."
+        image:
+          src: "https://lh3.googleusercontent.com/wsU9j0WxC7XebKBSAe8EupgXdSk_hHzwXEVc8vD3zEOhm0RZp8zuGddAk7XIAaq_LuyleLGyD5NCmzrZO_PIKGbbFearHLdT7W4"
+          width: 2400
+          height: 1260
+          alt: "Announcing Root.js v4.0 — A redesigned CMS, a new look, and themes to make it your own."
+          gcsPath: "/rootjs-dev.appspot.com/www/uploads/f86c6df5991160d4aa8b2b0824ce8519d90523bf.png"
+          assetId: "wYtMZrS7JCka"
+      content:
+        sections:
+          - id: "redesign"
+            titleSize: "h5"
+            title: "A redesigned CMS"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS has a new look. Pages sit on a warm off-white background, content is grouped into cards, and the sidebar expands to show labels or collapses down to icons."
+                - type: "ImageBlock"
+                  data:
+                    image:
+                      src: "https://lh3.googleusercontent.com/y2AVdreecY7uwlWBqmUQ62TkhWCu7oCBjlj5aFtVCVQTk-rEeQMx7MZon6HlYXl059R03pILnDbRgQHtwvUuqMgiumCdILKcGvAf"
+                      width: 1920
+                      height: 1200
+                      alt: "The Content page in the Root.js CMS, with the site’s collections on the left and the docs in the Pages collection listed with thumbnails, titles, publishing status, and who last edited them."
+                      gcsPath: "/rootjs-dev.appspot.com/www/uploads/4ba6307770cdfea5e194fc0812b0e4594a77581c.png"
+                      assetId: "9aFbTJ5hfYfT"
+                    options:
+                      - "open-in-new-tab"
+                    advanced: {}
+                - type: "paragraph"
+                  data:
+                    text: "We also redesigned the ⌘K global search, added a welcome message to the home page of new projects to help you get set up, and gave empty pages like Releases a clearer starting point. While you edit, you can now see who else is working on each field."
+              version: "lexical-0.31.2"
+          - id: "logo"
+            titleSize: "h5"
+            title: "Meet the beet"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js has a new logo: an 8-bit beetroot. It's drawn from a 16×16 pixel sprite in code and rendered as an SVG with crisp pixel edges. You'll find it in the CMS header, as the CMS's favicon, and across rootjs.dev."
+                - type: "ImageBlock"
+                  data:
+                    image:
+                      src: "https://lh3.googleusercontent.com/EN2yOEgsISbpdb-jLjrbnZ1sbxTKax0Mt3gdCHuHKxJJA4bzbmz-IS9upOP-_oR4-XHZkq6iI4p8rYWvdWG1IndIzI5WCOWwu_o"
+                      width: 2400
+                      height: 1260
+                      alt: "Root.js — Build. Edit. Ship."
+                      gcsPath: "/rootjs-dev.appspot.com/www/uploads/f54da9234094e8d3026dcae6b5c49ce87c72d982.png"
+                      assetId: "TlnCzKSnV2OY"
+                    options:
+                      - "open-in-new-tab"
+                    advanced: {}
+                - type: "paragraph"
+                  data:
+                    text: "Along with the logo, the CMS now goes by Root.js instead of \"Root CMS\". The framework and the CMS have always been designed to work together, and rootjs.dev now presents them as one platform. The CMS's default accent color is now beet pink to match."
+              version: "lexical-0.31.2"
+          - id: "themes"
+            titleSize: "h5"
+            title: "Themes: make the CMS your own"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "In the v3 announcement, we said custom themes were coming. They're here. A theme is a stylesheet that's loaded after the CMS's own styles. It sets <code>--cms-*</code> CSS custom properties to change the accent color, font sizes, field spacing, and how nested fields are drawn."
+                - type: "paragraph"
+                  data:
+                    text: "Register themes in <code>cmsPlugin</code>:"
+                - type: "CodeBlock"
+                  data:
+                    language: "ts"
+                    code: |-
+                      cmsPlugin({
+                        themes: [
+                          {id: 'compact', name: 'Compact', file: './cms/themes/compact.css'},
+                          {id: 'brand', name: 'Brand', css: ':root { --cms-accent: #12b886; }'},
+                        ],
+                        defaultTheme: 'compact',
+                      });
+                - type: "paragraph"
+                  data:
+                    text: "A theme only needs to set the properties it changes. To start one, copy <code>packages/root-cms/ui/styles/theme.css</code>, which lists every property with its default value:"
+                - type: "CodeBlock"
+                  data:
+                    language: "css"
+                    code: |-
+                      /* cms/themes/compact.css */
+                      :root {
+                        --cms-accent: #12b886;
+                        --cms-font-size: 11px;
+                        --cms-label-size: 11px;
+                        --cms-field-gap: 10px;
+                        --cms-drawer-indent: 12px;
+                        --cms-drawer-rule: 2px solid var(--color-border);
+                      }
+                - type: "paragraph"
+                  data:
+                    text: "Each user picks their own theme under <b>Settings → Theme</b>, and <code>defaultTheme</code> applies until they do. On the same page, admins can add <b>Project CSS</b> for everyone and each user can add <b>Personal CSS</b> for themselves. Neither needs a deploy, and both support <code>@import url(…)</code> for hosted stylesheets."
+                - type: "paragraph"
+                  data:
+                    text: "To brand the CMS for a client, set <code>favicon</code> to use your own favicon, and <code>minimalBranding</code> to hide the Root.js logo and show the project's name instead:"
+                - type: "CodeBlock"
+                  data:
+                    language: "ts"
+                    code: |-
+                      cmsPlugin({
+                        favicon: 'https://example.com/favicon.png',
+                        minimalBranding: true,
+                      });
+                - type: "paragraph"
+                  data:
+                    text: "Themes are still experimental. The <code>--cms-*</code> properties are the stable part of the API. Styles that target the CMS's class names work today but may break in a future release."
+              version: "lexical-0.31.2"
+          - id: "defaults"
+            titleSize: "h5"
+            title: "New defaults"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Several features that were opt-in in v3 are now on by default:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>Translations manager v2:</b> per-locale translations with fallback chains. Existing v1 translations are migrated automatically on the first dev server start or build."
+                      - content: "<b>Dependency graph:</b> tracks references between docs, so that fetching a doc can also resolve the docs it references."
+                      - content: "<b>Module preloading:</b> Root.js adds <code>&lt;link rel=\"modulepreload\"&gt;</code> tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel."
+                - type: "paragraph"
+                  data:
+                    text: "The legacy EditorJS rich text editor has also been removed. Rich text fields use the Lexical editor, which has been the default since v2, and stored content doesn't need to change."
+                - type: "paragraph"
+                  data:
+                    text: "Each new default can be turned off. See the <a href=\"/docs/migration/v4/\">v4 migration guide</a> for details."
+              version: "lexical-0.31.2"
+          - id: "since-v3"
+            titleSize: "h5"
+            title: "Also new since v3.0"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "If you haven't upgraded in a while, here's what else landed during the v3.x releases:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<b>Asset library:</b> a shared library for images and files, with folders and Figma and Google Drive sync. Replacing an asset updates every doc that uses it."
+                      - content: "<b>Collaboration:</b> comments on individual fields, a task manager with @mentions (experimental), and email notifications."
+                      - content: "<b>Publish checks:</b> required checks that must pass before a doc is published, configured per collection."
+                      - content: "<b>Root AI:</b> tools for releases and for Google Docs, Sheets and Slides, \"Edit with AI\" for images, and change proposals for reviewing AI edits before they're applied."
+                      - content: "<b>An agent-ready CLI:</b> <code>root-cms</code> commands built for AI agents, and a <code>root-cms setup</code> wizard that sets up Google Cloud for a new project."
+                      - content: "<b>Editing:</b> compare viewports side by side in the preview, undo and redo field edits, and crop images to fixed aspect ratios."
+                      - content: "<b>Framework:</b> parallel static builds with <code>root build --threads</code>, brotli compression, and security headers."
+              version: "lexical-0.31.2"
+          - id: "installation"
+            titleSize: "h5"
+            title: "Installation"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js v4.0 is available now on npm and is installable using the package manager of your choice. It requires Node.js 24 or later."
+                - type: "CodeBlock"
+                  data:
+                    language: "bash"
+                    code: "pnpm add @blinkk/root@latest @blinkk/root-cms@latest"
+              version: "lexical-0.31.2"
+          - id: "migration"
+            titleSize: "h5"
+            title: "Migration notes"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Most projects only need to update their packages. If your build runs without Firestore access, or you relied on one of the old defaults, read the <a href=\"/docs/migration/v4/\">v4 migration guide</a>."
+              version: "lexical-0.31.2"
+          - id: "thank-you"
+            titleSize: "h5"
+            title: "Thank you!"
+            body:
+              time: 1790956066661
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Huge thank you to everyone who filed bugs, requested features and tested new releases throughout v3. We have lots more planned for v4."
+                - type: "paragraph"
+                  data:
+                    text: "Issues, ideas, and PRs are always welcome at <a href=\"https://github.com/blinkk/rootjs\">github.com/blinkk/rootjs</a>."
+              version: "lexical-0.31.2"

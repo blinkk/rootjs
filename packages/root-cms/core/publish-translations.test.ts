@@ -133,7 +133,9 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
     });
 
     it('does not touch translations when the flag is disabled', async () => {
-      const v1Client = createTestCmsClient({experiments: {}});
+      const v1Client = createTestCmsClient({
+        experiments: {v2TranslationsManager: false},
+      });
       await seedDraftDoc(v1Client, 'Pages/index');
       // Seed a draft translations locale doc directly (the manager API is
       // gated behind the flag).

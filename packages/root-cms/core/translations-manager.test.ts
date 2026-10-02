@@ -76,12 +76,19 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
     });
 
     it('getTranslationsManager() throws when the flag is disabled', () => {
-      const disabledClient = createTestCmsClient({experiments: {}});
+      const disabledClient = createTestCmsClient({
+        experiments: {v2TranslationsManager: false},
+      });
       expect(() => disabledClient.getTranslationsManager()).toThrowError(
         /v2TranslationsManager/
       );
       expect(disabledClient.isV2TranslationsEnabled()).toBe(false);
       expect(cmsClient.isV2TranslationsEnabled()).toBe(true);
+    });
+
+    it('is enabled by default when the flag is unset', () => {
+      const defaultClient = createTestCmsClient({experiments: {}});
+      expect(defaultClient.isV2TranslationsEnabled()).toBe(true);
     });
 
     it('saves draft translations as per-locale docs', async () => {

@@ -31,8 +31,11 @@ describe('resolveDependencyGraphConfig', () => {
     expect(resolveDependencyGraphConfig(config)).toBe(config);
   });
 
-  it('treats unset/false as disabled', () => {
-    expect(resolveDependencyGraphConfig(undefined)).toBe(null);
+  it('treats unset as enabled', () => {
+    expect(resolveDependencyGraphConfig(undefined)).toEqual({});
+  });
+
+  it('treats false as disabled', () => {
     expect(resolveDependencyGraphConfig(false)).toBe(null);
   });
 });
@@ -306,7 +309,8 @@ function createTestProject(options?: {
   const projectId = `dep-test-${Date.now()}-${projectCounter++}`;
   const collections = options?.collections ?? ['Pages', 'Posts', 'Authors'];
   // Default to enabled, unless the caller explicitly sets the option
-  // (including an explicit `undefined`, which tests the unset config path).
+  // (including an explicit `undefined`, which tests the unset config path,
+  // also enabled).
   const dependencyGraph =
     options && 'dependencyGraph' in options ? options.dependencyGraph : true;
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-cms-dep-test-'));
@@ -392,12 +396,17 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       project = createTestProject();
     });
 
-    it('is disabled unless the dependencyGraph option is set', async () => {
-      const disabled = createTestProject({dependencyGraph: undefined});
+    it('is enabled by default', async () => {
+      const project = createTestProject({dependencyGraph: undefined});
+      expect(project.createService().isEnabled()).toBe(true);
+    });
+
+    it('is disabled when the dependencyGraph option is false', async () => {
+      const disabled = createTestProject({dependencyGraph: false});
       const service = disabled.createService();
       expect(service.isEnabled()).toBe(false);
       expect(await service.runCronUpdate()).toBe(null);
-      await expect(service.getGraph('draft')).rejects.toThrow(/not enabled/);
+      await expect(service.getGraph('draft')).rejects.toThrow(/disabled/);
       const status = await service.getStatus();
       expect(status.enabled).toBe(false);
       expect(status.lastRun).toBe(null);

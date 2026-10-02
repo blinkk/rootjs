@@ -1,7 +1,7 @@
 /**
  * Auto-migration of v1 translations to the v2 TranslationsManager.
  *
- * When the `experiments.v2TranslationsManager` flag is enabled, the CMS
+ * When the v2 translations manager is enabled (the default), the CMS
  * plugin runs `migrateV1TranslationsIfNeeded()` on dev server startup and
  * before prod builds. The migration copies the v1 translations
  * (`Projects/{p}/Translations`) into per-locale v2 docs and publishes them

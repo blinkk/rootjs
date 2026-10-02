@@ -427,7 +427,7 @@ export default function SidebarTools() {
     <div className="cms-app cms-app--expanded">
       <header className="cms-top">
         <div className="cms-top__logo">Root.js</div>
-        <div className="cms-top__version">v3.5</div>
+        <div className="cms-top__version">v4.0</div>
         <div className="cms-top__project">{PROJECT_NAME}</div>
         <div className="cms-top__search">
           <IconSearch size={14} />

@@ -1,7 +1,6 @@
 import {defineConfig} from '../../../dist/core.js';
 
 export default defineConfig({
-  modulePreload: true,
   jsxRenderer: {
     mode: 'pretty',
     blockElements: ['root-a', 'root-b'],

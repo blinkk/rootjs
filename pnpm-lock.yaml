@@ -528,30 +528,6 @@ importers:
       '@blinkk/root':
         specifier: workspace:*
         version: link:../root
-      '@editorjs/editorjs':
-        specifier: 2.31.7
-        version: 2.31.7
-      '@editorjs/header':
-        specifier: 2.8.9
-        version: 2.8.9
-      '@editorjs/image':
-        specifier: 2.10.3
-        version: 2.10.3
-      '@editorjs/list':
-        specifier: 2.0.9
-        version: 2.0.9
-      '@editorjs/nested-list':
-        specifier: 1.4.3
-        version: 1.4.3
-      '@editorjs/raw':
-        specifier: 2.5.1
-        version: 2.5.1
-      '@editorjs/table':
-        specifier: 2.4.6
-        version: 2.4.6
-      '@editorjs/underline':
-        specifier: 1.2.1
-        version: 1.2.1
       '@emotion/react':
         specifier: 11.14.0
         version: 11.14.0(@preact/compat@18.3.2(preact@10.29.8))(supports-color@10.2.2)
@@ -1004,21 +980,6 @@ packages:
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
 
-  '@codexteam/icons@0.0.2':
-    resolution: {integrity: sha512-KdeKj3TwaTHqM3IXd5YjeJP39PBUZTb+dtHjGlf5+b0VgsxYD4qzsZkb11lzopZbAuDsHaZJmAYQ8LFligIT6Q==}
-
-  '@codexteam/icons@0.0.4':
-    resolution: {integrity: sha512-V8N/TY2TGyas4wLrPIFq7bcow68b3gu8DfDt1+rrHPtXxcexadKauRJL6eQgfG7Z0LCrN4boLRawR4S9gjIh/Q==}
-
-  '@codexteam/icons@0.0.5':
-    resolution: {integrity: sha512-s6H2KXhLz2rgbMZSkRm8dsMJvyUNZsEjxobBEg9ztdrb1B2H3pEzY6iTwI4XUPJWJ3c3qRKwV4TrO3J5jUdoQA==}
-
-  '@codexteam/icons@0.0.6':
-    resolution: {integrity: sha512-L7Q5PET8PjKcBT5wp7VR+FCjwCi5PUp7rd/XjsgQ0CI5FJz0DphyHGRILMuDUdCW2MQT9NHbVr4QP31vwAkS/A==}
-
-  '@codexteam/icons@0.3.3':
-    resolution: {integrity: sha512-cp7mkZPgmBuSxigTm3Vb+DtVHYeX7qXfQd7o05vcLD8Ag5WvRlol2QSn5P10k0CDAJwmkH9nQGQLBycErS9lsQ==}
-
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
@@ -1068,39 +1029,6 @@ packages:
 
   '@dabh/diagnostics@2.0.8':
     resolution: {integrity: sha512-R4MSXTVnuMzGD7bzHdW2ZhhdPC/igELENcq5IjEverBvq5hn1SXCWcsi6eSsdWP0/Ur+SItRRjAktmdoX/8R/Q==}
-
-  '@editorjs/caret@1.1.0':
-    resolution: {integrity: sha512-dzUjrPV7mtqM0HR/7IwT1/1PfyMxUfe5MRXo9joFmBRDIcrQ5ikbqVxSL9+Hy5tQ+BUWBwqLUgX1UKTJylWW9Q==}
-
-  '@editorjs/dom@1.1.0':
-    resolution: {integrity: sha512-aH8OeS3DXCDG2WP6yt/uS6Z9PstrA3Re930boIilxtMdF7Ht+pKJrq3OJnd7OCMPVO/y7UOAmtHNesVx6v4K2g==}
-
-  '@editorjs/editorjs@2.31.7':
-    resolution: {integrity: sha512-te4wI1heK3B8s0pz1asyRPEmOglfkb9ex5nvvCN5OUVDLSnohTszI+yyLI73qOIuUWxenIvJYkOuGHzh/a47Hw==}
-
-  '@editorjs/header@2.8.9':
-    resolution: {integrity: sha512-eBL9/PLDKiE9ADZycmgps3PLz9Lw8w6rPFXr0mfHuhHQI/ynP/q1vLpyruBrRCflTLD2Dlj5nYPoJjL5mP/MFw==}
-
-  '@editorjs/helpers@1.2.2':
-    resolution: {integrity: sha512-saDNARvY3xd70H4KE0eBq2hlV0Z7SpfI1/1iVqyVt5PqhlEOIR5rWJFH4c63BHTa6BfiR/+PMl1n7X/X7SlptQ==}
-
-  '@editorjs/image@2.10.3':
-    resolution: {integrity: sha512-ekCsGICZOIdghF/U2T34H7CItqaWAoJDXbkRD+x8l/LIo/7Ozf7KovYm21qz+CluArgV4RurVFHqwlz+O0vfJA==}
-
-  '@editorjs/list@2.0.9':
-    resolution: {integrity: sha512-rUTgDSt5wygD3Dp24bNyp6vvye/Xf4UWju0ZuvWeP13Z4cu2z1Jb5JFSTEhCou72XUGuf4xVhtsd8cm/bwUS1g==}
-
-  '@editorjs/nested-list@1.4.3':
-    resolution: {integrity: sha512-3jTJd6H2Zwe8SeiI9li9AolkCxFVitEnCpJjDI6+la/HslSJC827fHivc9hue6JmC8esA4yri0KCMyp8N4ykww==}
-
-  '@editorjs/raw@2.5.1':
-    resolution: {integrity: sha512-h7CjXtfSTe4Bj1CL84ch5NW0q0CdrlWsLzQ/kbaFTgx914CzKz4Ug+xgdvytVO1dd1QzB5/HCW0ic1VxtgkhMQ==}
-
-  '@editorjs/table@2.4.6':
-    resolution: {integrity: sha512-2dtum3RGqyXHX9OoMsmz92piSrzwy+QWnpN/Kt5n0oVHFfpeJwd25xLzwPVjwMlvUYrun1VPrKio5/63SLGbuQ==}
-
-  '@editorjs/underline@1.2.1':
-    resolution: {integrity: sha512-LjJ01ia6Pj0Z/elifycp9+T1bQs0eXNnIcEYKOlk0sGHLy88DPcBOh9oz1i+uWarZ4AjGsvSMaptpWe+yQNsjQ==}
 
   '@electric-sql/pglite-tools@0.2.21':
     resolution: {integrity: sha512-kv8Z7UmmBVECHud63VblgQLp4A+qSklNP7H22VQqFQGrWFTodc73bubcjgmBqThFsIIiEeAEQQYwWGaK2lSDtA==}
@@ -3616,12 +3544,6 @@ packages:
   clsx@1.2.1:
     resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
     engines: {node: '>=6'}
-
-  codex-notifier@1.1.2:
-    resolution: {integrity: sha512-DCp6xe/LGueJ1N5sXEwcBc3r3PyVkEEDNWCVigfvywAkeXcZMk9K41a31tkEFBW0Ptlwji6/JlAb49E3Yrxbtg==}
-
-  codex-tooltip@1.0.6:
-    resolution: {integrity: sha512-3MVjBjeJFQ4jGlPuYHYV3Yj0wnl1l9ppB5zeIFJeyo8Ala3WlZYtLK5yZEoyND2fxIyVmqsZORCftDGX3vbSGQ==}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -8007,16 +7929,6 @@ snapshots:
       human-id: 4.1.3
       prettier: 2.8.8
 
-  '@codexteam/icons@0.0.2': {}
-
-  '@codexteam/icons@0.0.4': {}
-
-  '@codexteam/icons@0.0.5': {}
-
-  '@codexteam/icons@0.0.6': {}
-
-  '@codexteam/icons@0.3.3': {}
-
   '@colors/colors@1.5.0':
     optional: true
 
@@ -8061,53 +7973,6 @@ snapshots:
       '@so-ric/colorspace': 1.1.6
       enabled: 2.0.0
       kuler: 2.0.0
-
-  '@editorjs/caret@1.1.0':
-    dependencies:
-      '@editorjs/dom': 1.1.0
-
-  '@editorjs/dom@1.1.0':
-    dependencies:
-      '@editorjs/helpers': 1.2.2
-
-  '@editorjs/editorjs@2.31.7':
-    dependencies:
-      '@editorjs/caret': 1.1.0
-      codex-notifier: 1.1.2
-      codex-tooltip: 1.0.6
-
-  '@editorjs/header@2.8.9':
-    dependencies:
-      '@codexteam/icons': 0.0.5
-      '@editorjs/editorjs': 2.31.7
-
-  '@editorjs/helpers@1.2.2':
-    dependencies:
-      codex-tooltip: 1.0.6
-
-  '@editorjs/image@2.10.3':
-    dependencies:
-      '@codexteam/icons': 0.3.3
-
-  '@editorjs/list@2.0.9':
-    dependencies:
-      '@codexteam/icons': 0.3.3
-
-  '@editorjs/nested-list@1.4.3':
-    dependencies:
-      '@codexteam/icons': 0.0.2
-
-  '@editorjs/raw@2.5.1':
-    dependencies:
-      '@codexteam/icons': 0.0.4
-
-  '@editorjs/table@2.4.6':
-    dependencies:
-      '@codexteam/icons': 0.0.6
-
-  '@editorjs/underline@1.2.1':
-    dependencies:
-      '@codexteam/icons': 0.3.3
 
   '@electric-sql/pglite-tools@0.2.21(@electric-sql/pglite@0.3.16)':
     dependencies:
@@ -10754,10 +10619,6 @@ snapshots:
   clone@1.0.4: {}
 
   clsx@1.2.1: {}
-
-  codex-notifier@1.1.2: {}
-
-  codex-tooltip@1.0.6: {}
 
   color-convert@2.0.1:
     dependencies:

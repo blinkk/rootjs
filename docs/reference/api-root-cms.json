@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "@blinkk/root-cms",
-      "version": "3.5.2",
+      "version": "4.0.0",
       "entryPoints": [
         {
           "importPath": "@blinkk/root-cms",
@@ -109,6 +109,104 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Asset",
+              "kind": "interface",
+              "signature": "interface Asset",
+              "members": [
+                {
+                  "name": "id",
+                  "signature": "id: string;",
+                  "doc": "Unique id of the asset within the project.",
+                  "examples": []
+                },
+                {
+                  "name": "type",
+                  "signature": "type: 'file' | 'folder';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "parent",
+                  "signature": "parent: string;",
+                  "doc": "Parent folder path, e.g. `''` (root) or `'marketing/q1'`.",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "Display name, e.g. `hero.png` for files or `q1` for folders.",
+                  "examples": []
+                },
+                {
+                  "name": "file",
+                  "signature": "file?: UploadedFile;",
+                  "doc": "The uploaded file data (same shape stored in image/file fields).",
+                  "examples": []
+                },
+                {
+                  "name": "preserveFilename",
+                  "signature": "preserveFilename?: boolean;",
+                  "doc": "For folders, whether uploaded files keep their original filename in the\nGCS object path (`{hash}/{filename}.{ext}` instead of `{hash}.{ext}`).",
+                  "examples": []
+                },
+                {
+                  "name": "createdAt",
+                  "signature": "createdAt: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "createdBy",
+                  "signature": "createdBy: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedAt",
+                  "signature": "modifiedAt: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "An entry in the CMS asset library, stored at\n`Projects/${projectId}/Assets/${assetId}`. Files and folders live in the\nsame collection and are organized by their `parent` folder path.",
+              "examples": []
+            },
+            {
+              "name": "AssetFieldValue",
+              "kind": "type",
+              "signature": "type AssetFieldValue = UploadedFile & {\n    assetId: string;\n};",
+              "members": [],
+              "doc": "The value stored in a doc's image/file field when linked to an asset.",
+              "examples": []
+            },
+            {
+              "name": "AssetSyncResult",
+              "kind": "interface",
+              "signature": "interface AssetSyncResult",
+              "members": [
+                {
+                  "name": "updatedDocIds",
+                  "signature": "updatedDocIds: string[];",
+                  "doc": "Doc ids that were updated.",
+                  "examples": []
+                },
+                {
+                  "name": "failedDocIds",
+                  "signature": "failedDocIds: string[];",
+                  "doc": "Doc ids that failed to update (eventual consistency; retry by re-syncing).",
+                  "examples": []
+                }
+              ],
+              "doc": "Result of fanning out an asset update to docs that use it.",
               "examples": []
             },
             {
@@ -2140,7 +2238,7 @@
                 {
                   "name": "setRawDoc",
                   "signature": "setRawDoc(collectionId: string, slug: string, data: any, options: SetDocOptions): Promise<void>;",
-                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
+                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
                   "examples": [
                     "// Minimal example - sys fields use defaults\nawait client.setRawDoc('Pages', 'home', {\n  sys: {},  // All sys fields will be auto-populated with defaults\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });\n\n// Full example - with number timestamps (auto-converted)\nawait client.setRawDoc('Pages', 'home', {\n  id: 'Pages/home',\n  collection: 'Pages',\n  slug: 'home',\n  sys: {\n    createdAt: Date.now(),  // Auto-converted to Timestamp.\n    createdBy: 'user@example.com',\n    modifiedAt: Date.now(),  // Auto-converted to Timestamp.\n    modifiedBy: 'user@example.com',\n    locales: ['en', 'es']\n  },\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });"
                   ]
@@ -2173,6 +2271,36 @@
                   "name": "publishScheduledDocs",
                   "signature": "publishScheduledDocs(): Promise<any[]>;",
                   "doc": "Publishes scheduled docs.",
+                  "examples": []
+                },
+                {
+                  "name": "uploadAsset",
+                  "signature": "uploadAsset(file: string | Uint8Array, options?: UploadAssetOptions): Promise<UploadAssetResult>;",
+                  "doc": "Uploads a file to the asset library, from a local file path or raw bytes\n(which require `options.filename`). The file is uploaded to the project's\nGCS bucket and, for images when `gci` is enabled, registered with the\nGoogle Cloud Image service. If the destination folder already contains a\nfile with the same name (or `options.assetId` is set), the existing\nasset's file is replaced and the change is fanned out to every draft doc\nthat uses the asset.\n\nExample:\n`uploadAsset('./hero.png', {folder: 'marketing', alt: 'Hero image'})`",
+                  "examples": []
+                },
+                {
+                  "name": "getAsset",
+                  "signature": "getAsset(assetId: string): Promise<Asset | null>;",
+                  "doc": "Retrieves an asset library file or folder by id, or null if it does not\nexist.",
+                  "examples": []
+                },
+                {
+                  "name": "listAssets",
+                  "signature": "listAssets(folder?: string): Promise<Asset[]>;",
+                  "doc": "Lists the assets (folders first, then files) directly within an asset\nlibrary folder, e.g. `marketing/q1`. Defaults to the root folder.",
+                  "examples": []
+                },
+                {
+                  "name": "findDocsUsingAsset",
+                  "signature": "findDocsUsingAsset(assetId: string): Promise<string[]>;",
+                  "doc": "Returns the ids of the draft docs that embed an asset library file (e.g.\n`[\"Pages/home\"]`), found via each doc's `sys.assets` index.",
+                  "examples": []
+                },
+                {
+                  "name": "syncAssetToDocs",
+                  "signature": "syncAssetToDocs(assetId: string, options?: SyncAssetToDocsOptions): Promise<AssetSyncResult>;",
+                  "doc": "Updates the embedded copies of an asset's file data in every draft doc\nthat uses the asset. Called automatically by `uploadAsset()` when a file\nis replaced; call it directly to retry docs that failed to update.",
                   "examples": []
                 },
                 {
@@ -2226,7 +2354,7 @@
                 {
                   "name": "isV2TranslationsEnabled",
                   "signature": "isV2TranslationsEnabled(): boolean;",
-                  "doc": "Returns true if the v2 `TranslationsManager` is enabled via the\n`experiments.v2TranslationsManager` plugin config flag.",
+                  "doc": "Returns true if the v2 `TranslationsManager` is enabled. It's enabled by\ndefault, unless `experiments.v2TranslationsManager` is set to `false`.",
                   "examples": []
                 },
                 {
@@ -2996,6 +3124,27 @@
               "examples": []
             },
             {
+              "name": "SyncAssetToDocsOptions",
+              "kind": "interface",
+              "signature": "interface SyncAssetToDocsOptions",
+              "members": [
+                {
+                  "name": "previousFile",
+                  "signature": "previousFile?: UploadedFile;",
+                  "doc": "The asset's file data before the change. Used to detect doc-level alt\ntext and canvas bg color customizations, which are preserved.",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for `RootCMSClient.syncAssetToDocs()`.",
+              "examples": []
+            },
+            {
               "name": "toArrayObject",
               "kind": "function",
               "signature": "function toArrayObject(arr: any[]): ArrayObject;",
@@ -3393,6 +3542,183 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "UploadAssetOptions",
+              "kind": "interface",
+              "signature": "interface UploadAssetOptions",
+              "members": [
+                {
+                  "name": "folder",
+                  "signature": "folder?: string;",
+                  "doc": "Asset library folder to upload into, e.g. `marketing/q1`. Missing folders\nare created. Defaults to the root folder. Ignored when `assetId` is set.",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name?: string;",
+                  "doc": "Asset display name. Defaults to the filename. If the folder already\ncontains a file with this name, that asset's file is replaced.",
+                  "examples": []
+                },
+                {
+                  "name": "filename",
+                  "signature": "filename?: string;",
+                  "doc": "The uploaded file's name, e.g. `hero.png`. Defaults to the basename of\nthe file path. Required when uploading raw bytes.",
+                  "examples": []
+                },
+                {
+                  "name": "assetId",
+                  "signature": "assetId?: string;",
+                  "doc": "Id of an existing asset whose file should be replaced, regardless of its\nname or folder.",
+                  "examples": []
+                },
+                {
+                  "name": "alt",
+                  "signature": "alt?: string;",
+                  "doc": "Alt text for the file. When replacing a file and this is omitted, the\nasset's existing alt text is kept.",
+                  "examples": []
+                },
+                {
+                  "name": "namingMode",
+                  "signature": "namingMode?: 'hash' | 'hash-path' | 'clean';",
+                  "doc": "GCS object naming strategy. Defaults to `hash` (`{hash}.{ext}`), or\n`hash-path` (`{hash}/{filename}`) when the destination folder has the\n\"preserve filename\" setting enabled. `clean` keeps the original filename\nand can overwrite existing files.",
+                  "examples": []
+                },
+                {
+                  "name": "cacheControl",
+                  "signature": "cacheControl?: string;",
+                  "doc": "Cache-Control header for the GCS object. Defaults to 365 days.",
+                  "examples": []
+                },
+                {
+                  "name": "disableGci",
+                  "signature": "disableGci?: boolean;",
+                  "doc": "Skips registering images with the Google Cloud Image service.",
+                  "examples": []
+                },
+                {
+                  "name": "syncDocs",
+                  "signature": "syncDocs?: boolean;",
+                  "doc": "Whether to fan out a replaced file to the draft docs that use the asset.\nDefaults to `true`.",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for `RootCMSClient.uploadAsset()`.",
+              "examples": []
+            },
+            {
+              "name": "UploadAssetResult",
+              "kind": "interface",
+              "signature": "interface UploadAssetResult",
+              "members": [
+                {
+                  "name": "asset",
+                  "signature": "asset: Asset;",
+                  "doc": "The created or updated asset.",
+                  "examples": []
+                },
+                {
+                  "name": "status",
+                  "signature": "status: 'created' | 'replaced';",
+                  "doc": "Whether a new asset was created or an existing asset's file was replaced.",
+                  "examples": []
+                },
+                {
+                  "name": "sync",
+                  "signature": "sync?: AssetSyncResult;",
+                  "doc": "Docs updated with the new file, when an existing asset was replaced.",
+                  "examples": []
+                }
+              ],
+              "doc": "Result of `RootCMSClient.uploadAsset()`.",
+              "examples": []
+            },
+            {
+              "name": "UploadedFile",
+              "kind": "interface",
+              "signature": "interface UploadedFile",
+              "members": [
+                {
+                  "name": "src",
+                  "signature": "src: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "filename",
+                  "signature": "filename?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "gcsPath",
+                  "signature": "gcsPath?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "width",
+                  "signature": "width?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "height",
+                  "signature": "height?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "alt",
+                  "signature": "alt?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "uploadedBy",
+                  "signature": "uploadedBy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "uploadedAt",
+                  "signature": "uploadedAt?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "canvasBgColor",
+                  "signature": "canvasBgColor?: 'light' | 'dark';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "altDisabled",
+                  "signature": "altDisabled?: boolean;",
+                  "doc": "When true, alt text handling is disabled for the file (e.g. decorative\nimages). The alt text input is hidden in docs that use the file and no\nalt text is propagated from the asset library.",
+                  "examples": []
+                },
+                {
+                  "name": "originalSrc",
+                  "signature": "originalSrc?: string;",
+                  "doc": "The original source URL if the image has been edited.",
+                  "examples": []
+                },
+                {
+                  "name": "assetId",
+                  "signature": "assetId?: string;",
+                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/utils/assets.ts` and `core/assets.ts`).",
+                  "examples": []
+                }
+              ],
+              "doc": "File data stored in image/file fields and on asset library files.",
               "examples": []
             },
             {
@@ -3868,6 +4194,104 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "Asset",
+              "kind": "interface",
+              "signature": "interface Asset",
+              "members": [
+                {
+                  "name": "id",
+                  "signature": "id: string;",
+                  "doc": "Unique id of the asset within the project.",
+                  "examples": []
+                },
+                {
+                  "name": "type",
+                  "signature": "type: 'file' | 'folder';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "parent",
+                  "signature": "parent: string;",
+                  "doc": "Parent folder path, e.g. `''` (root) or `'marketing/q1'`.",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "Display name, e.g. `hero.png` for files or `q1` for folders.",
+                  "examples": []
+                },
+                {
+                  "name": "file",
+                  "signature": "file?: UploadedFile;",
+                  "doc": "The uploaded file data (same shape stored in image/file fields).",
+                  "examples": []
+                },
+                {
+                  "name": "preserveFilename",
+                  "signature": "preserveFilename?: boolean;",
+                  "doc": "For folders, whether uploaded files keep their original filename in the\nGCS object path (`{hash}/{filename}.{ext}` instead of `{hash}.{ext}`).",
+                  "examples": []
+                },
+                {
+                  "name": "createdAt",
+                  "signature": "createdAt: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "createdBy",
+                  "signature": "createdBy: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedAt",
+                  "signature": "modifiedAt: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy: string;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "An entry in the CMS asset library, stored at\n`Projects/${projectId}/Assets/${assetId}`. Files and folders live in the\nsame collection and are organized by their `parent` folder path.",
+              "examples": []
+            },
+            {
+              "name": "AssetFieldValue",
+              "kind": "type",
+              "signature": "type AssetFieldValue = UploadedFile & {\n    assetId: string;\n};",
+              "members": [],
+              "doc": "The value stored in a doc's image/file field when linked to an asset.",
+              "examples": []
+            },
+            {
+              "name": "AssetSyncResult",
+              "kind": "interface",
+              "signature": "interface AssetSyncResult",
+              "members": [
+                {
+                  "name": "updatedDocIds",
+                  "signature": "updatedDocIds: string[];",
+                  "doc": "Doc ids that were updated.",
+                  "examples": []
+                },
+                {
+                  "name": "failedDocIds",
+                  "signature": "failedDocIds: string[];",
+                  "doc": "Doc ids that failed to update (eventual consistency; retry by re-syncing).",
+                  "examples": []
+                }
+              ],
+              "doc": "Result of fanning out an asset update to docs that use it.",
               "examples": []
             },
             {
@@ -4855,7 +5279,7 @@
                 {
                   "name": "setRawDoc",
                   "signature": "setRawDoc(collectionId: string, slug: string, data: any, options: SetDocOptions): Promise<void>;",
-                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
+                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
                   "examples": [
                     "// Minimal example - sys fields use defaults\nawait client.setRawDoc('Pages', 'home', {\n  sys: {},  // All sys fields will be auto-populated with defaults\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });\n\n// Full example - with number timestamps (auto-converted)\nawait client.setRawDoc('Pages', 'home', {\n  id: 'Pages/home',\n  collection: 'Pages',\n  slug: 'home',\n  sys: {\n    createdAt: Date.now(),  // Auto-converted to Timestamp.\n    createdBy: 'user@example.com',\n    modifiedAt: Date.now(),  // Auto-converted to Timestamp.\n    modifiedBy: 'user@example.com',\n    locales: ['en', 'es']\n  },\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });"
                   ]
@@ -4888,6 +5312,36 @@
                   "name": "publishScheduledDocs",
                   "signature": "publishScheduledDocs(): Promise<any[]>;",
                   "doc": "Publishes scheduled docs.",
+                  "examples": []
+                },
+                {
+                  "name": "uploadAsset",
+                  "signature": "uploadAsset(file: string | Uint8Array, options?: UploadAssetOptions): Promise<UploadAssetResult>;",
+                  "doc": "Uploads a file to the asset library, from a local file path or raw bytes\n(which require `options.filename`). The file is uploaded to the project's\nGCS bucket and, for images when `gci` is enabled, registered with the\nGoogle Cloud Image service. If the destination folder already contains a\nfile with the same name (or `options.assetId` is set), the existing\nasset's file is replaced and the change is fanned out to every draft doc\nthat uses the asset.\n\nExample:\n`uploadAsset('./hero.png', {folder: 'marketing', alt: 'Hero image'})`",
+                  "examples": []
+                },
+                {
+                  "name": "getAsset",
+                  "signature": "getAsset(assetId: string): Promise<Asset | null>;",
+                  "doc": "Retrieves an asset library file or folder by id, or null if it does not\nexist.",
+                  "examples": []
+                },
+                {
+                  "name": "listAssets",
+                  "signature": "listAssets(folder?: string): Promise<Asset[]>;",
+                  "doc": "Lists the assets (folders first, then files) directly within an asset\nlibrary folder, e.g. `marketing/q1`. Defaults to the root folder.",
+                  "examples": []
+                },
+                {
+                  "name": "findDocsUsingAsset",
+                  "signature": "findDocsUsingAsset(assetId: string): Promise<string[]>;",
+                  "doc": "Returns the ids of the draft docs that embed an asset library file (e.g.\n`[\"Pages/home\"]`), found via each doc's `sys.assets` index.",
+                  "examples": []
+                },
+                {
+                  "name": "syncAssetToDocs",
+                  "signature": "syncAssetToDocs(assetId: string, options?: SyncAssetToDocsOptions): Promise<AssetSyncResult>;",
+                  "doc": "Updates the embedded copies of an asset's file data in every draft doc\nthat uses the asset. Called automatically by `uploadAsset()` when a file\nis replaced; call it directly to retry docs that failed to update.",
                   "examples": []
                 },
                 {
@@ -4941,7 +5395,7 @@
                 {
                   "name": "isV2TranslationsEnabled",
                   "signature": "isV2TranslationsEnabled(): boolean;",
-                  "doc": "Returns true if the v2 `TranslationsManager` is enabled via the\n`experiments.v2TranslationsManager` plugin config flag.",
+                  "doc": "Returns true if the v2 `TranslationsManager` is enabled. It's enabled by\ndefault, unless `experiments.v2TranslationsManager` is set to `false`.",
                   "examples": []
                 },
                 {
@@ -5207,6 +5661,27 @@
               "examples": []
             },
             {
+              "name": "SyncAssetToDocsOptions",
+              "kind": "interface",
+              "signature": "interface SyncAssetToDocsOptions",
+              "members": [
+                {
+                  "name": "previousFile",
+                  "signature": "previousFile?: UploadedFile;",
+                  "doc": "The asset's file data before the change. Used to detect doc-level alt\ntext and canvas bg color customizations, which are preserved.",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for `RootCMSClient.syncAssetToDocs()`.",
+              "examples": []
+            },
+            {
               "name": "toArrayObject",
               "kind": "function",
               "signature": "function toArrayObject(arr: any[]): ArrayObject;",
@@ -5274,6 +5749,183 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "UploadAssetOptions",
+              "kind": "interface",
+              "signature": "interface UploadAssetOptions",
+              "members": [
+                {
+                  "name": "folder",
+                  "signature": "folder?: string;",
+                  "doc": "Asset library folder to upload into, e.g. `marketing/q1`. Missing folders\nare created. Defaults to the root folder. Ignored when `assetId` is set.",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name?: string;",
+                  "doc": "Asset display name. Defaults to the filename. If the folder already\ncontains a file with this name, that asset's file is replaced.",
+                  "examples": []
+                },
+                {
+                  "name": "filename",
+                  "signature": "filename?: string;",
+                  "doc": "The uploaded file's name, e.g. `hero.png`. Defaults to the basename of\nthe file path. Required when uploading raw bytes.",
+                  "examples": []
+                },
+                {
+                  "name": "assetId",
+                  "signature": "assetId?: string;",
+                  "doc": "Id of an existing asset whose file should be replaced, regardless of its\nname or folder.",
+                  "examples": []
+                },
+                {
+                  "name": "alt",
+                  "signature": "alt?: string;",
+                  "doc": "Alt text for the file. When replacing a file and this is omitted, the\nasset's existing alt text is kept.",
+                  "examples": []
+                },
+                {
+                  "name": "namingMode",
+                  "signature": "namingMode?: 'hash' | 'hash-path' | 'clean';",
+                  "doc": "GCS object naming strategy. Defaults to `hash` (`{hash}.{ext}`), or\n`hash-path` (`{hash}/{filename}`) when the destination folder has the\n\"preserve filename\" setting enabled. `clean` keeps the original filename\nand can overwrite existing files.",
+                  "examples": []
+                },
+                {
+                  "name": "cacheControl",
+                  "signature": "cacheControl?: string;",
+                  "doc": "Cache-Control header for the GCS object. Defaults to 365 days.",
+                  "examples": []
+                },
+                {
+                  "name": "disableGci",
+                  "signature": "disableGci?: boolean;",
+                  "doc": "Skips registering images with the Google Cloud Image service.",
+                  "examples": []
+                },
+                {
+                  "name": "syncDocs",
+                  "signature": "syncDocs?: boolean;",
+                  "doc": "Whether to fan out a replaced file to the draft docs that use the asset.\nDefaults to `true`.",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for `RootCMSClient.uploadAsset()`.",
+              "examples": []
+            },
+            {
+              "name": "UploadAssetResult",
+              "kind": "interface",
+              "signature": "interface UploadAssetResult",
+              "members": [
+                {
+                  "name": "asset",
+                  "signature": "asset: Asset;",
+                  "doc": "The created or updated asset.",
+                  "examples": []
+                },
+                {
+                  "name": "status",
+                  "signature": "status: 'created' | 'replaced';",
+                  "doc": "Whether a new asset was created or an existing asset's file was replaced.",
+                  "examples": []
+                },
+                {
+                  "name": "sync",
+                  "signature": "sync?: AssetSyncResult;",
+                  "doc": "Docs updated with the new file, when an existing asset was replaced.",
+                  "examples": []
+                }
+              ],
+              "doc": "Result of `RootCMSClient.uploadAsset()`.",
+              "examples": []
+            },
+            {
+              "name": "UploadedFile",
+              "kind": "interface",
+              "signature": "interface UploadedFile",
+              "members": [
+                {
+                  "name": "src",
+                  "signature": "src: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "filename",
+                  "signature": "filename?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "gcsPath",
+                  "signature": "gcsPath?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "width",
+                  "signature": "width?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "height",
+                  "signature": "height?: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "alt",
+                  "signature": "alt?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "uploadedBy",
+                  "signature": "uploadedBy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "uploadedAt",
+                  "signature": "uploadedAt?: string | number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "canvasBgColor",
+                  "signature": "canvasBgColor?: 'light' | 'dark';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "altDisabled",
+                  "signature": "altDisabled?: boolean;",
+                  "doc": "When true, alt text handling is disabled for the file (e.g. decorative\nimages). The alt text input is hidden in docs that use the file and no\nalt text is propagated from the asset library.",
+                  "examples": []
+                },
+                {
+                  "name": "originalSrc",
+                  "signature": "originalSrc?: string;",
+                  "doc": "The original source URL if the image has been edited.",
+                  "examples": []
+                },
+                {
+                  "name": "assetId",
+                  "signature": "assetId?: string;",
+                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/utils/assets.ts` and `core/assets.ts`).",
+                  "examples": []
+                }
+              ],
+              "doc": "File data stored in image/file fields and on asset library files.",
               "examples": []
             },
             {

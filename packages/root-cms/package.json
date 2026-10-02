@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-cms",
-  "version": "3.5.3",
+  "version": "4.0.0",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -110,14 +110,6 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@blinkk/root": "workspace:*",
-    "@editorjs/editorjs": "2.31.7",
-    "@editorjs/header": "2.8.9",
-    "@editorjs/image": "2.10.3",
-    "@editorjs/list": "2.0.9",
-    "@editorjs/nested-list": "1.4.3",
-    "@editorjs/raw": "2.5.1",
-    "@editorjs/table": "2.4.6",
-    "@editorjs/underline": "1.2.1",
     "@emotion/react": "11.14.0",
     "@firebase/app-compat": "0.5.18",
     "@firebase/app-types": "0.9.6",

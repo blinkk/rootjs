@@ -242,6 +242,8 @@ function setupWindowMocks(collections?: Record<string, any>) {
       projectId: 'test-project',
     },
     collections,
+    // These tests cover the v1 translations path (v2 is the default).
+    experiments: {v2TranslationsManager: false},
   } as any;
   window.firebase = {
     db: mockDb,
