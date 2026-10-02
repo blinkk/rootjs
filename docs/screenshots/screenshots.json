@@ -26,6 +26,15 @@
     "gcsPath": "/rootjs-dev.appspot.com/www/uploads/f86c6df5991160d4aa8b2b0824ce8519d90523bf.png",
     "hash": "dcb37d2f8c4bde87"
   },
+  "blog-rootjs-wordmark": {
+    "assetId": "f8q8QAOcusyU",
+    "src": "https://lh3.googleusercontent.com/Ndl618dVMLZJMYnqTFp1SoBYteu5D2taln_Y5QxAyOyofGZUuu6ssEleP2p-OIBK6e2n9U9Jc9cPpZonFdBgDsk8Sn35yZTe7JI",
+    "width": 2400,
+    "height": 1260,
+    "alt": "The Root.js logo: an 8-bit pixel-art beetroot next to the words \"Root.js\".",
+    "gcsPath": "/rootjs-dev.appspot.com/www/uploads/bceebac5f100c0e2ed985258d74d96443e764b0e.png",
+    "hash": "96fea334fa95a941"
+  },
   "cms-action-logs": {
     "assetId": "9Ytyaat8I2TL",
     "src": "https://lh3.googleusercontent.com/FiwgaYzwnzmDHKgDYha33M8uvdQ-C7BmEnv26jfKriI1AbhWGsY3qXs6ndqvx_WJZnY83mo8GKjDgkkFZDTcStT_dHq6QlgtizET",
