@@ -30,6 +30,11 @@ export interface ActionLogsProps {
   limit?: number;
   /** When true, hides filters, summary, and pagination. */
   compact?: boolean;
+  /**
+   * When true, shows the onboarding message in place of the actions, even if
+   * the project has activity. Only applies to the compact variant.
+   */
+  showOnboarding?: boolean;
 }
 
 /** Number of actions to display per page. */
@@ -562,7 +567,7 @@ function toCompareUrlParam(docId: string, versionId: string) {
 function ActionLogsCompact(props: ActionLogsProps) {
   const {actions, loading, loaded} = useActions(props.limit || 10);
 
-  if (loading) {
+  if (loading && !props.showOnboarding) {
     return (
       <div
         className={joinClassNames(
@@ -578,7 +583,7 @@ function ActionLogsCompact(props: ActionLogsProps) {
 
   // Show an onboarding message for projects with no activity yet. If loading
   // failed, an error notification is shown instead.
-  if (loaded && actions.length === 0) {
+  if (props.showOnboarding || (loaded && actions.length === 0)) {
     return (
       <div className={joinClassNames(props.className, 'ActionLogsCompact')}>
         <ActionLogsOnboarding />

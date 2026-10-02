@@ -52,11 +52,11 @@ describe('ActionLogs', () => {
     cleanup();
   });
 
-  function renderCompact() {
+  function renderCompact(props: {showOnboarding?: boolean} = {}) {
     return render(
       <MantineProvider>
         <div style={{width: '900px'}}>
-          <ActionLogs compact />
+          <ActionLogs compact {...props} />
         </div>
       </MantineProvider>
     );
@@ -169,5 +169,13 @@ describe('ActionLogs', () => {
     await expect
       .element(onboarding)
       .toMatchScreenshot('ActionLogs-onboarding.png');
+  });
+
+  it('shows the onboarding message when forced, even with actions', async () => {
+    const {container} = renderCompact({showOnboarding: true});
+    await waitFor(() => {
+      expect(container.querySelector('.ActionLogsOnboarding')).not.toBeNull();
+    });
+    expect(container.querySelector('.ActionLogsCompact__table')).toBeNull();
   });
 });
