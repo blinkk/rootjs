@@ -1,6 +1,13 @@
 import './PublishDocModal.css';
 
-import {ActionIcon, Button, Checkbox, Loader, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Loader,
+  Modal,
+  Tooltip,
+} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -558,17 +565,30 @@ function PublishField(props: {
 
 /**
  * Shows what changed between the published doc and the draft, as a JSON diff
- * and, if AI is enabled, a Root AI summary. Nothing loads until the user asks
- * for it.
+ * and, if AI is enabled, a Root AI summary. Each opens in a modal on top of the
+ * publish modal, and nothing loads until the user asks for it.
  */
 function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
   const docId = props.docId;
-  const [showDiff, setShowDiff] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const modalTheme = useModalTheme();
+  // Kept here rather than in the summary modal so that closing and reopening
+  // the modal shows the same summary instead of running Root AI again.
   const aiSummary = useAiSummary({
     docId: docId,
     beforeVersion: 'published',
     afterVersion: 'draft',
   });
+  const hasSummary =
+    aiSummary.status === 'success' || aiSummary.status === 'loading';
+
+  function openSummary() {
+    if (!hasSummary) {
+      aiSummary.generate();
+    }
+    setSummaryOpen(true);
+  }
 
   return (
     <div className="PublishDocModal__panel">
@@ -587,55 +607,105 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
           variant="default"
           size="xs"
           compact
-          onClick={() => setShowDiff(!showDiff)}
+          onClick={() => setDiffOpen(true)}
         >
-          {showDiff ? 'Hide diff' : 'View diff'}
+          View diff
         </Button>
       </div>
-      {showDiff && (
-        <div className="PublishDocModal__row__expanded PublishDocModal__diff">
-          <DocDiffViewer
-            left={{docId, versionId: 'published'}}
-            right={{docId, versionId: 'draft'}}
-            showExpandButton={true}
-            showAiSummary={false}
+      {props.aiAvailable && (
+        <div className="PublishDocModal__row">
+          <IconRobot
+            className="PublishDocModal__row__icon"
+            size={17}
+            stroke={1.75}
           />
+          <div className="PublishDocModal__row__label">AI summary</div>
+          <div className="PublishDocModal__row__message">
+            Summarize the changes with Root AI.
+          </div>
+          <Button
+            className="PublishDocModal__row__button"
+            variant="default"
+            size="xs"
+            compact
+            onClick={() => openSummary()}
+          >
+            {hasSummary ? 'View summary' : 'Summarize'}
+          </Button>
         </div>
       )}
-      {props.aiAvailable && (
-        <>
-          <div className="PublishDocModal__row">
-            <IconRobot
-              className="PublishDocModal__row__icon"
-              size={17}
-              stroke={1.75}
+
+      <Modal
+        {...modalTheme}
+        opened={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        title={
+          <span className="PublishDocModal__title">
+            <IconGitCompare size={18} stroke={1.75} />
+            <span className="PublishDocModal__title__text">
+              Changes to {docId}
+            </span>
+          </span>
+        }
+        size="min(calc(100% - 32px), 900px)"
+        overflow="inside"
+      >
+        <DocDiffViewer
+          className="PublishDocModal__diff"
+          left={{docId, versionId: 'published'}}
+          right={{docId, versionId: 'draft'}}
+          showExpandButton={true}
+          showAiSummary={false}
+        />
+      </Modal>
+
+      <Modal
+        {...modalTheme}
+        opened={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        title={
+          <span className="PublishDocModal__title">
+            <IconRobot size={18} stroke={1.75} />
+            <span className="PublishDocModal__title__text">
+              AI summary of changes
+            </span>
+          </span>
+        }
+        size="640px"
+      >
+        <div className="PublishDocModal__summary">
+          <Text size="body-sm" color="gray">
+            Root AI compared the draft of {docId} to the published version.
+            Review the summary before relying on it.
+          </Text>
+          <div className="PublishDocModal__summary__body">
+            <AiSummaryResult
+              status={aiSummary.status}
+              summary={aiSummary.summary}
+              error={aiSummary.error}
             />
-            <div className="PublishDocModal__row__label">AI summary</div>
-            <div className="PublishDocModal__row__message">
-              Summarize the changes with Root AI.
-            </div>
+          </div>
+          <div className="PublishDocModal__buttons">
             <Button
-              className="PublishDocModal__row__button"
               variant="default"
               size="xs"
-              compact
-              loading={aiSummary.status === 'loading'}
+              leftIcon={<IconRobot size={15} stroke={1.75} />}
+              disabled={aiSummary.status === 'loading'}
               onClick={() => aiSummary.generate()}
             >
-              {aiSummary.status === 'success' ? 'Regenerate' : 'Summarize'}
+              Regenerate
+            </Button>
+            <Button
+              variant="filled"
+              color="dark"
+              size="xs"
+              onClick={() => setSummaryOpen(false)}
+            >
+              Done
             </Button>
           </div>
-          {aiSummary.status !== 'idle' && (
-            <div className="PublishDocModal__row__expanded">
-              <AiSummaryResult
-                status={aiSummary.status}
-                summary={aiSummary.summary}
-                error={aiSummary.error}
-              />
-            </div>
-          )}
-        </>
-      )}
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   vi,
 } from 'vitest';
 import {page} from 'vitest/browser';
+import {cmsGetDocDiffSummary} from '../../utils/doc.js';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 
 // Mock firebase/firestore.
@@ -258,32 +259,61 @@ describe('PublishDocModal', () => {
       .toMatchScreenshot('publish-doc-modal-default.png');
   });
 
-  it('renders scheduled state with changes and check results', async () => {
-    await page.viewport(680, 1100);
-    renderModal('Pages/spring-harvest', {width: 640, height: 1060});
+  it('renders scheduled state with check results', async () => {
+    await page.viewport(680, 760);
+    renderModal('Pages/spring-harvest', {width: 640, height: 720});
 
     await page.getByRole('radio', {name: 'Schedule'}).click();
     await expect.element(page.getByLabelText('Publish at')).toBeVisible();
-    await page.getByRole('button', {name: 'View diff'}).click();
-    await page.getByRole('button', {name: 'Summarize'}).click();
     await page.getByRole('button', {name: 'Run checks'}).click();
-    await page
-      .getByRole('button', {name: 'Suggest a publish message with Root AI'})
-      .hover();
-
-    await expect.element(page.getByText('/garden').first()).toBeVisible();
     await expect
       .element(page.getByText('2 images are missing alt text.'))
       .toBeVisible();
     await expect
       .element(page.getByRole('button', {name: 'Run again'}))
       .toBeVisible();
+    await page
+      .getByRole('button', {name: 'Suggest a publish message with Root AI'})
+      .hover();
     await expect
       .element(page.getByRole('button', {name: 'Schedule publish'}))
       .toBeVisible();
     await expect
       .element(page.getByTestId('wrapper'))
       .toMatchScreenshot('publish-doc-modal-scheduled.png');
+  });
+
+  it('opens the diff in a modal', async () => {
+    await page.viewport(1000, 640);
+    renderModal('Pages/spring-harvest', {width: 640, height: 560});
+
+    await page.getByRole('button', {name: 'View diff'}).click();
+    const dialog = page.getByRole('dialog');
+    await expect.element(dialog.getByText('/garden').first()).toBeVisible();
+    await expect
+      .element(dialog)
+      .toMatchScreenshot('publish-doc-modal-diff.png');
+  });
+
+  it('opens the ai summary in a modal', async () => {
+    await page.viewport(800, 640);
+    renderModal('Pages/spring-harvest', {width: 640, height: 560});
+
+    await page.getByRole('button', {name: 'Summarize'}).click();
+    const dialog = page.getByRole('dialog');
+    await expect.element(dialog.getByText('/garden')).toBeVisible();
+    await expect
+      .element(dialog)
+      .toMatchScreenshot('publish-doc-modal-ai-summary.png');
+
+    // Closing and reopening shows the same summary without running Root AI
+    // again.
+    await dialog.getByRole('button', {name: 'Done'}).click();
+    await page.getByRole('button', {name: 'View summary'}).click();
+    await expect
+      .element(page.getByRole('dialog').getByText('/garden'))
+      .toBeVisible();
+    expect(cmsGetDocDiffSummary).toHaveBeenCalledTimes(1);
   });
 
   it('renders publish confirmation with long doc id', async () => {

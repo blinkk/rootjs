@@ -205,27 +205,28 @@
   flex-shrink: 0;
 }
 
-.PublishDocModal__row__expanded {
-  padding: 0 12px 12px 39px;
-}
-
-.PublishDocModal__diff {
-  padding: 0 0 4px;
-  border-top: 1px solid #f1f3f5;
-}
-
-.PublishDocModal__diff .DocDiffViewer {
-  max-height: 360px;
-  overflow: auto;
-}
-
 .PublishDocModal__diff .DocDiffViewer__diff {
+  /* The diff modal sizes to its content instead of reserving space. */
   min-height: 0;
 }
 
-.PublishDocModal__diff .DocDiffViewer--loading {
+.PublishDocModal__summary {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.PublishDocModal__summary__body {
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.PublishDocModal__summary__body .AiSummaryResult {
+  padding-top: 0;
 }
 
 .PublishDocModal__refDocs {
