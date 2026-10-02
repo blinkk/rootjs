@@ -19,16 +19,9 @@
     "screenshots:render": "node scripts/screenshots_render.ts",
     "screenshots:upload": "node scripts/screenshots_upload.ts",
     "screenshots:publish": "node scripts/screenshots_render.ts && node scripts/screenshots_upload.ts",
-    "screenshots:link-docs": "node scripts/screenshots_link_docs.ts",
-    "seed:sandbox-index": "node scripts/seed_sandbox_index.ts",
     "seed:guides": "node scripts/seed_guides.ts",
-    "seed:guides-index": "node scripts/seed_guides_index.ts",
-    "seed:blog-index": "node scripts/seed_blog_index.ts",
     "reference": "node scripts/generate_reference.ts",
-    "propose:docs-copy": "node scripts/propose_docs_copy.ts",
-    "migrate:guide-to-docs": "node scripts/migrate_guide_to_docs.ts",
-    "env:save": "bash scripts/env-save.sh",
-    "env:download": "bash scripts/env-download.sh"
+    "propose:docs-copy": "node scripts/propose_docs_copy.ts"
   },
   "author": "s@blinkk.com",
   "license": "MIT",

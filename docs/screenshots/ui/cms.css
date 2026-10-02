@@ -207,6 +207,12 @@ body {
   font-weight: 600;
 }
 
+.cms-avatar--sm {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+}
+
 .cms-avatar--lg {
   width: 28px;
   height: 28px;
@@ -421,6 +427,19 @@ body {
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
+}
+
+.cms-field__viewers {
+  display: flex;
+  margin-left: auto;
+}
+
+.cms-field__viewers + .cms-field__comments {
+  margin-left: 0;
+}
+
+.cms-field__viewers .cms-avatar + .cms-avatar {
+  margin-left: -6px;
 }
 
 .cms-field__help {

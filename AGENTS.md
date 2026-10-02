@@ -7,6 +7,8 @@
   `eslint-config-root`.
 - `docs/` — powers `rootjs.dev`. It's a real Root.js project (`@private/docs`)
   and the local playground for testing framework/CMS changes.
+  Its product screenshots are rendered from code; see
+  `docs/screenshots/README.md` to update them.
 - `examples/` — example projects. `apps/` — internal, unpublished.
 
 ## Development
