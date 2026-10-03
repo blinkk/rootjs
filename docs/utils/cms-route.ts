@@ -89,8 +89,18 @@ export interface CMSDoc {
   };
 }
 
+/**
+ * Cache-Control for published pages. Browsers cache pages for 1 minute and the
+ * Firebase Hosting CDN for 5 minutes, so a publish can take up to ~6 minutes
+ * to show up (plus the CMS client's in-memory cache, see `createCmsClient()`).
+ */
+const PUBLISHED_CACHE_CONTROL = 'public, max-age=60, s-maxage=300';
+
 export function cmsRoute(options: CMSRouteOptions) {
   let cmsClient: RootCMSClient = null;
+  // Published (non-preview) requests read through a client that caches reads
+  // in memory, so most renders skip the Firestore round trips.
+  let cachedCmsClient: RootCMSClient | null = null;
 
   function getSlug(params: RouteParams) {
     if (options.slug) {
@@ -189,10 +199,6 @@ export function cmsRoute(options: CMSRouteOptions) {
 
     // SSR handler.
     handle: async (req, res) => {
-      if (!cmsClient) {
-        cmsClient = createCmsClient(req.rootConfig);
-      }
-      req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
       const slug = getSlug(ctx.params);
       if (slug.includes('.')) {
@@ -203,7 +209,17 @@ export function cmsRoute(options: CMSRouteOptions) {
       if (options.previewOnly && mode !== 'draft') {
         return {notFound: true};
       }
-      const routeContext: CMSRouteContext = {req, slug, mode, cmsClient};
+      const client =
+        mode === 'published'
+          ? (cachedCmsClient ??= createCmsClient(req.rootConfig, {cache: true}))
+          : (cmsClient ??= createCmsClient(req.rootConfig));
+      req.cmsClient = client;
+      const routeContext: CMSRouteContext = {
+        req,
+        slug,
+        mode,
+        cmsClient: client,
+      };
 
       const translationsTags = ['common', `${options.collection}/${slug}`];
       if (options.translations) {
@@ -212,10 +228,10 @@ export function cmsRoute(options: CMSRouteOptions) {
       }
 
       const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<CMSDoc>(options.collection, slug, {
+        client.getDoc<CMSDoc>(options.collection, slug, {
           mode,
         }),
-        cmsClient.loadTranslations({tags: translationsTags}),
+        client.loadTranslations({tags: translationsTags}),
         fetchData(routeContext),
       ]);
       if (!doc) {
@@ -242,8 +258,8 @@ export function cmsRoute(options: CMSRouteOptions) {
         props = await options.preRenderHook(props, routeContext);
       }
       const translations = translationsForLocale(
-        await withExtraTranslations(cmsClient, translationsMap, props),
-        resolveLocaleFallbacks(cmsClient.rootConfig.i18n, locale)
+        await withExtraTranslations(client, translationsMap, props),
+        resolveLocaleFallbacks(client.rootConfig.i18n, locale)
       );
 
       if (props.$redirect) {
@@ -256,7 +272,7 @@ export function cmsRoute(options: CMSRouteOptions) {
       if (options.disableCacheControl) {
         res.setHeader('cache-control', 'private');
       } else if (mode === 'published') {
-        res.setHeader('cache-control', 'public, max-age=15, s-maxage=30');
+        res.setHeader('cache-control', PUBLISHED_CACHE_CONTROL);
         if (ctx.route.isDefaultLocale) {
           res.setHeader('vary', 'accept-language, x-country-code');
         }
