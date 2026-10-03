@@ -1,5 +1,24 @@
 # @blinkk/root-cms
 
+## 4.0.1
+
+### Patch Changes
+
+- a12a1b4: feat: show asset library file paths in the action logs
+- b563767: feat: open the component picker when adding items to arrays of oneOf picker fields
+- 19f9cee: feat: add asset library uploads to the cms client and cli
+- 9e61168: feat: show an onboarding message on the cms home page for new projects
+- fcf63b1: feat: remove "Root.js" suffix from cms page titles
+- 4a2317b: feat: add a human-friendly changes view to the doc diff
+- 06c5408: feat: show who is editing each field in the doc editor
+- 75cda59: feat: redesign the global search modal to match the rest of the cms
+- d411e52: feat: redesign the publish modal with an on-demand diff and ai summary
+- 5dcc7c0: feat: add an empty state to the releases page
+- 330d9c0: feat: add a root-cms-setup agent skill for setting up a new site with the cms
+- 13c955c: feat: add `root-cms setup` wizard for Google Cloud and offer it from create-root
+- 1536a2f: feat: rebrand the CMS UI to Root.js
+  - @blinkk/root@4.0.1
+
 ## 3.5.3
 
 ### Patch Changes
