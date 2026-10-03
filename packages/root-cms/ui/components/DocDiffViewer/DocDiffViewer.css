@@ -17,13 +17,6 @@
   margin-bottom: 8px;
 }
 
-.DocDiffViewer__expand {
-  padding: 4px 8px;
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 4px;
-}
-
 .DocDiffViewer__header {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -52,11 +45,21 @@
   font-family: var(--font-family-mono);
 }
 
-.DocDiffViewer__expand {
-  padding: 4px 8px;
+.DocDiffViewer__toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 4px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px 8px;
+}
+
+.DocDiffViewer__toolbar__count {
+  font-family: var(--font-family-default);
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.DocDiffViewer__toolbar__expand {
+  margin-left: auto;
 }
 
 .DocDiffViewer__header {

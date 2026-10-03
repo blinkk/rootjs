@@ -124,6 +124,28 @@ vi.mock('../../utils/doc.js', () => ({
   deserializeDocJson: vi.fn(),
 }));
 
+// Mock the collection schema used to label the diff.
+vi.mock('../../utils/collection.js', () => ({
+  fetchCollectionSchema: vi.fn(() =>
+    Promise.resolve({
+      id: 'Pages',
+      name: 'Pages',
+      fields: [
+        {type: 'string', id: 'title', label: 'Title'},
+        {
+          type: 'object',
+          id: 'cta',
+          label: 'Call to action',
+          fields: [
+            {type: 'string', id: 'label', label: 'Label'},
+            {type: 'string', id: 'href', label: 'Link'},
+          ],
+        },
+      ],
+    })
+  ),
+}));
+
 // Mock the doc cache used to look up referenced docs.
 vi.mock('../../utils/doc-cache.js', () => ({
   getDocFromCacheOrFetch: vi.fn(() => Promise.resolve({sys: {}, fields: {}})),
