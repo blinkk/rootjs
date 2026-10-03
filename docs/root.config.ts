@@ -32,7 +32,6 @@ export default defineConfig({
       },
     },
   },
-  modulePreload: true,
   server: {
     trailingSlash: true,
     sessionCookieSecret: process.env.COOKIE_SECRET,
@@ -158,10 +157,6 @@ export default defineConfig({
           },
         },
       ],
-      experiments: {
-        taskManager: true,
-        v2TranslationsManager: true,
-      },
       preview: {
         channel: true,
       },

@@ -3,7 +3,7 @@
     {
       "bin": "create-root",
       "packageName": "@blinkk/create-root",
-      "version": "3.5.2",
+      "version": "4.0.0",
       "commands": [
         {
           "name": "create-root",
@@ -40,7 +40,7 @@
     {
       "bin": "root",
       "packageName": "@blinkk/root",
-      "version": "3.5.2",
+      "version": "4.0.0",
       "commands": [
         {
           "name": "root build",
@@ -425,7 +425,7 @@
     {
       "bin": "root-cms",
       "packageName": "@blinkk/root-cms",
-      "version": "3.5.2",
+      "version": "4.0.0",
       "commands": [
         {
           "name": "root-cms init-firebase",
@@ -445,6 +445,38 @@
             {
               "flags": "--admin <email>",
               "description": "adds an admin to the project"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms setup",
+          "aliases": [],
+          "usage": "root-cms setup [options]",
+          "summary": "sets up a google cloud project for root cms: checks gcloud sign-in, then configures firebase, firestore, storage, iam and secrets",
+          "description": "",
+          "examples": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--project <project>",
+              "description": "gcp project id (skips the new/existing question)"
+            },
+            {
+              "flags": "--site-id <siteId>",
+              "description": "site id, used to keep sites on one gcp project apart"
+            },
+            {
+              "flags": "--location <location>",
+              "description": "region for a new firestore database and storage bucket"
+            },
+            {
+              "flags": "--dry-run",
+              "description": "print what would change without changing anything"
+            },
+            {
+              "flags": "--yes",
+              "description": "accept the default answer to every question"
             }
           ],
           "subcommands": []
@@ -666,6 +698,66 @@
           "subcommands": []
         },
         {
+          "name": "root-cms assets.upload",
+          "aliases": [],
+          "usage": "root-cms assets.upload <paths...> [options]",
+          "summary": "uploads files to the asset library",
+          "description": "Files are uploaded to the GCS bucket (and registered with the Google Cloud Image service for images when `gci` is enabled). If the folder already has a file with the same name, the asset is replaced and the new file is synced to every draft doc that uses it. Directories are uploaded recursively, mirroring their structure as subfolders.",
+          "examples": [
+            "root-cms assets.upload ./hero.png",
+            "root-cms assets.upload ./hero.png --folder marketing --alt \"Hero image\"",
+            "root-cms assets.upload ./new-hero.png --asset-id AbC123dEf456",
+            "root-cms assets.upload ./icons --folder brand"
+          ],
+          "arguments": [
+            {
+              "name": "paths",
+              "required": true,
+              "variadic": true,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--folder <folder>",
+              "description": "asset library folder to upload into, e.g. \"marketing/q1\" (default: root)"
+            },
+            {
+              "flags": "--name <name>",
+              "description": "asset name (single file only)"
+            },
+            {
+              "flags": "--asset-id <assetId>",
+              "description": "id of an existing asset whose file should be replaced (single file only)"
+            },
+            {
+              "flags": "--alt <text>",
+              "description": "alt text for the uploaded file(s)"
+            },
+            {
+              "flags": "--naming-mode <mode>",
+              "description": "gcs object naming: \"hash\", \"hash-path\" or \"clean\" (default: folder setting)"
+            },
+            {
+              "flags": "--cache-control <value>",
+              "description": "cache-control header for the file(s)"
+            },
+            {
+              "flags": "--no-gci",
+              "description": "skip registering images with the gci service"
+            },
+            {
+              "flags": "--no-sync",
+              "description": "skip updating docs that use a replaced asset"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            }
+          ],
+          "subcommands": []
+        },
+        {
           "name": "root-cms client.call",
           "aliases": [],
           "usage": "root-cms client.call <method> [jsonArgs]",
@@ -845,7 +937,7 @@
     {
       "bin": "root-password-protect",
       "packageName": "@blinkk/root-password-protect",
-      "version": "3.5.2",
+      "version": "4.0.0",
       "commands": [
         {
           "name": "root-password-protect generate-hash",

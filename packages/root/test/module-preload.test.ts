@@ -46,7 +46,7 @@ test('preloaded chunks are copied to the build output', async () => {
   expect(await fs.readFile(chunk, 'utf-8')).toContain('textContent');
 });
 
-test('modulepreload tags are opt-in', async () => {
+test('modulepreload tags can be disabled', async () => {
   const html = await buildIndexHtml('./fixtures/module-preload-disabled');
   expect(html).not.toContain('modulepreload');
   expect(html).toContain('<script type="module" src="/assets/root-a.min.js">');

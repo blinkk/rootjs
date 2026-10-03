@@ -84,7 +84,7 @@ export function CmsFrame(props: CmsFrameProps) {
           </svg>
           Root.js
         </div>
-        <div className="cms-top__version">v3.5</div>
+        <div className="cms-top__version">v4.0</div>
         <div className="cms-top__project">{PROJECT_NAME}</div>
         {props.topRight || (
           <div className="cms-top__search">

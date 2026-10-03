@@ -226,6 +226,18 @@ function isGcloudReauthError(err: unknown): boolean {
   );
 }
 
+/**
+ * Returns true if the Firebase project ID is still the placeholder from the
+ * starter template (e.g. `YOUR_FIREBASE_PROJECT_ID`), i.e. the project hasn't
+ * been connected to a Firebase project yet.
+ */
+export function isPlaceholderFirebaseProject(
+  firebaseConfig?: Record<string, any>
+): boolean {
+  const projectId = firebaseConfig?.projectId;
+  return typeof projectId === 'string' && projectId.startsWith('YOUR_');
+}
+
 function logGcloudReauthHint() {
   console.log('\n');
   console.log('==================================================');
@@ -590,13 +602,14 @@ export type CMSPluginOptions = {
     ai?: boolean | CMSAIConfig;
 
     /**
-     * Enables the v2 `TranslationsManager`.
+     * Enables the v2 `TranslationsManager`. Enabled by default; set to `false`
+     * to use the legacy v1 translations system.
      */
     v2TranslationsManager?: boolean;
 
     /**
-     * Enables the task manager (sidebar entry, home page card, and
-     * `/cms/tasks` routes).
+     * Enables the task manager (sidebar entry and `/cms/tasks` routes).
+     * Enabled by default; set to `false` to hide it.
      */
     taskManager?: boolean;
   };
@@ -726,13 +739,13 @@ export type CMSPluginOptions = {
    * `RootCMSClient.getDependencyGraph()` to resolve the full set of
    * referenced docs that need to be fetched when fetching one or more docs.
    *
-   * Disabled by default. Pass `true` to enable with default options, or a
-   * config object to scope the graph to specific collections.
+   * Enabled by default. Pass `false` to disable, or a config object to scope
+   * the graph to specific collections.
    *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   dependencyGraph: true,
+   *   dependencyGraph: false,
    * });
    * ```
    */
@@ -1067,10 +1080,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
 
-        // When the v2 translations manager is enabled, migrate v1
-        // translations before the build (SSG reads translations at build
-        // time). A failure fails the build.
-        if (options.experiments?.v2TranslationsManager) {
+        // When the v2 translations manager is enabled (the default), migrate
+        // v1 translations before the build (SSG reads translations at build
+        // time). A failure fails the build. Projects that haven't been
+        // connected to Firebase yet (e.g. a new project from the starter
+        // template) have nothing to migrate, so they're skipped.
+        if (
+          options.experiments?.v2TranslationsManager !== false &&
+          !isPlaceholderFirebaseProject(options.firebaseConfig)
+        ) {
           const {migrateV1TranslationsIfNeeded} =
             await import('./translations-migration.js');
           const cmsClient = new RootCMSClient(rootConfig);
@@ -1084,7 +1102,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
                 'requires Firestore access when `v2TranslationsManager` is ' +
                 'enabled — ensure application default credentials (ADC) are ' +
                 'available, e.g. run `gcloud auth application-default login` ' +
-                'or set GOOGLE_APPLICATION_CREDENTIALS.'
+                'or set GOOGLE_APPLICATION_CREDENTIALS. to use the legacy v1 ' +
+                'translations system, set ' +
+                '`{experiments: {v2TranslationsManager: false}}`.'
             );
             throw err;
           }
@@ -1127,12 +1147,13 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
       }
 
-      // When the v2 translations manager is enabled, migrate v1 translations
-      // on dev server startup. Fire-and-forget so dev startup isn't blocked;
+      // When the v2 translations manager is enabled (the default), migrate v1
+      // translations on dev server startup. Fire-and-forget so dev startup isn't blocked;
       // prod servers never migrate (the migration runs at build time via the
-      // preBuild hook).
+      // preBuild hook). Projects not yet connected to Firebase are skipped.
       if (
-        options.experiments?.v2TranslationsManager &&
+        options.experiments?.v2TranslationsManager !== false &&
+        !isPlaceholderFirebaseProject(options.firebaseConfig) &&
         serverOptions.type === 'dev'
       ) {
         import('./translations-migration.js')

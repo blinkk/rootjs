@@ -18,8 +18,8 @@
  * const res = await req.fetch();
  * ```
  *
- * The feature is opt-in. Enable it in `root.config.ts` via the cmsPlugin
- * config, e.g. `cmsPlugin({dependencyGraph: true})`. Once enabled, the graph
+ * The feature is enabled by default. Disable it in `root.config.ts` via the
+ * cmsPlugin config, e.g. `cmsPlugin({dependencyGraph: false})`. The graph
  * is automatically kept up to date by the CMS cron job (`/cms/api/cron.run`),
  * which incrementally re-extracts references for docs that changed since the
  * last run.
@@ -166,13 +166,13 @@ interface ResolvedFilters {
 export function resolveDependencyGraphConfig(
   option?: boolean | CMSDependencyGraphConfig
 ): CMSDependencyGraphConfig | null {
-  if (option === true) {
-    return {};
+  if (option === false) {
+    return null;
   }
   if (option && typeof option === 'object') {
     return option;
   }
-  return null;
+  return {};
 }
 
 function toSetOrNull(values: string[] | undefined): Set<string> | null {
@@ -429,8 +429,8 @@ export class DependencyGraphService {
   private assertEnabled() {
     if (!this.isEnabled()) {
       throw new Error(
-        'the dependency graph is not enabled for this project. enable it in ' +
-          'root.config.ts, e.g. `cmsPlugin({dependencyGraph: true})`.'
+        'the dependency graph is disabled for this project. remove ' +
+          '`cmsPlugin({dependencyGraph: false})` from root.config.ts to enable it.'
       );
     }
   }

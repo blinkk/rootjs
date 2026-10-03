@@ -1959,19 +1959,19 @@ export class RootCMSClient {
   getTranslationsManager(): TranslationsManager {
     if (!this.isV2TranslationsEnabled()) {
       throw new Error(
-        '`v2TranslationsManager` is not enabled. update root.config.ts and add: `{experiments: {v2TranslationsManager: true}}`'
+        '`v2TranslationsManager` is disabled. update root.config.ts and remove: `{experiments: {v2TranslationsManager: false}}`'
       );
     }
     return new TranslationsManager(this);
   }
 
   /**
-   * Returns true if the v2 `TranslationsManager` is enabled via the
-   * `experiments.v2TranslationsManager` plugin config flag.
+   * Returns true if the v2 `TranslationsManager` is enabled. It's enabled by
+   * default, unless `experiments.v2TranslationsManager` is set to `false`.
    */
   isV2TranslationsEnabled(): boolean {
     const cmsPluginOptions = this.cmsPlugin.getConfig();
-    return Boolean(cmsPluginOptions.experiments?.v2TranslationsManager);
+    return cmsPluginOptions.experiments?.v2TranslationsManager !== false;
   }
 
   /**
@@ -2877,7 +2877,7 @@ export class RootCMSClient {
  * Returns true if the `data` is a rich text data object.
  */
 export function isRichTextData(data: any) {
-  // The RichTextEditor uses editorjs under the hood, the data format is
+  // The rich text data format (originally from editorjs) is
   // something like:
   //  {
   //   "time": 1721761211720,

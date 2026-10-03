@@ -5,7 +5,6 @@ import {ComponentChildren} from 'preact';
 import {ActionLogs} from '../../components/ActionLogs/ActionLogs.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {Surface} from '../../components/Surface/Surface.js';
-import {TaskManager} from '../../components/TaskManager/TaskManager.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useBooleanParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
@@ -13,12 +12,10 @@ import {Layout} from '../../layout/Layout.js';
 export function ProjectPage() {
   // const projectName = window.__ROOT_CTX.rootConfig.projectName || 'Root CMS';
   usePageTitle('Home');
-  const showTaskManager = !!window.__ROOT_CTX.experiments?.taskManager;
   return (
     <Layout>
       <div className="ProjectPage">
         <div className="ProjectPage__main">
-          {showTaskManager && <TaskManager />}
           <div className="ProjectPage__section">
             <ProjectPage.Collections />
             <ProjectPage.ActionLogs />

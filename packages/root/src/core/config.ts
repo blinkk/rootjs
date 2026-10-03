@@ -86,8 +86,8 @@ export interface RootUserConfig {
 
   /**
    * Whether to auto-inject `<link rel="modulepreload">` tags for the JS chunks
-   * imported by the page's `<script type="module">` tags. Disabled by default;
-   * pass `modulePreload: true` to opt in.
+   * imported by the page's `<script type="module">` tags. Enabled by default;
+   * pass `modulePreload: false` to opt out.
    *
    * Root injects a `<script type="module">` tag for every custom element and
    * bundle used on the page, but the shared chunks those scripts import are

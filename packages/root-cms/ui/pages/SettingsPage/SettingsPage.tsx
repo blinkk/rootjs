@@ -1,5 +1,5 @@
 import './SettingsPage.css';
-import {Button, LoadingOverlay, Select, Switch, Textarea} from '@mantine/core';
+import {Button, LoadingOverlay, Select, Textarea} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconCheck} from '@tabler/icons-preact';
@@ -755,7 +755,6 @@ function ThemeSection() {
 
 export function SettingsPage() {
   usePageTitle('Settings');
-  const userPrefs = useUserPreferences();
   const siteSettings = useSiteSettings();
   const projectRoles = useProjectRoles();
   const isAdmin =
@@ -812,71 +811,6 @@ export function SettingsPage() {
         </div>
         {isAdmin && <SiteAdminSection />}
         <ThemeSection />
-        <div className="SettingsPage__section">
-          <div className="SettingsPage__section__left">
-            <Heading className="SettingsPage__section__left__title">
-              User Preferences
-            </Heading>
-            <Text
-              className="SettingsPage__section__body"
-              size="body-sm"
-              weight="semi-bold"
-              color="gray"
-            >
-              <p>These settings are for you only.</p>
-            </Text>
-          </div>
-          <Surface className="SettingsPage__section__right">
-            <div className="SettingsPage__section__userPref">
-              <div className="SettingsPage__section__userPref__description">
-                <Text
-                  className="SettingsPage__section__userPref__description__title"
-                  size="body"
-                  weight="semi-bold"
-                >
-                  Enable EditorJS Editor (legacy)
-                </Text>
-                <Text
-                  className="SettingsPage__section__userPref__description__body"
-                  size="body-sm"
-                  weight="semi-bold"
-                  color="gray"
-                >
-                  <p>
-                    Replaces the{' '}
-                    <a
-                      href="https://lexical.dev/"
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      Lexical
-                    </a>{' '}
-                    (default) rich text editor with the{' '}
-                    <a
-                      href="https://editorjs.io/"
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      EditorJS
-                    </a>{' '}
-                    (legacy) version.
-                  </p>
-                </Text>
-              </div>
-              <div className="SettingsPage__section__userPref__input">
-                <Switch
-                  color="dark"
-                  checked={userPrefs.preferences.EnableEditorJSEditor}
-                  onChange={(e: Event) => {
-                    const enabled = (e.currentTarget as HTMLInputElement)
-                      .checked;
-                    userPrefs.setPreference('EnableEditorJSEditor', enabled);
-                  }}
-                />
-              </div>
-            </div>
-          </Surface>
-        </div>
       </div>
     </Layout>
   );

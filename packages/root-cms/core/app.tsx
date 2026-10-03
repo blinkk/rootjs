@@ -6,6 +6,7 @@ import {beetMarkDataUri} from '../shared/beet.js';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {getBuildInfo} from './build-info.js';
+import {resolveDependencyGraphConfig} from './dependency-graph.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -169,9 +170,8 @@ export async function renderApp(
     excludeLocalesFromTranslations:
       cmsConfig.excludeLocalesFromTranslations || [],
     allowedIframeOrigins: cmsConfig.allowedIframeOrigins || [],
-    // Matches `resolveDependencyGraphConfig()`: `true` or a config object
-    // enables the feature.
-    dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
+    dependencyGraphEnabled:
+      resolveDependencyGraphConfig(cmsConfig.dependencyGraph) !== null,
     // The themes a user can pick between, and which one applies until they
     // do (Settings → Theme).
     theme: {

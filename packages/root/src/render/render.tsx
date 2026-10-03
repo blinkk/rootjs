@@ -244,11 +244,10 @@ export class Renderer {
 
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
-    // Chunks imported by the injected scripts, collected only when
-    // `modulePreload` is enabled in `root.config.ts`.
-    const preloadDeps = this.rootConfig.modulePreload
-      ? new Set<string>()
-      : null;
+    // Chunks imported by the injected scripts, collected unless
+    // `modulePreload: false` is set in `root.config.ts`.
+    const preloadDeps =
+      this.rootConfig.modulePreload !== false ? new Set<string>() : null;
 
     // Walk the route's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.

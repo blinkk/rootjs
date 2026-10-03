@@ -28,7 +28,14 @@ function createTestClient(db: Firestore, projectId: string): RootCMSClient {
   Object.assign(client, {
     projectId,
     db,
-    cmsPlugin: {getConfig: () => ({})},
+    // Use the v1 translations system and skip the dependency graph, neither
+    // of which this test covers.
+    cmsPlugin: {
+      getConfig: () => ({
+        experiments: {v2TranslationsManager: false},
+        dependencyGraph: false,
+      }),
+    },
   });
   return client as RootCMSClient;
 }

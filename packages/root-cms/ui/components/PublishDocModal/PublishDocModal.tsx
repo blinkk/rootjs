@@ -46,7 +46,6 @@ import {
 import {extractReferenceDocIds} from '../../utils/references.js';
 import {type Release, generateReleaseId} from '../../utils/release.js';
 import {getLocalISOString} from '../../utils/time.js';
-import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAddToRelease} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {AiSummaryResult, useAiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
@@ -560,12 +559,6 @@ export function PublishDocModal(
               />
             )}
           </PublishField>
-        )}
-
-        {!isRelease && testV2TranslationsEnabled() && (
-          <Text size="body-sm" color="gray">
-            The doc's translations will be published together with the doc.
-          </Text>
         )}
 
         <div className="PublishDocModal__buttons">
