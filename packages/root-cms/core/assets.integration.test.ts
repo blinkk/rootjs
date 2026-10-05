@@ -76,6 +76,7 @@ function createTestClient(
     projectId,
     db,
     app: {},
+    user: 'root-cms-client',
     cmsPlugin: {
       getConfig: () => ({
         firebaseConfig: {storageBucket: BUCKET},

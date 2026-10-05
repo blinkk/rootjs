@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {parseProposal, type Proposal} from '../shared/proposal.js';
+import {getCliUser} from './cli-user.js';
 
 export interface ProposalApplyCliOptions {
   /** Skip validating resolved fields against the collection schema. */
@@ -92,12 +93,17 @@ async function runApply(filepath: string, options?: ProposalApplyCliOptions) {
       ]);
     const rootDir = process.cwd();
     const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-    const client = new RootCMSClient(rootConfig);
+    // Attribute writes to the active gcloud user (unless overridden) and
+    // record doc writes in the action logs, as edits from the CMS UI are.
+    const client = new RootCMSClient(rootConfig, {
+      user: options?.modifiedBy || getCliUser(),
+      logActions: true,
+    });
     const res = await applyProposal(client, proposal, {
       dryRun: options?.dryRun,
       verifyBefore: options?.verifyBefore,
       skipValidation: options?.skipValidation,
-      modifiedBy: options?.modifiedBy,
+      modifiedBy: client.user,
     });
     if (!res.ok) {
       writeEnvelope({

@@ -222,7 +222,7 @@ export interface SaveDraftOptions {
   locales?: string[];
 
   /**
-   * Email of user modifying the doc. If blank, defaults to `root-cms-client`.
+   * Email of user modifying the doc. If blank, defaults to the client's `user`.
    */
   modifiedBy?: string;
 
@@ -234,6 +234,11 @@ export interface SaveDraftOptions {
 }
 
 export interface UpdateDraftOptions {
+  /**
+   * Email of user modifying the doc. If blank, defaults to the client's `user`.
+   */
+  modifiedBy?: string;
+
   /**
    * Whether to validate the updated field against the collection schema.
    * If validation fails, an error will be thrown with details about the validation errors.
@@ -444,7 +449,7 @@ export interface UploadAssetOptions {
    * Defaults to `true`.
    */
   syncDocs?: boolean;
-  /** Email of the user making the change. Defaults to `root-cms-client`. */
+  /** Email of the user making the change. Defaults to the client's `user`. */
   modifiedBy?: string;
 }
 
@@ -465,7 +470,7 @@ export interface SyncAssetToDocsOptions {
    * text and canvas bg color customizations, which are preserved.
    */
   previousFile?: UploadedFile;
-  /** Email of the user making the change. Defaults to `root-cms-client`. */
+  /** Email of the user making the change. Defaults to the client's `user`. */
   modifiedBy?: string;
 }
 
@@ -476,7 +481,23 @@ export interface RootCMSClientOptions {
    * preview proposed content on a running site before accepting it.
    */
   proposal?: Proposal;
+  /**
+   * Email (or other identifier) that writes are attributed to when a method is
+   * not passed one explicitly, e.g. `sys.modifiedBy` and action log entries.
+   * Defaults to `root-cms-client`.
+   */
+  user?: string;
+  /**
+   * Whether doc writes (`saveDraftData()`, `updateDraftData()`, `setRawDoc()`,
+   * `publishDocs()` and `unpublishDocs()`) record an entry in the project's
+   * action logs, the same way edits made from the CMS UI do. Off by default so
+   * that bulk scripts and migrations don't flood the action logs.
+   */
+  logActions?: boolean;
 }
+
+/** Default identity used to attribute writes made through the client. */
+const DEFAULT_CLIENT_USER = 'root-cms-client';
 
 /**
  * Indexes a change proposal so it can be applied cheaply to docs and
@@ -697,6 +718,10 @@ export class RootCMSClient {
    * before accepting it. Reads only — writes never fold the proposal in.
    */
   readonly proposal?: ProposalOverlay;
+  /** Identity that writes are attributed to by default. */
+  readonly user: string;
+  /** Whether doc writes are recorded in the action logs. */
+  readonly logActions: boolean;
   private assetLibrary?: AssetLibrary;
 
   constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
@@ -710,6 +735,8 @@ export class RootCMSClient {
     if (options?.proposal) {
       this.proposal = new ProposalOverlay(options.proposal);
     }
+    this.user = options?.user || DEFAULT_CLIENT_USER;
+    this.logActions = Boolean(options?.logActions);
   }
 
   /**
@@ -889,7 +916,7 @@ export class RootCMSClient {
     const draftDoc =
       (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
     const draftSys = draftDoc.sys || {};
-    const modifiedBy = options?.modifiedBy || 'root-cms-client';
+    const modifiedBy = options?.modifiedBy || this.user;
     const fields = marshalData(fieldsData || {});
     const data = {
       id: docId,
@@ -937,6 +964,7 @@ export class RootCMSClient {
 
     // Save the updated document using saveDraftData.
     await this.saveDraftData(docId, fieldsData, {
+      modifiedBy: options?.modifiedBy,
       validate: options?.validate,
     });
   }
@@ -970,8 +998,8 @@ export class RootCMSClient {
    * ### Required Fields (auto-populated with defaults if missing)
    * - `sys.createdAt` - Defaults to current time if not provided
    * - `sys.modifiedAt` - Defaults to current time if not provided
-   * - `sys.createdBy` - Defaults to 'root-cms-client' if not provided
-   * - `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided
+   * - `sys.createdBy` - Defaults to the client's `user` if not provided
+   * - `sys.modifiedBy` - Defaults to the client's `user` if not provided
    * - `sys.locales` - Defaults to ['en'] if not provided
    *
    * ### Optional Fields (validated if present)
@@ -1047,7 +1075,7 @@ export class RootCMSClient {
     data.slug = slug;
 
     // Validate and normalize sys fields to prevent data integrity issues.
-    data.sys = validateSysFields(data.sys || {});
+    data.sys = validateSysFields(data.sys || {}, this.user);
 
     // Keep the asset library's reverse index (`sys.assets`) in sync with the
     // fields, e.g. when a doc is copied or its fields are rewritten, so that
@@ -1065,6 +1093,14 @@ export class RootCMSClient {
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     await docRef.set(data);
+
+    if (this.logActions) {
+      const metadata: Record<string, string> = {docId: expectedId};
+      if (options.mode !== 'draft') {
+        metadata.mode = options.mode;
+      }
+      await this.logAction('doc.save', {by: data.sys.modifiedBy, metadata});
+    }
   }
 
   /**
@@ -1168,7 +1204,7 @@ export class RootCMSClient {
     options?: {publishedBy: string; batch?: WriteBatch; releaseId?: string}
   ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
-    const publishedBy = options?.publishedBy || 'root-cms-client';
+    const publishedBy = options?.publishedBy || this.user;
 
     // Fetch the current draft data for each doc.
     const docRefs = docIds.map((docId) => {
@@ -1339,6 +1375,15 @@ export class RootCMSClient {
       await batch.commit();
     }
     console.log(`published ${publishedDocs.length} docs!`);
+    if (this.logActions) {
+      for (const doc of publishedDocs) {
+        const metadata: Record<string, string> = {docId: doc.id};
+        if (options?.releaseId) {
+          metadata.releaseId = options.releaseId;
+        }
+        await this.logAction('doc.publish', {by: publishedBy, metadata});
+      }
+    }
     return publishedDocs;
   }
 
@@ -1350,7 +1395,7 @@ export class RootCMSClient {
     options?: {unpublishedBy?: string; batch?: WriteBatch}
   ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
-    const unpublishedBy = options?.unpublishedBy || 'root-cms-client';
+    const unpublishedBy = options?.unpublishedBy || this.user;
 
     // Fetch the current draft data for each doc.
     const docRefs = docIds.map((docId) => {
@@ -1476,6 +1521,14 @@ export class RootCMSClient {
       await batch.commit();
     }
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
+    if (this.logActions) {
+      for (const doc of unpublishedDocs) {
+        await this.logAction('doc.unpublish', {
+          by: unpublishedBy,
+          metadata: {docId: doc.id},
+        });
+      }
+    }
     return unpublishedDocs;
   }
 
@@ -1784,7 +1837,7 @@ export class RootCMSClient {
     }
     const docRef = this.db.doc(this.dbReleasePath(releaseId));
     const snapshot = await docRef.get();
-    const modifiedBy = options?.modifiedBy || 'root-cms-client';
+    const modifiedBy = options?.modifiedBy || this.user;
     const data: Record<string, any> = {id: releaseId};
     for (const key of ['description', 'docIds', 'dataSourceIds'] as const) {
       if (release[key] !== undefined) {
@@ -2151,7 +2204,7 @@ export class RootCMSClient {
   ) {
     const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
     const docRef = this.db.doc(dbPath);
-    const archivedBy = options?.archivedBy || 'root-cms-client';
+    const archivedBy = options?.archivedBy || this.user;
     await docRef.update({
       archivedAt: Timestamp.now(),
       archivedBy: archivedBy,
@@ -2192,7 +2245,7 @@ export class RootCMSClient {
     const dataDocRef = this.db.doc(
       `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/draft`
     );
-    const syncedBy = options?.syncedBy || 'root-cms-client';
+    const syncedBy = options?.syncedBy || this.user;
 
     const updatedDataSource: DataSource = {
       ...dataSource,
@@ -2240,7 +2293,7 @@ export class RootCMSClient {
 
     const dataRes = await this.getFromDataSource(dataSourceId, {mode: 'draft'});
 
-    const publishedBy = options?.publishedBy || 'root-cms-client';
+    const publishedBy = options?.publishedBy || this.user;
 
     const updatedDataSource: DataSource = {
       ...dataSource,
@@ -2311,7 +2364,7 @@ export class RootCMSClient {
     dataSourceIds: string[],
     options?: {publishedBy: string; batch?: WriteBatch; commitBatch?: boolean}
   ) {
-    const publishedBy = options?.publishedBy || 'root-cms-client';
+    const publishedBy = options?.publishedBy || this.user;
     const batch = options?.batch || this.db.batch();
     for (const id of dataSourceIds) {
       const dataSource = await this.getDataSource(id);
@@ -3018,7 +3071,7 @@ function convertToTimestamp(value: any, fieldName: string): Timestamp {
  * Converts timestamp numbers to Firestore Timestamp objects and sets defaults for missing fields.
  * @throws Error if sys fields are invalid.
  */
-function validateSysFields(sys: any): any {
+function validateSysFields(sys: any, defaultUser: string): any {
   if (!sys || typeof sys !== 'object') {
     throw new Error('sys must be an object');
   }
@@ -3049,10 +3102,10 @@ function validateSysFields(sys: any): any {
 
   // Set default values for required string fields if not provided.
   if (!result.createdBy || typeof result.createdBy !== 'string') {
-    result.createdBy = 'root-cms-client';
+    result.createdBy = defaultUser;
   }
   if (!result.modifiedBy || typeof result.modifiedBy !== 'string') {
-    result.modifiedBy = 'root-cms-client';
+    result.modifiedBy = defaultUser;
   }
 
   // Validate optional string fields.

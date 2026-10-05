@@ -48,9 +48,6 @@ const DEFAULT_GCI_DOMAIN = 'https://services.rootjs.dev';
 /** Default cache-control for uploaded files (365 days, content-addressed). */
 const DEFAULT_CACHE_CONTROL = 'public, max-age=31536000';
 
-/** Default user attributed to changes made through the client. */
-const DEFAULT_MODIFIED_BY = 'root-cms-client';
-
 /** Content types for common upload extensions. */
 const CONTENT_TYPES: Record<string, string> = {
   avif: 'image/avif',
@@ -174,7 +171,7 @@ export class AssetLibrary {
     source: string | Uint8Array,
     options: UploadAssetOptions = {}
   ): Promise<UploadAssetResult> {
-    const modifiedBy = options.modifiedBy || DEFAULT_MODIFIED_BY;
+    const modifiedBy = options.modifiedBy || this.cmsClient.user;
     let bytes: Uint8Array;
     let filename: string;
     if (typeof source === 'string') {
@@ -395,7 +392,7 @@ export class AssetLibrary {
 
     const meta: Record<string, string | number> = {
       filename: filename,
-      uploadedBy: options.uploadedBy || DEFAULT_MODIFIED_BY,
+      uploadedBy: options.uploadedBy || this.cmsClient.user,
       uploadedAt: String(Date.now()),
     };
     let size: ImageSize | null = null;
@@ -513,7 +510,7 @@ export class AssetLibrary {
       );
     }
     const assetFile = {id: asset.id, file: asset.file};
-    const modifiedBy = options.modifiedBy || DEFAULT_MODIFIED_BY;
+    const modifiedBy = options.modifiedBy || this.cmsClient.user;
     const docs = await this.queryDocsUsingAsset(asset.id);
     const updatedDocIds: string[] = [];
     const failedDocIds: string[] = [];
