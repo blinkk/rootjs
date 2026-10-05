@@ -170,3 +170,7 @@
   justify-content: flex-end;
   gap: 12px;
 }
+
+.AddToReleaseModal__notificationButton {
+  margin-top: 8px;
+}

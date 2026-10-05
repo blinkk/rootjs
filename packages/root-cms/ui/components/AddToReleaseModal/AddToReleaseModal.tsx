@@ -109,10 +109,19 @@ export function useAddToRelease(options?: {
       showNotification({
         title: `Release created: ${releaseId}`,
         message: (
-          <span>
-            Created release with {docIds.length} doc(s).{' '}
-            <a href={`/cms/releases/${releaseId}`}>View release</a>
-          </span>
+          <div>
+            <div>Created release with {docIds.length} doc(s).</div>
+            <Button
+              className="AddToReleaseModal__notificationButton"
+              component="a"
+              href={`/cms/releases/${releaseId}`}
+              size="xs"
+              compact
+              variant="default"
+            >
+              View release
+            </Button>
+          </div>
         ),
         autoClose: 10000,
       });
@@ -151,10 +160,19 @@ export function useAddToRelease(options?: {
       showNotification({
         title: `Docs added to release: ${releaseId}`,
         message: (
-          <span>
-            Added {addedCount} new doc(s) to release.{' '}
-            <a href={`/cms/releases/${releaseId}`}>View release</a>
-          </span>
+          <div>
+            <div>Added {addedCount} new doc(s) to release.</div>
+            <Button
+              className="AddToReleaseModal__notificationButton"
+              component="a"
+              href={`/cms/releases/${releaseId}`}
+              size="xs"
+              compact
+              variant="default"
+            >
+              View release
+            </Button>
+          </div>
         ),
         autoClose: 10000,
       });
