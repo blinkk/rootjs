@@ -28,12 +28,26 @@ const IN_QUERY_CHUNK_SIZE = 10;
 const MAX_BATCH_OPS = 400;
 
 /**
- * Firestore rejects commits whose request payload exceeds ~11MB. Translations
- * locale docs can be large (up to 1MB each), so batches are also capped by
- * their estimated size. The estimate is based on the JSON-encoded size of the
- * strings, so leave plenty of headroom.
+ * Firestore rejects commits whose request payload exceeds ~11MB, and
+ * transactions (including batch commits) whose total size exceeds ~10MB. The
+ * transaction size includes the index entries created by each write, which
+ * for translations locale docs is much larger than the doc itself (every
+ * string in the `strings` map is indexed). Batches are capped by an estimate
+ * of that size (see `estimateWriteBytes()`), with plenty of headroom.
  */
 const MAX_BATCH_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Firestore truncates indexed string values to 1500 bytes.
+ */
+const MAX_INDEXED_VALUE_BYTES = 1500;
+
+/**
+ * Approximate fixed overhead per index entry, plus the length of the full
+ * document name (`projects/{p}/databases/(default)/documents/...`) that's
+ * stored in every index entry.
+ */
+const INDEX_ENTRY_OVERHEAD_BYTES = 32 + 100;
 
 export type Locale = string;
 export type SourceString = string;
@@ -201,7 +215,13 @@ export class TranslationsManager {
       if (Object.keys(hashMap).length === 0) {
         continue;
       }
-      const docBytes = estimateBytes(hashMap);
+      const localeDocPath = buildTranslationsLocaleDocDbPath({
+        project: this.cmsClient.projectId,
+        mode: mode,
+        id: id,
+        locale: locale,
+      });
+      const docBytes = estimateWriteBytes(localeDocPath, {strings: hashMap});
       if (numOps > 0 && numBytes + docBytes > MAX_BATCH_BYTES) {
         await batch.commit();
         batch = db.batch();
@@ -223,12 +243,6 @@ export class TranslationsManager {
       if (options?.linkedSheet) {
         updates.sys.linkedSheet = options.linkedSheet;
       }
-      const localeDocPath = buildTranslationsLocaleDocDbPath({
-        project: this.cmsClient.projectId,
-        mode: mode,
-        id: id,
-        locale: locale,
-      });
       const localeDocRef = db.doc(localeDocPath);
       batch.set(localeDocRef, updates, {merge: true});
       numOps += 1;
@@ -304,7 +318,9 @@ export class TranslationsManager {
       // fit. A translations doc that exceeds the limits on its own is split
       // across multiple commits.
       const docsBytes = localeDocs.map((localeDoc) =>
-        estimateBytes(localeDoc.data.strings)
+        estimateWriteBytes(localeDoc.ref.path, {
+          strings: localeDoc.data.strings,
+        })
       );
       const totalBytes = docsBytes.reduce((a, b) => a + b, 0);
       if (
@@ -757,9 +773,31 @@ export function chunkArray<T>(items: T[], chunkSize: number): T[][] {
 }
 
 /**
- * Returns the approximate size (in bytes) of a value when written to
- * Firestore, based on its JSON encoding.
+ * Returns the approximate size (in bytes) that writing a doc adds to a
+ * Firestore transaction: the stored field values plus an ascending and a
+ * descending single-field index entry for every leaf value.
  */
-function estimateBytes(value: unknown): number {
-  return Buffer.byteLength(JSON.stringify(value ?? null), 'utf8');
+function estimateWriteBytes(docPath: string, data: unknown): number {
+  const docPathBytes = Buffer.byteLength(docPath, 'utf8');
+  let total = docPathBytes;
+  const visit = (value: unknown, fieldPathBytes: number) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [key, child] of Object.entries(value)) {
+        const keyBytes = Buffer.byteLength(key, 'utf8') + 1;
+        total += keyBytes;
+        visit(child, fieldPathBytes + keyBytes);
+      }
+      return;
+    }
+    const valueBytes = Buffer.byteLength(JSON.stringify(value ?? null), 'utf8');
+    total += valueBytes;
+    const indexEntryBytes =
+      INDEX_ENTRY_OVERHEAD_BYTES +
+      docPathBytes +
+      fieldPathBytes +
+      Math.min(valueBytes, MAX_INDEXED_VALUE_BYTES);
+    total += 2 * indexEntryBytes;
+  };
+  visit(data, 0);
+  return total;
 }
