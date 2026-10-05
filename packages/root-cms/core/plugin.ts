@@ -1097,15 +1097,21 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               trigger: 'build',
             });
           } catch (err) {
-            console.error(
-              '[root cms] v1 -> v2 translations migration failed. the build ' +
-                'requires Firestore access when `v2TranslationsManager` is ' +
-                'enabled — ensure application default credentials (ADC) are ' +
-                'available, e.g. run `gcloud auth application-default login` ' +
-                'or set GOOGLE_APPLICATION_CREDENTIALS. to use the legacy v1 ' +
-                'translations system, set ' +
-                '`{experiments: {v2TranslationsManager: false}}`.'
-            );
+            const {isFirestoreAuthError} =
+              await import('./translations-migration.js');
+            let message = '[root cms] v1 -> v2 translations migration failed.';
+            if (isFirestoreAuthError(err)) {
+              message +=
+                ' the build requires Firestore access when ' +
+                '`v2TranslationsManager` is enabled — ensure application ' +
+                'default credentials (ADC) are available, e.g. run ' +
+                '`gcloud auth application-default login` or set ' +
+                'GOOGLE_APPLICATION_CREDENTIALS.';
+            }
+            message +=
+              ' to use the legacy v1 translations system, set ' +
+              '`{experiments: {v2TranslationsManager: false}}`.';
+            console.error(message);
             throw err;
           }
         }
