@@ -56,6 +56,25 @@ export interface MigrateV1TranslationsResult {
   skipped: boolean;
 }
 
+/**
+ * gRPC status codes that indicate a credentials or permissions problem.
+ */
+const GRPC_PERMISSION_DENIED = 7;
+const GRPC_UNAUTHENTICATED = 16;
+
+/**
+ * Returns true if an error looks like it was caused by missing or invalid
+ * Google Cloud credentials (e.g. no ADC, expired login, or no IAM access).
+ */
+export function isFirestoreAuthError(err: unknown): boolean {
+  const code = (err as {code?: unknown})?.code;
+  if (code === GRPC_PERMISSION_DENIED || code === GRPC_UNAUTHENTICATED) {
+    return true;
+  }
+  const message = String((err as {message?: unknown})?.message ?? err);
+  return /default credentials|invalid_grant|invalid_rapt|reauth/i.test(message);
+}
+
 function migrationStateDbPath(projectId: string) {
   return `Projects/${projectId}/TranslationsManager/migration`;
 }

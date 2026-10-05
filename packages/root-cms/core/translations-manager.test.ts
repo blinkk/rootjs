@@ -251,6 +251,27 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(strings.one.fr).toBe('un');
     });
 
+    it('saves and publishes translations larger than the request limit', async () => {
+      // 30 locales x ~500KB per locale doc is ~15MB per translations doc,
+      // which exceeds Firestore's ~11MB request payload limit.
+      const tm = cmsClient.getTranslationsManager();
+      const translations: Record<string, string> = {};
+      for (let i = 0; i < 30; i++) {
+        translations[`locale${i}`] = `${i}`.padEnd(500 * 1024, 'x');
+      }
+      await tm.saveTranslations('Pages/large', {big: translations});
+      await tm.saveTranslations('common', {hello: {es: 'hola'}});
+      const res = await tm.publishTranslationsBulk(['Pages/large', 'common']);
+      expect(res.publishedIds.sort()).toEqual(['Pages/large', 'common']);
+      const strings = await tm.loadTranslations({
+        ids: ['Pages/large', 'common'],
+        mode: 'published',
+      });
+      expect(Object.keys(strings.big)).toHaveLength(31);
+      expect(strings.big.locale29).toBe(translations.locale29);
+      expect(strings.hello.es).toBe('hola');
+    });
+
     describe('importTranslationsFromV1', () => {
       async function seedV1Translation(
         source: string,

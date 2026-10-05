@@ -27,6 +27,14 @@ const IN_QUERY_CHUNK_SIZE = 10;
  */
 const MAX_BATCH_OPS = 400;
 
+/**
+ * Firestore rejects commits whose request payload exceeds ~11MB. Translations
+ * locale docs can be large (up to 1MB each), so batches are also capped by
+ * their estimated size. The estimate is based on the JSON-encoded size of the
+ * strings, so leave plenty of headroom.
+ */
+const MAX_BATCH_BYTES = 4 * 1024 * 1024;
+
 export type Locale = string;
 export type SourceString = string;
 export type TranslatedString = string;
@@ -186,11 +194,19 @@ export class TranslationsManager {
     const db = this.cmsClient.db;
     let batch = db.batch();
     let numOps = 0;
+    let numBytes = 0;
     const locales = Array.from(localesSet);
     for (const locale of locales) {
       const hashMap = this.toLocaleDocHashMap(strings, locale);
       if (Object.keys(hashMap).length === 0) {
         continue;
+      }
+      const docBytes = estimateBytes(hashMap);
+      if (numOps > 0 && numBytes + docBytes > MAX_BATCH_BYTES) {
+        await batch.commit();
+        batch = db.batch();
+        numOps = 0;
+        numBytes = 0;
       }
       const updates: Record<string, any> = {
         id: id,
@@ -216,10 +232,12 @@ export class TranslationsManager {
       const localeDocRef = db.doc(localeDocPath);
       batch.set(localeDocRef, updates, {merge: true});
       numOps += 1;
+      numBytes += docBytes;
       if (numOps >= MAX_BATCH_OPS) {
         await batch.commit();
         batch = db.batch();
         numOps = 0;
+        numBytes = 0;
       }
     }
     if (numOps > 0) {
@@ -270,18 +288,47 @@ export class TranslationsManager {
     const publishedIds: string[] = [];
     let batch = db.batch();
     let numOps = 0;
+    let numBytes = 0;
+    const commit = async () => {
+      await batch.commit();
+      batch = db.batch();
+      numOps = 0;
+      numBytes = 0;
+    };
     for (const id of Object.keys(localeDocsById)) {
       const localeDocs = localeDocsById[id];
       if (localeDocs.length === 0) {
         continue;
       }
-      // Keep all of a translations doc's ops within a single commit.
-      if (numOps > 0 && numOps + 2 * localeDocs.length > MAX_BATCH_OPS) {
-        await batch.commit();
-        batch = db.batch();
-        numOps = 0;
+      // Keep all of a translations doc's ops within a single commit when they
+      // fit. A translations doc that exceeds the limits on its own is split
+      // across multiple commits.
+      const docsBytes = localeDocs.map((localeDoc) =>
+        estimateBytes(localeDoc.data.strings)
+      );
+      const totalBytes = docsBytes.reduce((a, b) => a + b, 0);
+      if (
+        numOps > 0 &&
+        (numOps + 2 * localeDocs.length > MAX_BATCH_OPS ||
+          numBytes + totalBytes > MAX_BATCH_BYTES)
+      ) {
+        await commit();
       }
-      numOps += this.addPublishTranslationsOps(localeDocs, batch, options);
+      for (let i = 0; i < localeDocs.length; i++) {
+        if (
+          numOps > 0 &&
+          (numOps + 2 > MAX_BATCH_OPS ||
+            numBytes + docsBytes[i] > MAX_BATCH_BYTES)
+        ) {
+          await commit();
+        }
+        numOps += this.addPublishTranslationsOps(
+          [localeDocs[i]],
+          batch,
+          options
+        );
+        numBytes += docsBytes[i];
+      }
       publishedIds.push(id);
     }
     if (numOps > 0) {
@@ -707,4 +754,12 @@ export function chunkArray<T>(items: T[], chunkSize: number): T[][] {
     chunks.push(items.slice(i, i + chunkSize));
   }
   return chunks;
+}
+
+/**
+ * Returns the approximate size (in bytes) of a value when written to
+ * Firestore, based on its JSON encoding.
+ */
+function estimateBytes(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value ?? null), 'utf8');
 }
