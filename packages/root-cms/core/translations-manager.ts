@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   DocumentReference,
   FieldValue,
@@ -5,10 +6,12 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {extractStringsFromFields} from '../shared/extract.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
-import {hashStr} from '../shared/strings.js';
+import {hashStr, normalizeStr} from '../shared/strings.js';
 import type {RootCMSClient} from './client.js';
+import type {SchemaWithTypes} from './schema.js';
 
 const TRANSLATIONS_DB_PATH_FORMAT =
   '/Projects/{project}/TranslationsManager/{mode}/Translations';
@@ -48,6 +51,26 @@ const MAX_INDEXED_VALUE_BYTES = 1500;
  * stored in every index entry.
  */
 const INDEX_ENTRY_OVERHEAD_BYTES = 32 + 100;
+
+/** Max number of doc refs to read in a single `getAll()` call. */
+const GET_ALL_CHUNK_SIZE = 100;
+
+/** Max number of Firestore reads or commits to run in parallel. */
+const MAX_CONCURRENT_REQUESTS = 8;
+
+/** gRPC status codes for errors that are safe to retry. */
+const RETRYABLE_GRPC_CODES = new Set([
+  4, // DEADLINE_EXCEEDED
+  8, // RESOURCE_EXHAUSTED
+  10, // ABORTED
+  14, // UNAVAILABLE
+]);
+
+/** Max number of attempts for a retryable Firestore request. */
+const MAX_ATTEMPTS = 4;
+
+/** How often to log progress while saving translations. */
+const PROGRESS_LOG_INTERVAL_MS = 5000;
 
 export type Locale = string;
 export type SourceString = string;
@@ -164,7 +187,78 @@ export interface ImportTranslationsFromV1Result {
     numStrings: number;
     /** Number of v2 translations docs saved. */
     numDocs: number;
+    /**
+     * Number of strings removed from doc-backed translations docs because
+     * the doc no longer uses them (see `getCollectionSchema` in
+     * `ImportTranslationsFromV1Options`).
+     */
+    numPrunedStrings: number;
   };
+}
+
+/**
+ * Options for `importTranslationsFromV1()`.
+ */
+export interface ImportTranslationsFromV1Options {
+  /**
+   * Publishes the imported translations in the same writes that save the
+   * drafts. Defaults to `false` (drafts only).
+   */
+  publish?: boolean;
+  /**
+   * Value saved to `sys.modifiedBy` (and `sys.publishedBy`, when publishing).
+   * Defaults to `root-cms v1 migration`.
+   */
+  modifiedBy?: string;
+  /**
+   * Loads a collection's schema. When provided, strings in doc-backed
+   * translations docs (e.g. `Pages/index`) that are no longer used by any
+   * version of the doc are pruned instead of imported. The v1 data isn't
+   * modified, so pruned strings can still be recovered from it.
+   */
+  getCollectionSchema?: (
+    collectionId: string
+  ) => Promise<SchemaWithTypes | null>;
+  /**
+   * Tracks locale docs that were already saved, so that a retry after a
+   * failed import skips them.
+   */
+  writeCache?: TranslationsWriteCache;
+}
+
+/**
+ * Stores the cache keys of translations locale docs that have been saved.
+ * Keys are content hashes, so a locale doc whose strings changed since it was
+ * saved is written again.
+ */
+export interface TranslationsWriteCache {
+  has(key: string): boolean;
+  add(keys: string[]): Promise<void>;
+}
+
+/** A doc that backs a doc-like v1 translations tag (e.g. `Pages/index`). */
+interface V1TagDoc {
+  /** The draft doc's linked l10n sheet. */
+  linkedSheet?: TranslationsLinkedSheet;
+  /** The `fields` of each existing version of the doc. */
+  fields: Record<string, any>[];
+}
+
+/** A pending write of a translations locale doc. */
+interface LocaleDocWrite {
+  draftPath: string;
+  /** Set when the locale doc should also be published. */
+  publishedPath?: string;
+  data: {
+    id: string;
+    locale: string;
+    strings: TranslationsLocaleDocHashMap;
+    sys: Record<string, any>;
+  };
+  /** Content hash used to skip writes saved by a previous run. */
+  cacheKey: string;
+  /** Estimated transaction size of the (draft) write. */
+  bytes: number;
 }
 
 export class TranslationsManager {
@@ -605,16 +699,22 @@ export class TranslationsManager {
    * Each v1 string is grouped into a v2 translations doc per tag (e.g. a
    * string tagged `Pages/index` is saved to the `Pages/index` translations
    * doc). Untagged strings are grouped into a `v1-untagged` doc so that
-   * nothing is dropped. The imported translations are saved as drafts; use
-   * `publishTranslationsBulk()` to publish them.
+   * nothing is dropped. By default, the imported translations are saved as
+   * drafts; use `publishTranslationsBulk()` to publish them, or pass
+   * `{publish: true}` to publish them as part of the import.
+   *
+   * See `ImportTranslationsFromV1Options` for pruning unused strings and
+   * resuming a previously failed import.
    */
-  async importTranslationsFromV1(): Promise<ImportTranslationsFromV1Result> {
+  async importTranslationsFromV1(
+    options: ImportTranslationsFromV1Options = {}
+  ): Promise<ImportTranslationsFromV1Result> {
     const projectId = this.cmsClient.projectId;
     const db = this.cmsClient.db;
     const dbPath = `Projects/${projectId}/Translations`;
     const query = db.collection(dbPath);
     const querySnapshot = await query.get();
-    const stats = {numStrings: 0, numDocs: 0};
+    const stats = {numStrings: 0, numDocs: 0, numPrunedStrings: 0};
     if (querySnapshot.size === 0) {
       return {ids: [], stats};
     }
@@ -665,43 +765,300 @@ export class TranslationsManager {
       return {ids: [], stats};
     }
 
-    for (const translationsId of ids) {
-      const data = translationsDocs[translationsId];
+    // Fetch the docs backing doc-like translations ids (e.g. `Pages/index`)
+    // in bulk, for their linked sheets and (when pruning) their strings.
+    const pruneUnusedStrings = Boolean(options.getCollectionSchema);
+    const tagDocs = await this.fetchV1TagDocs(ids, {
+      withFields: pruneUnusedStrings,
+    });
+    if (options.getCollectionSchema) {
+      stats.numPrunedStrings = await this.pruneUnusedV1Strings(
+        translationsDocs,
+        tagDocs,
+        options.getCollectionSchema
+      );
+    }
 
-      // For doc-backed translations ids (e.g. `Pages/index`), move the doc's
-      // "l10nSheet" to the translations doc's "linkedSheet".
-      let linkedSheet: TranslationsLinkedSheet | undefined;
-      const sepIndex = translationsId.indexOf('/');
-      if (sepIndex > 0) {
-        const collection = translationsId.slice(0, sepIndex);
-        const slug = translationsId.slice(sepIndex + 1);
+    const publish = Boolean(options.publish);
+    const modifiedBy = options.modifiedBy || 'root-cms v1 migration';
+    const now = Timestamp.now();
+    const writes: LocaleDocWrite[] = [];
+    const savedIds: string[] = [];
+    for (const translationsId of ids) {
+      const strings = translationsDocs[translationsId].strings;
+      const linkedSheet = tagDocs.get(translationsId)?.linkedSheet;
+      let numLocaleDocs = 0;
+      for (const locale of getLocales(strings)) {
+        const hashMap = this.toLocaleDocHashMap(strings, locale);
+        if (Object.keys(hashMap).length === 0) {
+          continue;
+        }
+        const sys: Record<string, any> = {modifiedAt: now, modifiedBy};
+        if (linkedSheet) {
+          sys.linkedSheet = linkedSheet;
+        }
+        if (publish) {
+          sys.publishedAt = now;
+          sys.publishedBy = modifiedBy;
+        }
+        const pathOptions = {
+          project: projectId,
+          id: translationsId,
+          locale: locale,
+        };
+        const draftPath = buildTranslationsLocaleDocDbPath({
+          ...pathOptions,
+          mode: 'draft',
+        });
+        writes.push({
+          draftPath: draftPath,
+          publishedPath: publish
+            ? buildTranslationsLocaleDocDbPath({
+                ...pathOptions,
+                mode: 'published',
+              })
+            : undefined,
+          data: {id: translationsId, locale, strings: hashMap, sys},
+          cacheKey: sha1(
+            JSON.stringify([
+              translationsId,
+              locale,
+              publish,
+              linkedSheet,
+              hashMap,
+            ])
+          ),
+          bytes: estimateWriteBytes(draftPath, {strings: hashMap}),
+        });
+        numLocaleDocs += 1;
+      }
+      if (numLocaleDocs > 0) {
+        savedIds.push(translationsId);
+      }
+    }
+
+    console.log(
+      `[root cms] saving ${stats.numStrings} v1 string(s) to ` +
+        `${savedIds.length} translations doc(s) (${writes.length} locale doc(s))`
+    );
+    await this.commitLocaleDocWrites(writes, {
+      writeCache: options.writeCache,
+    });
+    stats.numDocs = savedIds.length;
+    return {ids: savedIds, stats};
+  }
+
+  /**
+   * Fetches the CMS docs backing doc-like translations ids (e.g. `Pages/index`
+   * -> `Collections/Pages/{mode}/index`) using batched reads. Ids that don't
+   * match an existing doc are omitted from the result.
+   */
+  private async fetchV1TagDocs(
+    ids: string[],
+    options: {withFields: boolean}
+  ): Promise<Map<string, V1TagDoc>> {
+    const db = this.cmsClient.db;
+    const projectId = this.cmsClient.projectId;
+    // The linked sheet is read from the draft doc. Pruning also needs the
+    // fields of the published and scheduled versions.
+    const modes = options.withFields
+      ? ['Drafts', 'Published', 'Scheduled']
+      : ['Drafts'];
+    const lookups: Array<{id: string; mode: string; ref: DocumentReference}> =
+      [];
+    for (const id of ids) {
+      const sepIndex = id.indexOf('/');
+      if (sepIndex <= 0) {
+        continue;
+      }
+      const collectionId = id.slice(0, sepIndex);
+      const slug = normalizeSlug(id.slice(sepIndex + 1));
+      if (!slug || Buffer.byteLength(slug, 'utf8') > 1500) {
+        continue;
+      }
+      for (const mode of modes) {
         try {
-          const rawDoc = await this.cmsClient.getRawDoc(collection, slug, {
-            mode: 'draft',
-          });
-          linkedSheet = rawDoc?.sys?.l10nSheet;
-        } catch (err) {
-          // Tags are user-defined and may look like a doc id without matching
-          // an actual collection. Ignore lookup errors.
-          console.warn(
-            `[root cms] failed to look up doc for tag "${translationsId}":`,
-            String(err)
+          const ref = db.doc(
+            `Projects/${projectId}/Collections/${collectionId}/${mode}/${slug}`
+          );
+          lookups.push({id, mode, ref});
+        } catch {
+          // Tags are user-defined and may look like a doc id without being a
+          // valid doc path. Ignore them.
+        }
+      }
+    }
+
+    const results = new Map<string, V1TagDoc>();
+    const readOptions = options.withFields
+      ? undefined
+      : {fieldMask: ['sys.l10nSheet']};
+    await runWithConcurrency(
+      chunkArray(lookups, GET_ALL_CHUNK_SIZE),
+      MAX_CONCURRENT_REQUESTS,
+      async (chunk) => {
+        const refs = chunk.map((lookup) => lookup.ref);
+        const snapshots = await withRetries(() =>
+          readOptions ? db.getAll(...refs, readOptions) : db.getAll(...refs)
+        );
+        snapshots.forEach((snapshot, i) => {
+          if (!snapshot.exists) {
+            return;
+          }
+          const {id, mode} = chunk[i];
+          const data = snapshot.data() || {};
+          const result = results.get(id) || {fields: []};
+          if (mode === 'Drafts') {
+            result.linkedSheet = data.sys?.l10nSheet;
+          }
+          if (options.withFields) {
+            result.fields.push(data.fields || {});
+          }
+          results.set(id, result);
+        });
+      }
+    );
+    return results;
+  }
+
+  /**
+   * Removes strings from doc-backed translations docs (e.g. `Pages/index`)
+   * that are no longer used by any version (draft, published or scheduled) of
+   * the doc. If the doc no longer exists, all of its strings are removed.
+   * Translations ids that don't map to a collection are left untouched.
+   * Returns the number of strings removed.
+   */
+  private async pruneUnusedV1Strings(
+    translationsDocs: Record<string, {strings: MultiLocaleTranslationsMap}>,
+    tagDocs: Map<string, V1TagDoc>,
+    getCollectionSchema: (
+      collectionId: string
+    ) => Promise<SchemaWithTypes | null>
+  ): Promise<number> {
+    const schemas = new Map<string, Promise<SchemaWithTypes | null>>();
+    const loadSchema = (collectionId: string) => {
+      if (!schemas.has(collectionId)) {
+        schemas.set(
+          collectionId,
+          getCollectionSchema(collectionId).catch(() => null)
+        );
+      }
+      return schemas.get(collectionId)!;
+    };
+
+    let numPruned = 0;
+    for (const [translationsId, translationsDoc] of Object.entries(
+      translationsDocs
+    )) {
+      const sepIndex = translationsId.indexOf('/');
+      if (sepIndex <= 0) {
+        continue;
+      }
+      const schema = await loadSchema(translationsId.slice(0, sepIndex));
+      if (!schema) {
+        continue;
+      }
+      const usedStrings = new Set<string>();
+      for (const fields of tagDocs.get(translationsId)?.fields || []) {
+        extractStringsFromFields(schema, fields).forEach((str) =>
+          usedStrings.add(str)
+        );
+      }
+      for (const source of Object.keys(translationsDoc.strings)) {
+        if (!usedStrings.has(normalizeStr(source))) {
+          delete translationsDoc.strings[source];
+          numPruned += 1;
+        }
+      }
+    }
+    if (numPruned > 0) {
+      console.log(
+        `[root cms] pruned ${numPruned} unused v1 string(s) from doc translations`
+      );
+    }
+    return numPruned;
+  }
+
+  /**
+   * Writes translations locale docs (and their published copies, if any),
+   * grouping them into batches that stay within Firestore's limits and
+   * committing several batches in parallel. Writes found in `writeCache` are
+   * skipped, and committed writes are added to it.
+   */
+  private async commitLocaleDocWrites(
+    writes: LocaleDocWrite[],
+    options: {writeCache?: TranslationsWriteCache}
+  ) {
+    const db = this.cmsClient.db;
+    const writeCache = options.writeCache;
+    const pending = writeCache
+      ? writes.filter((write) => !writeCache.has(write.cacheKey))
+      : writes;
+    if (pending.length < writes.length) {
+      console.log(
+        `[root cms] skipping ${writes.length - pending.length} locale doc(s) ` +
+          'saved by a previous run'
+      );
+    }
+
+    // Group the writes into batches.
+    const batches: LocaleDocWrite[][] = [];
+    let batch: LocaleDocWrite[] = [];
+    let numOps = 0;
+    let numBytes = 0;
+    for (const write of pending) {
+      const writeOps = write.publishedPath ? 2 : 1;
+      const writeBytes = write.bytes * writeOps;
+      if (
+        batch.length > 0 &&
+        (numOps + writeOps > MAX_BATCH_OPS ||
+          numBytes + writeBytes > MAX_BATCH_BYTES)
+      ) {
+        batches.push(batch);
+        batch = [];
+        numOps = 0;
+        numBytes = 0;
+      }
+      batch.push(write);
+      numOps += writeOps;
+      numBytes += writeBytes;
+    }
+    if (batch.length > 0) {
+      batches.push(batch);
+    }
+
+    let numWritten = 0;
+    let lastLogTime = Date.now();
+    await runWithConcurrency(
+      batches,
+      MAX_CONCURRENT_REQUESTS,
+      async (items) => {
+        await withRetries(() => {
+          const writeBatch = db.batch();
+          for (const item of items) {
+            const data = {
+              ...item.data,
+              tags: FieldValue.arrayUnion(item.data.id),
+            };
+            writeBatch.set(db.doc(item.draftPath), data, {merge: true});
+            if (item.publishedPath) {
+              writeBatch.set(db.doc(item.publishedPath), data, {merge: true});
+            }
+          }
+          return writeBatch.commit();
+        });
+        if (writeCache) {
+          await writeCache.add(items.map((item) => item.cacheKey));
+        }
+        numWritten += items.length;
+        if (Date.now() - lastLogTime > PROGRESS_LOG_INTERVAL_MS) {
+          lastLogTime = Date.now();
+          console.log(
+            `[root cms] saved ${numWritten}/${pending.length} locale doc(s)`
           );
         }
       }
-
-      const numStrings = Object.keys(data.strings).length;
-      console.log(
-        `[root cms] saving ${numStrings} string(s) to ${translationsId}...`
-      );
-      await this.saveTranslations(translationsId, data.strings, {
-        tags: [translationsId],
-        linkedSheet: linkedSheet,
-        modifiedBy: 'root-cms v1 migration',
-      });
-      stats.numDocs += 1;
-    }
-    return {ids, stats};
+    );
   }
 }
 
@@ -800,4 +1157,64 @@ function estimateWriteBytes(docPath: string, data: unknown): number {
   };
   visit(data, 0);
   return total;
+}
+
+/**
+ * Returns the locales with translations in a multi-locale translations map.
+ */
+function getLocales(strings: MultiLocaleTranslationsMap): Locale[] {
+  const locales = new Set<Locale>();
+  Object.values(strings).forEach((entry) => {
+    Object.keys(entry).forEach((locale) => {
+      if (locale !== 'source') {
+        locales.add(locale);
+      }
+    });
+  });
+  return Array.from(locales);
+}
+
+function sha1(str: string): string {
+  return crypto.createHash('sha1').update(str).digest('hex');
+}
+
+/**
+ * Runs `fn` for each item, with at most `limit` calls in flight at a time.
+ */
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>
+) {
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      await fn(item);
+    }
+  };
+  const numWorkers = Math.min(limit, items.length);
+  await Promise.all(Array.from({length: numWorkers}, worker));
+}
+
+/**
+ * Calls `fn`, retrying with exponential backoff when it fails with a
+ * transient Firestore error.
+ */
+async function withRetries<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const code = (err as {code?: unknown})?.code;
+      const retryable =
+        typeof code === 'number' && RETRYABLE_GRPC_CODES.has(code);
+      if (!retryable || attempt >= MAX_ATTEMPTS) {
+        throw err;
+      }
+      const delayMs = 2 ** attempt * 500 + Math.random() * 500;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
 }

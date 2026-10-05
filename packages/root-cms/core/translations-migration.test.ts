@@ -5,6 +5,9 @@
  */
 
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it} from 'vitest';
@@ -112,7 +115,11 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       ).data() as TranslationsMigrationState;
       expect(state.status).toBe('complete');
       expect(state.version).toBe(1);
-      expect(state.stats).toEqual({numStrings: 1, numDocs: 2});
+      expect(state.stats).toEqual({
+        numStrings: 1,
+        numDocs: 2,
+        numPrunedStrings: 0,
+      });
 
       // The v1 data is left untouched as a backup.
       const v1Doc = await cmsClient.db
@@ -139,13 +146,64 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(published.bye).toBeUndefined();
     });
 
+    it('resumes a failed migration from the local write cache', async () => {
+      await seedV1Translation(cmsClient, 'hello', {es: 'hola'}, ['common']);
+      const cacheDir = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'translations-migration-test-')
+      );
+      // Simulate a failed run that already saved the `common:es` locale doc.
+      const runId = 'failed-run';
+      await migrationStateRef(cmsClient).set({
+        version: 1,
+        runId: runId,
+        status: 'error',
+        startedAt: Timestamp.now(),
+      });
+      const tm = cmsClient.getTranslationsManager();
+      const keys: string[] = [];
+      await tm.importTranslationsFromV1({
+        publish: true,
+        writeCache: {
+          has: () => false,
+          add: async (newKeys) => {
+            keys.push(...newKeys);
+          },
+        },
+      });
+      const cacheFile = path.join(
+        cacheDir,
+        `translations-migration-${cmsClient.projectId}-${runId}.txt`
+      );
+      await fs.writeFile(cacheFile, keys.join('\n') + '\n');
+      // Delete the published doc; the resumed run should skip re-writing it.
+      const publishedRef = cmsClient.db.doc(
+        `Projects/${cmsClient.projectId}/TranslationsManager/published/Translations/common:es`
+      );
+      await publishedRef.delete();
+
+      const res = await migrateV1TranslationsIfNeeded(cmsClient, {cacheDir});
+      expect(res).toEqual({status: 'complete', skipped: false});
+      expect((await publishedRef.get()).exists).toBe(false);
+      // The cache file is removed once the migration completes.
+      await expect(fs.stat(cacheFile)).rejects.toThrow();
+      const state = (
+        await migrationStateRef(cmsClient).get()
+      ).data() as TranslationsMigrationState;
+      expect(state.runId).toBe(runId);
+      await fs.rm(cacheDir, {recursive: true, force: true});
+    });
+
     it('completes with empty stats when there is nothing to migrate', async () => {
       const res = await migrateV1TranslationsIfNeeded(cmsClient);
       expect(res).toEqual({status: 'complete', skipped: false});
       const state = (
         await migrationStateRef(cmsClient).get()
       ).data() as TranslationsMigrationState;
-      expect(state.stats).toEqual({numStrings: 0, numDocs: 0});
+      expect(state.stats).toEqual({
+        numStrings: 0,
+        numDocs: 0,
+        numPrunedStrings: 0,
+      });
     });
 
     it('skips when another process holds a fresh running lock', async () => {

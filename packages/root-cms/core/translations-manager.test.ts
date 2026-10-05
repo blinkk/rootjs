@@ -367,11 +367,138 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
         expect(data.sys.linkedSheet?.spreadsheetId).toBe('sheet123');
       });
 
+      it('publishes the imported translations with `publish: true`', async () => {
+        await seedV1Translation('hello', {es: 'hola', fr: 'bonjour'}, [
+          'common',
+        ]);
+        const tm = cmsClient.getTranslationsManager();
+        await tm.importTranslationsFromV1({
+          publish: true,
+          modifiedBy: 'test-migration',
+        });
+
+        const published = await tm.loadTranslations({
+          ids: ['common'],
+          mode: 'published',
+        });
+        expect(published.hello).toMatchObject({es: 'hola', fr: 'bonjour'});
+
+        // The draft is marked as published.
+        const draftDoc = await cmsClient.db
+          .doc(
+            `Projects/${cmsClient.projectId}/TranslationsManager/draft/Translations/common:es`
+          )
+          .get();
+        const draft = draftDoc.data() as TranslationsLocaleDoc;
+        expect(draft.tags).toEqual(['common']);
+        expect(draft.sys.modifiedBy).toBe('test-migration');
+        expect(draft.sys.publishedBy).toBe('test-migration');
+        expect(draft.sys.publishedAt).toBeDefined();
+      });
+
+      it('prunes strings that are no longer used by the tagged doc', async () => {
+        const pagesSchema: any = {
+          name: 'Pages',
+          fields: [
+            {id: 'title', type: 'string', translate: true},
+            {id: 'internalNote', type: 'string'},
+          ],
+        };
+        const saveDoc = async (mode: string, slug: string, title: string) => {
+          await cmsClient.db
+            .doc(
+              `Projects/${cmsClient.projectId}/Collections/Pages/${mode}/${slug}`
+            )
+            .set({
+              id: `Pages/${slug}`,
+              sys: {},
+              fields: {title: title, internalNote: 'old title'},
+            });
+        };
+        // The draft and published versions use different titles; strings
+        // from both are kept.
+        await saveDoc('Drafts', 'index', 'new title');
+        await saveDoc('Published', 'index', 'live title');
+        await seedV1Translation('new title', {es: 'nuevo'}, ['Pages/index']);
+        await seedV1Translation('live title', {es: 'en vivo'}, ['Pages/index']);
+        await seedV1Translation('old title', {es: 'viejo'}, [
+          'Pages/index',
+          'common',
+        ]);
+        // Strings tagged with a deleted doc are pruned.
+        await seedV1Translation('deleted', {es: 'borrado'}, ['Pages/deleted']);
+        // Tags that don't map to a collection are left untouched.
+        await seedV1Translation('blog title', {es: 'blog'}, ['Blog/index']);
+
+        const tm = cmsClient.getTranslationsManager();
+        const res = await tm.importTranslationsFromV1({
+          getCollectionSchema: async (collectionId) =>
+            collectionId === 'Pages' ? pagesSchema : null,
+        });
+        expect(res.stats.numPrunedStrings).toBe(2);
+        expect(res.ids.sort()).toEqual(['Blog/index', 'Pages/index', 'common']);
+
+        const pageStrings = await tm.loadTranslations({
+          ids: ['Pages/index'],
+          mode: 'draft',
+        });
+        expect(Object.keys(pageStrings).sort()).toEqual([
+          'live title',
+          'new title',
+        ]);
+        // Pruning only applies to the doc's own translations doc.
+        const commonStrings = await tm.loadTranslations({
+          ids: ['common'],
+          mode: 'draft',
+        });
+        expect(commonStrings['old title'].es).toBe('viejo');
+      });
+
+      it('skips locale docs found in the write cache', async () => {
+        await seedV1Translation('hello', {es: 'hola', fr: 'bonjour'}, [
+          'common',
+        ]);
+        const keys = new Set<string>();
+        const writeCache = {
+          has: (key: string) => keys.has(key),
+          add: async (newKeys: string[]) => {
+            newKeys.forEach((key) => keys.add(key));
+          },
+        };
+        const tm = cmsClient.getTranslationsManager();
+        await tm.importTranslationsFromV1({writeCache});
+        expect(keys.size).toBe(2);
+
+        // Simulate a doc that a retry should skip: delete it, then re-run the
+        // import with the same cache.
+        const esDocRef = cmsClient.db.doc(
+          `Projects/${cmsClient.projectId}/TranslationsManager/draft/Translations/common:es`
+        );
+        await esDocRef.delete();
+        await tm.importTranslationsFromV1({writeCache});
+        expect((await esDocRef.get()).exists).toBe(false);
+
+        // A changed string is written again.
+        await seedV1Translation('hello', {es: 'hola!', fr: 'bonjour'}, [
+          'common',
+        ]);
+        await tm.importTranslationsFromV1({writeCache});
+        const strings = await tm.loadTranslations({
+          ids: ['common'],
+          mode: 'draft',
+        });
+        expect(strings.hello.es).toBe('hola!');
+      });
+
       it('returns empty results when there are no v1 translations', async () => {
         const tm = cmsClient.getTranslationsManager();
         const res = await tm.importTranslationsFromV1();
         expect(res.ids).toEqual([]);
-        expect(res.stats).toEqual({numStrings: 0, numDocs: 0});
+        expect(res.stats).toEqual({
+          numStrings: 0,
+          numDocs: 0,
+          numPrunedStrings: 0,
+        });
       });
     });
   }

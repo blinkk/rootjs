@@ -163,6 +163,38 @@ async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
   }
 }
 
+/**
+ * Local directory for the v1 -> v2 translations migration's write cache,
+ * which lets a failed migration resume where it left off.
+ */
+function translationsMigrationCacheDir(rootDir: string) {
+  return path.join(rootDir, 'node_modules', '.cache', 'root-cms');
+}
+
+/**
+ * Reads a collection schema from the `dist/collections/<id>.schema.json` files
+ * written by `writeCollectionSchemasToJson()`.
+ */
+async function readBuiltCollectionSchema(
+  rootDir: string,
+  collectionId: string
+) {
+  const schemaPath = path.join(
+    rootDir,
+    'dist',
+    'collections',
+    `${collectionId}.schema.json`
+  );
+  try {
+    return JSON.parse(await fs.readFile(schemaPath, 'utf8'));
+  } catch (err) {
+    if ((err as {code?: string})?.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
+
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
@@ -1095,6 +1127,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           try {
             await migrateV1TranslationsIfNeeded(cmsClient, {
               trigger: 'build',
+              // Schemas were written to `dist/collections` above.
+              getCollectionSchema: (collectionId) =>
+                readBuiltCollectionSchema(rootConfig.rootDir, collectionId),
+              cacheDir: translationsMigrationCacheDir(rootConfig.rootDir),
             });
           } catch (err) {
             const {isFirestoreAuthError} =
@@ -1164,8 +1200,23 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       ) {
         import('./translations-migration.js')
           .then(({migrateV1TranslationsIfNeeded}) => {
-            const cmsClient = new RootCMSClient(serverOptions.rootConfig);
-            return migrateV1TranslationsIfNeeded(cmsClient, {trigger: 'dev'});
+            const rootConfig = serverOptions.rootConfig;
+            const cmsClient = new RootCMSClient(rootConfig);
+            const viteServer = devViteContext?.viteServer;
+            // Schemas are only available through vite's module loader.
+            const getCollectionSchema = viteServer
+              ? async (collectionId: string) => {
+                  const project = (await viteServer.ssrLoadModule(
+                    path.resolve(__dirname, './project.js')
+                  )) as ProjectModule;
+                  return project.getCollectionSchema(collectionId);
+                }
+              : undefined;
+            return migrateV1TranslationsIfNeeded(cmsClient, {
+              trigger: 'dev',
+              getCollectionSchema: getCollectionSchema,
+              cacheDir: translationsMigrationCacheDir(rootConfig.rootDir),
+            });
           })
           .catch((err) => {
             console.error('[root cms] v1 -> v2 translations migration failed:');
