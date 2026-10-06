@@ -698,8 +698,12 @@ export class TranslationsManager {
    *
    * Each v1 string is grouped into a v2 translations doc per tag (e.g. a
    * string tagged `Pages/index` is saved to the `Pages/index` translations
-   * doc). Untagged strings are grouped into a `v1-untagged` doc so that
-   * nothing is dropped. By default, the imported translations are saved as
+   * doc). Collection-level tags (e.g. `Pages`, which v1 added alongside each
+   * doc tag) are ignored, since a translations doc with every string in a
+   * collection can exceed Firestore's doc size limit. Strings that are only
+   * tagged with a collection were removed from their docs and are skipped.
+   * Untagged strings are grouped into a `v1-untagged` doc so that nothing is
+   * dropped. By default, the imported translations are saved as
    * drafts; use `publishTranslationsBulk()` to publish them, or pass
    * `{publish: true}` to publish them as part of the import.
    *
@@ -723,10 +727,25 @@ export class TranslationsManager {
       '[root cms] importing v1 Translations to v2 TranslationsManager'
     );
 
+    // v1 tagged each string with both its collection id and its doc id (e.g.
+    // `Pages` and `Pages/index`). Translations are only stored per doc in v2,
+    // so collection-level tags are ignored.
+    const collectionIds = new Set<string>();
+    querySnapshot.forEach((doc) => {
+      const tags = (doc.data().tags || []) as string[];
+      for (const tag of tags) {
+        const sepIndex = tag.indexOf('/');
+        if (sepIndex > 0) {
+          collectionIds.add(tag.slice(0, sepIndex));
+        }
+      }
+    });
+
     const translationsDocs: Record<
       string,
       {id: string; strings: MultiLocaleTranslationsMap}
     > = {};
+    let numCollectionOnlyStrings = 0;
     querySnapshot.forEach((doc) => {
       const translation = doc.data();
       const source = this.cmsClient.normalizeString(translation.source || '');
@@ -747,7 +766,14 @@ export class TranslationsManager {
       }
       // Group the string into a translations doc per tag. Untagged strings
       // are grouped into a `v1-untagged` doc so that nothing is dropped.
-      const tags = (translation.tags || []) as string[];
+      const allTags = (translation.tags || []) as string[];
+      const tags = allTags.filter((tag) => !collectionIds.has(tag));
+      if (allTags.length > 0 && tags.length === 0) {
+        // The string was removed from all of its docs and is only left tagged
+        // with a collection, so it is no longer used.
+        numCollectionOnlyStrings += 1;
+        return;
+      }
       const translationsIds = tags.length > 0 ? tags : ['v1-untagged'];
       for (const translationsId of translationsIds) {
         translationsDocs[translationsId] ??= {
@@ -758,6 +784,12 @@ export class TranslationsManager {
       }
       stats.numStrings += 1;
     });
+    if (numCollectionOnlyStrings > 0) {
+      console.log(
+        `[root cms] skipped ${numCollectionOnlyStrings} v1 string(s) that ` +
+          'are only tagged with a collection'
+      );
+    }
 
     const ids = Object.keys(translationsDocs);
     if (ids.length === 0) {
