@@ -1,13 +1,16 @@
-import {cmsRoute} from '@/utils/cms-route.js';
-import {fetchModuleData} from '@/utils/module-data.js';
+import {createRoute} from '@blinkk/root-cms';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client.js';
+import {addModuleData, addModuleDataQueries} from '@/utils/module-data.js';
 import Page from '../[[...page]].js';
 
 const SandboxPage = Page;
 export default SandboxPage;
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'Sandbox',
   slugParam: 'page',
   previewOnly: true,
-  preRenderHook: fetchModuleData,
+  batchRequest: addModuleDataQueries,
+  preRenderHook: addModuleData,
 });

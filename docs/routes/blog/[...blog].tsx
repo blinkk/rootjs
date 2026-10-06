@@ -1,9 +1,10 @@
 import {useRequestContext, useTranslations} from '@blinkk/root';
+import {createRoute} from '@blinkk/root-cms';
 import {BlogPost} from '@/components/BlogPost/BlogPost.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {BlogPostsDoc} from '@/root-cms.js';
 import {getBlogPostTime} from '@/utils/blog.js';
-import {cmsRoute} from '@/utils/cms-route.js';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client.js';
 import {
   getAbsoluteUrl,
   JsonLdNode,
@@ -57,7 +58,8 @@ export default function Page(props: PageProps) {
   );
 }
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'BlogPosts',
   slugParam: 'blog',
 });

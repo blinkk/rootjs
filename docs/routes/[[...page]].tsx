@@ -1,11 +1,12 @@
+import {createRoute} from '@blinkk/root-cms';
 import {
   PageModuleFields,
   PageModules,
 } from '@/components/PageModules/PageModules';
 import {BaseLayout} from '@/layouts/BaseLayout';
 import {PagesDoc} from '@/root-cms';
-import {cmsRoute} from '@/utils/cms-route';
-import {fetchModuleData} from '@/utils/module-data';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client';
+import {addModuleData, addModuleDataQueries} from '@/utils/module-data';
 
 export interface PageProps {
   doc: PagesDoc;
@@ -24,8 +25,10 @@ export default function Page(props: PageProps) {
   );
 }
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'Pages',
   slugParam: 'page',
-  preRenderHook: fetchModuleData,
+  batchRequest: addModuleDataQueries,
+  preRenderHook: addModuleData,
 });

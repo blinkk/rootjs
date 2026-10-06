@@ -17,7 +17,7 @@ export type TemplateGuidesProps = TemplateGuidesFields & {
 
 /**
  * Lists every doc in the `Guides` collection. The guides are fetched by the
- * page route (see `fetchGuidesForModules()` in `utils/guides.ts`) and read from
+ * page route (see `addModuleData()` in `utils/module-data.ts`) and read from
  * the page props.
  */
 export function TemplateGuides(props: TemplateGuidesProps) {

@@ -1,4 +1,5 @@
 import {useRequestContext, useTranslations} from '@blinkk/root';
+import {createRoute} from '@blinkk/root-cms';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconArrowRight, IconCheck} from '@tabler/icons-preact';
 import {
@@ -13,7 +14,7 @@ import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {GuidesDoc, GuidesFields} from '@/root-cms.js';
-import {cmsRoute} from '@/utils/cms-route.js';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client.js';
 import {getGuideUrl, sortGuides} from '@/utils/guides.js';
 import {
   getAbsoluteUrl,
@@ -197,7 +198,8 @@ function getNextGuide(doc: GuidesDoc, guides: GuidesDoc[]) {
   return sorted[index + 1] || null;
 }
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'Guides',
   slugParam: 'slug',
   fetchData: (ctx) => ({

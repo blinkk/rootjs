@@ -1,4 +1,5 @@
 import {useTranslations} from '@blinkk/root';
+import {createRoute} from '@blinkk/root-cms';
 import {RichText} from '@blinkk/root-cms/richtext';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import {
@@ -15,7 +16,7 @@ import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {DocsDoc, DocsFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
-import {cmsRoute} from '@/utils/cms-route.js';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client.js';
 import {buildDocsNav, DocsNavGroup} from '@/utils/docs.js';
 import {getReference, getReferenceToc} from '@/utils/reference.js';
 import styles from './[[...slug]].module.scss';
@@ -160,7 +161,8 @@ function Section(props: {section: DocsSection}) {
   );
 }
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'Docs',
   slugParam: 'slug',
   fetchData: (ctx) => ({

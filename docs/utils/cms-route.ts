@@ -1,3 +1,15 @@
+/**
+ * @deprecated Use `createRoute()` from `@blinkk/root-cms` instead, with
+ * `CMS_ROUTE_OPTIONS` from `@/utils/cms-client.js`:
+ *
+ * ```ts
+ * export const {handle} = createRoute({
+ *   ...CMS_ROUTE_OPTIONS,
+ *   collection: 'Pages',
+ *   slugParam: 'page',
+ * });
+ * ```
+ */
 import {
   GetStaticPaths,
   GetStaticProps,
@@ -7,6 +19,7 @@ import {
   RouteParams,
 } from '@blinkk/root';
 import {
+  ReadCache,
   RootCMSClient,
   resolveLocaleFallbacks,
   translationsForLocale,
@@ -92,10 +105,17 @@ export interface CMSDoc {
 /**
  * Cache-Control for published pages. Browsers cache pages for 1 minute and the
  * Firebase Hosting CDN for 5 minutes, so a publish can take up to ~6 minutes
- * to show up (plus the CMS client's in-memory cache, see `createCmsClient()`).
+ * to show up (plus the in-memory read cache, see `readCache`).
  */
 const PUBLISHED_CACHE_CONTROL = 'public, max-age=60, s-maxage=300';
 
+/** In-memory cache for published reads, shared by every `cmsRoute()`. */
+const readCache = new ReadCache();
+
+/**
+ * @deprecated Use `createRoute()` from `@blinkk/root-cms` instead (see the
+ * module docs above).
+ */
 export function cmsRoute(options: CMSRouteOptions) {
   let cmsClient: RootCMSClient = null;
   // Published (non-preview) requests read through a client that caches reads
@@ -211,7 +231,10 @@ export function cmsRoute(options: CMSRouteOptions) {
       }
       const client =
         mode === 'published'
-          ? (cachedCmsClient ??= createCmsClient(req.rootConfig, {cache: true}))
+          ? (cachedCmsClient ??= createCmsClient(
+              req.rootConfig,
+              process.env.NODE_ENV === 'production' ? {cache: readCache} : {}
+            ))
           : (cmsClient ??= createCmsClient(req.rootConfig));
       req.cmsClient = client;
       const routeContext: CMSRouteContext = {
