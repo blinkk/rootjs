@@ -294,6 +294,8 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
           'common',
         ]);
         await seedV1Translation('bye', {es: 'adios'}, ['Pages', 'Pages/foo']);
+        // Strings only tagged with a collection are skipped.
+        await seedV1Translation('removed', {es: 'eliminado'}, ['Pages']);
         await seedV1Translation('untagged string', {es: 'sin etiqueta'});
         // Non-string locale values are skipped.
         await seedV1Translation('bad values', {es: ['not', 'a', 'string']}, [
@@ -302,15 +304,15 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
 
         const tm = cmsClient.getTranslationsManager();
         const res = await tm.importTranslationsFromV1();
+        // Collection-level tags (e.g. `Pages`) are ignored.
         expect(res.ids.sort()).toEqual([
-          'Pages',
           'Pages/foo',
           'Pages/index',
           'common',
           'v1-untagged',
         ]);
         expect(res.stats.numStrings).toBe(4);
-        expect(res.stats.numDocs).toBe(5);
+        expect(res.stats.numDocs).toBe(4);
 
         const commonStrings = await tm.loadTranslations({
           ids: ['common'],
