@@ -267,7 +267,7 @@ const GETTING_STARTED: DocCopy = {
       sections: [
         section('overview', 'Overview', [
           p(
-            `Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site.`
+            'Root.js is a web platform for building content-driven websites. It pairs a TypeScript web framework with a built-in CMS, so developers, writers and translators can work on the same site.'
           ),
           ul(
             `<b>The framework</b> renders TSX on the server, either on demand (SSR) or ahead of time as static HTML (SSG). It's built on ${a('https://vite.dev/', 'Vite')}, and it ships no client-side JavaScript unless you add it.`,
@@ -308,7 +308,7 @@ https://rootjs.dev/skills/root-cms-setup.md`
                 `A few steps need you, because they happen in a browser or pick who pays: signing in with ${c('gcloud')}, choosing a billing account for a new project, and turning on Google sign-in in the Firebase console. The agent tells you when.`
               ),
               p(
-                `If you'd rather do it yourself, the rest of this page covers the same steps.`
+                "If you'd rather do it yourself, the rest of this page covers the same steps."
               )
             ),
           ]
@@ -344,7 +344,7 @@ pnpm dev`
               ),
               html(`<pre><code>${STARTER_TREE}</code></pre>`),
               p(
-                `Until the CMS is connected to Google Cloud, the home page shows the setup steps.`
+                'Until the CMS is connected to Google Cloud, the home page shows the setup steps.'
               ),
               p(
                 `<b>Just the framework?</b> The ${a('https://github.com/blinkk/rootjs/tree/main/examples/minimal', 'minimal')} template is a plain Root.js project with a single "Hello, Root.js" page at ${c('routes/index.tsx')}, and no CMS. It's a good fit for static sites. To add the CMS to it later, install ${c('@blinkk/root-cms')} and ${c('firebase-admin')}, and add ${c('cmsPlugin()')} as described in ${a('/docs/cms/', 'CMS configuration')}:`
@@ -364,22 +364,22 @@ pnpm dev`
           [
             code('bash', 'pnpm exec root-cms setup'),
             copy(
-              p(`It asks for a new or existing project and a site id, then:`),
+              p('It asks for a new or existing project and a site id, then:'),
               ul(
                 `Signs you in with ${c('gcloud')}, if needed, and links a billing account.`,
-                `Adds Firebase, creates the Firestore database and storage bucket, and applies the CMS's security rules.`,
-                `Makes you an ADMIN of the CMS.`,
-                `Creates a service account for the site to run as in production.`,
+                "Adds Firebase, creates the Firestore database and storage bucket, and applies the CMS's security rules.",
+                'Makes you an ADMIN of the CMS.',
+                'Creates a service account for the site to run as in production.',
                 `Stores a session secret in Secret Manager, and creates a ${c('.root.secrets.json')} manifest to commit (see ${a('#secrets', 'Share environment variables')}).`,
                 `Writes the site id and Firebase config into ${c('root.config.ts')}.`
               ),
               p(
-                `One step is manual, because Google has no API for it: the wizard asks you to turn on Google sign-in in the Firebase console, links you to the page, and checks that it worked.`
+                'One step is manual, because Google has no API for it: the wizard asks you to turn on Google sign-in in the Firebase console, links you to the page, and checks that it worked.'
               ),
               p(
                 `The site id keeps this site's content, uploads and secrets apart, so several sites can share one Google Cloud project. The wizard is safe to run again: it skips anything that's already set up, so if a step fails, fix it and re-run. Pass ${c('--dry-run')} to see what it would change first.`
               ),
-              p(`<b>Create your home page</b>`),
+              p('<b>Create your home page</b>'),
               p(
                 `Restart the dev server and open ${a('http://localhost:4007/cms/', 'http://localhost:4007/cms/')}. In the ${c('Pages')} collection, create a doc with the slug ${c('index')}, add a <b>TemplateHero</b> module, and publish it. It replaces the setup page at ${c('/')}. Other slugs map to their own URL, e.g. ${c('about')} renders at ${c('/about')}.`
               ),
@@ -414,7 +414,7 @@ pnpm dev`
             code('tsx', starterFile('templates/TemplateHero/TemplateHero.tsx')),
             copy(
               p(
-                `Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:`
+                'Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:'
               )
             ),
             code('bash', 'pnpm exec root-cms generate-types'),
@@ -458,15 +458,15 @@ pnpm exec root secrets sync`
           'Work with AI agents',
           [
             p(
-              `Root.js includes skills that teach AI coding agents, such as Claude Code, how to set up the CMS and how to read and edit your content from the command line. If an agent set up your project, they're already installed. Otherwise, install them into your project and commit them:`
+              "Root.js includes skills that teach AI coding agents, such as Claude Code, how to set up the CMS and how to read and edit your content from the command line. If an agent set up your project, they're already installed. Otherwise, install them into your project and commit them:"
             ),
           ],
           [
             code('bash', 'pnpm exec root-cms skill.install'),
             copy(
-              p(`With the skills installed, you can ask an agent to:`),
+              p('With the skills installed, you can ask an agent to:'),
               ul(
-                `Look up or update content, e.g. "list the pages that don't have a meta description".`,
+                'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
                 `Connect a teammate's checkout, or a new environment, to Google Cloud with ${c('root-cms setup')}.`
               ),
@@ -669,7 +669,7 @@ const ROUTES: DocCopy = {
           'Page',
           [
             p(
-              `A route's default export is its page component. It's rendered to HTML on the server, and sends no JavaScript to the browser.`
+              "A route's default export is its page component. It's rendered to HTML on the server, and sends no JavaScript to the browser."
             ),
           ],
           [
@@ -853,7 +853,7 @@ if (!customElements.get('root-counter')) {
             ),
             copy(
               p(
-                `Then use the element in any page. There's nothing to import: Root.js detects it and adds the script.`
+                "Then use the element in any page. There's nothing to import: Root.js detects it and adds the script."
               )
             ),
             code(
@@ -877,9 +877,9 @@ export default function Page() {
           'Hydrate Preact components',
           [
             p(
-              `Root.js renders TSX with Preact on the server, but doesn't send Preact to the browser. To make a Preact component interactive, wrap it in a custom element that hydrates it on the client.`
+              "Root.js renders TSX with Preact on the server, but doesn't send Preact to the browser. To make a Preact component interactive, wrap it in a custom element that hydrates it on the client."
             ),
-            p(`First, create the element that does the hydrating:`),
+            p('First, create the element that does the hydrating:'),
           ],
           [
             code(
@@ -971,7 +971,7 @@ Counter.Component = (props) => {
             ),
             copy(
               p(
-                `Use the component like any other. It's rendered on the server, then hydrated in the browser.`
+                "Use the component like any other. It's rendered on the server, then hydrated in the browser."
               )
             ),
             code(
@@ -1006,7 +1006,7 @@ const LOCALIZATION: DocCopy = {
       title: 'Localization',
       body: richtext(
         p(
-          `Root.js has built-in localization: locale-aware URLs, translated strings, and translations for CMS content, all managed in one place.`
+          'Root.js has built-in localization: locale-aware URLs, translated strings, and translations for CMS content, all managed in one place.'
         )
       ),
       sections: [
@@ -1142,7 +1142,7 @@ export default defineConfig({
           'domain',
           [
             p(
-              `The site's canonical domain, used for the sitemap, canonical URLs and other SEO tags.`
+              "The site's canonical domain, used for the sitemap, canonical URLs and other SEO tags."
             ),
           ],
           [
@@ -1241,7 +1241,7 @@ export default defineConfig({
           'server.sessionCookieSecret',
           [
             p(
-              `The secret used to sign session cookies, e.g. for signing in to the CMS. Keep it out of source control, for example in an environment variable.`
+              'The secret used to sign session cookies, e.g. for signing in to the CMS. Keep it out of source control, for example in an environment variable.'
             ),
           ],
           [
@@ -1478,8 +1478,8 @@ export default defineConfig({
             ),
             ol(
               `Create a project in the ${a('https://console.firebase.google.com/', 'Firebase console')}, or add Firebase to an existing Google Cloud project.`,
-              `Create a Firestore database in <b>Native mode</b>.`,
-              `Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains.`,
+              'Create a Firestore database in <b>Native mode</b>.',
+              'Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains.',
               `Under <b>Project settings</b>, register a web app and copy its ${c('firebaseConfig')} values into ${c('cmsPlugin()')}:`
             ),
           ],
@@ -1518,7 +1518,7 @@ gcloud auth application-default login`
             ),
             copy(
               p(
-                `To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:`
+                'To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:'
               )
             ),
             code('ts', FIRESTORE_RULES),
@@ -1528,10 +1528,10 @@ gcloud auth application-default login`
               ),
               p('The roles are:'),
               ul(
-                `<b>ADMIN</b>: everything, including managing users and settings.`,
-                `<b>EDITOR</b>: edit and publish content.`,
-                `<b>CONTRIBUTOR</b>: edit drafts, but not publish.`,
-                `<b>VIEWER</b>: read-only access.`
+                '<b>ADMIN</b>: everything, including managing users and settings.',
+                '<b>EDITOR</b>: edit and publish content.',
+                '<b>CONTRIBUTOR</b>: edit drafts, but not publish.',
+                '<b>VIEWER</b>: read-only access.'
               ),
               p(
                 `A role can be granted to a whole domain with an entry like ${c('*@example.com')}. Anyone with a verified email on that domain gets the role, so use it sparingly, never with a free email provider, and prefer per-email grants for ADMIN and EDITOR.`
@@ -1541,10 +1541,10 @@ gcloud auth application-default login`
         ),
         section('google-apis', 'Google Drive and Sheets', [
           p(
-            `Some CMS features, like importing from Google Sheets and Drive, use Google APIs on the editor's behalf. To enable them:`
+            "Some CMS features, like importing from Google Sheets and Drive, use Google APIs on the editor's behalf. To enable them:"
           ),
           ol(
-            `In the Google Cloud console, enable the Google Sheets API and Google Drive API.`,
+            'In the Google Cloud console, enable the Google Sheets API and Google Drive API.',
             `Create an ${a('https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow', 'OAuth client id')} (web application) and an API key.`,
             `Pass them to the plugin as ${c('gapi: {clientId, apiKey}')}, e.g. from environment variables.`
           ),
@@ -1866,7 +1866,7 @@ const CLI: DocCopy = {
           `${c('root-cms')}: sets up the CMS, generates types, and reads and writes content.`,
           `${c('root-password-protect')}: tools for password-protected pages.`
         ),
-        p(`This reference is generated from the source code.`)
+        p('This reference is generated from the source code.')
       ),
       reference: 'cli',
       sections: [],
@@ -1888,7 +1888,7 @@ const API: DocCopy = {
       title: 'API reference',
       body: richtext(
         p(
-          `Root.js is published as a few npm packages. Each package has a reference page, generated from its TypeScript types and doc comments:`
+          'Root.js is published as a few npm packages. Each package has a reference page, generated from its TypeScript types and doc comments:'
         ),
         ul(
           `${a('/docs/api/root/', c('@blinkk/root'))}: the framework, including config, routing, components, hooks and the server.`,
@@ -1945,7 +1945,7 @@ const MIGRATION_V4: DocCopy = {
       title: 'Migrating to Root.js v4',
       body: richtext(
         p(
-          `Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if your build runs without Firestore access or you relied on the old defaults.`
+          'Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if your build runs without Firestore access or you relied on the old defaults.'
         )
       ),
       sections: [
@@ -2041,7 +2041,7 @@ cmsPlugin({
         ),
         section('editorjs', 'EditorJS removed', [
           p(
-            `The legacy EditorJS rich text editor and its "Enable EditorJS Editor (legacy)" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated.`
+            'The legacy EditorJS rich text editor and its "Enable EditorJS Editor (legacy)" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn\'t need to be migrated.'
           ),
         ]),
         section('branding', 'CMS branding', [
@@ -2079,7 +2079,7 @@ const MIGRATION_V3: DocCopy = {
       ),
       sections: [
         section('node', 'Node.js 24', [
-          p(`<i>Applies to v3.3.1 and above</i>`),
+          p('<i>Applies to v3.3.1 and above</i>'),
           p(
             `Root.js requires ${a('https://nodejs.org/', 'Node.js')} 24 (the current LTS) or later. Update your local Node.js version, CI, and your hosting runtime, e.g. ${c('runtime: nodejs24')} in App Engine's ${c('app.yaml')}.`
           ),
@@ -2088,7 +2088,7 @@ const MIGRATION_V3: DocCopy = {
           'vite',
           'Vite config updates',
           [
-            p(`<i>Applies to v3.0.0 and above</i>`),
+            p('<i>Applies to v3.0.0 and above</i>'),
             p(
               `${a('https://vite.dev/', 'Vite')} has been updated to v8. See Vite's ${a('https://vite.dev/guide/migration', 'migration guide')} for details.`
             ),
@@ -2134,7 +2134,7 @@ export default defineConfig({
           'Root AI config',
           [
             p(
-              `The Root AI config has graduated from "experimental". The new format supports more model providers.`
+              'The Root AI config has graduated from "experimental". The new format supports more model providers.'
             ),
           ],
           [
@@ -2206,12 +2206,12 @@ const MIGRATION_V2: DocCopy = {
       title: 'Migrating to Root.js v2',
       body: richtext(
         p(
-          `Root.js v2 updates third-party dependencies, including Vite, Express, Sass and esbuild. Keep the following in mind when you update a project.`
+          'Root.js v2 updates third-party dependencies, including Vite, Express, Sass and esbuild. Keep the following in mind when you update a project.'
         )
       ),
       sections: [
         section('node', 'Node.js updates', [
-          p(`<i>Applies to v2.0.0 and above</i>`),
+          p('<i>Applies to v2.0.0 and above</i>'),
           p(
             `Support for non-LTS versions of ${a('https://nodejs.org/', 'Node.js')} has been dropped. Root.js v2 requires Node.js 20 or later. (Root.js v3 requires Node.js 24, see the ${a('/docs/migration/v3/#node', 'v3 migration guide')}.)`
           ),
@@ -2220,7 +2220,7 @@ const MIGRATION_V2: DocCopy = {
           'vite',
           'Vite config updates',
           [
-            p(`<i>Applies to v2.2.0 and above</i>`),
+            p('<i>Applies to v2.2.0 and above</i>'),
             p(
               `${a('https://vite.dev/', 'Vite')} has been updated to v7. See Vite's ${a('https://vite.dev/guide/migration.html', 'migration guide')} for details.`
             ),
@@ -2277,7 +2277,7 @@ export default defineConfig({
           'sass',
           'Sass updates',
           [
-            p(`<i>Applies to v2.2.0 and above</i>`),
+            p('<i>Applies to v2.2.0 and above</i>'),
             p(
               `Sass has been updated to the latest ${a('https://www.npmjs.com/package/sass-embedded', 'sass-embedded')} (v1.92.0 at the time of writing), which has several ${a('https://sass-lang.com/documentation/breaking-changes/', 'breaking changes')}.`
             ),
@@ -2285,7 +2285,7 @@ export default defineConfig({
           [
             copy(
               p(
-                `In particular, the way Sass handles mixed declarations has changed, which can change the order of your CSS output:`
+                'In particular, the way Sass handles mixed declarations has changed, which can change the order of your CSS output:'
               ),
               p('⏪ Before:')
             ),
@@ -2340,7 +2340,7 @@ export default defineConfig({
           'root-cms',
           'CMS updates',
           [
-            p(`<i>Applies to v2.2.0 and above</i>`),
+            p('<i>Applies to v2.2.0 and above</i>'),
             p(
               `Much of the CMS UI was rewritten to perform better on large projects, which required a breaking change: every ${c('schema.define()')} name must now be unique across the project. This reduces the size of the schemas sent to the CMS and of ${c('root-cms.d.ts')}.`
             ),
@@ -2407,7 +2407,7 @@ const DEPLOYMENT: DocCopy = {
     content: {
       title: 'Deployment',
       body: richtext(
-        p(`Root.js sites can be deployed in one of two ways:`),
+        p('Root.js sites can be deployed in one of two ways:'),
         ul(
           `<b>Static (SSG)</b>: ${c('root build')} renders every page to HTML ahead of time. Host the output on any static host or CDN.`,
           `<b>Server (SSR)</b>: pages are rendered on each request by a Node.js server. Root.js packages the server for ${a('#app-engine', 'App Engine')} and ${a('#firebase', 'Firebase Hosting')}, and it runs anywhere Node.js 24 does.`
@@ -2599,7 +2599,7 @@ export const www = {
                 `Add ${c('firebase-functions')} and ${c('firebase-admin')} to your dependencies, and set ${c('"main": "index.js"')} and ${c('"engines": {"node": "24"}')} in your ${c('package.json')}. These are copied into the packaged function.`
               ),
               p(
-                `<b>2. Configure Firebase Hosting.</b> Serve static files from the packaged build, and rewrite every other request to the server function:`
+                '<b>2. Configure Firebase Hosting.</b> Serve static files from the packaged build, and rewrite every other request to the server function:'
               )
             ),
             code(
@@ -2660,8 +2660,8 @@ pnpm exec root start --host=0.0.0.0`
         ),
         section('cms-checklist', 'Checklist for sites with the CMS', [
           ul(
-            `<b>Credentials</b>: the server accesses Firestore with application default credentials. On App Engine and Cloud Functions, give the runtime's service account access to Firestore (e.g. the Cloud Datastore User role).`,
-            `<b>Sign-in</b>: add your production domain to the authorized domains under Authentication in the Firebase console.`,
+            "<b>Credentials</b>: the server accesses Firestore with application default credentials. On App Engine and Cloud Functions, give the runtime's service account access to Firestore (e.g. the Cloud Datastore User role).",
+            '<b>Sign-in</b>: add your production domain to the authorized domains under Authentication in the Firebase console.',
             `<b>Session cookies</b>: set ${a('/docs/config/#server-session-cookie-secret', c('server.sessionCookieSecret'))} from a secret, not a value in source control.`,
             `<b>Scheduled jobs</b>: schedule ${c('/cms/api/cron.run')} as shown above, or scheduled publishing and version history won't run. See ${a('/docs/cms/#cron-jobs', 'Scheduled jobs')}.`,
             `<b>Secrets</b>: to share secrets between developers and CI, see ${a('/docs/#secrets', c('root secrets'))}.`

@@ -21,7 +21,6 @@ export type TemplateGuidesProps = TemplateGuidesFields & {
  * the page props.
  */
 export function TemplateGuides(props: TemplateGuidesProps) {
-  const t = useTranslations();
   const ctx = useRequestContext();
   const guides: GuidesDoc[] = ctx.props?.guides || [];
   return (
