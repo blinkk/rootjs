@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as readline from 'node:readline';
 import {loadRootConfig} from '@blinkk/root/node';
+import {Timestamp} from 'firebase-admin/firestore';
 import {RootCMSClient, unmarshalData, getCmsPlugin} from '../core/client.js';
+import {getCliUser} from './cli-user.js';
 import {convertForExport, convertFirestoreTypes} from './utils.js';
 
 export interface DocsGetOptions {
@@ -82,7 +84,7 @@ export async function docsSet(
   const mode = validateMode(options.mode);
   const rootDir = process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-  const client = new RootCMSClient(rootConfig);
+  const client = createWriteClient(rootConfig);
   const cmsPlugin = getCmsPlugin(rootConfig);
   const db = cmsPlugin.getFirestore();
 
@@ -101,6 +103,7 @@ export async function docsSet(
   const data = convertFirestoreTypes(rawJson, db);
 
   const {collection, slug} = parseDocId(docId);
+  stampModified(client, data, mode);
   await client.setRawDoc(collection, slug, data, {mode});
   console.log(`Updated ${docId} (${mode})`);
 }
@@ -180,7 +183,7 @@ export async function docsUpload(
   const mode = validateMode(options.mode);
   const rootDir = process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-  const client = new RootCMSClient(rootConfig);
+  const client = createWriteClient(rootConfig);
   const cmsPlugin = getCmsPlugin(rootConfig);
   const db = cmsPlugin.getFirestore();
 
@@ -202,6 +205,7 @@ export async function docsUpload(
     const filePath = path.join(inputDir, file);
     const rawJson = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const data = convertFirestoreTypes(rawJson, db);
+    stampModified(client, data, mode);
     await client.setRawDoc(collectionId, slug, data, {mode});
     count++;
   }
@@ -209,6 +213,33 @@ export async function docsUpload(
   console.log(
     `Uploaded ${count} doc(s) to "${collectionId}" (${mode}) from ${inputDir}`
   );
+}
+
+/**
+ * Creates a client for commands that write docs. Writes (and their action
+ * logs) are attributed to the active gcloud user.
+ */
+function createWriteClient(
+  rootConfig: ConstructorParameters<typeof RootCMSClient>[0]
+): RootCMSClient {
+  return new RootCMSClient(rootConfig, {user: getCliUser()});
+}
+
+/**
+ * Stamps a draft doc's `sys.modifiedAt` and `sys.modifiedBy` so the edit is
+ * attributed to the CLI user and picked up by the version history cron.
+ * Without this, setting a doc from a previously downloaded JSON file would
+ * keep the stale values from the time of the download.
+ */
+function stampModified(client: RootCMSClient, data: any, mode: string) {
+  if (mode !== 'draft') {
+    return;
+  }
+  data.sys = {
+    ...(data.sys || {}),
+    modifiedAt: Timestamp.now(),
+    modifiedBy: client.user,
+  };
 }
 
 /**

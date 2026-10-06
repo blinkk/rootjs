@@ -1,5 +1,6 @@
 import {loadRootConfig} from '@blinkk/root/node';
 import {RootCMSClient} from '../core/client.js';
+import {getCliUser} from './cli-user.js';
 import {ClientApiInfo, getClientApiInfo} from './client-reflect.js';
 import {convertForExport, convertFirestoreTypes} from './utils.js';
 
@@ -43,7 +44,8 @@ export async function clientCall(method: string, jsonArgs: string | undefined) {
 
     const rootDir = process.cwd();
     const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-    const client = new RootCMSClient(rootConfig);
+    // Attribute writes (and their action logs) to the active gcloud user.
+    const client = new RootCMSClient(rootConfig, {user: getCliUser()});
 
     const fn = (client as any)[method];
     if (typeof fn !== 'function') {

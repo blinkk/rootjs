@@ -32,6 +32,9 @@ Together these give you full programmatic access to the CMS backend
   Firebase Admin tooling). If calls fail with auth errors, the environment
   needs `gcloud auth application-default login` or a
   `GOOGLE_APPLICATION_CREDENTIALS` service-account key.
+- Writes are attributed to the active gcloud account (`gcloud config get-value
+  account`), or to `ROOT_CMS_USER` if set, and doc saves, publishes and
+  unpublishes are recorded in the CMS action logs like edits made in the UI.
 - Invoke via the package binary. If `@blinkk/root-cms` is installed locally,
   use `npx root-cms ...` (or `pnpm exec root-cms ...`); otherwise the global
   `root-cms` binary.

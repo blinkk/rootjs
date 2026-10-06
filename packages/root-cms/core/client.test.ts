@@ -698,6 +698,101 @@ describe('RootCMSClient Validation', () => {
       expect(savedData.slug).toBe('parent--child--page');
       expect(savedData.id).toBe('Pages/parent--child--page');
     });
+
+    it('defaults createdBy and modifiedBy to the client user', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig, {
+        user: 'user@example.com',
+      });
+
+      await client.setRawDoc(
+        'Pages',
+        'test',
+        {sys: {}, fields: {}},
+        {mode: 'draft'}
+      );
+
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdBy).toBe('user@example.com');
+      expect(savedData.sys.modifiedBy).toBe('user@example.com');
+    });
+
+    it('does not log actions when logActions is false', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig, {logActions: false});
+      const mockLogAction = vi.fn();
+      client.logAction = mockLogAction as any;
+
+      await client.setRawDoc('Pages', 'test', {fields: {}}, {mode: 'draft'});
+
+      expect(mockLogAction).not.toHaveBeenCalled();
+    });
+
+    it('logs a doc.save action by default', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig, {
+        user: 'user@example.com',
+      });
+      const mockLogAction = vi.fn();
+      client.logAction = mockLogAction as any;
+
+      await client.setRawDoc('Pages', 'test', {fields: {}}, {mode: 'draft'});
+      await client.setRawDoc(
+        'Pages',
+        'test',
+        {fields: {}},
+        {mode: 'published'}
+      );
+
+      expect(mockLogAction.mock.calls).toEqual([
+        ['doc.save', {by: 'user@example.com', metadata: {docId: 'Pages/test'}}],
+        [
+          'doc.save',
+          {
+            by: 'user@example.com',
+            metadata: {docId: 'Pages/test', mode: 'published'},
+          },
+        ],
+      ]);
+    });
+
+    it('does not fail the write when logging the action fails', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      client.logAction = vi.fn().mockRejectedValue(new Error('boom')) as any;
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      await client.setRawDoc('Pages', 'test', {fields: {}}, {mode: 'draft'});
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
+    it('logs a single doc.save action from updateDraftData', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      client.getRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {title: 'Old Title'},
+      }) as any;
+      const mockLogAction = vi.fn();
+      client.logAction = mockLogAction as any;
+
+      await client.updateDraftData('Pages/test', 'title', 'New Title', {
+        modifiedBy: 'editor@example.com',
+      });
+
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.modifiedBy).toBe('editor@example.com');
+      expect(mockLogAction).toHaveBeenCalledTimes(1);
+      expect(mockLogAction).toHaveBeenCalledWith('doc.save', {
+        by: 'editor@example.com',
+        metadata: {docId: 'Pages/test'},
+      });
+    });
   });
 
   describe('getRawDoc parameter validation', () => {

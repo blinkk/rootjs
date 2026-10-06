@@ -28,6 +28,8 @@ function createTestClient(db: Firestore, projectId: string): RootCMSClient {
   Object.assign(client, {
     projectId,
     db,
+    user: 'root-cms-client',
+    logActions: true,
     // Use the v1 translations system and skip the dependency graph, neither
     // of which this test covers.
     cmsPlugin: {
@@ -171,5 +173,36 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
         expect(release.scheduledBy).toBeUndefined();
       }
     );
+
+    it('logs publish and unpublish actions', async () => {
+      const projectId = 'log-actions-test';
+      const client = createTestClient(db, projectId);
+      Object.assign(client, {user: 'cli@example.com'});
+      await seedDraftDocs(db, projectId, 'pages', ['foo', 'bar']);
+
+      await client.publishDocs(['pages/foo', 'pages/bar']);
+      await client.unpublishDocs(['pages/foo']);
+
+      const actions = (
+        await db.collection(`Projects/${projectId}/ActionLogs`).get()
+      ).docs.map((doc) => doc.data());
+      const summary = actions
+        .map((action) => `${action.action}:${action.metadata.docId}`)
+        .sort();
+      expect(summary).toEqual([
+        'doc.publish:pages/bar',
+        'doc.publish:pages/foo',
+        'doc.unpublish:pages/foo',
+      ]);
+      for (const action of actions) {
+        expect(action.by).toBe('cli@example.com');
+      }
+
+      // Publishing is attributed to the client user by default.
+      const published = await db
+        .doc(`Projects/${projectId}/Collections/pages/Published/bar`)
+        .get();
+      expect(published.data()?.sys?.publishedBy).toBe('cli@example.com');
+    });
   }
 );
