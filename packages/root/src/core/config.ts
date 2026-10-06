@@ -302,8 +302,19 @@ export interface RootI18nConfig {
    *   },
    * }
    * ```
+   *
+   * Can also be a function that returns the fallbacks for a locale, e.g.
+   * `fallbacks: (locale) => (locale.startsWith('fr') ? ['fr'] : [])`.
    */
-  fallbacks?: Record<RootLocale, RootLocale[]>;
+  fallbacks?:
+    Record<RootLocale, RootLocale[]> | ((locale: RootLocale) => RootLocale[]);
+
+  /**
+   * Falls back from a `<lang>_<country>` (or `<lang>-<country>`) locale to
+   * `<lang>` for translations, e.g. `ja_jp` -> `ja`, after any configured
+   * `fallbacks`. Only fallbacks to locales listed in `locales` are added.
+   */
+  fallbackToLanguage?: boolean;
 }
 
 export interface RootBuildConfig {

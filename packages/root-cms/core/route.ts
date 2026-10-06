@@ -23,6 +23,7 @@
  * export const {getStaticProps, getStaticPaths} = createRoute({collection: 'BlogPosts'});
  * ```
  */
+import path from 'node:path';
 import {
   GetStaticPaths,
   GetStaticProps,
@@ -44,13 +45,50 @@ import {
   translationsForLocale,
 } from './client.js';
 import type {DependencyGraphService} from './dependency-graph.js';
+import {FileSystemReadCacheStore} from './read-cache-fs-store.js';
 import {ReadCache} from './read-cache.js';
 
 /** Default Cache-Control header for published pages. */
 const DEFAULT_CACHE_CONTROL = 'public, max-age=15, s-maxage=30';
 
+/** Default Cache-Control header for 404 responses. */
+const DEFAULT_NOT_FOUND_CACHE_CONTROL = 'private';
+
+/**
+ * TTL for reads cached during `root build`. The build cache is deleted at the
+ * start and end of each build, so reads are effectively cached for the whole
+ * build, which also keeps the content consistent across pages.
+ */
+const BUILD_CACHE_TTL = 24 * 60 * 60 * 1000;
+
 /** Read cache shared by every route created with `{cache: true}`. */
 let sharedReadCache: ReadCache | undefined;
+
+/**
+ * Read cache shared by every route created with `{cache: true}` during
+ * `root build`, which is backed by the filesystem so that it's shared by the
+ * build's worker threads.
+ */
+let sharedBuildReadCache: ReadCache | undefined;
+
+/**
+ * Returns the read cache shared by every route created with `{cache: true}`.
+ */
+function getSharedReadCache(): ReadCache {
+  // `root build` sets `ROOT_BUILD_CACHE_DIR` while rendering SSG pages.
+  const buildCacheDir = process.env.ROOT_BUILD_CACHE_DIR;
+  if (buildCacheDir) {
+    sharedBuildReadCache ??= new ReadCache({
+      ttl: BUILD_CACHE_TTL,
+      store: new FileSystemReadCacheStore({
+        dir: path.join(buildCacheDir, 'root-cms'),
+      }),
+    });
+    return sharedBuildReadCache;
+  }
+  sharedReadCache ??= new ReadCache();
+  return sharedReadCache;
+}
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -155,8 +193,8 @@ export interface Route {
  * Context passed to the `resolveLocale()` option.
  */
 export interface ResolveLocaleContext {
-  /** HTTP request object. */
-  req: RouteRequest;
+  /** HTTP request object. Only available in SSR mode. */
+  req?: RouteRequest;
   /** The route context, including the loaded `doc`. */
   routeContext: RouteContext;
   /** The route's CMS doc. */
@@ -166,20 +204,23 @@ export interface ResolveLocaleContext {
   /**
    * The locale from the URL, e.g. "de" for `/de/about/`. For the route's
    * default-locale URL (e.g. `/about/`), this is the site's default locale.
+   * In SSG mode, this is the locale from the build path (`params.$locale`).
    */
   routeLocale: string;
   /**
    * Whether the request is for the route's default-locale URL (i.e. the URL
    * has no locale prefix), in which case the locale is typically determined
    * from the user's request (`?hl=`, `accept-language`, country, etc.).
+   * Always `false` in SSG mode.
    */
   isDefaultLocale: boolean;
   /**
    * Upper-cased country code from `?gl=` or the `x-country-code` /
-   * `x-appengine-country` headers, or an empty string if unknown.
+   * `x-appengine-country` headers, or an empty string if unknown (always
+   * empty in SSG mode).
    */
   country: string;
-  /** Value of the `?hl=` query param, or `null` if not set. */
+  /** Value of the `?hl=` query param, or `null` if not set (or in SSG mode). */
   hl: string | null;
   /**
    * Runs the built-in locale resolution. Useful for customizing only some
@@ -187,6 +228,31 @@ export interface ResolveLocaleContext {
    */
   resolveDefault: () => string | null;
 }
+
+/**
+ * A locale returned by the `resolveLocale()` option.
+ */
+export interface ResolvedLocale {
+  /** The locale to render. */
+  locale: string;
+  /**
+   * Renders the locale even if the doc isn't enabled for it (i.e. it isn't
+   * one of `ctx.docLocales`). The locale is used as-is.
+   */
+  force?: boolean;
+}
+
+/**
+ * Context passed to the `resolveDoc()` option.
+ */
+export type ResolveDocContext = RouteContext & {
+  /** The route's CMS doc. */
+  doc: RootCMSDoc;
+  /** The resolved locale. */
+  locale: string;
+  /** Data returned by the `fetchData()` option. */
+  data: Record<string, any>;
+};
 
 export interface CreateRouteOptions {
   /**
@@ -217,6 +283,28 @@ export interface CreateRouteOptions {
    * Slug to use for the route. Used for non-dynamic, single-document routes.
    */
   slug?: string;
+
+  /**
+   * Custom slug resolution, e.g. for normalizing legacy URLs. Takes
+   * precedence over `slug`, `slugFormat` and `slugParam`, and applies to both
+   * SSR and SSG. Returning an empty string renders the 404 page.
+   *
+   * ```ts
+   * createRoute({
+   *   collection: 'Pages',
+   *   slugParam: 'path',
+   *   // Map `section/123` to the `section/123/index` doc.
+   *   getSlug: (params) => {
+   *     const slug = params.path || 'index';
+   *     return /^section\/\d+$/.test(slug) ? `${slug}/index` : slug;
+   *   },
+   * });
+   * ```
+   *
+   * NOTE: `getStaticPaths()` maps doc slugs to params with the default logic
+   * and doesn't use `getSlug()`.
+   */
+  getSlug?: (params: RouteParams) => string;
 
   /**
    * Callback function that returns a map of Promises that contain fetched data.
@@ -253,19 +341,53 @@ export interface CreateRouteOptions {
   ) => void | Promise<void>;
 
   /**
+   * Replaces the route's doc for a request, e.g. to serve a region-specific
+   * or flag-gated variant from another collection on the same URL. Called
+   * once the locale is resolved and before translations are loaded. If a doc
+   * is returned, it replaces the route's doc (as `props.doc` and
+   * `context.doc`), and its translations are loaded on top of the route
+   * doc's translations. Returning `null` or `undefined` keeps the route's
+   * doc.
+   *
+   * ```ts
+   * createRoute({
+   *   collection: 'Pages',
+   *   resolveDoc: async (ctx) => {
+   *     if (ctx.req?.get('x-country-code') !== 'DE') {
+   *       return null;
+   *     }
+   *     return ctx.cmsClient.getDoc('PagesDE', ctx.slug, {mode: ctx.mode});
+   *   },
+   * });
+   * ```
+   */
+  resolveDoc?: (
+    ctx: ResolveDocContext
+  ) => RootCMSDoc | null | undefined | Promise<RootCMSDoc | null | undefined>;
+
+  /**
    * Hook that's called when the doc is not found. If not provided, the default
    * 404 handler will be called.
+   *
+   * The response status code set by the hook (e.g. `res.status(404)`) is
+   * passed through to `req.handlerContext.render()`.
    */
   notFoundHook?: (req: Request, res: Response) => void | Promise<void>;
 
   /**
    * Hook for amending any props values before being passed to the page
    * component.
+   *
+   * Set `props.$redirect` (and optionally `props.$redirectCode`) to redirect,
+   * or `props.$statusCode` to respond with a different status code (e.g. 403
+   * or 410). A non-200 `res.statusCode` set by the hook is also passed
+   * through to the renderer.
    */
   preRenderHook?: (props: any, context: RouteContext) => any | Promise<any>;
 
   /**
-   * Hook for setting any response headers.
+   * Hook for setting any response headers. A non-200 `res.statusCode` set by
+   * the hook is passed through to the renderer.
    */
   setResponseHeaders?: (req: Request, res: Response) => void;
 
@@ -288,6 +410,15 @@ export interface CreateRouteOptions {
   translateReferences?: boolean | 'transitive';
 
   /**
+   * Whether to load translations for the route. Set to `false` (or a function
+   * that returns `false`) to skip all translation loading, e.g. for embeds or
+   * preview-only routes, in which case the page is rendered with `{}`
+   * translations. The function is called once the doc and locale are loaded.
+   * Defaults to `true`.
+   */
+  translate?: boolean | ((context: RouteContext) => boolean);
+
+  /**
    * Sets Cache-Control header to `private`.
    */
   disableCacheControl?: boolean;
@@ -300,6 +431,13 @@ export interface CreateRouteOptions {
   cacheControl?: string;
 
   /**
+   * Cache-Control header for 404 responses. Defaults to `private`, so that
+   * CDNs don't cache a 404 caused by a transient miss or a doc that isn't
+   * published yet. A `notFoundHook` can override it.
+   */
+  notFoundCacheControl?: string;
+
+  /**
    * Caches published CMS reads in memory, which saves a Firestore round trip
    * on most page renders. Pass `true` to use a cache shared by every route
    * (reads are cached for 60 seconds), or pass a `ReadCache` to configure it,
@@ -308,7 +446,12 @@ export interface CreateRouteOptions {
    * Published content can take up to the cache's ttl to show up (plus any CDN
    * cache time, see `cacheControl`). Draft (preview) requests are never
    * cached. Ignored outside of production (i.e. unless `NODE_ENV` is
-   * "production").
+   * "production"). Caches are cleared when docs are published or unpublished
+   * in the same process, or manually with `clearReadCaches()`.
+   *
+   * During `root build`, the shared cache (`true`) is backed by the
+   * filesystem (see `FileSystemReadCacheStore`), so reads are shared by the
+   * build's worker threads (`--threads`) and cached for the whole build.
    */
   cache?: boolean | ReadCache;
 
@@ -342,9 +485,31 @@ export interface CreateRouteOptions {
   ssgMode?: DocMode;
 
   /**
-   * Whether the route should only be available with ?preview=true.
+   * Whether the route should only be available in draft mode (i.e. with
+   * `?preview=true`, see `getMode`).
    */
   previewOnly?: boolean;
+
+  /**
+   * Determines whether a request reads draft or published content. Defaults
+   * to the exported `getMode()`, which uses `?preview=true` (and
+   * `?preview=true&mode=published`). Only used in SSR mode (see `ssgMode`).
+   *
+   * ```ts
+   * import {createRoute, getMode} from '@blinkk/root-cms';
+   *
+   * createRoute({
+   *   collection: 'Pages',
+   *   getMode: (req) => {
+   *     if (!isProd && req.get('x-force-draft') === 'true') {
+   *       return 'draft';
+   *     }
+   *     return getMode(req);
+   *   },
+   * });
+   * ```
+   */
+  getMode?: (req: RouteRequest) => DocMode | Promise<DocMode>;
 
   /**
    * Overrides the default locale for the route.
@@ -352,11 +517,12 @@ export interface CreateRouteOptions {
   defaultLocale?: string;
 
   /**
-   * Custom locale lookup for SSR requests, for sites with custom locale logic
-   * (e.g. mapping countries or URL params to locales). Returns the locale to
-   * render, which must be one of `ctx.docLocales` (matched
-   * case-insensitively). Returning `null` or a locale the doc isn't enabled
-   * for renders the 404 page (or calls `notFoundHook`).
+   * Custom locale lookup, for sites with custom locale logic (e.g. mapping
+   * countries or URL params to locales). Returns the locale to render, which
+   * must be one of `ctx.docLocales` (matched case-insensitively). Returning
+   * `null` or a locale the doc isn't enabled for renders the 404 page (or
+   * calls `notFoundHook`). To render a locale the doc isn't enabled for,
+   * return `{locale, force: true}`.
    *
    * Call `ctx.resolveDefault()` to fall back to the built-in logic:
    *
@@ -372,11 +538,19 @@ export interface CreateRouteOptions {
    * });
    * ```
    *
-   * SSG builds always render the locale from the build path.
+   * Also called in SSG mode, with `req: undefined`, `isDefaultLocale: false`
+   * and `routeLocale` set to the locale from the build path, where
+   * `ctx.resolveDefault()` returns the build path's locale (if the doc is
+   * enabled for it).
    */
   resolveLocale?: (
     ctx: ResolveLocaleContext
-  ) => string | null | undefined | Promise<string | null | undefined>;
+  ) =>
+    | string
+    | ResolvedLocale
+    | null
+    | undefined
+    | Promise<string | ResolvedLocale | null | undefined>;
 }
 
 /**
@@ -395,8 +569,7 @@ export function createRoute(options: CreateRouteOptions): Route {
       return undefined;
     }
     if (options.cache === true) {
-      sharedReadCache ??= new ReadCache();
-      return sharedReadCache;
+      return getSharedReadCache();
     }
     return options.cache;
   }
@@ -424,7 +597,14 @@ export function createRoute(options: CreateRouteOptions): Route {
     return cmsClient;
   }
 
-  function getSlug(params: RouteParams) {
+  /**
+   * Returns the slug for the route params, or an empty string if the slug
+   * can't be resolved (see `options.getSlug`).
+   */
+  function resolveSlug(params: RouteParams): string {
+    if (options.getSlug) {
+      return options.getSlug(params) || '';
+    }
     if (options.slug) {
       return options.slug;
     }
@@ -454,11 +634,20 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   /**
-   * Translations are only loaded for sites that have >1 locale configured.
+   * Translations are only loaded for sites that have >1 locale configured,
+   * unless disabled with `options.translate`.
    */
-  function shouldTranslate(cmsClient: RootCMSClient) {
-    const siteLocales = cmsClient.rootConfig.i18n?.locales || ['en'];
-    return siteLocales.length > 1;
+  function shouldTranslate(routeContext: RouteContext) {
+    const siteLocales = routeContext.cmsClient.rootConfig.i18n?.locales || [
+      'en',
+    ];
+    if (siteLocales.length <= 1) {
+      return false;
+    }
+    if (typeof options.translate === 'function') {
+      return options.translate(routeContext);
+    }
+    return options.translate ?? true;
   }
 
   async function fetchData(
@@ -483,7 +672,8 @@ export function createRoute(options: CreateRouteOptions): Route {
   ): Promise<string[]> {
     if (
       options.translateReferences === false ||
-      !shouldTranslate(cmsClient) ||
+      options.translate === false ||
+      (cmsClient.rootConfig.i18n?.locales || ['en']).length <= 1 ||
       !cmsClient.isV2TranslationsEnabled()
     ) {
       return [];
@@ -538,10 +728,61 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   /**
+   * Resolves the locale to render from the `options.resolveLocale()` result,
+   * or `null` if the doc isn't enabled for the locale.
+   */
+  async function resolveLocale(
+    ctx: Omit<ResolveLocaleContext, 'docLocales'>
+  ): Promise<string | null> {
+    const docLocales = getDocLocales(
+      ctx.doc,
+      ctx.routeContext.cmsClient.rootConfig
+    );
+    const result = options.resolveLocale
+      ? await options.resolveLocale({...ctx, docLocales})
+      : ctx.resolveDefault();
+    if (!result) {
+      return null;
+    }
+    if (typeof result === 'object') {
+      if (!result.locale) {
+        return null;
+      }
+      return result.force
+        ? result.locale
+        : findLocale(docLocales, result.locale);
+    }
+    return findLocale(docLocales, result);
+  }
+
+  /**
+   * Calls `options.resolveDoc()` and replaces the route's doc with the
+   * returned doc, if any.
+   */
+  async function resolveDoc(
+    routeContext: RouteContext,
+    data: Record<string, any>
+  ) {
+    if (!options.resolveDoc) {
+      return;
+    }
+    const doc = await options.resolveDoc({
+      ...routeContext,
+      doc: routeContext.doc!,
+      locale: routeContext.locale!,
+      data,
+    });
+    if (doc) {
+      routeContext.doc = doc;
+    }
+  }
+
+  /**
    * Loads the translations for the resolved locale. Translations are loaded
    * for any `options.translations()` tags, the docs referenced by the route's
-   * doc, the route's doc, and any docs added to the batch request, in that
-   * order of precedence (later ids win).
+   * doc, the route's doc (and the doc returned by `options.resolveDoc()`, if
+   * any), and any docs added to the batch request, in that order of
+   * precedence (later ids win).
    */
   async function loadTranslations(
     routeContext: RouteContext,
@@ -549,10 +790,14 @@ export function createRoute(options: CreateRouteOptions): Route {
     locale: string
   ): Promise<Record<string, string>> {
     const {cmsClient, slug} = routeContext;
-    if (!shouldTranslate(cmsClient)) {
+    if (!shouldTranslate(routeContext)) {
       return {};
     }
-    const docId = getDocId(slug);
+    const docIds = [getDocId(slug)];
+    const resolvedDocId = routeContext.doc?.id;
+    if (resolvedDocId && !docIds.includes(resolvedDocId)) {
+      docIds.push(resolvedDocId);
+    }
     const tags = options.translations?.(routeContext)?.tags || [];
 
     // The v1 translations system stores strings by tag, so load them with a
@@ -560,7 +805,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     // compatibility.
     if (!cmsClient.isV2TranslationsEnabled()) {
       const translationsMap = await cmsClient.loadTranslations({
-        tags: ['common', docId, ...tags],
+        tags: ['common', ...docIds, ...tags],
       });
       const fallbackLocales = resolveLocaleFallbacks(
         cmsClient.rootConfig.i18n,
@@ -572,7 +817,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     const {batchRequest, batchResponse, referencedDocIds} = content;
     tags.forEach((tag) => batchRequest.addTranslations(tag));
     referencedDocIds.forEach((id) => batchRequest.addTranslations(id));
-    batchRequest.addTranslations(docId);
+    docIds.forEach((id) => batchRequest.addTranslations(id));
     // Only the resolved locale (and its fallbacks) are fetched.
     await batchRequest.fetchTranslations(batchResponse, {locales: [locale]});
     return batchResponse.getTranslations(locale);
@@ -580,24 +825,43 @@ export function createRoute(options: CreateRouteOptions): Route {
 
   async function generateProps(routeContext: RouteContext, locale: string) {
     const {slug, mode, cmsClient} = routeContext;
+    if (!slug) {
+      return {notFound: true};
+    }
     const content = await loadContent(routeContext);
     const {doc, data} = content;
     if (!doc) {
       return {notFound: true};
     }
     const docLocales = getDocLocales(doc, cmsClient.rootConfig);
-    const docLocale = findLocale(docLocales, locale);
+    const docLocale = await resolveLocale({
+      req: undefined,
+      routeContext,
+      doc,
+      routeLocale: locale,
+      isDefaultLocale: false,
+      country: '',
+      hl: null,
+      resolveDefault: () => findLocale(docLocales, locale),
+    });
     if (!docLocale) {
       return {notFound: true};
     }
     routeContext.locale = docLocale;
+    await resolveDoc(routeContext, data);
 
     const translations = await loadTranslations(
       routeContext,
       content,
       docLocale
     );
-    let props: any = {...data, locale: docLocale, mode, slug, doc};
+    let props: any = {
+      ...data,
+      locale: docLocale,
+      mode,
+      slug,
+      doc: routeContext.doc,
+    };
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
     }
@@ -608,30 +872,52 @@ export function createRoute(options: CreateRouteOptions): Route {
   const route: Route = {
     // SSR handler.
     handle: async (req: RouteRequest, res: Response) => {
-      const mode = await getMode(req);
-      const cmsClient = getCmsClient(req.rootConfig, mode);
-      req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
-      const slug = getSlug(ctx.params);
-      // Ignore slugs with `--` and `.` in it, these generally should not be
-      // handled by a CMS route.
-      if (slug.includes('.') || slug.includes('--')) {
-        return ctx.render404();
-      }
+      // The renderer responds with `options.statusCode || 200`, so pass
+      // through any status code set by a hook (e.g. a `notFoundHook` that
+      // sets 404 and renders a page), which would otherwise be served as a
+      // cacheable 200.
+      const render = ctx.render;
+      ctx.render = (props, renderOptions) =>
+        render(props, {
+          ...renderOptions,
+          statusCode: renderOptions?.statusCode ?? getResponseStatusCode(res),
+        });
 
-      // For previewOnly routes, render the 404 page if ?preview=true is not
-      // in the URL.
-      if (options.previewOnly && mode !== 'draft') {
+      const setNotFoundHeaders = () => {
+        res.setHeader(
+          'cache-control',
+          options.notFoundCacheControl || DEFAULT_NOT_FOUND_CACHE_CONTROL
+        );
+      };
+      const render404 = () => {
+        setNotFoundHeaders();
         return ctx.render404();
-      }
-
+      };
       const notFound = async () => {
+        setNotFoundHeaders();
         if (options.notFoundHook) {
           await options.notFoundHook(req, res);
           return;
         }
         return ctx.render404();
       };
+
+      const mode = await (options.getMode || getMode)(req);
+      const cmsClient = getCmsClient(req.rootConfig, mode);
+      req.cmsClient = cmsClient;
+      const slug = resolveSlug(ctx.params);
+      // Ignore slugs with `--` and `.` in it, these generally should not be
+      // handled by a CMS route.
+      if (!slug || slug.includes('.') || slug.includes('--')) {
+        return render404();
+      }
+
+      // For previewOnly routes, render the 404 page if ?preview=true is not
+      // in the URL.
+      if (options.previewOnly && mode !== 'draft') {
+        return render404();
+      }
 
       const routeContext: RouteContext = {
         req,
@@ -724,37 +1010,41 @@ export function createRoute(options: CreateRouteOptions): Route {
       }
 
       const docLocales = getDocLocales(doc, req.rootConfig);
-      const resolveDefault = () => {
-        if (ctx.route.isDefaultLocale) {
-          return getFallbackLocale(docLocales);
-        }
-        return findLocale(docLocales, ctx.route.locale);
-      };
-      const resolvedLocale = options.resolveLocale
-        ? await options.resolveLocale({
-            req,
-            routeContext,
-            doc,
-            docLocales,
-            routeLocale: ctx.route.locale,
-            isDefaultLocale: !!ctx.route.isDefaultLocale,
-            country,
-            hl,
-            resolveDefault,
-          })
-        : resolveDefault();
-      const locale = resolvedLocale && findLocale(docLocales, resolvedLocale);
+      const locale = await resolveLocale({
+        req,
+        routeContext,
+        doc,
+        routeLocale: ctx.route.locale,
+        isDefaultLocale: !!ctx.route.isDefaultLocale,
+        country,
+        hl,
+        resolveDefault: () => {
+          if (ctx.route.isDefaultLocale) {
+            return getFallbackLocale(docLocales);
+          }
+          return findLocale(docLocales, ctx.route.locale);
+        },
+      });
       if (!locale) {
         return notFound();
       }
       routeContext.locale = locale;
+      await resolveDoc(routeContext, data);
 
       const translations = await loadTranslations(
         routeContext,
         content,
         locale
       );
-      let props: any = {...data, req, locale, mode, slug, doc, country};
+      let props: any = {
+        ...data,
+        req,
+        locale,
+        mode,
+        slug,
+        doc: routeContext.doc,
+        country,
+      };
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
       }
@@ -784,7 +1074,11 @@ export function createRoute(options: CreateRouteOptions): Route {
       if (options.setResponseHeaders) {
         options.setResponseHeaders(req, res);
       }
-      return ctx.render(props, {locale, translations});
+      return ctx.render(props, {
+        locale,
+        translations,
+        statusCode: props.$statusCode,
+      });
     },
   };
 
@@ -812,7 +1106,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     };
 
     route.getStaticProps = async (ctx) => {
-      const slug = getSlug(ctx.params);
+      const slug = resolveSlug(ctx.params);
       const mode = options.ssgMode || 'published';
       const cmsClient = getCmsClient(ctx.rootConfig, mode);
       const routeContext: RouteContext = {
@@ -828,6 +1122,15 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   return route;
+}
+
+/**
+ * Returns the response's status code if it was changed from the default
+ * (200), e.g. by a `notFoundHook` or `preRenderHook`.
+ */
+function getResponseStatusCode(res: Response): number | undefined {
+  const statusCode = res.statusCode;
+  return statusCode && statusCode !== 200 ? statusCode : undefined;
 }
 
 /**
