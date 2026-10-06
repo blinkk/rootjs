@@ -29,6 +29,7 @@ function createTestClient(db: Firestore, projectId: string): RootCMSClient {
     projectId,
     db,
     user: 'root-cms-client',
+    logActions: true,
     // Use the v1 translations system and skip the dependency graph, neither
     // of which this test covers.
     cmsPlugin: {
@@ -173,10 +174,10 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       }
     );
 
-    it('logs publish and unpublish actions when logActions is enabled', async () => {
+    it('logs publish and unpublish actions', async () => {
       const projectId = 'log-actions-test';
       const client = createTestClient(db, projectId);
-      Object.assign(client, {user: 'cli@example.com', logActions: true});
+      Object.assign(client, {user: 'cli@example.com'});
       await seedDraftDocs(db, projectId, 'pages', ['foo', 'bar']);
 
       await client.publishDocs(['pages/foo', 'pages/bar']);

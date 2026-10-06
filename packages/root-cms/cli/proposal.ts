@@ -93,11 +93,10 @@ async function runApply(filepath: string, options?: ProposalApplyCliOptions) {
       ]);
     const rootDir = process.cwd();
     const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-    // Attribute writes to the active gcloud user (unless overridden) and
-    // record doc writes in the action logs, as edits from the CMS UI are.
+    // Attribute writes (and their action logs) to the active gcloud user,
+    // unless overridden with `--modified-by`.
     const client = new RootCMSClient(rootConfig, {
       user: options?.modifiedBy || getCliUser(),
-      logActions: true,
     });
     const res = await applyProposal(client, proposal, {
       dryRun: options?.dryRun,

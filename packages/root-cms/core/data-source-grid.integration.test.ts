@@ -39,6 +39,7 @@ function createTestClient(db: Firestore, projectId: string): RootCMSClient {
     projectId,
     db,
     user: 'root-cms-client',
+    logActions: true,
     cmsPlugin: {getConfig: () => ({})},
   });
   return client as RootCMSClient;

@@ -490,8 +490,8 @@ export interface RootCMSClientOptions {
   /**
    * Whether doc writes (`saveDraftData()`, `updateDraftData()`, `setRawDoc()`,
    * `publishDocs()` and `unpublishDocs()`) record an entry in the project's
-   * action logs, the same way edits made from the CMS UI do. Off by default so
-   * that bulk scripts and migrations don't flood the action logs.
+   * action logs, the same way edits made from the CMS UI do. Defaults to
+   * `true`. Set to `false` to skip logging, e.g. for a one-off bulk migration.
    */
   logActions?: boolean;
 }
@@ -736,7 +736,7 @@ export class RootCMSClient {
       this.proposal = new ProposalOverlay(options.proposal);
     }
     this.user = options?.user || DEFAULT_CLIENT_USER;
-    this.logActions = Boolean(options?.logActions);
+    this.logActions = options?.logActions ?? true;
   }
 
   /**
@@ -1094,13 +1094,11 @@ export class RootCMSClient {
     const docRef = this.db.doc(dbPath);
     await docRef.set(data);
 
-    if (this.logActions) {
-      const metadata: Record<string, string> = {docId: expectedId};
-      if (options.mode !== 'draft') {
-        metadata.mode = options.mode;
-      }
-      await this.logAction('doc.save', {by: data.sys.modifiedBy, metadata});
+    const metadata: Record<string, string> = {docId: expectedId};
+    if (options.mode !== 'draft') {
+      metadata.mode = options.mode;
     }
+    await this.logDocAction('doc.save', data.sys.modifiedBy, metadata);
   }
 
   /**
@@ -1375,14 +1373,12 @@ export class RootCMSClient {
       await batch.commit();
     }
     console.log(`published ${publishedDocs.length} docs!`);
-    if (this.logActions) {
-      for (const doc of publishedDocs) {
-        const metadata: Record<string, string> = {docId: doc.id};
-        if (options?.releaseId) {
-          metadata.releaseId = options.releaseId;
-        }
-        await this.logAction('doc.publish', {by: publishedBy, metadata});
+    for (const doc of publishedDocs) {
+      const metadata: Record<string, string> = {docId: doc.id};
+      if (options?.releaseId) {
+        metadata.releaseId = options.releaseId;
       }
+      await this.logDocAction('doc.publish', publishedBy, metadata);
     }
     return publishedDocs;
   }
@@ -1521,13 +1517,8 @@ export class RootCMSClient {
       await batch.commit();
     }
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
-    if (this.logActions) {
-      for (const doc of unpublishedDocs) {
-        await this.logAction('doc.unpublish', {
-          by: unpublishedBy,
-          metadata: {docId: doc.id},
-        });
-      }
+    for (const doc of unpublishedDocs) {
+      await this.logDocAction('doc.unpublish', unpublishedBy, {docId: doc.id});
     }
     return unpublishedDocs;
   }
@@ -2687,6 +2678,26 @@ export class RootCMSClient {
 
     const snapshot = await queryRef.get();
     return snapshot.docs.map((doc) => doc.data() as Action);
+  }
+
+  /**
+   * Logs an action for a doc write, unless the client was created with
+   * `logActions: false`. The write has already been committed at this point,
+   * so a logging failure is reported but not thrown.
+   */
+  private async logDocAction(
+    action: string,
+    by: string,
+    metadata: Record<string, string>
+  ) {
+    if (!this.logActions) {
+      return;
+    }
+    try {
+      await this.logAction(action, {by, metadata});
+    } catch (err) {
+      console.error(`failed to log action "${action}":`, err);
+    }
   }
 
   async logAction(

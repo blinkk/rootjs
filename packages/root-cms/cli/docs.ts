@@ -216,17 +216,13 @@ export async function docsUpload(
 }
 
 /**
- * Creates a client for commands that write docs. Writes are attributed to the
- * active gcloud user and recorded in the action logs, the same way edits made
- * from the CMS UI are.
+ * Creates a client for commands that write docs. Writes (and their action
+ * logs) are attributed to the active gcloud user.
  */
 function createWriteClient(
   rootConfig: ConstructorParameters<typeof RootCMSClient>[0]
 ): RootCMSClient {
-  return new RootCMSClient(rootConfig, {
-    user: getCliUser(),
-    logActions: true,
-  });
+  return new RootCMSClient(rootConfig, {user: getCliUser()});
 }
 
 /**

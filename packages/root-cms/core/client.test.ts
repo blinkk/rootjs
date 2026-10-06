@@ -717,9 +717,9 @@ describe('RootCMSClient Validation', () => {
       expect(savedData.sys.modifiedBy).toBe('user@example.com');
     });
 
-    it('does not log actions by default', async () => {
+    it('does not log actions when logActions is false', async () => {
       const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
+      const client = new RootCMSClient(mockRootConfig, {logActions: false});
       const mockLogAction = vi.fn();
       client.logAction = mockLogAction as any;
 
@@ -728,11 +728,10 @@ describe('RootCMSClient Validation', () => {
       expect(mockLogAction).not.toHaveBeenCalled();
     });
 
-    it('logs a doc.save action when logActions is enabled', async () => {
+    it('logs a doc.save action by default', async () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig, {
         user: 'user@example.com',
-        logActions: true,
       });
       const mockLogAction = vi.fn();
       client.logAction = mockLogAction as any;
@@ -757,9 +756,24 @@ describe('RootCMSClient Validation', () => {
       ]);
     });
 
+    it('does not fail the write when logging the action fails', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      client.logAction = vi.fn().mockRejectedValue(new Error('boom')) as any;
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      await client.setRawDoc('Pages', 'test', {fields: {}}, {mode: 'draft'});
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
     it('logs a single doc.save action from updateDraftData', async () => {
       const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig, {logActions: true});
+      const client = new RootCMSClient(mockRootConfig);
       client.getRawDoc = vi.fn().mockResolvedValue({
         sys: {},
         fields: {title: 'Old Title'},

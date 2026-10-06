@@ -44,12 +44,8 @@ export async function clientCall(method: string, jsonArgs: string | undefined) {
 
     const rootDir = process.cwd();
     const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-    // Attribute writes to the active gcloud user and record doc writes in the
-    // action logs, the same way edits made from the CMS UI are.
-    const client = new RootCMSClient(rootConfig, {
-      user: getCliUser(),
-      logActions: true,
-    });
+    // Attribute writes (and their action logs) to the active gcloud user.
+    const client = new RootCMSClient(rootConfig, {user: getCliUser()});
 
     const fn = (client as any)[method];
     if (typeof fn !== 'function') {
