@@ -4,6 +4,18 @@ on:
   push:
     branches:
       - main
+  # Manually publishes a prerelease (e.g. `4.0.0-alpha.4`) from main. See the
+  # `prerelease` job below.
+  workflow_dispatch:
+    inputs:
+      preid:
+        description: 'Prerelease type, also used as the npm dist-tag'
+        type: choice
+        options:
+          - alpha
+          - beta
+          - rc
+        default: alpha
 
 defaults:
   run:
@@ -23,6 +35,7 @@ permissions:
 jobs:
   release:
     name: Release
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -84,3 +97,94 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Use OIDC for npm authentication instead of NPM_TOKEN
           NPM_TOKEN: ''
+
+  # Publishes a prerelease of the packages in the changesets "fixed" group.
+  # The version is computed by `scripts/prerelease.ts` from what's already on
+  # npm, e.g. if `4.0.0-alpha.3` is the latest published alpha, this publishes
+  # `4.0.0-alpha.4`. The version bump is committed on a detached HEAD and pushed
+  # only as a git tag (e.g. `v4.0.0-alpha.4`); main is left unchanged.
+  prerelease:
+    name: Prerelease
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Prevent two runs from computing (and trying to publish) the same version.
+    concurrency:
+      group: prerelease
+      cancel-in-progress: false
+    env:
+      PREID: ${{ inputs.preid }}
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Prereleases can only be published from main (got $GITHUB_REF)."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      # The root-cms unit tests run inside the Firestore emulator, which needs a
+      # JDK. firebase-tools >= 15 requires Java 21 or above.
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install playwright deps
+        working-directory: ./packages/root-cms
+        run: pnpm exec playwright install chromium
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Set prerelease version
+        id: version
+        run: node scripts/prerelease.ts "$PREID"
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Publish
+        run: |
+          pnpm -r ${{ steps.version.outputs.filters }} publish \
+            --tag "$PREID" --access public --no-git-checks
+        env:
+          # Use OIDC for npm authentication instead of NPM_TOKEN
+          NPM_TOKEN: ''
+
+      - name: Push git tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: release v$VERSION"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
