@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
+  DocumentReference,
   FieldValue,
   Firestore,
   Query,
@@ -38,6 +39,7 @@ export {
   type PasswordHash,
   type PasswordHashAlgorithm,
 } from '../shared/password.js';
+export {ReadCache, type ReadCacheOptions} from './read-cache.js';
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
@@ -50,6 +52,7 @@ import type {
 } from './dependency-graph.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
 import {CMSPlugin} from './plugin.js';
+import type {ReadCache} from './read-cache.js';
 import {Collection} from './schema.js';
 import {
   TranslationsLocaleDoc,
@@ -494,6 +497,13 @@ export interface RootCMSClientOptions {
    * `true`. Set to `false` to skip logging, e.g. for a one-off bulk migration.
    */
   logActions?: boolean;
+  /**
+   * Caches published reads in memory (see `ReadCache`). Covers `getDoc()`,
+   * `listDocs()` (unless a `query` fn is used), `loadTranslations()` and
+   * batch requests. Draft reads are never cached, but `loadTranslations()`
+   * has no mode, so don't use a cached client to serve previews.
+   */
+  cache?: ReadCache;
 }
 
 /** Default identity used to attribute writes made through the client. */
@@ -722,6 +732,8 @@ export class RootCMSClient {
   readonly user: string;
   /** Whether doc writes are recorded in the action logs. */
   readonly logActions: boolean;
+  /** In-memory cache for published reads. */
+  readonly cache?: ReadCache;
   private assetLibrary?: AssetLibrary;
 
   constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
@@ -737,6 +749,85 @@ export class RootCMSClient {
     }
     this.user = options?.user || DEFAULT_CLIENT_USER;
     this.logActions = options?.logActions ?? true;
+    this.cache = options?.cache;
+  }
+
+  /**
+   * Reads data through the client's `cache`, if any. Pass a `null` key for
+   * reads that shouldn't be cached (e.g. draft reads).
+   */
+  private cachedRead<T>(key: unknown[] | null, fetch: () => Promise<T>) {
+    if (!this.cache || !key) {
+      return fetch();
+    }
+    return this.cache.get(JSON.stringify(key), fetch);
+  }
+
+  /**
+   * Fetches the data for a list of doc refs, in order, with `undefined` for
+   * docs that don't exist. Published reads are cached per doc when the client
+   * has a `cache`, and the uncached docs are fetched in a single `getAll()`.
+   */
+  async getAllData(
+    refs: DocumentReference[],
+    options: {mode: DocMode}
+  ): Promise<any[]> {
+    if (refs.length === 0) {
+      return [];
+    }
+    const cache = options.mode === 'published' ? this.cache : undefined;
+    if (!cache) {
+      const snapshots = await this.db.getAll(...refs);
+      return snapshots.map((snapshot) => snapshot.data());
+    }
+    const uncachedRefs: DocumentReference[] = [];
+    let resolveSnapshots!: (
+      snapshots: FirebaseFirestore.DocumentSnapshot[]
+    ) => void;
+    let rejectSnapshots!: (err: unknown) => void;
+    const snapshotsPromise = new Promise<FirebaseFirestore.DocumentSnapshot[]>(
+      (resolve, reject) => {
+        resolveSnapshots = resolve;
+        rejectSnapshots = reject;
+      }
+    );
+    // `cache.get()` calls the fetch fn synchronously on a cache miss, so the
+    // uncached refs are all collected before `getAll()` is called below.
+    const results = refs.map((ref) =>
+      cache.get(JSON.stringify(['doc', ref.path]), async () => {
+        const index = uncachedRefs.push(ref) - 1;
+        const snapshots = await snapshotsPromise;
+        return snapshots[index].data() ?? null;
+      })
+    );
+    if (uncachedRefs.length > 0) {
+      this.db.getAll(...uncachedRefs).then(resolveSnapshots, rejectSnapshots);
+    }
+    const data = await Promise.all(results);
+    return data.map((item) => item ?? undefined);
+  }
+
+  /**
+   * Runs a Firestore query and returns the data of each result. Published
+   * reads are cached when the client has a `cache` and a `cacheKey` is
+   * provided, i.e. the query is fully described by the key.
+   */
+  async getQueryData(
+    query: Query,
+    options: {mode: DocMode; cacheKey?: unknown[] | null}
+  ): Promise<any[]> {
+    const cacheKey =
+      options.mode === 'published' && options.cacheKey
+        ? ['query', ...options.cacheKey]
+        : null;
+    return this.cachedRead(cacheKey, async () => {
+      const results = await query.get();
+      const data: any[] = [];
+      results.forEach((result) => {
+        data.push(result.data());
+      });
+      return data;
+    });
   }
 
   /**
@@ -820,12 +911,11 @@ export class RootCMSClient {
       return null;
     }
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
-    const docRef = this.db.doc(dbPath);
-    const doc = await docRef.get();
-    if (doc.exists) {
-      return doc.data();
-    }
-    return null;
+    const cacheKey = options.mode === 'published' ? ['doc', dbPath] : null;
+    return this.cachedRead(cacheKey, async () => {
+      const doc = await this.db.doc(dbPath).get();
+      return doc.exists ? doc.data() : null;
+    });
   }
 
   /**
@@ -1146,16 +1236,28 @@ export class RootCMSClient {
     if (options.query) {
       query = options.query(query);
     }
-    const results = await query.get();
+    // Queries with a `query` fn can't be keyed, so they're never cached.
+    const cacheKey = options.query
+      ? null
+      : [
+          dbPath,
+          mergeProposedDocs ? null : options.limit,
+          mergeProposedDocs ? null : options.offset,
+          orderBy,
+          options.orderByDirection,
+        ];
+    const results = await this.getQueryData(query, {
+      mode: options.mode,
+      cacheKey,
+    });
     const docs: T[] = [];
-    results.forEach((result) => {
+    results.forEach((data) => {
       if (options.raw) {
         // For callers that wish to modify the raw doc via `setRawDoc()`,
         // return the unmodified doc as returned from firestore.
-        const rawDoc = result.data() as T;
-        docs.push(rawDoc);
+        docs.push(data as T);
       } else {
-        const doc = this.overlayDoc(unmarshalData(result.data())) as T;
+        const doc = this.overlayDoc(unmarshalData(data)) as T;
         docs.push(doc);
       }
     });
@@ -2038,12 +2140,18 @@ export class RootCMSClient {
       query = query.where('tags', 'array-contains-any', options.tags);
     }
 
-    const querySnapshot = await query.get();
-    const translationsMap: TranslationsMap = {};
-    querySnapshot.forEach((doc) => {
-      const hash = doc.id;
-      translationsMap[hash] = doc.data() as Translation;
-    });
+    const cacheKey = ['translations', dbPath, options?.tags || null];
+    const translationsMap: TranslationsMap = await this.cachedRead(
+      cacheKey,
+      async () => {
+        const querySnapshot = await query.get();
+        const results: TranslationsMap = {};
+        querySnapshot.forEach((doc) => {
+          results[doc.id] = doc.data() as Translation;
+        });
+        return results;
+      }
+    );
     // Overlay proposed translations, keyed by the same sha1 hash the db uses.
     const proposed = this.proposal?.allTranslations();
     if (proposed) {
@@ -3561,16 +3669,16 @@ export class BatchRequest {
         mode: this.options.mode,
       });
     });
-    const docs = await this.db.getAll(...docRefs);
+    const docs = await this.cmsClient.getAllData(docRefs, {
+      mode: this.options.mode,
+    });
     this.docIds.forEach((docId, i) => {
-      const doc = docs[i];
-      if (!doc.exists) {
+      const data = docs[i];
+      if (!data) {
         console.warn(`doc "${docId}" does not exist`);
         return;
       }
-      const docData = this.cmsClient.overlayDoc(
-        unmarshalData(doc.data())
-      ) as Doc;
+      const docData = this.cmsClient.overlayDoc(unmarshalData(data)) as Doc;
       res.docs[docId] = docData;
 
       if (this.options.translate) {
@@ -3607,12 +3715,23 @@ export class BatchRequest {
       if (queryOptions.query) {
         query = queryOptions.query(query);
       }
-      const results = await query.get();
+      // Queries with a `query` fn can't be keyed, so they're never cached.
+      const cacheKey = queryOptions.query
+        ? null
+        : [
+            docsPath,
+            queryOptions.limit,
+            queryOptions.offset,
+            queryOptions.orderBy,
+            queryOptions.orderByDirection,
+          ];
+      const results = await this.cmsClient.getQueryData(query, {
+        mode,
+        cacheKey,
+      });
       const docs: Doc[] = [];
-      results.forEach((result) => {
-        const doc = this.cmsClient.overlayDoc(
-          unmarshalData(result.data())
-        ) as Doc;
+      results.forEach((data) => {
+        const doc = this.cmsClient.overlayDoc(unmarshalData(data)) as Doc;
         docs.push(doc);
         // Based on the results of the query, fetch the corresponding
         // translations for each doc.
@@ -3635,14 +3754,16 @@ export class BatchRequest {
         mode: this.options.mode,
       });
     });
-    const docs = await this.db.getAll(...docRefs);
+    const docs = await this.cmsClient.getAllData(docRefs, {
+      mode: this.options.mode,
+    });
     this.dataSourceIds.forEach((dataSourceId, i) => {
-      const doc = docs[i];
-      if (!doc.exists) {
+      const data = docs[i];
+      if (!data) {
         console.warn(`"data source "${dataSourceId}" does not exist`);
         return;
       }
-      res.dataSources[dataSourceId] = doc.data() as DataSourceData;
+      res.dataSources[dataSourceId] = data as DataSourceData;
     });
   }
 
@@ -3708,24 +3829,29 @@ export class BatchRequest {
       // Fetch the refs in chunks. Missing locale docs are fine (e.g. a
       // translations doc may not have every locale).
       const chunks = chunkArray(localeDocRefs, 300);
-      const snapshotChunks = await Promise.all(
-        chunks.map((chunk) => this.db.getAll(...chunk.map((item) => item.ref)))
+      const dataChunks = await Promise.all(
+        chunks.map((chunk) =>
+          this.cmsClient.getAllData(
+            chunk.map((item) => item.ref),
+            {mode}
+          )
+        )
       );
-      const snapshots = snapshotChunks.flat();
+      const localeDocsData = dataChunks.flat();
       localeDocRefs.forEach((item, i) => {
-        const snapshot = snapshots[i];
+        const data = localeDocsData[i];
         const proposed = this.cmsClient.proposal?.localeDocStrings(
           item.translationsId,
           item.locale
         );
-        if (!snapshot.exists && !proposed) {
+        if (!data && !proposed) {
           return;
         }
-        const localeDoc = (
-          snapshot.exists
-            ? snapshot.data()
-            : {id: item.translationsId, locale: item.locale, strings: {}}
-        ) as TranslationsLocaleDoc;
+        const localeDoc = (data || {
+          id: item.translationsId,
+          locale: item.locale,
+          strings: {},
+        }) as TranslationsLocaleDoc;
         res.translations[item.translationsId] ??= {};
         res.translations[item.translationsId][item.locale] = proposed
           ? {...localeDoc, strings: {...localeDoc.strings, ...proposed}}
@@ -3736,15 +3862,17 @@ export class BatchRequest {
       // translations id (chunked due to Firestore's `in` query limits).
       const dbPath = buildTranslationsDbPath({project, mode});
       const collectionRef = this.db.collection(dbPath);
-      const snapshots = await Promise.all(
+      const results = await Promise.all(
         chunkArray(translationsIds, 10).map((chunk) =>
-          collectionRef.where('id', 'in', chunk).get()
+          this.cmsClient.getQueryData(collectionRef.where('id', 'in', chunk), {
+            mode,
+            cacheKey: [dbPath, 'id', chunk],
+          })
         )
       );
       const localeDocsById: Record<string, TranslationsLocaleDoc[]> = {};
-      snapshots.forEach((snapshot) => {
-        snapshot.docs.forEach((doc) => {
-          const localeDoc = doc.data() as TranslationsLocaleDoc;
+      results.forEach((localeDocs: TranslationsLocaleDoc[]) => {
+        localeDocs.forEach((localeDoc) => {
           localeDocsById[localeDoc.id] ??= [];
           localeDocsById[localeDoc.id].push(localeDoc);
         });

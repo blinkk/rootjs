@@ -7,7 +7,8 @@ import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {RootCMSClient} from './client.js';
-import {CreateRouteOptions, createRoute} from './route.js';
+import {ReadCache} from './read-cache.js';
+import {CreateRouteOptions, Route, createRoute} from './route.js';
 
 const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
@@ -105,10 +106,11 @@ interface MockRequestOptions {
 /** Calls the route's SSR handler with a mock request. */
 async function renderRoute(
   rootConfig: any,
-  routeOptions: CreateRouteOptions,
+  routeOptions: CreateRouteOptions | Route,
   reqOptions: MockRequestOptions
 ) {
-  const route = createRoute(routeOptions);
+  const route =
+    'handle' in routeOptions ? routeOptions : createRoute(routeOptions);
   const render = vi.fn();
   const render404 = vi.fn();
   const headers: Record<string, string> = {};
@@ -390,6 +392,86 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     );
     expect(result.props.mode).toBe('draft');
     expect(result.headers['cache-control']).toBe('private');
+  });
+
+  it('caches published reads in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      await seedDoc(cmsClient, 'Pages/about');
+      await seedDoc(cmsClient, 'Pages/about', {mode: 'draft'});
+      const tm = cmsClient.getTranslationsManager();
+      await tm.saveTranslations('Pages/about', {about: {de: 'über'}});
+      await tm.publishTranslationsBulk(['Pages/about']);
+
+      const route = createRoute({
+        collection: 'Pages',
+        cache: new ReadCache(),
+        cacheControl: 'public, max-age=60, s-maxage=300',
+        batchRequest: (req) => req.addQuery('pages', 'Pages'),
+      });
+      const first = await renderRoute(rootConfig, route, {
+        slug: 'about',
+        locale: 'de',
+      });
+      expect(first.headers['cache-control']).toBe(
+        'public, max-age=60, s-maxage=300'
+      );
+      // Mutating the props doesn't affect later renders.
+      first.props.doc.fields.title = 'Mutated';
+
+      const docsPath = `Projects/${cmsClient.projectId}/Collections/Pages`;
+      await cmsClient.db
+        .doc(`${docsPath}/Published/about`)
+        .update({'fields.title': 'Updated'});
+      await cmsClient.db
+        .doc(`${docsPath}/Drafts/about`)
+        .update({'fields.title': 'Draft'});
+      await tm.saveTranslations('Pages/about', {about: {de: 'neu'}});
+      await tm.publishTranslationsBulk(['Pages/about']);
+
+      const second = await renderRoute(rootConfig, route, {
+        slug: 'about',
+        locale: 'de',
+      });
+      expect(second.props.doc.fields.title).toBe('Title for Pages/about');
+      expect(second.translations).toEqual({about: 'über'});
+
+      // Draft reads are never cached.
+      const preview = await renderRoute(rootConfig, route, {
+        slug: 'about',
+        locale: 'de',
+        query: {preview: 'true'},
+      });
+      expect(preview.props.doc.fields.title).toBe('Draft');
+      expect(preview.headers['cache-control']).toBe('private');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('does not cache reads outside of production', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    const route = createRoute({collection: 'Pages', cache: new ReadCache()});
+    await renderRoute(rootConfig, route, {slug: 'about'});
+    await cmsClient.db
+      .doc(`Projects/${cmsClient.projectId}/Collections/Pages/Published/about`)
+      .update({'fields.title': 'Updated'});
+    const result = await renderRoute(rootConfig, route, {slug: 'about'});
+    expect(result.props.doc.fields.title).toBe('Updated');
+  });
+
+  it('supports a custom createCmsClient()', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    const createCmsClient = vi.fn(
+      (rootConfig, options) => new RootCMSClient(rootConfig, options)
+    );
+    const result = await renderRoute(
+      rootConfig,
+      {collection: 'Pages', createCmsClient},
+      {slug: 'about'}
+    );
+    expect(result.rendered).toBe(true);
+    expect(createCmsClient).toHaveBeenCalledOnce();
   });
 
   it('supports v1 translations', async () => {

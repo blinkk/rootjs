@@ -1,6 +1,4 @@
-import type {RootCMSClient} from '@blinkk/root-cms/client';
 import {BlogPostsDoc} from '@/root-cms.js';
-import {hasModule} from '@/utils/modules.js';
 
 /** Returns the URL path for a blog post, e.g. `/blog/hello-world/`. */
 export function getBlogPostUrl(doc: BlogPostsDoc) {
@@ -44,30 +42,4 @@ export function formatBlogPostDate(doc: BlogPostsDoc) {
     day: 'numeric',
   }).format(date);
   return {iso, label};
-}
-
-/**
- * A `cmsRoute()` pre-render hook that, when the doc has a `TemplateBlogPosts`
- * module, adds the blog posts (newest first) to the page props (as
- * `blogPosts`) and requests the translations for their copy.
- */
-export async function fetchBlogPostsForModules(
-  props: {doc?: {fields?: {content?: unknown}}; $translationTags?: string[]},
-  context: {cmsClient: RootCMSClient; mode: 'draft' | 'published'}
-) {
-  if (!hasModule(props.doc?.fields?.content, 'TemplateBlogPosts')) {
-    return props;
-  }
-  const res = await context.cmsClient.listDocs<BlogPostsDoc>('BlogPosts', {
-    mode: context.mode,
-  });
-  const blogPosts = sortBlogPosts(res.docs);
-  return {
-    ...props,
-    blogPosts,
-    $translationTags: [
-      ...(props.$translationTags || []),
-      ...blogPosts.map((post) => `BlogPosts/${post.slug}`),
-    ],
-  };
 }

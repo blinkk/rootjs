@@ -1,3 +1,4 @@
+import {createRoute} from '@blinkk/root-cms';
 import {Container} from '@/components/Container/Container.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
@@ -5,7 +6,7 @@ import {testAllConditions} from '@/conditions/conditions.js';
 import {FeatureFlag, FeatureFlagsContext} from '@/hooks/useFeatureFlags.js';
 import {BaseLayout} from '@/layouts/BaseLayout';
 import {GlobalModulesDoc} from '@/root-cms';
-import {cmsRoute} from '@/utils/cms-route';
+import {CMS_ROUTE_OPTIONS} from '@/utils/cms-client';
 import styles from './global-modules.module.scss';
 
 export interface PageProps {
@@ -78,7 +79,8 @@ function FlagRow(props: {flag: FeatureFlag}) {
   );
 }
 
-export const {handle} = cmsRoute({
+export const {handle} = createRoute({
+  ...CMS_ROUTE_OPTIONS,
   collection: 'GlobalModules',
   slugParam: 'slug',
   previewOnly: true,

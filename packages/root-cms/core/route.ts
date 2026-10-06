@@ -40,9 +40,17 @@ import {
   BatchResponse,
   DocMode,
   RootCMSClient,
+  RootCMSClientOptions,
   translationsForLocale,
 } from './client.js';
 import type {DependencyGraphService} from './dependency-graph.js';
+import {ReadCache} from './read-cache.js';
+
+/** Default Cache-Control header for published pages. */
+const DEFAULT_CACHE_CONTROL = 'public, max-age=15, s-maxage=30';
+
+/** Read cache shared by every route created with `{cache: true}`. */
+let sharedReadCache: ReadCache | undefined;
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -285,6 +293,44 @@ export interface CreateRouteOptions {
   disableCacheControl?: boolean;
 
   /**
+   * Cache-Control header for published pages. Defaults to
+   * `public, max-age=15, s-maxage=30`. Draft (preview) pages are always
+   * `private`.
+   */
+  cacheControl?: string;
+
+  /**
+   * Caches published CMS reads in memory, which saves a Firestore round trip
+   * on most page renders. Pass `true` to use a cache shared by every route
+   * (reads are cached for 60 seconds), or pass a `ReadCache` to configure it,
+   * e.g. `{cache: new ReadCache({ttl: 30 * 1000})}`.
+   *
+   * Published content can take up to the cache's ttl to show up (plus any CDN
+   * cache time, see `cacheControl`). Draft (preview) requests are never
+   * cached. Ignored outside of production (i.e. unless `NODE_ENV` is
+   * "production").
+   */
+  cache?: boolean | ReadCache;
+
+  /**
+   * Creates the route's `RootCMSClient`, e.g. to overlay a change proposal
+   * with `{proposal}`. The `options` (which include the read `cache`, if
+   * enabled) should be passed along to the client.
+   *
+   * ```ts
+   * createRoute({
+   *   collection: 'Pages',
+   *   createCmsClient: (rootConfig, options) =>
+   *     new RootCMSClient(rootConfig, {...options, proposal}),
+   * });
+   * ```
+   */
+  createCmsClient?: (
+    rootConfig: RootConfig,
+    options: RootCMSClientOptions
+  ) => RootCMSClient;
+
+  /**
    * Enables SSG mode for sites that serve on SCS or other static servers.
    */
   ssg?: boolean;
@@ -337,8 +383,46 @@ export interface CreateRouteOptions {
  * Utility for creating Root filesystem routes that are connected to a CMS doc.
  */
 export function createRoute(options: CreateRouteOptions): Route {
-  let cmsClient: RootCMSClient;
+  let cmsClient: RootCMSClient | undefined;
+  // Published requests read through a client that caches reads in memory
+  // (when `options.cache` is enabled), so most renders skip the Firestore
+  // round trips.
+  let cachedCmsClient: RootCMSClient | undefined;
   let dependencyGraphService: DependencyGraphService | undefined;
+
+  function getReadCache(): ReadCache | undefined {
+    if (!options.cache || process.env.NODE_ENV !== 'production') {
+      return undefined;
+    }
+    if (options.cache === true) {
+      sharedReadCache ??= new ReadCache();
+      return sharedReadCache;
+    }
+    return options.cache;
+  }
+
+  function newCmsClient(
+    rootConfig: RootConfig,
+    clientOptions: RootCMSClientOptions
+  ) {
+    if (options.createCmsClient) {
+      return options.createCmsClient(rootConfig, clientOptions);
+    }
+    return new RootCMSClient(rootConfig, clientOptions);
+  }
+
+  /**
+   * Returns the client for reading docs in the given mode.
+   */
+  function getCmsClient(rootConfig: RootConfig, mode: DocMode) {
+    const cache = mode === 'published' ? getReadCache() : undefined;
+    if (cache) {
+      cachedCmsClient ??= newCmsClient(rootConfig, {cache});
+      return cachedCmsClient;
+    }
+    cmsClient ??= newCmsClient(rootConfig, {});
+    return cmsClient;
+  }
 
   function getSlug(params: RouteParams) {
     if (options.slug) {
@@ -524,9 +608,8 @@ export function createRoute(options: CreateRouteOptions): Route {
   const route: Route = {
     // SSR handler.
     handle: async (req: RouteRequest, res: Response) => {
-      if (!cmsClient) {
-        cmsClient = new RootCMSClient(req.rootConfig);
-      }
+      const mode = await getMode(req);
+      const cmsClient = getCmsClient(req.rootConfig, mode);
       req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
       const slug = getSlug(ctx.params);
@@ -535,7 +618,6 @@ export function createRoute(options: CreateRouteOptions): Route {
       if (slug.includes('.') || slug.includes('--')) {
         return ctx.render404();
       }
-      const mode = await getMode(req);
 
       // For previewOnly routes, render the 404 page if ?preview=true is not
       // in the URL.
@@ -688,7 +770,10 @@ export function createRoute(options: CreateRouteOptions): Route {
         // Never cache draft (preview) content in shared caches.
         res.setHeader('cache-control', 'private');
       } else {
-        res.setHeader('cache-control', 'public, max-age=15, s-maxage=30');
+        res.setHeader(
+          'cache-control',
+          options.cacheControl || DEFAULT_CACHE_CONTROL
+        );
         if (ctx.route.isDefaultLocale) {
           res.setHeader(
             'vary',
@@ -711,10 +796,8 @@ export function createRoute(options: CreateRouteOptions): Route {
       if (options.slug || options.slugFormat) {
         return {paths: []};
       }
-      if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
-      }
       const mode = options.ssgMode || 'published';
+      const cmsClient = getCmsClient(ctx.rootConfig, mode);
       const res = await cmsClient.listDocs<{slug: string}>(options.collection, {
         mode,
       });
@@ -729,11 +812,9 @@ export function createRoute(options: CreateRouteOptions): Route {
     };
 
     route.getStaticProps = async (ctx) => {
-      if (!cmsClient) {
-        cmsClient = new RootCMSClient(ctx.rootConfig);
-      }
       const slug = getSlug(ctx.params);
       const mode = options.ssgMode || 'published';
+      const cmsClient = getCmsClient(ctx.rootConfig, mode);
       const routeContext: RouteContext = {
         req: undefined,
         slug,

@@ -15,8 +15,8 @@ export type TemplateBlogPostsProps = TemplateBlogPostsFields & {
 
 /**
  * Lists every doc in the `BlogPosts` collection in a single column, newest
- * first. The posts are fetched by the page route (see
- * `fetchBlogPostsForModules()` in `utils/blog.ts`) and read from the page props.
+ * first. The posts are fetched by the page route (see `addModuleData()` in
+ * `utils/module-data.ts`) and read from the page props.
  */
 export function TemplateBlogPosts(props: TemplateBlogPostsProps) {
   const ctx = useRequestContext();
