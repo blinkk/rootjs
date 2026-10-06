@@ -16,6 +16,10 @@ test('redirects with params', () => {
     '/foo/baz'
   );
   expect(res.redirect).toHaveBeenCalledWith(301, '/bar/baz');
+  expect(res.setHeader).toHaveBeenCalledWith(
+    'cache-control',
+    'no-cache, no-store, max-age=0, must-revalidate'
+  );
   expect(next).not.toHaveBeenCalled();
 });
 

@@ -3432,9 +3432,9 @@ export class BatchRequest {
    * Fetches data from the DB.
    */
   async fetch(): Promise<BatchResponse> {
-    const res = new BatchResponse(this.cmsClient.rootConfig.i18n || {});
+    const res = this.createResponse();
 
-    const promises = [
+    const promises: Array<Promise<unknown>> = [
       this.fetchDocs(res),
       this.fetchQueries(res),
       this.fetchDataSources(res),
@@ -3457,13 +3457,43 @@ export class BatchRequest {
     return res;
   }
 
+  /**
+   * Fetches the docs, queries and data sources in the request, but not the
+   * translations. Use this with `fetchTranslations()` to defer loading
+   * translations until the locale is known, e.g.:
+   *
+   * ```ts
+   * const req = cmsClient.createBatchRequest({mode, translate: true});
+   * req.addDoc('Pages/index');
+   * req.addTranslations('common');
+   * const res = await req.fetchContent();
+   * const locale = pickLocale(res.docs['Pages/index']);
+   * await req.fetchTranslations(res, {locales: [locale]});
+   * const translations = res.getTranslations(locale);
+   * ```
+   */
+  async fetchContent(): Promise<BatchResponse> {
+    const res = this.createResponse();
+    await Promise.all([
+      this.fetchDocs(res),
+      this.fetchQueries(res),
+      this.fetchDataSources(res),
+    ]);
+    return res;
+  }
+
+  private createResponse(): BatchResponse {
+    return new BatchResponse(this.cmsClient.rootConfig.i18n || {});
+  }
+
   private async fetchDocs(res: BatchResponse) {
     if (this.docIds.length === 0) {
       return;
     }
     const docRefs = this.docIds.map((docId) => {
-      const [collectionId, slug] = docId.split('/');
-      return this.cmsClient.dbDocRef(collectionId, slug, {
+      // Use `parseDocId()` so slugs containing slashes are supported.
+      const {collection, slug} = parseDocId(docId);
+      return this.cmsClient.dbDocRef(collection, slug, {
         mode: this.options.mode,
       });
     });
@@ -3552,7 +3582,17 @@ export class BatchRequest {
     });
   }
 
-  private async fetchTranslations(res: BatchResponse) {
+  /**
+   * Fetches translations into `res` for the explicitly-added translations ids
+   * and, when `options.translate` is enabled, the docs fetched so far.
+   *
+   * `options.locales` overrides the locales set on the request. Each locale
+   * is expanded through its fallback chain.
+   */
+  async fetchTranslations(
+    res: BatchResponse,
+    options?: {locales?: string[]}
+  ): Promise<BatchResponse> {
     // Order the translations ids so that precedence is deterministic:
     // generic translations (e.g. "common") first, docs returned from queries
     // next, and specific docs (e.g. "Pages/index") last.
@@ -3564,13 +3604,14 @@ export class BatchRequest {
       ])
     );
     if (translationsIds.length === 0) {
-      return;
+      return res;
     }
     const mode = this.options.mode;
     const project = this.cmsClient.projectId;
     const i18nConfig = this.cmsClient.rootConfig.i18n || {};
 
-    const locales = this.options.locales || i18nConfig.locales;
+    const locales =
+      options?.locales || this.options.locales || i18nConfig.locales;
     if (locales && locales.length > 0) {
       // When the locales are known, expand each locale through its fallback
       // chain and fetch the exact locale doc refs with `getAll()`.
@@ -3658,6 +3699,7 @@ export class BatchRequest {
         }
       }
     }
+    return res;
   }
 }
 
