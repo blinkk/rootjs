@@ -37,6 +37,7 @@ import {
   isDevSharedAuthEnabled,
   setDevAuthCookie,
 } from './dev-session.js';
+import {FileReadCache, getSsgReadCacheDir} from './file-read-cache.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
@@ -1111,6 +1112,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
        */
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
+
+        // Clear the SSG read cache (see `createRoute({cache: true})`) so that
+        // every build reads the latest published content.
+        await new FileReadCache({
+          dir: getSsgReadCacheDir(rootConfig.rootDir),
+        }).clear();
 
         // When the v2 translations manager is enabled (the default), migrate
         // v1 translations before the build (SSG reads translations at build

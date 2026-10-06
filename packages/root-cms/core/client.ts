@@ -39,7 +39,16 @@ export {
   type PasswordHash,
   type PasswordHashAlgorithm,
 } from '../shared/password.js';
-export {ReadCache, type ReadCacheOptions} from './read-cache.js';
+export {
+  FileReadCache,
+  getSsgReadCacheDir,
+  type FileReadCacheOptions,
+} from './file-read-cache.js';
+export {
+  ReadCache,
+  type ReadCacheOptions,
+  type RootCMSReadCache,
+} from './read-cache.js';
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
@@ -52,7 +61,7 @@ import type {
 } from './dependency-graph.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
 import {CMSPlugin} from './plugin.js';
-import type {ReadCache} from './read-cache.js';
+import type {RootCMSReadCache} from './read-cache.js';
 import {Collection} from './schema.js';
 import {
   TranslationsLocaleDoc,
@@ -498,12 +507,13 @@ export interface RootCMSClientOptions {
    */
   logActions?: boolean;
   /**
-   * Caches published reads in memory (see `ReadCache`). Covers `getDoc()`,
+   * Caches published reads, e.g. in memory with a `ReadCache` or on the
+   * filesystem with a `FileReadCache`. Covers `getDoc()`,
    * `listDocs()` (unless a `query` fn is used), `loadTranslations()` and
    * batch requests. Draft reads are never cached, but `loadTranslations()`
    * has no mode, so don't use a cached client to serve previews.
    */
-  cache?: ReadCache;
+  cache?: RootCMSReadCache;
 }
 
 /** Default identity used to attribute writes made through the client. */
@@ -732,8 +742,8 @@ export class RootCMSClient {
   readonly user: string;
   /** Whether doc writes are recorded in the action logs. */
   readonly logActions: boolean;
-  /** In-memory cache for published reads. */
-  readonly cache?: ReadCache;
+  /** Cache for published reads. */
+  readonly cache?: RootCMSReadCache;
   private assetLibrary?: AssetLibrary;
 
   constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
@@ -780,29 +790,36 @@ export class RootCMSClient {
       const snapshots = await this.db.getAll(...refs);
       return snapshots.map((snapshot) => snapshot.data());
     }
-    const uncachedRefs: DocumentReference[] = [];
-    let resolveSnapshots!: (
-      snapshots: FirebaseFirestore.DocumentSnapshot[]
-    ) => void;
-    let rejectSnapshots!: (err: unknown) => void;
-    const snapshotsPromise = new Promise<FirebaseFirestore.DocumentSnapshot[]>(
-      (resolve, reject) => {
-        resolveSnapshots = resolve;
-        rejectSnapshots = reject;
-      }
-    );
-    // `cache.get()` calls the fetch fn synchronously on a cache miss, so the
-    // uncached refs are all collected before `getAll()` is called below.
+    // Uncached refs are batched into a single `getAll()`, which is called
+    // once the cache has requested every ref it's missing in the current
+    // tick. An in-memory cache requests them synchronously, while a
+    // filesystem cache requests them once its file reads finish.
+    let batch: Array<{
+      ref: DocumentReference;
+      resolve: (data: any) => void;
+      reject: (err: unknown) => void;
+    }> = [];
+    const flush = () => {
+      const items = batch;
+      batch = [];
+      this.db.getAll(...items.map((item) => item.ref)).then(
+        (snapshots) => {
+          items.forEach((item, i) => item.resolve(snapshots[i].data() ?? null));
+        },
+        (err) => items.forEach((item) => item.reject(err))
+      );
+    };
+    const fetchRef = (ref: DocumentReference) => {
+      return new Promise<any>((resolve, reject) => {
+        if (batch.length === 0) {
+          setImmediate(flush);
+        }
+        batch.push({ref, resolve, reject});
+      });
+    };
     const results = refs.map((ref) =>
-      cache.get(JSON.stringify(['doc', ref.path]), async () => {
-        const index = uncachedRefs.push(ref) - 1;
-        const snapshots = await snapshotsPromise;
-        return snapshots[index].data() ?? null;
-      })
+      cache.get(JSON.stringify(['doc', ref.path]), () => fetchRef(ref))
     );
-    if (uncachedRefs.length > 0) {
-      this.db.getAll(...uncachedRefs).then(resolveSnapshots, rejectSnapshots);
-    }
     const data = await Promise.all(results);
     return data.map((item) => item ?? undefined);
   }

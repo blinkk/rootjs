@@ -44,13 +44,20 @@ import {
   translationsForLocale,
 } from './client.js';
 import type {DependencyGraphService} from './dependency-graph.js';
-import {ReadCache} from './read-cache.js';
+import {FileReadCache, getSsgReadCacheDir} from './file-read-cache.js';
+import {ReadCache, RootCMSReadCache} from './read-cache.js';
 
 /** Default Cache-Control header for published pages. */
 const DEFAULT_CACHE_CONTROL = 'public, max-age=15, s-maxage=30';
 
-/** Read cache shared by every route created with `{cache: true}`. */
+/** In-memory read cache shared by every route created with `{cache: true}`. */
 let sharedReadCache: ReadCache | undefined;
+
+/**
+ * Filesystem read caches shared by every route created with `{cache: true}`
+ * for SSG builds, keyed by directory.
+ */
+const sharedFileReadCaches = new Map<string, FileReadCache>();
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -300,17 +307,24 @@ export interface CreateRouteOptions {
   cacheControl?: string;
 
   /**
-   * Caches published CMS reads in memory, which saves a Firestore round trip
-   * on most page renders. Pass `true` to use a cache shared by every route
-   * (reads are cached for 60 seconds), or pass a `ReadCache` to configure it,
-   * e.g. `{cache: new ReadCache({ttl: 30 * 1000})}`.
+   * Caches published CMS reads, which saves a Firestore round trip on most
+   * page renders. Pass `true` to use the default caches, which are shared by
+   * every route:
+   *
+   * - SSR: an in-memory `ReadCache` (reads are cached for 60 seconds).
+   * - SSG: a `FileReadCache` in `node_modules/.cache/root-cms/ssg-reads/`, so
+   *   that the cache is shared by every thread of the build (e.g. with
+   *   `root build --threads`). It's cleared at the start of every build.
+   *
+   * Or pass a cache to use for both, e.g.
+   * `{cache: new ReadCache({ttl: 30 * 1000})}`.
    *
    * Published content can take up to the cache's ttl to show up (plus any CDN
    * cache time, see `cacheControl`). Draft (preview) requests are never
    * cached. Ignored outside of production (i.e. unless `NODE_ENV` is
    * "production").
    */
-  cache?: boolean | ReadCache;
+  cache?: boolean | RootCMSReadCache;
 
   /**
    * Creates the route's `RootCMSClient`, e.g. to overlay a change proposal
@@ -384,21 +398,34 @@ export interface CreateRouteOptions {
  */
 export function createRoute(options: CreateRouteOptions): Route {
   let cmsClient: RootCMSClient | undefined;
-  // Published requests read through a client that caches reads in memory
-  // (when `options.cache` is enabled), so most renders skip the Firestore
-  // round trips.
-  let cachedCmsClient: RootCMSClient | undefined;
+  // Published requests read through clients that cache reads (when
+  // `options.cache` is enabled), so most renders skip the Firestore round
+  // trips. SSR and SSG use different caches by default.
+  let ssrCachedCmsClient: RootCMSClient | undefined;
+  let ssgCachedCmsClient: RootCMSClient | undefined;
   let dependencyGraphService: DependencyGraphService | undefined;
 
-  function getReadCache(): ReadCache | undefined {
+  function getReadCache(
+    rootConfig: RootConfig,
+    ssg: boolean
+  ): RootCMSReadCache | undefined {
     if (!options.cache || process.env.NODE_ENV !== 'production') {
       return undefined;
     }
-    if (options.cache === true) {
-      sharedReadCache ??= new ReadCache();
-      return sharedReadCache;
+    if (options.cache !== true) {
+      return options.cache;
     }
-    return options.cache;
+    if (ssg) {
+      const dir = getSsgReadCacheDir(rootConfig.rootDir);
+      let fileReadCache = sharedFileReadCaches.get(dir);
+      if (!fileReadCache) {
+        fileReadCache = new FileReadCache({dir});
+        sharedFileReadCaches.set(dir, fileReadCache);
+      }
+      return fileReadCache;
+    }
+    sharedReadCache ??= new ReadCache();
+    return sharedReadCache;
   }
 
   function newCmsClient(
@@ -412,13 +439,23 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   /**
-   * Returns the client for reading docs in the given mode.
+   * Returns the client for reading docs in the given mode, for either an SSR
+   * request or an SSG build.
    */
-  function getCmsClient(rootConfig: RootConfig, mode: DocMode) {
-    const cache = mode === 'published' ? getReadCache() : undefined;
+  function getCmsClient(
+    rootConfig: RootConfig,
+    mode: DocMode,
+    {ssg}: {ssg: boolean}
+  ) {
+    const cache =
+      mode === 'published' ? getReadCache(rootConfig, ssg) : undefined;
+    if (cache && ssg) {
+      ssgCachedCmsClient ??= newCmsClient(rootConfig, {cache});
+      return ssgCachedCmsClient;
+    }
     if (cache) {
-      cachedCmsClient ??= newCmsClient(rootConfig, {cache});
-      return cachedCmsClient;
+      ssrCachedCmsClient ??= newCmsClient(rootConfig, {cache});
+      return ssrCachedCmsClient;
     }
     cmsClient ??= newCmsClient(rootConfig, {});
     return cmsClient;
@@ -609,7 +646,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     // SSR handler.
     handle: async (req: RouteRequest, res: Response) => {
       const mode = await getMode(req);
-      const cmsClient = getCmsClient(req.rootConfig, mode);
+      const cmsClient = getCmsClient(req.rootConfig, mode, {ssg: false});
       req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
       const slug = getSlug(ctx.params);
@@ -797,7 +834,7 @@ export function createRoute(options: CreateRouteOptions): Route {
         return {paths: []};
       }
       const mode = options.ssgMode || 'published';
-      const cmsClient = getCmsClient(ctx.rootConfig, mode);
+      const cmsClient = getCmsClient(ctx.rootConfig, mode, {ssg: true});
       const res = await cmsClient.listDocs<{slug: string}>(options.collection, {
         mode,
       });
@@ -814,7 +851,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     route.getStaticProps = async (ctx) => {
       const slug = getSlug(ctx.params);
       const mode = options.ssgMode || 'published';
-      const cmsClient = getCmsClient(ctx.rootConfig, mode);
+      const cmsClient = getCmsClient(ctx.rootConfig, mode, {ssg: true});
       const routeContext: RouteContext = {
         req: undefined,
         slug,

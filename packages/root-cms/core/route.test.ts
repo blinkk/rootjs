@@ -3,10 +3,14 @@
  * translations-manager.test.ts for details on the emulator setup).
  */
 
+import {promises as fs} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {RootCMSClient} from './client.js';
+import {FileReadCache, getSsgReadCacheDir} from './file-read-cache.js';
 import {ReadCache} from './read-cache.js';
 import {CreateRouteOptions, Route, createRoute} from './route.js';
 
@@ -513,5 +517,46 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       params: {slug: 'about', $locale: 'es'},
     } as any);
     expect(notFound).toEqual({notFound: true});
+  });
+
+  it('caches ssg reads on the filesystem in production', async () => {
+    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'route-test-'));
+    rootConfig.rootDir = rootDir;
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de']});
+      const tm = cmsClient.getTranslationsManager();
+      await tm.saveTranslations('Pages/about', {about: {de: 'über'}});
+      await tm.publishTranslationsBulk(['Pages/about']);
+
+      const ctx: any = {rootConfig, params: {slug: 'about', $locale: 'de'}};
+      const first: any = await createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: true,
+      }).getStaticProps!(ctx);
+      expect(first.translations).toEqual({about: 'über'});
+      const cacheDir = getSsgReadCacheDir(rootDir);
+      expect((await fs.readdir(cacheDir)).length).toBeGreaterThan(0);
+
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/Pages/Published/about`
+        )
+        .update({'fields.title': 'Updated'});
+
+      // A route in another thread reads the cached doc and translations.
+      const second: any = await createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: new FileReadCache({dir: cacheDir}),
+      }).getStaticProps!(ctx);
+      expect(second.props.doc.fields.title).toBe('Title for Pages/about');
+      expect(second.props.doc.sys.locales).toEqual(['en', 'de']);
+      expect(second.translations).toEqual({about: 'über'});
+    } finally {
+      vi.unstubAllEnvs();
+      await fs.rm(rootDir, {recursive: true, force: true});
+    }
   });
 });

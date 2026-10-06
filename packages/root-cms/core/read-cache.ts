@@ -1,4 +1,17 @@
 /**
+ * A cache for published CMS reads, e.g. `ReadCache` (in-memory) or
+ * `FileReadCache` (on the filesystem). Pass one to a `RootCMSClient` with
+ * `new RootCMSClient(rootConfig, {cache})`.
+ */
+export interface RootCMSReadCache {
+  /**
+   * Returns the cached value for `key`, or calls `fetch()` and caches its
+   * result. Each caller should get its own copy of the value.
+   */
+  get<T>(key: string, fetch: () => Promise<T>): Promise<T>;
+}
+
+/**
  * Options for a `ReadCache`.
  */
 export interface ReadCacheOptions {
@@ -29,7 +42,7 @@ interface CacheEntry {
  * Published content can take up to `ttl` to show up, so a cached client
  * shouldn't be used to serve previews.
  */
-export class ReadCache {
+export class ReadCache implements RootCMSReadCache {
   private readonly ttl: number;
   private readonly maxEntries: number;
   private readonly entries = new Map<string, CacheEntry>();
