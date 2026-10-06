@@ -109,13 +109,15 @@ async function captureProgram(source: CliSource) {
   const originalParseAsync = Command.prototype.parseAsync;
   const originalLog = console.log;
   let program: any = null;
-  const capture = function (this: any) {
-    program = this;
-    return this;
+  const capture = (instance: any) => {
+    program = instance;
+    return instance;
   };
-  Command.prototype.parse = capture;
+  Command.prototype.parse = function (this: any) {
+    return capture(this);
+  };
   Command.prototype.parseAsync = async function (this: any) {
-    return capture.call(this);
+    return capture(this);
   };
   // Silence banners printed while the program is built.
   console.log = () => {};
