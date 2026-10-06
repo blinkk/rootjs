@@ -271,7 +271,7 @@ export interface CreateRouteOptions {
 
   /**
    * Translations configuration. The returned `tags` are additional
-   * translations ids to load (e.g. "Global/strings"), on top of "common" and
+   * translations ids to load (e.g. "common" or "Global/strings"), on top of
    * the route doc's own translations. Called after the doc is loaded, so
    * `context.doc` and `context.locale` are available.
    */
@@ -539,9 +539,9 @@ export function createRoute(options: CreateRouteOptions): Route {
 
   /**
    * Loads the translations for the resolved locale. Translations are loaded
-   * for "common", any `options.translations()` tags, the docs referenced by
-   * the route's doc, the route's doc, and any docs added to the batch
-   * request, in that order of precedence (later ids win).
+   * for any `options.translations()` tags, the docs referenced by the route's
+   * doc, the route's doc, and any docs added to the batch request, in that
+   * order of precedence (later ids win).
    */
   async function loadTranslations(
     routeContext: RouteContext,
@@ -556,7 +556,8 @@ export function createRoute(options: CreateRouteOptions): Route {
     const tags = options.translations?.(routeContext)?.tags || [];
 
     // The v1 translations system stores strings by tag, so load them with a
-    // single tags query.
+    // single tags query. "common" is always loaded for backwards
+    // compatibility.
     if (!cmsClient.isV2TranslationsEnabled()) {
       const translationsMap = await cmsClient.loadTranslations({
         tags: ['common', docId, ...tags],
@@ -569,7 +570,6 @@ export function createRoute(options: CreateRouteOptions): Route {
     }
 
     const {batchRequest, batchResponse, referencedDocIds} = content;
-    batchRequest.addTranslations('common');
     tags.forEach((tag) => batchRequest.addTranslations(tag));
     referencedDocIds.forEach((id) => batchRequest.addTranslations(id));
     batchRequest.addTranslations(docId);

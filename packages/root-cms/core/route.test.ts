@@ -181,7 +181,8 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     expect(result.rendered).toBe(true);
     expect(result.locale).toBe('de');
     expect(result.props.doc.id).toBe('Pages/about');
-    expect(result.translations).toEqual({hello: 'hallo', about: 'über'});
+    // "common" is not loaded unless explicitly requested.
+    expect(result.translations).toEqual({about: 'über'});
     expect(result.headers['cache-control']).toBe(
       'public, max-age=15, s-maxage=30'
     );
@@ -262,8 +263,10 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
   it('supports a custom resolveLocale()', async () => {
     await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de', 'es']});
     const tm = cmsClient.getTranslationsManager();
-    await tm.saveTranslations('common', {hello: {de: 'hallo', es: 'hola'}});
-    await tm.publishTranslationsBulk(['common']);
+    await tm.saveTranslations('Pages/about', {
+      hello: {de: 'hallo', es: 'hola'},
+    });
+    await tm.publishTranslationsBulk(['Pages/about']);
 
     const resolveLocale: CreateRouteOptions['resolveLocale'] = (ctx) => {
       if (ctx.isDefaultLocale && ctx.country === 'CH') {
@@ -327,7 +330,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       // The doc and locale are available to the translations hook.
       expect(ctx.doc.id).toBe('Pages/index');
       expect(ctx.locale).toBe('es');
-      return {tags: ['Global/strings']};
+      return {tags: ['common', 'Global/strings']};
     });
     const result = await renderRoute(
       rootConfig,
