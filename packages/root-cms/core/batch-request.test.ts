@@ -187,4 +187,30 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('BatchRequest', () => {
     expect(Object.keys(res.translations.common)).toEqual(['es']);
     expect(res.getTranslations('es')).toEqual({hello: 'hola'});
   });
+  it('defers translations with fetchContent() and fetchTranslations()', async () => {
+    await seedDraftDoc(cmsClient, 'Pages/index');
+    const tm = cmsClient.getTranslationsManager();
+    await tm.saveTranslations('Pages/index', {
+      hello: {es: 'hola', 'en-GB': 'hello (GB)'},
+    });
+
+    const req = cmsClient.createBatchRequest({mode: 'draft', translate: true});
+    req.addDoc('Pages/index');
+    const res = await req.fetchContent();
+    expect(res.docs['Pages/index']).toBeDefined();
+    expect(res.translations).toEqual({});
+
+    await req.fetchTranslations(res, {locales: ['es']});
+    // Only the `es` fallback chain (es -> en) is fetched.
+    expect(Object.keys(res.translations['Pages/index'])).toEqual(['es']);
+    expect(res.getTranslations('es')).toEqual({hello: 'hola'});
+  });
+
+  it('fetches docs with slashes in the slug', async () => {
+    await seedDraftDoc(cmsClient, 'Pages/foo--bar');
+    const req = cmsClient.createBatchRequest({mode: 'draft'});
+    req.addDoc('Pages/foo/bar');
+    const res = await req.fetch();
+    expect(res.docs['Pages/foo/bar']?.id).toBe('Pages/foo--bar');
+  });
 });

@@ -35,8 +35,14 @@ import {
 } from '@blinkk/root';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
-import {DocMode, RootCMSClient, translationsForLocale} from './client.js';
-import {translationsForLocaleV2} from './translations-manager.js';
+import {
+  BatchRequest,
+  BatchResponse,
+  DocMode,
+  RootCMSClient,
+  translationsForLocale,
+} from './client.js';
+import type {DependencyGraphService} from './dependency-graph.js';
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -98,6 +104,26 @@ export interface RouteContext {
    * URL param map from filesystem routing.
    */
   params: RouteParams;
+
+  /**
+   * The route's CMS doc. Set once the doc is loaded, so it's available to
+   * `translations()` and `preRenderHook()` but not `fetchData()`.
+   */
+  doc?: RootCMSDoc;
+
+  /**
+   * The locale being rendered. Set once the locale is resolved, so it's
+   * available to `translations()` and `preRenderHook()` but not
+   * `fetchData()`.
+   */
+  locale?: string;
+
+  /**
+   * The response of the route's batch request, containing anything added via
+   * the `batchRequest()` option. Set once loaded, so it's available to
+   * `translations()` and `preRenderHook()` but not `fetchData()`.
+   */
+  batchResponse?: BatchResponse;
 }
 
 export interface Route {
@@ -115,6 +141,43 @@ export interface Route {
    * SSG path params provider, enabled with `{ssg: true}`.
    */
   getStaticPaths?: GetStaticPaths;
+}
+
+/**
+ * Context passed to the `resolveLocale()` option.
+ */
+export interface ResolveLocaleContext {
+  /** HTTP request object. */
+  req: RouteRequest;
+  /** The route context, including the loaded `doc`. */
+  routeContext: RouteContext;
+  /** The route's CMS doc. */
+  doc: RootCMSDoc;
+  /** Locales the doc is enabled for, in the doc's casing. */
+  docLocales: string[];
+  /**
+   * The locale from the URL, e.g. "de" for `/de/about/`. For the route's
+   * default-locale URL (e.g. `/about/`), this is the site's default locale.
+   */
+  routeLocale: string;
+  /**
+   * Whether the request is for the route's default-locale URL (i.e. the URL
+   * has no locale prefix), in which case the locale is typically determined
+   * from the user's request (`?hl=`, `accept-language`, country, etc.).
+   */
+  isDefaultLocale: boolean;
+  /**
+   * Upper-cased country code from `?gl=` or the `x-country-code` /
+   * `x-appengine-country` headers, or an empty string if unknown.
+   */
+  country: string;
+  /** Value of the `?hl=` query param, or `null` if not set. */
+  hl: string | null;
+  /**
+   * Runs the built-in locale resolution. Useful for customizing only some
+   * requests and deferring to the default behavior for the rest.
+   */
+  resolveDefault: () => string | null;
 }
 
 export interface CreateRouteOptions {
@@ -155,6 +218,33 @@ export interface CreateRouteOptions {
   fetchData?: (context: RouteContext) => Record<string, Promise<any>>;
 
   /**
+   * Hook for adding docs, queries, data sources or translations to the
+   * route's batch request. Everything added here is fetched in parallel with
+   * the route's doc, and translations for any docs or query results are
+   * loaded along with the route's translations (for the resolved locale
+   * only). The response is available as `context.batchResponse`.
+   *
+   * ```ts
+   * createRoute({
+   *   collection: 'Pages',
+   *   batchRequest: (req) => {
+   *     req.addDoc('Global/header');
+   *     req.addQuery('posts', 'BlogPosts', {limit: 10});
+   *   },
+   *   preRenderHook: (props, ctx) => ({
+   *     ...props,
+   *     header: ctx.batchResponse!.docs['Global/header'],
+   *     posts: ctx.batchResponse!.queries.posts,
+   *   }),
+   * });
+   * ```
+   */
+  batchRequest?: (
+    batchRequest: BatchRequest,
+    context: RouteContext
+  ) => void | Promise<void>;
+
+  /**
    * Hook that's called when the doc is not found. If not provided, the default
    * 404 handler will be called.
    */
@@ -172,9 +262,22 @@ export interface CreateRouteOptions {
   setResponseHeaders?: (req: Request, res: Response) => void;
 
   /**
-   * Translations configuration.
+   * Translations configuration. The returned `tags` are additional
+   * translations ids to load (e.g. "Global/strings"), on top of "common" and
+   * the route doc's own translations. Called after the doc is loaded, so
+   * `context.doc` and `context.locale` are available.
    */
   translations?: (context: RouteContext) => {tags?: string[]};
+
+  /**
+   * Whether to also load translations for the docs referenced by the route's
+   * doc (e.g. via `schema.reference()` fields), as tracked by the CMS
+   * dependency graph. Set to "transitive" to include docs referenced by those
+   * docs, recursively. Defaults to `true` (direct references only). Has no
+   * effect when the dependency graph or the v2 translations manager is
+   * disabled.
+   */
+  translateReferences?: boolean | 'transitive';
 
   /**
    * Sets Cache-Control header to `private`.
@@ -201,6 +304,33 @@ export interface CreateRouteOptions {
    * Overrides the default locale for the route.
    */
   defaultLocale?: string;
+
+  /**
+   * Custom locale lookup for SSR requests, for sites with custom locale logic
+   * (e.g. mapping countries or URL params to locales). Returns the locale to
+   * render, which must be one of `ctx.docLocales` (matched
+   * case-insensitively). Returning `null` or a locale the doc isn't enabled
+   * for renders the 404 page (or calls `notFoundHook`).
+   *
+   * Call `ctx.resolveDefault()` to fall back to the built-in logic:
+   *
+   * ```ts
+   * createRoute({
+   *   collection: 'Pages',
+   *   resolveLocale: (ctx) => {
+   *     if (ctx.isDefaultLocale && ctx.country === 'CH') {
+   *       return ctx.docLocales.includes('de-CH') ? 'de-CH' : 'de';
+   *     }
+   *     return ctx.resolveDefault();
+   *   },
+   * });
+   * ```
+   *
+   * SSG builds always render the locale from the build path.
+   */
+  resolveLocale?: (
+    ctx: ResolveLocaleContext
+  ) => string | null | undefined | Promise<string | null | undefined>;
 }
 
 /**
@@ -208,6 +338,7 @@ export interface CreateRouteOptions {
  */
 export function createRoute(options: CreateRouteOptions): Route {
   let cmsClient: RootCMSClient;
+  let dependencyGraphService: DependencyGraphService | undefined;
 
   function getSlug(params: RouteParams) {
     if (options.slug) {
@@ -221,6 +352,31 @@ export function createRoute(options: CreateRouteOptions): Route {
     return slug;
   }
 
+  function getDocId(slug: string) {
+    return `${options.collection}/${normalizeSlug(slug)}`;
+  }
+
+  function getDefaultLocale(rootConfig: RootConfig) {
+    return options.defaultLocale || rootConfig.i18n?.defaultLocale || 'en';
+  }
+
+  /**
+   * Returns the locales the doc is enabled for, defaulting to the route's
+   * default locale.
+   */
+  function getDocLocales(doc: RootCMSDoc, rootConfig: RootConfig) {
+    const locales = doc.sys?.locales || [];
+    return locales.length > 0 ? locales : [getDefaultLocale(rootConfig)];
+  }
+
+  /**
+   * Translations are only loaded for sites that have >1 locale configured.
+   */
+  function shouldTranslate(cmsClient: RootCMSClient) {
+    const siteLocales = cmsClient.rootConfig.i18n?.locales || ['en'];
+    return siteLocales.length > 1;
+  }
+
   async function fetchData(
     fetchOptions: RouteContext
   ): Promise<Record<string, any>> {
@@ -232,83 +388,137 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   /**
-   * Loads the translations used by the route. When the v2 translations
-   * manager is enabled, translations are read from the v2 per-locale docs
-   * (using the same ids as the v1 tags); otherwise the v1 translations
-   * collection is used.
+   * Returns the ids of the docs referenced by the route's doc, used for
+   * loading their translations. Errors are logged and swallowed so that a
+   * dependency graph failure never breaks the page.
    */
-  function loadRouteTranslations(
+  async function getReferencedDocIds(
     cmsClient: RootCMSClient,
-    translationsTags: string[],
+    docId: string,
     mode: DocMode
-  ): Promise<Record<string, any>> {
-    if (cmsClient.isV2TranslationsEnabled()) {
-      const tm = cmsClient.getTranslationsManager();
-      return tm.loadTranslations({ids: translationsTags, mode});
+  ): Promise<string[]> {
+    if (
+      options.translateReferences === false ||
+      !shouldTranslate(cmsClient) ||
+      !cmsClient.isV2TranslationsEnabled()
+    ) {
+      return [];
     }
-    return cmsClient.loadTranslations({tags: translationsTags});
+    try {
+      if (!dependencyGraphService) {
+        // Lazy load the dependency graph module to minimize the amount of
+        // code loaded by routes that don't need it.
+        const {DependencyGraphService} = await import('./dependency-graph.js');
+        dependencyGraphService = new DependencyGraphService(
+          cmsClient.rootConfig
+        );
+      }
+      if (!dependencyGraphService.isEnabled()) {
+        return [];
+      }
+      const graph = await dependencyGraphService.getGraph(mode);
+      return graph.getDependencies(docId, {
+        transitive: options.translateReferences === 'transitive',
+      });
+    } catch (err) {
+      console.error(`failed to load the dependency graph for ${docId}:`);
+      console.error(String(err.stack || err));
+      return [];
+    }
   }
 
   /**
-   * Flattens a loaded translations map to a source -> translation map for a
-   * locale, resolving the locale's fallback chain (`i18n.fallbacks`).
+   * Loads the route's content in a single round trip: the route's doc, the
+   * route's batch request (see `options.batchRequest`), the ids of the docs
+   * it references, and `options.fetchData`. Translations are loaded
+   * separately with `loadTranslations()` once the locale is known.
    */
-  function translationsMapForLocale(
-    cmsClient: RootCMSClient,
-    translationsMap: Record<string, any>,
-    locale: string
-  ): Record<string, string> {
-    const fallbackLocales = resolveLocaleFallbacks(
-      cmsClient.rootConfig.i18n,
-      locale
-    );
-    if (cmsClient.isV2TranslationsEnabled()) {
-      return translationsForLocaleV2(translationsMap, fallbackLocales);
+  async function loadContent(routeContext: RouteContext) {
+    const {cmsClient, mode, slug} = routeContext;
+    const docId = getDocId(slug);
+    const batchRequest = cmsClient.createBatchRequest({mode, translate: true});
+    if (options.batchRequest) {
+      await options.batchRequest(batchRequest, routeContext);
     }
-    return translationsForLocale(translationsMap, fallbackLocales);
+    const [doc, batchResponse, referencedDocIds, data] = await Promise.all([
+      cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {mode}),
+      batchRequest.fetchContent(),
+      getReferencedDocIds(cmsClient, docId, mode),
+      fetchData(routeContext),
+    ]);
+    if (doc) {
+      routeContext.doc = doc;
+    }
+    routeContext.batchResponse = batchResponse;
+    return {doc, data, batchRequest, batchResponse, referencedDocIds};
+  }
+
+  /**
+   * Loads the translations for the resolved locale. Translations are loaded
+   * for "common", any `options.translations()` tags, the docs referenced by
+   * the route's doc, the route's doc, and any docs added to the batch
+   * request, in that order of precedence (later ids win).
+   */
+  async function loadTranslations(
+    routeContext: RouteContext,
+    content: Awaited<ReturnType<typeof loadContent>>,
+    locale: string
+  ): Promise<Record<string, string>> {
+    const {cmsClient, slug} = routeContext;
+    if (!shouldTranslate(cmsClient)) {
+      return {};
+    }
+    const docId = getDocId(slug);
+    const tags = options.translations?.(routeContext)?.tags || [];
+
+    // The v1 translations system stores strings by tag, so load them with a
+    // single tags query.
+    if (!cmsClient.isV2TranslationsEnabled()) {
+      const translationsMap = await cmsClient.loadTranslations({
+        tags: ['common', docId, ...tags],
+      });
+      const fallbackLocales = resolveLocaleFallbacks(
+        cmsClient.rootConfig.i18n,
+        locale
+      );
+      return translationsForLocale(translationsMap, fallbackLocales);
+    }
+
+    const {batchRequest, batchResponse, referencedDocIds} = content;
+    batchRequest.addTranslations('common');
+    tags.forEach((tag) => batchRequest.addTranslations(tag));
+    referencedDocIds.forEach((id) => batchRequest.addTranslations(id));
+    batchRequest.addTranslations(docId);
+    // Only the resolved locale (and its fallbacks) are fetched.
+    await batchRequest.fetchTranslations(batchResponse, {locales: [locale]});
+    return batchResponse.getTranslations(locale);
   }
 
   async function generateProps(routeContext: RouteContext, locale: string) {
     const {slug, mode, cmsClient} = routeContext;
-    const translationsTags = [
-      'common',
-      `${options.collection}/${normalizeSlug(slug)}`,
-    ];
-    if (options.translations) {
-      const tags = options.translations(routeContext)?.tags || [];
-      translationsTags.push(...tags);
-    }
-    const siteLocales = cmsClient.rootConfig.i18n?.locales || ['en'];
-
-    const [doc, translationsMap, data] = await Promise.all([
-      cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {
-        mode,
-      }),
-      // Only load translations for sites that have >1 locale configured.
-      siteLocales.length > 1
-        ? loadRouteTranslations(cmsClient, translationsTags, mode)
-        : Promise.resolve({}),
-      fetchData(routeContext),
-    ]);
+    const content = await loadContent(routeContext);
+    const {doc, data} = content;
     if (!doc) {
       return {notFound: true};
     }
-    const docLocales = doc.sys.locales || [];
-    if (!docLocales.includes(locale)) {
+    const docLocales = getDocLocales(doc, cmsClient.rootConfig);
+    const docLocale = findLocale(docLocales, locale);
+    if (!docLocale) {
       return {notFound: true};
     }
+    routeContext.locale = docLocale;
 
-    const translations = translationsMapForLocale(
-      cmsClient,
-      translationsMap,
-      locale
+    const translations = await loadTranslations(
+      routeContext,
+      content,
+      docLocale
     );
-    let props: any = {...data, locale, mode, slug, doc};
+    let props: any = {...data, locale: docLocale, mode, slug, doc};
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
     }
 
-    return {props, locale, translations};
+    return {props, locale: docLocale, translations};
   }
 
   const route: Route = {
@@ -326,13 +536,20 @@ export function createRoute(options: CreateRouteOptions): Route {
         return ctx.render404();
       }
       const mode = await getMode(req);
-      const siteLocales = req.rootConfig?.i18n?.locales || ['en'];
 
       // For previewOnly routes, render the 404 page if ?preview=true is not
       // in the URL.
       if (options.previewOnly && mode !== 'draft') {
         return ctx.render404();
       }
+
+      const notFound = async () => {
+        if (options.notFoundHook) {
+          await options.notFoundHook(req, res);
+          return;
+        }
+        return ctx.render404();
+      };
 
       const routeContext: RouteContext = {
         req,
@@ -342,32 +559,10 @@ export function createRoute(options: CreateRouteOptions): Route {
         params: ctx.params,
       };
 
-      const translationsTags = [
-        'common',
-        `${options.collection}/${normalizeSlug(slug)}`,
-      ];
-      if (options.translations) {
-        const tags = options.translations(routeContext)?.tags || [];
-        translationsTags.push(...tags);
-      }
-
-      const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {
-          mode,
-        }),
-        // Only load translations for sites that have >1 locale configured.
-        siteLocales.length > 1
-          ? loadRouteTranslations(cmsClient, translationsTags, mode)
-          : Promise.resolve({}),
-        fetchData(routeContext),
-      ]);
+      const content = await loadContent(routeContext);
+      const {doc, data} = content;
       if (!doc) {
-        // console.log(`doc not found: ${options.collection}/${slug}`);
-        if (options.notFoundHook) {
-          await options.notFoundHook(req, res);
-          return;
-        }
-        return ctx.render404();
+        return notFound();
       }
 
       const hl = getFirstQueryParam(req, 'hl');
@@ -386,83 +581,95 @@ export function createRoute(options: CreateRouteOptions): Route {
        * country) from a list of available locales.
        */
       function getFallbackLocale(docLocales: string[]) {
-        const localesMap: Record<string, string> = {};
-        docLocales.forEach((docLocale) => {
-          const lowerLocale = docLocale.toLowerCase();
-          localesMap[lowerLocale] = docLocale;
-        });
-
         // TODO(stevenle): figure out a better, more generic way to handle this.
         if (hl === 'fr') {
-          if (country === 'CA' && 'fr-ca' in localesMap) {
-            return localesMap['fr-ca'];
+          if (country === 'CA') {
+            const frCA = findLocale(docLocales, 'fr-ca');
+            if (frCA) {
+              return frCA;
+            }
           }
-          if (country === 'FR' && 'fr-fr' in localesMap) {
-            return localesMap['fr-fr'];
+          if (country === 'FR') {
+            const frFR = findLocale(docLocales, 'fr-fr');
+            if (frFR) {
+              return frFR;
+            }
           }
         }
         if (hl === 'pt') {
-          if (country === 'BR' && 'pt-br' in localesMap) {
-            return localesMap['pt-br'];
-          }
-          if (country === 'PT' && 'pt-pt' in localesMap) {
-            return localesMap['pt-pt'];
-          }
-        }
-
-        const preferredLocale = ctx.getPreferredLocale(docLocales);
-        if (preferredLocale) {
-          // The `getPreferredLocale()` method returns the locale in lower-case,
-          // convert it to the doc's locale casing.
-          // TODO(stevenle): fix this upstream.
-
-          const normalizedLocale =
-            localesMap[preferredLocale] || preferredLocale;
-
-          // "en" users in certain countries should default to en-GB if it
-          // exists in the doc.
-          // TODO(stevenle): add a formal fallback configuration system.
-          if (preferredLocale === 'en') {
-            if (['AU', 'CA', 'IN', 'MY'].includes(country)) {
-              if (localesMap[`en-${country.toLowerCase()}`]) {
-                return localesMap[`en-${country.toLowerCase()}`];
-              }
-              if (localesMap['en-gb']) {
-                return localesMap['en-gb'];
-              }
+          if (country === 'BR') {
+            const ptBR = findLocale(docLocales, 'pt-br');
+            if (ptBR) {
+              return ptBR;
             }
           }
-
-          return normalizedLocale;
-        }
-
-        const defaultLocale =
-          options.defaultLocale || req.rootConfig?.i18n?.defaultLocale || 'en';
-        if (docLocales.includes(defaultLocale)) {
-          return defaultLocale;
-        }
-
-        return docLocales[0];
-      }
-
-      const sys = doc.sys;
-      const docLocales = sys.locales || ['en'];
-      let locale = ctx.route.locale;
-      if (ctx.route.isDefaultLocale) {
-        locale = getFallbackLocale(docLocales);
-      } else {
-        if (!docLocales.includes(locale)) {
-          if (options.notFoundHook) {
-            await options.notFoundHook(req, res);
-            return;
+          if (country === 'PT') {
+            const ptPT = findLocale(docLocales, 'pt-pt');
+            if (ptPT) {
+              return ptPT;
+            }
           }
-          return ctx.render404();
         }
+
+        // NOTE: `getPreferredLocale()` returns the site's default locale when
+        // none of the user's locales match, which may not be enabled for the
+        // doc.
+        const preferredLocale = ctx.getPreferredLocale(docLocales);
+
+        // "en" users in certain countries should default to en-GB if it
+        // exists in the doc.
+        // TODO(stevenle): add a formal fallback configuration system.
+        if (
+          preferredLocale.toLowerCase() === 'en' &&
+          ['AU', 'CA', 'IN', 'MY'].includes(country)
+        ) {
+          const enCountry =
+            findLocale(docLocales, `en-${country}`) ||
+            findLocale(docLocales, 'en-gb');
+          if (enCountry) {
+            return enCountry;
+          }
+        }
+
+        const docLocale = findLocale(docLocales, preferredLocale);
+        if (docLocale) {
+          return docLocale;
+        }
+        return (
+          findLocale(docLocales, getDefaultLocale(req.rootConfig)) ||
+          docLocales[0]
+        );
       }
 
-      const translations = translationsMapForLocale(
-        cmsClient,
-        translationsMap,
+      const docLocales = getDocLocales(doc, req.rootConfig);
+      const resolveDefault = () => {
+        if (ctx.route.isDefaultLocale) {
+          return getFallbackLocale(docLocales);
+        }
+        return findLocale(docLocales, ctx.route.locale);
+      };
+      const resolvedLocale = options.resolveLocale
+        ? await options.resolveLocale({
+            req,
+            routeContext,
+            doc,
+            docLocales,
+            routeLocale: ctx.route.locale,
+            isDefaultLocale: !!ctx.route.isDefaultLocale,
+            country,
+            hl,
+            resolveDefault,
+          })
+        : resolveDefault();
+      const locale = resolvedLocale && findLocale(docLocales, resolvedLocale);
+      if (!locale) {
+        return notFound();
+      }
+      routeContext.locale = locale;
+
+      const translations = await loadTranslations(
+        routeContext,
+        content,
         locale
       );
       let props: any = {...data, req, locale, mode, slug, doc, country};
@@ -477,9 +684,10 @@ export function createRoute(options: CreateRouteOptions): Route {
         return;
       }
 
-      if (options.disableCacheControl) {
+      if (options.disableCacheControl || mode === 'draft') {
+        // Never cache draft (preview) content in shared caches.
         res.setHeader('cache-control', 'private');
-      } else if (mode === 'published') {
+      } else {
         res.setHeader('cache-control', 'public, max-age=15, s-maxage=30');
         if (ctx.route.isDefaultLocale) {
           res.setHeader(
@@ -498,7 +706,9 @@ export function createRoute(options: CreateRouteOptions): Route {
   // SSG handlers (only enabled with `{ssg: true}`).
   if (options.ssg) {
     route.getStaticPaths = async (ctx) => {
-      if (!options.slugParam) {
+      // Single-doc routes and multi-param slugs can't be mapped back to route
+      // params.
+      if (options.slug || options.slugFormat) {
         return {paths: []};
       }
       if (!cmsClient) {
@@ -537,6 +747,15 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   return route;
+}
+
+/**
+ * Returns the locale from `locales` matching `locale` case-insensitively (in
+ * the casing used by `locales`), or `null` if there's no match.
+ */
+function findLocale(locales: string[], locale: string): string | null {
+  const lowerLocale = String(locale).toLowerCase();
+  return locales.find((l) => l.toLowerCase() === lowerLocale) || null;
 }
 
 export async function resolvePromisesMap(
