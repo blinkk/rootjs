@@ -793,6 +793,9 @@ export function getFirstQueryParam(req: Request, key: string): string | null {
 
 /**
  * Issues an HTTP redirect, preserving any query params from the original req.
+ *
+ * Redirects are never cached (even 301s), so that a redirect that's later
+ * removed in the CMS takes effect immediately for browsers and CDNs.
  */
 export function redirectWithQuery(
   req: Request,
@@ -800,6 +803,10 @@ export function redirectWithQuery(
   redirectCode: number,
   redirectPath: string
 ) {
+  res.setHeader(
+    'cache-control',
+    'no-cache, no-store, max-age=0, must-revalidate'
+  );
   // Only preserve query params for relative urls.
   if (!redirectPath.startsWith('/')) {
     res.redirect(redirectCode, redirectPath);

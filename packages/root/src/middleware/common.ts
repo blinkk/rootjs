@@ -105,6 +105,8 @@ export function trailingSlashMiddleware(options: {rootConfig: RootConfig}) {
 
 /**
  * Issues an HTTP redirect, preserving any query params from the original req.
+ * Redirects are never cached (even 301s), so config changes take effect
+ * immediately for browsers and CDNs.
  */
 function redirectWithQuery(
   req: Request,
@@ -112,6 +114,10 @@ function redirectWithQuery(
   redirectCode: number,
   redirectPath: string
 ) {
+  res.setHeader(
+    'cache-control',
+    'no-cache, no-store, max-age=0, must-revalidate'
+  );
   const queryStr = getQueryStr(req);
   const redirectUrl = queryStr ? `${redirectPath}?${queryStr}` : redirectPath;
   res.redirect(redirectCode, redirectUrl);

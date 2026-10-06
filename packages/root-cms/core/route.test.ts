@@ -144,6 +144,7 @@ async function renderRoute(
   await route.handle(req, res);
   const renderArgs = render.mock.calls[0];
   return {
+    redirect: res.redirect,
     rendered: render.mock.calls.length > 0,
     notFound: render404.mock.calls.length > 0,
     props: renderArgs?.[0],
@@ -357,6 +358,27 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       {slug: 'index', locale: 'es'}
     );
     expect(withoutRefs.translations).not.toHaveProperty('author');
+  });
+
+  it('never caches redirects', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    const result = await renderRoute(
+      rootConfig,
+      {
+        collection: 'Pages',
+        preRenderHook: (props) => ({
+          ...props,
+          $redirect: '/new/',
+          $redirectCode: 301,
+        }),
+      },
+      {slug: 'about', locale: 'de'}
+    );
+    expect(result.rendered).toBe(false);
+    expect(result.redirect).toHaveBeenCalledWith(301, '/new/');
+    expect(result.headers['cache-control']).toBe(
+      'no-cache, no-store, max-age=0, must-revalidate'
+    );
   });
 
   it('marks draft responses as private', async () => {
