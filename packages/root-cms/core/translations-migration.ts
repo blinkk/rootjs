@@ -23,10 +23,16 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import cliProgress from 'cli-progress';
 import {Timestamp} from 'firebase-admin/firestore';
+import {bold, cyan, dim, green} from 'kleur/colors';
 import type {RootCMSClient} from './client.js';
 import type {SchemaWithTypes} from './schema.js';
-import type {TranslationsWriteCache} from './translations-manager.js';
+import type {
+  ImportTranslationsFromV1Progress,
+  ImportTranslationsFromV1Result,
+  TranslationsWriteCache,
+} from './translations-manager.js';
 
 /**
  * Bump this version to force the migration to re-run on projects that have
@@ -55,6 +61,9 @@ export interface TranslationsMigrationState {
     numStrings: number;
     numDocs: number;
     numPrunedStrings?: number;
+    numSkippedStrings?: number;
+    numLocaleDocs?: number;
+    numCachedLocaleDocs?: number;
   };
 }
 
@@ -181,6 +190,7 @@ export async function migrateV1TranslationsIfNeeded(
         )
       )
     : undefined;
+  const progress = new MigrationProgress();
   try {
     const tm = cmsClient.getTranslationsManager();
     // v1 translations were live as soon as they were saved, so the migrated
@@ -190,7 +200,9 @@ export async function migrateV1TranslationsIfNeeded(
       modifiedBy: `root-cms migration (${trigger})`,
       getCollectionSchema: options?.getCollectionSchema,
       writeCache: writeCache,
+      onProgress: (update) => progress.update(update),
     });
+    progress.stop();
     const completeState: TranslationsMigrationState = {
       version: MIGRATION_VERSION,
       runId: runId,
@@ -203,13 +215,11 @@ export async function migrateV1TranslationsIfNeeded(
     await stateRef.set(completeState);
     await writeCache?.remove();
     if (res.ids.length > 0) {
-      console.log(
-        `[root cms] migrated ${res.stats.numStrings} v1 translation(s) into ` +
-          `${res.stats.numDocs} translations doc(s)`
-      );
+      printMigrationSummary(res, Date.now() - startedAt.toMillis());
     }
     return {status: 'complete', skipped: false};
   } catch (err) {
+    progress.stop();
     const errorState: Partial<TranslationsMigrationState> = {
       status: 'error',
       finishedAt: Timestamp.now(),
@@ -281,4 +291,141 @@ class FileWriteCache implements TranslationsWriteCache {
     await this.pendingWrite;
     await fs.rm(this.filePath, {force: true}).catch(() => {});
   }
+}
+
+/** Labels for each step reported by `importTranslationsFromV1()`. */
+const PROGRESS_STEPS: Record<
+  ImportTranslationsFromV1Progress['step'],
+  {label: string; unit: string}
+> = {
+  'fetch-docs': {label: 'Reading docs', unit: 'docs'},
+  prune: {label: 'Pruning', unit: 'translations docs'},
+  write: {label: 'Writing', unit: 'locale docs'},
+};
+
+/**
+ * Renders a progress bar for each step of the migration. In a non-TTY
+ * environment (e.g. CI), the progress is logged periodically instead.
+ */
+class MigrationProgress {
+  private bar?: cliProgress.SingleBar;
+  private step?: ImportTranslationsFromV1Progress['step'];
+
+  update(progress: ImportTranslationsFromV1Progress) {
+    // Hide steps with nothing to do (e.g. no doc-backed tags to read).
+    if (progress.total === 0) {
+      return;
+    }
+    if (progress.step === this.step) {
+      this.bar?.update(progress.completed);
+      return;
+    }
+    if (!this.step) {
+      console.log(
+        `${bold('[root cms]')} migrating v1 translations to the v2 ` +
+          'translations manager'
+      );
+    }
+    this.bar?.stop();
+    this.step = progress.step;
+    const {label, unit} = PROGRESS_STEPS[progress.step];
+    this.bar = new cliProgress.SingleBar({
+      format:
+        `  ${label.padEnd(12)} ${cyan('{bar}')} {percentage}% ` +
+        dim(`| {value}/{total} ${unit} | {duration_formatted}`),
+      barCompleteChar: '\u2588',
+      barIncompleteChar: '\u2591',
+      barsize: 30,
+      hideCursor: true,
+      noTTYOutput: true,
+      notTTYSchedule: 5000,
+    });
+    this.bar.start(progress.total, progress.completed);
+  }
+
+  stop() {
+    this.bar?.stop();
+    this.bar = undefined;
+  }
+}
+
+/** Prints summary tables for a completed migration. */
+function printMigrationSummary(
+  res: ImportTranslationsFromV1Result,
+  durationMs: number
+) {
+  const {stats} = res;
+  const rows: string[][] = [
+    ['v1 strings migrated', formatNumber(stats.numStrings)],
+    ['Translations docs', formatNumber(stats.numDocs)],
+    ['Locale docs', formatNumber(stats.numLocaleDocs)],
+  ];
+  if (stats.numCachedLocaleDocs > 0) {
+    rows.push(['Locale docs resumed', formatNumber(stats.numCachedLocaleDocs)]);
+  }
+  if (stats.numPrunedStrings > 0) {
+    rows.push(['Unused strings pruned', formatNumber(stats.numPrunedStrings)]);
+  }
+  if (stats.numSkippedStrings > 0) {
+    rows.push([
+      'Collection-only strings skipped',
+      formatNumber(stats.numSkippedStrings),
+    ]);
+  }
+  rows.push(['Duration', `${(durationMs / 1000).toFixed(1)}s`]);
+
+  const localeRows = Object.keys(res.locales)
+    .sort()
+    .map((locale) => [
+      locale,
+      formatNumber(res.locales[locale].numDocs),
+      formatNumber(res.locales[locale].numStrings),
+    ]);
+
+  console.log();
+  console.log(`${bold('[root cms]')} ${green('✔')} v1 translations migrated`);
+  console.log(renderTable(['Summary', ''], rows));
+  if (localeRows.length > 0) {
+    console.log(renderTable(['Locale', 'Docs', 'Strings'], localeRows));
+  }
+}
+
+/**
+ * Renders a table with box-drawing borders. The first column is left-aligned
+ * and the rest are right-aligned (for numbers).
+ *
+ * ```
+ * renderTable(['Locale', 'Docs'], [['es', '12']]);
+ * // ┌────────┬──────┐
+ * // │ Locale │ Docs │
+ * // ├────────┼──────┤
+ * // │ es     │   12 │
+ * // └────────┴──────┘
+ * ```
+ */
+export function renderTable(headers: string[], rows: string[][]): string {
+  const widths = headers.map((header, i) =>
+    Math.max(header.length, ...rows.map((row) => (row[i] || '').length))
+  );
+  const border = (left: string, mid: string, right: string) =>
+    dim(left + widths.map((w) => '─'.repeat(w + 2)).join(mid) + right);
+  const line = (cells: string[], format: (str: string) => string) => {
+    const sep = dim('│');
+    const padded = widths.map((w, i) => {
+      const cell = cells[i] || '';
+      return format(i === 0 ? cell.padEnd(w) : cell.padStart(w));
+    });
+    return `${sep} ${padded.join(` ${sep} `)} ${sep}`;
+  };
+  return [
+    border('┌', '┬', '┐'),
+    line(headers, bold),
+    border('├', '┼', '┤'),
+    ...rows.map((row) => line(row, (str) => str)),
+    border('└', '┴', '┘'),
+  ].join('\n');
+}
+
+function formatNumber(num: number): string {
+  return num.toLocaleString('en-US');
 }

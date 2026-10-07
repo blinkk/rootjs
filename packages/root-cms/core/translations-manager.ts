@@ -193,7 +193,32 @@ export interface ImportTranslationsFromV1Result {
      * `ImportTranslationsFromV1Options`).
      */
     numPrunedStrings: number;
+    /**
+     * Number of v1 strings skipped because they were only tagged with a
+     * collection (i.e. they were removed from all of their docs).
+     */
+    numSkippedStrings: number;
+    /** Number of v2 translations locale docs saved (or resumed). */
+    numLocaleDocs: number;
+    /**
+     * Number of locale docs that were skipped because a previous run already
+     * saved them (see `writeCache` in `ImportTranslationsFromV1Options`).
+     */
+    numCachedLocaleDocs: number;
   };
+  /** Per-locale counts of the saved locale docs and their strings. */
+  locales: Record<Locale, {numDocs: number; numStrings: number}>;
+}
+
+/**
+ * A progress update emitted by `importTranslationsFromV1()`. Steps run in
+ * order: `fetch-docs` (reading the CMS docs backing the v1 tags), `prune`
+ * (only when pruning unused strings) and `write` (saving locale docs).
+ */
+export interface ImportTranslationsFromV1Progress {
+  step: 'fetch-docs' | 'prune' | 'write';
+  completed: number;
+  total: number;
 }
 
 /**
@@ -224,6 +249,11 @@ export interface ImportTranslationsFromV1Options {
    * failed import skips them.
    */
   writeCache?: TranslationsWriteCache;
+  /**
+   * Called as the import progresses. When provided, the import doesn't log
+   * its own progress messages, so that the caller can render them instead.
+   */
+  onProgress?: (progress: ImportTranslationsFromV1Progress) => void;
 }
 
 /**
@@ -718,14 +748,23 @@ export class TranslationsManager {
     const dbPath = `Projects/${projectId}/Translations`;
     const query = db.collection(dbPath);
     const querySnapshot = await query.get();
-    const stats = {numStrings: 0, numDocs: 0, numPrunedStrings: 0};
+    const stats = {
+      numStrings: 0,
+      numDocs: 0,
+      numPrunedStrings: 0,
+      numSkippedStrings: 0,
+      numLocaleDocs: 0,
+      numCachedLocaleDocs: 0,
+    };
+    const locales: ImportTranslationsFromV1Result['locales'] = {};
     if (querySnapshot.size === 0) {
-      return {ids: [], stats};
+      return {ids: [], stats, locales};
     }
 
-    console.log(
-      '[root cms] importing v1 Translations to v2 TranslationsManager'
-    );
+    // When the caller renders progress, it also owns the log output.
+    const onProgress = options.onProgress;
+    const log = onProgress ? () => {} : console.log;
+    log('[root cms] importing v1 Translations to v2 TranslationsManager');
 
     // v1 tagged each string with both its collection id and its doc id (e.g.
     // `Pages` and `Pages/index`). Translations are only stored per doc in v2,
@@ -745,7 +784,6 @@ export class TranslationsManager {
       string,
       {id: string; strings: MultiLocaleTranslationsMap}
     > = {};
-    let numCollectionOnlyStrings = 0;
     querySnapshot.forEach((doc) => {
       const translation = doc.data();
       const source = this.cmsClient.normalizeString(translation.source || '');
@@ -771,7 +809,7 @@ export class TranslationsManager {
       if (allTags.length > 0 && tags.length === 0) {
         // The string was removed from all of its docs and is only left tagged
         // with a collection, so it is no longer used.
-        numCollectionOnlyStrings += 1;
+        stats.numSkippedStrings += 1;
         return;
       }
       const translationsIds = tags.length > 0 ? tags : ['v1-untagged'];
@@ -784,17 +822,17 @@ export class TranslationsManager {
       }
       stats.numStrings += 1;
     });
-    if (numCollectionOnlyStrings > 0) {
-      console.log(
-        `[root cms] skipped ${numCollectionOnlyStrings} v1 string(s) that ` +
+    if (stats.numSkippedStrings > 0) {
+      log(
+        `[root cms] skipped ${stats.numSkippedStrings} v1 string(s) that ` +
           'are only tagged with a collection'
       );
     }
 
     const ids = Object.keys(translationsDocs);
     if (ids.length === 0) {
-      console.log('[root cms] no v1 translations to save');
-      return {ids: [], stats};
+      log('[root cms] no v1 translations to save');
+      return {ids: [], stats, locales};
     }
 
     // Fetch the docs backing doc-like translations ids (e.g. `Pages/index`)
@@ -802,12 +840,14 @@ export class TranslationsManager {
     const pruneUnusedStrings = Boolean(options.getCollectionSchema);
     const tagDocs = await this.fetchV1TagDocs(ids, {
       withFields: pruneUnusedStrings,
+      onProgress: onProgress,
     });
     if (options.getCollectionSchema) {
       stats.numPrunedStrings = await this.pruneUnusedV1Strings(
         translationsDocs,
         tagDocs,
-        options.getCollectionSchema
+        options.getCollectionSchema,
+        {log, onProgress}
       );
     }
 
@@ -863,21 +903,28 @@ export class TranslationsManager {
           bytes: estimateWriteBytes(draftPath, {strings: hashMap}),
         });
         numLocaleDocs += 1;
+        locales[locale] ??= {numDocs: 0, numStrings: 0};
+        locales[locale].numDocs += 1;
+        locales[locale].numStrings += Object.keys(hashMap).length;
       }
       if (numLocaleDocs > 0) {
         savedIds.push(translationsId);
       }
     }
 
-    console.log(
+    log(
       `[root cms] saving ${stats.numStrings} v1 string(s) to ` +
         `${savedIds.length} translations doc(s) (${writes.length} locale doc(s))`
     );
-    await this.commitLocaleDocWrites(writes, {
+    const {numCached} = await this.commitLocaleDocWrites(writes, {
       writeCache: options.writeCache,
+      log,
+      onProgress,
     });
     stats.numDocs = savedIds.length;
-    return {ids: savedIds, stats};
+    stats.numLocaleDocs = writes.length;
+    stats.numCachedLocaleDocs = numCached;
+    return {ids: savedIds, stats, locales};
   }
 
   /**
@@ -887,7 +934,10 @@ export class TranslationsManager {
    */
   private async fetchV1TagDocs(
     ids: string[],
-    options: {withFields: boolean}
+    options: {
+      withFields: boolean;
+      onProgress?: ImportTranslationsFromV1Options['onProgress'];
+    }
   ): Promise<Map<string, V1TagDoc>> {
     const db = this.cmsClient.db;
     const projectId = this.cmsClient.projectId;
@@ -925,6 +975,12 @@ export class TranslationsManager {
     const readOptions = options.withFields
       ? undefined
       : {fieldMask: ['sys.l10nSheet']};
+    let numFetched = 0;
+    options.onProgress?.({
+      step: 'fetch-docs',
+      completed: 0,
+      total: lookups.length,
+    });
     await runWithConcurrency(
       chunkArray(lookups, GET_ALL_CHUNK_SIZE),
       MAX_CONCURRENT_REQUESTS,
@@ -948,6 +1004,12 @@ export class TranslationsManager {
           }
           results.set(id, result);
         });
+        numFetched += chunk.length;
+        options.onProgress?.({
+          step: 'fetch-docs',
+          completed: numFetched,
+          total: lookups.length,
+        });
       }
     );
     return results;
@@ -965,7 +1027,11 @@ export class TranslationsManager {
     tagDocs: Map<string, V1TagDoc>,
     getCollectionSchema: (
       collectionId: string
-    ) => Promise<SchemaWithTypes | null>
+    ) => Promise<SchemaWithTypes | null>,
+    options: {
+      log: (message: string) => void;
+      onProgress?: ImportTranslationsFromV1Options['onProgress'];
+    }
   ): Promise<number> {
     const schemas = new Map<string, Promise<SchemaWithTypes | null>>();
     const loadSchema = (collectionId: string) => {
@@ -979,9 +1045,16 @@ export class TranslationsManager {
     };
 
     let numPruned = 0;
-    for (const [translationsId, translationsDoc] of Object.entries(
-      translationsDocs
-    )) {
+    const entries = Object.entries(translationsDocs);
+    const reportProgress = (completed: number) => {
+      options.onProgress?.({
+        step: 'prune',
+        completed: completed,
+        total: entries.length,
+      });
+    };
+    for (const [i, [translationsId, translationsDoc]] of entries.entries()) {
+      reportProgress(i);
       const sepIndex = translationsId.indexOf('/');
       if (sepIndex <= 0) {
         continue;
@@ -1003,8 +1076,9 @@ export class TranslationsManager {
         }
       }
     }
+    reportProgress(entries.length);
     if (numPruned > 0) {
-      console.log(
+      options.log(
         `[root cms] pruned ${numPruned} unused v1 string(s) from doc translations`
       );
     }
@@ -1019,16 +1093,21 @@ export class TranslationsManager {
    */
   private async commitLocaleDocWrites(
     writes: LocaleDocWrite[],
-    options: {writeCache?: TranslationsWriteCache}
-  ) {
+    options: {
+      writeCache?: TranslationsWriteCache;
+      log: (message: string) => void;
+      onProgress?: ImportTranslationsFromV1Options['onProgress'];
+    }
+  ): Promise<{numCached: number}> {
     const db = this.cmsClient.db;
     const writeCache = options.writeCache;
     const pending = writeCache
       ? writes.filter((write) => !writeCache.has(write.cacheKey))
       : writes;
-    if (pending.length < writes.length) {
-      console.log(
-        `[root cms] skipping ${writes.length - pending.length} locale doc(s) ` +
+    const numCached = writes.length - pending.length;
+    if (numCached > 0) {
+      options.log(
+        `[root cms] skipping ${numCached} locale doc(s) ` +
           'saved by a previous run'
       );
     }
@@ -1059,8 +1138,15 @@ export class TranslationsManager {
       batches.push(batch);
     }
 
+    // Progress includes the cached writes, so that a resumed run picks up
+    // where the failed run left off.
     let numWritten = 0;
     let lastLogTime = Date.now();
+    options.onProgress?.({
+      step: 'write',
+      completed: numCached,
+      total: writes.length,
+    });
     await runWithConcurrency(
       batches,
       MAX_CONCURRENT_REQUESTS,
@@ -1083,14 +1169,20 @@ export class TranslationsManager {
           await writeCache.add(items.map((item) => item.cacheKey));
         }
         numWritten += items.length;
+        options.onProgress?.({
+          step: 'write',
+          completed: numCached + numWritten,
+          total: writes.length,
+        });
         if (Date.now() - lastLogTime > PROGRESS_LOG_INTERVAL_MS) {
           lastLogTime = Date.now();
-          console.log(
+          options.log(
             `[root cms] saved ${numWritten}/${pending.length} locale doc(s)`
           );
         }
       }
     );
+    return {numCached};
   }
 }
 
