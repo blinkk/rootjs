@@ -477,8 +477,18 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
           `Projects/${cmsClient.projectId}/TranslationsManager/draft/Translations/common:es`
         );
         await esDocRef.delete();
-        await tm.importTranslationsFromV1({writeCache});
+        const progress: ImportTranslationsFromV1Progress[] = [];
+        const res = await tm.importTranslationsFromV1({
+          writeCache,
+          onProgress: (update) => progress.push(update),
+        });
         expect((await esDocRef.get()).exists).toBe(false);
+        expect(res.stats.numLocaleDocs).toBe(2);
+        expect(res.stats.numCachedLocaleDocs).toBe(2);
+        // Cached locale docs count towards the write progress.
+        expect(progress.filter((update) => update.step === 'write')).toEqual([
+          {step: 'write', completed: 2, total: 2},
+        ]);
 
         // A changed string is written again.
         await seedV1Translation('hello', {es: 'hola!', fr: 'bonjour'}, [
@@ -500,7 +510,11 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
           numStrings: 0,
           numDocs: 0,
           numPrunedStrings: 0,
+          numSkippedStrings: 0,
+          numLocaleDocs: 0,
+          numCachedLocaleDocs: 0,
         });
+        expect(res.locales).toEqual({});
       });
     });
   }
