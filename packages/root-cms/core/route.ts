@@ -329,8 +329,8 @@ export interface CreateRouteOptions {
    *   },
    *   preRenderHook: (props, ctx) => ({
    *     ...props,
-   *     header: ctx.batchResponse!.docs['Global/header'],
-   *     posts: ctx.batchResponse!.queries.posts,
+   *     header: ctx.batchResponse!.getDoc('Global/header'),
+   *     posts: ctx.batchResponse!.getQuery('posts'),
    *   }),
    * });
    * ```
