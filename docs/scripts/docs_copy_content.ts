@@ -1729,12 +1729,12 @@ export default schema.collection({
 
 const DATA_FETCHING: DocCopy = {
   slug: 'cms--data-fetching',
-  note: 'Fixes bugs in the examples, and adds sections on custom ordering and translations.',
+  note: 'Uses the new BatchResponse getters (getDoc, getQuery, getDataSource) in the batch request examples.',
   fields: {
     meta: {
       title: 'Data fetching – Root.js',
       description:
-        'Read CMS content in routes with RootCMSClient: docs, lists, custom ordering and translations.',
+        'Read CMS content in routes with createRoute() and batch requests: docs, lists, custom ordering and translations.',
       category: 'cms',
     },
     content: {
@@ -1745,50 +1745,171 @@ const DATA_FETCHING: DocCopy = {
           'Overview',
           [
             p(
-              `Routes read CMS content on the server with ${c('RootCMSClient')}, in ${c('getStaticProps()')} (SSG) or ${c('handle()')} (SSR). Create a client with the ${c('rootConfig')} from the request or context.`
+              `${c('createRoute()')} is the recommended way to set up routes that are connected to the CMS. Give it a collection, and it loads the doc for each URL and renders the route's component with the doc as ${c('props.doc')}.`
             ),
             p(
-              `Every read takes a ${c('mode')}: ${c('published')} for live content, or ${c('draft')} for the latest edits. A common pattern is to read drafts when the URL has ${c('?preview=true')}, which the CMS adds to its preview links.`
+              `It also handles the details: draft content for ${c('?preview=true')} URLs (which the CMS adds to its preview links), the locale for each request, translations, 404s for missing docs, and ${c('Cache-Control')} headers.`
             ),
           ],
           [
             code(
               'tsx',
               `
-// @/routes/[...page].tsx
+// @/routes/[...slug].tsx
 
-import {Handler, HandlerContext} from '@blinkk/root';
+import {createRoute} from '@blinkk/root-cms';
+import {PagesDoc} from '@/root-cms.js';
+
+export default function Page(props: {doc: PagesDoc}) {
+  return <h1>{props.doc.fields?.meta?.title}</h1>;
+}
+
+// Renders \`Pages/<slug>\`, e.g. \`/about\` renders \`Pages/about\` and \`/\`
+// renders \`Pages/index\`.
+export const {handle} = createRoute({
+  collection: 'Pages',
+  slugParam: 'slug',
+});`
+            ),
+            copy(
+              p(
+                `For a site built as static HTML (SSG), export ${c('getStaticProps')} and ${c('getStaticPaths')} instead, which build a page for every published doc in the collection:`
+              )
+            ),
+            code(
+              'tsx',
+              `
+export const {getStaticProps, getStaticPaths} = createRoute({
+  collection: 'BlogPosts',
+  ssg: true,
+});`
+            ),
+          ]
+        ),
+        section('route-options', 'Route options', [
+          p(
+            `Most custom logic maps to an option of ${c('createRoute()')}, so a route rarely needs its own handler:`
+          ),
+          ul(
+            `${c('slug')}: the doc for a single-page route, e.g. ${c("{slug: 'index'}")} in ${c('routes/index.tsx')}. Use ${c('slugFormat')} or ${c('getSlug(params)')} for slugs built from several URL params.`,
+            `${c('batchRequest')} and ${c('preRenderHook')}: load more content for the page and pass it as props (see ${a('#batch-requests', 'Batch requests')}).`,
+            `${c('translations')}: load more translations, such as strings shared by every page (see ${a('#translations', 'Translations')}).`,
+            `${c('resolveLocale')}: choose the locale yourself, e.g. from the user's country.`,
+            `${c('resolveDoc')}: serve a different doc on the same URL, e.g. a regional variant.`,
+            `${c('getMode')}: choose between draft and published content yourself.`,
+            `${c('notFoundHook')}: render your own page when the doc doesn't exist.`,
+            `${c('preRenderHook')}: redirect with ${c('props.$redirect')}, or set a status code with ${c('props.$statusCode')}.`,
+            `${c('cache')} and ${c('cacheControl')}: cache published reads in memory for 60 seconds, and set the ${c('Cache-Control')} header for published pages.`
+          ),
+          p(
+            `See the ${a('/docs/api/root-cms/', c('@blinkk/root-cms'))} reference for every option.`
+          ),
+        ]),
+        section(
+          'batch-requests',
+          'Batch requests',
+          [
+            p(
+              "Every read from the CMS is a round trip to Firestore. A batch request combines the reads a page needs: its docs, queries and data sources are fetched in parallel, then the translations for every doc in the batch are fetched together, for the page's locale only."
+            ),
+            p(
+              `In ${c('createRoute()')}, add reads with the ${c('batchRequest')} option. They're fetched in the same batch as the route's doc. The response is available as ${c('ctx.batchResponse')}, e.g. in ${c('preRenderHook')}, which passes it to the page as props:`
+            ),
+          ],
+          [
+            code(
+              'tsx',
+              `
+export const {handle} = createRoute({
+  collection: 'Pages',
+  slugParam: 'slug',
+  batchRequest: (req) => {
+    req.addDoc('Global/header');
+    req.addQuery('posts', 'BlogPosts', {limit: 3});
+    req.addDataSource('pricing');
+  },
+  preRenderHook: (props, ctx) => ({
+    ...props,
+    header: ctx.batchResponse!.getDoc('Global/header'),
+    posts: ctx.batchResponse!.getQuery('posts'),
+    pricing: ctx.batchResponse!.getDataSource('pricing'),
+  }),
+});`
+            ),
+            copy(
+              p(
+                `Read the results with the response's getters, using the ids you added: ${c('getDoc(docId)')} and ${c('getDataSource(id)')} return ${c('null')} if the doc or data source doesn't exist, and ${c('getQuery(queryId)')} returns an empty array if the query has no results.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'batch-requests-outside-routes',
+          'Batch requests outside a route',
+          [
+            p(
+              `In a custom handler, ${c('getStaticProps()')} or a plugin, create a batch request with ${c('cmsClient.createBatchRequest()')}. With ${c('translate: true')}, it also loads the translations for the docs it returns, for the ${c('locales')} you pass:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
 import {RootCMSClient} from '@blinkk/root-cms';
 
-export const handle: Handler = async (req, res) => {
-  const ctx = req.handlerContext as HandlerContext;
-  const slug = ctx.params.page;
-  const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
-  const cmsClient = new RootCMSClient(req.rootConfig);
-  const doc = await cmsClient.getDoc('Pages', slug, {mode});
-  if (!doc) {
-    return ctx.render404();
-  }
-  return ctx.render({slug, mode, doc});
-};`
+const cmsClient = new RootCMSClient(rootConfig);
+const req = cmsClient.createBatchRequest({
+  mode: 'published',
+  translate: true,
+  locales: [locale],
+});
+req.addDoc('Pages/index');
+req.addTranslations('common');
+const res = await req.fetch();
+
+const doc = res.getDoc('Pages/index');
+const translations = res.getTranslations(locale);`
+            ),
+            copy(
+              p(
+                'If the locale depends on the doc, fetch the content first and the translations once the locale is known:'
+              )
+            ),
+            code(
+              'ts',
+              `
+const res = await req.fetchContent();
+const locale = pickLocale(res.getDoc('Pages/index'));
+await req.fetchTranslations(res, {locales: [locale]});`
             ),
           ]
         ),
         section(
           'listing-docs',
           'Listing docs',
-          [p(`To list the docs in a collection, use ${c('listDocs()')}:`)],
+          [
+            p(
+              `To list the docs in a collection, add a query to the batch request with ${c('addQuery()')}. It takes the same options as ${c('cmsClient.listDocs()')}: ${c('limit')}, ${c('offset')}, ${c('orderBy')}, ${c('orderByDirection')}, and ${c('query')} for Firestore filters.`
+            ),
+          ],
           [
             code(
-              'ts',
+              'tsx',
               `
-const cmsClient = new RootCMSClient(req.rootConfig);
-const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
-const orderBy = mode === 'draft' ? 'sys.createdAt' : 'sys.firstPublishedAt';
-const blogPosts = await cmsClient.listDocs('BlogPosts', {
-  mode,
-  orderBy,
-  orderByDirection: 'desc',
+// @/routes/blog/index.tsx, which renders \`Pages/blog\`.
+export const {handle} = createRoute({
+  collection: 'Pages',
+  slug: 'blog',
+  batchRequest: (req, ctx) => {
+    req.addQuery('posts', 'BlogPosts', {
+      orderBy: ctx.mode === 'draft' ? 'sys.createdAt' : 'sys.firstPublishedAt',
+      orderByDirection: 'desc',
+    });
+  },
+  preRenderHook: (props, ctx) => ({
+    ...props,
+    posts: ctx.batchResponse!.getQuery('posts'),
+  }),
 });`
             ),
           ]
@@ -1805,10 +1926,7 @@ const blogPosts = await cmsClient.listDocs('BlogPosts', {
             code(
               'ts',
               `
-const res = await cmsClient.listDocs('Guides', {
-  mode,
-  orderBy: 'sys.sortKey',
-});`
+req.addQuery('guides', 'Guides', {orderBy: 'sys.sortKey'});`
             ),
             copy(
               p(
@@ -1822,20 +1940,57 @@ const res = await cmsClient.listDocs('Guides', {
           'Translations',
           [
             p(
-              `Translations for CMS content are tagged with the doc they belong to. Load them with ${c('loadTranslations()')}, then pass the ones for the current locale to ${c('ctx.render()')}:`
+              `Each doc's translations are stored with the doc, in the translations manager. ${c('createRoute()')} loads them for the page's locale, along with the translations for docs the page references and docs in its batch request. In your components, translate strings with ${c('useTranslations()')}:`
+            ),
+          ],
+          [
+            code(
+              'tsx',
+              `
+import {useTranslations} from '@blinkk/root';
+
+export default function Page(props: {doc: PagesDoc}) {
+  const t = useTranslations();
+  return <h1>{t(props.doc.fields?.meta?.title || '')}</h1>;
+}`
+            ),
+            copy(
+              p(
+                `To load more translations, such as strings shared by every page, return their ids from the ${c('translations')} option:`
+              )
+            ),
+            code(
+              'ts',
+              `
+createRoute({
+  collection: 'Pages',
+  translations: () => ({tags: ['common']}),
+});`
+            ),
+            copy(
+              p(
+                `Outside a route, use a batch request with ${c('translate: true')} and ${c('res.getTranslations(locale)')} (see ${a('#batch-requests-outside-routes', 'Batch requests outside a route')}). Avoid ${c('cmsClient.loadTranslations()')}, which reads the v1 translations from before Root.js v4.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'reading-docs-directly',
+          'Reading docs directly',
+          [
+            p(
+              `For a single read, e.g. in a script, use ${c('RootCMSClient')}. Every read takes a ${c('mode')}: ${c('published')} for live content, or ${c('draft')} for the latest edits.`
             ),
           ],
           [
             code(
               'ts',
               `
-import {translationsForLocale} from '@blinkk/root-cms';
+import {RootCMSClient} from '@blinkk/root-cms';
 
-const translationsMap = await cmsClient.loadTranslations({
-  tags: ['common', \`Pages/\${slug}\`],
-});
-const translations = translationsForLocale(translationsMap, locale);
-return ctx.render({doc}, {locale, translations});`
+const cmsClient = new RootCMSClient(rootConfig);
+const doc = await cmsClient.getDoc('Pages', 'index', {mode: 'published'});
+const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});`
             ),
           ]
         ),
