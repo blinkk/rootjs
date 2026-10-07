@@ -3563,6 +3563,19 @@ export function parseDocId(docId: string) {
   return {collection, slug};
 }
 
+/**
+ * Normalizes a doc id's slug (e.g. "Pages/foo/bar" -> "Pages/foo--bar"), or
+ * returns the id as-is if it isn't a valid doc id.
+ */
+function normalizeDocId(docId: string): string {
+  try {
+    const {collection, slug} = parseDocId(docId);
+    return `${collection}/${slug}`;
+  } catch {
+    return docId;
+  }
+}
+
 export interface BatchRequestOptions {
   mode: 'draft' | 'published';
   /**
@@ -3691,7 +3704,7 @@ export class BatchRequest {
    * req.addDoc('Pages/index');
    * req.addTranslations('common');
    * const res = await req.fetchContent();
-   * const locale = pickLocale(res.docs['Pages/index']);
+   * const locale = pickLocale(res.getDoc('Pages/index'));
    * await req.fetchTranslations(res, {locales: [locale]});
    * const translations = res.getTranslations(locale);
    * ```
@@ -3964,6 +3977,51 @@ export class BatchResponse {
 
   constructor(i18nConfig?: RootConfig['i18n']) {
     this.i18nConfig = i18nConfig || {};
+  }
+
+  /**
+   * Returns a doc added with `addDoc()`, or `null` if it doesn't exist. Slugs
+   * with slashes match either form, e.g. "Pages/foo/bar" or "Pages/foo--bar".
+   *
+   * ```ts
+   * const header = res.getDoc<GlobalFields>('Global/header');
+   * ```
+   */
+  getDoc<Fields = any>(docId: string): Doc<Fields> | null {
+    if (docId in this.docs) {
+      return this.docs[docId];
+    }
+    const normalizedId = normalizeDocId(docId);
+    for (const key in this.docs) {
+      if (normalizeDocId(key) === normalizedId) {
+        return this.docs[key];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the docs for a query added with `addQuery()`, or an empty array if
+   * the query has no results.
+   *
+   * ```ts
+   * const posts = res.getQuery<BlogPostsFields>('posts');
+   * ```
+   */
+  getQuery<Fields = any>(queryId: string): Array<Doc<Fields>> {
+    return this.queries[queryId] || [];
+  }
+
+  /**
+   * Returns a data source added with `addDataSource()`, or `null` if it
+   * doesn't exist.
+   *
+   * ```ts
+   * const pricing = res.getDataSource<PricingRow[]>('pricing');
+   * ```
+   */
+  getDataSource<T = any>(dataSourceId: string): DataSourceData<T> | null {
+    return this.dataSources[dataSourceId] || null;
   }
 
   /**

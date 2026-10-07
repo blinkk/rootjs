@@ -409,8 +409,8 @@ createRoute({
   },
   preRenderHook: (props, ctx) => ({
     ...props,
-    header: ctx.batchResponse!.docs['Global/header'],
-    guides: ctx.batchResponse!.queries.guides,
+    header: ctx.batchResponse!.getDoc('Global/header'),
+    guides: ctx.batchResponse!.getQuery('guides'),
   }),
 });
 ```
@@ -423,7 +423,7 @@ const req = cmsClient.createBatchRequest({mode, translate: true, locales: [local
 req.addDoc('Pages/index');
 req.addTranslations('common');   // A v1 tag, now a v2 translations id.
 const res = await req.fetch();
-const doc = res.docs['Pages/index'];
+const doc = res.getDoc('Pages/index');
 const translations = res.getTranslations(locale);
 ```
 
@@ -439,12 +439,15 @@ Notes:
   translations ids with the same name. `loadTranslationsForLocale(locale)`
   with no tags loaded *every* string. The batch equivalent is the docs on
   the page, which is what createRoute() loads.
-- Check the result keys. The batch response is keyed by doc id
-  (`Collection/slug`) and query id, not by the old variable names.
+- Read results with the response's getters, which take the same ids you
+  added: `getDoc('Collection/slug')` (or `null`), `getQuery(queryId)` (or
+  `[]`), and `getDataSource(id)` (or `null`). Older v4 releases don't have
+  the getters; if `getDoc` is missing, use the `docs`, `queries` and
+  `dataSources` maps, keyed the same way.
 - `BatchRequest` options and methods: `addDoc(docId)`,
   `addQuery(id, collection, {limit, offset, orderBy, orderByDirection, query})`,
-  `addDataSource(id)`, `addTranslations(id)`; response: `docs`, `queries`,
-  `dataSources`, `getTranslations(locale)`.
+  `addDataSource(id)`, `addTranslations(id)`; response: `getDoc(id)`,
+  `getQuery(id)`, `getDataSource(id)`, `getTranslations(locale)`.
 
 ## Step 7 — Final checks
 
