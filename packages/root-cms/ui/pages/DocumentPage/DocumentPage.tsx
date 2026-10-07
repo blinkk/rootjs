@@ -28,6 +28,10 @@ import {RootAIChat} from '../../components/RootAIChat/RootAIChat.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Text} from '../../components/Text/Text.js';
+import {
+  DOC_RESTORED_EVENT,
+  DocRestoredEventDetail,
+} from '../../components/VersionHistoryModal/VersionHistoryModal.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {
   COMMENTS_VISIBLE_EVENT,
@@ -1140,6 +1144,19 @@ DocumentPage.Preview = (props: PreviewProps) => {
       removeOnFlush?.();
     };
   }, [draft.controller]);
+
+  // Restoring a version writes to the draft directly rather than through the
+  // controller, so it doesn't trigger a flush. Reload the preview explicitly.
+  useEffect(() => {
+    const onRestored = (e: Event) => {
+      const detail = (e as CustomEvent<DocRestoredEventDetail>).detail;
+      if (detail?.docId === props.docId) {
+        reloadAllIframes();
+      }
+    };
+    window.addEventListener(DOC_RESTORED_EVENT, onRestored);
+    return () => window.removeEventListener(DOC_RESTORED_EVENT, onRestored);
+  }, [props.docId]);
 
   // Navigate every visible iframe to the localized preview url. Runs on mount
   // (initial load) and whenever the selected locale changes.
