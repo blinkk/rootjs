@@ -1,0 +1,98 @@
+version: 1
+id: "2026-10-07-blog-rootjs-v4-ai-upgrade"
+title: "Add upgrade, createRoute() and batch request notes to the Root.js v4.0 blog post"
+author: "claude-code"
+summary: |-
+  - BlogPosts/rootjs-v4: Adds a "Routes and data fetching" section that
+    recommends createRoute() for CMS routes and batch requests for loading
+    content and translations, adds the AI agent upgrade prompt to the
+    migration notes, and mentions `root-cms translations.migrate` in the
+    translations section.
+changes:
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Mentions the new translations.migrate command."
+    ops:
+      - op: "set"
+        path: "content.sections.3.body.blocks.3.data.text"
+        before: "Existing translations are migrated automatically the first time you start the dev server or build your site with v4."
+        after: "Existing translations are migrated automatically the first time you start the dev server or build your site with v4. To run the migration yourself, use <code>root-cms translations.migrate</code>."
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Adds the prompt for upgrading with an AI agent."
+    ops:
+      - op: "set"
+        path: "content.sections.8.body"
+        before:
+          time: 1791001745952
+          version: "lexical-0.31.2"
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Most projects only need to update their packages. If your build runs without Firestore access, or you relied on one of the old defaults, read the <a href=\"/docs/migration/v4/\">v4 migration guide</a>."
+        after:
+          time: 1791383954878
+          version: "lexical-0.31.2"
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Most projects only need to update their packages. If your build runs without Firestore access, or you relied on one of the old defaults, read the <a href=\"/docs/migration/v4/\">v4 migration guide</a>."
+            - type: "paragraph"
+              data:
+                text: "To have an AI coding agent, such as <a href=\"https://claude.com/claude-code\">Claude Code</a>, do the upgrade for you, start it in your project's folder and paste this prompt:"
+            - type: "CodeBlock"
+              data:
+                code: |-
+                  Upgrade this project to Root.js v4. Follow the instructions at
+                  https://rootjs.dev/skills/root-v4-upgrade.md
+            - type: "paragraph"
+              data:
+                text: "The agent works on a new branch and saves a snapshot of your pages before it changes anything. It updates your packages and migrates your translations once you give it the go-ahead. It also suggests other changes worth making for v4, like moving CMS routes to <code>createRoute()</code>. Then it compares your pages before and after, runs your build and tests, and offers to file GitHub issues for anything left over."
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Adds a section recommending createRoute() and batch requests. Listed last so the indexes above refer to the sections before this insert."
+    ops:
+      - op: "insert_item"
+        path: "content.sections"
+        index: 7
+        after:
+          id: "routes"
+          titleSize: "h5"
+          title: "Routes and data fetching"
+          body:
+            time: 1791383954878
+            version: "lexical-0.31.2"
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "<code>createRoute()</code> is now the recommended way to set up routes that are connected to the CMS. Give it a collection, and it loads the doc for each URL and handles preview mode, locales, translations, 404s and caching for you."
+              - type: "paragraph"
+                data:
+                  text: "To load more content for a page, like a shared header or a list of posts, use a batch request. Instead of a separate RPC to Firestore for each read, a batch request fetches the page's docs, queries and data sources in parallel, then fetches the translations for every doc in the batch, for the page's locale only. In <code>createRoute()</code>, add reads with the <code>batchRequest</code> option:"
+              - type: "CodeBlock"
+                data:
+                  language: "tsx"
+                  code: |-
+                    // routes/[...slug].tsx
+
+                    import {createRoute} from '@blinkk/root-cms';
+
+                    export default function Page(props) {
+                      // props.doc, props.header and props.posts are ready to render.
+                    }
+
+                    export const {handle} = createRoute({
+                      collection: 'Pages',
+                      batchRequest: (req) => {
+                        req.addDoc('Global/header');
+                        req.addQuery('posts', 'BlogPosts', {limit: 3});
+                      },
+                      preRenderHook: (props, ctx) => ({
+                        ...props,
+                        header: ctx.batchResponse.docs['Global/header'],
+                        posts: ctx.batchResponse.queries.posts,
+                      }),
+                    });
+              - type: "paragraph"
+                data:
+                  text: "Outside of a route, use <code>cmsClient.createBatchRequest()</code>. See the <a href=\"/docs/api/root-cms/\">@blinkk/root-cms API reference</a> for all of the options."
