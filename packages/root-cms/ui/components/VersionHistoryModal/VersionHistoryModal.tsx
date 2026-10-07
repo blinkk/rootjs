@@ -32,6 +32,17 @@ import './VersionHistoryModal.css';
 const MODAL_ID = 'VersionHistoryModal';
 const PAGE_SIZE = 50;
 
+/**
+ * Dispatched on `window` after a doc is restored to an earlier version. The
+ * event detail is a {@link DocRestoredEventDetail}.
+ */
+export const DOC_RESTORED_EVENT = 'root:doc-restored';
+
+export interface DocRestoredEventDetail {
+  /** The id of the restored doc, e.g. `Pages/foo`. */
+  docId: string;
+}
+
 export interface VersionHistoryModalProps {
   [key: string]: unknown;
   docId: string;
@@ -149,6 +160,11 @@ export function VersionHistoryModal(
       )}.`,
       autoClose: 5000,
     });
+    window.dispatchEvent(
+      new CustomEvent<DocRestoredEventDetail>(DOC_RESTORED_EVENT, {
+        detail: {docId},
+      })
+    );
     if (props.onRestore) {
       props.onRestore({version});
     }
