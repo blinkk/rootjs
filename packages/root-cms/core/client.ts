@@ -39,7 +39,20 @@ export {
   type PasswordHash,
   type PasswordHashAlgorithm,
 } from '../shared/password.js';
-export {ReadCache, type ReadCacheOptions} from './read-cache.js';
+export {
+  clearReadCaches,
+  ReadCache,
+  type ReadCacheOptions,
+  type ReadCacheReadOptions,
+  type ReadCacheStore,
+  type ReadCacheStoreEntry,
+  type ReadCacheTtl,
+  type ReadCacheType,
+} from './read-cache.js';
+export {
+  FileSystemReadCacheStore,
+  type FileSystemReadCacheStoreOptions,
+} from './read-cache-fs-store.js';
 import {toDocEditOperations, type Proposal} from '../shared/proposal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
@@ -52,7 +65,11 @@ import type {
 } from './dependency-graph.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
 import {CMSPlugin} from './plugin.js';
-import type {ReadCache} from './read-cache.js';
+import {
+  clearReadCaches,
+  type ReadCache,
+  type ReadCacheType,
+} from './read-cache.js';
 import {Collection} from './schema.js';
 import {
   TranslationsLocaleDoc,
@@ -716,6 +733,31 @@ function readFieldPath(data: any, fieldPath: string): any {
   return cursor;
 }
 
+/**
+ * Internal state of a `RootCMSClient`.
+ */
+interface ClientInternals {
+  /** In-memory cache for published reads. */
+  cache?: ReadCache;
+  assetLibrary?: AssetLibrary;
+}
+
+/**
+ * Internal state for each `RootCMSClient`, stored outside of the instance so
+ * that a subclass field (e.g. `cache`) can't accidentally shadow it, and so
+ * that clients created without the constructor (e.g. test mocks) still work.
+ */
+const clientInternals = new WeakMap<RootCMSClient, ClientInternals>();
+
+function getClientInternals(client: RootCMSClient): ClientInternals {
+  let internals = clientInternals.get(client);
+  if (!internals) {
+    internals = {};
+    clientInternals.set(client, internals);
+  }
+  return internals;
+}
+
 export class RootCMSClient {
   readonly rootConfig: RootConfig;
   readonly cmsPlugin: CMSPlugin;
@@ -732,9 +774,6 @@ export class RootCMSClient {
   readonly user: string;
   /** Whether doc writes are recorded in the action logs. */
   readonly logActions: boolean;
-  /** In-memory cache for published reads. */
-  readonly cache?: ReadCache;
-  private assetLibrary?: AssetLibrary;
 
   constructor(rootConfig: RootConfig, options?: RootCMSClientOptions) {
     this.rootConfig = rootConfig;
@@ -749,18 +788,23 @@ export class RootCMSClient {
     }
     this.user = options?.user || DEFAULT_CLIENT_USER;
     this.logActions = options?.logActions ?? true;
-    this.cache = options?.cache;
+    getClientInternals(this).cache = options?.cache;
   }
 
   /**
    * Reads data through the client's `cache`, if any. Pass a `null` key for
    * reads that shouldn't be cached (e.g. draft reads).
    */
-  private cachedRead<T>(key: unknown[] | null, fetch: () => Promise<T>) {
-    if (!this.cache || !key) {
+  private cachedRead<T>(
+    key: unknown[] | null,
+    fetch: () => Promise<T>,
+    type: ReadCacheType
+  ) {
+    const cache = getClientInternals(this).cache;
+    if (!cache || !key) {
       return fetch();
     }
-    return this.cache.get(JSON.stringify(key), fetch);
+    return cache.get(JSON.stringify(key), fetch, {type});
   }
 
   /**
@@ -770,40 +814,33 @@ export class RootCMSClient {
    */
   async getAllData(
     refs: DocumentReference[],
-    options: {mode: DocMode}
+    options: {mode: DocMode; cacheType?: ReadCacheType}
   ): Promise<any[]> {
     if (refs.length === 0) {
       return [];
     }
-    const cache = options.mode === 'published' ? this.cache : undefined;
+    const cache =
+      options.mode === 'published' ? getClientInternals(this).cache : undefined;
     if (!cache) {
       const snapshots = await this.db.getAll(...refs);
       return snapshots.map((snapshot) => snapshot.data());
     }
-    const uncachedRefs: DocumentReference[] = [];
-    let resolveSnapshots!: (
-      snapshots: FirebaseFirestore.DocumentSnapshot[]
-    ) => void;
-    let rejectSnapshots!: (err: unknown) => void;
-    const snapshotsPromise = new Promise<FirebaseFirestore.DocumentSnapshot[]>(
-      (resolve, reject) => {
-        resolveSnapshots = resolve;
-        rejectSnapshots = reject;
-      }
+    const refsByKey = new Map<string, DocumentReference>();
+    const keys = refs.map((ref) => {
+      const key = JSON.stringify(['doc', ref.path]);
+      refsByKey.set(key, ref);
+      return key;
+    });
+    const data = await cache.getMany(
+      keys,
+      async (uncachedKeys) => {
+        const snapshots = await this.db.getAll(
+          ...uncachedKeys.map((key) => refsByKey.get(key)!)
+        );
+        return snapshots.map((snapshot) => snapshot.data() ?? null);
+      },
+      {type: options.cacheType || 'doc'}
     );
-    // `cache.get()` calls the fetch fn synchronously on a cache miss, so the
-    // uncached refs are all collected before `getAll()` is called below.
-    const results = refs.map((ref) =>
-      cache.get(JSON.stringify(['doc', ref.path]), async () => {
-        const index = uncachedRefs.push(ref) - 1;
-        const snapshots = await snapshotsPromise;
-        return snapshots[index].data() ?? null;
-      })
-    );
-    if (uncachedRefs.length > 0) {
-      this.db.getAll(...uncachedRefs).then(resolveSnapshots, rejectSnapshots);
-    }
-    const data = await Promise.all(results);
     return data.map((item) => item ?? undefined);
   }
 
@@ -814,20 +851,28 @@ export class RootCMSClient {
    */
   async getQueryData(
     query: Query,
-    options: {mode: DocMode; cacheKey?: unknown[] | null}
+    options: {
+      mode: DocMode;
+      cacheKey?: unknown[] | null;
+      cacheType?: ReadCacheType;
+    }
   ): Promise<any[]> {
     const cacheKey =
       options.mode === 'published' && options.cacheKey
         ? ['query', ...options.cacheKey]
         : null;
-    return this.cachedRead(cacheKey, async () => {
-      const results = await query.get();
-      const data: any[] = [];
-      results.forEach((result) => {
-        data.push(result.data());
-      });
-      return data;
-    });
+    return this.cachedRead(
+      cacheKey,
+      async () => {
+        const results = await query.get();
+        const data: any[] = [];
+        results.forEach((result) => {
+          data.push(result.data());
+        });
+        return data;
+      },
+      options.cacheType || 'query'
+    );
   }
 
   /**
@@ -912,10 +957,14 @@ export class RootCMSClient {
     }
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const cacheKey = options.mode === 'published' ? ['doc', dbPath] : null;
-    return this.cachedRead(cacheKey, async () => {
-      const doc = await this.db.doc(dbPath).get();
-      return doc.exists ? doc.data() : null;
-    });
+    return this.cachedRead(
+      cacheKey,
+      async () => {
+        const doc = await this.db.doc(dbPath).get();
+        return doc.exists ? doc.data() : null;
+      },
+      'doc'
+    );
   }
 
   /**
@@ -1474,6 +1523,7 @@ export class RootCMSClient {
     if (batchCount > 0) {
       await batch.commit();
     }
+    await clearReadCaches();
     console.log(`published ${publishedDocs.length} docs!`);
     for (const doc of publishedDocs) {
       const metadata: Record<string, string> = {docId: doc.id};
@@ -1618,6 +1668,7 @@ export class RootCMSClient {
     if (batchCount > 0) {
       await batch.commit();
     }
+    await clearReadCaches();
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
     for (const doc of unpublishedDocs) {
       await this.logDocAction('doc.unpublish', unpublishedBy, {docId: doc.id});
@@ -1803,6 +1854,7 @@ export class RootCMSClient {
     if (batchCount > 0) {
       await batch.commit();
     }
+    await clearReadCaches();
     console.log(`published ${publishedDocs.length} docs!`);
 
     // Log an action for each published doc.
@@ -1818,10 +1870,9 @@ export class RootCMSClient {
   }
 
   private getAssetLibrary(): AssetLibrary {
-    if (!this.assetLibrary) {
-      this.assetLibrary = new AssetLibrary(this);
-    }
-    return this.assetLibrary;
+    const internals = getClientInternals(this);
+    internals.assetLibrary ??= new AssetLibrary(this);
+    return internals.assetLibrary;
   }
 
   /**
@@ -2150,7 +2201,8 @@ export class RootCMSClient {
           results[doc.id] = doc.data() as Translation;
         });
         return results;
-      }
+      },
+      'translations'
     );
     // Overlay proposed translations, keyed by the same sha1 hash the db uses.
     const proposed = this.proposal?.allTranslations();
@@ -3756,6 +3808,7 @@ export class BatchRequest {
     });
     const docs = await this.cmsClient.getAllData(docRefs, {
       mode: this.options.mode,
+      cacheType: 'dataSource',
     });
     this.dataSourceIds.forEach((dataSourceId, i) => {
       const data = docs[i];
@@ -3833,7 +3886,7 @@ export class BatchRequest {
         chunks.map((chunk) =>
           this.cmsClient.getAllData(
             chunk.map((item) => item.ref),
-            {mode}
+            {mode, cacheType: 'translations'}
           )
         )
       );
@@ -3867,6 +3920,7 @@ export class BatchRequest {
           this.cmsClient.getQueryData(collectionRef.where('id', 'in', chunk), {
             mode,
             cacheKey: [dbPath, 'id', chunk],
+            cacheType: 'translations',
           })
         )
       );

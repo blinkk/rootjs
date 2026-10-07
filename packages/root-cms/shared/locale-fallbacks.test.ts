@@ -98,4 +98,51 @@ describe('resolveLocaleFallbacks', () => {
       'en',
     ]);
   });
+  it('supports a fallbacks function', () => {
+    const i18n = {
+      fallbacks: (locale: string) => (locale === 'fr-ca' ? ['fr'] : []),
+    };
+    expect(resolveLocaleFallbacks(i18n, 'fr-ca')).toEqual([
+      'fr-ca',
+      'fr',
+      'en',
+    ]);
+    expect(resolveLocaleFallbacks(i18n, 'de')).toEqual(['de', 'en']);
+  });
+
+  it('falls back from <lang>_<country> to <lang>', () => {
+    const i18n = {
+      locales: ['en', 'ja', 'ja_jp', 'zh', 'zh-Hant-TW', 'en-GB', 'en-CA'],
+      fallbacks: {'en-CA': ['en-GB']},
+      fallbackToLanguage: true,
+    };
+    expect(resolveLocaleFallbacks(i18n, 'ja_jp')).toEqual([
+      'ja_jp',
+      'ja',
+      'en',
+    ]);
+    expect(resolveLocaleFallbacks(i18n, 'JA_JP')).toEqual([
+      'JA_JP',
+      'ja',
+      'en',
+    ]);
+    // Subtags are stripped until a configured locale is found.
+    expect(resolveLocaleFallbacks(i18n, 'zh-Hant-TW')).toEqual([
+      'zh-Hant-TW',
+      'zh',
+      'en',
+    ]);
+    // Configured fallbacks come first.
+    expect(resolveLocaleFallbacks(i18n, 'en-CA')).toEqual([
+      'en-CA',
+      'en-GB',
+      'en',
+    ]);
+    // Languages that aren't configured locales are skipped.
+    expect(resolveLocaleFallbacks(i18n, 'fr_ca')).toEqual(['fr_ca', 'en']);
+    // Without configured locales, any language is used.
+    expect(resolveLocaleFallbacks({fallbackToLanguage: true}, 'fr_ca')).toEqual(
+      ['fr_ca', 'fr', 'en']
+    );
+  });
 });

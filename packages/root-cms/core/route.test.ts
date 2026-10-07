@@ -3,12 +3,15 @@
  * translations-manager.test.ts for details on the emulator setup).
  */
 
+import os from 'node:os';
+import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {RootCMSClient} from './client.js';
+import {FileSystemReadCacheStore} from './read-cache-fs-store.js';
 import {ReadCache} from './read-cache.js';
-import {CreateRouteOptions, Route, createRoute} from './route.js';
+import {CreateRouteOptions, Route, createRoute, getMode} from './route.js';
 
 const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
@@ -22,7 +25,10 @@ function getTestApp() {
 
 let projectCounter = 0;
 
-function createRootConfig(options?: {v2Translations?: boolean}): any {
+function createRootConfig(options?: {
+  v2Translations?: boolean;
+  i18n?: Record<string, any>;
+}): any {
   const app = getTestApp();
   const db = getFirestore(app);
   const projectId = `route-test-${Date.now()}-${projectCounter++}`;
@@ -43,7 +49,7 @@ function createRootConfig(options?: {v2Translations?: boolean}): any {
   };
   return {
     rootDir: '/test',
-    i18n: {
+    i18n: options?.i18n || {
       locales: ['en', 'en-GB', 'en-CA', 'de', 'es'],
       defaultLocale: 'en',
       fallbacks: {'en-CA': ['en-GB']},
@@ -95,7 +101,8 @@ async function seedDependencyGraph(
 }
 
 interface MockRequestOptions {
-  slug: string;
+  slug?: string;
+  params?: Record<string, string>;
   locale?: string;
   isDefaultLocale?: boolean;
   preferredLocales?: string[];
@@ -116,7 +123,7 @@ async function renderRoute(
   const headers: Record<string, string> = {};
   const isDefaultLocale = reqOptions.isDefaultLocale ?? !reqOptions.locale;
   const handlerContext = {
-    params: {slug: reqOptions.slug},
+    params: reqOptions.params || {slug: reqOptions.slug!},
     route: {locale: reqOptions.locale || 'en', isDefaultLocale},
     getPreferredLocale: (availableLocales: string[]) => {
       const lowerLocales = availableLocales.map((l) => l.toLowerCase());
@@ -138,6 +145,11 @@ async function renderRoute(
     get: (name: string) => reqOptions.headers?.[name.toLowerCase()],
   };
   const res: any = {
+    statusCode: 200,
+    status(statusCode: number) {
+      res.statusCode = statusCode;
+      return res;
+    },
     setHeader: (name: string, value: string) => {
       headers[name.toLowerCase()] = value;
     },
@@ -146,6 +158,7 @@ async function renderRoute(
   await route.handle(req, res);
   const renderArgs = render.mock.calls[0];
   return {
+    statusCode: renderArgs?.[1]?.statusCode as number | undefined,
     redirect: res.redirect,
     rendered: render.mock.calls.length > 0,
     notFound: render404.mock.calls.length > 0,
@@ -516,5 +529,436 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       params: {slug: 'about', $locale: 'es'},
     } as any);
     expect(notFound).toEqual({notFound: true});
+  });
+  it('honors status codes set by hooks', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    let result = await renderRoute(
+      rootConfig,
+      {
+        collection: 'Pages',
+        preRenderHook: (props) => ({...props, $statusCode: 403}),
+      },
+      {slug: 'about'}
+    );
+    expect(result.rendered).toBe(true);
+    expect(result.statusCode).toBe(403);
+
+    result = await renderRoute(
+      rootConfig,
+      {
+        collection: 'Pages',
+        setResponseHeaders: (req, res) => res.status(410),
+      },
+      {slug: 'about'}
+    );
+    expect(result.statusCode).toBe(410);
+
+    result = await renderRoute(
+      rootConfig,
+      {collection: 'Pages'},
+      {slug: 'about'}
+    );
+    expect(result.statusCode).toBeUndefined();
+
+    // A `notFoundHook` that sets 404 and renders a page responds with 404.
+    result = await renderRoute(
+      rootConfig,
+      {
+        collection: 'Pages',
+        notFoundHook: async (req, res) => {
+          res.status(404);
+          await req.handlerContext!.render({notFound: true});
+        },
+      },
+      {slug: 'missing'}
+    );
+    expect(result.rendered).toBe(true);
+    expect(result.props).toEqual({notFound: true});
+    expect(result.statusCode).toBe(404);
+    expect(result.headers['cache-control']).toBe('private');
+  });
+
+  it('sets cache-control on 404 responses', async () => {
+    await seedDoc(cmsClient, 'Pages/about', {locales: ['en']});
+    const cases: Array<[CreateRouteOptions, MockRequestOptions]> = [
+      // Invalid slug.
+      [{collection: 'Pages'}, {slug: 'foo.bar'}],
+      // Preview-only route.
+      [{collection: 'Pages', previewOnly: true}, {slug: 'about'}],
+      // Doc not found.
+      [{collection: 'Pages'}, {slug: 'missing'}],
+      // Locale not found.
+      [{collection: 'Pages'}, {slug: 'about', locale: 'de'}],
+    ];
+    for (const [routeOptions, reqOptions] of cases) {
+      const result = await renderRoute(rootConfig, routeOptions, reqOptions);
+      expect(result.notFound).toBe(true);
+      expect(result.headers['cache-control']).toBe('private');
+    }
+
+    const result = await renderRoute(
+      rootConfig,
+      {collection: 'Pages', notFoundCacheControl: 'public, max-age=5'},
+      {slug: 'missing'}
+    );
+    expect(result.headers['cache-control']).toBe('public, max-age=5');
+  });
+
+  it('supports a custom getMode()', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    await seedDoc(cmsClient, 'Pages/about', {mode: 'draft'});
+    await cmsClient.db
+      .doc(`Projects/${cmsClient.projectId}/Collections/Pages/Drafts/about`)
+      .update({'fields.title': 'Draft'});
+
+    const route = createRoute({
+      collection: 'Pages',
+      getMode: (req) => {
+        if (req.get('x-force-draft') === 'true') {
+          return 'draft';
+        }
+        return getMode(req);
+      },
+    });
+    let result = await renderRoute(rootConfig, route, {
+      slug: 'about',
+      headers: {'x-force-draft': 'true'},
+    });
+    expect(result.props.mode).toBe('draft');
+    expect(result.props.doc.fields.title).toBe('Draft');
+    expect(result.headers['cache-control']).toBe('private');
+
+    result = await renderRoute(rootConfig, route, {slug: 'about'});
+    expect(result.props.mode).toBe('published');
+    expect(result.props.doc.fields.title).toBe('Title for Pages/about');
+
+    result = await renderRoute(rootConfig, route, {
+      slug: 'about',
+      query: {preview: 'true'},
+    });
+    expect(result.props.mode).toBe('draft');
+  });
+
+  it('supports a custom getSlug()', async () => {
+    await seedDoc(cmsClient, 'Pages/section--123--index');
+    const getSlug = (params: Record<string, string>) => {
+      const slug = params.path || 'index';
+      if (slug === 'hidden') {
+        return '';
+      }
+      return /^section\/\d+$/.test(slug) ? `${slug}/index` : slug;
+    };
+    const route = createRoute({
+      collection: 'Pages',
+      slugParam: 'path',
+      getSlug,
+      ssg: true,
+    });
+
+    let result = await renderRoute(rootConfig, route, {
+      params: {path: 'section/123'},
+    });
+    expect(result.rendered).toBe(true);
+    expect(result.props.doc.id).toBe('Pages/section--123--index');
+
+    result = await renderRoute(rootConfig, route, {params: {path: 'hidden'}});
+    expect(result.notFound).toBe(true);
+
+    const res: any = await route.getStaticProps!({
+      rootConfig,
+      params: {path: 'section/123', $locale: 'en'},
+    } as any);
+    expect(res.props.doc.id).toBe('Pages/section--123--index');
+
+    const notFound: any = await route.getStaticProps!({
+      rootConfig,
+      params: {path: 'hidden', $locale: 'en'},
+    } as any);
+    expect(notFound).toEqual({notFound: true});
+  });
+
+  for (const v2Translations of [true, false]) {
+    describe(`with ${v2Translations ? 'v2' : 'v1'} translations`, () => {
+      beforeEach(() => {
+        rootConfig = createRootConfig({
+          v2Translations,
+          i18n: {
+            locales: ['en', 'ja', 'ja_jp', 'de'],
+            defaultLocale: 'en',
+            fallbackToLanguage: true,
+          },
+        });
+        cmsClient = new RootCMSClient(rootConfig);
+      });
+
+      async function saveTranslations(
+        id: string,
+        strings: Record<string, Record<string, string>>
+      ) {
+        if (v2Translations) {
+          const tm = cmsClient.getTranslationsManager();
+          await tm.saveTranslations(id, strings);
+          await tm.publishTranslationsBulk([id]);
+        } else {
+          await cmsClient.saveTranslations(strings, [id]);
+        }
+      }
+
+      it('falls back from <lang>_<country> to <lang>', async () => {
+        await seedDoc(cmsClient, 'Pages/about', {
+          locales: ['en', 'ja', 'ja_jp'],
+        });
+        await saveTranslations('Pages/about', {
+          hello: {ja: 'こんにちは (ja)', ja_jp: 'こんにちは (ja_jp)'},
+          bye: {ja: 'さようなら (ja)'},
+        });
+        const expected = {
+          hello: 'こんにちは (ja_jp)',
+          bye: 'さようなら (ja)',
+        };
+
+        const result = await renderRoute(
+          rootConfig,
+          {collection: 'Pages'},
+          {slug: 'about', locale: 'ja_jp'}
+        );
+        expect(result.locale).toBe('ja_jp');
+        expect(result.translations).toEqual(expected);
+
+        const route = createRoute({collection: 'Pages', ssg: true});
+        const res: any = await route.getStaticProps!({
+          rootConfig,
+          params: {slug: 'about', $locale: 'ja_jp'},
+        } as any);
+        expect(res.locale).toBe('ja_jp');
+        expect(res.translations).toEqual(expected);
+      });
+
+      it('replaces the doc with resolveDoc()', async () => {
+        await seedDoc(cmsClient, 'Pages/about');
+        await seedDoc(cmsClient, 'PagesDE/about');
+        await saveTranslations('Pages/about', {
+          hello: {de: 'hallo (page)'},
+          about: {de: 'über (page)'},
+        });
+        await saveTranslations('PagesDE/about', {
+          variant: {de: 'variante'},
+        });
+
+        const routeOptions: CreateRouteOptions = {
+          collection: 'Pages',
+          fetchData: () => ({extra: Promise.resolve('data')}),
+          resolveDoc: async (ctx) => {
+            expect(ctx.doc.id).toBe('Pages/about');
+            expect(ctx.locale).toBe('de');
+            expect(ctx.data).toEqual({extra: 'data'});
+            if (ctx.req && ctx.req.get('x-country-code') !== 'DE') {
+              return null;
+            }
+            return ctx.cmsClient.getDoc('PagesDE', ctx.slug, {mode: ctx.mode});
+          },
+          preRenderHook: (props, ctx) => {
+            expect(ctx.doc).toBe(props.doc);
+            return props;
+          },
+        };
+        let result = await renderRoute(rootConfig, routeOptions, {
+          slug: 'about',
+          locale: 'de',
+          headers: {'x-country-code': 'DE'},
+        });
+        expect(result.props.doc.id).toBe('PagesDE/about');
+        expect(result.translations).toEqual({
+          hello: 'hallo (page)',
+          about: 'über (page)',
+          variant: 'variante',
+        });
+
+        result = await renderRoute(rootConfig, routeOptions, {
+          slug: 'about',
+          locale: 'de',
+        });
+        expect(result.props.doc.id).toBe('Pages/about');
+        expect(result.translations).toEqual({
+          hello: 'hallo (page)',
+          about: 'über (page)',
+        });
+
+        const route = createRoute({...routeOptions, ssg: true});
+        const res: any = await route.getStaticProps!({
+          rootConfig,
+          params: {slug: 'about', $locale: 'de'},
+        } as any);
+        expect(res.props.doc.id).toBe('PagesDE/about');
+        expect(res.translations).toEqual({
+          hello: 'hallo (page)',
+          about: 'über (page)',
+          variant: 'variante',
+        });
+      });
+
+      it('skips translations with translate: false', async () => {
+        await seedDoc(cmsClient, 'Pages/about');
+        await saveTranslations('Pages/about', {hello: {de: 'hallo'}});
+
+        let result = await renderRoute(
+          rootConfig,
+          {collection: 'Pages', translate: false},
+          {slug: 'about', locale: 'de'}
+        );
+        expect(result.rendered).toBe(true);
+        expect(result.translations).toEqual({});
+
+        const translate = vi.fn((ctx) => ctx.locale !== 'de');
+        result = await renderRoute(
+          rootConfig,
+          {collection: 'Pages', translate},
+          {slug: 'about', locale: 'de'}
+        );
+        expect(translate).toHaveBeenCalledOnce();
+        expect(result.translations).toEqual({});
+
+        const route = createRoute({
+          collection: 'Pages',
+          translate: false,
+          ssg: true,
+        });
+        const res: any = await route.getStaticProps!({
+          rootConfig,
+          params: {slug: 'about', $locale: 'de'},
+        } as any);
+        expect(res.translations).toEqual({});
+      });
+    });
+  }
+
+  it('calls resolveLocale() in ssg mode', async () => {
+    await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de']});
+    const resolveLocale = vi.fn<
+      NonNullable<CreateRouteOptions['resolveLocale']>
+    >((ctx) => {
+      if (ctx.routeLocale === 'es') {
+        return {locale: 'es', force: true};
+      }
+      if (ctx.routeLocale === 'en-GB') {
+        return 'en';
+      }
+      return ctx.resolveDefault();
+    });
+    const route = createRoute({collection: 'Pages', ssg: true, resolveLocale});
+    const getStaticProps = (locale: string) =>
+      route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: locale},
+      } as any) as Promise<any>;
+
+    let res = await getStaticProps('de');
+    expect(res.locale).toBe('de');
+    expect(resolveLocale).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        req: undefined,
+        routeLocale: 'de',
+        isDefaultLocale: false,
+        docLocales: ['en', 'de'],
+      })
+    );
+
+    // Locales outside of the doc's locales can be forced.
+    res = await getStaticProps('es');
+    expect(res.locale).toBe('es');
+    expect(res.props.locale).toBe('es');
+
+    res = await getStaticProps('en-GB');
+    expect(res.locale).toBe('en');
+
+    res = await getStaticProps('en-CA');
+    expect(res).toEqual({notFound: true});
+
+    // Forced locales work in SSR too.
+    const result = await renderRoute(
+      rootConfig,
+      {collection: 'Pages', resolveLocale},
+      {slug: 'about', locale: 'es'}
+    );
+    expect(result.locale).toBe('es');
+  });
+
+  it('shares cached reads across processes with a filesystem store', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const dir = path.join(
+      os.tmpdir(),
+      `root-cms-route-test-${Date.now()}-${Math.random()}`
+    );
+    try {
+      await seedDoc(cmsClient, 'Pages/about');
+      await seedDoc(cmsClient, 'Global/header');
+      // Every client shares the same Firestore instance.
+      const getAll = vi.spyOn(cmsClient.db, 'getAll');
+      // Each route (and cache) simulates a separate SSG worker thread.
+      const routes = Array.from({length: 4}, () =>
+        createRoute({
+          collection: 'Pages',
+          ssg: true,
+          cache: new ReadCache({store: new FileSystemReadCacheStore({dir})}),
+          batchRequest: (req) => req.addDoc('Global/header'),
+        })
+      );
+      const results: any[] = await Promise.all(
+        routes.map((route) =>
+          route.getStaticProps!({
+            rootConfig,
+            params: {slug: 'about', $locale: 'en'},
+          } as any)
+        )
+      );
+      results.forEach((res) => {
+        expect(res.props.doc.id).toBe('Pages/about');
+        expect(res.props.doc.sys.createdAt).toBeGreaterThan(0);
+      });
+      // The shared "Global/header" doc is only fetched once.
+      const headerReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(headerReads).toHaveLength(1);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      await new FileSystemReadCacheStore({dir}).clear();
+    }
+  });
+
+  it('clears read caches when docs are published', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      await seedDoc(cmsClient, 'Pages/about');
+      await seedDoc(cmsClient, 'Pages/about', {mode: 'draft'});
+      const route = createRoute({collection: 'Pages', cache: true});
+      let result = await renderRoute(rootConfig, route, {slug: 'about'});
+      expect(result.props.doc.fields.title).toBe('Title for Pages/about');
+
+      await cmsClient.db
+        .doc(`Projects/${cmsClient.projectId}/Collections/Pages/Drafts/about`)
+        .update({'fields.title': 'Updated'});
+      await cmsClient.publishDocs(['Pages/about']);
+      result = await renderRoute(rootConfig, route, {slug: 'about'});
+      expect(result.props.doc.fields.title).toBe('Updated');
+
+      await cmsClient.unpublishDocs(['Pages/about']);
+      result = await renderRoute(rootConfig, route, {slug: 'about'});
+      expect(result.notFound).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('supports RootCMSClient subclasses that declare a `cache` field', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    class CustomClient extends RootCMSClient {
+      cache = new Map<string, unknown>();
+    }
+    const client = new CustomClient(rootConfig, {cache: new ReadCache()});
+    const res = await client.listDocs('Pages', {mode: 'published'});
+    expect(res.docs.map((doc: any) => doc.id)).toEqual(['Pages/about']);
+    expect(client.cache.size).toBe(0);
   });
 });
