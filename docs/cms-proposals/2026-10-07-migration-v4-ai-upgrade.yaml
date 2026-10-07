@@ -1,0 +1,327 @@
+version: 1
+id: "2026-10-07-migration-v4-ai-upgrade"
+title: "Update the developer docs: migration--v4"
+generated: "2026-10-07T14:39:15.586Z"
+author: "scripts/propose_docs_copy.ts"
+summary: "- Docs/migration--v4: Adds an \"Upgrade with an AI agent\" section and the translations.migrate command."
+changes:
+  - kind: "doc.edit"
+    docId: "Docs/migration--v4"
+    note: "Adds an \"Upgrade with an AI agent\" section and the translations.migrate command."
+    ops:
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "translations"
+            title: "Translations manager v2"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The v2 translations manager is now on by default. On the first dev server start or <code>root build</code>, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup."
+                - type: "paragraph"
+                  data:
+                    text: "The migration runs before each build, so <b><code>root build</code> now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. <code>gcloud auth application-default login</code> or <code>GOOGLE_APPLICATION_CREDENTIALS</code>."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "If you set <code>experiments: {v2TranslationsManager: true}</code>, you can remove it. To stay on the v1 translations system, opt out:"
+                  time: 1790959895696
+                  version: "2.28.2"
+                _arrayKey: "Ah7jF8"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {v2TranslationsManager: false},
+                  });
+                _arrayKey: "PGUASA"
+            _arrayKey: "0EoL4z"
+          - id: "dependency-graph"
+            title: "Dependency graph"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The dependency graph, which tracks references between docs, is now on by default. If you set <code>dependencyGraph: true</code>, you can remove it."
+                - type: "paragraph"
+                  data:
+                    text: "The graph and global search are kept up to date by the CMS cron job. If you haven't set one up, see <a href=\"/docs/cms/#cron-jobs\">cron jobs</a>."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1790959895696
+                  version: "2.28.2"
+                _arrayKey: "0T3bdV"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    dependencyGraph: false,
+                  });
+                _arrayKey: "dWnmyW"
+            _arrayKey: "CZVTZX"
+          - id: "module-preload"
+            title: "Module preloading"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js now adds <code>&lt;link rel=\"modulepreload\"&gt;</code> tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel. Your pages' HTML will include these new tags. If you set <code>modulePreload: true</code>, you can remove it."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1790959895696
+                  version: "2.28.2"
+                _arrayKey: "yV9QJ9"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    modulePreload: false,
+                  });
+                _arrayKey: "Vn1CYz"
+            _arrayKey: "SPiYcT"
+          - id: "task-manager"
+            title: "Task manager"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The task manager is now on by default, with a Tasks page in the CMS sidebar. It no longer appears on the CMS home page. If you set <code>experiments: {taskManager: true}</code>, you can remove it."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To hide it:"
+                  time: 1790959895696
+                  version: "2.28.2"
+                _arrayKey: "EJLv4S"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {taskManager: false},
+                  });
+                _arrayKey: "L1JVlB"
+            _arrayKey: "0DaCEt"
+          - id: "editorjs"
+            title: "EditorJS removed"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The legacy EditorJS rich text editor and its \"Enable EditorJS Editor (legacy)\" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "zsZOSf"
+          - id: "branding"
+            title: "CMS branding"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS UI now uses the Root.js name and the beet logo. The default accent color is now pink instead of light blue, and the default favicon is the beet. To change the look, use the <code>favicon</code> and <code>minimalBranding</code> cmsPlugin options, or <code>themes</code> to override the <code>--cms-*</code> CSS properties, such as <code>--cms-accent</code>."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "SaR5uX"
+          - id: "other"
+            title: "Other issues"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Found an issue that isn't covered here? <a href=\"https://github.com/blinkk/rootjs/issues\">File an issue</a> on GitHub."
+              time: 1790959895696
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "7oWibi"
+        after:
+          - id: "ai-upgrade"
+            title: "Upgrade with an AI agent"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "A coding agent, such as <a href=\"https://claude.com/claude-code\">Claude Code</a>, can run the upgrade for you. Start it in your project's folder on a clean git checkout and paste this prompt:"
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                code: |-
+                  Upgrade this project to Root.js v4. Follow the instructions at
+                  https://rootjs.dev/skills/root-v4-upgrade.md
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Or start Claude Code with the prompt in one line: <code>claude \"Upgrade this project to Root.js v4. Follow https://rootjs.dev/skills/root-v4-upgrade.md\"</code>"
+                    - type: "paragraph"
+                      data:
+                        text: "The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything, updates the packages, and runs the translations migration (after checking with you). It also suggests moving CMS routes to <code>createRoute()</code>, secrets to <code>root secrets</code> and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left."
+                  time: 1791383954878
+                  version: "2.28.2"
+          - id: "translations"
+            title: "Translations manager v2"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The v2 translations manager is now on by default. On the first dev server start or <code>root build</code>, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, as a step of the upgrade, use <code>root-cms translations.migrate</code>, and <code>--status</code> to check whether it has run."
+                - type: "paragraph"
+                  data:
+                    text: "The migration runs before each build, so <b><code>root build</code> now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. <code>gcloud auth application-default login</code> or <code>GOOGLE_APPLICATION_CREDENTIALS</code>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "If you set <code>experiments: {v2TranslationsManager: true}</code>, you can remove it. To stay on the v1 translations system, opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {v2TranslationsManager: false},
+                  });
+          - id: "dependency-graph"
+            title: "Dependency graph"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The dependency graph, which tracks references between docs, is now on by default. If you set <code>dependencyGraph: true</code>, you can remove it."
+                - type: "paragraph"
+                  data:
+                    text: "The graph and global search are kept up to date by the CMS cron job. If you haven't set one up, see <a href=\"/docs/cms/#cron-jobs\">cron jobs</a>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    dependencyGraph: false,
+                  });
+          - id: "module-preload"
+            title: "Module preloading"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js now adds <code>&lt;link rel=\"modulepreload\"&gt;</code> tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel. Your pages' HTML will include these new tags. If you set <code>modulePreload: true</code>, you can remove it."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    modulePreload: false,
+                  });
+          - id: "task-manager"
+            title: "Task manager"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The task manager is now on by default, with a Tasks page in the CMS sidebar. It no longer appears on the CMS home page. If you set <code>experiments: {taskManager: true}</code>, you can remove it."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To hide it:"
+                  time: 1791383954878
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {taskManager: false},
+                  });
+          - id: "editorjs"
+            title: "EditorJS removed"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The legacy EditorJS rich text editor and its \"Enable EditorJS Editor (legacy)\" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
+          - id: "branding"
+            title: "CMS branding"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS UI now uses the Root.js name and the beet logo. The default accent color is now pink instead of light blue, and the default favicon is the beet. To change the look, use the <code>favicon</code> and <code>minimalBranding</code> cmsPlugin options, or <code>themes</code> to override the <code>--cms-*</code> CSS properties, such as <code>--cms-accent</code>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
+          - id: "other"
+            title: "Other issues"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Found an issue that isn't covered here? <a href=\"https://github.com/blinkk/rootjs/issues\">File an issue</a> on GitHub."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
