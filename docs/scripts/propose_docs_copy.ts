@@ -21,7 +21,10 @@
  * collection schema (a dry run of `proposal.apply`). Once it's approved, apply
  * it with:
  *
- *   npx root-cms proposal.apply cms-proposals/<id>.yaml --modified-by <email>
+ *   npx root-cms proposal.apply cms-proposals/<id>.yaml
+ *
+ * The writes are attributed to the active gcloud account. Pass
+ * `--modified-by <email>` to attribute them to someone else.
  *
  * Proposals can't set `sys` values, so the sidebar order (`sys.sortKey`, see
  * the collection's `customSorting` option) is not part of the proposal. Pass
@@ -240,7 +243,7 @@ async function main() {
     await writeFile(outPath, yaml);
     console.log(`wrote ${path.relative(DOCS_DIR, outPath)}`);
     console.log(
-      `apply: npx root-cms proposal.apply ${path.relative(DOCS_DIR, outPath)} --modified-by <email>`
+      `apply: npx root-cms proposal.apply ${path.relative(DOCS_DIR, outPath)}`
     );
   } else {
     console.log('no changes to propose');
