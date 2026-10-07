@@ -10,6 +10,7 @@ import {initFirebase} from './init-firebase.js';
 import {proposalApply, proposalCheck, proposalDiff} from './proposal.js';
 import {setup} from './setup/setup.js';
 import {installSkill} from './skill.js';
+import {translationsMigrate} from './translations.js';
 
 class CliRunner {
   private name: string;
@@ -314,6 +315,26 @@ class CliRunner {
       .option('--force', 'overwrite the skill if it is already installed')
       .option('--skill <name>', 'install only the named skill')
       .action(installSkill);
+    program
+      .command('translations.migrate')
+      .description(
+        'migrates v1 translations to the v2 translations manager\n\n' +
+          'The CMS runs this automatically on the first `root dev` or\n' +
+          '`root build`. Run it on demand to migrate as a deliberate step,\n' +
+          'e.g. when upgrading to Root.js v4. The v1 translations are left\n' +
+          'in place as a backup, and the migrated translations are\n' +
+          'published.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms translations.migrate --status\n' +
+          '  $ root-cms translations.migrate\n' +
+          '  $ root-cms translations.migrate --force'
+      )
+      .option('--status', 'print the migration status without migrating')
+      .option(
+        '--force',
+        're-run a completed migration (overwrites v2 edits to migrated strings)'
+      )
+      .action(translationsMigrate);
     await program.parseAsync(argv);
   }
 }

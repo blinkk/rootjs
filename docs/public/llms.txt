@@ -7,6 +7,7 @@ Root.js is published to npm as `@blinkk/root` (the framework) and `@blinkk/root-
 ## Agent skills
 
 - [Set up a Root.js site with the CMS](https://rootjs.dev/skills/root-cms-setup.md): Step-by-step instructions for an AI coding agent to scaffold a site, run `root-cms setup`, and hand off. Other skills, for reading and editing CMS content, are installed into a project with `root-cms skill.install`.
+- [Upgrade a Root.js project to v4](https://rootjs.dev/skills/root-v4-upgrade.md): Instructions for an AI coding agent to upgrade a v3 project: snapshot the site, update the packages, migrate translations to the v2 translations manager, modernize CMS routes, secrets and data fetching, then compare the site before and after.
 
 ## Docs
 

@@ -69,7 +69,14 @@ export interface TranslationsMigrationState {
 
 export interface MigrateV1TranslationsOptions {
   /** What triggered the migration (used for logging/state). */
-  trigger?: 'build' | 'dev';
+  trigger?: 'build' | 'dev' | 'cli';
+  /**
+   * Re-runs the migration even if it already completed, e.g. to pick up v1
+   * translations that were edited after the first run. Locale docs written by
+   * the migration are overwritten, so edits made in the v2 translations
+   * manager since then are lost for any string that is also in v1.
+   */
+  force?: boolean;
   /**
    * Loads a collection's schema. When provided, strings that are no longer
    * used by the docs they're tagged with are pruned instead of migrated.
@@ -117,6 +124,23 @@ function migrationStateDbPath(projectId: string) {
 }
 
 /**
+ * Returns the state of the v1 -> v2 translations migration, or `null` if it
+ * has never run for the project.
+ */
+export async function getTranslationsMigrationState(
+  cmsClient: RootCMSClient
+): Promise<TranslationsMigrationState | null> {
+  const stateRef = cmsClient.db.doc(migrationStateDbPath(cmsClient.projectId));
+  const snapshot = await stateRef.get();
+  return (snapshot.data() as TranslationsMigrationState | undefined) || null;
+}
+
+/** Returns true if a migration state is complete for the current version. */
+function isMigrationComplete(state?: TranslationsMigrationState) {
+  return state?.status === 'complete' && state.version >= MIGRATION_VERSION;
+}
+
+/**
  * Migrates v1 translations to the v2 TranslationsManager if the migration
  * hasn't already run for this project. Safe to call on every dev server boot
  * and build: after the first successful run, this costs a single Firestore
@@ -127,13 +151,14 @@ export async function migrateV1TranslationsIfNeeded(
   options?: MigrateV1TranslationsOptions
 ): Promise<MigrateV1TranslationsResult> {
   const trigger = options?.trigger || 'build';
+  const force = Boolean(options?.force);
   const db = cmsClient.db;
   const stateRef = db.doc(migrationStateDbPath(cmsClient.projectId));
 
   // Fast path: a single read per boot. `complete` is the "migrated" tag.
   const snapshot = await stateRef.get();
   const state = snapshot.data() as TranslationsMigrationState | undefined;
-  if (state?.status === 'complete' && state.version >= MIGRATION_VERSION) {
+  if (!force && isMigrationComplete(state)) {
     return {status: 'complete', skipped: true};
   }
 
@@ -146,7 +171,7 @@ export async function migrateV1TranslationsIfNeeded(
   const claimed = await db.runTransaction(async (tx) => {
     const snapshot = await tx.get(stateRef);
     const state = snapshot.data() as TranslationsMigrationState | undefined;
-    if (state?.status === 'complete' && state.version >= MIGRATION_VERSION) {
+    if (!force && isMigrationComplete(state)) {
       return false;
     }
     if (state?.status === 'running') {
