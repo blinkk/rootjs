@@ -1,0 +1,56 @@
+version: 1
+id: "2026-10-07-blog-rootjs-v4-batch-getters"
+title: "Use the BatchResponse getters in the Root.js v4.0 blog post"
+author: "claude-code"
+summary: |-
+  - BlogPosts/rootjs-v4: Updates the createRoute() example in "Routes and
+    data fetching" to read batch results with getDoc() and getQuery().
+changes:
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Uses the getters added to BatchResponse."
+    ops:
+      - op: "set"
+        path: "content.sections.7.body.blocks.2.data.code"
+        before: |-
+          // routes/[...slug].tsx
+
+          import {createRoute} from '@blinkk/root-cms';
+
+          export default function Page(props) {
+            // props.doc, props.header and props.posts are ready to render.
+          }
+
+          export const {handle} = createRoute({
+            collection: 'Pages',
+            batchRequest: (req) => {
+              req.addDoc('Global/header');
+              req.addQuery('posts', 'BlogPosts', {limit: 3});
+            },
+            preRenderHook: (props, ctx) => ({
+              ...props,
+              header: ctx.batchResponse.docs['Global/header'],
+              posts: ctx.batchResponse.queries.posts,
+            }),
+          });
+        after: |-
+          // routes/[...slug].tsx
+
+          import {createRoute} from '@blinkk/root-cms';
+
+          export default function Page(props) {
+            // props.doc, props.header and props.posts are ready to render.
+          }
+
+          export const {handle} = createRoute({
+            collection: 'Pages',
+            batchRequest: (req) => {
+              req.addDoc('Global/header');
+              req.addQuery('posts', 'BlogPosts', {limit: 3});
+            },
+            preRenderHook: (props, ctx) => ({
+              ...props,
+              header: ctx.batchResponse.getDoc('Global/header'),
+              posts: ctx.batchResponse.getQuery('posts'),
+            }),
+          });

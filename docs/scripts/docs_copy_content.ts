@@ -1729,7 +1729,7 @@ export default schema.collection({
 
 const DATA_FETCHING: DocCopy = {
   slug: 'cms--data-fetching',
-  note: 'Recommends createRoute() for CMS routes, adds sections on batch requests, and updates the translations section for the v2 translations manager.',
+  note: 'Uses the new BatchResponse getters (getDoc, getQuery, getDataSource) in the batch request examples.',
   fields: {
     meta: {
       title: 'Data fetching – Root.js',
@@ -1830,15 +1830,15 @@ export const {handle} = createRoute({
   },
   preRenderHook: (props, ctx) => ({
     ...props,
-    header: ctx.batchResponse!.docs['Global/header'],
-    posts: ctx.batchResponse!.queries.posts,
-    pricing: ctx.batchResponse!.dataSources.pricing,
+    header: ctx.batchResponse!.getDoc('Global/header'),
+    posts: ctx.batchResponse!.getQuery('posts'),
+    pricing: ctx.batchResponse!.getDataSource('pricing'),
   }),
 });`
             ),
             copy(
               p(
-                `The response's ${c('docs')} are keyed by doc id, its ${c('queries')} by the id you passed to ${c('addQuery()')}, and its ${c('dataSources')} by data source id.`
+                `Read the results with the response's getters, using the ids you added: ${c('getDoc(docId)')} and ${c('getDataSource(id)')} return ${c('null')} if the doc or data source doesn't exist, and ${c('getQuery(queryId)')} returns an empty array if the query has no results.`
               )
             ),
           ]
@@ -1867,7 +1867,7 @@ req.addDoc('Pages/index');
 req.addTranslations('common');
 const res = await req.fetch();
 
-const doc = res.docs['Pages/index'];
+const doc = res.getDoc('Pages/index');
 const translations = res.getTranslations(locale);`
             ),
             copy(
@@ -1879,7 +1879,7 @@ const translations = res.getTranslations(locale);`
               'ts',
               `
 const res = await req.fetchContent();
-const locale = pickLocale(res.docs['Pages/index']);
+const locale = pickLocale(res.getDoc('Pages/index'));
 await req.fetchTranslations(res, {locales: [locale]});`
             ),
           ]
@@ -1908,7 +1908,7 @@ export const {handle} = createRoute({
   },
   preRenderHook: (props, ctx) => ({
     ...props,
-    posts: ctx.batchResponse!.queries.posts,
+    posts: ctx.batchResponse!.getQuery('posts'),
   }),
 });`
             ),
