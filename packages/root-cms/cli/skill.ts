@@ -4,7 +4,11 @@ import {fileURLToPath} from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Names of the bundled skill directories, in install order. */
+/**
+ * Names of the bundled skill directories, in install order. The
+ * `root-v4-upgrade` skill is a one-off, served from rootjs.dev, so it isn't
+ * installed into projects.
+ */
 export const SKILL_NAMES = [
   'root-cms-setup',
   'root-cms-cli',

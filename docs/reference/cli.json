@@ -23,13 +23,17 @@
           "options": [
             {
               "flags": "--template [template]",
-              "description": "template to use",
+              "description": "template to use: \"starter\" (Root CMS) or \"minimal\" (hello world)",
               "defaultValue": "\"starter\""
             },
             {
               "flags": "--repo [repo]",
               "description": "github repo to pull from",
               "defaultValue": "\"blinkk/rootjs/examples\""
+            },
+            {
+              "flags": "--skip-gcp-setup",
+              "description": "don't offer to set up Google Cloud for Root CMS templates"
             }
           ],
           "subcommands": []
@@ -922,6 +926,30 @@
             {
               "flags": "--skill <name>",
               "description": "install only the named skill"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms translations.migrate",
+          "aliases": [],
+          "usage": "root-cms translations.migrate [options]",
+          "summary": "migrates v1 translations to the v2 translations manager",
+          "description": "The CMS runs this automatically on the first `root dev` or `root build`. Run it on demand to migrate as a deliberate step, e.g. when upgrading to Root.js v4. The v1 translations are left in place as a backup, and the migrated translations are published.",
+          "examples": [
+            "root-cms translations.migrate --status",
+            "root-cms translations.migrate",
+            "root-cms translations.migrate --force"
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--status",
+              "description": "print the migration status without migrating"
+            },
+            {
+              "flags": "--force",
+              "description": "re-run a completed migration (overwrites v2 edits to migrated strings)"
             }
           ],
           "subcommands": []

@@ -1932,7 +1932,7 @@ function apiPackageDoc(
 
 const MIGRATION_V4: DocCopy = {
   slug: 'migration--v4',
-  note: 'Adds the v4 migration guide.',
+  note: 'Adds an "Upgrade with an AI agent" section and the translations.migrate command.',
   fields: {
     meta: {
       title: 'Migrating to Root.js v4 – Root.js',
@@ -1950,11 +1950,35 @@ const MIGRATION_V4: DocCopy = {
       ),
       sections: [
         section(
+          'ai-upgrade',
+          'Upgrade with an AI agent',
+          [
+            p(
+              `A coding agent, such as ${a('https://claude.com/claude-code', 'Claude Code')}, can run the upgrade for you. Start it in your project's folder on a clean git checkout and paste this prompt:`
+            ),
+          ],
+          [
+            plain(
+              `
+Upgrade this project to Root.js v4. Follow the instructions at
+https://rootjs.dev/skills/root-v4-upgrade.md`
+            ),
+            copy(
+              p(
+                `Or start Claude Code with the prompt in one line: ${c('claude "Upgrade this project to Root.js v4. Follow https://rootjs.dev/skills/root-v4-upgrade.md"')}`
+              ),
+              p(
+                `The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything, updates the packages, and runs the translations migration (after checking with you). It also suggests moving CMS routes to ${c('createRoute()')}, secrets to ${c('root secrets')} and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left.`
+              )
+            ),
+          ]
+        ),
+        section(
           'translations',
           'Translations manager v2',
           [
             p(
-              `The v2 translations manager is now on by default. On the first dev server start or ${c('root build')}, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup.`
+              `The v2 translations manager is now on by default. On the first dev server start or ${c('root build')}, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, as a step of the upgrade, use ${c('root-cms translations.migrate')}, and ${c('--status')} to check whether it has run.`
             ),
             p(
               `The migration runs before each build, so <b>${c('root build')} now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. ${c('gcloud auth application-default login')} or ${c('GOOGLE_APPLICATION_CREDENTIALS')}.`

@@ -1,5 +1,5 @@
-import {Handler, HandlerContext, Request} from '@blinkk/root';
-import {RootCMSClient} from '@blinkk/root-cms';
+import {Handler, HandlerContext, Request, Response} from '@blinkk/root';
+import {createRoute, RouteRequest} from '@blinkk/root-cms';
 import {PageModules} from '@/components/PageModules/PageModules.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {PagesDoc} from '@/root-cms.js';
@@ -30,33 +30,35 @@ export default function Page(props: PageProps) {
   );
 }
 
-export const handle: Handler = async (req: Request) => {
-  const ctx = req.handlerContext as HandlerContext;
-  const slug = ctx.params.slug || 'index';
-  const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+const route = createRoute({
+  collection: 'Pages',
+  slugParam: 'slug',
+  notFoundHook: (req: Request) => {
+    const ctx = req.handlerContext as HandlerContext;
+    // Until the home page exists, show setup steps on it in dev.
+    if (import.meta.env.DEV && isHomePage(ctx)) {
+      return ctx.render({});
+    }
+    return ctx.render404();
+  },
+});
 
-  const cmsClient = new RootCMSClient(req.rootConfig);
-  let doc: PagesDoc | null = null;
+export const handle: Handler = async (req: Request, res: Response) => {
   try {
-    doc = await cmsClient.getDoc<PagesDoc>('Pages', slug, {mode});
+    return await route.handle(req as RouteRequest, res);
   } catch (err) {
     // Until Firebase is set up, show setup steps on the home page in dev.
-    if (import.meta.env.DEV && slug === 'index') {
+    const ctx = req.handlerContext as HandlerContext;
+    if (import.meta.env.DEV && isHomePage(ctx)) {
       return ctx.render({setupError: String(err)});
     }
     throw err;
   }
-  if (!doc) {
-    if (import.meta.env.DEV && slug === 'index') {
-      return ctx.render({});
-    }
-    return ctx.render404();
-  }
-
-  const locale = ctx.getPreferredLocale(doc.sys.locales || ['en']);
-  const translations = await cmsClient.loadTranslationsForLocale(locale);
-  return ctx.render({doc}, {locale, translations});
 };
+
+function isHomePage(ctx: HandlerContext) {
+  return (ctx.params.slug || 'index') === 'index';
+}
 
 /** Getting started steps, shown in dev until the home page exists. */
 function Welcome(props: {error?: string}) {
