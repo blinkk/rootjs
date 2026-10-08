@@ -2,7 +2,14 @@
 
 import {ActionIcon, Loader, Tooltip} from '@mantine/core';
 import {IconLanguage} from '@tabler/icons-preact';
+import {diffWordsWithSpace} from 'diff';
 import {useEffect, useState} from 'preact/hooks';
+import {isRichTextData} from '../../../shared/marshal.js';
+import {
+  RichTextData,
+  testSameRichTextContent,
+} from '../../../shared/richtext.js';
+import {richTextToPlainText} from '../../utils/doc-changes.js';
 import {cmsListVersions, cmsReadDocVersion} from '../../utils/doc.js';
 import {sourceHash} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -10,8 +17,18 @@ import {getNestedValue} from '../../utils/objects.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import './FieldHistory.css';
 
+/**
+ * Below this ratio of unchanged text, a word diff is harder to read than the
+ * new text on its own, so the diff is skipped (the previous version is shown
+ * just below it in the list).
+ */
+const MIN_DIFF_SIMILARITY = 0.4;
+
 interface FieldVersion {
-  value: string;
+  /** The raw field value. */
+  value: unknown;
+  /** The value as human-readable text. */
+  text: string;
   modifiedBy: string;
   modifiedAt: Date;
   versionId: string;
@@ -67,7 +84,8 @@ export function FieldHistory(props: FieldHistoryProps) {
       if (draftDoc) {
         const draftValue = getNestedValue(draftDoc, deepKey);
         entries.push({
-          value: formatFieldValue(draftValue),
+          value: draftValue,
+          text: formatFieldValue(draftValue),
           modifiedBy: draftDoc.sys?.modifiedBy || 'Unknown',
           modifiedAt: draftDoc.sys?.modifiedAt?.toDate?.() || new Date(),
           versionId: 'draft',
@@ -78,7 +96,8 @@ export function FieldHistory(props: FieldHistoryProps) {
       for (const version of versions) {
         const value = getNestedValue(version, deepKey);
         entries.push({
-          value: formatFieldValue(value),
+          value: value,
+          text: formatFieldValue(value),
           modifiedBy: version.sys?.modifiedBy || 'Unknown',
           modifiedAt: version.sys?.modifiedAt?.toDate?.() || new Date(),
           versionId: version._versionId,
@@ -89,7 +108,7 @@ export function FieldHistory(props: FieldHistoryProps) {
       const deduped: FieldVersion[] = [];
       for (const entry of entries) {
         const prev = deduped[deduped.length - 1];
-        if (!prev || prev.value !== entry.value) {
+        if (!prev || !testSameFieldValue(prev, entry)) {
           deduped.push(entry);
         }
       }
@@ -126,19 +145,65 @@ export function FieldHistory(props: FieldHistoryProps) {
             {i === 0 && (
               <span className="FieldHistory__entry__badge">Current</span>
             )}
-            {translatable && entry.value && (
+            {translatable && typeof entry.value === 'string' && entry.value && (
               <span className="FieldHistory__entry__translationsLink">
                 <TranslationsLink value={entry.value} />
               </span>
             )}
           </div>
-          <div className="FieldHistory__entry__value">
-            {entry.value || (
-              <span className="FieldHistory__entry__empty">(empty)</span>
-            )}
-          </div>
+          <FieldValue entry={entry} prevEntry={fieldVersions[i + 1]} />
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Renders a field version's value. Rich text is shown as plain text, with the
+ * words added or removed since the previous version highlighted.
+ */
+function FieldValue(props: {entry: FieldVersion; prevEntry?: FieldVersion}) {
+  const {entry, prevEntry} = props;
+  if (!entry.text) {
+    return (
+      <div className="FieldHistory__entry__value">
+        <span className="FieldHistory__entry__empty">(empty)</span>
+      </div>
+    );
+  }
+  if (!isRichTextData(entry.value) || !prevEntry?.text) {
+    return <div className="FieldHistory__entry__value">{entry.text}</div>;
+  }
+  if (entry.text === prevEntry.text) {
+    return (
+      <div className="FieldHistory__entry__value">
+        <div className="FieldHistory__entry__note">
+          Only the formatting or embedded content changed.
+        </div>
+        {entry.text}
+      </div>
+    );
+  }
+  const parts = diffWordsWithSpace(prevEntry.text, entry.text);
+  const unchangedLength = parts
+    .filter((part) => !part.added && !part.removed)
+    .reduce((total, part) => total + part.value.length, 0);
+  const similarity =
+    unchangedLength / Math.max(prevEntry.text.length, entry.text.length, 1);
+  if (similarity < MIN_DIFF_SIMILARITY) {
+    return <div className="FieldHistory__entry__value">{entry.text}</div>;
+  }
+  return (
+    <div className="FieldHistory__entry__value">
+      {parts.map((part, i) => {
+        if (part.added) {
+          return <ins key={i}>{part.value}</ins>;
+        }
+        if (part.removed) {
+          return <del key={i}>{part.value}</del>;
+        }
+        return <span key={i}>{part.value}</span>;
+      })}
     </div>
   );
 }
@@ -180,5 +245,22 @@ function formatFieldValue(value: unknown): string {
   if (typeof value === 'string') {
     return value;
   }
+  if (isRichTextData(value)) {
+    return richTextToPlainText(value as RichTextData);
+  }
   return JSON.stringify(value);
+}
+
+/**
+ * Returns true if two field versions hold the same value. Rich text is
+ * compared by its blocks, ignoring the `time` that changes on every save.
+ */
+function testSameFieldValue(a: FieldVersion, b: FieldVersion): boolean {
+  if (isRichTextData(a.value) && isRichTextData(b.value)) {
+    return testSameRichTextContent(
+      a.value as RichTextData,
+      b.value as RichTextData
+    );
+  }
+  return a.text === b.text;
 }
