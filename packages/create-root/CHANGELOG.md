@@ -1,5 +1,12 @@
 # @blinkk/create-root
 
+## 4.0.1
+
+### Patch Changes
+
+- 13c955c: feat: add `root-cms setup` wizard for Google Cloud and offer it from create-root
+- fece8b9: feat: simplify create-root to "starter" (with Root CMS) and "minimal" templates
+
 ## 3.5.3
 
 ## 3.5.2

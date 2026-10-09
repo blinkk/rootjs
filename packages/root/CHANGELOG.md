@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 4.0.1
+
+### Patch Changes
+
+- 924434a: feat: add getMode, getSlug, resolveDoc, translate and other createRoute() options
+- 1764aca: fix: never cache redirects from createRoute() and trailing slash handling
+
 ## 3.5.3
 
 ### Patch Changes
