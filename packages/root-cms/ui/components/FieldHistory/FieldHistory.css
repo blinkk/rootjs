@@ -1,4 +1,8 @@
 .FieldHistory {
+  --field-history-added-bg: #dafbe1;
+  --field-history-added-text: #116329;
+  --field-history-removed-bg: #ffebe9;
+  --field-history-removed-text: #82071e;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -68,4 +72,29 @@
 .FieldHistory__entry__empty {
   color: #adb5bd;
   font-style: italic;
+}
+
+.FieldHistory__entry__value ins,
+.FieldHistory__entry__value del {
+  border-radius: 3px;
+}
+
+.FieldHistory__entry__value ins {
+  text-decoration: none;
+  background-color: var(--field-history-added-bg);
+  color: var(--field-history-added-text);
+}
+
+.FieldHistory__entry__value del {
+  background-color: var(--field-history-removed-bg);
+  color: var(--field-history-removed-text);
+  text-decoration: line-through;
+  text-decoration-color: rgba(130, 7, 30, 0.4);
+}
+
+.FieldHistory__entry__note {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: #868e96;
 }
