@@ -36,6 +36,7 @@ import {GlobalSearch} from './components/GlobalSearch/GlobalSearch.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PinnedCommentThreads} from './components/PinnedCommentThreads/PinnedCommentThreads.js';
+import {PortTranslationsModal} from './components/PortTranslationsModal/PortTranslationsModal.js';
 import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {PublishChecksModal} from './components/PublishChecksModal/PublishChecksModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
@@ -379,6 +380,7 @@ function App() {
                           [ExportSheetModal.id]: ExportSheetModal,
                           [LocalizationModal.id]: LocalizationModal,
                           [LockPublishingModal.id]: LockPublishingModal,
+                          [PortTranslationsModal.id]: PortTranslationsModal,
                           [PruneTranslationsModal.id]: PruneTranslationsModal,
                           [PublishChecksModal.id]: PublishChecksModal,
                           [PublishDocModal.id]: PublishDocModal,
