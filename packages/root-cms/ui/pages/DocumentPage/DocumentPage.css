@@ -62,6 +62,7 @@
 }
 
 .DocumentPage__side__header__docId {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -355,4 +356,46 @@
 
 .DocumentPage__followConfirm__dontAsk {
   margin-top: 16px;
+}
+
+/**
+ * On mobile the preview is hidden (it can still be opened in a new tab) and the
+ * right-hand panels open as full-screen sheets below the top bar, which keeps
+ * the toolbar buttons that toggle them visible.
+ */
+@media (max-width: 768px) {
+  .DocumentPage__side__header__buttons {
+    flex-shrink: 0;
+  }
+
+  .DocumentPage__side__header__saveButton {
+    margin-right: 4px;
+    min-width: 0;
+  }
+
+  .DocumentPage__side__editor,
+  .DocumentPage__side__editor--centered {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .DocumentPage__checksDivider,
+  .DocumentPage__commentsDivider,
+  .DocumentPage__searchDivider,
+  .DocumentPage__aiDivider {
+    display: none;
+  }
+
+  .DocumentPage__checks,
+  .DocumentPage__comments,
+  .DocumentPage__search,
+  .DocumentPage__ai {
+    position: fixed;
+    top: 48px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    max-height: none;
+    z-index: 100;
+  }
 }

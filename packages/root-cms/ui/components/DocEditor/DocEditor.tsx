@@ -526,6 +526,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               color="dark"
               size="xs"
               leftIcon={<IconSearch size={16} />}
+              aria-label="Search"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('root:toggle-search'));
               }}
@@ -547,6 +548,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               color="dark"
               size="xs"
               leftIcon={<IconMessageCircle size={16} />}
+              aria-label="Comments"
               rightIcon={
                 fieldComments.openCount > 0 ? (
                   <span className="DocEditor__statusBar__comments__count">
@@ -575,6 +577,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               color="dark"
               size="xs"
               leftIcon={<IconListCheck size={16} />}
+              aria-label="Checks"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('root:toggle-checks'));
               }}
@@ -597,6 +600,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
                 color="dark"
                 size="xs"
                 leftIcon={<IconRobot size={16} />}
+                aria-label="Root AI"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('root:toggle-ai'));
                 }}
@@ -613,6 +617,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           color="dark"
           size="xs"
           leftIcon={<IconPlanet size={16} />}
+          aria-label="Localization"
           onClick={() => {
             // When the v2 translations manager is enabled, the doc's
             // translations are edited in the translations manager.
@@ -636,6 +641,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           <Button
             color="dark"
             size="xs"
+            aria-label="Publish"
             onClick={() => publishDocModal.open()}
             loading
             disabled
@@ -652,6 +658,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             <Button
               color="dark"
               size="xs"
+              aria-label="Publish"
               leftIcon={<IconRocket size={16} />}
               disabled
             >
@@ -666,6 +673,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             <Button
               color="dark"
               size="xs"
+              aria-label="Publish"
               leftIcon={<IconLock size={16} />}
               disabled
             >
@@ -680,6 +688,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             <Button
               color="dark"
               size="xs"
+              aria-label="Publish"
               leftIcon={<IconRocket size={16} />}
               onClick={() => publishDocModal.open()}
               disabled={!canPublish}

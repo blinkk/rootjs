@@ -313,3 +313,13 @@
 .Layout__bottom {
   grid-area: bottom;
 }
+
+/**
+ * On mobile, the doc editor's toolbar spans the whole top bar, so the branding
+ * is hidden to make room for it.
+ */
+@media (max-width: 768px) {
+  .Layout__top--docEditor > * {
+    display: none;
+  }
+}

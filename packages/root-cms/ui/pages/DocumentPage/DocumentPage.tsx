@@ -40,6 +40,7 @@ import {
   OpenFieldCommentsEventDetail,
   TOGGLE_COMMENTS_EVENT,
 } from '../../hooks/useFieldComments.js';
+import {useIsMobile} from '../../hooks/useIsMobile.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -158,6 +159,9 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     `root::DocumentPage::previewVisible::${collectionId}`,
     hasCollectionUrl
   );
+  // The preview doesn't fit on mobile, so it's only available in a new tab.
+  const isMobile = useIsMobile();
+  const showPreview = hasCollectionUrl && isPreviewVisible && !isMobile;
   const hasChecks = useMemo(() => {
     const allChecks = window.__ROOT_CTX.checks || [];
     return allChecks.some(
@@ -414,8 +418,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
           <SplitPanel.Item
             className={joinClassNames(
               'DocumentPage__side',
-              (!hasCollectionUrl || !isPreviewVisible) &&
-                'DocumentPage__side--expanded'
+              !showPreview && 'DocumentPage__side--expanded'
             )}
           >
             <div className="DocumentPage__side__header">
@@ -462,21 +465,25 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                 </ConditionalTooltip>
                 {hasCollectionUrl && (
                   <>
-                    <Tooltip
-                      label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-                    >
-                      <ActionIcon
-                        className="DocumentPage__side__header__previewToggle"
-                        onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                    {!isMobile && (
+                      <Tooltip
+                        label={
+                          isPreviewVisible ? 'Hide preview' : 'Show preview'
+                        }
                       >
-                        {isPreviewVisible ? (
-                          <IconLayoutSidebarRightCollapse size={16} />
-                        ) : (
-                          <IconLayoutSidebarRightExpand size={16} />
-                        )}
-                      </ActionIcon>
-                    </Tooltip>
-                    {!isPreviewVisible && (
+                        <ActionIcon
+                          className="DocumentPage__side__header__previewToggle"
+                          onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                        >
+                          {isPreviewVisible ? (
+                            <IconLayoutSidebarRightCollapse size={16} />
+                          ) : (
+                            <IconLayoutSidebarRightExpand size={16} />
+                          )}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {!showPreview && (
                       <Tooltip label="Open preview in new tab">
                         <ActionIcon
                           className="DocumentPage__side__header__openNewTab"
@@ -493,7 +500,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
             <div
               className={joinClassNames(
                 'DocumentPage__side__editor',
-                (!hasCollectionUrl || !isPreviewVisible) &&
+                !showPreview &&
                   !isChecksVisible &&
                   !isSearchVisible &&
                   !isAiVisible &&
@@ -506,14 +513,11 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
           <SplitPanel.Item
             className={joinClassNames(
               'DocumentPage__main',
-              (!hasCollectionUrl || !isPreviewVisible) &&
-                'DocumentPage__main--hidden'
+              !showPreview && 'DocumentPage__main--hidden'
             )}
             fluid
           >
-            {hasCollectionUrl && isPreviewVisible && (
-              <DocumentPage.Preview key={docId} docId={docId} />
-            )}
+            {showPreview && <DocumentPage.Preview key={docId} docId={docId} />}
           </SplitPanel.Item>
         </SplitPanel>
         {hasChecks && isChecksVisible && (

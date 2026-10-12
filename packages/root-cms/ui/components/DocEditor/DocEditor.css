@@ -94,6 +94,67 @@
   margin-left: 4px;
 }
 
+/**
+ * On mobile the toolbar spans the full top bar. Secondary info (viewers, save
+ * state) is hidden, status badges truncate, and the panel toggles and the
+ * localization button are icon-only.
+ */
+@media (max-width: 768px) {
+  .DocEditor__statusBar {
+    left: 0;
+    padding: 0 8px;
+  }
+
+  .DocEditor__statusBar__viewers,
+  .DocEditor__statusBar__saveState {
+    display: none;
+  }
+
+  .DocEditor__statusBar__statusBadges {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 8px;
+    overflow: hidden;
+  }
+
+  .DocEditor__statusBar__buttonGroup,
+  .DocEditor__statusBar__i18n,
+  .DocEditor__statusBar__publishButton,
+  .DocEditor__statusBar__actionsMenu {
+    flex-shrink: 0;
+  }
+
+  .DocEditor__statusBar__buttonGroup .mantine-Button-root,
+  .DocEditor__statusBar__i18n .mantine-Button-root {
+    padding: 0 8px;
+  }
+
+  .DocEditor__statusBar__buttonGroup .mantine-Button-label,
+  .DocEditor__statusBar__i18n .mantine-Button-label {
+    display: none;
+  }
+
+  .DocEditor__statusBar__buttonGroup .mantine-Button-leftIcon,
+  .DocEditor__statusBar__i18n .mantine-Button-leftIcon {
+    margin-right: 0;
+  }
+}
+
+/* On narrow phones the publish button is also icon-only. */
+@media (max-width: 480px) {
+  .DocEditor__statusBar__publishButton .mantine-Button-root {
+    padding: 0 10px;
+  }
+
+  .DocEditor__statusBar__publishButton .mantine-Button-label {
+    display: none;
+  }
+
+  .DocEditor__statusBar__publishButton .mantine-Button-leftIcon {
+    margin-right: 0;
+  }
+}
+
 .DocEditor__fields {
   display: flex;
   flex-direction: column;

@@ -106,9 +106,15 @@ Layout.Top = () => {
   const projectName = rootConfig.projectName || rootConfig.projectId;
   const minimalBranding = rootConfig.minimalBranding;
   const {url} = useLocation();
-  const showSearchBar = !isDocumentEditorUrl(url);
+  const isDocumentEditor = isDocumentEditorUrl(url);
+  const showSearchBar = !isDocumentEditor;
   return (
-    <div className="Layout__top">
+    <div
+      className={joinClassNames(
+        'Layout__top',
+        isDocumentEditor && 'Layout__top--docEditor'
+      )}
+    >
       {!minimalBranding ? (
         <>
           <a className="Layout__top__logo" href="/cms">
