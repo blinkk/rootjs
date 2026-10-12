@@ -314,12 +314,103 @@
   grid-area: bottom;
 }
 
+/* The menu button is only rendered on mobile. */
+.Layout__top__menuButton {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  color: var(--color-text-default);
+}
+
 /**
- * On mobile, the doc editor's toolbar spans the whole top bar, so the branding
- * is hidden to make room for it.
+ * On mobile the sidebar is hidden behind the top bar's menu button and opens as
+ * a drawer over the page.
  */
 @media (max-width: 768px) {
-  .Layout__top--docEditor > * {
+  .Layout,
+  .Layout--sidebar-expanded {
+    --sidebar-width: 0px;
+    grid-template-areas:
+      'top'
+      'main'
+      'bottom';
+    grid-template-columns: 1fr;
+  }
+
+  .Layout__top__version,
+  .Layout__top__version__tooltip {
     display: none;
+  }
+
+  .Layout__top__logo {
+    flex: 0 0 auto;
+  }
+
+  .Layout__top__project {
+    min-width: 0;
+    margin-left: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .Layout__top__search {
+    flex: 0 0 auto;
+    padding-right: 0;
+    padding-left: 8px;
+  }
+
+  /* The search bar is icon-only on mobile. */
+  .Layout__top__search .SearchBar {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .Layout__top__search .SearchBar__placeholder,
+  .Layout__top__search .SearchBar__shortcut {
+    display: none;
+  }
+
+  /* The doc editor's toolbar takes up the top bar next to the menu button. */
+  .Layout__top--docEditor > :not(.Layout__top__menuButton) {
+    display: none;
+  }
+
+  .Layout__side {
+    position: fixed;
+    top: var(--header-height);
+    bottom: 0;
+    left: 0;
+    z-index: 150;
+    width: min(260px, 85vw);
+    height: auto;
+    max-height: none;
+    background: var(--surface-background);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s ease;
+  }
+
+  .Layout--menu-open .Layout__side {
+    transform: none;
+    visibility: visible;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .Layout__backdrop {
+    position: fixed;
+    top: var(--header-height);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 149;
+    background: rgb(0 0 0 / 0.3);
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .Layout__side {
+    transition: none;
   }
 }

@@ -359,11 +359,24 @@
 }
 
 /**
- * On mobile the preview is hidden (it can still be opened in a new tab) and the
- * right-hand panels open as full-screen sheets below the top bar, which keeps
- * the toolbar buttons that toggle them visible.
+ * On mobile the preview is hidden (it can still be opened in a new tab), the
+ * page leaves room for the doc editor's toolbar row below the top bar, and the
+ * right-hand panels open as full-screen sheets below the toolbar, which keeps
+ * the buttons that toggle them visible.
  */
 @media (max-width: 768px) {
+  .DocumentPage__layout {
+    padding-top: var(--doc-toolbar-height);
+  }
+
+  .DocumentPage__layout > .SplitPanel {
+    height: 100%;
+  }
+
+  .DocumentPage__side {
+    max-height: 100%;
+  }
+
   .DocumentPage__side__header__buttons {
     flex-shrink: 0;
   }
@@ -391,7 +404,7 @@
   .DocumentPage__search,
   .DocumentPage__ai {
     position: fixed;
-    top: 48px;
+    top: calc(var(--header-height) + var(--doc-toolbar-height));
     right: 0;
     bottom: 0;
     left: 0;

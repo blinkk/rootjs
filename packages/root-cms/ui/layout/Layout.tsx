@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Avatar,
   Divider,
   Menu,
@@ -16,19 +17,28 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
+  IconMenu2,
   IconPhoto,
   IconRobot,
   IconRocket,
   IconSettings,
+  IconX,
 } from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
-import {useCallback, useContext, useMemo} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' with {type: 'json'};
 import {clearLastSignIn} from '../../shared/auth-hints.js';
 import {RootJsLogo} from '../components/RootJsLogo/RootJsLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
+import {useIsMobile} from '../hooks/useIsMobile.js';
 import {useLocalStorage} from '../hooks/useLocalStorage.js';
 import {testAiEnabled} from '../utils/ai.js';
 import {joinClassNames} from '../utils/classes.js';
@@ -44,11 +54,23 @@ interface SidebarState {
   expanded: boolean;
   /** Toggles the sidebar between its expanded and collapsed states. */
   toggle: () => void;
+  /**
+   * Whether the viewport uses the mobile layout, where the sidebar is hidden
+   * behind a menu button in the top bar.
+   */
+  mobile: boolean;
+  /** Whether the sidebar menu is open on mobile. */
+  menuOpen: boolean;
+  /** Opens or closes the sidebar menu on mobile. */
+  toggleMenu: () => void;
 }
 
 const SidebarContext = createContext<SidebarState>({
   expanded: false,
   toggle: () => {},
+  mobile: false,
+  menuOpen: false,
+  toggleMenu: () => {},
 });
 
 /**
@@ -72,17 +94,58 @@ export function Layout(props: LayoutProps) {
   const toggle = useCallback(() => {
     setExpanded((current) => !current);
   }, [setExpanded]);
-  const sidebar = useMemo(() => ({expanded, toggle}), [expanded, toggle]);
+  const mobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleMenu = useCallback(() => {
+    setMenuOpen((current) => !current);
+  }, []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const {url} = useLocation();
+
+  // Close the mobile menu after navigating.
+  useEffect(() => {
+    closeMenu();
+  }, [url]);
+
+  // Close the mobile menu with the escape key.
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMenu();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
+
+  const sidebar = useMemo(
+    () => ({
+      // The mobile menu always shows the link labels.
+      expanded: expanded || mobile,
+      toggle,
+      mobile,
+      menuOpen: mobile && menuOpen,
+      toggleMenu,
+    }),
+    [expanded, toggle, mobile, menuOpen, toggleMenu]
+  );
   return (
     <SidebarContext.Provider value={sidebar}>
       <div
         className={joinClassNames(
           'Layout',
-          expanded && 'Layout--sidebar-expanded'
+          sidebar.expanded && 'Layout--sidebar-expanded',
+          sidebar.menuOpen && 'Layout--menu-open'
         )}
       >
         <Layout.Top />
         <Layout.Side />
+        {sidebar.menuOpen && (
+          <div className="Layout__backdrop" onClick={closeMenu} />
+        )}
         <Layout.Main {...props}>{props.children}</Layout.Main>
         <Layout.Bottom />
       </div>
@@ -108,6 +171,7 @@ Layout.Top = () => {
   const {url} = useLocation();
   const isDocumentEditor = isDocumentEditorUrl(url);
   const showSearchBar = !isDocumentEditor;
+  const {mobile, menuOpen, toggleMenu} = useSidebar();
   return (
     <div
       className={joinClassNames(
@@ -115,6 +179,17 @@ Layout.Top = () => {
         isDocumentEditor && 'Layout__top--docEditor'
       )}
     >
+      {mobile && (
+        <ActionIcon
+          className="Layout__top__menuButton"
+          size="lg"
+          onClick={toggleMenu}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? <IconX size={20} /> : <IconMenu2 size={20} />}
+        </ActionIcon>
+      )}
       {!minimalBranding ? (
         <>
           <a className="Layout__top__logo" href="/cms">
@@ -189,7 +264,7 @@ Layout.Side = () => {
   const {url} = useLocation();
   const currentUrl = url.replace(/\/*$/g, '');
   const user = window.firebase.user;
-  const {expanded} = useSidebar();
+  const {expanded, mobile} = useSidebar();
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
   const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(
     window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || []
@@ -342,7 +417,7 @@ Layout.Side = () => {
         )}
       </div>
       <div className="Layout__side__footer">
-        <Layout.SideToggleButton />
+        {!mobile && <Layout.SideToggleButton />}
         <div className="Layout__side__user">
           <Menu
             shadow="md"
