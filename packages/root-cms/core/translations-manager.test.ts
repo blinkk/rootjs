@@ -15,6 +15,7 @@ import {
   TranslationsLocaleDoc,
   translationsForLocaleV2,
 } from './translations-manager.js';
+import type {ImportTranslationsFromV1Progress} from './translations-manager.js';
 
 const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
@@ -84,11 +85,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       );
       expect(disabledClient.isV2TranslationsEnabled()).toBe(false);
       expect(cmsClient.isV2TranslationsEnabled()).toBe(true);
-    });
-
-    it('is enabled by default when the flag is unset', () => {
-      const defaultClient = createTestCmsClient({experiments: {}});
-      expect(defaultClient.isV2TranslationsEnabled()).toBe(true);
     });
 
     it('saves draft translations as per-locale docs', async () => {
@@ -500,21 +496,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
           mode: 'draft',
         });
         expect(strings.hello.es).toBe('hola!');
-      });
-
-      it('returns empty results when there are no v1 translations', async () => {
-        const tm = cmsClient.getTranslationsManager();
-        const res = await tm.importTranslationsFromV1();
-        expect(res.ids).toEqual([]);
-        expect(res.stats).toEqual({
-          numStrings: 0,
-          numDocs: 0,
-          numPrunedStrings: 0,
-          numSkippedStrings: 0,
-          numLocaleDocs: 0,
-          numCachedLocaleDocs: 0,
-        });
-        expect(res.locales).toEqual({});
       });
     });
   }

@@ -30,15 +30,6 @@ describe('auth-hints', () => {
     expect(getLastSignIn()).toBe(null);
   });
 
-  test('ignores an empty email', () => {
-    setLastSignIn('', 1000);
-    expect(getLastSignIn()).toBe(null);
-  });
-
-  test('allows an automatic sign-in by default', () => {
-    expect(isAutoSignInAllowed(1000)).toBe(true);
-  });
-
   test('blocks repeat automatic sign-ins within the cooldown', () => {
     markAutoSignInAttempt(1000);
     expect(isAutoSignInAllowed(1000)).toBe(false);

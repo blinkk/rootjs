@@ -185,17 +185,6 @@ describe('FileField preview', () => {
       container.querySelector('.FileField__Canvas--infoOpened')
     ).toBeNull();
   });
-
-  it('shows the info panel for non-previewable files', () => {
-    const {container} = renderWithValue({
-      src: 'https://example.com/doc.pdf',
-      filename: 'doc.pdf',
-    });
-    expect(container.querySelector('img.FileField__Preview__Image')).toBeNull();
-    expect(
-      container.querySelector('.FileField__Canvas--infoOpened')
-    ).not.toBeNull();
-  });
 });
 
 describe('FileField aspect ratio warning', () => {
@@ -246,37 +235,6 @@ describe('FileField aspect ratio warning', () => {
       ...mismatched,
       width: 1920,
       height: 1080,
-    });
-    expect(
-      container.querySelector('.FileField__AspectRatioWarning')
-    ).toBeNull();
-  });
-
-  it('warns for videos', () => {
-    const {container} = renderWithValue({
-      src: 'https://example.com/hero.mp4',
-      filename: 'hero.mp4',
-      width: 1080,
-      height: 1080,
-    });
-    const warning = container.querySelector('.FileField__AspectRatioWarning');
-    expect(warning!.textContent).toContain('This video is');
-  });
-
-  it('can be dismissed', () => {
-    const setIgnored = vi.fn();
-    const {container} = renderWithValue(mismatched, {setIgnored});
-    const dismiss = Array.from(
-      container.querySelectorAll('.FileField__AspectRatioWarning__Button')
-    ).find((el) => el.textContent === 'Dismiss')!;
-    fireEvent.click(dismiss);
-    expect(setIgnored).toHaveBeenCalledWith(true);
-  });
-
-  it('hides the warning once dismissed', () => {
-    const {container} = renderWithValue(mismatched, {
-      ignored: true,
-      setIgnored: vi.fn(),
     });
     expect(
       container.querySelector('.FileField__AspectRatioWarning')

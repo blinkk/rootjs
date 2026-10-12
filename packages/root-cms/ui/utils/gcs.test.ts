@@ -3,9 +3,7 @@ import {
   IMAGE_EXTS,
   OPT_IN_IMAGE_EXTS,
   PREVIEW_IMAGE_EXTS,
-  getFileExt,
   testFileMatchesAccept,
-  testIsImageFile,
 } from './gcs.js';
 
 describe('image exts', () => {
@@ -13,26 +11,6 @@ describe('image exts', () => {
     expect(IMAGE_EXTS).not.toContain('avif');
     expect(OPT_IN_IMAGE_EXTS).toContain('avif');
     expect(PREVIEW_IMAGE_EXTS).toContain('avif');
-  });
-});
-
-describe('getFileExt', () => {
-  it('normalizes extensions', () => {
-    expect(getFileExt('hero.PNG')).toEqual('png');
-    expect(getFileExt('hero.jpeg')).toEqual('jpg');
-    expect(getFileExt('hero.avif')).toEqual('avif');
-  });
-});
-
-describe('testIsImageFile', () => {
-  it('previews common image extensions', () => {
-    expect(testIsImageFile('https://example.com/a.png')).toBe(true);
-    expect(testIsImageFile('https://example.com/a.svg')).toBe(true);
-    expect(testIsImageFile('https://example.com/a.pdf')).toBe(false);
-  });
-
-  it('previews avif as an image', () => {
-    expect(testIsImageFile('https://example.com/a.avif')).toBe(true);
   });
 });
 

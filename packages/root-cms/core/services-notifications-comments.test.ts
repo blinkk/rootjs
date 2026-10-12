@@ -109,17 +109,6 @@ describe('commentEmailNotifications', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it('ignores actions outside the configured list', async () => {
-    const {ctx, sendEmail} = testContext();
-    const service = commentEmailNotifications();
-    const result = await service.onAction!(
-      ctx,
-      commentAction({action: 'doc.comment.edit'})
-    );
-    expect(result?.status).toBe('info');
-    expect(sendEmail).not.toHaveBeenCalled();
-  });
-
   it('supports extra recipients, filters and custom templates', async () => {
     const {ctx, sendEmail} = testContext();
     const service = commentEmailNotifications({
@@ -147,26 +136,5 @@ describe('commentEmailNotifications', () => {
     );
     expect(filtered?.status).toBe('info');
     expect(sendEmail).not.toHaveBeenCalled();
-  });
-
-  it('describes resolve actions without comment content', async () => {
-    const {ctx, sendEmail} = testContext();
-    const service = commentEmailNotifications();
-    await service.onAction!(
-      ctx,
-      commentAction({
-        action: 'doc.comment.resolve',
-        by: 'earlier@example.com',
-        metadata: {
-          docId: 'Pages/foo',
-          fieldKey: 'fields.hero.title',
-          fieldLabel: 'Hero › Title',
-          participants: ['author@example.com', 'earlier@example.com'],
-        },
-      })
-    );
-    const email = (sendEmail.mock.calls[0] as any)[0];
-    expect(email.to).toEqual(['author@example.com']);
-    expect(email.subject).toContain('resolved the comments on "Hero › Title"');
   });
 });

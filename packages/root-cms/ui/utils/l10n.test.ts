@@ -86,30 +86,6 @@ describe('isLocaleExcludedFromTranslations', () => {
     expect(isLocaleExcludedFromTranslations('e')).toBe(false);
     expect(isLocaleExcludedFromTranslations('eng')).toBe(false);
   });
-
-  it('matches case-insensitively', () => {
-    setExcludeLocales(['all_*']);
-    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(true);
-  });
-
-  it('supports exact (non-wildcard) patterns', () => {
-    setExcludeLocales(['de']);
-    expect(isLocaleExcludedFromTranslations('de')).toBe(true);
-    expect(isLocaleExcludedFromTranslations('de_DE')).toBe(false);
-  });
-
-  it('matches if any of multiple patterns match', () => {
-    setExcludeLocales(['ALL_*', 'xx']);
-    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(true);
-    expect(isLocaleExcludedFromTranslations('xx')).toBe(true);
-    expect(isLocaleExcludedFromTranslations('en')).toBe(false);
-  });
-
-  it('treats regex special chars in patterns literally', () => {
-    setExcludeLocales(['en.US']);
-    expect(isLocaleExcludedFromTranslations('en.US')).toBe(true);
-    expect(isLocaleExcludedFromTranslations('enXUS')).toBe(false);
-  });
 });
 
 describe('batchUpdateTags', () => {

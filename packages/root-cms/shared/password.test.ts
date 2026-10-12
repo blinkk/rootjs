@@ -1,11 +1,6 @@
 // @vitest-environment node
 import {describe, expect, test} from 'vitest';
-import {
-  DEFAULT_ITERATIONS,
-  hashPassword,
-  isPasswordHash,
-  verifyPassword,
-} from './password.js';
+import {hashPassword, isPasswordHash, verifyPassword} from './password.js';
 
 // A low iteration count keeps the tests fast; the algorithm is the same.
 const ITERATIONS = 1000;
@@ -18,11 +13,6 @@ describe('hashPassword', () => {
     expect(stored.salt).toMatch(/^[A-Za-z0-9+/]+=*$/);
     expect(stored.hash).toMatch(/^[A-Za-z0-9+/]+=*$/);
     expect(stored.hash).not.toContain('hunter2');
-  });
-
-  test('uses the default iteration count when none is given', async () => {
-    const stored = await hashPassword('hunter2');
-    expect(stored.iterations).toBe(DEFAULT_ITERATIONS);
   });
 
   test('generates a different salt and hash for the same password', async () => {

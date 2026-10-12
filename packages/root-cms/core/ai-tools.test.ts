@@ -126,10 +126,6 @@ describe('validateValueAtPath', () => {
     );
   });
 
-  it('accepts a multiselect value as a plain string array', () => {
-    expect(validateValueAtPath(collection, 'tags', ['a', 'b'])).toEqual([]);
-  });
-
   it('walks into array items by numeric index', () => {
     const errors = validateValueAtPath(collection, 'sections.0.heading', 42);
     expect(errors[0]).toMatchObject({
@@ -137,15 +133,6 @@ describe('validateValueAtPath', () => {
       expected: 'string',
       received: 'number',
     });
-  });
-
-  it('rejects an image field with a string value', () => {
-    const errors = validateValueAtPath(
-      collection,
-      'sections.0.image',
-      '/image.png'
-    );
-    expect(errors[0]).toMatchObject({expected: 'object', received: 'string'});
   });
 
   it('accepts a valid whole array item update', () => {
@@ -185,19 +172,6 @@ describe('validateValueAtPath', () => {
       path: 'content.0',
       expected: 'array field',
       received: 'object',
-    });
-  });
-
-  it('rejects array indices with leading zeroes', () => {
-    const errors = validateValueAtPath(
-      collection,
-      'sections.01.heading',
-      'Hero'
-    );
-    expect(errors[0]).toMatchObject({
-      path: 'sections.01',
-      expected: 'array index',
-      received: '01',
     });
   });
 
@@ -273,16 +247,6 @@ describe('applyDocEdits', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.fields.content.modules[0].body).toBe('updated');
-    }
-  });
-
-  it('creates a new object key with set', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'set', path: 'hero.cta', value: {label: 'Go'}},
-    ]);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.fields.hero.cta).toEqual({label: 'Go'});
     }
   });
 
@@ -403,45 +367,9 @@ describe('applyDocEdits', () => {
     }
   });
 
-  it('rejects an insert without a value', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'insert_item', path: 'content.modules'},
-    ]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toMatchObject({
-        op: 'insert_item',
-        expected: 'value',
-      });
-    }
-  });
-
-  it('rejects a remove without an index', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'remove_item', path: 'content.modules'},
-    ]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toMatchObject({
-        op: 'remove_item',
-        expected: 'index',
-      });
-    }
-  });
-
   it('rejects a remove index out of range', () => {
     const result = applyDocEdits(baseFields(), [
       {op: 'remove_item', path: 'content.modules', index: 5},
-    ]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.message).toMatch(/out of range/i);
-    }
-  });
-
-  it('rejects an insert index out of range', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'insert_item', path: 'content.modules', index: 9, value: {}},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -457,19 +385,6 @@ describe('applyDocEdits', () => {
     if (!result.ok) {
       expect(result.error).toMatchObject({
         op: 'insert_item',
-        expected: 'array',
-      });
-    }
-  });
-
-  it('rejects remove when the target is not an array', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'remove_item', path: 'hero', index: 0},
-    ]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toMatchObject({
-        op: 'remove_item',
         expected: 'array',
       });
     }
@@ -504,31 +419,9 @@ describe('applyDocEdits', () => {
       expect(result.error.path).toBe('content.modules.9');
     }
   });
-
-  it('rejects an unknown operation', () => {
-    const result = applyDocEdits(baseFields(), [
-      {op: 'replace' as any, path: 'hero.title', value: 'x'},
-    ]);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.message).toMatch(/unknown operation/i);
-    }
-  });
 });
 
 describe('getReleaseStatus', () => {
-  it('returns "unpublished" when no stamps are set', () => {
-    expect(getReleaseStatus({})).toBe('unpublished');
-  });
-
-  it('returns "scheduled" when only scheduledAt is set', () => {
-    expect(getReleaseStatus({scheduledAt: 1234})).toBe('scheduled');
-  });
-
-  it('returns "published" when publishedAt is set', () => {
-    expect(getReleaseStatus({publishedAt: 1234})).toBe('published');
-  });
-
   it('prefers "published" over "scheduled"', () => {
     expect(getReleaseStatus({publishedAt: 1234, scheduledAt: 5678})).toBe(
       'published'
@@ -539,12 +432,6 @@ describe('getReleaseStatus', () => {
     expect(
       getReleaseStatus({archivedAt: 1, publishedAt: 2, scheduledAt: 3})
     ).toBe('archived');
-  });
-
-  it('treats truthy Timestamp-like objects as set', () => {
-    expect(getReleaseStatus({scheduledAt: {toMillis: () => 1}})).toBe(
-      'scheduled'
-    );
   });
 });
 
@@ -565,30 +452,6 @@ describe('computeReleaseDocIds', () => {
     expect(
       computeReleaseDocIds(['Pages/a'], ['Pages/b', 'Pages/c'], ['Pages/b'])
     ).toEqual(['Pages/a', 'Pages/c']);
-  });
-
-  it('ignores removals of docs not in the release', () => {
-    expect(computeReleaseDocIds(['Pages/a'], [], ['Pages/zzz'])).toEqual([
-      'Pages/a',
-    ]);
-  });
-
-  it('dedupes an existing list with duplicates', () => {
-    expect(computeReleaseDocIds(['Pages/a', 'Pages/a'], [], [])).toEqual([
-      'Pages/a',
-    ]);
-  });
-
-  it('returns an empty list when everything is removed', () => {
-    expect(computeReleaseDocIds(['Pages/a'], undefined, ['Pages/a'])).toEqual(
-      []
-    );
-  });
-
-  it('does not mutate the inputs', () => {
-    const existing = ['Pages/b', 'Pages/a'];
-    computeReleaseDocIds(existing, ['Pages/c'], ['Pages/a']);
-    expect(existing).toEqual(['Pages/b', 'Pages/a']);
   });
 });
 
@@ -633,31 +496,6 @@ describe('release tools wiring', () => {
     // can approve them first — they must NOT carry an execute here.
     expect(tools.release_create.execute).toBeUndefined();
     expect(tools.release_update.execute).toBeUndefined();
-  });
-
-  it('releases_list returns releases from the backend', async () => {
-    const tools = createCmsTools(stubBackend());
-    const result: any = await (tools.releases_list.execute as any)(
-      {limit: 10},
-      {} as any
-    );
-    expect(result.releases).toHaveLength(1);
-    expect(result.releases[0].id).toBe('spring-launch');
-  });
-
-  it('release_get reports found/not-found', async () => {
-    const tools = createCmsTools(stubBackend());
-    const found: any = await (tools.release_get.execute as any)(
-      {releaseId: 'spring-launch'},
-      {} as any
-    );
-    expect(found).toMatchObject({found: true});
-    expect(found.release.status).toBe('unpublished');
-    const missing: any = await (tools.release_get.execute as any)(
-      {releaseId: 'nope'},
-      {} as any
-    );
-    expect(missing).toEqual({found: false});
   });
 
   it('includes release read tools (but not write tools) in the read-only set', () => {

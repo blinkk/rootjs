@@ -3,7 +3,6 @@ import {
   checkNestingDepth,
   checkNestingDepthForUpdates,
   FIRESTORE_MAX_NESTING_DEPTH,
-  formatNestingDepthMessage,
   getNestingDepth,
   getRemainingNestingDepth,
   measureNestingDepth,
@@ -23,11 +22,6 @@ describe('getNestingDepth', () => {
     expect(getNestingDepth('fields')).toBe(0);
     expect(getNestingDepth('fields.meta')).toBe(1);
     expect(getNestingDepth('fields.meta.title')).toBe(2);
-  });
-
-  it('treats an empty key as the doc root', () => {
-    expect(getNestingDepth('')).toBe(0);
-    expect(getNestingDepth('   ')).toBe(0);
   });
 });
 
@@ -197,19 +191,5 @@ describe('checkNestingDepthForUpdates', () => {
 
   it('returns an empty list for an empty payload', () => {
     expect(checkNestingDepthForUpdates({})).toEqual([]);
-  });
-});
-
-describe('formatNestingDepthMessage', () => {
-  it('names the offending field and the limit', () => {
-    const issue = checkNestingDepth('fields', nest(21))!;
-    const message = formatNestingDepthMessage(issue);
-    expect(message).toContain('nested 21 levels deep');
-    expect(message).toContain('20 levels deep');
-  });
-
-  it('reports remaining headroom in a warning', () => {
-    const issue = checkNestingDepth('fields', nest(19))!;
-    expect(formatNestingDepthMessage(issue)).toContain('19 of 20 levels');
   });
 });

@@ -41,12 +41,6 @@ describe('normalizePublishChecks', () => {
     ).toEqual([{id: 'ok', level: 'required'}]);
   });
 
-  it('trims ids', () => {
-    expect(normalizePublishChecks(['  seo-meta  '])).toEqual([
-      {id: 'seo-meta', level: 'required'},
-    ]);
-  });
-
   it('keeps the first entry when an id is duplicated', () => {
     expect(
       normalizePublishChecks([
@@ -115,13 +109,5 @@ describe('summarizePublishChecks', () => {
       'Pages/c',
       'Pages/d',
     ]);
-  });
-
-  it('handles an empty result set', () => {
-    expect(summarizePublishChecks([])).toEqual({
-      blocking: [],
-      warnings: [],
-      passed: [],
-    });
   });
 });

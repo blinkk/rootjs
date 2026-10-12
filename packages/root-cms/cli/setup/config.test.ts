@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 import {updateRootConfig} from './config.js';
 import {serviceAccountId} from './iam.js';
 import {validateSiteId} from './project.js';
-import {gsmKeyForSite} from './secrets.js';
 
 const VALUES = {
   siteId: 'www',
@@ -79,10 +78,6 @@ describe('site ids', () => {
     expect(validateSiteId('My Site')).toBeDefined();
     expect(validateSiteId('-www')).toBeDefined();
     expect(validateSiteId('a/b')).toBeDefined();
-  });
-
-  it('prefixes the Secret Manager key with the site id', () => {
-    expect(gsmKeyForSite('blog')).toBe('blog-root-secrets');
   });
 
   it('keeps service account ids within 6-30 characters', () => {

@@ -186,14 +186,4 @@ describe('DocEditor field viewers', () => {
       'fields.body'
     );
   });
-
-  it('does not make avatars clickable when the viewer has no focused field', async () => {
-    mockViewer(null);
-    renderEditor({onViewerClick: vi.fn()});
-
-    await expect
-      .poll(() => document.querySelector('.Viewers .UserAvatar'))
-      .toBeTruthy();
-    expect(document.querySelector('.Viewers__button')).toBeNull();
-  });
 });

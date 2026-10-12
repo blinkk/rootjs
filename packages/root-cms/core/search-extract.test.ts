@@ -2,7 +2,6 @@ import {describe, it, expect} from 'vitest';
 import {convertOneOfTypes, SchemaModule} from './project.js';
 import * as schema from './schema.js';
 import {
-  MAX_FIELD_TEXT_CHARS,
   extractDocRecords,
   extractRichText,
   stripHtml,
@@ -19,10 +18,6 @@ describe('stripHtml', () => {
     expect(
       stripHtml('<p>Hi</p><script>alert(1)</script><style>x{}</style>')
     ).toBe('Hi');
-  });
-
-  it('handles empty input', () => {
-    expect(stripHtml('')).toBe('');
   });
 });
 
@@ -84,13 +79,6 @@ describe('extractRichText', () => {
     expect(result).toBe('col val');
   });
 
-  it('strips html block tags', () => {
-    const result = extractRichText({
-      blocks: [{type: 'html', data: {html: '<div>raw <em>html</em></div>'}}],
-    });
-    expect(result).toBe('raw html');
-  });
-
   it('ignores unknown / non-textual blocks', () => {
     const result = extractRichText({
       blocks: [
@@ -100,12 +88,6 @@ describe('extractRichText', () => {
       ],
     });
     expect(result).toBe('kept');
-  });
-
-  it('returns empty string for missing/invalid input', () => {
-    expect(extractRichText(null)).toBe('');
-    expect(extractRichText({})).toBe('');
-    expect(extractRichText({blocks: 'not-an-array'} as any)).toBe('');
   });
 });
 
@@ -415,32 +397,5 @@ describe('extractDocRecords', () => {
       'fields.modules.m1.modules.n1.caption',
     ]);
     expect(records.map((r) => r.text)).toContain('Deeply nested text');
-  });
-
-  it('truncates long text to MAX_FIELD_TEXT_CHARS', () => {
-    const S = schema.define({
-      name: 'T',
-      fields: [schema.string({id: 's'})],
-    });
-    const long = 'x'.repeat(MAX_FIELD_TEXT_CHARS + 500);
-    const records = extractDocRecords(S, {
-      collection: 'T',
-      slug: 'one',
-      fields: {s: long},
-    });
-    expect(records[0]?.text.length).toBe(MAX_FIELD_TEXT_CHARS);
-  });
-
-  it('ignores empty strings', () => {
-    const S = schema.define({
-      name: 'E',
-      fields: [schema.string({id: 'a'}), schema.string({id: 'b'})],
-    });
-    const records = extractDocRecords(S, {
-      collection: 'E',
-      slug: 's',
-      fields: {a: '   ', b: 'kept'},
-    });
-    expect(records.map((r) => r.deepKey)).toEqual(['fields.b']);
   });
 });

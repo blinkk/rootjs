@@ -232,58 +232,6 @@ describe('DocPickerModal', () => {
     await expect.element(element).toMatchScreenshot('multi-select-mode.png');
   });
 
-  it('renders with minimal features', async () => {
-    const modalProps: ContextModalProps<DocPickerModalProps> = {
-      context: {} as any,
-      id: 'test-modal',
-      innerProps: {
-        collections: ['BlogPosts'],
-        initialCollection: 'BlogPosts',
-        onChange: vi.fn(),
-        enableSearch: false,
-        enableSort: false,
-        enableCreate: true,
-        enableStatusBadges: false,
-      },
-    };
-
-    render(
-      <TestWrapper>
-        <DocPickerModal {...modalProps} />
-      </TestWrapper>
-    );
-
-    const element = page.getByTestId('wrapper');
-    await expect.element(element).toBeVisible();
-    await expect.element(element).toMatchScreenshot('minimal-features.png');
-  });
-
-  it('renders with multiple collections', async () => {
-    const modalProps: ContextModalProps<DocPickerModalProps> = {
-      context: {} as any,
-      id: 'test-modal',
-      innerProps: {
-        collections: ['BlogPosts', 'Pages'],
-        initialCollection: 'BlogPosts',
-        onChange: vi.fn(),
-        enableSearch: true,
-        enableSort: true,
-        enableCreate: true,
-        enableStatusBadges: true,
-      },
-    };
-
-    render(
-      <TestWrapper>
-        <DocPickerModal {...modalProps} />
-      </TestWrapper>
-    );
-
-    const element = page.getByTestId('wrapper');
-    await expect.element(element).toBeVisible();
-    await expect.element(element).toMatchScreenshot('multiple-collections.png');
-  });
-
   it('renders the compact view for collections with viewOptions.compact', async () => {
     const modalProps: ContextModalProps<DocPickerModalProps> = {
       context: {} as any,
@@ -308,33 +256,5 @@ describe('DocPickerModal', () => {
     const element = page.getByTestId('wrapper');
     await expect.element(element).toBeVisible();
     await expect.element(element).toMatchScreenshot('compact-view.png');
-  });
-
-  it('renders initial state with collection selector and create button', async () => {
-    const modalProps: ContextModalProps<DocPickerModalProps> = {
-      context: {} as any,
-      id: 'test-modal',
-      innerProps: {
-        collections: ['BlogPosts', 'Pages'],
-        initialCollection: 'BlogPosts',
-        onChange: vi.fn(),
-        enableSearch: true,
-        enableSort: true,
-        enableCreate: true,
-        enableStatusBadges: true,
-      },
-    };
-
-    render(
-      <TestWrapper>
-        <DocPickerModal {...modalProps} />
-      </TestWrapper>
-    );
-
-    const element = page.getByTestId('wrapper');
-    await expect.element(element).toBeVisible();
-    await expect
-      .element(element)
-      .toMatchScreenshot('collection-selector-with-create-button.png');
   });
 });

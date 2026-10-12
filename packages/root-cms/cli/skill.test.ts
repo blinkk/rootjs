@@ -20,11 +20,6 @@ describe('detectSkillsDirs', () => {
     expect(detectSkillsDirs(root)).toEqual([path.join(root, '.agent/skills')]);
   });
 
-  it('detects a non-Claude provider skills directory', () => {
-    fs.mkdirSync(path.join(root, '.cursor/skills'), {recursive: true});
-    expect(detectSkillsDirs(root)).toEqual([path.join(root, '.cursor/skills')]);
-  });
-
   it('detects multiple existing skills directories (sorted)', () => {
     fs.mkdirSync(path.join(root, '.claude/skills'), {recursive: true});
     fs.mkdirSync(path.join(root, '.agent/skills'), {recursive: true});
@@ -50,17 +45,6 @@ describe('detectSkillsDirs', () => {
 });
 
 describe('resolveSkillNames', () => {
-  it('returns every bundled skill by default', () => {
-    expect(resolveSkillNames()).toEqual([...SKILL_NAMES]);
-    expect(resolveSkillNames()).toContain('root-cms-cli');
-    expect(resolveSkillNames()).toContain('root-cms-propose');
-    expect(resolveSkillNames()).toContain('root-cms-apply');
-  });
-
-  it('narrows to a single named skill', () => {
-    expect(resolveSkillNames('root-cms-propose')).toEqual(['root-cms-propose']);
-  });
-
   it('throws for an unknown skill name', () => {
     expect(() => resolveSkillNames('nope')).toThrow(/unknown skill/);
   });

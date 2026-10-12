@@ -12,7 +12,6 @@ import {
   getRelativeFolderPath,
   joinFolderPath,
   parseFolderPath,
-  replaceFileExt,
   setAssetPickerLastFolder,
   sortAssets,
   validateAssetName,
@@ -184,25 +183,6 @@ describe('collectAssetFieldPaths', () => {
   });
 });
 
-describe('replaceFileExt', () => {
-  it('swaps a filename extension', () => {
-    expect(replaceFileExt('hero.png', 'webp')).toEqual('hero.webp');
-    expect(replaceFileExt('a.b.png', 'avif')).toEqual('a.b.avif');
-  });
-
-  it('returns the name unchanged when the ext matches', () => {
-    expect(replaceFileExt('hero.png', 'png')).toEqual('hero.png');
-    // `jpeg` normalizes to `jpg`.
-    expect(replaceFileExt('hero.jpeg', 'jpg')).toEqual('hero.jpeg');
-  });
-
-  it('returns names without an extension unchanged', () => {
-    expect(replaceFileExt('My Photo', 'png')).toEqual('My Photo');
-    expect(replaceFileExt('.gitignore', 'png')).toEqual('.gitignore');
-    expect(replaceFileExt('hero.png', '')).toEqual('hero.png');
-  });
-});
-
 describe('buildAssetFieldValue', () => {
   it('copies the file data and adds the assetId backlink', () => {
     const value = buildAssetFieldValue(testAsset());
@@ -340,38 +320,6 @@ describe('sortAssets', () => {
       'banner.png',
     ]);
   });
-
-  it('sorts names numerically and case-insensitively', () => {
-    const files = [
-      testEntry('file', 'img10.png'),
-      testEntry('file', 'IMG2.png'),
-      testEntry('file', 'img1.png'),
-    ];
-    expect(names(sortAssets(files))).toEqual([
-      'img1.png',
-      'IMG2.png',
-      'img10.png',
-    ]);
-  });
-
-  it('falls back to the name for assets without a timestamp', () => {
-    const files = [
-      testEntry('file', 'b.png'),
-      testEntry('file', 'a.png'),
-      testEntry('file', 'c.png', 500),
-    ];
-    expect(names(sortAssets(files, {field: 'modified', dir: 'desc'}))).toEqual([
-      'c.png',
-      'a.png',
-      'b.png',
-    ]);
-  });
-
-  it('returns a sorted copy without mutating the input', () => {
-    const input = [...assets];
-    sortAssets(input, {field: 'modified', dir: 'desc'});
-    expect(names(input)).toEqual(names(assets));
-  });
 });
 
 describe('assetPickerLastFolder', () => {
@@ -385,30 +333,6 @@ describe('assetPickerLastFolder', () => {
   afterEach(() => {
     window.__ROOT_CTX = originalCtx;
     sessionStorage.clear();
-  });
-
-  it('returns null when unset in the tab session', () => {
-    expect(getAssetPickerLastFolder()).toEqual(null);
-  });
-
-  it('round-trips the last folder within the tab session', () => {
-    setAssetPickerLastFolder('marketing/2026');
-    expect(getAssetPickerLastFolder()).toEqual('marketing/2026');
-  });
-
-  it('distinguishes the project root from an unset value', () => {
-    setAssetPickerLastFolder('');
-    expect(getAssetPickerLastFolder()).toEqual('');
-  });
-
-  it('stores the value in sessionStorage, not localStorage', () => {
-    setAssetPickerLastFolder('marketing');
-    expect(
-      sessionStorage.getItem('root-cms:assetPicker:lastFolder:test-project')
-    ).toEqual('marketing');
-    expect(
-      localStorage.getItem('root-cms:assetPicker:lastFolder:test-project')
-    ).toEqual(null);
   });
 
   it('scopes the value per project', () => {

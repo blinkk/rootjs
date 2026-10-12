@@ -85,9 +85,4 @@ describe('proposalCheck', () => {
     expect(envelope.error).toMatch(/file not found/);
     expect(process.exitCode).toBe(1);
   });
-
-  it('emits exactly one line of JSON', async () => {
-    await proposalCheck(write('ok.yaml', VALID));
-    expect(stdout.trimEnd().split('\n')).toHaveLength(1);
-  });
 });

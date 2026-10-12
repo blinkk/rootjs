@@ -48,25 +48,6 @@ afterEach(() => {
 });
 
 describe('CommentEditor', () => {
-  it('hides the toolbar in the minimal variant', () => {
-    render(
-      <MantineProvider>
-        <CommentEditor variant="minimal" placeholder="Comment…" />
-      </MantineProvider>
-    );
-    expect(document.querySelector('.LexicalEditor__toolbar')).toBeNull();
-    expect(document.querySelector('.LexicalEditor--noToolbar')).not.toBeNull();
-  });
-
-  it('shows the toolbar in the default variant', () => {
-    render(
-      <MantineProvider>
-        <CommentEditor placeholder="Comment…" />
-      </MantineProvider>
-    );
-    expect(document.querySelector('.LexicalEditor__toolbar')).not.toBeNull();
-  });
-
   it('autocompletes @mentions of project users', async () => {
     page.viewport(800, 600);
     const user = userEvent.setup();

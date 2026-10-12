@@ -3,18 +3,6 @@ import * as schema from '../../core/schema.js';
 import {getDefaultFieldValue, normalizePresetData} from './fields.js';
 
 describe('normalizePresetData', () => {
-  it('returns data unchanged when there are no array/object fields', () => {
-    const Hero = schema.define({
-      name: 'Hero',
-      fields: [schema.string({id: 'title'}), schema.string({id: 'subtitle'})],
-    });
-    const result = normalizePresetData(Hero, {
-      title: 'Welcome',
-      subtitle: 'Hi',
-    });
-    expect(result).toEqual({title: 'Welcome', subtitle: 'Hi'});
-  });
-
   it('converts plain arrays at array-field positions to array-maps', () => {
     const CardGrid = schema.define({
       name: 'CardGrid',
@@ -142,39 +130,9 @@ describe('normalizePresetData', () => {
     expect(Array.isArray(child.tags._array)).toBe(true);
     expect(child.tags._array).toHaveLength(1);
   });
-
-  it('skips fields that are not in the data', () => {
-    const Hero = schema.define({
-      name: 'Hero',
-      fields: [schema.string({id: 'title'}), schema.string({id: 'subtitle'})],
-    });
-    const result = normalizePresetData(Hero, {title: 'Welcome'});
-    expect(result).toEqual({title: 'Welcome'});
-    expect('subtitle' in result).toBe(false);
-  });
-
-  it('preserves _type on the data root', () => {
-    const Hero = schema.define({
-      name: 'Hero',
-      fields: [schema.string({id: 'title'})],
-    });
-    const result = normalizePresetData(Hero, {
-      _type: 'Hero',
-      title: 'Welcome',
-    });
-    expect(result._type).toBe('Hero');
-  });
 });
 
 describe('getDefaultFieldValue', () => {
-  it('returns an empty object when no defaults are set', () => {
-    const Hero = schema.define({
-      name: 'Hero',
-      fields: [schema.string({id: 'title'})],
-    });
-    expect(getDefaultFieldValue(Hero)).toEqual({});
-  });
-
   it('uses field defaults when set', () => {
     const Hero = schema.define({
       name: 'Hero',

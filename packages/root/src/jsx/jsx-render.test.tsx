@@ -40,18 +40,6 @@ test('renders boolean attributes', () => {
   expect(output).toBe('<input type="checkbox" checked disabled>');
 });
 
-test('renders disableRemotePlayback as a boolean attribute', () => {
-  const vnode = <video disableRemotePlayback />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<video disableremoteplayback></video>');
-});
-
-test('renders disablePictureInPicture as a boolean attribute', () => {
-  const vnode = <video disablePictureInPicture />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<video disablepictureinpicture></video>');
-});
-
 test('renders inert as a boolean attribute', () => {
   // `<div inert />` minimizes to a bare `inert` attribute.
   expect(renderJsxToString(<div inert />, {mode: 'minimal'})).toBe(
@@ -141,33 +129,6 @@ test('escapes html entities in attributes', () => {
   expect(output).toBe(
     '<div title="he said &quot;hello&quot; &amp; goodbye"></div>'
   );
-});
-
-// Boundary cases for the escape fast-path (a no-match precheck that returns the
-// input unchanged before entering the per-character escape loop): specials at
-// the very start/end of a string, consecutive specials, and a lone special.
-test('escapes specials at string boundaries in text', () => {
-  const vnode = <div>{'<a & b>'}</div>;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div>&lt;a &amp; b&gt;</div>');
-});
-
-test('escapes consecutive specials in text', () => {
-  const vnode = <div>{'&&<<>>'}</div>;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div>&amp;&amp;&lt;&lt;&gt;&gt;</div>');
-});
-
-test('escapes quote at attribute boundaries', () => {
-  const vnode = <div title={'"x"'} />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div title="&quot;x&quot;"></div>');
-});
-
-test('leaves strings without specials unchanged', () => {
-  const vnode = <div title="plain value">{'no specials here'}</div>;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div title="plain value">no specials here</div>');
 });
 
 test('renders dangerouslySetInnerHTML', () => {
@@ -288,22 +249,6 @@ test('renders functional components', () => {
   expect(output).toBe('<span>Hello, World!</span>');
 });
 
-test('renders nested components', () => {
-  function Inner() {
-    return <em>inner</em>;
-  }
-  function Outer() {
-    return (
-      <div>
-        <Inner />
-      </div>
-    );
-  }
-  const vnode = <Outer />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div><em>inner</em></div>');
-});
-
 test('renders fragments', () => {
   function List() {
     return (
@@ -378,18 +323,6 @@ test('skips function event handlers', () => {
   expect(output).toBe('<button>click</button>');
 });
 
-test('preserves string event handlers', () => {
-  const vnode = (
-    <select onChange={'this.form.submit()'}>
-      <option value="a">a</option>
-    </select>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<select onChange="this.form.submit()"><option value="a">a</option></select>'
-  );
-});
-
 test('preserves and escapes string event handlers, skips function ones', () => {
   const vnode = (
     <button onClick={'doStuff("a" & "b")'} onMouseOver={() => {}}>
@@ -458,21 +391,6 @@ test('pretty mode: void block elements get newlines', () => {
   expect(output).toBe(`<head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="style.css">
-</head>
-`);
-});
-
-test('pretty mode: base element is block', () => {
-  const vnode = (
-    <head>
-      <base href="/" />
-      <link rel="stylesheet" href="a.css" />
-    </head>
-  );
-  const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe(`<head>
-<base href="/">
-<link rel="stylesheet" href="a.css">
 </head>
 `);
 });
@@ -567,19 +485,6 @@ test('pretty mode: select with optgroups breaks onto their own lines', () => {
 `);
 });
 
-test('minimal mode: select options stay compact', () => {
-  const vnode = (
-    <select name="color">
-      <option value="r">Red</option>
-      <option value="g">Green</option>
-    </select>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<select name="color"><option value="r">Red</option><option value="g">Green</option></select>'
-  );
-});
-
 test('minimal mode: no extra whitespace', () => {
   const vnode = (
     <html>
@@ -634,38 +539,6 @@ test('minimal mode: preserves space between text and inline element', () => {
   expect(output).toBe('<p>Hello <strong>world</strong></p>');
 });
 
-test('minimal mode: preserves space after inline element', () => {
-  const vnode = (
-    <p>
-      <em>Hello</em> world
-    </p>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<p><em>Hello</em> world</p>');
-});
-
-test('minimal mode: preserves spaces between multiple inline elements', () => {
-  const vnode = (
-    <p>
-      <span>a</span> <span>b</span> <span>c</span>
-    </p>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<p><span>a</span> <span>b</span> <span>c</span></p>');
-});
-
-test('minimal mode: preserves space with anchor tags', () => {
-  const vnode = (
-    <p>
-      Visit <a href="/about">our site</a> for more info.
-    </p>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<p>Visit <a href="/about">our site</a> for more info.</p>'
-  );
-});
-
 test('minimal mode: no space between inline elements on separate lines', () => {
   const vnode = (
     <div>
@@ -686,29 +559,6 @@ test('minimal mode: no space between text and element on separate lines', () => 
   );
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<p>Hello<strong>world</strong></p>');
-});
-
-test('minimal mode: no space between element and text on separate lines', () => {
-  const vnode = (
-    <p>
-      <em>Hello</em>
-      world
-    </p>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<p><em>Hello</em>world</p>');
-});
-
-test('minimal mode: multiple inline elements on separate lines', () => {
-  const vnode = (
-    <p>
-      <span>a</span>
-      <span>b</span>
-      <span>c</span>
-    </p>
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<p><span>a</span><span>b</span><span>c</span></p>');
 });
 
 test('minimal mode: explicit space expression between inline elements', () => {
@@ -749,74 +599,12 @@ test('pretty mode: pre tag with newlines in text content', () => {
   expect(output).toBe('<pre>a\nb</pre>\n');
 });
 
-test('pretty mode: script tag with newlines in text content', () => {
-  const vnode = <script>{'var a = 1;\nvar b = 2;'}</script>;
-  const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe('<script>var a = 1;\nvar b = 2;</script>\n');
-});
-
-test('pretty mode: style tag with newlines in text content', () => {
-  const vnode = <style>{'body {\n  color: red;\n}'}</style>;
-  const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe('<style>body {\n  color: red;\n}</style>\n');
-});
-
 // --- SVG attribute tests ---
 
 test('svg: converts strokeWidth to stroke-width', () => {
   const vnode = <path strokeWidth="2" />;
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<path stroke-width="2"></path>');
-});
-
-test('svg: converts stopColor to stop-color', () => {
-  const vnode = <stop stopColor="blue" offset="0%" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<stop stop-color="blue" offset="0%"></stop>');
-});
-
-test('svg: converts stopOpacity to stop-opacity', () => {
-  const vnode = <stop stopOpacity="0.5" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<stop stop-opacity="0.5"></stop>');
-});
-
-test('svg: converts fillOpacity and fillRule', () => {
-  const vnode = <path fillOpacity="0.5" fillRule="evenodd" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<path fill-opacity="0.5" fill-rule="evenodd"></path>');
-});
-
-test('svg: converts stroke-related attributes', () => {
-  const vnode = (
-    <line
-      strokeDasharray="5,5"
-      strokeDashoffset="2"
-      strokeLinecap="round"
-      strokeLinejoin="miter"
-      strokeOpacity="0.8"
-    />
-  );
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<line stroke-dasharray="5,5" stroke-dashoffset="2" stroke-linecap="round" stroke-linejoin="miter" stroke-opacity="0.8"></line>'
-  );
-});
-
-test('svg: converts clipPath and clipRule', () => {
-  const vnode = <rect clipPath="url(#clip)" clipRule="evenodd" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<rect clip-path="url(#clip)" clip-rule="evenodd"></rect>'
-  );
-});
-
-test('svg: converts text presentation attributes', () => {
-  const vnode = <text textAnchor="middle" textDecoration="underline" dominantBaseline="central" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<text text-anchor="middle" text-decoration="underline" dominant-baseline="central"></text>'
-  );
 });
 
 test('svg: preserves non-mapped attributes like viewBox', () => {

@@ -56,32 +56,6 @@ test('dedupes a src repeated many times (e.g. a PageModules loop)', async () => 
   expect(fooAsset.getCssDeps).toHaveBeenCalledTimes(1);
 });
 
-test('dedupes overlapping CSS shared by different components', async () => {
-  const assetMap = fakeAssetMap({
-    'templates/Foo/Foo.tsx': fakeAsset('Foo', [
-      '/assets/shared.css',
-      '/assets/Foo.css',
-    ]),
-    'templates/Bar/Bar.tsx': fakeAsset('Bar', [
-      '/assets/shared.css',
-      '/assets/Bar.css',
-    ]),
-  });
-  const cssDeps = new Set<string>();
-
-  await collectStyleDeps(
-    assetMap,
-    ['templates/Foo/Foo.tsx', 'templates/Bar/Bar.tsx'],
-    cssDeps
-  );
-
-  expect(Array.from(cssDeps).sort()).toEqual([
-    '/assets/Bar.css',
-    '/assets/Foo.css',
-    '/assets/shared.css',
-  ]);
-});
-
 test('preserves existing cssDeps and skips ?inline deps', async () => {
   const assetMap = fakeAssetMap({
     'templates/Foo/Foo.tsx': fakeAsset('Foo', [

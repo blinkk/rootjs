@@ -43,6 +43,23 @@ Tests use `vitest`. `pnpm test` builds first, then runs `turbo run test`.
   `__screenshots__/` (gitignored, local only); regenerate with
   `pnpm test:visual --update`.
 
+#### What to test
+
+Tests are a maintenance cost, so only add them for significant or core logic:
+routing, rendering, schema/validation, security and permissions, data
+marshaling, publishing, translations, and other non-trivial algorithms where a
+regression would be costly or hard to notice.
+
+- **Don't** add tests by default for every change, bug fix, or new component.
+- **Don't** test trivial helpers, simple formatters, thin wrappers, constants,
+  type shapes, or code whose behavior is obvious from reading it.
+- **Don't** write tests that mostly assert on mocks, re-test third-party
+  libraries (Preact, Mantine, Lexical, Firestore), or snapshot incidental UI.
+- **Don't** add a new test file for a one-off edge case; extend an existing
+  suite or skip it.
+- Prefer a few tests covering real behavior over many tests enumerating every
+  input permutation.
+
 ## Architecture Notes
 
 ### root-cms layers

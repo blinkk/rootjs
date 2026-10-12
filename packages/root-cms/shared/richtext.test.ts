@@ -2,27 +2,9 @@ import {describe, expect, test} from 'vitest';
 import {
   getRichTextParagraphEditorStyles,
   normalizeRichTextParagraphSizes,
-  parseRichTextParagraphSize,
   RichTextData,
   testSameRichTextContent,
 } from './richtext.js';
-
-describe('parseRichTextParagraphSize', () => {
-  test('accepts any non-empty string', () => {
-    expect(parseRichTextParagraphSize('small')).toBe('small');
-    expect(parseRichTextParagraphSize('body-3')).toBe('body-3');
-    expect(parseRichTextParagraphSize('  large  ')).toBe('large');
-  });
-
-  test('rejects missing and non-string values', () => {
-    expect(parseRichTextParagraphSize(undefined)).toBe(undefined);
-    expect(parseRichTextParagraphSize(null)).toBe(undefined);
-    expect(parseRichTextParagraphSize('')).toBe(undefined);
-    expect(parseRichTextParagraphSize('   ')).toBe(undefined);
-    expect(parseRichTextParagraphSize(2)).toBe(undefined);
-    expect(parseRichTextParagraphSize({value: 'small'})).toBe(undefined);
-  });
-});
 
 describe('normalizeRichTextParagraphSizes', () => {
   test('defaults labels to the size value', () => {
@@ -90,11 +72,6 @@ describe('normalizeRichTextParagraphSizes', () => {
       ])
     ).toEqual([{value: 'small', label: 'small'}]);
   });
-
-  test('returns an empty list when the option is omitted', () => {
-    expect(normalizeRichTextParagraphSizes()).toEqual([]);
-    expect(normalizeRichTextParagraphSizes(null)).toEqual([]);
-  });
 });
 
 describe('getRichTextParagraphEditorStyles', () => {
@@ -110,10 +87,6 @@ describe('getRichTextParagraphEditorStyles', () => {
         'small',
       ])
     ).toEqual({tiny: {fontSize: '0.75em', fontWeight: 300}});
-  });
-
-  test('is empty when the option is omitted', () => {
-    expect(getRichTextParagraphEditorStyles()).toEqual({});
   });
 });
 

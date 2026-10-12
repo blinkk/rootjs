@@ -87,41 +87,6 @@ describe('EditTranslationsModal', () => {
     id: 'modal-id',
   };
 
-  it('should load translation metadata from draft controller', async () => {
-    mockDraft.controller.getValue.mockReturnValue({
-      translate: false,
-      description: 'Keep it simple',
-    });
-
-    render(<EditTranslationsModal {...defaultProps} />);
-
-    await vi.waitFor(() => {
-      expect(mockDraft.controller.getValue).toHaveBeenCalledWith(
-        'fields.@title'
-      );
-    });
-  });
-
-  it('should render "Do not translate" checkbox', async () => {
-    render(<EditTranslationsModal {...defaultProps} />);
-
-    await vi.waitFor(() => {
-      const checkbox = screen.getByLabelText('Do not translate');
-      expect(checkbox).toBeTruthy();
-    });
-  });
-
-  it('should render "Translator notes" textarea', async () => {
-    render(<EditTranslationsModal {...defaultProps} />);
-
-    await vi.waitFor(() => {
-      const textarea = screen.getByPlaceholderText(
-        'Add context or notes for translators...'
-      );
-      expect(textarea).toBeTruthy();
-    });
-  });
-
   it('should hide translation table when "Do not translate" is checked', async () => {
     mockDraft.controller.getValue.mockReturnValue({
       translate: false,

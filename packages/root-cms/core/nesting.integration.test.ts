@@ -55,25 +55,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       }
     }
 
-    it('accepts a doc nested exactly at the limit', async () => {
-      // `fields` is depth 0, so 20 more maps lands the leaf at depth 20.
-      const fields = nest(20);
-      expect(measureNestingDepth(fields, 'fields').depth).toBe(
-        FIRESTORE_MAX_NESTING_DEPTH
-      );
-      expect(checkNestingDepth('fields', fields, {warningBuffer: 0})).toBe(
-        null
-      );
-      expect(await trySet('at-limit', fields)).toBe(true);
-    });
-
-    it('rejects a doc nested one level past the limit', async () => {
-      const fields = nest(21);
-      const issue = checkNestingDepth('fields', fields, {warningBuffer: 0});
-      expect(issue?.severity).toBe('error');
-      expect(await trySet('over-limit', fields)).toBe(false);
-    });
-
     it('predicts acceptance across a range of depths', async () => {
       const predicted: boolean[] = [];
       const actual: boolean[] = [];

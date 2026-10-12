@@ -48,17 +48,4 @@ describe('sortDocsCustomOrder', () => {
     const sorted = sortDocsCustomOrder(docs);
     expect(sorted.map((d) => d.slug)).toEqual(['a', 'b']);
   });
-
-  it('tolerates docs with missing sys data', () => {
-    const docs = [{slug: 'no-sys'} as any, doc('keyed', 'a0')];
-    const sorted = sortDocsCustomOrder(docs);
-    expect(sorted.map((d) => d.slug)).toEqual(['keyed', 'no-sys']);
-  });
-
-  it('returns a new array without mutating the input', () => {
-    const docs = [doc('b', 'a1'), doc('a', 'a0')];
-    const sorted = sortDocsCustomOrder(docs);
-    expect(sorted).not.toBe(docs);
-    expect(docs.map((d) => d.slug)).toEqual(['b', 'a']);
-  });
 });

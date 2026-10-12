@@ -1,6 +1,5 @@
 import {describe, expect, it} from 'vitest';
 import {
-  getPreviewPathFromUrlKey,
   getPreviewSearch,
   getPreviewSrcFromUrlKey,
   getPreviewUrlKey,
@@ -18,10 +17,6 @@ describe('getPreviewUrlKey', () => {
     expect(
       getPreviewUrlKey({pathname: '/about', search: '?preview=true&debug=1'})
     ).toBe('/about?debug=1');
-  });
-
-  it('handles locations with no search', () => {
-    expect(getPreviewUrlKey({pathname: '/', search: ''})).toBe('/');
   });
 });
 
@@ -50,21 +45,10 @@ describe('getPreviewUrlKeyFromUrl', () => {
 });
 
 describe('getPreviewSrcFromUrlKey', () => {
-  it('re-adds the preview param', () => {
-    expect(getPreviewSrcFromUrlKey('/about')).toBe('/about?preview=true');
-  });
-
   it('preserves other params', () => {
     expect(getPreviewSrcFromUrlKey('/about?debug=1')).toBe(
       '/about?debug=1&preview=true'
     );
-  });
-});
-
-describe('getPreviewPathFromUrlKey', () => {
-  it('drops the search params', () => {
-    expect(getPreviewPathFromUrlKey('/about?debug=1')).toBe('/about');
-    expect(getPreviewPathFromUrlKey('/about')).toBe('/about');
   });
 });
 

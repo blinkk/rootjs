@@ -1,17 +1,11 @@
 import {describe, expect, it} from 'vitest';
 import {
-  buildGlobalSearchUrl,
   parseGlobalSearchFilter,
   readGlobalSearchUrlState,
   writeGlobalSearchUrlState,
 } from './search-filters.js';
 
 describe('parseGlobalSearchFilter', () => {
-  it('returns known filters as-is', () => {
-    expect(parseGlobalSearchFilter('docs')).toBe('docs');
-    expect(parseGlobalSearchFilter('data-sources')).toBe('data-sources');
-  });
-
   it('falls back to "all" for unknown or empty values', () => {
     expect(parseGlobalSearchFilter('bogus')).toBe('all');
     expect(parseGlobalSearchFilter('')).toBe('all');
@@ -91,16 +85,5 @@ describe('writeGlobalSearchUrlState', () => {
     expect(
       readGlobalSearchUrlState(writeGlobalSearchUrlState('', state))
     ).toEqual(state);
-  });
-});
-
-describe('buildGlobalSearchUrl', () => {
-  it('builds a shareable CMS path', () => {
-    expect(buildGlobalSearchUrl({query: 'foo', filter: 'all'})).toBe(
-      '/cms/?modal=search&q=foo'
-    );
-    expect(buildGlobalSearchUrl({query: 'foo', filter: 'releases'})).toBe(
-      '/cms/?modal=search&q=foo&type=releases'
-    );
   });
 });

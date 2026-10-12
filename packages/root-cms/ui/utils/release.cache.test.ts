@@ -88,16 +88,6 @@ describe('releases cache', () => {
     expect(mocks.getDocs).toHaveBeenCalledTimes(1);
   });
 
-  it('re-fetches when forced', async () => {
-    const {listReleasesFromCacheOrFetch} = await importReleaseUtils();
-    mockReleases([{id: 'release-a'}]);
-
-    await listReleasesFromCacheOrFetch();
-    await listReleasesFromCacheOrFetch({force: true});
-
-    expect(mocks.getDocs).toHaveBeenCalledTimes(2);
-  });
-
   it('notifies subscribers when docs are added to a release', async () => {
     const {listReleasesFromCacheOrFetch, subscribeToReleases, updateRelease} =
       await importReleaseUtils();

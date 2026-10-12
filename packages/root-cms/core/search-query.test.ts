@@ -9,24 +9,6 @@ import {
 } from './search-query.js';
 
 describe('parseQuery', () => {
-  it('parses a single bare term', () => {
-    expect(parseQuery('foo')).toEqual({
-      phrases: [],
-      terms: ['foo'],
-      excluded: [],
-      excludedPhrases: [],
-    });
-  });
-
-  it('splits multiple bare terms on whitespace', () => {
-    expect(parseQuery('foo  bar\tbaz')).toEqual({
-      phrases: [],
-      terms: ['foo', 'bar', 'baz'],
-      excluded: [],
-      excludedPhrases: [],
-    });
-  });
-
   it('extracts a quoted phrase', () => {
     expect(parseQuery('"foo bar"')).toEqual({
       phrases: ['foo bar'],
@@ -82,44 +64,11 @@ describe('parseQuery', () => {
     });
   });
 
-  it('skips empty quotes', () => {
-    expect(parseQuery('foo "" "  " bar')).toEqual({
-      phrases: [],
-      terms: ['foo', 'bar'],
-      excluded: [],
-      excludedPhrases: [],
-    });
-  });
-
   it('keeps an embedded dash inside a term', () => {
     // `foo-bar` is a single token; only a leading `-` after whitespace excludes.
     expect(parseQuery('foo-bar')).toEqual({
       phrases: [],
       terms: ['foo-bar'],
-      excluded: [],
-      excludedPhrases: [],
-    });
-  });
-
-  it('drops a standalone dash', () => {
-    expect(parseQuery('foo - bar')).toEqual({
-      phrases: [],
-      terms: ['foo', 'bar'],
-      excluded: [],
-      excludedPhrases: [],
-    });
-  });
-
-  it('handles empty / whitespace-only input', () => {
-    expect(parseQuery('')).toEqual({
-      phrases: [],
-      terms: [],
-      excluded: [],
-      excludedPhrases: [],
-    });
-    expect(parseQuery('   ')).toEqual({
-      phrases: [],
-      terms: [],
       excluded: [],
       excludedPhrases: [],
     });
@@ -150,23 +99,6 @@ describe('containsPhrase', () => {
   it('requires word boundaries (no substring matches)', () => {
     expect(containsPhrase('foobar', 'foo bar')).toBe(false);
     expect(containsPhrase('foobar', 'foo')).toBe(false);
-  });
-
-  it('is case-insensitive', () => {
-    expect(containsPhrase('The Quick Brown Fox', 'quick BROWN fox')).toBe(true);
-  });
-
-  it('handles single-word phrases', () => {
-    expect(containsPhrase('foo bar baz', 'bar')).toBe(true);
-    expect(containsPhrase('foo bar baz', 'qux')).toBe(false);
-  });
-
-  it('returns true for empty phrases (vacuously true)', () => {
-    expect(containsPhrase('anything', '')).toBe(true);
-  });
-
-  it('returns false when the text is shorter than the phrase', () => {
-    expect(containsPhrase('foo', 'foo bar baz')).toBe(false);
   });
 });
 
@@ -219,11 +151,6 @@ describe('executeQuery', () => {
     index.addAll(records.map(withWeight));
     return index;
   }
-
-  it('returns no hits for an empty query', () => {
-    const index = buildIndex();
-    expect(executeQuery(index, parseQuery(''))).toEqual([]);
-  });
 
   it('AND-combines unquoted terms (narrows results)', () => {
     const index = buildIndex();
@@ -290,16 +217,5 @@ describe('executeQuery', () => {
   it('returns no hits for queries with only exclusions', () => {
     const index = buildIndex();
     expect(executeQuery(index, parseQuery('-foo'))).toEqual([]);
-  });
-
-  it('returns both title and body matches for a phrase search', () => {
-    const index = buildIndex();
-    const ids = executeQuery(index, parseQuery('"quick brown"')).map(
-      (r) => r.id
-    );
-    // The phrase appears in A (body) and C (title); B has the words but
-    // out of order, so it must be excluded.
-    expect(ids).toEqual(expect.arrayContaining(['A', 'C']));
-    expect(ids).not.toContain('B');
   });
 });

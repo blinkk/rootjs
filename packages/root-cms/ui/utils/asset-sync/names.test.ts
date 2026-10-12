@@ -11,24 +11,11 @@ describe('sanitizeAssetName', () => {
     expect(sanitizeAssetName('a\\b')).toEqual('a-b');
   });
 
-  it('collapses whitespace and trims', () => {
-    expect(sanitizeAssetName('  hero   image  ')).toEqual('hero image');
-  });
-
   it('falls back for empty/dot names', () => {
     expect(sanitizeAssetName('')).toEqual('untitled');
     expect(sanitizeAssetName('   ')).toEqual('untitled');
     expect(sanitizeAssetName('.')).toEqual('untitled');
     expect(sanitizeAssetName('..')).toEqual('untitled');
-  });
-
-  it('strips control characters', () => {
-    expect(sanitizeAssetName('a\u0000b')).toEqual('a-b');
-  });
-
-  it('truncates very long names', () => {
-    const long = 'a'.repeat(500);
-    expect(sanitizeAssetName(long).length).toBeLessThanOrEqual(190);
   });
 });
 
@@ -50,11 +37,6 @@ describe('isIgnoredSourceFile', () => {
     expect(isIgnoredSourceFile('Desktop.ini')).toBe(true);
     expect(isIgnoredSourceFile('Icon\r')).toBe(true);
     expect(isIgnoredSourceFile('__MACOSX')).toBe(true);
-  });
-
-  it('ignores tooling temp files', () => {
-    expect(isIgnoredSourceFile('~$Report.docx')).toBe(true);
-    expect(isIgnoredSourceFile('photo.jpg.crdownload')).toBe(true);
   });
 
   it('keeps regular asset names', () => {

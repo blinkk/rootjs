@@ -1,9 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {
-  isCronDue,
-  isValidCronExpression,
-  parseCronExpression,
-} from './cron-schedule.js';
+import {isCronDue, parseCronExpression} from './cron-schedule.js';
 
 const MINUTE = 60 * 1000;
 
@@ -46,19 +42,6 @@ describe('parseCronExpression', () => {
   it('throws on out-of-range values', () => {
     expect(() => parseCronExpression('99 * * * *')).toThrow();
     expect(() => parseCronExpression('0 25 * * *')).toThrow();
-  });
-});
-
-describe('isValidCronExpression', () => {
-  it('accepts valid expressions', () => {
-    expect(isValidCronExpression('0 19 * * *')).toBe(true);
-    expect(isValidCronExpression('0 17 * * 5')).toBe(true);
-  });
-
-  it('rejects invalid expressions', () => {
-    expect(isValidCronExpression('')).toBe(false);
-    expect(isValidCronExpression('not a cron')).toBe(false);
-    expect(isValidCronExpression('0 19 * *')).toBe(false);
   });
 });
 

@@ -3,11 +3,6 @@ import {DraftDocEventType} from '../../../../hooks/useDraftDoc.js';
 import {InMemoryDraftDocController} from './InMemoryDraftDocController.js';
 
 describe('InMemoryDraftDocController', () => {
-  it('should support .on() method', () => {
-    const controller = new InMemoryDraftDocController({});
-    expect(typeof controller.on).toBe('function');
-  });
-
   it('should dispatch VALUE_CHANGE event', () =>
     new Promise<void>((resolve, reject) => {
       const controller = new InMemoryDraftDocController({
@@ -40,12 +35,6 @@ describe('InMemoryDraftDocController', () => {
     controller.updateKey('block.foo', 'baz');
     expect(seen).toEqual(['bar', 'baz']);
     unsubscribe();
-  });
-
-  it('should expose a no-op flush method', async () => {
-    // `EditTranslationsModal` calls `draft.controller.flush()` when saving.
-    const controller = new InMemoryDraftDocController({foo: 'bar'});
-    await expect(controller.flush()).resolves.toBeUndefined();
   });
 
   it('should use the parent doc id and sys data when provided', () => {

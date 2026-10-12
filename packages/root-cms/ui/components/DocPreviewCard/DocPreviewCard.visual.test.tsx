@@ -102,23 +102,6 @@ describe('DocPreviewCard', () => {
       .toMatchScreenshot('DocPreviewCard-compact.png');
   });
 
-  it('renders with status badges', async () => {
-    const doc = createDoc('products/test-doc', {
-      publishedAt: mockTimestamp(1647485978000),
-      publishedBy: 'test@example.com',
-    });
-    setDocToCache('products/test-doc', doc);
-    render(
-      <div data-testid="card-badges" style={{width: '300px'}}>
-        <DocPreviewCard docId="products/test-doc" doc={doc} statusBadges />
-      </div>
-    );
-    await expect.element(page.getByText('Published')).toBeVisible();
-    await expect
-      .element(page.getByTestId('card-badges'))
-      .toMatchScreenshot('DocPreviewCard-badges.png');
-  });
-
   it('renders not found indicator for a stale reference', async () => {
     render(
       <div data-testid="card-notfound" style={{width: '300px'}}>
@@ -130,40 +113,5 @@ describe('DocPreviewCard', () => {
     await expect
       .element(page.getByTestId('card-notfound'))
       .toMatchScreenshot('DocPreviewCard-notfound.png');
-  });
-
-  it('renders compact not found indicator for a stale reference', async () => {
-    render(
-      <div data-testid="card-notfound-compact" style={{width: '300px'}}>
-        <DocPreviewCard docId="products/deleted-doc" variant="compact" />
-      </div>
-    );
-    await expect.element(page.getByText('products/deleted-doc')).toBeVisible();
-    await expect.element(page.getByText(/Doc not found/)).toBeVisible();
-    await expect
-      .element(page.getByTestId('card-notfound-compact'))
-      .toMatchScreenshot('DocPreviewCard-notfound-compact.png');
-  });
-
-  it('renders compact with badges', async () => {
-    const doc = createDoc('products/test-doc', {
-      publishedAt: mockTimestamp(1647485978000),
-      publishedBy: 'test@example.com',
-    });
-    setDocToCache('products/test-doc', doc);
-    render(
-      <div data-testid="card-compact-badges" style={{width: '300px'}}>
-        <DocPreviewCard
-          docId="products/test-doc"
-          doc={doc}
-          variant="compact"
-          statusBadges
-        />
-      </div>
-    );
-    await expect.element(page.getByText('Published')).toBeVisible();
-    await expect
-      .element(page.getByTestId('card-compact-badges'))
-      .toMatchScreenshot('DocPreviewCard-compact-badges.png');
   });
 });

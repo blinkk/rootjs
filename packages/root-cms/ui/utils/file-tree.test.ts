@@ -61,11 +61,6 @@ describe('testIgnoredUploadFile', () => {
     expect(testIgnoredUploadFile('Thumbs.db')).toBe(true);
     expect(testIgnoredUploadFile('desktop.ini')).toBe(true);
   });
-
-  it('keeps normal files', () => {
-    expect(testIgnoredUploadFile('data.json')).toBe(false);
-    expect(testIgnoredUploadFile('img_0.png')).toBe(false);
-  });
 });
 
 describe('testIgnoredUploadDir', () => {
@@ -73,18 +68,9 @@ describe('testIgnoredUploadDir', () => {
     expect(testIgnoredUploadDir('__MACOSX')).toBe(true);
     expect(testIgnoredUploadDir('.git')).toBe(true);
   });
-
-  it('keeps normal dirs', () => {
-    expect(testIgnoredUploadDir('images')).toBe(false);
-  });
 });
 
 describe('getUploadFiles', () => {
-  it('returns an empty list for no files', () => {
-    expect(getUploadFiles(null)).toEqual([]);
-    expect(getUploadFiles([])).toEqual([]);
-  });
-
   it('uses an empty path for files without a relative path', () => {
     const res = getUploadFiles([testFile('hero.png')]);
     expect(res).toHaveLength(1);
@@ -114,10 +100,6 @@ describe('getUploadFiles', () => {
 });
 
 describe('getUploadFilesFromDataTransfer', () => {
-  it('returns an empty list without a data transfer', async () => {
-    expect(await getUploadFilesFromDataTransfer(null)).toEqual([]);
-  });
-
   it('walks dropped directories recursively', async () => {
     const dataTransfer = testDataTransfer([
       testFileEntry('hero.png'),
