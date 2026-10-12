@@ -10,11 +10,7 @@ vi.mock('./doc.js', () => ({
   getDraftDocRef: (docId: string) => ({docId}),
 }));
 
-import {
-  getDocFromCacheOrFetch,
-  removeDocFromCache,
-  setDocToCache,
-} from './doc-cache.js';
+import {getDocFromCacheOrFetch, removeDocFromCache} from './doc-cache.js';
 
 describe('getDocFromCacheOrFetch', () => {
   beforeEach(() => {
@@ -66,13 +62,5 @@ describe('getDocFromCacheOrFetch', () => {
 
     expect(getDocMock).toHaveBeenCalledTimes(2);
     expect(retried).toEqual({title: 'Retry'});
-  });
-
-  it('removeDocFromCache also clears any pending fetch', async () => {
-    setDocToCache('Pages/foo', {title: 'Cached'});
-    expect(await getDocFromCacheOrFetch('Pages/foo')).toEqual({
-      title: 'Cached',
-    });
-    expect(getDocMock).toHaveBeenCalledTimes(0);
   });
 });

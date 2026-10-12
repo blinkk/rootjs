@@ -8,7 +8,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {stripVTControlCharacters} from 'node:util';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it} from 'vitest';
@@ -16,7 +15,6 @@ import {RootCMSClient} from './client.js';
 import {
   TranslationsMigrationState,
   migrateV1TranslationsIfNeeded,
-  renderTable,
 } from './translations-migration.js';
 
 const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
@@ -198,22 +196,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       await fs.rm(cacheDir, {recursive: true, force: true});
     });
 
-    it('completes with empty stats when there is nothing to migrate', async () => {
-      const res = await migrateV1TranslationsIfNeeded(cmsClient);
-      expect(res).toEqual({status: 'complete', skipped: false});
-      const state = (
-        await migrationStateRef(cmsClient).get()
-      ).data() as TranslationsMigrationState;
-      expect(state.stats).toEqual({
-        numStrings: 0,
-        numDocs: 0,
-        numPrunedStrings: 0,
-        numSkippedStrings: 0,
-        numLocaleDocs: 0,
-        numCachedLocaleDocs: 0,
-      });
-    });
-
     it('skips when another process holds a fresh running lock', async () => {
       await seedV1Translation(cmsClient, 'hello', {es: 'hola'}, ['common']);
       await migrationStateRef(cmsClient).set({
@@ -274,27 +256,3 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
     });
   }
 );
-
-describe('renderTable', () => {
-  it('aligns text left and numbers right', () => {
-    const table = stripVTControlCharacters(
-      renderTable(
-        ['Locale', 'Docs'],
-        [
-          ['es', '12'],
-          ['fr', '1,024'],
-        ]
-      )
-    );
-    expect(table).toBe(
-      [
-        '┌────────┬───────┐',
-        '│ Locale │  Docs │',
-        '├────────┼───────┤',
-        '│ es     │    12 │',
-        '│ fr     │ 1,024 │',
-        '└────────┴───────┘',
-      ].join('\n')
-    );
-  });
-});

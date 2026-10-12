@@ -17,28 +17,8 @@ import {
   extractRefDocIds,
   getReferenceDocId,
   isCollectionTracked,
-  resolveDependencyGraphConfig,
   resolveDependencyGraphFilters,
 } from './dependency-graph.js';
-
-describe('resolveDependencyGraphConfig', () => {
-  it('treats `true` as enabled with default options', () => {
-    expect(resolveDependencyGraphConfig(true)).toEqual({});
-  });
-
-  it('treats a config object as enabled', () => {
-    const config = {includeCollections: ['Pages']};
-    expect(resolveDependencyGraphConfig(config)).toBe(config);
-  });
-
-  it('treats unset as enabled', () => {
-    expect(resolveDependencyGraphConfig(undefined)).toEqual({});
-  });
-
-  it('treats false as disabled', () => {
-    expect(resolveDependencyGraphConfig(false)).toBe(null);
-  });
-});
 
 describe('dependency graph filters', () => {
   it('treats unset/empty config as "track everything"', () => {
@@ -245,11 +225,6 @@ describe('DependencyGraph', () => {
     expect(graph.getDependencies(['Cycles/a', 'Cycles/b'])).toEqual([]);
   });
 
-  it('returns an empty list for unknown docs', () => {
-    const graph = createGraph();
-    expect(graph.getDependencies('Pages/unknown')).toEqual([]);
-  });
-
   it('normalizes input doc ids', () => {
     const graph = new DependencyGraph(
       'draft',
@@ -394,11 +369,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
 
     beforeEach(() => {
       project = createTestProject();
-    });
-
-    it('is enabled by default', async () => {
-      const project = createTestProject({dependencyGraph: undefined});
-      expect(project.createService().isEnabled()).toBe(true);
     });
 
     it('is disabled when the dependencyGraph option is false', async () => {

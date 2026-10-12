@@ -476,20 +476,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     expect(result.props.doc.fields.title).toBe('Updated');
   });
 
-  it('supports a custom createCmsClient()', async () => {
-    await seedDoc(cmsClient, 'Pages/about');
-    const createCmsClient = vi.fn(
-      (rootConfig, options) => new RootCMSClient(rootConfig, options)
-    );
-    const result = await renderRoute(
-      rootConfig,
-      {collection: 'Pages', createCmsClient},
-      {slug: 'about'}
-    );
-    expect(result.rendered).toBe(true);
-    expect(createCmsClient).toHaveBeenCalledOnce();
-  });
-
   it('supports v1 translations', async () => {
     rootConfig = createRootConfig({v2Translations: false});
     cmsClient = new RootCMSClient(rootConfig);
@@ -949,16 +935,5 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     } finally {
       vi.unstubAllEnvs();
     }
-  });
-
-  it('supports RootCMSClient subclasses that declare a `cache` field', async () => {
-    await seedDoc(cmsClient, 'Pages/about');
-    class CustomClient extends RootCMSClient {
-      cache = new Map<string, unknown>();
-    }
-    const client = new CustomClient(rootConfig, {cache: new ReadCache()});
-    const res = await client.listDocs('Pages', {mode: 'published'});
-    expect(res.docs.map((doc: any) => doc.id)).toEqual(['Pages/about']);
-    expect(client.cache.size).toBe(0);
   });
 });

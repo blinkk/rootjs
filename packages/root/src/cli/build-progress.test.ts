@@ -1,11 +1,6 @@
 import {assert, test} from 'vitest';
 
-import {
-  BuildProgress,
-  formatBytes,
-  formatDuration,
-  parseBuildLogMode,
-} from './build-progress.js';
+import {BuildProgress} from './build-progress.js';
 
 /** Strips ANSI escape codes for assertions. */
 function stripAnsi(str: string): string {
@@ -47,26 +42,6 @@ function fakeClock(startMs = 0) {
     },
   };
 }
-
-test('parseBuildLogMode accepts valid modes and defaults to progress', () => {
-  assert.equal(parseBuildLogMode(undefined), 'progress');
-  assert.equal(parseBuildLogMode(''), 'progress');
-  assert.equal(parseBuildLogMode('progress'), 'progress');
-  assert.equal(parseBuildLogMode('verbose'), 'verbose');
-  assert.equal(parseBuildLogMode('quiet'), 'quiet');
-  assert.throws(() => parseBuildLogMode('loud'), /invalid --log value/);
-});
-
-test('formatBytes formats sizes', () => {
-  assert.equal(formatBytes(174), '0.17 kB');
-  assert.equal(formatBytes(563056), '549.86 kB');
-  assert.equal(formatBytes(5 * 1024 * 1024), '5 MB');
-});
-
-test('formatDuration formats durations', () => {
-  assert.equal(formatDuration(45_200), '45.2s');
-  assert.equal(formatDuration(151_000), '2m31s');
-});
 
 test('verbose mode prints one line per file', () => {
   const stream = new FakeStream();

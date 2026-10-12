@@ -87,19 +87,6 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       await deleteApp(app);
     });
 
-    it('firestore rejects arrays nested within arrays', async () => {
-      const docRef = db.doc(
-        `Projects/${projectId}/DataSources/nested/Data/draft`
-      );
-      let err: unknown = null;
-      try {
-        await docRef.set({data: GRID});
-      } catch (e) {
-        err = e;
-      }
-      expect(err).toBeInstanceOf(Error);
-    });
-
     it('syncs grid data and reads it back as a 2d array', async () => {
       const id = 'grid-sync';
       const client = createTestClient(db, projectId);

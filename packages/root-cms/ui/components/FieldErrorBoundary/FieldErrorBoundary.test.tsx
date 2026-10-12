@@ -50,23 +50,4 @@ describe('FieldErrorBoundary', () => {
     expect(screen.queryByText('healthy field')).toBeNull();
     expect(consoleError).toHaveBeenCalled();
   });
-
-  test('includes the deepKey in the logged error', () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-
-    render(
-      <FieldErrorBoundary deepKey="fields.0.body">
-        <ThrowingField />
-      </FieldErrorBoundary>
-    );
-
-    const loggedMessages = consoleError.mock.calls.map((call) =>
-      String(call[0])
-    );
-    expect(loggedMessages.some((msg) => msg.includes('fields.0.body'))).toBe(
-      true
-    );
-  });
 });

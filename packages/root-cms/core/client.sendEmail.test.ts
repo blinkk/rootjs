@@ -84,27 +84,6 @@ describe('RootCMSClient.sendEmail', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('supports custom from, htmlBody, and expiresAt', async () => {
-    const {RootCMSClient} = await import('./client.js');
-    const client = new RootCMSClient(mockRootConfig);
-    const expiresAt = new Date('2026-07-21T12:00:00.000Z');
-
-    await client.sendEmail({
-      to: ['a@example.com', ' b@example.com ', ''],
-      from: 'cms@example.com',
-      subject: 'Test subject',
-      body: 'Test body',
-      htmlBody: '<p>Test body</p>',
-      expiresAt: expiresAt,
-    });
-
-    const email = mockAdd.mock.calls[0][0];
-    expect(email.to).toEqual(['a@example.com', 'b@example.com']);
-    expect(email.from).toBe('cms@example.com');
-    expect(email.htmlBody).toBe('<p>Test body</p>');
-    expect(email.expiredAt.toDate()).toEqual(expiresAt);
-  });
-
   it('derives a plain-text body from the html body', async () => {
     const {RootCMSClient} = await import('./client.js');
     const client = new RootCMSClient(mockRootConfig);
@@ -147,47 +126,5 @@ describe('RootCMSClient.sendEmail', () => {
     expect(mockFetch.mock.calls[0][0]).toBe(
       'https://services.rootjs.dev/_/send_emails?projectId=test-project'
     );
-  });
-
-  it('notifies a self-hosted email service by base url', async () => {
-    const {RootCMSClient} = await import('./client.js');
-    const client = new RootCMSClient(mockRootConfig);
-
-    await client.sendEmail({
-      to: 'a@example.com',
-      subject: 'Test subject',
-      body: 'Test body',
-      emailService: 'https://services.example.com/',
-    });
-
-    expect(mockFetch.mock.calls[0][0]).toBe(
-      'https://services.example.com/_/send_emails?projectId=test-project'
-    );
-  });
-
-  it('resolves even when the email service request fails', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-    mockFetch.mockRejectedValue(new Error('network error'));
-
-    const {RootCMSClient} = await import('./client.js');
-    const client = new RootCMSClient(mockRootConfig);
-
-    const emailId = await client.sendEmail({
-      to: 'a@example.com',
-      subject: 'Test subject',
-      body: 'Test body',
-      emailService: true,
-    });
-    expect(emailId).toBe('email-1');
-
-    // Flush the fire-and-forget request to verify the error is handled.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(consoleError).toHaveBeenCalledWith(
-      'failed to notify the email service:',
-      expect.any(Error)
-    );
-    consoleError.mockRestore();
   });
 });

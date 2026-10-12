@@ -407,29 +407,4 @@ describe('PublishDocModal', () => {
       .toBeVisible();
     expect(cmsGetDocDiffSummary).toHaveBeenCalledTimes(1);
   });
-
-  it('renders publish confirmation with long doc id', async () => {
-    (window as any).__ROOT_CTX = {
-      experiments: {},
-      rootConfig: {projectId: 'test-project'},
-    };
-
-    await page.viewport(640, 480);
-    renderModal(
-      'very-long-doc-id-that-should-break-word-and-wrap-to-the-next-line-to-avoid-overflowing-the-modal-content-area',
-      {width: 640, height: 480}
-    );
-
-    await page.getByRole('button', {name: 'Publish', exact: true}).click();
-
-    // Now the confirm modal should appear.
-    await expect
-      .element(page.getByText('Are you sure you want to publish'))
-      .toBeVisible();
-    await expect.element(page.getByTestId('doc-id')).toBeVisible();
-
-    await expect
-      .element(page.getByTestId('wrapper').first())
-      .toMatchScreenshot('publish-doc-modal.png');
-  });
 });

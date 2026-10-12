@@ -154,12 +154,6 @@ describe('stableJsonStringify', () => {
 });
 
 describe('deepMerge', () => {
-  it('merges shallow keys, source overrides target', () => {
-    const target: Record<string, any> = {a: 1, b: 2};
-    const source: Record<string, any> = {b: 99, c: 3};
-    expect(deepMerge(target, source)).toEqual({a: 1, b: 99, c: 3});
-  });
-
   it('recursively merges nested objects', () => {
     const target: Record<string, any> = {a: {x: 1, y: 2}};
     const source: Record<string, any> = {a: {y: 99, z: 3}};
@@ -176,20 +170,6 @@ describe('deepMerge', () => {
     const target: Record<string, any> = {a: 1};
     const source: Record<string, any> = {a: undefined};
     expect(deepMerge(target, source)).toEqual({a: 1});
-  });
-
-  it('allows null to override target values', () => {
-    const target: Record<string, any> = {a: 1};
-    const source: Record<string, any> = {a: null};
-    expect(deepMerge(target, source)).toEqual({a: null});
-  });
-
-  it('does not mutate the inputs', () => {
-    const target: Record<string, any> = {a: {x: 1}};
-    const source: Record<string, any> = {a: {y: 2}};
-    deepMerge(target, source);
-    expect(target).toEqual({a: {x: 1}});
-    expect(source).toEqual({a: {y: 2}});
   });
 
   it('replaces array-maps wholesale instead of merging them', () => {

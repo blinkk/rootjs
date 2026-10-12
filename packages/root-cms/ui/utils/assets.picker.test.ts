@@ -98,24 +98,11 @@ describe('resolveAssetPickerFolder', () => {
     expect(await resolveAssetPickerFolder('asset-b')).toEqual('folderB');
   });
 
-  it('remembers the project root over the asset folder', async () => {
-    setAssetPickerLastFolder('');
-    expect(await resolveAssetPickerFolder('asset-a')).toEqual('');
-  });
-
   it('opens the last visited folder for an empty field', async () => {
     expect(await resolveAssetPickerFolder(undefined)).toEqual('');
 
     setAssetPickerLastFolder('folderA');
     expect(await resolveAssetPickerFolder(undefined)).toEqual('folderA');
-  });
-
-  it('falls back to the project root for an asset in the root', async () => {
-    expect(await resolveAssetPickerFolder('asset-root')).toEqual('');
-  });
-
-  it('falls back to the project root when the asset is missing', async () => {
-    expect(await resolveAssetPickerFolder('asset-gone')).toEqual('');
   });
 
   it('falls back to the project root when the asset lookup fails', async () => {

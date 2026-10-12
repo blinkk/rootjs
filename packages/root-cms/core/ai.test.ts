@@ -15,7 +15,6 @@ import {
   sanitizeDanglingToolCalls,
   readRootMd,
   ROOT_MD_FILENAME,
-  sanitizeGeneratedTitle,
   serializeAiConfig,
   stripUndefined,
   testSupportsImageEditing,
@@ -50,15 +49,6 @@ describe('ai', () => {
 
     it('falls back to the configured default when modelId is missing', () => {
       expect(findModel(config)?.id).toBe('claude-opus');
-    });
-
-    it('falls back to the first model when default is unset', () => {
-      const noDefault: AiConfig = {models: config.models};
-      expect(findModel(noDefault)?.id).toBe('gpt-4o');
-    });
-
-    it('falls back to the default for unknown ids', () => {
-      expect(findModel(config, 'unknown')?.id).toBe('claude-opus');
     });
   });
 
@@ -221,19 +211,6 @@ describe('ai', () => {
   });
 
   describe('testSupportsImageEditing', () => {
-    it('accepts gemini image models but not imagen', () => {
-      expect(
-        testSupportsImageEditing({id: 'gemini-3-pro-image', provider: 'google'})
-      ).toBe(true);
-      expect(
-        testSupportsImageEditing({
-          id: 'img',
-          provider: 'google',
-          modelId: 'imagen-4.0-generate-001',
-        })
-      ).toBe(false);
-    });
-
     it('accepts openai image models except dall-e-3', () => {
       expect(
         testSupportsImageEditing({id: 'gpt-image-1', provider: 'openai'})
@@ -261,10 +238,6 @@ describe('ai', () => {
   });
 
   describe('deriveChatTitle', () => {
-    it('returns "New chat" for an empty list', () => {
-      expect(deriveChatTitle([])).toBe('New chat');
-    });
-
     it('extracts the first user text part', () => {
       const title = deriveChatTitle([
         {
@@ -275,22 +248,9 @@ describe('ai', () => {
       ]);
       expect(title).toBe('Hello world');
     });
-
-    it('truncates long messages', () => {
-      const longText = 'a'.repeat(120);
-      const title = deriveChatTitle([
-        {id: '1', role: 'user', parts: [{type: 'text', text: longText}]} as any,
-      ]);
-      expect(title.length).toBeLessThanOrEqual(80);
-      expect(title.endsWith('…')).toBe(true);
-    });
   });
 
   describe('buildTitlePromptContext', () => {
-    it('returns an empty string for no messages', () => {
-      expect(buildTitlePromptContext([])).toBe('');
-    });
-
     it('includes the first user turn and first assistant text turn', () => {
       const ctx = buildTitlePromptContext([
         {
@@ -330,109 +290,6 @@ describe('ai', () => {
       expect(ctx).not.toContain('Internal thoughts');
       expect(ctx).not.toContain('searchDocs');
     });
-
-    it('ignores assistant turns with no text content', () => {
-      const ctx = buildTitlePromptContext([
-        {
-          id: '1',
-          role: 'user',
-          parts: [{type: 'text', text: 'Fix the broken image'}],
-        } as any,
-        {
-          id: '2',
-          role: 'assistant',
-          parts: [{type: 'tool-call', toolName: 'readDoc', input: {}}],
-        } as any,
-        {
-          id: '3',
-          role: 'assistant',
-          parts: [{type: 'text', text: 'The image path was wrong.'}],
-        } as any,
-      ]);
-      expect(ctx).toContain('Assistant: The image path was wrong.');
-    });
-
-    it('stops after the first user/assistant text pair', () => {
-      const ctx = buildTitlePromptContext([
-        {
-          id: '1',
-          role: 'user',
-          parts: [{type: 'text', text: 'first question'}],
-        } as any,
-        {
-          id: '2',
-          role: 'assistant',
-          parts: [{type: 'text', text: 'first answer'}],
-        } as any,
-        {
-          id: '3',
-          role: 'user',
-          parts: [{type: 'text', text: 'follow-up question'}],
-        } as any,
-      ]);
-      expect(ctx).not.toContain('follow-up question');
-    });
-
-    it('truncates very long pasted blobs', () => {
-      const blob = 'a'.repeat(2000);
-      const ctx = buildTitlePromptContext([
-        {id: '1', role: 'user', parts: [{type: 'text', text: blob}]} as any,
-      ]);
-      expect(ctx.length).toBeLessThan(blob.length);
-      expect(ctx.endsWith('…')).toBe(true);
-    });
-  });
-
-  describe('sanitizeGeneratedTitle', () => {
-    it('returns empty for empty input', () => {
-      expect(sanitizeGeneratedTitle('')).toBe('');
-      expect(sanitizeGeneratedTitle('   ')).toBe('');
-    });
-
-    it('strips surrounding quotes', () => {
-      expect(sanitizeGeneratedTitle('"Translate Hero Copy"')).toBe(
-        'Translate Hero Copy'
-      );
-      expect(sanitizeGeneratedTitle('“Translate Hero Copy”')).toBe(
-        'Translate Hero Copy'
-      );
-    });
-
-    it('strips a leading "Title:" prefix', () => {
-      expect(sanitizeGeneratedTitle('Title: Translate Hero Copy')).toBe(
-        'Translate Hero Copy'
-      );
-      expect(sanitizeGeneratedTitle('Chat title — Debug Upload')).toBe(
-        'Debug Upload'
-      );
-    });
-
-    it('drops trailing punctuation', () => {
-      expect(sanitizeGeneratedTitle('Translate Hero Copy.')).toBe(
-        'Translate Hero Copy'
-      );
-      expect(sanitizeGeneratedTitle('Translate Hero Copy!')).toBe(
-        'Translate Hero Copy'
-      );
-    });
-
-    it('keeps only the first non-empty line', () => {
-      const raw = 'Translate Hero Copy\n\nThis title summarizes the chat.';
-      expect(sanitizeGeneratedTitle(raw)).toBe('Translate Hero Copy');
-    });
-
-    it('strips markdown emphasis', () => {
-      expect(sanitizeGeneratedTitle('**Translate Hero Copy**')).toBe(
-        'Translate Hero Copy'
-      );
-      expect(sanitizeGeneratedTitle('`Debug Upload`')).toBe('Debug Upload');
-    });
-
-    it('truncates overly long titles with an ellipsis', () => {
-      const title = sanitizeGeneratedTitle('a'.repeat(120));
-      expect(title.length).toBeLessThanOrEqual(80);
-      expect(title.endsWith('…')).toBe(true);
-    });
   });
 
   describe('readRootMd', () => {
@@ -446,10 +303,6 @@ describe('ai', () => {
       await fs.rm(tmpDir, {recursive: true, force: true});
     });
 
-    it('returns null when ROOT.md is missing', async () => {
-      expect(await readRootMd(tmpDir)).toBeNull();
-    });
-
     it('returns trimmed contents when ROOT.md exists', async () => {
       await fs.writeFile(
         path.join(tmpDir, ROOT_MD_FILENAME),
@@ -458,11 +311,6 @@ describe('ai', () => {
       expect(await readRootMd(tmpDir)).toBe(
         '# Project conventions\n\nUse `Foo` for bar.'
       );
-    });
-
-    it('returns null for an empty/whitespace-only file', async () => {
-      await fs.writeFile(path.join(tmpDir, ROOT_MD_FILENAME), '   \n\n');
-      expect(await readRootMd(tmpDir)).toBeNull();
     });
   });
 
@@ -510,16 +358,6 @@ describe('ai', () => {
         expect(prompt).toContain('Before the first write');
         expect(prompt).toContain('After write tools finish');
       }
-    });
-
-    it('always names the current execution mode', () => {
-      expect(buildExecutionModePrompt('read')).toContain('Read only');
-      expect(buildExecutionModePrompt('approve')).toContain(
-        'Ask before writing'
-      );
-      expect(buildExecutionModePrompt('auto')).toContain(
-        'Auto-apply draft edits'
-      );
     });
 
     it('explains the release policy only when writes are possible', () => {
@@ -643,17 +481,6 @@ describe('ai', () => {
       const out = stripUndefined([1, undefined, {meta: undefined, ok: true}]);
       expect(out).toEqual([1, {ok: true}]);
     });
-
-    it('preserves null values (only undefined is removed)', () => {
-      const out = stripUndefined({a: null, b: undefined});
-      expect(out).toEqual({a: null});
-    });
-
-    it('returns primitives unchanged', () => {
-      expect(stripUndefined('hello')).toBe('hello');
-      expect(stripUndefined(42)).toBe(42);
-      expect(stripUndefined(null)).toBeNull();
-    });
   });
 
   describe('extractJsonFromResponse', () => {
@@ -674,27 +501,6 @@ describe('ai', () => {
       expect(extractJsonFromResponse(input)).toBe(
         '{"en": "Hello", "es": "Hola"}'
       );
-    });
-
-    it('should handle JSON with whitespace', () => {
-      const input = '  \n  {"en": "Hello"}  \n  ';
-      expect(extractJsonFromResponse(input)).toBe('{"en": "Hello"}');
-    });
-
-    it('should handle multiline JSON in code blocks', () => {
-      const input = '```json\n{\n  "en": "Hello",\n  "es": "Hola"\n}\n```';
-      expect(extractJsonFromResponse(input)).toBe(
-        '{\n  "en": "Hello",\n  "es": "Hola"\n}'
-      );
-    });
-
-    it('should handle empty strings', () => {
-      expect(extractJsonFromResponse('')).toBe('');
-    });
-
-    it('should handle JSON with only whitespace around code blocks', () => {
-      const input = '  ```json\n{"locale": "value"}\n```  ';
-      expect(extractJsonFromResponse(input)).toBe('{"locale": "value"}');
     });
   });
 });

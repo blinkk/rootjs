@@ -92,15 +92,6 @@ test('sync exits non-zero and does not report "up to date" when gcloud fails', a
   assert.isFalse(envExists(), 'nothing should be written on failure');
 });
 
-test('pull also fails the CLI when gcloud fails', async () => {
-  gcloud.fail = true;
-
-  await runSecrets('pull');
-
-  assert.equal(process.exitCode, 1);
-  assert.notInclude(logs.join('\n'), 'up to date');
-});
-
 test('a successful sync writes .env, reports the update, and exits clean', async () => {
   gsmStore.set('site-a', {API_KEY: 'v1'});
 

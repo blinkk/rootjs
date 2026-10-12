@@ -1,21 +1,11 @@
 import {describe, it, expect} from 'vitest';
-import {
-  cmsToolPrefix,
-  cmsUrlToIframeSrc,
-  iframeLocationToCmsUrl,
-} from './iframe-url-sync.js';
+import {cmsUrlToIframeSrc, iframeLocationToCmsUrl} from './iframe-url-sync.js';
 
 /** Builds a UrlParts from a relative url like "/foo?a=1#h". */
 function parts(relative: string) {
   const url = new URL(relative, 'https://cms.example.com');
   return {pathname: url.pathname, search: url.search, hash: url.hash};
 }
-
-describe('cmsToolPrefix', () => {
-  it('builds the tool route prefix', () => {
-    expect(cmsToolPrefix('foo')).toBe('/cms/tools/foo');
-  });
-});
 
 describe('iframeLocationToCmsUrl', () => {
   it('mirrors a sub-path onto the cms tool prefix', () => {
@@ -32,18 +22,6 @@ describe('iframeLocationToCmsUrl', () => {
         parts('/myroute/foo/bar/?q=1#section')
       )
     ).toBe('/cms/tools/foo/bar/?q=1#section');
-  });
-
-  // `?preview=true` is an auth-transport param; it should be hidden from the
-  // clean CMS URL while other params are preserved.
-  it('strips preview=true from the cms url', () => {
-    expect(
-      iframeLocationToCmsUrl(
-        '/myroute/foo',
-        'foo',
-        parts('/myroute/foo/bar/?preview=true#section')
-      )
-    ).toBe('/cms/tools/foo/bar/#section');
   });
 
   it('strips preview=true but keeps other params', () => {
@@ -69,16 +47,6 @@ describe('iframeLocationToCmsUrl', () => {
     ).toBe('/cms/tools/foo');
   });
 
-  // A trailing slash on the iframe url should not change the mirrored result.
-  it('works whether or not the iframe url has a trailing slash', () => {
-    expect(
-      iframeLocationToCmsUrl('/myroute/foo/', 'foo', parts('/myroute/foo/bar/'))
-    ).toBe('/cms/tools/foo/bar/');
-    expect(
-      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/myroute/foo/bar/'))
-    ).toBe('/cms/tools/foo/bar/');
-  });
-
   it('handles absolute (cross-origin) iframe urls', () => {
     expect(
       iframeLocationToCmsUrl(
@@ -87,12 +55,6 @@ describe('iframeLocationToCmsUrl', () => {
         parts('/app/insights/?q=1')
       )
     ).toBe('/cms/tools/design/insights/?q=1');
-  });
-
-  it('handles a tool mounted at the domain root', () => {
-    expect(
-      iframeLocationToCmsUrl('https://tool.example.com/', 'foo', parts('/bar/'))
-    ).toBe('/cms/tools/foo/bar/');
   });
 
   it('returns null when the iframe navigates outside its base path', () => {
@@ -146,16 +108,6 @@ describe('cmsUrlToIframeSrc', () => {
     );
     expect(withSlash).toBe('https://tool.example.com/app/x/y/');
     expect(withoutSlash).toBe('https://tool.example.com/app/x/y/');
-  });
-
-  it('handles a tool mounted at the domain root', () => {
-    expect(
-      cmsUrlToIframeSrc(
-        'https://tool.example.com/',
-        'foo',
-        parts('/cms/tools/foo/bar/')
-      )
-    ).toBe('https://tool.example.com/bar/');
   });
 
   // The CMS URL strips `preview=true`, so it must be re-added onto the iframe

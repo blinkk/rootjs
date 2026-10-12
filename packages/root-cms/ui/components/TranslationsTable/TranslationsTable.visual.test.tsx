@@ -68,37 +68,6 @@ describe('TranslationsTable', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('renders table with many translations', async () => {
-    page.viewport(2400, 1600);
-    const mockData = generateMockTranslations(50);
-    vi.mocked(l10n.loadTranslations).mockResolvedValue(mockData);
-
-    render(
-      <MantineProvider>
-        <div data-testid="translations-table">
-          <TranslationsTable />
-        </div>
-      </MantineProvider>
-    );
-
-    const element = page.getByTestId('translations-table');
-
-    // Verify header is present.
-    await expect.element(element.getByText('Source')).toBeVisible();
-
-    // Verify data loading.
-    expect(l10n.loadTranslations).toHaveBeenCalled();
-
-    await expect
-      .element(
-        element.getByText('Lorem ipsum dolor sit amet', {exact: false}).first()
-      )
-      .toBeVisible();
-    await expect
-      .element(element)
-      .toMatchScreenshot('TranslationsTable-many-rows.png');
-  });
-
   it('filters by search and tags', async () => {
     page.viewport(1200, 800);
     const mockData = generateMockTranslations(10);

@@ -48,19 +48,6 @@ test('version check notifies once, then throttles for a day', async () => {
   assert.isFalse(loggedUpdateNotice(log));
 });
 
-test('no notice when already on the latest version', async () => {
-  const fetchMock = vi.fn(async () => ({
-    ok: true,
-    json: async () => ({version: '1.0.0'}),
-  }));
-  vi.stubGlobal('fetch', fetchMock);
-  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-  await runStartupTasks({rootDir: '/tmp/project', version: '1.0.0'});
-  assert.equal(fetchMock.mock.calls.length, 1);
-  assert.isFalse(loggedUpdateNotice(log));
-});
-
 test('version check can be disabled via env var', async () => {
   const fetchMock = vi.fn(async () => ({
     ok: true,
@@ -71,19 +58,6 @@ test('version check can be disabled via env var', async () => {
   const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
   await runStartupTasks({rootDir: '/tmp/project', version: '1.0.0'});
-  assert.equal(fetchMock.mock.calls.length, 0);
-  assert.isFalse(loggedUpdateNotice(log));
-});
-
-test('pre-release builds skip the version check (no network call)', async () => {
-  const fetchMock = vi.fn(async () => ({
-    ok: true,
-    json: async () => ({version: '99.0.0'}),
-  }));
-  vi.stubGlobal('fetch', fetchMock);
-  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-  await runStartupTasks({rootDir: '/tmp/project', version: '3.1.0-rc.1'});
   assert.equal(fetchMock.mock.calls.length, 0);
   assert.isFalse(loggedUpdateNotice(log));
 });

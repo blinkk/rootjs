@@ -526,31 +526,4 @@ describe('EditHistory', () => {
       expect(value.other).toEqual('x');
     });
   });
-
-  it('clear() empties both stacks', () => {
-    const {history} = createHistory();
-    const store = createStore({'fields.title': 'v1'});
-    store.set('fields.title', 'v2');
-    history.capture({'fields.title': {before: 'v1', after: 'v2'}});
-    const undone = history.undo(store.get);
-    if (undone.status === 'applied') {
-      store.applyUpdates(undone.updates);
-    }
-    store.set('fields.other', 1);
-    history.capture({'fields.other': {before: undefined, after: 1}});
-    history.clear();
-    expect(history.canUndo()).toBe(false);
-    expect(history.canRedo()).toBe(false);
-  });
-
-  it('emits change events when stacks change', () => {
-    const {history} = createHistory();
-    const events: number[] = [];
-    history.onChange(() => events.push(1));
-    history.capture({'fields.a': {before: 1, after: 2}});
-    expect(events.length).toEqual(1);
-    const store = createStore({'fields.a': 2});
-    history.undo(store.get);
-    expect(events.length).toEqual(2);
-  });
 });

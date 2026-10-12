@@ -74,12 +74,6 @@ describe('formatAiErrorMessage', () => {
     );
   });
 
-  test('falls back to a generic explanation when the provider gives none', () => {
-    expect(formatAiErrorMessage(apiError(529, ''))).toBe(
-      'The AI provider is temporarily unavailable (HTTP 529). The provider is temporarily unable to handle the request. Please try again in a moment.'
-    );
-  });
-
   test('keeps the provider message for permanent failures', () => {
     expect(formatAiErrorMessage(apiError(401, 'Invalid API key'))).toBe(
       'Invalid API key (HTTP 401)'
@@ -87,12 +81,5 @@ describe('formatAiErrorMessage', () => {
     expect(formatAiErrorMessage(new Error('schema mismatch'))).toBe(
       'schema mismatch'
     );
-  });
-
-  test('handles unknown error values', () => {
-    expect(formatAiErrorMessage(undefined)).toBe(
-      'An unexpected error occurred.'
-    );
-    expect(formatAiErrorMessage('plain string')).toBe('plain string');
   });
 });

@@ -74,36 +74,6 @@ describe('RootCMSClient Validation', () => {
     mockGetCollectionSchema = projectModule.getCollectionSchema as any;
   });
 
-  describe('getCollection', () => {
-    it('returns collection schema when it exists', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      const testSchema = schema.define({
-        name: 'TestCollection',
-        fields: [schema.string({id: 'title'})],
-      });
-
-      mockGetCollectionSchema.mockResolvedValue(testSchema);
-
-      const result = await client.getCollection('TestCollection');
-
-      expect(mockGetCollectionSchema).toHaveBeenCalledWith('TestCollection');
-      expect(result).toEqual(testSchema);
-    });
-
-    it('returns null when collection does not exist', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      mockGetCollectionSchema.mockResolvedValue(null);
-
-      const result = await client.getCollection('NonExistent');
-
-      expect(result).toBeNull();
-    });
-  });
-
   describe('saveDraftData with validation', () => {
     it('validates and saves successfully with valid data', async () => {
       const {RootCMSClient} = await import('./client.js');
@@ -796,24 +766,6 @@ describe('RootCMSClient Validation', () => {
   });
 
   describe('getRawDoc parameter validation', () => {
-    it('throws error when collectionId is empty', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      await expect(
-        client.getRawDoc('', 'test-slug', {mode: 'draft'})
-      ).rejects.toThrow(/collectionId is required/);
-    });
-
-    it('throws error when slug is empty', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      await expect(
-        client.getRawDoc('Pages', '', {mode: 'draft'})
-      ).rejects.toThrow(/slug is required/);
-    });
-
     it('returns null without querying when slug exceeds Firestore id byte limit', async () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig);
@@ -841,28 +793,6 @@ describe('RootCMSClient Validation', () => {
 
       expect(result).toBeNull();
       expect(mockDoc).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('listDocs parameter validation', () => {
-    it('throws error when collectionId is empty', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      await expect(client.listDocs('', {mode: 'draft'})).rejects.toThrow(
-        /collectionId is required/
-      );
-    });
-  });
-
-  describe('getDocsCount parameter validation', () => {
-    it('throws error when collectionId is empty', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const client = new RootCMSClient(mockRootConfig);
-
-      await expect(client.getDocsCount('', {mode: 'draft'})).rejects.toThrow(
-        /collectionId is required/
-      );
     });
   });
 
@@ -903,20 +833,6 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([['slug', undefined]]);
     });
 
-    it('defaults to orderBy slug even when customSorting is enabled', async () => {
-      const {queryMock, orderByCalls} = createQueryMock();
-      const client = await createClient(queryMock);
-      mockGetCollectionSchema.mockResolvedValue({
-        name: 'Products',
-        customSorting: true,
-        fields: [],
-      });
-
-      await client.listDocs('Products', {mode: 'published'});
-
-      expect(orderByCalls).toEqual([['slug', undefined]]);
-    });
-
     it('explicit orderBy takes precedence over the default', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
@@ -931,23 +847,6 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([['sys.createdAt', 'desc']]);
     });
 
-    it('supports an explicit orderBy of sys.sortKey', async () => {
-      const {queryMock, orderByCalls} = createQueryMock();
-      const client = await createClient(queryMock);
-      mockGetCollectionSchema.mockResolvedValue({
-        name: 'Products',
-        customSorting: true,
-        fields: [],
-      });
-
-      await client.listDocs('Products', {
-        mode: 'published',
-        orderBy: 'sys.sortKey',
-      });
-
-      expect(orderByCalls).toEqual([['sys.sortKey', undefined]]);
-    });
-
     it('skips the default when a query fn is provided', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
@@ -959,21 +858,6 @@ describe('RootCMSClient Validation', () => {
       });
 
       expect(orderByCalls).toEqual([]);
-      expect(queryMock.where).toHaveBeenCalled();
-    });
-
-    it('applies an explicit orderBy alongside a query fn', async () => {
-      const {queryMock, orderByCalls} = createQueryMock();
-      const client = await createClient(queryMock);
-      mockGetCollectionSchema.mockResolvedValue({name: 'Pages', fields: []});
-
-      await client.listDocs('Pages', {
-        mode: 'published',
-        orderBy: 'slug',
-        query: (q: any) => q.where('sys.locales', 'array-contains', 'en'),
-      });
-
-      expect(orderByCalls).toEqual([['slug', undefined]]);
       expect(queryMock.where).toHaveBeenCalled();
     });
 

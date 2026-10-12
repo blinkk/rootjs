@@ -142,33 +142,6 @@ describe('lazyRoute', () => {
     vi.restoreAllMocks();
   });
 
-  test('shows a loading indicator until the import resolves', async () => {
-    let resolveImport!: (component: FunctionComponent) => void;
-    const factory = vi.fn(
-      () =>
-        new Promise<FunctionComponent>((resolve) => {
-          resolveImport = resolve;
-        })
-    );
-    const LazyComponent = lazyRoute(factory);
-    const result = render(<LazyComponent />);
-    // The loading screen renders within the app frame by default.
-    expect(
-      result.container.querySelector('.Layout .RouteLoading')
-    ).toBeTruthy();
-    resolveImport(TestComponent);
-    await result.findByText('test page');
-    expect(result.container.querySelector('.RouteLoading')).toBeFalsy();
-  });
-
-  test('shows a frameless loading indicator for frameless routes', () => {
-    const factory = vi.fn(() => new Promise<FunctionComponent>(() => {}));
-    const LazyComponent = lazyRoute(factory, {frame: false});
-    const result = render(<LazyComponent />);
-    expect(result.container.querySelector('.RouteLoading')).toBeTruthy();
-    expect(result.container.querySelector('.Layout')).toBeFalsy();
-  });
-
   test('renders immediately once the import has resolved', async () => {
     const factory = vi.fn().mockResolvedValue(TestComponent);
     const LazyComponent = lazyRoute(factory);

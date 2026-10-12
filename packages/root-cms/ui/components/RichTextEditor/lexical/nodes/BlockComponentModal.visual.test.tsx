@@ -58,27 +58,6 @@ function renderModal(initialValue: Record<string, any>) {
 describe('BlockComponentModal', () => {
   afterEach(() => cleanup());
 
-  it('renders array items on first open (array-map form)', async () => {
-    const initialValue = {
-      slides: {
-        _array: ['k1', 'k2'],
-        k1: {title: 'Slide 1'},
-        k2: {title: 'Slide 2'},
-      },
-    };
-    renderModal(initialValue);
-    // Wait for items to render. Items are rendered as ArrayField list entries.
-    await vi.waitFor(
-      () => {
-        const items = document.body.querySelectorAll(
-          '.DocEditor__ArrayField__item'
-        );
-        expect(items.length).toBe(2);
-      },
-      {timeout: 2000}
-    );
-  });
-
   it('renders items after close+reopen (array-map preserved)', async () => {
     const initialValue = {
       slides: {

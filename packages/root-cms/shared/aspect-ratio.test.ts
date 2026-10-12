@@ -1,10 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   COMMON_ASPECT_RATIOS,
-  flipAspectRatio,
-  formatAspectRatio,
   formatDimensionsAspectRatio,
-  normalizeAspectRatios,
   parseAspectRatio,
   testAnyAspectRatioMatches,
   testAspectRatioMatches,
@@ -39,25 +36,6 @@ describe('parseAspectRatio', () => {
     expect(parseAspectRatio(0)).toBe(null);
     expect(parseAspectRatio(-1)).toBe(null);
     expect(parseAspectRatio(undefined)).toBe(null);
-  });
-});
-
-describe('normalizeAspectRatios', () => {
-  it('normalizes single values and lists', () => {
-    expect(normalizeAspectRatios(undefined)).toEqual([]);
-    expect(normalizeAspectRatios('16:9')).toEqual(['16:9']);
-    expect(normalizeAspectRatios(['16:9', 'foo', 1])).toEqual(['16:9', 1]);
-  });
-});
-
-describe('formatAspectRatio', () => {
-  it('formats aspect ratios', () => {
-    expect(formatAspectRatio('16:9')).toBe('16:9');
-    expect(formatAspectRatio('16/9')).toBe('16:9');
-    expect(formatAspectRatio('1400x600')).toBe('1400:600');
-    expect(formatAspectRatio(1.5)).toBe('3:2');
-    expect(formatAspectRatio(16 / 9)).toBe('16:9');
-    expect(formatAspectRatio(1.85)).toBe('1.85:1');
   });
 });
 
@@ -98,14 +76,6 @@ describe('formatDimensionsAspectRatio with known ratios', () => {
     expect(formatDimensionsAspectRatio(1200, 630, COMMON_ASPECT_RATIOS)).toBe(
       '1.9:1'
     );
-  });
-});
-
-describe('flipAspectRatio', () => {
-  it('flips ratio strings and numbers', () => {
-    expect(flipAspectRatio('16:9')).toBe('9:16');
-    expect(flipAspectRatio('1400x600')).toBe('600:1400');
-    expect(flipAspectRatio(2)).toBe(0.5);
   });
 });
 

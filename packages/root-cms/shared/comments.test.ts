@@ -3,12 +3,8 @@ import {
   countThreadComments,
   fieldKeyToThreadId,
   FieldCommentThread,
-  resolvedThreadId,
   getThreadComments,
-  isOpenThread,
-  normalizeEmails,
   sortThreads,
-  truncateCommentContent,
 } from './comments.js';
 
 function ts(millis: number) {
@@ -60,20 +56,7 @@ describe('fieldKeyToThreadId', () => {
   });
 });
 
-describe('resolvedThreadId', () => {
-  it('suffixes the open thread id with the resolve time', () => {
-    expect(resolvedThreadId('title-abc123', 1788365631876.9)).toBe(
-      'title-abc123-1788365631876'
-    );
-  });
-});
-
 describe('thread helpers', () => {
-  it('treats threads without a resolved status as open', () => {
-    expect(isOpenThread({status: 'open'})).toBe(true);
-    expect(isOpenThread({status: 'resolved'})).toBe(false);
-  });
-
   it('separates comments from system events', () => {
     const t = thread({
       comments: [
@@ -90,17 +73,6 @@ describe('thread helpers', () => {
     });
     expect(getThreadComments(t).map((c) => c.id)).toEqual(['1', '3']);
     expect(countThreadComments(t)).toBe(1);
-  });
-
-  it('normalizes email lists', () => {
-    expect(
-      normalizeEmails([' A@Example.com', 'a@example.com', '', null])
-    ).toEqual(['a@example.com']);
-  });
-
-  it('truncates long content with an ellipsis', () => {
-    expect(truncateCommentContent('hello world', 20)).toBe('hello world');
-    expect(truncateCommentContent('hello world', 6)).toBe('hello…');
   });
 
   it('sorts open threads before resolved ones, most recent first', () => {

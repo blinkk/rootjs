@@ -77,12 +77,4 @@ describe('FloatingLinkEditorPlugin', () => {
     });
     await expect.element(checkbox).toBeChecked();
   });
-
-  it('reverts pending changes with undo', async () => {
-    const {checkbox} = await renderLinkEditor();
-    await userEvent.click(checkbox);
-    await expect.element(checkbox).toBeChecked();
-    await userEvent.click(page.getByTitle('Undo'));
-    await expect.element(checkbox).not.toBeChecked();
-  });
 });

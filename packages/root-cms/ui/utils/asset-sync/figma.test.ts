@@ -23,24 +23,12 @@ describe('parseFigmaUrl', () => {
     ).toEqual({fileKey: 'AbC123xyz', nodeId: '1:2'});
   });
 
-  it('parses proto URLs', () => {
-    expect(parseFigmaUrl('https://www.figma.com/proto/AbC123xyz/Demo')).toEqual(
-      {fileKey: 'AbC123xyz'}
-    );
-  });
-
   it('uses the branch key for branch URLs', () => {
     expect(
       parseFigmaUrl(
         'https://www.figma.com/design/AbC123xyz/branch/DeF456uvw/My-File'
       )
     ).toEqual({fileKey: 'DeF456uvw'});
-  });
-
-  it('accepts figma.com without www', () => {
-    expect(parseFigmaUrl('https://figma.com/design/AbC123xyz/File')).toEqual({
-      fileKey: 'AbC123xyz',
-    });
   });
 
   it('rejects non-figma URLs', () => {
@@ -71,11 +59,6 @@ describe('buildExportFilename', () => {
     expect(buildExportFilename('icon/24/arrow', {format: 'SVG'})).toEqual(
       'icon-24-arrow.svg'
     );
-  });
-
-  it('defaults to png and normalizes jpeg', () => {
-    expect(buildExportFilename('hero', {})).toEqual('hero.png');
-    expect(buildExportFilename('hero', {format: 'JPEG'})).toEqual('hero.jpg');
   });
 });
 

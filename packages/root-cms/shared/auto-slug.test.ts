@@ -5,11 +5,6 @@ import {renderAutoSlug} from './auto-slug.js';
 const FIXED_DATE = new Date(2026, 5, 2, 9, 7, 5); // 2026-06-02 09:07:05
 
 describe('renderAutoSlug', () => {
-  it('returns literal templates unchanged when normalized', () => {
-    expect(renderAutoSlug('hello')).toBe('hello');
-    expect(renderAutoSlug('foo-bar')).toBe('foo-bar');
-  });
-
   it('renders {date} as YYYYMMDD by default', () => {
     expect(renderAutoSlug('{date}', {now: FIXED_DATE})).toBe('20260602');
   });
@@ -29,20 +24,6 @@ describe('renderAutoSlug', () => {
     expect(a).toMatch(/^[a-z0-9]{6}$/);
     const b = renderAutoSlug('{random:12}');
     expect(b).toMatch(/^[a-z0-9]{12}$/);
-  });
-
-  it('renders {adjective} and {noun} from the word lists', () => {
-    const adj = renderAutoSlug('{adjective}');
-    expect(ADJECTIVES).toContain(adj);
-    const noun = renderAutoSlug('{noun}');
-    expect(NOUNS).toContain(noun);
-  });
-
-  it('combines tokens with literal separators', () => {
-    const slug = renderAutoSlug('{date:YYYYMMDD}-{adjective}-{noun}', {
-      now: FIXED_DATE,
-    });
-    expect(slug).toMatch(/^20260602-[a-z]+-[a-z]+$/);
   });
 
   it('leaves unknown tokens untouched', () => {

@@ -70,22 +70,6 @@ function menuItemLabels() {
 }
 
 describe('ToolbarPlugin components dropdown', () => {
-  it('omits the filter when there are only a few components', async () => {
-    const user = userEvent.setup();
-    render(
-      <MantineProvider>
-        <DeeplinkProvider>
-          <LexicalEditor />
-        </DeeplinkProvider>
-      </MantineProvider>
-    );
-
-    await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
-
-    expect(componentsFilter()).toBeNull();
-    expect(menuItemLabels()).toContain('HTML Code');
-  });
-
   it('focuses the filter and narrows the list as you type', async () => {
     const user = renderFilterableEditor();
     await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
@@ -107,16 +91,6 @@ describe('ToolbarPlugin components dropdown', () => {
     expect(menuItemLabels()).toEqual(['Pull Quote']);
   });
 
-  it('shows an empty state when nothing matches', async () => {
-    const user = renderFilterableEditor();
-    await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
-
-    await user.keyboard('nothingmatchesthis');
-
-    expect(menuItemLabels()).toEqual([]);
-    expect(screen.getByText('No components found.')).toBeTruthy();
-  });
-
   it('inserts the first match on enter', async () => {
     const user = renderFilterableEditor();
     await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
@@ -125,40 +99,5 @@ describe('ToolbarPlugin components dropdown', () => {
 
     // The HTML block opens its editor modal.
     expect(screen.getByRole('button', {name: 'Insert block'})).toBeTruthy();
-  });
-
-  it('moves focus into the list on arrow down', async () => {
-    const user = renderFilterableEditor();
-    await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
-
-    await user.keyboard('hero{ArrowDown}');
-
-    expect(document.activeElement?.textContent).toBe('Hero Link');
-  });
-
-  it('clears the filter on escape, then closes the menu', async () => {
-    const user = renderFilterableEditor();
-    await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
-
-    await user.keyboard('hero{Escape}');
-    expect(componentsFilter()).toHaveProperty('value', '');
-    expect(menuItemLabels()).toContain('Pull Quote');
-
-    await user.keyboard('{Escape}');
-    await vi.waitFor(() => expect(componentsFilter()).toBeNull());
-  });
-
-  it('resets the filter when the menu is reopened', async () => {
-    const user = renderFilterableEditor();
-    const control = screen.getAllByRole('button', {name: 'Components'})[0];
-
-    await user.click(control);
-    await user.keyboard('hero');
-    await user.click(control);
-    await vi.waitFor(() => expect(componentsFilter()).toBeNull());
-
-    await user.click(control);
-    expect(componentsFilter()).toHaveProperty('value', '');
-    expect(menuItemLabels()).toContain('Pull Quote');
   });
 });

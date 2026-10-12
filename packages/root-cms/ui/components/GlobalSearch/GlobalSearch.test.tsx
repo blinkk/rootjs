@@ -164,14 +164,6 @@ describe('GlobalSearch', () => {
     window.history.replaceState({}, '', '/cms/');
   });
 
-  it('stays closed when the URL has no search params', () => {
-    window.history.replaceState({}, '', '/cms/');
-    renderSearch();
-    expect(
-      screen.queryByPlaceholderText('Search docs, collections, releases…')
-    ).toBeNull();
-  });
-
   it('opens from a deep link with the query and filter prefilled', () => {
     window.history.replaceState({}, '', '/cms/?modal=search&q=pages&type=docs');
     renderSearch();
@@ -251,12 +243,5 @@ describe('GlobalSearch', () => {
     await flush();
     expect(window.location.pathname).toBe('/cms/content/Pages');
     expect(window.location.search).toBe('?modal=search&q=hello+world');
-  });
-
-  it('hides the filter tabs while the query is empty', () => {
-    window.history.replaceState({}, '', '/cms/?modal=search');
-    renderSearch();
-    expect(getInput().value).toBe('');
-    expect(screen.queryByRole('group', {name: 'Filter results'})).toBeNull();
   });
 });

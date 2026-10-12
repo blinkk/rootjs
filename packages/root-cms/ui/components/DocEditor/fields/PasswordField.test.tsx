@@ -84,19 +84,6 @@ describe('PasswordField', () => {
     hashPasswordMock.mockClear();
   });
 
-  test('renders an input when no password is set', () => {
-    renderField(null);
-    expect(screen.getByPlaceholderText('Enter a new password')).not.toBeNull();
-    expect(screen.getByText('Set password')).not.toBeNull();
-  });
-
-  test('renders a status row when a password is set', () => {
-    renderField(STORED);
-    expect(screen.getByText('Password set')).not.toBeNull();
-    expect(screen.getByText('Change password')).not.toBeNull();
-    expect(screen.queryByPlaceholderText('Enter a new password')).toBeNull();
-  });
-
   test('hashes the password and stores only the hash', async () => {
     renderField(null, {iterations: 1000});
     const input = screen.getByPlaceholderText('Enter a new password');

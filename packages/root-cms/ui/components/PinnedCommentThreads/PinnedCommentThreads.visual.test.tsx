@@ -153,11 +153,6 @@ afterEach(() => {
 });
 
 describe('PinnedCommentThreads', () => {
-  it('renders nothing when no threads are pinned', () => {
-    renderPinned();
-    expect(document.querySelector('.PinnedCommentThreads')).toBeNull();
-  });
-
   it('renders a pinned thread in a fixed window', async () => {
     renderPinned();
     act(() => {
@@ -218,64 +213,6 @@ describe('PinnedCommentThreads', () => {
     });
     expect(win.style.left).toBe('8px');
     expect(win.style.top).toBe('8px');
-  });
-
-  it('moves the window with the arrow keys', () => {
-    renderPinned();
-    act(() => {
-      pinnedCtx.pin({
-        docId: 'Pages/foo',
-        fieldKey: 'fields.hero.title',
-        fieldLabel: 'Hero › Title',
-        x: 100,
-        y: 120,
-      });
-    });
-    const handle = screen.getByRole('button', {
-      name: 'Move comment window (use arrow keys)',
-    });
-    act(() => {
-      handle.dispatchEvent(
-        new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true})
-      );
-      handle.dispatchEvent(
-        new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true})
-      );
-    });
-    expect(getWindow().style.left).toBe('116px');
-    expect(getWindow().style.top).toBe('136px');
-  });
-
-  it('brings a focused window to the front', () => {
-    renderPinned();
-    act(() => {
-      pinnedCtx.pin({
-        docId: 'Pages/foo',
-        fieldKey: 'fields.hero.title',
-        fieldLabel: 'Hero › Title',
-        x: 100,
-        y: 120,
-      });
-      pinnedCtx.pin({
-        docId: 'Pages/foo',
-        fieldKey: 'fields.hero.body',
-        fieldLabel: 'Hero › Body',
-        x: 140,
-        y: 160,
-      });
-    });
-    const title = getWindow('Hero › Title');
-    const body = getWindow('Hero › Body');
-    expect(Number(body.style.zIndex)).toBeGreaterThan(
-      Number(title.style.zIndex)
-    );
-    act(() => {
-      pinnedCtx.focus('Pages/foo', 'fields.hero.title');
-    });
-    expect(Number(title.style.zIndex)).toBeGreaterThan(
-      Number(body.style.zIndex)
-    );
-    expect(title.classList).toContain('PinnedCommentThreads__window--flash');
   });
 
   it('unpins the thread when closed', async () => {

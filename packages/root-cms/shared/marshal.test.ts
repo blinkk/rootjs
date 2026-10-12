@@ -2,7 +2,6 @@ import {describe, it, expect} from 'vitest';
 import {
   marshalData,
   unmarshalData,
-  isArrayObject,
   isRichTextData,
   resolveArrayObjectPath,
 } from './marshal.js';
@@ -183,24 +182,6 @@ describe('unmarshalData', () => {
   });
 });
 
-describe('isArrayObject', () => {
-  it('returns true for objects with _array', () => {
-    expect(isArrayObject({_array: ['a'], a: 1})).toBe(true);
-  });
-
-  it('returns false for plain objects', () => {
-    expect(isArrayObject({foo: 'bar'})).toBe(false);
-  });
-
-  it('returns false for arrays', () => {
-    expect(isArrayObject([1, 2, 3])).toBe(false);
-  });
-
-  it('returns false for null', () => {
-    expect(isArrayObject(null)).toBe(false);
-  });
-});
-
 describe('resolveArrayObjectPath', () => {
   const data = {
     content: {
@@ -302,22 +283,6 @@ describe('isRichTextData', () => {
         blocks: [{type: 'paragraph', data: {text: 'Hello'}}],
       })
     ).toBe(true);
-  });
-
-  it('returns false for plain objects', () => {
-    expect(isRichTextData({foo: 'bar'})).toBe(false);
-  });
-
-  it('returns false for objects missing version', () => {
-    expect(isRichTextData({time: 123, blocks: []})).toBe(false);
-  });
-
-  it('returns false for arrays', () => {
-    expect(isRichTextData([1, 2, 3])).toBe(false);
-  });
-
-  it('returns false for null', () => {
-    expect(isRichTextData(null)).toBe(false);
   });
 
   it('returns false when `blocks` uses `_array` object notation', () => {

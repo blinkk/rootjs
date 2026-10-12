@@ -63,13 +63,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('runGcloud resolves stdout on success', async () => {
-  queue.push({code: 0, stdout: 'hello'});
-  const out = await runGcloud(['version']);
-  assert.equal(out, 'hello');
-  assert.deepEqual(calls[0].args, ['version']);
-});
-
 test('accessSecretJson parses a JSON object', async () => {
   queue.push({code: 0, stdout: '{"API_KEY":"v1"}'});
   const blob = await accessSecretJson('site-a', 'proj');

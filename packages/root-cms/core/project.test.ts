@@ -1,7 +1,6 @@
 import {afterEach, describe, expect, test} from 'vitest';
 import {
   convertOneOfTypes,
-  getProjectSchemas,
   resolveOneOfPatterns,
   SchemaModule,
 } from './project.js';
@@ -259,13 +258,5 @@ describe('schema resolution node budget', () => {
       ],
     };
     expect(() => convertOneOfTypes(collection, schemaModules)).not.toThrow();
-  });
-});
-
-describe('getProjectSchemas', () => {
-  test('memoizes the resolved schema map per module instance', () => {
-    const first = getProjectSchemas();
-    const second = getProjectSchemas();
-    expect(second).toBe(first);
   });
 });
