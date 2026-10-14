@@ -5,16 +5,22 @@
  * OAuth token (see `ui/utils/google-auth.ts`), so the model can only read
  * files the user personally has access to and no Google credential is ever
  * stored server-side. The REST APIs are used instead of `gapi.client` so the
- * tools work on pages that never loaded the gapi script.
+ * tools work on pages that never loaded the gapi script. The write tools'
+ * handlers (`googleToolHandlers.ts`) reuse the same fetch helpers.
  *
  * The tool set is empty unless the project configured
  * `gapi: {apiKey, clientId}` on the cmsPlugin.
  */
-import type {ToolSet} from 'ai';
+import type {ToolSet, UIMessage} from 'ai';
 import {
   createGoogleTools,
+  createGoogleWriteTools,
+  GOOGLE_TOOL_NAMES,
+  isGoogleWriteTool,
   GoogleToolError,
   throwGoogleAuthRequired,
+  type GoogleComment,
+  type GoogleCommentsContent,
   type GoogleDocContent,
   type GoogleDriveFileContent,
   type GoogleFileMeta,
@@ -29,16 +35,18 @@ import {
   clearGoogleAccessToken,
   ensureGoogleAccessToken,
   getGoogleAccessToken,
+  GOOGLE_WRITE_SCOPES,
   isGoogleApiEnabled,
 } from '../../utils/google-auth.js';
 
-const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
-const SHEETS_API_ORIGIN = 'https://sheets.googleapis.com';
-const SLIDES_API_ORIGIN = 'https://slides.googleapis.com';
+export const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
+export const SHEETS_API_ORIGIN = 'https://sheets.googleapis.com';
+export const SLIDES_API_ORIGIN = 'https://slides.googleapis.com';
+export const DOCS_API_ORIGIN = 'https://docs.googleapis.com';
 
-const DOC_MIME_TYPE = 'application/vnd.google-apps.document';
-const SHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet';
-const SLIDES_MIME_TYPE = 'application/vnd.google-apps.presentation';
+export const DOC_MIME_TYPE = 'application/vnd.google-apps.document';
+export const SHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet';
+export const SLIDES_MIME_TYPE = 'application/vnd.google-apps.presentation';
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 /** Drive file fields requested for every file read. */
@@ -122,7 +130,7 @@ function parseSlideId(url: string): string | null {
 }
 
 /** Parses a file ref, throwing a model-readable error on bad input. */
-function requireFileRef(input: string): GoogleFileRef {
+export function requireFileRef(input: string): GoogleFileRef {
   const ref = parseGoogleFileRef(input);
   if (!ref) {
     throw new GoogleToolError(
@@ -134,10 +142,29 @@ function requireFileRef(input: string): GoogleFileRef {
   return ref;
 }
 
+/** Options for `googleFetch`. */
+export interface GoogleFetchOptions {
+  method?: 'GET' | 'POST' | 'PUT';
+  /** JSON request body. */
+  body?: unknown;
+  /** Scopes needed beyond the sign-in scopes (e.g. write access). */
+  extraScopes?: string[];
+  /**
+   * Whether the Google sign-in popup may be shown. Only pass `true` while
+   * handling a user gesture (e.g. right after the user clicked "Approve").
+   */
+  interactive?: boolean;
+}
+
 /** Returns an access token, mapping "not signed in" to an auth tool error. */
-async function requireAccessToken(): Promise<string> {
+async function requireAccessToken(
+  options: GoogleFetchOptions
+): Promise<string> {
   try {
-    return await ensureGoogleAccessToken();
+    return await ensureGoogleAccessToken({
+      interactive: options.interactive,
+      extraScopes: options.extraScopes,
+    });
   } catch (err: any) {
     throwGoogleAuthRequired(
       err?.message || 'The user has not granted Google access yet.'
@@ -150,9 +177,22 @@ async function requireAccessToken(): Promise<string> {
  * `GoogleToolError`. A 401 clears the cached token and retries once, which
  * covers a token that expired mid-chat.
  */
-async function googleFetch(url: string, retryOn401 = true): Promise<Response> {
-  const token = await requireAccessToken();
-  const res = await fetch(url, {headers: {Authorization: `Bearer ${token}`}});
+export async function googleFetch(
+  url: string,
+  options: GoogleFetchOptions = {},
+  retryOn401 = true
+): Promise<Response> {
+  const token = await requireAccessToken(options);
+  const headers: Record<string, string> = {Authorization: `Bearer ${token}`};
+  const init: RequestInit = {headers};
+  if (options.method) {
+    init.method = options.method;
+  }
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    init.body = JSON.stringify(options.body);
+  }
+  const res = await fetch(url, init);
   if (res.ok) {
     return res;
   }
@@ -163,7 +203,7 @@ async function googleFetch(url: string, retryOn401 = true): Promise<Response> {
   if (res.status === 401) {
     clearGoogleAccessToken();
     if (retryOn401) {
-      return await googleFetch(url, false);
+      return await googleFetch(url, options, false);
     }
     throwGoogleAuthRequired('The Google sign-in session has expired.');
   }
@@ -192,10 +232,17 @@ async function googleFetch(url: string, retryOn401 = true): Promise<Response> {
     );
   }
   if (res.status === 403) {
+    const write = options.method && options.method !== 'GET';
     throw new GoogleToolError(
       'GOOGLE_PERMISSION_DENIED',
-      "The signed-in Google account doesn't have access to this file.",
-      {hint: 'Ask the user to share the file with their own Google account.'}
+      write
+        ? "The signed-in Google account can't edit or comment on this file."
+        : "The signed-in Google account doesn't have access to this file.",
+      {
+        hint: write
+          ? 'Ask the user to get edit (or comment) access to the file.'
+          : 'Ask the user to share the file with their own Google account.',
+      }
     );
   }
   if (res.status === 404) {
@@ -226,7 +273,7 @@ function isApiDisabledError(body: any): boolean {
   );
 }
 
-interface DriveFileMetadata {
+export interface DriveFileMetadata {
   id: string;
   name?: string;
   mimeType?: string;
@@ -235,7 +282,9 @@ interface DriveFileMetadata {
   webViewLink?: string;
 }
 
-async function fetchFileMetadata(fileId: string): Promise<DriveFileMetadata> {
+export async function fetchFileMetadata(
+  fileId: string
+): Promise<DriveFileMetadata> {
   const res = await googleFetch(
     `${DRIVE_API_ORIGIN}/drive/v3/files/${encodeURIComponent(
       fileId
@@ -244,7 +293,7 @@ async function fetchFileMetadata(fileId: string): Promise<DriveFileMetadata> {
   return (await res.json()) as DriveFileMetadata;
 }
 
-function shapeFileMeta(file: DriveFileMetadata): GoogleFileMeta {
+export function shapeFileMeta(file: DriveFileMetadata): GoogleFileMeta {
   return {
     fileId: file.id,
     name: file.name || file.id,
@@ -359,13 +408,9 @@ async function readNonNativeFileAsText(
   return await downloadAsText(file);
 }
 
-async function getSheet(
-  fileRef: string,
-  options: {sheet?: string; maxRows: number}
-): Promise<GoogleSheetContent> {
-  const ref = requireFileRef(fileRef);
-  const file = await fetchFileMetadata(ref.fileId);
-  const meta = shapeFileMeta(file);
+/** Reads a file's metadata, failing unless it is a Google Sheet. */
+export async function fetchSheetMeta(fileId: string): Promise<GoogleFileMeta> {
+  const meta = shapeFileMeta(await fetchFileMetadata(fileId));
   if (meta.mimeType !== SHEET_MIME_TYPE) {
     throw new GoogleToolError(
       'GOOGLE_UNSUPPORTED_FILE',
@@ -380,10 +425,17 @@ async function getSheet(
       }
     );
   }
+  return meta;
+}
 
+/** Lists the tabs of a spreadsheet. */
+export async function fetchSheetTabs(
+  spreadsheetId: string,
+  name: string
+): Promise<GoogleSheetTab[]> {
   const propsRes = await googleFetch(
     `${SHEETS_API_ORIGIN}/v4/spreadsheets/${encodeURIComponent(
-      ref.fileId
+      spreadsheetId
     )}?fields=sheets.properties.sheetId,sheets.properties.title`
   );
   const propsBody = await propsRes.json();
@@ -396,9 +448,19 @@ async function getSheet(
   if (tabs.length === 0) {
     throw new GoogleToolError(
       'GOOGLE_REQUEST_FAILED',
-      `"${meta.name}" has no readable tabs.`
+      `"${name}" has no readable tabs.`
     );
   }
+  return tabs;
+}
+
+async function getSheet(
+  fileRef: string,
+  options: {sheet?: string; maxRows: number}
+): Promise<GoogleSheetContent> {
+  const ref = requireFileRef(fileRef);
+  const meta = await fetchSheetMeta(ref.fileId);
+  const tabs = await fetchSheetTabs(ref.fileId, meta.name);
   const sheet = selectTab(tabs, options.sheet, ref.gid);
 
   // Request one extra row so truncation can be detected without a second call.
@@ -430,7 +492,7 @@ async function getSheet(
  * Picks the tab to read: the explicitly requested one (by title or gid), else
  * the tab from the URL's `gid`, else the first tab.
  */
-function selectTab(
+export function selectTab(
   tabs: GoogleSheetTab[],
   requested: string | undefined,
   urlGid: number | undefined
@@ -466,7 +528,7 @@ function selectTab(
 }
 
 /** Quotes a sheet title for use in an A1 range (single quotes are doubled). */
-function quoteSheetTitle(title: string): string {
+export function quoteSheetTitle(title: string): string {
   return `'${title.replace(/'/g, "''")}'`;
 }
 
@@ -750,9 +812,88 @@ async function getFile(
   return {...result, text, truncated};
 }
 
+/** Drive API fields requested for each comment. */
+const COMMENT_FIELDS =
+  'id,content,author(displayName,emailAddress),createdTime,resolved,deleted,' +
+  'quotedFileContent(value),' +
+  'replies(id,content,author(displayName,emailAddress),createdTime,action,deleted)';
+
+/** Formats a Drive `User` as "Name <email>" (or whichever part is known). */
+function formatDriveUser(user: any): string | undefined {
+  const name = String(user?.displayName || '').trim();
+  const email = String(user?.emailAddress || '').trim();
+  if (name && email) {
+    return `${name} <${email}>`;
+  }
+  return name || email || undefined;
+}
+
+/** Converts a Drive API `Comment` resource into a `GoogleComment`. */
+export function shapeComment(comment: any): GoogleComment {
+  const quotedText = String(comment?.quotedFileContent?.value || '').trim();
+  return {
+    commentId: String(comment?.id || ''),
+    author: formatDriveUser(comment?.author),
+    content: String(comment?.content || ''),
+    ...(quotedText ? {quotedText} : {}),
+    createdTime: comment?.createdTime,
+    resolved: Boolean(comment?.resolved),
+    replies: (comment?.replies || [])
+      .filter((reply: any) => !reply?.deleted)
+      .map((reply: any) => ({
+        replyId: String(reply?.id || ''),
+        author: formatDriveUser(reply?.author),
+        content: String(reply?.content || ''),
+        createdTime: reply?.createdTime,
+        ...(reply?.action ? {action: reply.action} : {}),
+      })),
+  };
+}
+
+async function listComments(
+  fileRef: string,
+  options: {includeResolved: boolean; maxResults: number}
+): Promise<GoogleCommentsContent> {
+  const {fileId} = requireFileRef(fileRef);
+  const meta = shapeFileMeta(await fetchFileMetadata(fileId));
+  const comments: GoogleComment[] = [];
+  let pageToken = '';
+  let truncated = false;
+  // Pages through the comments until `maxResults` matches are collected.
+  // Resolved comments are filtered client-side since the API can't.
+  do {
+    const params = new URLSearchParams({
+      fields: `nextPageToken,comments(${COMMENT_FIELDS})`,
+      pageSize: '100',
+      includeDeleted: 'false',
+    });
+    if (pageToken) {
+      params.set('pageToken', pageToken);
+    }
+    const res = await googleFetch(
+      `${DRIVE_API_ORIGIN}/drive/v3/files/${encodeURIComponent(
+        fileId
+      )}/comments?${params.toString()}`
+    );
+    const body = await res.json();
+    for (const raw of body?.comments || []) {
+      if (raw?.deleted || (raw?.resolved && !options.includeResolved)) {
+        continue;
+      }
+      if (comments.length >= options.maxResults) {
+        truncated = true;
+        break;
+      }
+      comments.push(shapeComment(raw));
+    }
+    pageToken = truncated ? '' : String(body?.nextPageToken || '');
+  } while (pageToken);
+  return {...meta, comments, truncated};
+}
+
 /** Builds a `GoogleToolBackend` backed by the Drive and Sheets REST APIs. */
 export function createClientGoogleToolBackend(): GoogleToolBackend {
-  return {getDoc, getSheet, getSlides, getFile};
+  return {getDoc, getSheet, getSlides, getFile, listComments};
 }
 
 /** Matches a Google Docs/Sheets/Drive link inside chat text. */
@@ -764,8 +905,42 @@ export function containsGoogleLink(text: string): boolean {
 }
 
 /**
+ * Summarizes the Google tool calls in a conversation: whether any were made,
+ * and whether a write failed because the user hadn't granted write access.
+ */
+export function getGoogleToolUsage(messages: UIMessage[]): {
+  used: boolean;
+  writeAuthFailed: boolean;
+} {
+  let used = false;
+  let writeAuthFailed = false;
+  for (const message of messages) {
+    for (const part of (message.parts || []) as any[]) {
+      const toolName =
+        typeof part.type === 'string' && part.type.startsWith('tool-')
+          ? part.type.slice('tool-'.length)
+          : part.toolName;
+      const isWrite = isGoogleWriteTool(toolName);
+      if (
+        !isWrite &&
+        !(GOOGLE_TOOL_NAMES as readonly string[]).includes(toolName)
+      ) {
+        continue;
+      }
+      used = true;
+      if (isWrite && part.output?.error === 'GOOGLE_AUTH_REQUIRED') {
+        writeAuthFailed = true;
+      }
+    }
+  }
+  return {used, writeAuthFailed};
+}
+
+/**
  * Prompts the user to grant Google access when the conversation references a
- * Google link and no access token is held yet.
+ * Google link (or already called a Google tool, e.g. on a sheet linked to a
+ * CMS doc) and no access token is held yet. When a Google edit failed for lack
+ * of write access, write access is requested too.
  *
  * Tool calls run mid-stream, long after the user's last click, so a sign-in
  * popup opened from inside a tool would be blocked by the browser. Instead the
@@ -774,15 +949,23 @@ export function containsGoogleLink(text: string): boolean {
  * (cancelled popup, blocked popup) are non-fatal: the message is still sent
  * and the tool reports `GOOGLE_AUTH_REQUIRED` if it needs access.
  */
-export async function maybeAuthorizeGoogle(texts: string[]): Promise<void> {
-  if (!isGoogleApiEnabled() || getGoogleAccessToken()) {
+export async function maybeAuthorizeGoogle(
+  texts: string[],
+  messages: UIMessage[] = []
+): Promise<void> {
+  if (!isGoogleApiEnabled()) {
     return;
   }
-  if (!texts.some(containsGoogleLink)) {
+  const usage = getGoogleToolUsage(messages);
+  if (!usage.used && !texts.some(containsGoogleLink)) {
+    return;
+  }
+  const extraScopes = usage.writeAuthFailed ? GOOGLE_WRITE_SCOPES : [];
+  if (getGoogleAccessToken(extraScopes)) {
     return;
   }
   try {
-    await ensureGoogleAccessToken({interactive: true});
+    await ensureGoogleAccessToken({interactive: true, extraScopes});
   } catch (err) {
     console.warn('google sign-in skipped:', err);
   }
@@ -791,10 +974,16 @@ export async function maybeAuthorizeGoogle(texts: string[]): Promise<void> {
 /**
  * Google tool set for the browser chat. Returns an empty set when the project
  * has no `gapi` config, so the model never sees tools it cannot use.
+ *
+ * Pass `{write: true}` to also include the (schema-only) write tools, which
+ * the chat previews and applies via `googleToolHandlers.ts`.
  */
-export function createClientGoogleTools(): ToolSet {
+export function createClientGoogleTools(options?: {write?: boolean}): ToolSet {
   if (!isGoogleApiEnabled()) {
     return {};
   }
-  return createGoogleTools(createClientGoogleToolBackend());
+  return {
+    ...createGoogleTools(createClientGoogleToolBackend()),
+    ...(options?.write ? createGoogleWriteTools() : {}),
+  };
 }

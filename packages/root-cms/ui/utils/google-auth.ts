@@ -13,6 +13,10 @@
  * base scopes), so consenting once covers the gapi-based features (Drive file
  * picker, Sheets export), the Drive asset sync provider, and the Root AI
  * Google tools.
+ *
+ * Write access (`GOOGLE_WRITE_SCOPES`) is requested incrementally, only when
+ * the user approves a Root AI edit to a Google file, so signing in to read a
+ * file never asks for permission to change it.
  */
 
 import {loadGisScript} from '../hooks/useGapiClient.js';
@@ -20,6 +24,16 @@ import {loadGisScript} from '../hooks/useGapiClient.js';
 /** Read access to files the user can open in Drive (incl. Docs exports). */
 export const GOOGLE_DRIVE_READONLY_SCOPE =
   'https://www.googleapis.com/auth/drive.readonly';
+
+/**
+ * Full Drive access, needed to edit Docs and Slides, and to add and reply to
+ * comments, on any file the user can edit (`drive.file` only covers files the
+ * CMS created or the user picked).
+ */
+export const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+
+/** Extra scopes requested before Root AI edits a Google file. */
+export const GOOGLE_WRITE_SCOPES = [GOOGLE_DRIVE_SCOPE];
 
 /**
  * Scopes requested at sign-in. Includes the same base scopes as
@@ -44,7 +58,12 @@ interface GapiUserConsent {
   at?: number;
 }
 
-let cachedToken: {accessToken: string; expiresAt: number} | null = null;
+let cachedToken: {
+  accessToken: string;
+  expiresAt: number;
+  /** Scopes the user actually granted (they can untick some at consent). */
+  scopes: string[];
+} | null = null;
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
@@ -78,6 +97,18 @@ export function isGoogleApiEnabled(): boolean {
   return Boolean(gapi?.apiKey && gapi?.clientId);
 }
 
+/** Returns `GOOGLE_LOGIN_SCOPES` plus `extraScopes`, deduplicated. */
+function withLoginScopes(extraScopes: string[] = []): string[] {
+  return Array.from(new Set([...GOOGLE_LOGIN_SCOPES, ...extraScopes]));
+}
+
+/** Parses the space-separated `scope` field of a GIS token response. */
+function parseScopeList(scope: unknown): string[] | null {
+  return typeof scope === 'string' && scope.trim()
+    ? scope.trim().split(/\s+/)
+    : null;
+}
+
 /** Whether the user has already consented to `scopes` for this client id. */
 export function hasGoogleConsent(
   scopes: string[] = GOOGLE_LOGIN_SCOPES
@@ -100,19 +131,32 @@ export function hasGoogleConsent(
  * different part of the CMS (e.g. `useGapiClient`) signed the user in — but
  * only when the user consented to the full scope list, since a token granted
  * for the base scopes alone cannot read arbitrary Drive files.
+ *
+ * Pass `extraScopes` (e.g. `GOOGLE_WRITE_SCOPES`) to only return a token that
+ * was also granted those scopes.
  */
-export function getGoogleAccessToken(): string | null {
+export function getGoogleAccessToken(
+  extraScopes: string[] = []
+): string | null {
   if (
     cachedToken &&
-    nowSeconds() < cachedToken.expiresAt - TOKEN_EXPIRY_SKEW_SECONDS
+    nowSeconds() < cachedToken.expiresAt - TOKEN_EXPIRY_SKEW_SECONDS &&
+    extraScopes.every((scope) => cachedToken!.scopes.includes(scope))
   ) {
     return cachedToken.accessToken;
   }
-  if (!hasGoogleConsent()) {
+  if (!hasGoogleConsent(withLoginScopes(extraScopes))) {
     return null;
   }
   const gapiToken = (window as any).gapi?.auth?.getToken?.();
-  return gapiToken?.access_token || null;
+  if (!gapiToken?.access_token) {
+    return null;
+  }
+  const granted = parseScopeList(gapiToken.scope);
+  if (granted && !extraScopes.every((scope) => granted.includes(scope))) {
+    return null;
+  }
+  return gapiToken.access_token;
 }
 
 /** Drops the cached token, e.g. after an API call returns 401. */
@@ -124,21 +168,25 @@ export function clearGoogleAccessToken() {
  * Requests a Google access token via the GIS token flow.
  *
  * When `interactive` is false the request is only attempted if the user has
- * already consented to `GOOGLE_LOGIN_SCOPES` (Google can then issue a token
- * without showing UI); otherwise it rejects immediately. Interactive requests
- * must be called from a user gesture so the popup isn't blocked.
+ * already consented to `GOOGLE_LOGIN_SCOPES` (plus `extraScopes`), since
+ * Google can then issue a token without showing UI; otherwise it rejects
+ * immediately. Interactive requests must be called from a user gesture so the
+ * popup isn't blocked.
  */
 export async function requestGoogleAccessToken(options?: {
   interactive?: boolean;
+  extraScopes?: string[];
 }): Promise<string> {
   const interactive = options?.interactive ?? false;
+  const extraScopes = options?.extraScopes || [];
+  const scopes = withLoginScopes(extraScopes);
   const clientId = window.__ROOT_CTX.gapi?.clientId;
   if (!clientId) {
     throw new Error(
       'Google APIs are not configured. Add `gapi: {apiKey, clientId}` to the cmsPlugin options in root.config.ts.'
     );
   }
-  const consented = hasGoogleConsent();
+  const consented = hasGoogleConsent(scopes);
   if (!interactive && !consented) {
     throw new Error('Google access has not been granted yet.');
   }
@@ -170,7 +218,9 @@ export async function requestGoogleAccessToken(options?: {
 
     const tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      scope: GOOGLE_LOGIN_SCOPES.join(' '),
+      scope: scopes.join(' '),
+      // Keep scopes granted earlier (e.g. write access) on the new token.
+      include_granted_scopes: true,
       callback: (token: any) => {
         if (!token || token.error || !token.access_token) {
           finish(
@@ -180,14 +230,28 @@ export async function requestGoogleAccessToken(options?: {
           );
           return;
         }
+        const granted = parseScopeList(token.scope) || scopes;
+        const missing = extraScopes.filter((scope) => !granted.includes(scope));
+        if (missing.length > 0) {
+          finish(
+            new Error(
+              'The Google permissions needed for this action were not granted.'
+            )
+          );
+          return;
+        }
         cachedToken = {
           accessToken: token.access_token,
           expiresAt: nowSeconds() + Number(token.expires_in || 3600),
+          scopes: granted,
         };
+        const previous = readUserConsent();
+        const previousScopes =
+          previous?.clientId === clientId ? previous.scopes || [] : [];
         writeUserConsent({
           at: nowSeconds(),
           clientId: clientId,
-          scopes: GOOGLE_LOGIN_SCOPES,
+          scopes: Array.from(new Set([...previousScopes, ...granted])),
         });
         finish(null, token.access_token);
       },
@@ -209,8 +273,9 @@ export async function requestGoogleAccessToken(options?: {
  */
 export async function ensureGoogleAccessToken(options?: {
   interactive?: boolean;
+  extraScopes?: string[];
 }): Promise<string> {
-  const token = getGoogleAccessToken();
+  const token = getGoogleAccessToken(options?.extraScopes);
   if (token) {
     return token;
   }
