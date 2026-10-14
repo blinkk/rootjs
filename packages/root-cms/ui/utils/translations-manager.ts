@@ -10,6 +10,7 @@
 
 import {
   DocumentReference,
+  FieldPath,
   Timestamp,
   WriteBatch,
   arrayUnion,
@@ -247,6 +248,37 @@ export async function getTranslationsLocaleDocs(
     });
   });
   return localeDocsById;
+}
+
+/**
+ * Finds the draft translations for a source string across all translations
+ * docs, keyed by root locale. Returns `null` if the string has no
+ * translations. When multiple translations docs contain the string, the first
+ * non-empty translation found for each locale is used.
+ */
+export async function findDraftTranslationsBySource(
+  source: string
+): Promise<Record<string, string> | null> {
+  const normalized = normalizeStr(source);
+  if (!normalized) {
+    return null;
+  }
+  const hash = hashStr(normalized);
+  const snapshot = await getDocs(
+    query(
+      getTranslationsManagerCollection('draft'),
+      where(new FieldPath('strings', hash, 'source'), '==', normalized)
+    )
+  );
+  const translations: Record<string, string> = {};
+  snapshot.forEach((docSnapshot) => {
+    const data = docSnapshot.data() as TranslationsLocaleDoc;
+    const translation = data.strings?.[hash]?.translation;
+    if (data.locale && translation && !translations[data.locale]) {
+      translations[data.locale] = translation;
+    }
+  });
+  return Object.keys(translations).length > 0 ? translations : null;
 }
 
 /**

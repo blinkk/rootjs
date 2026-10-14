@@ -1,0 +1,149 @@
+.PortTranslationsModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.PortTranslationsModal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.PortTranslationsModal__label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.PortTranslationsModal__source {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.PortTranslationsModal__diff del {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+
+.PortTranslationsModal__diff ins {
+  background: #d3f9d8;
+  color: #2b8a3e;
+  text-decoration: none;
+}
+
+.PortTranslationsModal__loading {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.PortTranslationsModal__lookup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.PortTranslationsModal__lookup__input {
+  flex: 1;
+}
+
+.PortTranslationsModal__changes {
+  margin: 0;
+  padding-left: 28px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.PortTranslationsModal__changes code {
+  font-size: 12px;
+  padding: 1px 4px;
+  background: #f1f3f5;
+  border-radius: 3px;
+  white-space: pre-wrap;
+}
+
+.PortTranslationsModal__changes__count {
+  margin-left: 8px;
+  color: #868e96;
+}
+
+.PortTranslationsModal__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.PortTranslationsModal__rule {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.PortTranslationsModal__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.PortTranslationsModal__table th,
+.PortTranslationsModal__table td {
+  border: 1px solid #dee2e6;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.PortTranslationsModal__table th {
+  font-weight: 600;
+  background: #f8f9fa;
+}
+
+.PortTranslationsModal__table__row--empty {
+  color: #adb5bd;
+}
+
+.PortTranslationsModal__table__checkbox {
+  width: 1px;
+}
+
+.PortTranslationsModal__table__lang {
+  width: 1px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.PortTranslationsModal__table__from {
+  width: 40%;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.PortTranslationsModal__table__none {
+  font-style: italic;
+}
+
+.PortTranslationsModal__table__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.PortTranslationsModal__table__badges:empty {
+  display: none;
+}
+
+.PortTranslationsModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}

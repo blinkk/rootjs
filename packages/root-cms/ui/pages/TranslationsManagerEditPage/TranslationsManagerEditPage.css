@@ -109,6 +109,20 @@
   max-width: 400px;
 }
 
+.TranslationsManagerEditPage__Table__portButton {
+  float: right;
+  margin: -2px -6px 0 8px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.TranslationsManagerEditPage__Table
+  tr:hover
+  .TranslationsManagerEditPage__Table__portButton,
+.TranslationsManagerEditPage__Table__portButton:focus-within {
+  opacity: 1;
+}
+
 .TranslationsManagerEditPage__Table__unusedBadge {
   margin-top: 6px;
 }

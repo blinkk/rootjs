@@ -21,6 +21,7 @@ import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowUpRight,
+  IconArrowsTransferDown,
   IconCheck,
   IconChevronDown,
   IconExternalLink,
@@ -64,18 +65,23 @@ import {
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
 import {
+  Translation,
+  TranslationsMap,
   batchSaveTranslations,
   batchUpdateTags,
   getLocalesForTranslationLanguage,
+  getTranslationByHash,
   getTranslationForLanguage,
   getTranslationLanguage,
   isLocaleExcludedFromTranslations,
+  loadTranslations,
+  loadTranslationsByHashes,
   sourceHash,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
-import {TranslationsMap, loadTranslationsByHashes} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
+import {usePortTranslationsModal} from '../PortTranslationsModal/PortTranslationsModal.js';
 import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
 import {usePruneTranslationsModal} from '../PruneTranslationsModal/PruneTranslationsModal.js';
 import './LocalizationModal.css';
@@ -366,6 +372,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
   const pruneModal = usePruneTranslationsModal();
+  const portModal = usePortTranslationsModal();
   const [missingTagSources, setMissingTagSources] = useState<Set<string>>(
     new Set()
   );
@@ -410,31 +417,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         locales,
       }));
       await batchSaveTranslations(edits, {tags: [props.docId]});
-      // Merge edits into local translationsMap state.
-      const hashes = await Promise.all(
-        edits.map(async (edit) => ({
-          hash: await sourceHash(edit.source),
-          source: edit.source,
-          locales: edit.locales,
-        }))
-      );
-      // Merge saved edits into local state, including the doc tag so the
-      // "missing tags" banner doesn't reappear after saving.
-      const docTags = [props.docId];
-      setTranslationsMap((prev) => {
-        const next = {...prev};
-        for (const {hash, source, locales} of hashes) {
-          const existing = next[hash];
-          const existingTags: string[] = existing?.tags || [];
-          const tags = Array.from(new Set([...existingTags, ...docTags]));
-          if (existing) {
-            next[hash] = {...existing, ...locales, tags};
-          } else {
-            next[hash] = {source, ...locales, tags} as any;
-          }
-        }
-        return next;
-      });
+      await mergeSavedTranslations(edits);
       setPendingEdits({});
       showNotification({
         title: 'Saved!',
@@ -451,6 +434,95 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       });
     }
     setSaving(false);
+  }
+
+  /**
+   * Merges saved edits into the local translations map, including the doc tag
+   * so the "missing tags" banner doesn't reappear after saving.
+   */
+  async function mergeSavedTranslations(
+    edits: Array<{source: string; locales: Record<string, string>}>
+  ) {
+    const hashes = await Promise.all(
+      edits.map(async (edit) => ({
+        hash: await sourceHash(edit.source),
+        source: edit.source,
+        locales: edit.locales,
+      }))
+    );
+    const docTags = [props.docId];
+    setTranslationsMap((prev) => {
+      const next = {...prev};
+      for (const {hash, source, locales} of hashes) {
+        const existing = next[hash];
+        const existingTags: string[] = existing?.tags || [];
+        const tags = Array.from(new Set([...existingTags, ...docTags]));
+        if (existing) {
+          next[hash] = {...existing, ...locales, tags};
+        } else {
+          next[hash] = {source, ...locales, tags} as any;
+        }
+      }
+      return next;
+    });
+  }
+
+  function openPortModal(source: string) {
+    portModal.open({
+      id: props.docId,
+      targetSource: source,
+      targetTranslations: toLocaleTranslations(sourceToTranslationsMap[source]),
+      languages: toTranslationLanguages(
+        locales.filter((l) => !isLocaleExcludedFromTranslations(l))
+      ),
+      loadCandidates: async () => {
+        // Candidates are the doc's current strings plus strings tagged with
+        // the doc that it no longer uses (e.g. the pre-edit source strings).
+        const tagged = await loadTranslations({tags: [props.docId]});
+        const currentSources = new Set(sourceStrings);
+        const bySource = new Map<string, Translation>();
+        [...Object.values(translationsMap), ...Object.values(tagged)].forEach(
+          (translation) => {
+            if (translation?.source && !bySource.has(translation.source)) {
+              bySource.set(translation.source, translation);
+            }
+          }
+        );
+        return Array.from(bySource.values()).map((translation) => ({
+          source: translation.source,
+          translations: toLocaleTranslations(translation),
+          label: currentSources.has(translation.source) ? undefined : 'unused',
+        }));
+      },
+      lookupSource: async (lookupSource) => {
+        const translation = await getTranslationByHash(
+          await sourceHash(lookupSource)
+        );
+        const translations = toLocaleTranslations(translation);
+        return Object.keys(translations).length > 0 ? translations : null;
+      },
+      onSave: async (translations) => {
+        const edits = [{source, locales: translations}];
+        await batchSaveTranslations(edits, {tags: [props.docId]});
+        await mergeSavedTranslations(edits);
+        // Discard any unsaved edits for the ported cells, since the ported
+        // translations replace them.
+        setPendingEdits((prev) => {
+          if (!prev[source]) {
+            return prev;
+          }
+          const remaining = {...prev[source]};
+          Object.keys(translations).forEach((lang) => delete remaining[lang]);
+          const next = {...prev};
+          if (Object.keys(remaining).length > 0) {
+            next[source] = remaining;
+          } else {
+            delete next[source];
+          }
+          return next;
+        });
+      },
+    });
   }
 
   function shouldShowAiButton() {
@@ -1453,42 +1525,54 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       <span className="LocalizationModal__sourceCell__text">
                         {source}
                       </span>
-                      {(sourceToTranslationsMap[source] ||
-                        missingTagSources.has(source)) && (
-                        <div className="LocalizationModal__sourceCell__icons">
-                          {sourceToTranslationsMap[source] && (
+                      <div className="LocalizationModal__sourceCell__icons">
+                        <Tooltip
+                          label="Port translations from another string"
+                          position="top"
+                          withArrow
+                        >
+                          <ActionIcon
+                            className="LocalizationModal__sourceCell__port"
+                            size="sm"
+                            variant="subtle"
+                            aria-label="Port translations from another string"
+                            onClick={() => openPortModal(source)}
+                          >
+                            <IconArrowsTransferDown size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        {sourceToTranslationsMap[source] && (
+                          <ActionIcon
+                            className="LocalizationModal__sourceCell__link"
+                            size="sm"
+                            variant="subtle"
+                            onClick={async () => {
+                              const hash = await sourceHash(source);
+                              window.open(
+                                `/cms/translations/${hash}`,
+                                '_blank'
+                              );
+                            }}
+                          >
+                            <IconExternalLink size={16} />
+                          </ActionIcon>
+                        )}
+                        {missingTagSources.has(source) && (
+                          <Tooltip
+                            label={`Missing "${props.docId}" tag`}
+                            position="top"
+                            withArrow
+                          >
                             <ActionIcon
-                              className="LocalizationModal__sourceCell__link"
+                              className="LocalizationModal__sourceCell__missingTag"
                               size="sm"
                               variant="subtle"
-                              onClick={async () => {
-                                const hash = await sourceHash(source);
-                                window.open(
-                                  `/cms/translations/${hash}`,
-                                  '_blank'
-                                );
-                              }}
                             >
-                              <IconExternalLink size={16} />
+                              <IconAlertTriangle size={14} />
                             </ActionIcon>
-                          )}
-                          {missingTagSources.has(source) && (
-                            <Tooltip
-                              label={`Missing "${props.docId}" tag`}
-                              position="top"
-                              withArrow
-                            >
-                              <ActionIcon
-                                className="LocalizationModal__sourceCell__missingTag"
-                                size="sm"
-                                variant="subtle"
-                              >
-                                <IconAlertTriangle size={14} />
-                              </ActionIcon>
-                            </Tooltip>
-                          )}
-                        </div>
-                      )}
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="LocalizationModal__translations__table__col">
@@ -1542,6 +1626,22 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     </div>
   );
 };
+
+/**
+ * Returns the locale translations of a v1 translations doc, excluding the
+ * `source` and `tags` fields.
+ */
+function toLocaleTranslations(
+  translation?: Record<string, unknown>
+): Record<string, string> {
+  const results: Record<string, string> = {};
+  Object.entries(translation || {}).forEach(([key, value]) => {
+    if (key !== 'source' && key !== 'tags' && typeof value === 'string') {
+      results[key] = value;
+    }
+  });
+  return results;
+}
 
 interface TranslationCellProps {
   source: string;

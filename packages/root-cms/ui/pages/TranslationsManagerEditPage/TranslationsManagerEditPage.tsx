@@ -1,12 +1,25 @@
 import './TranslationsManagerEditPage.css';
 
-import {Badge, Breadcrumbs, Button, Loader, TextInput} from '@mantine/core';
+import {
+  ActionIcon,
+  Badge,
+  Breadcrumbs,
+  Button,
+  Loader,
+  TextInput,
+  Tooltip,
+} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconCirclePlus, IconRocket} from '@tabler/icons-preact';
+import {
+  IconArrowsTransferDown,
+  IconCirclePlus,
+  IconRocket,
+} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePortTranslationsModal} from '../../components/PortTranslationsModal/PortTranslationsModal.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -22,6 +35,7 @@ import {notifyErrors} from '../../utils/notifications.js';
 import {
   TranslationsDocData,
   TranslationsEdit,
+  findDraftTranslationsBySource,
   loadTranslationsDoc,
   publishTranslations,
   saveDraftTranslations,
@@ -76,6 +90,7 @@ export function TranslationsManagerEditPage(
   const [publishing, setPublishing] = useState(false);
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const portModal = usePortTranslationsModal();
 
   const isDocBacked = testIsDocBackedId(translationsId);
   const hasChanges = Object.keys(changesMap).length > 0;
@@ -237,6 +252,47 @@ export function TranslationsManagerEditPage(
     });
   }
 
+  function openPortModal(row: TranslationsRow) {
+    portModal.open({
+      id: translationsId,
+      targetSource: row.source,
+      targetTranslations: row.translations,
+      languages: languages,
+      loadCandidates: async () =>
+        rows.map((r) => ({
+          source: r.source,
+          translations: r.translations,
+          label: r.unused ? 'unused' : undefined,
+        })),
+      lookupSource: (source) => findDraftTranslationsBySource(source),
+      onSave: async (translations) => {
+        await saveDraftTranslations(
+          translationsId,
+          [{source: row.source, translations}],
+          {tags: [translationsId]}
+        );
+        // Discard any unsaved edits for the ported cells, since the ported
+        // translations replace them.
+        setChangesMap((current) => {
+          if (!current[row.source]) {
+            return current;
+          }
+          const remaining = {...current[row.source]};
+          Object.keys(translations).forEach((lang) => delete remaining[lang]);
+          const next = {...current};
+          if (Object.keys(remaining).length > 0) {
+            next[row.source] = remaining;
+          } else {
+            delete next[row.source];
+          }
+          return next;
+        });
+        const docData = await loadTranslationsDoc(translationsId);
+        setDocData(docData);
+      },
+    });
+  }
+
   function onAddSourceString(source: string) {
     const normalized = normalizeString(source);
     if (!normalized) {
@@ -307,6 +363,7 @@ export function TranslationsManagerEditPage(
               rows={rows}
               changesMap={changesMap}
               onChange={onChange}
+              onPort={openPortModal}
             />
           )}
         </div>
@@ -349,6 +406,7 @@ TranslationsManagerEditPage.Table = (props: {
   rows: TranslationsRow[];
   changesMap: Record<string, Record<string, string>>;
   onChange: (source: string, lang: string, translation: string) => void;
+  onPort: (row: TranslationsRow) => void;
 }) => {
   return (
     <div className="TranslationsManagerEditPage__TableWrap">
@@ -374,6 +432,23 @@ TranslationsManagerEditPage.Table = (props: {
             <tr key={row.source}>
               <td className="TranslationsManagerEditPage__Table__sourceCellWrap">
                 <div className="TranslationsManagerEditPage__Table__sourceCell">
+                  {!row.unused && (
+                    <Tooltip
+                      className="TranslationsManagerEditPage__Table__portButton"
+                      label="Port translations from another string"
+                      position="top"
+                      withArrow
+                    >
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        aria-label="Port translations from another string"
+                        onClick={() => props.onPort(row)}
+                      >
+                        <IconArrowsTransferDown size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
                   {row.source}
                   {row.unused && (
                     <div className="TranslationsManagerEditPage__Table__unusedBadge">
@@ -417,6 +492,14 @@ TranslationsManagerEditPage.Textarea = (props: {
     changedValue = props.changesMap[props.source][props.lang];
   }
   const hasChanges = changedValue !== null && changedValue !== props.value;
+
+  // Sync changes to the saved value (e.g. after translations are ported to
+  // this string) unless the cell has unsaved changes.
+  useEffect(() => {
+    if (changedValue === null) {
+      setValue(props.value);
+    }
+  }, [props.value]);
 
   function updateTextareaHeight() {
     window.requestAnimationFrame(() => {
