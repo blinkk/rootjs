@@ -21,6 +21,7 @@ import {
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
+import type {GoogleWriteToolName} from '../../../core/ai-tools-google.js';
 import type {DocEditOperation} from '../../../core/ai-tools.js';
 import {Collection} from '../../../core/schema.js';
 import {
@@ -78,7 +79,7 @@ export interface CmsToolReceipt {
 }
 
 export interface CmsToolPreview {
-  toolName: CmsWriteToolName;
+  toolName: CmsWriteToolName | GoogleWriteToolName;
   title: string;
   summary: string;
   docId?: string;

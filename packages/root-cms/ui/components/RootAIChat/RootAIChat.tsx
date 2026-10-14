@@ -37,6 +37,7 @@ import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {isGoogleWriteTool} from '../../../core/ai-tools-google.js';
 import {
   testClientModelExpired,
   type SerializedClientModel,
@@ -74,6 +75,10 @@ import {
   isCmsWriteTool,
   previewCmsWriteTool,
 } from './cmsToolHandlers.js';
+import {
+  executeGoogleWriteTool,
+  previewGoogleWriteTool,
+} from './googleToolHandlers.js';
 import {prettyToolName, prettyToolState} from './toolLabels.js';
 
 export type RootAIChatVariant = 'page' | 'panel';
@@ -754,7 +759,8 @@ function ChatPane(props: {
 
   const resolveToolOutput = useCallback(
     async (toolCall: {toolCallId: string; toolName: string; input: any}) => {
-      if (!isCmsWriteTool(toolCall.toolName)) {
+      const isGoogleWrite = isGoogleWriteTool(toolCall.toolName);
+      if (!isGoogleWrite && !isCmsWriteTool(toolCall.toolName)) {
         return await executeCmsTool(toolCall.toolName, toolCall.input);
       }
 
@@ -772,7 +778,9 @@ function ChatPane(props: {
 
       let preview: CmsToolPreview;
       try {
-        preview = await previewCmsWriteTool(toolCall.toolName, toolCall.input);
+        preview = isGoogleWrite
+          ? await previewGoogleWriteTool(toolCall.toolName, toolCall.input)
+          : await previewCmsWriteTool(toolCall.toolName, toolCall.input);
       } catch (err: any) {
         return {
           success: false,
@@ -790,7 +798,9 @@ function ChatPane(props: {
         };
       }
 
-      if (mode === 'approve') {
+      // Google edits change files outside the CMS (there's no draft to fall
+      // back on), so they always pause for approval, even in auto mode.
+      if (mode === 'approve' || isGoogleWrite) {
         const decision = await waitForApproval(
           toolCall.toolCallId,
           toolCall.toolName,
@@ -802,13 +812,15 @@ function ChatPane(props: {
             success: false,
             error: 'USER_REJECTED',
             message:
-              'The user rejected this draft change. Do not retry unless they ask for a revised version.',
+              'The user rejected this change. Do not retry unless they ask for a revised version.',
           };
         }
       }
 
       try {
-        return await executeCmsTool(toolCall.toolName, toolCall.input);
+        return isGoogleWrite
+          ? await executeGoogleWriteTool(toolCall.toolName, toolCall.input)
+          : await executeCmsTool(toolCall.toolName, toolCall.input);
       } finally {
         setPendingApprovals((prev) => {
           if (!prev[toolCall.toolCallId]) {
@@ -897,13 +909,17 @@ function ChatPane(props: {
           if (!model.capabilities.tools) {
             return {};
           }
-          const cmsTools =
-            effectiveModeRef.current === 'read'
-              ? createReadOnlyClientCmsTools()
-              : createClientCmsTools();
-          // The Google tools are read-only, so they're offered in every
-          // execution mode (and are empty unless `gapi` is configured).
-          return {...cmsTools, ...createClientGoogleTools()};
+          const readOnly = effectiveModeRef.current === 'read';
+          const cmsTools = readOnly
+            ? createReadOnlyClientCmsTools()
+            : createClientCmsTools();
+          // The Google read tools are offered in every execution mode, the
+          // write tools in every mode but read-only (both are empty unless
+          // `gapi` is configured).
+          return {
+            ...cmsTools,
+            ...createClientGoogleTools({write: !readOnly}),
+          };
         },
         onFinish: persistChat,
       }),
@@ -986,12 +1002,12 @@ function ChatPane(props: {
             .filter(Boolean)
             .join('\n\n');
           // Grant Google access up front (while the send click still counts as
-          // a user gesture) when the chat references a Drive/Docs/Sheets link,
-          // so the Google read tools have a token mid-turn.
-          await maybeAuthorizeGoogle([
-            messageText,
-            ...messages.map(getMessageText),
-          ]);
+          // a user gesture) when the chat references a Drive/Docs/Sheets link
+          // or already used a Google tool, so the tools have a token mid-turn.
+          await maybeAuthorizeGoogle(
+            [messageText, ...messages.map(getMessageText)],
+            messages
+          );
           sendMessage({
             text: messageText,
             files: preparedAttachments.files.map((a) => ({
@@ -1377,8 +1393,8 @@ function ToolApprovalCard(props: {
       {hasDiff && (
         <JsDiff
           className="RootAIChat__approval__diff"
-          oldCode={stableJsonStringify(preview.before)}
-          newCode={stableJsonStringify(preview.after)}
+          oldCode={formatDiffValue(preview.before)}
+          newCode={formatDiffValue(preview.after)}
         />
       )}
       <div className="RootAIChat__approval__actions">
@@ -1409,6 +1425,11 @@ function ToolApprovalCard(props: {
   );
 }
 
+/** Diffs text (e.g. Google Doc edits) as-is, and anything else as JSON. */
+function formatDiffValue(value: unknown): string {
+  return typeof value === 'string' ? value : stableJsonStringify(value);
+}
+
 function ToolReceipt(props: {output: any}) {
   const receipt = props.output.receipt;
   return (
@@ -1436,6 +1457,9 @@ function ToolReceipt(props: {output: any}) {
           size="xs"
           compact
           href={receipt.adminUrl}
+          {...(/^https?:/.test(receipt.adminUrl)
+            ? {target: '_blank', rel: 'noopener noreferrer'}
+            : {})}
         >
           {receipt.linkLabel || 'Open document'}
         </Button>

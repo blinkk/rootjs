@@ -49,6 +49,22 @@ export function prettyToolName(toolName: string, input: any): string {
       return 'Read Google Slides';
     case 'gdrive_getFile':
       return 'Read Google Drive file';
+    case 'gdrive_listComments':
+      return 'Read Google comments';
+    case 'gsheet_updateValues':
+      return 'Edit Google Sheet';
+    case 'gsheet_appendRows':
+      return 'Append rows to Google Sheet';
+    case 'gdoc_edit':
+      return 'Edit Google Doc';
+    case 'gslides_edit':
+      return 'Edit Google Slides';
+    case 'gdrive_addComment':
+      return 'Add Google comment';
+    case 'gdrive_replyComment':
+      return input?.action === 'resolve'
+        ? 'Resolve Google comment'
+        : 'Reply to Google comment';
     default:
       return toolName;
   }
