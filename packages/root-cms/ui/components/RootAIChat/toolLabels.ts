@@ -42,7 +42,11 @@ export function prettyToolName(toolName: string, input: any): string {
     case 'release_update':
       return `Update release ${input?.releaseId || ''}`.trim();
     case 'gdoc_get':
-      return 'Read Google Doc';
+      return input?.suggestions === 'accepted'
+        ? 'Read suggested Google Doc'
+        : 'Read Google Doc';
+    case 'gdoc_getSuggestions':
+      return 'Read Google Doc suggestions';
     case 'gsheet_get':
       return `Read Google Sheet${input?.sheet ? ` (${input.sheet})` : ''}`;
     case 'gslides_get':

@@ -21,7 +21,10 @@ import {
   throwGoogleAuthRequired,
   type GoogleComment,
   type GoogleCommentsContent,
+  DEFAULT_MAX_COMMENTS,
   type GoogleDocContent,
+  type GoogleDocSuggestionsContent,
+  type GoogleDocSuggestionsView,
   type GoogleDriveFileContent,
   type GoogleFileMeta,
   type GoogleSheetContent,
@@ -38,6 +41,10 @@ import {
   GOOGLE_WRITE_SCOPES,
   isGoogleApiEnabled,
 } from '../../utils/google-auth.js';
+import {
+  extractDocSuggestions,
+  renderDocMarkdown,
+} from './googleDocSuggestions.js';
 
 export const DRIVE_API_ORIGIN = 'https://www.googleapis.com';
 export const SHEETS_API_ORIGIN = 'https://sheets.googleapis.com';
@@ -254,7 +261,8 @@ export async function googleFetch(
   const message = String(body?.error?.message || '');
   throw new GoogleToolError(
     'GOOGLE_REQUEST_FAILED',
-    `Google API request failed (${res.status})${message ? `: ${message}` : ''}`
+    `Google API request failed (${res.status})${message ? `: ${message}` : ''}`,
+    {status: res.status}
   );
 }
 
@@ -367,13 +375,75 @@ async function downloadAsText(file: DriveFileMetadata): Promise<string> {
   return await res.text();
 }
 
+/** Docs API `suggestionsViewMode` for each suggestions view. */
+const SUGGESTIONS_VIEW_MODES: Record<GoogleDocSuggestionsView, string> = {
+  accepted: 'PREVIEW_SUGGESTIONS_ACCEPTED',
+  rejected: 'PREVIEW_WITHOUT_SUGGESTIONS',
+  inline: 'SUGGESTIONS_INLINE',
+};
+
+/** Fails unless the file is a Google Doc (suggestions are Docs-only). */
+function requireDocMeta(meta: GoogleFileMeta) {
+  if (meta.mimeType !== DOC_MIME_TYPE) {
+    throw new GoogleToolError(
+      'GOOGLE_UNSUPPORTED_FILE',
+      `"${meta.name}" is not a Google Doc (${meta.mimeType}), so it has no suggested edits.`
+    );
+  }
+}
+
+/**
+ * Fetches a Google Doc's structure via the Docs API with the given
+ * suggestions view. Viewing suggestions needs comment or edit access, which
+ * the API reports as a 400.
+ */
+async function fetchDocument(
+  fileId: string,
+  view: GoogleDocSuggestionsView
+): Promise<any> {
+  const params = new URLSearchParams({
+    includeTabsContent: 'true',
+    suggestionsViewMode: SUGGESTIONS_VIEW_MODES[view],
+  });
+  try {
+    const res = await googleFetch(
+      `${DOCS_API_ORIGIN}/v1/documents/${encodeURIComponent(
+        fileId
+      )}?${params.toString()}`
+    );
+    return await res.json();
+  } catch (err) {
+    if (err instanceof GoogleToolError && err.status === 400) {
+      throw new GoogleToolError(
+        'GOOGLE_PERMISSION_DENIED',
+        "The signed-in Google account can't see this doc's suggested edits.",
+        {
+          hint:
+            'Suggestions are only visible with comment or edit access. Read ' +
+            'the doc without `suggestions` instead, or ask the user for access.',
+        }
+      );
+    }
+    throw err;
+  }
+}
+
 async function getDoc(
   fileRef: string,
-  options: {maxChars: number}
+  options: {maxChars: number; suggestions?: GoogleDocSuggestionsView}
 ): Promise<GoogleDocContent> {
   const {fileId} = requireFileRef(fileRef);
   const file = await fetchFileMetadata(fileId);
   const meta = shapeFileMeta(file);
+  if (options.suggestions) {
+    requireDocMeta(meta);
+    const document = await fetchDocument(fileId, options.suggestions);
+    const {text, truncated} = truncate(
+      renderDocMarkdown(document, {inline: options.suggestions === 'inline'}),
+      options.maxChars
+    );
+    return {...meta, text, truncated, suggestions: options.suggestions};
+  }
   if (meta.mimeType === SHEET_MIME_TYPE) {
     throw new GoogleToolError(
       'GOOGLE_UNSUPPORTED_FILE',
@@ -856,6 +926,14 @@ async function listComments(
 ): Promise<GoogleCommentsContent> {
   const {fileId} = requireFileRef(fileRef);
   const meta = shapeFileMeta(await fetchFileMetadata(fileId));
+  return {...meta, ...(await fetchComments(fileId, options))};
+}
+
+/** Fetches up to `maxResults` comments on a Drive file. */
+async function fetchComments(
+  fileId: string,
+  options: {includeResolved: boolean; maxResults: number}
+): Promise<{comments: GoogleComment[]; truncated: boolean}> {
   const comments: GoogleComment[] = [];
   let pageToken = '';
   let truncated = false;
@@ -888,12 +966,45 @@ async function listComments(
     }
     pageToken = truncated ? '' : String(body?.nextPageToken || '');
   } while (pageToken);
-  return {...meta, comments, truncated};
+  return {comments, truncated};
+}
+
+async function getDocSuggestions(
+  fileRef: string,
+  options: {maxSuggestions: number; includeComments: boolean}
+): Promise<GoogleDocSuggestionsContent> {
+  const {fileId} = requireFileRef(fileRef);
+  const meta = shapeFileMeta(await fetchFileMetadata(fileId));
+  requireDocMeta(meta);
+  const document = await fetchDocument(fileId, 'inline');
+  const all = extractDocSuggestions(document);
+  const result: GoogleDocSuggestionsContent = {
+    ...meta,
+    suggestions: all.slice(0, options.maxSuggestions),
+    suggestionCount: all.length,
+    truncated: all.length > options.maxSuggestions,
+  };
+  if (options.includeComments) {
+    const {comments, truncated} = await fetchComments(fileId, {
+      includeResolved: false,
+      maxResults: DEFAULT_MAX_COMMENTS,
+    });
+    result.comments = comments;
+    result.commentsTruncated = truncated;
+  }
+  return result;
 }
 
 /** Builds a `GoogleToolBackend` backed by the Drive and Sheets REST APIs. */
 export function createClientGoogleToolBackend(): GoogleToolBackend {
-  return {getDoc, getSheet, getSlides, getFile, listComments};
+  return {
+    getDoc,
+    getSheet,
+    getSlides,
+    getFile,
+    listComments,
+    getDocSuggestions,
+  };
 }
 
 /** Matches a Google Docs/Sheets/Drive link inside chat text. */
