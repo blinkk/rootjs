@@ -164,11 +164,11 @@ function audit({rootDir, json}) {
     .filter((file) => SOURCE_EXTS.has(path.extname(file)))
     .map((file) => ({file, text: readText(path.join(rootDir, file))}))
     .filter((source) => source.text !== null);
-  auditConfig(rootDir, sources, add);
+  const {v2Translations} = auditConfig(rootDir, sources, add);
   auditRoutes(sources, add);
-  auditDataFetching(sources, add);
+  auditDataFetching(sources, add, {v2Translations});
   auditSecrets(rootDir, files, sources, add);
-  auditCi(rootDir, files, add);
+  auditCi(rootDir, files, add, {v2Translations});
 
   const summary = {action: 0, suggestion: 0, info: 0};
   findings.forEach((finding) => summary[finding.severity]++);
@@ -243,11 +243,6 @@ function auditPackages(rootDir, pkg, add) {
 /** Config flags that v4 turns on by default. */
 const DEFAULT_ON_FLAGS = [
   {
-    re: /v2TranslationsManager\s*:\s*true/,
-    message:
-      '`experiments.v2TranslationsManager: true` is the default in v4 and can be removed.',
-  },
-  {
     re: /dependencyGraph\s*:\s*true/,
     message: '`dependencyGraph: true` is the default in v4 and can be removed.',
   },
@@ -262,7 +257,12 @@ const DEFAULT_ON_FLAGS = [
   },
 ];
 
+/**
+ * Audits the root.config files. Returns whether the project has opted in to
+ * the v2 translations manager, which is still opt-in in v4.
+ */
 function auditConfig(rootDir, sources, add) {
+  let v2Translations = false;
   const configs = sources.filter((source) =>
     /(^|\/)root\.config\.[mc]?[jt]sx?$/.test(source.file)
   );
@@ -286,31 +286,48 @@ function auditConfig(rootDir, sources, add) {
         });
       });
     }
-    forEachMatch(text, /v2TranslationsManager\s*:\s*false/, (line, snippet) => {
+    forEachMatch(text, /v2TranslationsManager\s*:\s*true/, (line, snippet) => {
+      v2Translations = true;
       add({
         category: 'translations',
-        severity: 'action',
+        severity: 'info',
         message:
-          'The v2 translations manager is turned off, so the v1 -> v2 ' +
-          'translations migration will not run. Remove this opt-out to ' +
-          'migrate (ask the user first; they may have opted out on purpose).',
+          'The project has opted in to the v2 translations manager, which ' +
+          'is still opt-in in v4. Keep this flag, and run ' +
+          '`root-cms translations.migrate --status` after upgrading to check ' +
+          'that the v1 -> v2 translations migration has run.',
         file,
         line,
         snippet,
       });
     });
-    if (/cmsPlugin\s*\(/.test(text)) {
+    forEachMatch(text, /v2TranslationsManager\s*:\s*false/, (line, snippet) => {
       add({
-        category: 'translations',
-        severity: 'info',
+        category: 'config',
+        severity: 'suggestion',
         message:
-          'The CMS is enabled. v4 migrates v1 translations to the v2 ' +
-          'translations manager; run `root-cms translations.migrate --status` ' +
-          'after upgrading.',
+          '`experiments.v2TranslationsManager: false` is the default in v4 ' +
+          'and can be removed.',
         file,
+        line,
+        snippet,
       });
-    }
+    });
   }
+  if (
+    !v2Translations &&
+    configs.some(({text}) => /cmsPlugin\s*\(/.test(text))
+  ) {
+    add({
+      category: 'translations',
+      severity: 'info',
+      message:
+        'The CMS uses the v1 translations system, which is still the ' +
+        'default in v4. The v2 translations manager is experimental and ' +
+        'opt-in, so leave the translations as they are.',
+    });
+  }
+  return {v2Translations};
 }
 
 /** Matches calls that read CMS content. */
@@ -370,7 +387,7 @@ function auditRoutes(sources, add) {
   }
 }
 
-function auditDataFetching(sources, add) {
+function auditDataFetching(sources, add, {v2Translations}) {
   for (const {file, text} of sources) {
     if (/\.(test|spec)\.[mc]?[jt]sx?$/.test(file)) {
       continue;
@@ -380,21 +397,25 @@ function auditDataFetching(sources, add) {
     if (/(^|\/)(scripts|functions)\//.test(file)) {
       continue;
     }
-    forEachMatch(text, V1_TRANSLATIONS_RE, (line, snippet) => {
-      add({
-        category: 'data-fetching',
-        severity: 'action',
-        message:
-          'Reads the v1 translations collection. After the migration, ' +
-          'translations are edited in the v2 translations manager, so this ' +
-          'would serve stale strings. Load translations with a batch ' +
-          'request (`addTranslations()` + `getTranslations(locale)`) or ' +
-          'createRoute() instead.',
-        file,
-        line,
-        snippet,
+    // v1 translations reads are only stale once the project has moved to
+    // the v2 translations manager.
+    if (v2Translations) {
+      forEachMatch(text, V1_TRANSLATIONS_RE, (line, snippet) => {
+        add({
+          category: 'data-fetching',
+          severity: 'action',
+          message:
+            'Reads the v1 translations collection. After the migration, ' +
+            'translations are edited in the v2 translations manager, so this ' +
+            'would serve stale strings. Load translations with a batch ' +
+            'request (`addTranslations()` + `getTranslations(locale)`) or ' +
+            'createRoute() instead.',
+          file,
+          line,
+          snippet,
+        });
       });
-    });
+    }
     if (
       /import\s*{[^}]*\b(getDoc|listDocs)\b[^}]*}\s*from\s*['"]@blinkk\/root-cms['"]/.test(
         text
@@ -418,8 +439,13 @@ function auditDataFetching(sources, add) {
         message:
           `Makes ${numReads} separate CMS reads. Combine them into a batch ` +
           'request (`cmsClient.createBatchRequest()`, or the `batchRequest()` ' +
-          'option of createRoute()), which fetches docs, queries, data ' +
-          'sources and translations in parallel.',
+          'option of createRoute()), which fetches docs, queries and data ' +
+          'sources in parallel.' +
+          (v2Translations
+            ? ' With `translate: true`, it also loads their translations.'
+            : ' Keep v1 translations reads (`loadTranslationsForLocale()`) ' +
+              'as they are; batch request translations need the v2 ' +
+              'translations manager.'),
         file,
         line: lineOf(text, CMS_READ_RE),
       });
@@ -574,7 +600,11 @@ function auditSecrets(rootDir, files, sources, add) {
   }
 }
 
-function auditCi(rootDir, files, add) {
+function auditCi(rootDir, files, add, {v2Translations}) {
+  // Builds only need Firestore access for the v2 translations migration.
+  if (!v2Translations) {
+    return;
+  }
   const ciFiles = files.filter((file) =>
     /(^|\/)(\.github\/workflows\/[^/]+\.ya?ml|cloudbuild[^/]*\.ya?ml|\.gitlab-ci\.yml|\.circleci\/config\.yml)$/.test(
       file
@@ -587,8 +617,9 @@ function auditCi(rootDir, files, add) {
         category: 'ci',
         severity: 'action',
         message:
-          'CI runs a build. In v4, `root build` migrates translations and ' +
-          'reads Firestore before building, so the job needs Google Cloud ' +
+          'CI runs a build. With the v2 translations manager, `root build` ' +
+          'migrates translations and reads Firestore before building, so the ' +
+          'job needs Google Cloud ' +
           'credentials (application default credentials or ' +
           'GOOGLE_APPLICATION_CREDENTIALS) with access to the project.',
         file,

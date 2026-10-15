@@ -319,11 +319,11 @@ class CliRunner {
       .command('translations.migrate')
       .description(
         'migrates v1 translations to the v2 translations manager\n\n' +
-          'The CMS runs this automatically on the first `root dev` or\n' +
-          '`root build`. Run it on demand to migrate as a deliberate step,\n' +
-          'e.g. when upgrading to Root.js v4. The v1 translations are left\n' +
-          'in place as a backup, and the migrated translations are\n' +
-          'published.\n\n' +
+          'Requires `experiments: {v2TranslationsManager: true}`. The CMS\n' +
+          'runs this automatically on the first `root dev` or `root build`.\n' +
+          'Run it on demand to migrate as a deliberate step, e.g. when\n' +
+          'opting in. The v1 translations are left in place as a backup,\n' +
+          'and the migrated translations are published.\n\n' +
           'Usage examples:\n' +
           '  $ root-cms translations.migrate --status\n' +
           '  $ root-cms translations.migrate\n' +

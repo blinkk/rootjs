@@ -157,6 +157,9 @@ export default defineConfig({
           },
         },
       ],
+      experiments: {
+        v2TranslationsManager: true,
+      },
       preview: {
         channel: true,
       },

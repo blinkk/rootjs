@@ -634,8 +634,8 @@ export type CMSPluginOptions = {
     ai?: boolean | CMSAIConfig;
 
     /**
-     * Enables the v2 `TranslationsManager`. Enabled by default; set to `false`
-     * to use the legacy v1 translations system.
+     * Enables the v2 `TranslationsManager`. Disabled by default; set to `true`
+     * to opt in (existing v1 translations are migrated automatically).
      */
     v2TranslationsManager?: boolean;
 
@@ -1112,13 +1112,13 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
 
-        // When the v2 translations manager is enabled (the default), migrate
-        // v1 translations before the build (SSG reads translations at build
+        // When the v2 translations manager is enabled, migrate v1
+        // translations before the build (SSG reads translations at build
         // time). A failure fails the build. Projects that haven't been
         // connected to Firebase yet (e.g. a new project from the starter
         // template) have nothing to migrate, so they're skipped.
         if (
-          options.experiments?.v2TranslationsManager !== false &&
+          options.experiments?.v2TranslationsManager &&
           !isPlaceholderFirebaseProject(options.firebaseConfig)
         ) {
           const {migrateV1TranslationsIfNeeded} =
@@ -1145,8 +1145,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
                 'GOOGLE_APPLICATION_CREDENTIALS.';
             }
             message +=
-              ' to use the legacy v1 translations system, set ' +
-              '`{experiments: {v2TranslationsManager: false}}`.';
+              ' to use the legacy v1 translations system, remove ' +
+              '`{experiments: {v2TranslationsManager: true}}`.';
             console.error(message);
             throw err;
           }
@@ -1189,12 +1189,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
       }
 
-      // When the v2 translations manager is enabled (the default), migrate v1
+      // When the v2 translations manager is enabled, migrate v1
       // translations on dev server startup. Fire-and-forget so dev startup isn't blocked;
       // prod servers never migrate (the migration runs at build time via the
       // preBuild hook). Projects not yet connected to Firebase are skipped.
       if (
-        options.experiments?.v2TranslationsManager !== false &&
+        options.experiments?.v2TranslationsManager &&
         !isPlaceholderFirebaseProject(options.firebaseConfig) &&
         serverOptions.type === 'dev'
       ) {

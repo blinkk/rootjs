@@ -303,8 +303,9 @@ declare global {
 }
 
 function App() {
-  const v2TranslationsEnabled =
-    window.__ROOT_CTX.experiments?.v2TranslationsManager !== false;
+  const v2TranslationsEnabled = Boolean(
+    window.__ROOT_CTX.experiments?.v2TranslationsManager
+  );
   // NOTE: conditional route children must be arrays (not fragments) —
   // preact-iso's Router only flattens arrays.
   const translationsRoutes = v2TranslationsEnabled

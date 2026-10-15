@@ -1,0 +1,1148 @@
+version: 1
+id: "2026-10-15-translations-manager-opt-in"
+title: "Update the developer docs: localization, cms--data-fetching, migration--v4"
+generated: "2026-10-15T15:56:02.494Z"
+author: "scripts/propose_docs_copy.ts"
+summary: |-
+  - Docs/localization: Adds a section on the experimental v2 translations manager and how to opt in.
+  - Docs/cms--data-fetching: Notes that batch request translations need the opt-in v2 translations manager, and how to load v1 translations outside a route.
+  - Docs/migration--v4: Makes the v2 translations manager opt-in, so upgrading no longer migrates translations or needs Firestore access to build.
+changes:
+  - kind: "doc.edit"
+    docId: "Docs/localization"
+    note: "Adds a section on the experimental v2 translations manager and how to opt in."
+    ops:
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "config"
+            title: "Configuration"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Set the site's locales and URL format with the <code>i18n</code> option in <code>root.config.ts</code>:"
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    i18n: {
+                      locales: ['en', 'ja'],
+                      defaultLocale: 'en',
+                      urlFormat: '/[locale]/[path]',
+                    },
+                  });
+                _arrayKey: "tFTkfm"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Each route is then served at a URL per locale, e.g. <code>/ja/about</code>. Use <code>fallbacks</code> to set which locales a missing translation falls back to."
+                  time: 1790660317218
+                  version: "2.28.2"
+                _arrayKey: "qCUkmJ"
+            _arrayKey: "l1N7ya"
+          - id: "translations"
+            title: "Translations"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Translated strings live in <code>translations/</code>, one JSON file per locale, mapping each source string to its translation:"
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "json"
+                code: |-
+                  // @/translations/fr.json
+
+                  {
+                    "Hello, world!": "Bonjour le monde !",
+                    "Hello, {name}!": "Bonjour {name} !"
+                  }
+                _arrayKey: "y5plqo"
+            _arrayKey: "i8Sf21"
+          - id: "useTranslations"
+            title: "useTranslations()"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>useTranslations()</code> returns a function that translates a string into the current locale. Values in curly braces are replaced with the params you pass."
+              time: 1790660317218
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/index.tsx
+
+                  import {useTranslations} from '@blinkk/root';
+
+                  export default function Page(props) {
+                    const t = useTranslations();
+                    if (props.name) {
+                      return <h1>{t('Hello, {name}!', {name: props.name})}</h1>;
+                    }
+                    return <h1>{t('Hello, world!')}</h1>;
+                  }
+                _arrayKey: "WKeiuM"
+            _arrayKey: "N2Po3h"
+          - id: "cms-content"
+            title: "Translating CMS content"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Schema fields marked with <code>translate: true</code> are sent for translation. Editors translate them in the CMS, with AI, or by exporting them to a spreadsheet or translation vendor."
+                - type: "paragraph"
+                  data:
+                    text: "Translations are stored in the CMS, and loaded with <code>cmsClient.loadTranslations()</code>. Pass them to <code>ctx.render()</code> to use them with <code>useTranslations()</code>. See <a href=\"/docs/cms/data-fetching/#translations\">Data fetching</a>."
+              time: 1790660317218
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "6sDWOj"
+        after:
+          - id: "config"
+            title: "Configuration"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Set the site's locales and URL format with the <code>i18n</code> option in <code>root.config.ts</code>:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    i18n: {
+                      locales: ['en', 'ja'],
+                      defaultLocale: 'en',
+                      urlFormat: '/[locale]/[path]',
+                    },
+                  });
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Each route is then served at a URL per locale, e.g. <code>/ja/about</code>. Use <code>fallbacks</code> to set which locales a missing translation falls back to."
+                  time: 1792079761368
+                  version: "2.28.2"
+          - id: "translations"
+            title: "Translations"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Translated strings live in <code>translations/</code>, one JSON file per locale, mapping each source string to its translation:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "json"
+                code: |-
+                  // @/translations/fr.json
+
+                  {
+                    "Hello, world!": "Bonjour le monde !",
+                    "Hello, {name}!": "Bonjour {name} !"
+                  }
+          - id: "useTranslations"
+            title: "useTranslations()"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>useTranslations()</code> returns a function that translates a string into the current locale. Values in curly braces are replaced with the params you pass."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/index.tsx
+
+                  import {useTranslations} from '@blinkk/root';
+
+                  export default function Page(props) {
+                    const t = useTranslations();
+                    if (props.name) {
+                      return <h1>{t('Hello, {name}!', {name: props.name})}</h1>;
+                    }
+                    return <h1>{t('Hello, world!')}</h1>;
+                  }
+          - id: "cms-content"
+            title: "Translating CMS content"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Schema fields marked with <code>translate: true</code> are sent for translation. Editors translate them in the CMS, with AI, or by exporting them to a spreadsheet or translation vendor."
+                - type: "paragraph"
+                  data:
+                    text: "Translations are stored in the CMS. <code>createRoute()</code> loads them for each page, and <code>cmsClient.loadTranslationsForLocale()</code> loads them anywhere else. Pass them to <code>ctx.render()</code> to use them with <code>useTranslations()</code>. See <a href=\"/docs/cms/data-fetching/#translations\">Data fetching</a>."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []
+          - id: "translations-manager-v2"
+            title: "Translations manager v2 (experimental)"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The v2 translations manager stores each doc's translations with the doc, per locale, and drafts and publishes them together with the doc. It's still experimental, so it's off by default. To try it, opt in:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {v2TranslationsManager: true},
+                  });
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "On the first dev server start or <code>root build</code> after you opt in, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, use <code>root-cms translations.migrate</code>, and <code>--status</code> to check whether it has run."
+                    - type: "paragraph"
+                      data:
+                        text: "The migration check runs before each build, so with the v2 translations manager, <b><code>root build</code> needs Firestore access</b>. Make sure your CI has application default credentials, e.g. <code>gcloud auth application-default login</code> or <code>GOOGLE_APPLICATION_CREDENTIALS</code>."
+                  time: 1792079761368
+                  version: "2.28.2"
+  - kind: "doc.edit"
+    docId: "Docs/cms--data-fetching"
+    note: "Notes that batch request translations need the opt-in v2 translations manager, and how to load v1 translations outside a route."
+    ops:
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>createRoute()</code> is the recommended way to set up routes that are connected to the CMS. Give it a collection, and it loads the doc for each URL and renders the route's component with the doc as <code>props.doc</code>."
+                - type: "paragraph"
+                  data:
+                    text: "It also handles the details: draft content for <code>?preview=true</code> URLs (which the CMS adds to its preview links), the locale for each request, translations, 404s for missing docs, and <code>Cache-Control</code> headers."
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/[...slug].tsx
+
+                  import {createRoute} from '@blinkk/root-cms';
+                  import {PagesDoc} from '@/root-cms.js';
+
+                  export default function Page(props: {doc: PagesDoc}) {
+                    return <h1>{props.doc.fields?.meta?.title}</h1>;
+                  }
+
+                  // Renders `Pages/<slug>`, e.g. `/about` renders `Pages/about` and `/`
+                  // renders `Pages/index`.
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slugParam: 'slug',
+                  });
+                _arrayKey: "3hl2LN"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "For a site built as static HTML (SSG), export <code>getStaticProps</code> and <code>getStaticPaths</code> instead, which build a page for every published doc in the collection:"
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "o6q2jA"
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  export const {getStaticProps, getStaticPaths} = createRoute({
+                    collection: 'BlogPosts',
+                    ssg: true,
+                  });
+                _arrayKey: "rP3B32"
+            _arrayKey: "TpFSFs"
+          - id: "route-options"
+            title: "Route options"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Most custom logic maps to an option of <code>createRoute()</code>, so a route rarely needs its own handler:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<code>slug</code>: the doc for a single-page route, e.g. <code>{slug: 'index'}</code> in <code>routes/index.tsx</code>. Use <code>slugFormat</code> or <code>getSlug(params)</code> for slugs built from several URL params."
+                        items: []
+                      - content: "<code>batchRequest</code> and <code>preRenderHook</code>: load more content for the page and pass it as props (see <a href=\"#batch-requests\">Batch requests</a>)."
+                        items: []
+                      - content: "<code>translations</code>: load more translations, such as strings shared by every page (see <a href=\"#translations\">Translations</a>)."
+                        items: []
+                      - content: "<code>resolveLocale</code>: choose the locale yourself, e.g. from the user's country."
+                        items: []
+                      - content: "<code>resolveDoc</code>: serve a different doc on the same URL, e.g. a regional variant."
+                        items: []
+                      - content: "<code>getMode</code>: choose between draft and published content yourself."
+                        items: []
+                      - content: "<code>notFoundHook</code>: render your own page when the doc doesn't exist."
+                        items: []
+                      - content: "<code>preRenderHook</code>: redirect with <code>props.$redirect</code>, or set a status code with <code>props.$statusCode</code>."
+                        items: []
+                      - content: "<code>cache</code> and <code>cacheControl</code>: cache published reads in memory for 60 seconds, and set the <code>Cache-Control</code> header for published pages."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "See the <a href=\"/docs/api/root-cms/\"><code>@blinkk/root-cms</code></a> reference for every option."
+              time: 1791387244063
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "lFP1oI"
+          - id: "batch-requests"
+            title: "Batch requests"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Every read from the CMS is a round trip to Firestore. A batch request combines the reads a page needs: its docs, queries and data sources are fetched in parallel, then the translations for every doc in the batch are fetched together, for the page's locale only."
+                - type: "paragraph"
+                  data:
+                    text: "In <code>createRoute()</code>, add reads with the <code>batchRequest</code> option. They're fetched in the same batch as the route's doc. The response is available as <code>ctx.batchResponse</code>, e.g. in <code>preRenderHook</code>, which passes it to the page as props:"
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slugParam: 'slug',
+                    batchRequest: (req) => {
+                      req.addDoc('Global/header');
+                      req.addQuery('posts', 'BlogPosts', {limit: 3});
+                      req.addDataSource('pricing');
+                    },
+                    preRenderHook: (props, ctx) => ({
+                      ...props,
+                      header: ctx.batchResponse!.getDoc('Global/header'),
+                      posts: ctx.batchResponse!.getQuery('posts'),
+                      pricing: ctx.batchResponse!.getDataSource('pricing'),
+                    }),
+                  });
+                _arrayKey: "2Llj7W"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Read the results with the response's getters, using the ids you added: <code>getDoc(docId)</code> and <code>getDataSource(id)</code> return <code>null</code> if the doc or data source doesn't exist, and <code>getQuery(queryId)</code> returns an empty array if the query has no results."
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "McOHnJ"
+            _arrayKey: "nHXD81"
+          - id: "batch-requests-outside-routes"
+            title: "Batch requests outside a route"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "In a custom handler, <code>getStaticProps()</code> or a plugin, create a batch request with <code>cmsClient.createBatchRequest()</code>. With <code>translate: true</code>, it also loads the translations for the docs it returns, for the <code>locales</code> you pass:"
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  import {RootCMSClient} from '@blinkk/root-cms';
+
+                  const cmsClient = new RootCMSClient(rootConfig);
+                  const req = cmsClient.createBatchRequest({
+                    mode: 'published',
+                    translate: true,
+                    locales: [locale],
+                  });
+                  req.addDoc('Pages/index');
+                  req.addTranslations('common');
+                  const res = await req.fetch();
+
+                  const doc = res.getDoc('Pages/index');
+                  const translations = res.getTranslations(locale);
+                _arrayKey: "84uTq9"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "If the locale depends on the doc, fetch the content first and the translations once the locale is known:"
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "1RTvCU"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  const res = await req.fetchContent();
+                  const locale = pickLocale(res.getDoc('Pages/index'));
+                  await req.fetchTranslations(res, {locales: [locale]});
+                _arrayKey: "kJmoTl"
+            _arrayKey: "buBy9e"
+          - id: "listing-docs"
+            title: "Listing docs"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "To list the docs in a collection, add a query to the batch request with <code>addQuery()</code>. It takes the same options as <code>cmsClient.listDocs()</code>: <code>limit</code>, <code>offset</code>, <code>orderBy</code>, <code>orderByDirection</code>, and <code>query</code> for Firestore filters."
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/blog/index.tsx, which renders `Pages/blog`.
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slug: 'blog',
+                    batchRequest: (req, ctx) => {
+                      req.addQuery('posts', 'BlogPosts', {
+                        orderBy: ctx.mode === 'draft' ? 'sys.createdAt' : 'sys.firstPublishedAt',
+                        orderByDirection: 'desc',
+                      });
+                    },
+                    preRenderHook: (props, ctx) => ({
+                      ...props,
+                      posts: ctx.batchResponse!.getQuery('posts'),
+                    }),
+                  });
+                _arrayKey: "8khIij"
+            _arrayKey: "tlFHoz"
+          - id: "custom-order"
+            title: "Custom order"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Collections with <code>customSorting: true</code> let editors drag docs into order in the CMS. The order is stored at <code>sys.sortKey</code>:"
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: "req.addQuery('guides', 'Guides', {orderBy: 'sys.sortKey'});"
+                _arrayKey: "ol7EWc"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Ordering by <code>sys.sortKey</code> leaves out docs that don't have a position yet, e.g. ones created by a script."
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "k931OU"
+            _arrayKey: "w4jFt4"
+          - id: "translations"
+            title: "Translations"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Each doc's translations are stored with the doc, in the translations manager. <code>createRoute()</code> loads them for the page's locale, along with the translations for docs the page references and docs in its batch request. In your components, translate strings with <code>useTranslations()</code>:"
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  import {useTranslations} from '@blinkk/root';
+
+                  export default function Page(props: {doc: PagesDoc}) {
+                    const t = useTranslations();
+                    return <h1>{t(props.doc.fields?.meta?.title || '')}</h1>;
+                  }
+                _arrayKey: "JU8Y4N"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To load more translations, such as strings shared by every page, return their ids from the <code>translations</code> option:"
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "DuaT78"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  createRoute({
+                    collection: 'Pages',
+                    translations: () => ({tags: ['common']}),
+                  });
+                _arrayKey: "9aGQm0"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Outside a route, use a batch request with <code>translate: true</code> and <code>res.getTranslations(locale)</code> (see <a href=\"#batch-requests-outside-routes\">Batch requests outside a route</a>). Avoid <code>cmsClient.loadTranslations()</code>, which reads the v1 translations from before Root.js v4."
+                  time: 1791387244063
+                  version: "2.28.2"
+                _arrayKey: "PcV3Dw"
+            _arrayKey: "5tI9nx"
+          - id: "reading-docs-directly"
+            title: "Reading docs directly"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "For a single read, e.g. in a script, use <code>RootCMSClient</code>. Every read takes a <code>mode</code>: <code>published</code> for live content, or <code>draft</code> for the latest edits."
+              time: 1791387244063
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  import {RootCMSClient} from '@blinkk/root-cms';
+
+                  const cmsClient = new RootCMSClient(rootConfig);
+                  const doc = await cmsClient.getDoc('Pages', 'index', {mode: 'published'});
+                  const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});
+                _arrayKey: "dmxLVt"
+            _arrayKey: "EPqiNi"
+        after:
+          - id: "overview"
+            title: "Overview"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>createRoute()</code> is the recommended way to set up routes that are connected to the CMS. Give it a collection, and it loads the doc for each URL and renders the route's component with the doc as <code>props.doc</code>."
+                - type: "paragraph"
+                  data:
+                    text: "It also handles the details: draft content for <code>?preview=true</code> URLs (which the CMS adds to its preview links), the locale for each request, translations, 404s for missing docs, and <code>Cache-Control</code> headers."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/[...slug].tsx
+
+                  import {createRoute} from '@blinkk/root-cms';
+                  import {PagesDoc} from '@/root-cms.js';
+
+                  export default function Page(props: {doc: PagesDoc}) {
+                    return <h1>{props.doc.fields?.meta?.title}</h1>;
+                  }
+
+                  // Renders `Pages/<slug>`, e.g. `/about` renders `Pages/about` and `/`
+                  // renders `Pages/index`.
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slugParam: 'slug',
+                  });
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "For a site built as static HTML (SSG), export <code>getStaticProps</code> and <code>getStaticPaths</code> instead, which build a page for every published doc in the collection:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  export const {getStaticProps, getStaticPaths} = createRoute({
+                    collection: 'BlogPosts',
+                    ssg: true,
+                  });
+          - id: "route-options"
+            title: "Route options"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Most custom logic maps to an option of <code>createRoute()</code>, so a route rarely needs its own handler:"
+                - type: "unorderedList"
+                  data:
+                    style: "unordered"
+                    items:
+                      - content: "<code>slug</code>: the doc for a single-page route, e.g. <code>{slug: 'index'}</code> in <code>routes/index.tsx</code>. Use <code>slugFormat</code> or <code>getSlug(params)</code> for slugs built from several URL params."
+                        items: []
+                      - content: "<code>batchRequest</code> and <code>preRenderHook</code>: load more content for the page and pass it as props (see <a href=\"#batch-requests\">Batch requests</a>)."
+                        items: []
+                      - content: "<code>translations</code>: load more translations, such as strings shared by every page (see <a href=\"#translations\">Translations</a>)."
+                        items: []
+                      - content: "<code>resolveLocale</code>: choose the locale yourself, e.g. from the user's country."
+                        items: []
+                      - content: "<code>resolveDoc</code>: serve a different doc on the same URL, e.g. a regional variant."
+                        items: []
+                      - content: "<code>getMode</code>: choose between draft and published content yourself."
+                        items: []
+                      - content: "<code>notFoundHook</code>: render your own page when the doc doesn't exist."
+                        items: []
+                      - content: "<code>preRenderHook</code>: redirect with <code>props.$redirect</code>, or set a status code with <code>props.$statusCode</code>."
+                        items: []
+                      - content: "<code>cache</code> and <code>cacheControl</code>: cache published reads in memory for 60 seconds, and set the <code>Cache-Control</code> header for published pages."
+                        items: []
+                - type: "paragraph"
+                  data:
+                    text: "See the <a href=\"/docs/api/root-cms/\"><code>@blinkk/root-cms</code></a> reference for every option."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []
+          - id: "batch-requests"
+            title: "Batch requests"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Every read from the CMS is a round trip to Firestore. A batch request combines the reads a page needs: its docs, queries and data sources are fetched in parallel. With the <a href=\"/docs/localization/#translations-manager-v2\">v2 translations manager</a>, the translations for every doc in the batch are then fetched together, for the page's locale only."
+                - type: "paragraph"
+                  data:
+                    text: "In <code>createRoute()</code>, add reads with the <code>batchRequest</code> option. They're fetched in the same batch as the route's doc. The response is available as <code>ctx.batchResponse</code>, e.g. in <code>preRenderHook</code>, which passes it to the page as props:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slugParam: 'slug',
+                    batchRequest: (req) => {
+                      req.addDoc('Global/header');
+                      req.addQuery('posts', 'BlogPosts', {limit: 3});
+                      req.addDataSource('pricing');
+                    },
+                    preRenderHook: (props, ctx) => ({
+                      ...props,
+                      header: ctx.batchResponse!.getDoc('Global/header'),
+                      posts: ctx.batchResponse!.getQuery('posts'),
+                      pricing: ctx.batchResponse!.getDataSource('pricing'),
+                    }),
+                  });
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Read the results with the response's getters, using the ids you added: <code>getDoc(docId)</code> and <code>getDataSource(id)</code> return <code>null</code> if the doc or data source doesn't exist, and <code>getQuery(queryId)</code> returns an empty array if the query has no results."
+                  time: 1792079761368
+                  version: "2.28.2"
+          - id: "batch-requests-outside-routes"
+            title: "Batch requests outside a route"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "In a custom handler, <code>getStaticProps()</code> or a plugin, create a batch request with <code>cmsClient.createBatchRequest()</code>. With <code>translate: true</code> and the <a href=\"/docs/localization/#translations-manager-v2\">v2 translations manager</a>, it also loads the translations for the docs it returns, for the <code>locales</code> you pass:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  import {RootCMSClient} from '@blinkk/root-cms';
+
+                  const cmsClient = new RootCMSClient(rootConfig);
+                  const req = cmsClient.createBatchRequest({
+                    mode: 'published',
+                    translate: true,
+                    locales: [locale],
+                  });
+                  req.addDoc('Pages/index');
+                  req.addTranslations('common');
+                  const res = await req.fetch();
+
+                  const doc = res.getDoc('Pages/index');
+                  const translations = res.getTranslations(locale);
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "If the locale depends on the doc, fetch the content first and the translations once the locale is known:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  const res = await req.fetchContent();
+                  const locale = pickLocale(res.getDoc('Pages/index'));
+                  await req.fetchTranslations(res, {locales: [locale]});
+          - id: "listing-docs"
+            title: "Listing docs"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "To list the docs in a collection, add a query to the batch request with <code>addQuery()</code>. It takes the same options as <code>cmsClient.listDocs()</code>: <code>limit</code>, <code>offset</code>, <code>orderBy</code>, <code>orderByDirection</code>, and <code>query</code> for Firestore filters."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  // @/routes/blog/index.tsx, which renders `Pages/blog`.
+                  export const {handle} = createRoute({
+                    collection: 'Pages',
+                    slug: 'blog',
+                    batchRequest: (req, ctx) => {
+                      req.addQuery('posts', 'BlogPosts', {
+                        orderBy: ctx.mode === 'draft' ? 'sys.createdAt' : 'sys.firstPublishedAt',
+                        orderByDirection: 'desc',
+                      });
+                    },
+                    preRenderHook: (props, ctx) => ({
+                      ...props,
+                      posts: ctx.batchResponse!.getQuery('posts'),
+                    }),
+                  });
+          - id: "custom-order"
+            title: "Custom order"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Collections with <code>customSorting: true</code> let editors drag docs into order in the CMS. The order is stored at <code>sys.sortKey</code>:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: "req.addQuery('guides', 'Guides', {orderBy: 'sys.sortKey'});"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Ordering by <code>sys.sortKey</code> leaves out docs that don't have a position yet, e.g. ones created by a script."
+                  time: 1792079761368
+                  version: "2.28.2"
+          - id: "translations"
+            title: "Translations"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "<code>createRoute()</code> loads the translations for the page's locale: the doc's own strings and the strings tagged <code>common</code>. With the <a href=\"/docs/localization/#translations-manager-v2\">v2 translations manager</a>, it loads the translations for docs the page references and docs in its batch request instead of <code>common</code>. In your components, translate strings with <code>useTranslations()</code>:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "tsx"
+                code: |-
+                  import {useTranslations} from '@blinkk/root';
+
+                  export default function Page(props: {doc: PagesDoc}) {
+                    const t = useTranslations();
+                    return <h1>{t(props.doc.fields?.meta?.title || '')}</h1>;
+                  }
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To load more translations, such as strings shared by every page, return their ids from the <code>translations</code> option:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  createRoute({
+                    collection: 'Pages',
+                    translations: () => ({tags: ['common']}),
+                  });
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Outside a route, use <code>cmsClient.loadTranslationsForLocale(locale, {tags: ['common']})</code>. With the v2 translations manager, use a batch request with <code>translate: true</code> and <code>res.getTranslations(locale)</code> instead (see <a href=\"#batch-requests-outside-routes\">Batch requests outside a route</a>), since <code>loadTranslations()</code> and <code>loadTranslationsForLocale()</code> only read the v1 translations."
+                  time: 1792079761368
+                  version: "2.28.2"
+          - id: "reading-docs-directly"
+            title: "Reading docs directly"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "For a single read, e.g. in a script, use <code>RootCMSClient</code>. Every read takes a <code>mode</code>: <code>published</code> for live content, or <code>draft</code> for the latest edits."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  import {RootCMSClient} from '@blinkk/root-cms';
+
+                  const cmsClient = new RootCMSClient(rootConfig);
+                  const doc = await cmsClient.getDoc('Pages', 'index', {mode: 'published'});
+                  const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});
+  - kind: "doc.edit"
+    docId: "Docs/migration--v4"
+    note: "Makes the v2 translations manager opt-in, so upgrading no longer migrates translations or needs Firestore access to build."
+    ops:
+      - op: "set"
+        path: "content.body"
+        before:
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if your build runs without Firestore access or you relied on the old defaults."
+          time: 1790955935335
+          version: "2.28.2"
+        after:
+          blocks:
+            - type: "paragraph"
+              data:
+                text: "Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if you relied on the old defaults."
+          time: 1792079761368
+          version: "2.28.2"
+      - op: "set"
+        path: "content.sections"
+        before:
+          - id: "ai-upgrade"
+            title: "Upgrade with an AI agent"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "A coding agent, such as <a href=\"https://claude.com/claude-code\">Claude Code</a>, can run the upgrade for you. Start it in your project's folder on a clean git checkout and paste this prompt:"
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                code: |-
+                  Upgrade this project to Root.js v4. Follow the instructions at
+                  https://rootjs.dev/skills/root-v4-upgrade.md
+                _arrayKey: "HGYJak"
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Or start Claude Code with the prompt in one line: <code>claude \"Upgrade this project to Root.js v4. Follow https://rootjs.dev/skills/root-v4-upgrade.md\"</code>"
+                    - type: "paragraph"
+                      data:
+                        text: "The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything, updates the packages, and runs the translations migration (after checking with you). It also suggests moving CMS routes to <code>createRoute()</code>, secrets to <code>root secrets</code> and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left."
+                  time: 1791383954878
+                  version: "2.28.2"
+                _arrayKey: "3hLiYf"
+            _arrayKey: "NB4oFJ"
+          - id: "translations"
+            title: "Translations manager v2"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The v2 translations manager is now on by default. On the first dev server start or <code>root build</code>, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, as a step of the upgrade, use <code>root-cms translations.migrate</code>, and <code>--status</code> to check whether it has run."
+                - type: "paragraph"
+                  data:
+                    text: "The migration runs before each build, so <b><code>root build</code> now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. <code>gcloud auth application-default login</code> or <code>GOOGLE_APPLICATION_CREDENTIALS</code>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "If you set <code>experiments: {v2TranslationsManager: true}</code>, you can remove it. To stay on the v1 translations system, opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+                _arrayKey: "IV6v9V"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {v2TranslationsManager: false},
+                  });
+                _arrayKey: "ehFx0S"
+            _arrayKey: "eMhHXF"
+          - id: "dependency-graph"
+            title: "Dependency graph"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The dependency graph, which tracks references between docs, is now on by default. If you set <code>dependencyGraph: true</code>, you can remove it."
+                - type: "paragraph"
+                  data:
+                    text: "The graph and global search are kept up to date by the CMS cron job. If you haven't set one up, see <a href=\"/docs/cms/#cron-jobs\">cron jobs</a>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+                _arrayKey: "ZHNzjL"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    dependencyGraph: false,
+                  });
+                _arrayKey: "S5Sqlu"
+            _arrayKey: "Q9X7Rv"
+          - id: "module-preload"
+            title: "Module preloading"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js now adds <code>&lt;link rel=\"modulepreload\"&gt;</code> tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel. Your pages' HTML will include these new tags. If you set <code>modulePreload: true</code>, you can remove it."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1791383954878
+                  version: "2.28.2"
+                _arrayKey: "6ONb7R"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    modulePreload: false,
+                  });
+                _arrayKey: "cYn860"
+            _arrayKey: "GQk4eM"
+          - id: "task-manager"
+            title: "Task manager"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The task manager is now on by default, with a Tasks page in the CMS sidebar. It no longer appears on the CMS home page. If you set <code>experiments: {taskManager: true}</code>, you can remove it."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To hide it:"
+                  time: 1791383954878
+                  version: "2.28.2"
+                _arrayKey: "NAcF7o"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {taskManager: false},
+                  });
+                _arrayKey: "2TpMj2"
+            _arrayKey: "iGAi7l"
+          - id: "editorjs"
+            title: "EditorJS removed"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The legacy EditorJS rich text editor and its \"Enable EditorJS Editor (legacy)\" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "jMH58j"
+          - id: "branding"
+            title: "CMS branding"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS UI now uses the Root.js name and the beet logo. The default accent color is now pink instead of light blue, and the default favicon is the beet. To change the look, use the <code>favicon</code> and <code>minimalBranding</code> cmsPlugin options, or <code>themes</code> to override the <code>--cms-*</code> CSS properties, such as <code>--cms-accent</code>."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "UERZ5d"
+          - id: "other"
+            title: "Other issues"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Found an issue that isn't covered here? <a href=\"https://github.com/blinkk/rootjs/issues\">File an issue</a> on GitHub."
+              time: 1791383954878
+              version: "2.28.2"
+            blocks: []
+            _arrayKey: "4IkXlP"
+        after:
+          - id: "ai-upgrade"
+            title: "Upgrade with an AI agent"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "A coding agent, such as <a href=\"https://claude.com/claude-code\">Claude Code</a>, can run the upgrade for you. Start it in your project's folder on a clean git checkout and paste this prompt:"
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CodeBlock"
+                code: |-
+                  Upgrade this project to Root.js v4. Follow the instructions at
+                  https://rootjs.dev/skills/root-v4-upgrade.md
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "Or start Claude Code with the prompt in one line: <code>claude \"Upgrade this project to Root.js v4. Follow https://rootjs.dev/skills/root-v4-upgrade.md\"</code>"
+                    - type: "paragraph"
+                      data:
+                        text: "The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything and updates the packages. It also suggests moving CMS routes to <code>createRoute()</code>, secrets to <code>root secrets</code> and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left."
+                  time: 1792079761368
+                  version: "2.28.2"
+          - id: "translations"
+            title: "Translations"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The v1 translations system is still the default, so your translations don't need to be migrated. The v2 translations manager stays opt-in while it's experimental. If you set <code>experiments: {v2TranslationsManager: true}</code>, keep it. To try it, see <a href=\"/docs/localization/#translations-manager-v2\">Translations manager v2</a>."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []
+          - id: "dependency-graph"
+            title: "Dependency graph"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The dependency graph, which tracks references between docs, is now on by default. If you set <code>dependencyGraph: true</code>, you can remove it."
+                - type: "paragraph"
+                  data:
+                    text: "The graph and global search are kept up to date by the CMS cron job. If you haven't set one up, see <a href=\"/docs/cms/#cron-jobs\">cron jobs</a>."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    dependencyGraph: false,
+                  });
+          - id: "module-preload"
+            title: "Module preloading"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Root.js now adds <code>&lt;link rel=\"modulepreload\"&gt;</code> tags for the shared JS chunks that a page's scripts import, so the browser can fetch them in parallel. Your pages' HTML will include these new tags. If you set <code>modulePreload: true</code>, you can remove it."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To opt out:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  // @/root.config.ts
+
+                  import {defineConfig} from '@blinkk/root';
+
+                  export default defineConfig({
+                    modulePreload: false,
+                  });
+          - id: "task-manager"
+            title: "Task manager"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The task manager is now on by default, with a Tasks page in the CMS sidebar. It no longer appears on the CMS home page. If you set <code>experiments: {taskManager: true}</code>, you can remove it."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks:
+              - _type: "CopyBlock"
+                body:
+                  blocks:
+                    - type: "paragraph"
+                      data:
+                        text: "To hide it:"
+                  time: 1792079761368
+                  version: "2.28.2"
+              - _type: "CodeBlock"
+                language: "ts"
+                code: |-
+                  cmsPlugin({
+                    experiments: {taskManager: false},
+                  });
+          - id: "editorjs"
+            title: "EditorJS removed"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The legacy EditorJS rich text editor and its \"Enable EditorJS Editor (legacy)\" setting have been removed. Rich text fields always use the Lexical editor, which has been the default since v2. Rich text is stored in the same format, so existing content doesn't need to be migrated."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []
+          - id: "branding"
+            title: "CMS branding"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "The CMS UI now uses the Root.js name and the beet logo. The default accent color is now pink instead of light blue, and the default favicon is the beet. To change the look, use the <code>favicon</code> and <code>minimalBranding</code> cmsPlugin options, or <code>themes</code> to override the <code>--cms-*</code> CSS properties, such as <code>--cms-accent</code>."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []
+          - id: "other"
+            title: "Other issues"
+            body:
+              blocks:
+                - type: "paragraph"
+                  data:
+                    text: "Found an issue that isn't covered here? <a href=\"https://github.com/blinkk/rootjs/issues\">File an issue</a> on GitHub."
+              time: 1792079761368
+              version: "2.28.2"
+            blocks: []

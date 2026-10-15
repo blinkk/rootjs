@@ -2156,19 +2156,19 @@ export class RootCMSClient {
   getTranslationsManager(): TranslationsManager {
     if (!this.isV2TranslationsEnabled()) {
       throw new Error(
-        '`v2TranslationsManager` is disabled. update root.config.ts and remove: `{experiments: {v2TranslationsManager: false}}`'
+        '`v2TranslationsManager` is not enabled. update root.config.ts and add: `{experiments: {v2TranslationsManager: true}}`'
       );
     }
     return new TranslationsManager(this);
   }
 
   /**
-   * Returns true if the v2 `TranslationsManager` is enabled. It's enabled by
-   * default, unless `experiments.v2TranslationsManager` is set to `false`.
+   * Returns true if the v2 `TranslationsManager` is enabled via the
+   * `experiments.v2TranslationsManager` plugin config flag.
    */
   isV2TranslationsEnabled(): boolean {
     const cmsPluginOptions = this.cmsPlugin.getConfig();
-    return cmsPluginOptions.experiments?.v2TranslationsManager !== false;
+    return Boolean(cmsPluginOptions.experiments?.v2TranslationsManager);
   }
 
   /**

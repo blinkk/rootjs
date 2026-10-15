@@ -1,0 +1,54 @@
+version: 1
+id: "2026-10-15-blog-rootjs-v4-translations-opt-in"
+title: "Make the translations manager opt-in in the Root.js v4.0 blog post"
+author: "claude-code"
+summary: |-
+  - BlogPosts/rootjs-v4: Marks the rebuilt translations manager as
+    experimental and opt-in, removes it from the new defaults, and drops the
+    Firestore access and translations migration notes from the upgrade.
+changes:
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Marks the translations manager as experimental and explains how to opt in."
+    ops:
+      - op: "set"
+        path: "content.sections.3.title"
+        before: "Translations manager"
+        after: "Translations manager (experimental)"
+      - op: "set"
+        path: "content.sections.3.body.blocks.0.data.text"
+        before: "The translations manager has been rebuilt from the ground up to work more closely with the docs they support. Translations now have draft and published versions like docs do, so changes to translations go live when the doc is published instead of as soon as they&#039;re saved."
+        after: "The translations manager has been rebuilt from the ground up to work more closely with the docs they support. Translations now have draft and published versions like docs do, so changes to translations go live when the doc is published instead of as soon as they&#039;re saved. It&#039;s experimental for now, so it&#039;s off by default."
+      - op: "set"
+        path: "content.sections.3.body.blocks.3.data.text"
+        before: "Existing translations are migrated automatically the first time you start the dev server or build your site with v4. To run the migration yourself, use <code>root-cms translations.migrate</code>."
+        after: "To try it, set <code>experiments: {v2TranslationsManager: true}</code> in your <code>cmsPlugin()</code> config. Existing translations are migrated automatically the first time you start the dev server or build your site with it on. See <a href=\"/docs/localization/#translations-manager-v2\">Localization</a> for details."
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Removes the translations manager from the new defaults."
+    ops:
+      - op: "remove_item"
+        path: "content.sections.5.body.blocks.1.data.items"
+        index: 0
+        before:
+          content: "<b>Translations manager:</b> the rebuilt translations manager, described above."
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Notes that batch request translations need the new translations manager."
+    ops:
+      - op: "set"
+        path: "content.sections.7.body.blocks.1.data.text"
+        before: "To load more content for a page, like a shared header or a list of posts, use a batch request. Instead of a separate RPC to Firestore for each read, a batch request fetches the page's docs, queries and data sources in parallel, then fetches the translations for every doc in the batch, for the page's locale only. In <code>createRoute()</code>, add reads with the <code>batchRequest</code> option:"
+        after: "To load more content for a page, like a shared header or a list of posts, use a batch request. Instead of a separate RPC to Firestore for each read, a batch request fetches the page's docs, queries and data sources in parallel. With the new translations manager, it then fetches the translations for every doc in the batch, for the page's locale only. In <code>createRoute()</code>, add reads with the <code>batchRequest</code> option:"
+  - kind: "doc.edit"
+    docId: "BlogPosts/rootjs-v4"
+    note: "Drops the Firestore access and translations migration notes from the upgrade."
+    ops:
+      - op: "set"
+        path: "content.sections.9.body.blocks.0.data.text"
+        before: "Most projects only need to update their packages. If your build runs without Firestore access, or you relied on one of the old defaults, read the <a href=\"/docs/migration/v4/\">v4 migration guide</a>."
+        after: "Most projects only need to update their packages. If you relied on one of the old defaults, read the <a href=\"/docs/migration/v4/\">v4 migration guide</a>."
+      - op: "set"
+        path: "content.sections.9.body.blocks.3.data.text"
+        before: "The agent works on a new branch and saves a snapshot of your pages before it changes anything. It updates your packages and migrates your translations once you give it the go-ahead. It also suggests other changes worth making for v4, like moving CMS routes to <code>createRoute()</code>. Then it compares your pages before and after, runs your build and tests, and offers to file GitHub issues for anything left over."
+        after: "The agent works on a new branch and saves a snapshot of your pages before it changes anything. It updates your packages and suggests other changes worth making for v4, like moving CMS routes to <code>createRoute()</code>. Then it compares your pages before and after, runs your build and tests, and offers to file GitHub issues for anything left over."
