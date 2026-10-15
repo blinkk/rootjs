@@ -12,9 +12,9 @@ import {
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
-  IconArrowsTransferDown,
   IconCirclePlus,
   IconRocket,
+  IconStatusChange,
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -378,6 +378,7 @@ export function TranslationsManagerEditPage(
             <Button
               variant="filled"
               color="dark"
+              size="sm"
               disabled={!hasChanges}
               loading={saving}
               onClick={() => onSave()}
@@ -387,6 +388,7 @@ export function TranslationsManagerEditPage(
             <Button
               variant="default"
               color="dark"
+              size="sm"
               leftIcon={<IconRocket size={16} />}
               disabled={loading || !docData || hasChanges || !status}
               loading={publishing}
@@ -440,12 +442,12 @@ TranslationsManagerEditPage.Table = (props: {
                       withArrow
                     >
                       <ActionIcon
+                        variant="default"
                         size="sm"
-                        variant="subtle"
                         aria-label="Port translations from another string"
                         onClick={() => props.onPort(row)}
                       >
-                        <IconArrowsTransferDown size={14} />
+                        <IconStatusChange size={14} />
                       </ActionIcon>
                     </Tooltip>
                   )}

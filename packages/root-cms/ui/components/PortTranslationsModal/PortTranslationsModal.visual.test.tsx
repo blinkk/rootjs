@@ -95,27 +95,33 @@ describe('PortTranslationsModal', () => {
     cleanup();
   });
 
-  it('ports translations with carried-over edits and rules', async () => {
+  it('ports translations with find/replace rules', async () => {
     await page.viewport(1200, 1000);
     const {onSave, closeModal} = renderModal();
     const wrapper = page.getByTestId('wrapper');
 
-    // The most similar candidate is preselected and the year change is
-    // carried over to each translation.
-    await expect
-      .element(wrapper.getByText('applied in 3 of 3 languages'))
-      .toBeVisible();
-    expect(getPortedValues()).toEqual({
-      de: '© 2026 Google LLC. Alle Rechte vorbehalten.',
-      es: '© 2026 Google LLC. Todos los derechos reservados.',
-      fr: '© 2026 Google LLC. Tous droits réservés.',
-    });
+    // The most similar candidate is preselected and its translations are
+    // copied as-is.
     await expect.element(wrapper.getByText('replaces existing')).toBeVisible();
+    expect(getPortedValues()).toEqual({
+      de: '© 2025 Google LLC. Alle Rechte vorbehalten.',
+      es: '© 2025 Google LLC. Todos los derechos reservados.',
+      fr: '© 2025 Google LLC. Tous droits réservés.',
+    });
 
-    // Add a find/replace rule.
+    // Add find/replace rules.
     await wrapper.getByRole('button', {name: 'Add find/replace rule'}).click();
-    await wrapper.getByPlaceholder('Find', {exact: true}).fill('Todos los');
-    await wrapper.getByPlaceholder('Replace', {exact: true}).fill('Todos');
+    await wrapper.getByPlaceholder('Find', {exact: true}).fill('2025');
+    await wrapper.getByPlaceholder('Replace', {exact: true}).fill('2026');
+    await wrapper.getByRole('button', {name: 'Add find/replace rule'}).click();
+    await wrapper
+      .getByPlaceholder('Find', {exact: true})
+      .nth(1)
+      .fill('Todos los');
+    await wrapper
+      .getByPlaceholder('Replace', {exact: true})
+      .nth(1)
+      .fill('Todos');
     await vi.waitFor(() =>
       expect(getPortedValues().es).toBe(
         '© 2026 Google LLC. Todos derechos reservados.'
@@ -139,9 +145,7 @@ describe('PortTranslationsModal', () => {
     await page.viewport(1200, 1000);
     renderModal();
     const wrapper = page.getByTestId('wrapper');
-    await expect
-      .element(wrapper.getByText('applied in 3 of 3 languages'))
-      .toBeVisible();
+    await expect.element(wrapper.getByText('replaces existing')).toBeVisible();
     await wrapper.getByRole('button', {name: 'Add find/replace rule'}).click();
     await wrapper.getByRole('checkbox', {name: 'Regex'}).click();
     await wrapper.getByPlaceholder('Find (regex)').fill('(');

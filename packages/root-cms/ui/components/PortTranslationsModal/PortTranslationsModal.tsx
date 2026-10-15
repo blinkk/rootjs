@@ -26,7 +26,6 @@ import {
   classifySourceChange,
   diffStrings,
   findPlaceholderMismatches,
-  getSourceHunks,
   portTranslation,
   rankBySimilarity,
 } from '../../../shared/translation-port.js';
@@ -85,7 +84,7 @@ export function usePortTranslationsModal() {
         ...modalTheme,
         title: 'Port translations',
         innerProps,
-        size: 'clamp(80%, 960px, 1200px)',
+        size: 'clamp(70%, 880px, 1040px)',
       });
     },
   };
@@ -94,7 +93,7 @@ export function usePortTranslationsModal() {
 /**
  * Modal for porting the translations of one source string to another, e.g.
  * after a source string is edited slightly. Translations can optionally be
- * transformed by carrying over the source edits and by find/replace rules.
+ * transformed by find/replace rules.
  */
 export function PortTranslationsModal(
   modalProps: ContextModalProps<PortTranslationsModalProps>
@@ -105,7 +104,6 @@ export function PortTranslationsModal(
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [lookupValue, setLookupValue] = useState('');
   const [lookingUp, setLookingUp] = useState(false);
-  const [carryOver, setCarryOver] = useState(true);
   const [rules, setRules] = useState<ReplaceRule[]>([]);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set());
@@ -248,13 +246,7 @@ export function PortTranslationsModal(
         props.targetTranslations,
         lang
       );
-      const result = portTranslation({
-        oldSource: selectedCandidate.source,
-        newSource: props.targetSource,
-        translation: from,
-        carryOverSourceEdits: carryOver,
-        rules: validRules,
-      });
+      const result = portTranslation({translation: from, rules: validRules});
       const overridden = lang in overrides;
       const value = overridden ? overrides[lang] : result.text;
       return {
@@ -267,7 +259,6 @@ export function PortTranslationsModal(
         placeholders: value
           ? findPlaceholderMismatches(props.targetSource, value)
           : {missing: [], extra: []},
-        changes: result.changes,
       };
     });
   }, [
@@ -275,29 +266,9 @@ export function PortTranslationsModal(
     props.languages,
     props.targetSource,
     props.targetTranslations,
-    carryOver,
     validRules,
     overrides,
   ]);
-
-  // For each source change, count the languages it was carried over to.
-  const sourceChanges = useMemo(() => {
-    if (!selectedCandidate) {
-      return [];
-    }
-    const hunks = getSourceHunks(
-      selectedCandidate.source,
-      props.targetSource
-    ).filter((hunk) => hunk.oldText.trim() || hunk.newText.trim());
-    const rowsWithFrom = rows.filter((row) => row.from);
-    return hunks.map((hunk, i) => ({
-      ...hunk,
-      appliedCount: rowsWithFrom.filter(
-        (row) => row.changes[i]?.status === 'applied'
-      ).length,
-      total: rowsWithFrom.length,
-    }));
-  }, [selectedCandidate, props.targetSource, rows]);
 
   const changeType = selectedCandidate
     ? classifySourceChange(selectedCandidate.source, props.targetSource)
@@ -342,7 +313,6 @@ export function PortTranslationsModal(
           fromSource: selectedCandidate.source,
           toSource: props.targetSource,
           languages: Object.keys(translations),
-          carryOverSourceEdits: carryOver,
           rules: validRules,
         },
       });
@@ -458,31 +428,11 @@ export function PortTranslationsModal(
           </div>
 
           <div className="PortTranslationsModal__section">
-            <div className="PortTranslationsModal__label">Transforms</div>
-            <Checkbox
-              size="xs"
-              label="Apply the source changes to translations where the changed text appears unchanged (e.g. numbers, years, URLs and product names)"
-              checked={carryOver}
-              onChange={(e: Event) =>
-                setCarryOver((e.target as HTMLInputElement).checked)
-              }
-            />
-            {carryOver && sourceChanges.length > 0 && (
-              <ul className="PortTranslationsModal__changes">
-                {sourceChanges.map((change, i) => (
-                  <li key={i} className="PortTranslationsModal__changes__item">
-                    <code>{change.oldText || '∅'}</code>
-                    {' → '}
-                    <code>{change.newText || '∅'}</code>
-                    <span className="PortTranslationsModal__changes__count">
-                      {change.oldText.trim()
-                        ? `applied in ${change.appliedCount} of ${change.total} languages`
-                        : 'added text, edit manually'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="PortTranslationsModal__label">Find and replace</div>
+            <Text size="body-sm" color="gray">
+              Optionally update the ported translations, e.g. to replace a year
+              or product name that changed in the source string.
+            </Text>
             <div className="PortTranslationsModal__rules">
               {rules.map((rule, i) => (
                 <div key={i} className="PortTranslationsModal__rule">
@@ -531,8 +481,8 @@ export function PortTranslationsModal(
                   />
                   <Tooltip label="Remove rule" position="top" withArrow>
                     <ActionIcon
+                      variant="default"
                       size="sm"
-                      variant="subtle"
                       onClick={() =>
                         setRules((current) => current.filter((_, j) => j !== i))
                       }
@@ -563,7 +513,7 @@ export function PortTranslationsModal(
               <thead>
                 <tr>
                   <th />
-                  <th>language</th>
+                  <th>lang</th>
                   <th>from</th>
                   <th>ported</th>
                 </tr>
@@ -669,7 +619,6 @@ export function PortTranslationsModal(
                               >
                                 <ActionIcon
                                   size="xs"
-                                  variant="subtle"
                                   onClick={() =>
                                     setOverrides((current) => {
                                       const next = {...current};

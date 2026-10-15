@@ -7,13 +7,10 @@
  * Usage:
  * ```
  * const result = portTranslation({
- *   oldSource: '© 2025 Google',
- *   newSource: '© 2026 Google',
  *   translation: '© 2025 Google. Alle Rechte vorbehalten.',
- *   carryOverSourceEdits: true,
- *   rules: [{find: 'Alle', replace: 'Sämtliche'}],
+ *   rules: [{find: '2025', replace: '2026'}],
  * });
- * // result.text => '© 2026 Google. Sämtliche Rechte vorbehalten.'
+ * // result.text => '© 2026 Google. Alle Rechte vorbehalten.'
  * ```
  */
 
@@ -21,36 +18,6 @@
 export interface DiffOp {
   type: 'equal' | 'insert' | 'delete';
   text: string;
-}
-
-/** A contiguous change between an old and new source string. */
-export interface SourceHunk {
-  /** Text removed from the old source (empty for pure insertions). */
-  oldText: string;
-  /** Text added in the new source (empty for pure deletions). */
-  newText: string;
-}
-
-/**
- * Outcome of carrying a source change over to a translation:
- * - `applied`: the old text was found in the translation and replaced.
- * - `not-found`: the old text doesn't appear in the translation (i.e. it was
- *   translated), so the change has to be made manually.
- * - `ambiguous`: the old text appears in the translation more often than in
- *   the source, or maps to different replacements, so it was left as-is.
- * - `insertion`: new text was added to the source, which can't be carried
- *   over automatically.
- */
-export type CarryOverStatus =
-  'applied' | 'not-found' | 'ambiguous' | 'insertion';
-
-export interface CarryOverChange extends SourceHunk {
-  status: CarryOverStatus;
-}
-
-export interface CarryOverResult {
-  text: string;
-  changes: CarryOverChange[];
 }
 
 /** A find/replace rule applied to translations when porting. */
@@ -74,22 +41,14 @@ export interface ReplaceRuleResult {
 }
 
 export interface PortTranslationOptions {
-  /** The source string the translation was made for. */
-  oldSource: string;
-  /** The source string the translation is being ported to. */
-  newSource: string;
-  /** The existing translation of `oldSource`. */
+  /** The existing translation to port. */
   translation: string;
-  /** Whether to apply the old -> new source edits to the translation. */
-  carryOverSourceEdits?: boolean;
-  /** Find/replace rules, applied in order after carrying over edits. */
+  /** Find/replace rules, applied in order. */
   rules?: ReplaceRule[];
 }
 
 export interface PortTranslationResult {
   text: string;
-  /** Source changes and whether each was carried over. */
-  changes: CarryOverChange[];
   /** Number of replacements made by each rule, in order. */
   ruleCounts: number[];
 }
@@ -214,145 +173,6 @@ function mergeOps(ops: DiffOp[]): DiffOp[] {
 }
 
 /**
- * Returns the contiguous changes between an old and new source string.
- */
-export function getSourceHunks(
-  oldSource: string,
-  newSource: string
-): SourceHunk[] {
-  const hunks: SourceHunk[] = [];
-  let current: SourceHunk | null = null;
-  for (const op of diffStrings(oldSource, newSource)) {
-    if (op.type === 'equal') {
-      current = null;
-      continue;
-    }
-    if (!current) {
-      current = {oldText: '', newText: ''};
-      hunks.push(current);
-    }
-    if (op.type === 'delete') {
-      current.oldText += op.text;
-    } else {
-      current.newText += op.text;
-    }
-  }
-  return hunks;
-}
-
-/**
- * Applies the edits between `oldSource` and `newSource` to a translation of
- * `oldSource`, for changed text that appears verbatim in the translation
- * (e.g. numbers, years, URLs, placeholders and product names, which usually
- * aren't translated).
- */
-export function carryOverSourceEdits(
-  oldSource: string,
-  newSource: string,
-  translation: string
-): CarryOverResult {
-  const hunks = getSourceHunks(oldSource, newSource);
-
-  // Group the hunks by old text so repeated changes (e.g. "2025" -> "2026"
-  // in two places) are treated as one, and conflicting ones are detected.
-  const replacements = new Map<
-    string,
-    {newTexts: Set<string>; changedCount: number}
-  >();
-  for (const hunk of hunks) {
-    const oldText = hunk.oldText.trim() ? hunk.oldText : '';
-    if (!oldText) {
-      continue;
-    }
-    if (!replacements.has(oldText)) {
-      replacements.set(oldText, {newTexts: new Set(), changedCount: 0});
-    }
-    const entry = replacements.get(oldText)!;
-    entry.newTexts.add(hunk.newText);
-    entry.changedCount++;
-  }
-
-  const statuses = new Map<string, CarryOverStatus>();
-  const matches: Array<{start: number; end: number; replacement: string}> = [];
-  for (const [oldText, {newTexts, changedCount}] of replacements) {
-    const translationMatches = findBoundedMatches(translation, oldText);
-    if (translationMatches.length === 0) {
-      statuses.set(oldText, 'not-found');
-      continue;
-    }
-    // The change is ambiguous if it maps to different replacements, if only
-    // some of the occurrences in the source changed (it's unknown which
-    // occurrences in the translation correspond to them), or if the text
-    // appears in the translation more often than in the source.
-    const sourceCount = findBoundedMatches(oldSource, oldText).length;
-    if (
-      newTexts.size > 1 ||
-      changedCount < sourceCount ||
-      translationMatches.length > sourceCount
-    ) {
-      statuses.set(oldText, 'ambiguous');
-      continue;
-    }
-    const replacement = Array.from(newTexts)[0];
-    statuses.set(oldText, 'applied');
-    for (const start of translationMatches) {
-      matches.push({start, end: start + oldText.length, replacement});
-    }
-  }
-
-  // Apply all replacements against the original translation at once, so a
-  // replacement's output is never matched by another change.
-  matches.sort((a, b) => a.start - b.start);
-  let text = '';
-  let pos = 0;
-  for (const match of matches) {
-    if (match.start < pos) {
-      continue;
-    }
-    text += translation.slice(pos, match.start) + match.replacement;
-    pos = match.end;
-  }
-  text += translation.slice(pos);
-
-  const changes: CarryOverChange[] = hunks
-    .filter((hunk) => hunk.oldText.trim() || hunk.newText.trim())
-    .map((hunk) => ({
-      ...hunk,
-      status: hunk.oldText.trim()
-        ? statuses.get(hunk.oldText) || 'not-found'
-        : 'insertion',
-    }));
-  return {text, changes};
-}
-
-/**
- * Returns the start indexes of `needle` in `haystack`, skipping matches that
- * are part of a larger word (e.g. "9" within "1999").
- */
-function findBoundedMatches(haystack: string, needle: string): number[] {
-  const results: number[] = [];
-  if (!needle) {
-    return results;
-  }
-  const checkStart = WORD_CHAR_RE.test(needle[0]);
-  const checkEnd = WORD_CHAR_RE.test(needle[needle.length - 1]);
-  let index = haystack.indexOf(needle);
-  while (index !== -1) {
-    const before = haystack[index - 1];
-    const after = haystack[index + needle.length];
-    const boundedStart = !checkStart || !before || !WORD_CHAR_RE.test(before);
-    const boundedEnd = !checkEnd || !after || !WORD_CHAR_RE.test(after);
-    if (boundedStart && boundedEnd) {
-      results.push(index);
-      index = haystack.indexOf(needle, index + needle.length);
-    } else {
-      index = haystack.indexOf(needle, index + 1);
-    }
-  }
-  return results;
-}
-
-/**
  * Applies a find/replace rule to a string.
  */
 export function applyReplaceRule(
@@ -411,30 +231,19 @@ function escapeRegExp(str: string): string {
 }
 
 /**
- * Ports a translation from an old source string to a new one, optionally
- * carrying over the source edits and applying find/replace rules.
+ * Ports a translation to a new source string by applying find/replace rules.
  */
 export function portTranslation(
   options: PortTranslationOptions
 ): PortTranslationResult {
   let text = options.translation || '';
-  let changes: CarryOverChange[] = [];
-  if (options.carryOverSourceEdits) {
-    const result = carryOverSourceEdits(
-      options.oldSource,
-      options.newSource,
-      text
-    );
-    text = result.text;
-    changes = result.changes;
-  }
   const ruleCounts: number[] = [];
   for (const rule of options.rules || []) {
     const result = applyReplaceRule(text, rule);
     text = result.text;
     ruleCounts.push(result.count);
   }
-  return {text, changes, ruleCounts};
+  return {text, ruleCounts};
 }
 
 /**
