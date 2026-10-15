@@ -249,6 +249,18 @@
                   "signature": "fetch(): Promise<BatchResponse>;",
                   "doc": "Fetches data from the DB.",
                   "examples": []
+                },
+                {
+                  "name": "fetchContent",
+                  "signature": "fetchContent(): Promise<BatchResponse>;",
+                  "doc": "Fetches the docs, queries and data sources in the request, but not the\ntranslations. Use this with `fetchTranslations()` to defer loading\ntranslations until the locale is known, e.g.:\n\n```ts\nconst req = cmsClient.createBatchRequest({mode, translate: true});\nreq.addDoc('Pages/index');\nreq.addTranslations('common');\nconst res = await req.fetchContent();\nconst locale = pickLocale(res.getDoc('Pages/index'));\nawait req.fetchTranslations(res, {locales: [locale]});\nconst translations = res.getTranslations(locale);\n```",
+                  "examples": []
+                },
+                {
+                  "name": "fetchTranslations",
+                  "signature": "fetchTranslations(res: BatchResponse, options?: {\n    locales?: string[];\n}): Promise<BatchResponse>;",
+                  "doc": "Fetches translations into `res` for the explicitly-added translations ids\nand, when `options.translate` is enabled, the docs fetched so far.\n\n`options.locales` overrides the locales set on the request. Each locale\nis expanded through its fallback chain.",
+                  "examples": []
                 }
               ],
               "doc": "",
@@ -377,6 +389,24 @@
                   "examples": []
                 },
                 {
+                  "name": "getDoc",
+                  "signature": "getDoc<Fields = any>(docId: string): Doc<Fields> | null;",
+                  "doc": "Returns a doc added with `addDoc()`, or `null` if it doesn't exist. Slugs\nwith slashes match either form, e.g. \"Pages/foo/bar\" or \"Pages/foo--bar\".\n\n```ts\nconst header = res.getDoc<GlobalFields>('Global/header');\n```",
+                  "examples": []
+                },
+                {
+                  "name": "getQuery",
+                  "signature": "getQuery<Fields = any>(queryId: string): Array<Doc<Fields>>;",
+                  "doc": "Returns the docs for a query added with `addQuery()`, or an empty array if\nthe query has no results.\n\n```ts\nconst posts = res.getQuery<BlogPostsFields>('posts');\n```",
+                  "examples": []
+                },
+                {
+                  "name": "getDataSource",
+                  "signature": "getDataSource<T = any>(dataSourceId: string): DataSourceData<T> | null;",
+                  "doc": "Returns a data source added with `addDataSource()`, or `null` if it\ndoesn't exist.\n\n```ts\nconst pricing = res.getDataSource<PricingRow[]>('pricing');\n```",
+                  "examples": []
+                },
+                {
                   "name": "getTranslations",
                   "signature": "getTranslations(locale: string | string[]): LocaleTranslations;",
                   "doc": "Returns a map of translations for a given locale or locale fallbacks.\n\nThe input is either a single locale (e.g. \"de\"), which is expanded\nthrough the fallback chain configured in `i18n.fallbacks`, or an array of\nlocales representing an explicit fallback chain, e.g.\n`[\"en-CA\", \"en-GB\", \"en\"]`.\n\nThe returned value is a flat map of source string to translated string,\ne.g.:\n{\"<source>\": \"<translation>\"}",
@@ -408,6 +438,14 @@
               "signature": "function chunkArray<T>(items: T[], chunkSize: number): T[][];",
               "members": [],
               "doc": "Splits an array into chunks of (up to) a given size.",
+              "examples": []
+            },
+            {
+              "name": "clearReadCaches",
+              "kind": "function",
+              "signature": "function clearReadCaches(): Promise<void>;",
+              "members": [],
+              "doc": "Clears every `ReadCache` in the process (including their stores). Called\nautomatically when docs are published or unpublished through a\n`RootCMSClient`.",
               "examples": []
             },
             {
@@ -456,39 +494,93 @@
                   "examples": []
                 },
                 {
+                  "name": "getSlug",
+                  "signature": "getSlug?: (params: RouteParams) => string;",
+                  "doc": "Custom slug resolution, e.g. for normalizing legacy URLs. Takes\nprecedence over `slug`, `slugFormat` and `slugParam`, and applies to both\nSSR and SSG. Returning an empty string renders the 404 page.\n\n```ts\ncreateRoute({\n  collection: 'Pages',\n  slugParam: 'path',\n  // Map `section/123` to the `section/123/index` doc.\n  getSlug: (params) => {\n    const slug = params.path || 'index';\n    return /^section\\/\\d+$/.test(slug) ? `${slug}/index` : slug;\n  },\n});\n```\n\nNOTE: `getStaticPaths()` maps doc slugs to params with the default logic\nand doesn't use `getSlug()`.",
+                  "examples": []
+                },
+                {
                   "name": "fetchData",
                   "signature": "fetchData?: (context: RouteContext) => Record<string, Promise<any>>;",
                   "doc": "Callback function that returns a map of Promises that contain fetched data.\nOnce the promise is resolved, the values are injected into page's props\nfor rendering.",
                   "examples": []
                 },
                 {
+                  "name": "batchRequest",
+                  "signature": "batchRequest?: (batchRequest: BatchRequest, context: RouteContext) => void | Promise<void>;",
+                  "doc": "Hook for adding docs, queries, data sources or translations to the\nroute's batch request. Everything added here is fetched in parallel with\nthe route's doc, and translations for any docs or query results are\nloaded along with the route's translations (for the resolved locale\nonly). The response is available as `context.batchResponse`.\n\n```ts\ncreateRoute({\n  collection: 'Pages',\n  batchRequest: (req) => {\n    req.addDoc('Global/header');\n    req.addQuery('posts', 'BlogPosts', {limit: 10});\n  },\n  preRenderHook: (props, ctx) => ({\n    ...props,\n    header: ctx.batchResponse!.getDoc('Global/header'),\n    posts: ctx.batchResponse!.getQuery('posts'),\n  }),\n});\n```",
+                  "examples": []
+                },
+                {
+                  "name": "resolveDoc",
+                  "signature": "resolveDoc?: (ctx: ResolveDocContext) => RootCMSDoc | null | undefined | Promise<RootCMSDoc | null | undefined>;",
+                  "doc": "Replaces the route's doc for a request, e.g. to serve a region-specific\nor flag-gated variant from another collection on the same URL. Called\nonce the locale is resolved and before translations are loaded. If a doc\nis returned, it replaces the route's doc (as `props.doc` and\n`context.doc`), and its translations are loaded on top of the route\ndoc's translations. Returning `null` or `undefined` keeps the route's\ndoc.\n\n```ts\ncreateRoute({\n  collection: 'Pages',\n  resolveDoc: async (ctx) => {\n    if (ctx.req?.get('x-country-code') !== 'DE') {\n      return null;\n    }\n    return ctx.cmsClient.getDoc('PagesDE', ctx.slug, {mode: ctx.mode});\n  },\n});\n```",
+                  "examples": []
+                },
+                {
                   "name": "notFoundHook",
                   "signature": "notFoundHook?: (req: Request, res: Response) => void | Promise<void>;",
-                  "doc": "Hook that's called when the doc is not found. If not provided, the default\n404 handler will be called.",
+                  "doc": "Hook that's called when the doc is not found. If not provided, the default\n404 handler will be called.\n\nThe response status code set by the hook (e.g. `res.status(404)`) is\npassed through to `req.handlerContext.render()`.",
                   "examples": []
                 },
                 {
                   "name": "preRenderHook",
                   "signature": "preRenderHook?: (props: any, context: RouteContext) => any | Promise<any>;",
-                  "doc": "Hook for amending any props values before being passed to the page\ncomponent.",
+                  "doc": "Hook for amending any props values before being passed to the page\ncomponent.\n\nSet `props.$redirect` (and optionally `props.$redirectCode`) to redirect,\nor `props.$statusCode` to respond with a different status code (e.g. 403\nor 410). A non-200 `res.statusCode` set by the hook is also passed\nthrough to the renderer.",
                   "examples": []
                 },
                 {
                   "name": "setResponseHeaders",
                   "signature": "setResponseHeaders?: (req: Request, res: Response) => void;",
-                  "doc": "Hook for setting any response headers.",
+                  "doc": "Hook for setting any response headers. A non-200 `res.statusCode` set by\nthe hook is passed through to the renderer.",
                   "examples": []
                 },
                 {
                   "name": "translations",
                   "signature": "translations?: (context: RouteContext) => {\n    tags?: string[];\n};",
-                  "doc": "Translations configuration.",
+                  "doc": "Translations configuration. The returned `tags` are additional\ntranslations ids to load (e.g. \"common\" or \"Global/strings\"), on top of\nthe route doc's own translations. Called after the doc is loaded, so\n`context.doc` and `context.locale` are available.",
+                  "examples": []
+                },
+                {
+                  "name": "translateReferences",
+                  "signature": "translateReferences?: boolean | 'transitive';",
+                  "doc": "Whether to also load translations for the docs referenced by the route's\ndoc (e.g. via `schema.reference()` fields), as tracked by the CMS\ndependency graph. Set to \"transitive\" to include docs referenced by those\ndocs, recursively. Defaults to `true` (direct references only). Has no\neffect when the dependency graph or the v2 translations manager is\ndisabled.",
+                  "examples": []
+                },
+                {
+                  "name": "translate",
+                  "signature": "translate?: boolean | ((context: RouteContext) => boolean);",
+                  "doc": "Whether to load translations for the route. Set to `false` (or a function\nthat returns `false`) to skip all translation loading, e.g. for embeds or\npreview-only routes, in which case the page is rendered with `{}`\ntranslations. The function is called once the doc and locale are loaded.\nDefaults to `true`.",
                   "examples": []
                 },
                 {
                   "name": "disableCacheControl",
                   "signature": "disableCacheControl?: boolean;",
                   "doc": "Sets Cache-Control header to `private`.",
+                  "examples": []
+                },
+                {
+                  "name": "cacheControl",
+                  "signature": "cacheControl?: string;",
+                  "doc": "Cache-Control header for published pages. Defaults to\n`public, max-age=15, s-maxage=30`. Draft (preview) pages are always\n`private`.",
+                  "examples": []
+                },
+                {
+                  "name": "notFoundCacheControl",
+                  "signature": "notFoundCacheControl?: string;",
+                  "doc": "Cache-Control header for 404 responses. Defaults to `private`, so that\nCDNs don't cache a 404 caused by a transient miss or a doc that isn't\npublished yet. A `notFoundHook` can override it.",
+                  "examples": []
+                },
+                {
+                  "name": "cache",
+                  "signature": "cache?: boolean | ReadCache;",
+                  "doc": "Caches published CMS reads in memory, which saves a Firestore round trip\non most page renders. Pass `true` to use a cache shared by every route\n(reads are cached for 60 seconds), or pass a `ReadCache` to configure it,\ne.g. `{cache: new ReadCache({ttl: 30 * 1000})}`.\n\nPublished content can take up to the cache's ttl to show up (plus any CDN\ncache time, see `cacheControl`). Draft (preview) requests are never\ncached. Ignored outside of production (i.e. unless `NODE_ENV` is\n\"production\"). Caches are cleared when docs are published or unpublished\nin the same process, or manually with `clearReadCaches()`.\n\nDuring `root build`, the shared cache (`true`) is backed by the\nfilesystem (see `FileSystemReadCacheStore`), so reads are shared by the\nbuild's worker threads (`--threads`) and cached for the whole build.",
+                  "examples": []
+                },
+                {
+                  "name": "createCmsClient",
+                  "signature": "createCmsClient?: (rootConfig: RootConfig, options: RootCMSClientOptions) => RootCMSClient;",
+                  "doc": "Creates the route's `RootCMSClient`, e.g. to overlay a change proposal\nwith `{proposal}`. The `options` (which include the read `cache`, if\nenabled) should be passed along to the client.\n\n```ts\ncreateRoute({\n  collection: 'Pages',\n  createCmsClient: (rootConfig, options) =>\n    new RootCMSClient(rootConfig, {...options, proposal}),\n});\n```",
                   "examples": []
                 },
                 {
@@ -506,13 +598,25 @@
                 {
                   "name": "previewOnly",
                   "signature": "previewOnly?: boolean;",
-                  "doc": "Whether the route should only be available with ?preview=true.",
+                  "doc": "Whether the route should only be available in draft mode (i.e. with\n`?preview=true`, see `getMode`).",
+                  "examples": []
+                },
+                {
+                  "name": "getMode",
+                  "signature": "getMode?: (req: RouteRequest) => DocMode | Promise<DocMode>;",
+                  "doc": "Determines whether a request reads draft or published content. Defaults\nto the exported `getMode()`, which uses `?preview=true` (and\n`?preview=true&mode=published`). Only used in SSR mode (see `ssgMode`).\n\n```ts\nimport {createRoute, getMode} from '@blinkk/root-cms';\n\ncreateRoute({\n  collection: 'Pages',\n  getMode: (req) => {\n    if (!isProd && req.get('x-force-draft') === 'true') {\n      return 'draft';\n    }\n    return getMode(req);\n  },\n});\n```",
                   "examples": []
                 },
                 {
                   "name": "defaultLocale",
                   "signature": "defaultLocale?: string;",
                   "doc": "Overrides the default locale for the route.",
+                  "examples": []
+                },
+                {
+                  "name": "resolveLocale",
+                  "signature": "resolveLocale?: (ctx: ResolveLocaleContext) => string | ResolvedLocale | null | undefined | Promise<string | ResolvedLocale | null | undefined>;",
+                  "doc": "Custom locale lookup, for sites with custom locale logic (e.g. mapping\ncountries or URL params to locales). Returns the locale to render, which\nmust be one of `ctx.docLocales` (matched case-insensitively). Returning\n`null` or a locale the doc isn't enabled for renders the 404 page (or\ncalls `notFoundHook`). To render a locale the doc isn't enabled for,\nreturn `{locale, force: true}`.\n\nCall `ctx.resolveDefault()` to fall back to the built-in logic:\n\n```ts\ncreateRoute({\n  collection: 'Pages',\n  resolveLocale: (ctx) => {\n    if (ctx.isDefaultLocale && ctx.country === 'CH') {\n      return ctx.docLocales.includes('de-CH') ? 'de-CH' : 'de';\n    }\n    return ctx.resolveDefault();\n  },\n});\n```\n\nAlso called in SSG mode, with `req: undefined`, `isDefaultLocale: false`\nand `routeLocale` set to the locale from the build path, where\n`ctx.resolveDefault()` returns the build path's locale (if the doc is\nenabled for it).",
                   "examples": []
                 }
               ],
@@ -1105,6 +1209,66 @@
               "examples": []
             },
             {
+              "name": "FileSystemReadCacheStore",
+              "kind": "class",
+              "signature": "class FileSystemReadCacheStore implements ReadCacheStore",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get(key: string): Promise<ReadCacheStoreEntry | undefined>;",
+                  "doc": "Returns the entry for `key`, or `undefined` if it isn't stored.",
+                  "examples": []
+                },
+                {
+                  "name": "set",
+                  "signature": "set(key: string, entry: ReadCacheStoreEntry): Promise<void>;",
+                  "doc": "Stores the entry for `key`.",
+                  "examples": []
+                },
+                {
+                  "name": "delete",
+                  "signature": "delete(key: string): Promise<void>;",
+                  "doc": "Removes the entry for `key`, e.g. when a fetch fails.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all entries.",
+                  "examples": []
+                }
+              ],
+              "doc": "A `ReadCacheStore` that writes cached reads to the filesystem, so that they\ncan be shared across processes and worker threads, e.g. the workers of a\n`root build --threads=N` SSG build.\n\nConcurrent misses for the same key are deduped across processes: the\nfirst process to miss claims the key with a lock file and fetches it, and\nthe others wait for the result.\n\n```ts\nconst cache = new ReadCache({\n  store: new FileSystemReadCacheStore({dir: 'dist/.cache/root-cms'}),\n});\n```\n\nDuring `root build`, `createRoute({cache: true})` uses this store\nautomatically (under `dist/.cache/`, which is deleted at the start and end\nof each build).",
+              "examples": []
+            },
+            {
+              "name": "FileSystemReadCacheStoreOptions",
+              "kind": "interface",
+              "signature": "interface FileSystemReadCacheStoreOptions",
+              "members": [
+                {
+                  "name": "dir",
+                  "signature": "dir: string;",
+                  "doc": "Directory where cached reads are written.",
+                  "examples": []
+                },
+                {
+                  "name": "lockTimeout",
+                  "signature": "lockTimeout?: number;",
+                  "doc": "How long (in ms) to wait for another process that's fetching the same\nkey before fetching it again. Defaults to 30 seconds.",
+                  "examples": []
+                },
+                {
+                  "name": "pollInterval",
+                  "signature": "pollInterval?: number;",
+                  "doc": "How often (in ms) to check whether another process has finished fetching\na key. Defaults to 20ms.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a `FileSystemReadCacheStore`.",
+              "examples": []
+            },
+            {
               "name": "generateKeyAfter",
               "kind": "function",
               "signature": "function generateKeyAfter(a: string | null): string;",
@@ -1237,6 +1401,14 @@
               "examples": []
             },
             {
+              "name": "getTranslationsMigrationState",
+              "kind": "function",
+              "signature": "function getTranslationsMigrationState(cmsClient: RootCMSClient): Promise<TranslationsMigrationState | null>;",
+              "members": [],
+              "doc": "Returns the state of the v1 -> v2 translations migration, or `null` if it\nhas never run for the project.",
+              "examples": []
+            },
+            {
               "name": "GsheetDataFormat",
               "kind": "type",
               "signature": "type GsheetDataFormat = 'map' | 'grid';",
@@ -1276,6 +1448,72 @@
               "examples": []
             },
             {
+              "name": "ImportTranslationsFromV1Options",
+              "kind": "interface",
+              "signature": "interface ImportTranslationsFromV1Options",
+              "members": [
+                {
+                  "name": "publish",
+                  "signature": "publish?: boolean;",
+                  "doc": "Publishes the imported translations in the same writes that save the\ndrafts. Defaults to `false` (drafts only).",
+                  "examples": []
+                },
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Value saved to `sys.modifiedBy` (and `sys.publishedBy`, when publishing).\nDefaults to `root-cms v1 migration`.",
+                  "examples": []
+                },
+                {
+                  "name": "getCollectionSchema",
+                  "signature": "getCollectionSchema?: (collectionId: string) => Promise<SchemaWithTypes | null>;",
+                  "doc": "Loads a collection's schema. When provided, strings in doc-backed\ntranslations docs (e.g. `Pages/index`) that are no longer used by any\nversion of the doc are pruned instead of imported. The v1 data isn't\nmodified, so pruned strings can still be recovered from it.",
+                  "examples": []
+                },
+                {
+                  "name": "writeCache",
+                  "signature": "writeCache?: TranslationsWriteCache;",
+                  "doc": "Tracks locale docs that were already saved, so that a retry after a\nfailed import skips them.",
+                  "examples": []
+                },
+                {
+                  "name": "onProgress",
+                  "signature": "onProgress?: (progress: ImportTranslationsFromV1Progress) => void;",
+                  "doc": "Called as the import progresses. When provided, the import doesn't log\nits own progress messages, so that the caller can render them instead.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for `importTranslationsFromV1()`.",
+              "examples": []
+            },
+            {
+              "name": "ImportTranslationsFromV1Progress",
+              "kind": "interface",
+              "signature": "interface ImportTranslationsFromV1Progress",
+              "members": [
+                {
+                  "name": "step",
+                  "signature": "step: 'fetch-docs' | 'prune' | 'write';",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "completed",
+                  "signature": "completed: number;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "total",
+                  "signature": "total: number;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "A progress update emitted by `importTranslationsFromV1()`. Steps run in\norder: `fetch-docs` (reading the CMS docs backing the v1 tags), `prune`\n(only when pruning unused strings) and `write` (saving locale docs).",
+              "examples": []
+            },
+            {
               "name": "ImportTranslationsFromV1Result",
               "kind": "interface",
               "signature": "interface ImportTranslationsFromV1Result",
@@ -1288,8 +1526,14 @@
                 },
                 {
                   "name": "stats",
-                  "signature": "stats: {\n    numStrings: number;\n    numDocs: number;\n};",
+                  "signature": "stats: {\n    numStrings: number;\n    numDocs: number;\n    numPrunedStrings: number;\n    numSkippedStrings: number;\n    numLocaleDocs: number;\n    numCachedLocaleDocs: number;\n};",
                   "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "locales",
+                  "signature": "locales: Record<Locale, {\n    numDocs: number;\n    numStrings: number;\n}>;",
+                  "doc": "Per-locale counts of the saved locale docs and their strings.",
                   "examples": []
                 }
               ],
@@ -1302,6 +1546,14 @@
               "signature": "function isCollectionTracked(filters: ResolvedFilters, collectionId: string): boolean;",
               "members": [],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "isFirestoreAuthError",
+              "kind": "function",
+              "signature": "function isFirestoreAuthError(err: unknown): boolean;",
+              "members": [],
+              "doc": "Returns true if an error looks like it was caused by missing or invalid\nGoogle Cloud credentials (e.g. no ADC, expired login, or no IAM access).",
               "examples": []
             },
             {
@@ -1467,8 +1719,14 @@
                 },
                 {
                   "name": "fallbacks",
-                  "signature": "fallbacks?: Record<string, string[]>;",
-                  "doc": "",
+                  "signature": "fallbacks?: Record<string, string[]> | ((locale: string) => string[]);",
+                  "doc": "Map of locale to fallback locales, or a function that returns the\nfallback locales for a locale.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbackToLanguage",
+                  "signature": "fallbackToLanguage?: boolean;",
+                  "doc": "Falls back from a `<lang>_<country>` (or `<lang>-<country>`) locale to\n`<lang>`, e.g. `ja_jp` -> `ja`, after any configured `fallbacks`. When\n`locales` is set, only fallbacks to configured locales are added.",
                   "examples": []
                 }
               ],
@@ -1514,8 +1772,26 @@
               "members": [
                 {
                   "name": "trigger",
-                  "signature": "trigger?: 'build' | 'dev';",
+                  "signature": "trigger?: 'build' | 'dev' | 'cli';",
                   "doc": "What triggered the migration (used for logging/state).",
+                  "examples": []
+                },
+                {
+                  "name": "force",
+                  "signature": "force?: boolean;",
+                  "doc": "Re-runs the migration even if it already completed, e.g. to pick up v1\ntranslations that were edited after the first run. Locale docs written by\nthe migration are overwritten, so edits made in the v2 translations\nmanager since then are lost for any string that is also in v1.",
+                  "examples": []
+                },
+                {
+                  "name": "getCollectionSchema",
+                  "signature": "getCollectionSchema?: (collectionId: string) => Promise<SchemaWithTypes | null>;",
+                  "doc": "Loads a collection's schema. When provided, strings that are no longer\nused by the docs they're tagged with are pruned instead of migrated.",
+                  "examples": []
+                },
+                {
+                  "name": "cacheDir",
+                  "signature": "cacheDir?: string;",
+                  "doc": "Directory for the local write cache, used to resume a failed migration.\nWhen omitted, a retry re-saves everything.",
                   "examples": []
                 }
               ],
@@ -1925,11 +2201,150 @@
               "deprecated": "Use RootCMSClient.publishScheduledDocs() instead."
             },
             {
+              "name": "ReadCache",
+              "kind": "class",
+              "signature": "class ReadCache",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get<T>(key: string, fetch: () => Promise<T>, options?: ReadCacheReadOptions): Promise<T>;",
+                  "doc": "Returns the cached value for `key`, or calls `fetch()` and caches its\nresult. Concurrent reads for the same key share one fetch, and failed\nfetches aren't cached. Each caller gets its own copy of the value so that\na render that mutates it can't affect other requests.",
+                  "examples": []
+                },
+                {
+                  "name": "getMany",
+                  "signature": "getMany<T>(keys: string[], fetchMany: (keys: string[]) => Promise<T[]>, options?: ReadCacheReadOptions): Promise<T[]>;",
+                  "doc": "Like `get()`, but for multiple keys. The uncached keys are fetched with a\nsingle `fetchMany()` call, which must return their values in order.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all cached reads, including the ones in the store.",
+                  "examples": []
+                }
+              ],
+              "doc": "An in-memory cache for published CMS reads, which saves a Firestore round\ntrip on most page renders. Pass one to a `RootCMSClient` with\n`new RootCMSClient(rootConfig, {cache})`, or enable it for a route with\n`createRoute({cache: true})`.\n\nPublished content can take up to `ttl` to show up, so a cached client\nshouldn't be used to serve previews.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheOptions",
+              "kind": "interface",
+              "signature": "interface ReadCacheOptions",
+              "members": [
+                {
+                  "name": "ttl",
+                  "signature": "ttl?: number | ReadCacheTtl;",
+                  "doc": "How long (in ms) a cached read is served before it's fetched again.\nDefaults to 60 seconds. Pass an object to set the ttl per read type, e.g.\n`{default: 15_000, translations: 120_000}`.",
+                  "examples": []
+                },
+                {
+                  "name": "maxEntries",
+                  "signature": "maxEntries?: number;",
+                  "doc": "Max number of cached reads held in memory, so that arbitrary slugs can't\ngrow the cache unbounded. The oldest reads are evicted first. Defaults to\n1000.",
+                  "examples": []
+                },
+                {
+                  "name": "store",
+                  "signature": "store?: ReadCacheStore;",
+                  "doc": "Secondary storage that's checked on an in-memory miss, e.g. a\n`FileSystemReadCacheStore` that's shared across processes.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a `ReadCache`.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheReadOptions",
+              "kind": "interface",
+              "signature": "interface ReadCacheReadOptions",
+              "members": [
+                {
+                  "name": "type",
+                  "signature": "type?: ReadCacheType;",
+                  "doc": "The type of read, used to pick the ttl. Defaults to \"doc\".",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a single read.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheStore",
+              "kind": "interface",
+              "signature": "interface ReadCacheStore",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get(key: string): Promise<ReadCacheStoreEntry | undefined>;",
+                  "doc": "Returns the entry for `key`, or `undefined` if it isn't stored.",
+                  "examples": []
+                },
+                {
+                  "name": "set",
+                  "signature": "set(key: string, entry: ReadCacheStoreEntry): Promise<void>;",
+                  "doc": "Stores the entry for `key`.",
+                  "examples": []
+                },
+                {
+                  "name": "delete",
+                  "signature": "delete(key: string): Promise<void>;",
+                  "doc": "Removes the entry for `key`, e.g. when a fetch fails.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all entries.",
+                  "examples": []
+                }
+              ],
+              "doc": "A secondary storage layer for a `ReadCache`, e.g. for sharing cached reads\nbetween the worker threads of an SSG build (see\n`FileSystemReadCacheStore`). Reads are always cached in memory first, and\nthe store is only checked on an in-memory miss.\n\nStored values are plain Firestore data, so a store that serializes them\nmust preserve `Timestamp` values.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheStoreEntry",
+              "kind": "interface",
+              "signature": "interface ReadCacheStoreEntry",
+              "members": [
+                {
+                  "name": "expiresAt",
+                  "signature": "expiresAt: number;",
+                  "doc": "Timestamp (in ms) when the entry expires.",
+                  "examples": []
+                },
+                {
+                  "name": "value",
+                  "signature": "value: unknown;",
+                  "doc": "The cached value.",
+                  "examples": []
+                }
+              ],
+              "doc": "A cached value stored in a `ReadCacheStore`.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheTtl",
+              "kind": "type",
+              "signature": "type ReadCacheTtl = {\n    default?: number;\n} & {\n    [type in ReadCacheType]?: number;\n};",
+              "members": [],
+              "doc": "Per-read-type ttls (in ms). Types without a ttl use `default`, which\ndefaults to 60 seconds.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheType",
+              "kind": "type",
+              "signature": "type ReadCacheType = 'doc' | 'query' | 'translations' | 'dataSource';",
+              "members": [],
+              "doc": "The type of a cached read, used for per-type ttls (see `ReadCacheTtl`).",
+              "examples": []
+            },
+            {
               "name": "redirectWithQuery",
               "kind": "function",
               "signature": "function redirectWithQuery(req: Request, res: Response, redirectCode: number, redirectPath: string): void;",
               "members": [],
-              "doc": "Issues an HTTP redirect, preserving any query params from the original req.",
+              "doc": "Issues an HTTP redirect, preserving any query params from the original req.\n\nRedirects are never cached (even 301s), so that a redirect that's later\nremoved in the CMS takes effect immediately for browsers and CDNs.",
               "examples": []
             },
             {
@@ -2035,6 +2450,14 @@
               "examples": []
             },
             {
+              "name": "renderTable",
+              "kind": "function",
+              "signature": "function renderTable(headers: string[], rows: string[][]): string;",
+              "members": [],
+              "doc": "Renders a table with box-drawing borders. The first column is left-aligned\nand the rest are right-aligned (for numbers).\n\n```\nrenderTable(['Locale', 'Docs'], [['es', '12']]);\n// ┌────────┬──────┐\n// │ Locale │ Docs │\n// ├────────┼──────┤\n// │ es     │   12 │\n// └────────┴──────┘\n```",
+              "examples": []
+            },
+            {
               "name": "requireCmsLogin",
               "kind": "function",
               "signature": "function requireCmsLogin(options?: RequireLoginOptions): RequestMiddleware;",
@@ -2119,6 +2542,98 @@
               "examples": []
             },
             {
+              "name": "ResolvedLocale",
+              "kind": "interface",
+              "signature": "interface ResolvedLocale",
+              "members": [
+                {
+                  "name": "locale",
+                  "signature": "locale: string;",
+                  "doc": "The locale to render.",
+                  "examples": []
+                },
+                {
+                  "name": "force",
+                  "signature": "force?: boolean;",
+                  "doc": "Renders the locale even if the doc isn't enabled for it (i.e. it isn't\none of `ctx.docLocales`). The locale is used as-is.",
+                  "examples": []
+                }
+              ],
+              "doc": "A locale returned by the `resolveLocale()` option.",
+              "examples": []
+            },
+            {
+              "name": "ResolveDocContext",
+              "kind": "type",
+              "signature": "type ResolveDocContext = RouteContext & {\n    doc: RootCMSDoc;\n    locale: string;\n    data: Record<string, any>;\n};",
+              "members": [],
+              "doc": "Context passed to the `resolveDoc()` option.",
+              "examples": []
+            },
+            {
+              "name": "ResolveLocaleContext",
+              "kind": "interface",
+              "signature": "interface ResolveLocaleContext",
+              "members": [
+                {
+                  "name": "req",
+                  "signature": "req?: RouteRequest;",
+                  "doc": "HTTP request object. Only available in SSR mode.",
+                  "examples": []
+                },
+                {
+                  "name": "routeContext",
+                  "signature": "routeContext: RouteContext;",
+                  "doc": "The route context, including the loaded `doc`.",
+                  "examples": []
+                },
+                {
+                  "name": "doc",
+                  "signature": "doc: RootCMSDoc;",
+                  "doc": "The route's CMS doc.",
+                  "examples": []
+                },
+                {
+                  "name": "docLocales",
+                  "signature": "docLocales: string[];",
+                  "doc": "Locales the doc is enabled for, in the doc's casing.",
+                  "examples": []
+                },
+                {
+                  "name": "routeLocale",
+                  "signature": "routeLocale: string;",
+                  "doc": "The locale from the URL, e.g. \"de\" for `/de/about/`. For the route's\ndefault-locale URL (e.g. `/about/`), this is the site's default locale.\nIn SSG mode, this is the locale from the build path (`params.$locale`).",
+                  "examples": []
+                },
+                {
+                  "name": "isDefaultLocale",
+                  "signature": "isDefaultLocale: boolean;",
+                  "doc": "Whether the request is for the route's default-locale URL (i.e. the URL\nhas no locale prefix), in which case the locale is typically determined\nfrom the user's request (`?hl=`, `accept-language`, country, etc.).\nAlways `false` in SSG mode.",
+                  "examples": []
+                },
+                {
+                  "name": "country",
+                  "signature": "country: string;",
+                  "doc": "Upper-cased country code from `?gl=` or the `x-country-code` /\n`x-appengine-country` headers, or an empty string if unknown (always\nempty in SSG mode).",
+                  "examples": []
+                },
+                {
+                  "name": "hl",
+                  "signature": "hl: string | null;",
+                  "doc": "Value of the `?hl=` query param, or `null` if not set (or in SSG mode).",
+                  "examples": []
+                },
+                {
+                  "name": "resolveDefault",
+                  "signature": "resolveDefault: () => string | null;",
+                  "doc": "Runs the built-in locale resolution. Useful for customizing only some\nrequests and deferring to the default behavior for the rest.",
+                  "examples": []
+                }
+              ],
+              "doc": "Context passed to the `resolveLocale()` option.",
+              "examples": []
+            },
+            {
               "name": "resolveLocaleFallbacks",
               "kind": "function",
               "signature": "function resolveLocaleFallbacks(i18nConfig: LocaleFallbacksI18nConfig | undefined, locale: string): string[];",
@@ -2176,6 +2691,30 @@
                   "examples": []
                 },
                 {
+                  "name": "user",
+                  "signature": "readonly user: string;",
+                  "doc": "Identity that writes are attributed to by default.",
+                  "examples": []
+                },
+                {
+                  "name": "logActions",
+                  "signature": "readonly logActions: boolean;",
+                  "doc": "Whether doc writes are recorded in the action logs.",
+                  "examples": []
+                },
+                {
+                  "name": "getAllData",
+                  "signature": "getAllData(refs: DocumentReference[], options: {\n    mode: DocMode;\n    cacheType?: ReadCacheType;\n}): Promise<any[]>;",
+                  "doc": "Fetches the data for a list of doc refs, in order, with `undefined` for\ndocs that don't exist. Published reads are cached per doc when the client\nhas a `cache`, and the uncached docs are fetched in a single `getAll()`.",
+                  "examples": []
+                },
+                {
+                  "name": "getQueryData",
+                  "signature": "getQueryData(query: Query, options: {\n    mode: DocMode;\n    cacheKey?: unknown[] | null;\n    cacheType?: ReadCacheType;\n}): Promise<any[]>;",
+                  "doc": "Runs a Firestore query and returns the data of each result. Published\nreads are cached when the client has a `cache` and a `cacheKey` is\nprovided, i.e. the query is fully described by the key.",
+                  "examples": []
+                },
+                {
                   "name": "overlayDoc",
                   "signature": "overlayDoc<T = any>(doc: T): T;",
                   "doc": "Applies the proposal overlay (if any) to an unmarshaled doc.\n\nCalled from every non-raw read path. `getRawDoc()` and\n`listDocs({raw: true})` deliberately skip this: those exist to feed\n`setRawDoc()`, and folding proposed content into them would leak it into a\nwrite.",
@@ -2213,7 +2752,7 @@
                 },
                 {
                   "name": "dbDocRef",
-                  "signature": "dbDocRef(collectionId: string, slug: string, options: {\n    mode: 'draft' | 'published';\n}): FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
+                  "signature": "dbDocRef(collectionId: string, slug: string, options: {\n    mode: 'draft' | 'published';\n}): DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
                   "doc": "Firestore doc ref for a content doc.",
                   "examples": []
                 },
@@ -2238,7 +2777,7 @@
                 {
                   "name": "setRawDoc",
                   "signature": "setRawDoc(collectionId: string, slug: string, data: any, options: SetDocOptions): Promise<void>;",
-                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
+                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to the client's `user` if not provided\n- `sys.modifiedBy` - Defaults to the client's `user` if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
                   "examples": [
                     "// Minimal example - sys fields use defaults\nawait client.setRawDoc('Pages', 'home', {\n  sys: {},  // All sys fields will be auto-populated with defaults\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });\n\n// Full example - with number timestamps (auto-converted)\nawait client.setRawDoc('Pages', 'home', {\n  id: 'Pages/home',\n  collection: 'Pages',\n  slug: 'home',\n  sys: {\n    createdAt: Date.now(),  // Auto-converted to Timestamp.\n    createdBy: 'user@example.com',\n    modifiedAt: Date.now(),  // Auto-converted to Timestamp.\n    modifiedBy: 'user@example.com',\n    locales: ['en', 'es']\n  },\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });"
                   ]
@@ -2354,7 +2893,7 @@
                 {
                   "name": "isV2TranslationsEnabled",
                   "signature": "isV2TranslationsEnabled(): boolean;",
-                  "doc": "Returns true if the v2 `TranslationsManager` is enabled. It's enabled by\ndefault, unless `experiments.v2TranslationsManager` is set to `false`.",
+                  "doc": "Returns true if the v2 `TranslationsManager` is enabled via the\n`experiments.v2TranslationsManager` plugin config flag.",
                   "examples": []
                 },
                 {
@@ -2449,7 +2988,7 @@
                 },
                 {
                   "name": "dbDataSourceDataRef",
-                  "signature": "dbDataSourceDataRef(dataSourceId: string, options: {\n    mode: 'draft' | 'published';\n}): FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
+                  "signature": "dbDataSourceDataRef(dataSourceId: string, options: {\n    mode: 'draft' | 'published';\n}): DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
                   "doc": "Firestore doc ref for a datasource data.",
                   "examples": []
                 },
@@ -2520,6 +3059,24 @@
                   "name": "proposal",
                   "signature": "proposal?: Proposal;",
                   "doc": "An unapplied change proposal to overlay on top of every read. Use this to\npreview proposed content on a running site before accepting it.",
+                  "examples": []
+                },
+                {
+                  "name": "user",
+                  "signature": "user?: string;",
+                  "doc": "Email (or other identifier) that writes are attributed to when a method is\nnot passed one explicitly, e.g. `sys.modifiedBy` and action log entries.\nDefaults to `root-cms-client`.",
+                  "examples": []
+                },
+                {
+                  "name": "logActions",
+                  "signature": "logActions?: boolean;",
+                  "doc": "Whether doc writes (`saveDraftData()`, `updateDraftData()`, `setRawDoc()`,\n`publishDocs()` and `unpublishDocs()`) record an entry in the project's\naction logs, the same way edits made from the CMS UI do. Defaults to\n`true`. Set to `false` to skip logging, e.g. for a one-off bulk migration.",
+                  "examples": []
+                },
+                {
+                  "name": "cache",
+                  "signature": "cache?: ReadCache;",
+                  "doc": "Caches published reads in memory (see `ReadCache`). Covers `getDoc()`,\n`listDocs()` (unless a `query` fn is used), `loadTranslations()` and\nbatch requests. Draft reads are never cached, but `loadTranslations()`\nhas no mode, so don't use a cached client to serve previews.",
                   "examples": []
                 }
               ],
@@ -2626,6 +3183,24 @@
                   "signature": "params: RouteParams;",
                   "doc": "URL param map from filesystem routing.",
                   "examples": []
+                },
+                {
+                  "name": "doc",
+                  "signature": "doc?: RootCMSDoc;",
+                  "doc": "The route's CMS doc. Set once the doc is loaded, so it's available to\n`translations()` and `preRenderHook()` but not `fetchData()`.",
+                  "examples": []
+                },
+                {
+                  "name": "locale",
+                  "signature": "locale?: string;",
+                  "doc": "The locale being rendered. Set once the locale is resolved, so it's\navailable to `translations()` and `preRenderHook()` but not\n`fetchData()`.",
+                  "examples": []
+                },
+                {
+                  "name": "batchResponse",
+                  "signature": "batchResponse?: BatchResponse;",
+                  "doc": "The response of the route's batch request, containing anything added via\nthe `batchRequest()` option. Set once loaded, so it's available to\n`translations()` and `preRenderHook()` but not `fetchData()`.",
+                  "examples": []
                 }
               ],
               "doc": "",
@@ -2661,7 +3236,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of user modifying the doc. If blank, defaults to `root-cms-client`.",
+                  "doc": "Email of user modifying the doc. If blank, defaults to the client's `user`.",
                   "examples": []
                 },
                 {
@@ -3137,7 +3712,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "doc": "Email of the user making the change. Defaults to the client's `user`.",
                   "examples": []
                 }
               ],
@@ -3438,8 +4013,8 @@
                 },
                 {
                   "name": "importTranslationsFromV1",
-                  "signature": "importTranslationsFromV1(): Promise<ImportTranslationsFromV1Result>;",
-                  "doc": "Imports translations from the v1 system to the TranslationsManager.\n\nEach v1 string is grouped into a v2 translations doc per tag (e.g. a\nstring tagged `Pages/index` is saved to the `Pages/index` translations\ndoc). Untagged strings are grouped into a `v1-untagged` doc so that\nnothing is dropped. The imported translations are saved as drafts; use\n`publishTranslationsBulk()` to publish them.",
+                  "signature": "importTranslationsFromV1(options?: ImportTranslationsFromV1Options): Promise<ImportTranslationsFromV1Result>;",
+                  "doc": "Imports translations from the v1 system to the TranslationsManager.\n\nEach v1 string is grouped into a v2 translations doc per tag (e.g. a\nstring tagged `Pages/index` is saved to the `Pages/index` translations\ndoc). Collection-level tags (e.g. `Pages`, which v1 added alongside each\ndoc tag) are ignored, since a translations doc with every string in a\ncollection can exceed Firestore's doc size limit. Strings that are only\ntagged with a collection were removed from their docs and are skipped.\nUntagged strings are grouped into a `v1-untagged` doc so that nothing is\ndropped. By default, the imported translations are saved as\ndrafts; use `publishTranslationsBulk()` to publish them, or pass\n`{publish: true}` to publish them as part of the import.\n\nSee `ImportTranslationsFromV1Options` for pruning unused strings and\nresuming a previously failed import.",
                   "examples": []
                 }
               ],
@@ -3472,6 +4047,12 @@
                   "examples": []
                 },
                 {
+                  "name": "runId",
+                  "signature": "runId?: string;",
+                  "doc": "Identifies a migration across retries. Kept when a failed or stale run is\nretried, so the retry can resume from the local write cache.",
+                  "examples": []
+                },
+                {
                   "name": "startedAt",
                   "signature": "startedAt?: Timestamp;",
                   "doc": "",
@@ -3497,7 +4078,7 @@
                 },
                 {
                   "name": "stats",
-                  "signature": "stats?: {\n    numStrings: number;\n    numDocs: number;\n};",
+                  "signature": "stats?: {\n    numStrings: number;\n    numDocs: number;\n    numPrunedStrings?: number;\n    numSkippedStrings?: number;\n    numLocaleDocs?: number;\n    numCachedLocaleDocs?: number;\n};",
                   "doc": "",
                   "examples": []
                 }
@@ -3511,6 +4092,27 @@
               "signature": "type TranslationsMigrationStatus = 'running' | 'complete' | 'error';",
               "members": [],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "TranslationsWriteCache",
+              "kind": "interface",
+              "signature": "interface TranslationsWriteCache",
+              "members": [
+                {
+                  "name": "has",
+                  "signature": "has(key: string): boolean;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "add",
+                  "signature": "add(keys: string[]): Promise<void>;",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "Stores the cache keys of translations locale docs that have been saved.\nKeys are content hashes, so a locale doc whose strings changed since it was\nsaved is written again.",
               "examples": []
             },
             {
@@ -3534,6 +4136,12 @@
               "kind": "interface",
               "signature": "interface UpdateDraftOptions",
               "members": [
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of user modifying the doc. If blank, defaults to the client's `user`.",
+                  "examples": []
+                },
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
@@ -3606,7 +4214,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "doc": "Email of the user making the change. Defaults to the client's `user`.",
                   "examples": []
                 }
               ],
@@ -4334,6 +4942,18 @@
                   "signature": "fetch(): Promise<BatchResponse>;",
                   "doc": "Fetches data from the DB.",
                   "examples": []
+                },
+                {
+                  "name": "fetchContent",
+                  "signature": "fetchContent(): Promise<BatchResponse>;",
+                  "doc": "Fetches the docs, queries and data sources in the request, but not the\ntranslations. Use this with `fetchTranslations()` to defer loading\ntranslations until the locale is known, e.g.:\n\n```ts\nconst req = cmsClient.createBatchRequest({mode, translate: true});\nreq.addDoc('Pages/index');\nreq.addTranslations('common');\nconst res = await req.fetchContent();\nconst locale = pickLocale(res.getDoc('Pages/index'));\nawait req.fetchTranslations(res, {locales: [locale]});\nconst translations = res.getTranslations(locale);\n```",
+                  "examples": []
+                },
+                {
+                  "name": "fetchTranslations",
+                  "signature": "fetchTranslations(res: BatchResponse, options?: {\n    locales?: string[];\n}): Promise<BatchResponse>;",
+                  "doc": "Fetches translations into `res` for the explicitly-added translations ids\nand, when `options.translate` is enabled, the docs fetched so far.\n\n`options.locales` overrides the locales set on the request. Each locale\nis expanded through its fallback chain.",
+                  "examples": []
                 }
               ],
               "doc": "",
@@ -4462,6 +5082,24 @@
                   "examples": []
                 },
                 {
+                  "name": "getDoc",
+                  "signature": "getDoc<Fields = any>(docId: string): Doc<Fields> | null;",
+                  "doc": "Returns a doc added with `addDoc()`, or `null` if it doesn't exist. Slugs\nwith slashes match either form, e.g. \"Pages/foo/bar\" or \"Pages/foo--bar\".\n\n```ts\nconst header = res.getDoc<GlobalFields>('Global/header');\n```",
+                  "examples": []
+                },
+                {
+                  "name": "getQuery",
+                  "signature": "getQuery<Fields = any>(queryId: string): Array<Doc<Fields>>;",
+                  "doc": "Returns the docs for a query added with `addQuery()`, or an empty array if\nthe query has no results.\n\n```ts\nconst posts = res.getQuery<BlogPostsFields>('posts');\n```",
+                  "examples": []
+                },
+                {
+                  "name": "getDataSource",
+                  "signature": "getDataSource<T = any>(dataSourceId: string): DataSourceData<T> | null;",
+                  "doc": "Returns a data source added with `addDataSource()`, or `null` if it\ndoesn't exist.\n\n```ts\nconst pricing = res.getDataSource<PricingRow[]>('pricing');\n```",
+                  "examples": []
+                },
+                {
                   "name": "getTranslations",
                   "signature": "getTranslations(locale: string | string[]): LocaleTranslations;",
                   "doc": "Returns a map of translations for a given locale or locale fallbacks.\n\nThe input is either a single locale (e.g. \"de\"), which is expanded\nthrough the fallback chain configured in `i18n.fallbacks`, or an array of\nlocales representing an explicit fallback chain, e.g.\n`[\"en-CA\", \"en-GB\", \"en\"]`.\n\nThe returned value is a flat map of source string to translated string,\ne.g.:\n{\"<source>\": \"<translation>\"}",
@@ -4469,6 +5107,14 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "clearReadCaches",
+              "kind": "function",
+              "signature": "function clearReadCaches(): Promise<void>;",
+              "members": [],
+              "doc": "Clears every `ReadCache` in the process (including their stores). Called\nautomatically when docs are published or unpublished through a\n`RootCMSClient`.",
               "examples": []
             },
             {
@@ -4735,6 +5381,66 @@
               "examples": []
             },
             {
+              "name": "FileSystemReadCacheStore",
+              "kind": "class",
+              "signature": "class FileSystemReadCacheStore implements ReadCacheStore",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get(key: string): Promise<ReadCacheStoreEntry | undefined>;",
+                  "doc": "Returns the entry for `key`, or `undefined` if it isn't stored.",
+                  "examples": []
+                },
+                {
+                  "name": "set",
+                  "signature": "set(key: string, entry: ReadCacheStoreEntry): Promise<void>;",
+                  "doc": "Stores the entry for `key`.",
+                  "examples": []
+                },
+                {
+                  "name": "delete",
+                  "signature": "delete(key: string): Promise<void>;",
+                  "doc": "Removes the entry for `key`, e.g. when a fetch fails.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all entries.",
+                  "examples": []
+                }
+              ],
+              "doc": "A `ReadCacheStore` that writes cached reads to the filesystem, so that they\ncan be shared across processes and worker threads, e.g. the workers of a\n`root build --threads=N` SSG build.\n\nConcurrent misses for the same key are deduped across processes: the\nfirst process to miss claims the key with a lock file and fetches it, and\nthe others wait for the result.\n\n```ts\nconst cache = new ReadCache({\n  store: new FileSystemReadCacheStore({dir: 'dist/.cache/root-cms'}),\n});\n```\n\nDuring `root build`, `createRoute({cache: true})` uses this store\nautomatically (under `dist/.cache/`, which is deleted at the start and end\nof each build).",
+              "examples": []
+            },
+            {
+              "name": "FileSystemReadCacheStoreOptions",
+              "kind": "interface",
+              "signature": "interface FileSystemReadCacheStoreOptions",
+              "members": [
+                {
+                  "name": "dir",
+                  "signature": "dir: string;",
+                  "doc": "Directory where cached reads are written.",
+                  "examples": []
+                },
+                {
+                  "name": "lockTimeout",
+                  "signature": "lockTimeout?: number;",
+                  "doc": "How long (in ms) to wait for another process that's fetching the same\nkey before fetching it again. Defaults to 30 seconds.",
+                  "examples": []
+                },
+                {
+                  "name": "pollInterval",
+                  "signature": "pollInterval?: number;",
+                  "doc": "How often (in ms) to check whether another process has finished fetching\na key. Defaults to 20ms.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a `FileSystemReadCacheStore`.",
+              "examples": []
+            },
+            {
               "name": "getCmsPlugin",
               "kind": "function",
               "signature": "function getCmsPlugin(rootConfig: RootConfig): CMSPlugin;",
@@ -4945,8 +5651,14 @@
                 },
                 {
                   "name": "fallbacks",
-                  "signature": "fallbacks?: Record<string, string[]>;",
-                  "doc": "",
+                  "signature": "fallbacks?: Record<string, string[]> | ((locale: string) => string[]);",
+                  "doc": "Map of locale to fallback locales, or a function that returns the\nfallback locales for a locale.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbackToLanguage",
+                  "signature": "fallbackToLanguage?: boolean;",
+                  "doc": "Falls back from a `<lang>_<country>` (or `<lang>-<country>`) locale to\n`<lang>`, e.g. `ja_jp` -> `ja`, after any configured `fallbacks`. When\n`locales` is set, only fallbacks to configured locales are added.",
                   "examples": []
                 }
               ],
@@ -5099,6 +5811,145 @@
               "examples": []
             },
             {
+              "name": "ReadCache",
+              "kind": "class",
+              "signature": "class ReadCache",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get<T>(key: string, fetch: () => Promise<T>, options?: ReadCacheReadOptions): Promise<T>;",
+                  "doc": "Returns the cached value for `key`, or calls `fetch()` and caches its\nresult. Concurrent reads for the same key share one fetch, and failed\nfetches aren't cached. Each caller gets its own copy of the value so that\na render that mutates it can't affect other requests.",
+                  "examples": []
+                },
+                {
+                  "name": "getMany",
+                  "signature": "getMany<T>(keys: string[], fetchMany: (keys: string[]) => Promise<T[]>, options?: ReadCacheReadOptions): Promise<T[]>;",
+                  "doc": "Like `get()`, but for multiple keys. The uncached keys are fetched with a\nsingle `fetchMany()` call, which must return their values in order.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all cached reads, including the ones in the store.",
+                  "examples": []
+                }
+              ],
+              "doc": "An in-memory cache for published CMS reads, which saves a Firestore round\ntrip on most page renders. Pass one to a `RootCMSClient` with\n`new RootCMSClient(rootConfig, {cache})`, or enable it for a route with\n`createRoute({cache: true})`.\n\nPublished content can take up to `ttl` to show up, so a cached client\nshouldn't be used to serve previews.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheOptions",
+              "kind": "interface",
+              "signature": "interface ReadCacheOptions",
+              "members": [
+                {
+                  "name": "ttl",
+                  "signature": "ttl?: number | ReadCacheTtl;",
+                  "doc": "How long (in ms) a cached read is served before it's fetched again.\nDefaults to 60 seconds. Pass an object to set the ttl per read type, e.g.\n`{default: 15_000, translations: 120_000}`.",
+                  "examples": []
+                },
+                {
+                  "name": "maxEntries",
+                  "signature": "maxEntries?: number;",
+                  "doc": "Max number of cached reads held in memory, so that arbitrary slugs can't\ngrow the cache unbounded. The oldest reads are evicted first. Defaults to\n1000.",
+                  "examples": []
+                },
+                {
+                  "name": "store",
+                  "signature": "store?: ReadCacheStore;",
+                  "doc": "Secondary storage that's checked on an in-memory miss, e.g. a\n`FileSystemReadCacheStore` that's shared across processes.",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a `ReadCache`.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheReadOptions",
+              "kind": "interface",
+              "signature": "interface ReadCacheReadOptions",
+              "members": [
+                {
+                  "name": "type",
+                  "signature": "type?: ReadCacheType;",
+                  "doc": "The type of read, used to pick the ttl. Defaults to \"doc\".",
+                  "examples": []
+                }
+              ],
+              "doc": "Options for a single read.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheStore",
+              "kind": "interface",
+              "signature": "interface ReadCacheStore",
+              "members": [
+                {
+                  "name": "get",
+                  "signature": "get(key: string): Promise<ReadCacheStoreEntry | undefined>;",
+                  "doc": "Returns the entry for `key`, or `undefined` if it isn't stored.",
+                  "examples": []
+                },
+                {
+                  "name": "set",
+                  "signature": "set(key: string, entry: ReadCacheStoreEntry): Promise<void>;",
+                  "doc": "Stores the entry for `key`.",
+                  "examples": []
+                },
+                {
+                  "name": "delete",
+                  "signature": "delete(key: string): Promise<void>;",
+                  "doc": "Removes the entry for `key`, e.g. when a fetch fails.",
+                  "examples": []
+                },
+                {
+                  "name": "clear",
+                  "signature": "clear(): Promise<void>;",
+                  "doc": "Removes all entries.",
+                  "examples": []
+                }
+              ],
+              "doc": "A secondary storage layer for a `ReadCache`, e.g. for sharing cached reads\nbetween the worker threads of an SSG build (see\n`FileSystemReadCacheStore`). Reads are always cached in memory first, and\nthe store is only checked on an in-memory miss.\n\nStored values are plain Firestore data, so a store that serializes them\nmust preserve `Timestamp` values.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheStoreEntry",
+              "kind": "interface",
+              "signature": "interface ReadCacheStoreEntry",
+              "members": [
+                {
+                  "name": "expiresAt",
+                  "signature": "expiresAt: number;",
+                  "doc": "Timestamp (in ms) when the entry expires.",
+                  "examples": []
+                },
+                {
+                  "name": "value",
+                  "signature": "value: unknown;",
+                  "doc": "The cached value.",
+                  "examples": []
+                }
+              ],
+              "doc": "A cached value stored in a `ReadCacheStore`.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheTtl",
+              "kind": "type",
+              "signature": "type ReadCacheTtl = {\n    default?: number;\n} & {\n    [type in ReadCacheType]?: number;\n};",
+              "members": [],
+              "doc": "Per-read-type ttls (in ms). Types without a ttl use `default`, which\ndefaults to 60 seconds.",
+              "examples": []
+            },
+            {
+              "name": "ReadCacheType",
+              "kind": "type",
+              "signature": "type ReadCacheType = 'doc' | 'query' | 'translations' | 'dataSource';",
+              "members": [],
+              "doc": "The type of a cached read, used for per-type ttls (see `ReadCacheTtl`).",
+              "examples": []
+            },
+            {
               "name": "Release",
               "kind": "interface",
               "signature": "interface Release",
@@ -5217,6 +6068,30 @@
                   "examples": []
                 },
                 {
+                  "name": "user",
+                  "signature": "readonly user: string;",
+                  "doc": "Identity that writes are attributed to by default.",
+                  "examples": []
+                },
+                {
+                  "name": "logActions",
+                  "signature": "readonly logActions: boolean;",
+                  "doc": "Whether doc writes are recorded in the action logs.",
+                  "examples": []
+                },
+                {
+                  "name": "getAllData",
+                  "signature": "getAllData(refs: DocumentReference[], options: {\n    mode: DocMode;\n    cacheType?: ReadCacheType;\n}): Promise<any[]>;",
+                  "doc": "Fetches the data for a list of doc refs, in order, with `undefined` for\ndocs that don't exist. Published reads are cached per doc when the client\nhas a `cache`, and the uncached docs are fetched in a single `getAll()`.",
+                  "examples": []
+                },
+                {
+                  "name": "getQueryData",
+                  "signature": "getQueryData(query: Query, options: {\n    mode: DocMode;\n    cacheKey?: unknown[] | null;\n    cacheType?: ReadCacheType;\n}): Promise<any[]>;",
+                  "doc": "Runs a Firestore query and returns the data of each result. Published\nreads are cached when the client has a `cache` and a `cacheKey` is\nprovided, i.e. the query is fully described by the key.",
+                  "examples": []
+                },
+                {
                   "name": "overlayDoc",
                   "signature": "overlayDoc<T = any>(doc: T): T;",
                   "doc": "Applies the proposal overlay (if any) to an unmarshaled doc.\n\nCalled from every non-raw read path. `getRawDoc()` and\n`listDocs({raw: true})` deliberately skip this: those exist to feed\n`setRawDoc()`, and folding proposed content into them would leak it into a\nwrite.",
@@ -5254,7 +6129,7 @@
                 },
                 {
                   "name": "dbDocRef",
-                  "signature": "dbDocRef(collectionId: string, slug: string, options: {\n    mode: 'draft' | 'published';\n}): FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
+                  "signature": "dbDocRef(collectionId: string, slug: string, options: {\n    mode: 'draft' | 'published';\n}): DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
                   "doc": "Firestore doc ref for a content doc.",
                   "examples": []
                 },
@@ -5279,7 +6154,7 @@
                 {
                   "name": "setRawDoc",
                   "signature": "setRawDoc(collectionId: string, slug: string, data: any, options: SetDocOptions): Promise<void>;",
-                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to 'root-cms-client' if not provided\n- `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
+                  "doc": "Sets the raw document data directly in Firestore.\n\nCAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.\nOnly use this method if you need to manipulate system-level (sys) fields\ndirectly or if you're implementing low-level data operations.\n\n## Validation & Normalization\n\nThis method automatically validates and normalizes `sys` fields to prevent\ndata integrity issues that can cause runtime errors like\n\"e.toMillis is not a function\".\n\n### Timestamp Fields (auto-converted)\nThe following fields accept multiple formats and are automatically converted\nto Firestore Timestamp objects:\n- `sys.createdAt`\n- `sys.modifiedAt`\n- `sys.publishedAt`\n- `sys.firstPublishedAt`\n\nAccepted formats:\n- Firestore `Timestamp` object (unchanged)\n- `number` - Interpreted as milliseconds since epoch, converted to Timestamp\n- `Date` object - Converted to Timestamp\n\n### Required Fields (auto-populated with defaults if missing)\n- `sys.createdAt` - Defaults to current time if not provided\n- `sys.modifiedAt` - Defaults to current time if not provided\n- `sys.createdBy` - Defaults to the client's `user` if not provided\n- `sys.modifiedBy` - Defaults to the client's `user` if not provided\n- `sys.locales` - Defaults to ['en'] if not provided\n\n### Optional Fields (validated if present)\n- `sys.publishedBy` - String identifier\n- `sys.firstPublishedBy` - String identifier\n- `sys.publishingLocked` - Object with optional `until` Timestamp\n\n### Computed Fields\n- `sys.assets` - Recomputed from the asset library ids embedded in\n  `fields`, so that asset updates fan out to the doc\n\n### Document Identity\nThe `id`, `collection`, and `slug` fields are always set to match the\nprovided parameters, overwriting any existing values to prevent data\ninconsistencies.",
                   "examples": [
                     "// Minimal example - sys fields use defaults\nawait client.setRawDoc('Pages', 'home', {\n  sys: {},  // All sys fields will be auto-populated with defaults\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });\n\n// Full example - with number timestamps (auto-converted)\nawait client.setRawDoc('Pages', 'home', {\n  id: 'Pages/home',\n  collection: 'Pages',\n  slug: 'home',\n  sys: {\n    createdAt: Date.now(),  // Auto-converted to Timestamp.\n    createdBy: 'user@example.com',\n    modifiedAt: Date.now(),  // Auto-converted to Timestamp.\n    modifiedBy: 'user@example.com',\n    locales: ['en', 'es']\n  },\n  fields: {\n    title: 'Home Page'\n  }\n}, { mode: 'draft' });"
                   ]
@@ -5395,7 +6270,7 @@
                 {
                   "name": "isV2TranslationsEnabled",
                   "signature": "isV2TranslationsEnabled(): boolean;",
-                  "doc": "Returns true if the v2 `TranslationsManager` is enabled. It's enabled by\ndefault, unless `experiments.v2TranslationsManager` is set to `false`.",
+                  "doc": "Returns true if the v2 `TranslationsManager` is enabled via the\n`experiments.v2TranslationsManager` plugin config flag.",
                   "examples": []
                 },
                 {
@@ -5490,7 +6365,7 @@
                 },
                 {
                   "name": "dbDataSourceDataRef",
-                  "signature": "dbDataSourceDataRef(dataSourceId: string, options: {\n    mode: 'draft' | 'published';\n}): FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
+                  "signature": "dbDataSourceDataRef(dataSourceId: string, options: {\n    mode: 'draft' | 'published';\n}): DocumentReference<FirebaseFirestore.DocumentData, FirebaseFirestore.DocumentData>;",
                   "doc": "Firestore doc ref for a datasource data.",
                   "examples": []
                 },
@@ -5562,6 +6437,24 @@
                   "signature": "proposal?: Proposal;",
                   "doc": "An unapplied change proposal to overlay on top of every read. Use this to\npreview proposed content on a running site before accepting it.",
                   "examples": []
+                },
+                {
+                  "name": "user",
+                  "signature": "user?: string;",
+                  "doc": "Email (or other identifier) that writes are attributed to when a method is\nnot passed one explicitly, e.g. `sys.modifiedBy` and action log entries.\nDefaults to `root-cms-client`.",
+                  "examples": []
+                },
+                {
+                  "name": "logActions",
+                  "signature": "logActions?: boolean;",
+                  "doc": "Whether doc writes (`saveDraftData()`, `updateDraftData()`, `setRawDoc()`,\n`publishDocs()` and `unpublishDocs()`) record an entry in the project's\naction logs, the same way edits made from the CMS UI do. Defaults to\n`true`. Set to `false` to skip logging, e.g. for a one-off bulk migration.",
+                  "examples": []
+                },
+                {
+                  "name": "cache",
+                  "signature": "cache?: ReadCache;",
+                  "doc": "Caches published reads in memory (see `ReadCache`). Covers `getDoc()`,\n`listDocs()` (unless a `query` fn is used), `loadTranslations()` and\nbatch requests. Draft reads are never cached, but `loadTranslations()`\nhas no mode, so don't use a cached client to serve previews.",
+                  "examples": []
                 }
               ],
               "doc": "Options for constructing a `RootCMSClient`.",
@@ -5581,7 +6474,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of user modifying the doc. If blank, defaults to `root-cms-client`.",
+                  "doc": "Email of user modifying the doc. If blank, defaults to the client's `user`.",
                   "examples": []
                 },
                 {
@@ -5674,7 +6567,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "doc": "Email of the user making the change. Defaults to the client's `user`.",
                   "examples": []
                 }
               ],
@@ -5741,6 +6634,12 @@
               "kind": "interface",
               "signature": "interface UpdateDraftOptions",
               "members": [
+                {
+                  "name": "modifiedBy",
+                  "signature": "modifiedBy?: string;",
+                  "doc": "Email of user modifying the doc. If blank, defaults to the client's `user`.",
+                  "examples": []
+                },
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
@@ -5813,7 +6712,7 @@
                 {
                   "name": "modifiedBy",
                   "signature": "modifiedBy?: string;",
-                  "doc": "Email of the user making the change. Defaults to `root-cms-client`.",
+                  "doc": "Email of the user making the change. Defaults to the client's `user`.",
                   "examples": []
                 }
               ],
@@ -7111,6 +8010,14 @@
               "signature": "type FieldCommentThreadStatus = 'open' | 'resolved';",
               "members": [],
               "doc": "Lifecycle status of a field comment thread.",
+              "examples": []
+            },
+            {
+              "name": "isPlaceholderFirebaseProject",
+              "kind": "function",
+              "signature": "function isPlaceholderFirebaseProject(firebaseConfig?: Record<string, any>): boolean;",
+              "members": [],
+              "doc": "Returns true if the Firebase project ID is still the placeholder from the\nstarter template (e.g. `YOUR_FIREBASE_PROJECT_ID`), i.e. the project hasn't\nbeen connected to a Firebase project yet.",
               "examples": []
             },
             {

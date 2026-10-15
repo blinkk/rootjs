@@ -720,8 +720,14 @@
                 },
                 {
                   "name": "fallbacks",
-                  "signature": "fallbacks?: Record<RootLocale, RootLocale[]>;",
-                  "doc": "Locale fallback chains for translations. When a translation is missing\nfor a locale, each fallback locale is checked (in order) before falling\nback to `defaultLocale` and finally the source string. Fallbacks are\nresolved recursively, e.g. with the config below, `en-CA` resolves to\n`['en-CA', 'en-GB', 'en']`. For example:\n\n```\ni18n: {\n  locales: ['en', 'en-GB', 'en-CA'],\n  fallbacks: {\n    'en-CA': ['en-GB'],\n  },\n}\n```",
+                  "signature": "fallbacks?: Record<RootLocale, RootLocale[]> | ((locale: RootLocale) => RootLocale[]);",
+                  "doc": "Locale fallback chains for translations. When a translation is missing\nfor a locale, each fallback locale is checked (in order) before falling\nback to `defaultLocale` and finally the source string. Fallbacks are\nresolved recursively, e.g. with the config below, `en-CA` resolves to\n`['en-CA', 'en-GB', 'en']`. For example:\n\n```\ni18n: {\n  locales: ['en', 'en-GB', 'en-CA'],\n  fallbacks: {\n    'en-CA': ['en-GB'],\n  },\n}\n```\n\nCan also be a function that returns the fallbacks for a locale, e.g.\n`fallbacks: (locale) => (locale.startsWith('fr') ? ['fr'] : [])`.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbackToLanguage",
+                  "signature": "fallbackToLanguage?: boolean;",
+                  "doc": "Falls back from a `<lang>_<country>` (or `<lang>-<country>`) locale to\n`<lang>` for translations, e.g. `ja_jp` -> `ja`, after any configured\n`fallbacks`. Only fallbacks to locales listed in `locales` are added.",
                   "examples": []
                 }
               ],

@@ -994,7 +994,7 @@ export default function Page() {
 
 const LOCALIZATION: DocCopy = {
   slug: 'localization',
-  note: 'Adds a section on translating CMS content, and a note on locale fallbacks.',
+  note: 'Adds a section on the experimental v2 translations manager and how to opt in.',
   fields: {
     meta: {
       title: 'Localization – Root.js',
@@ -1093,9 +1093,35 @@ export default function Page(props) {
             `Schema fields marked with ${c('translate: true')} are sent for translation. Editors translate them in the CMS, with AI, or by exporting them to a spreadsheet or translation vendor.`
           ),
           p(
-            `Translations are stored in the CMS, and loaded with ${c('cmsClient.loadTranslations()')}. Pass them to ${c('ctx.render()')} to use them with ${c('useTranslations()')}. See ${a('/docs/cms/data-fetching/#translations', 'Data fetching')}.`
+            `Translations are stored in the CMS. ${c('createRoute()')} loads them for each page, and ${c('cmsClient.loadTranslationsForLocale()')} loads them anywhere else. Pass them to ${c('ctx.render()')} to use them with ${c('useTranslations()')}. See ${a('/docs/cms/data-fetching/#translations', 'Data fetching')}.`
           ),
         ]),
+        section(
+          'translations-manager-v2',
+          'Translations manager v2 (experimental)',
+          [
+            p(
+              "The v2 translations manager stores each doc's translations with the doc, per locale, and drafts and publishes them together with the doc. It's still experimental, so it's off by default. To try it, opt in:"
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+cmsPlugin({
+  experiments: {v2TranslationsManager: true},
+});`
+            ),
+            copy(
+              p(
+                `On the first dev server start or ${c('root build')} after you opt in, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, use ${c('root-cms translations.migrate')}, and ${c('--status')} to check whether it has run.`
+              ),
+              p(
+                `The migration check runs before each build, so with the v2 translations manager, <b>${c('root build')} needs Firestore access</b>. Make sure your CI has application default credentials, e.g. ${c('gcloud auth application-default login')} or ${c('GOOGLE_APPLICATION_CREDENTIALS')}.`
+              )
+            ),
+          ]
+        ),
       ],
     },
   },
@@ -1729,7 +1755,7 @@ export default schema.collection({
 
 const DATA_FETCHING: DocCopy = {
   slug: 'cms--data-fetching',
-  note: 'Uses the new BatchResponse getters (getDoc, getQuery, getDataSource) in the batch request examples.',
+  note: 'Notes that batch request translations need the opt-in v2 translations manager, and how to load v1 translations outside a route.',
   fields: {
     meta: {
       title: 'Data fetching – Root.js',
@@ -1810,7 +1836,7 @@ export const {getStaticProps, getStaticPaths} = createRoute({
           'Batch requests',
           [
             p(
-              "Every read from the CMS is a round trip to Firestore. A batch request combines the reads a page needs: its docs, queries and data sources are fetched in parallel, then the translations for every doc in the batch are fetched together, for the page's locale only."
+              `Every read from the CMS is a round trip to Firestore. A batch request combines the reads a page needs: its docs, queries and data sources are fetched in parallel. With the ${a('/docs/localization/#translations-manager-v2', 'v2 translations manager')}, the translations for every doc in the batch are then fetched together, for the page's locale only.`
             ),
             p(
               `In ${c('createRoute()')}, add reads with the ${c('batchRequest')} option. They're fetched in the same batch as the route's doc. The response is available as ${c('ctx.batchResponse')}, e.g. in ${c('preRenderHook')}, which passes it to the page as props:`
@@ -1848,7 +1874,7 @@ export const {handle} = createRoute({
           'Batch requests outside a route',
           [
             p(
-              `In a custom handler, ${c('getStaticProps()')} or a plugin, create a batch request with ${c('cmsClient.createBatchRequest()')}. With ${c('translate: true')}, it also loads the translations for the docs it returns, for the ${c('locales')} you pass:`
+              `In a custom handler, ${c('getStaticProps()')} or a plugin, create a batch request with ${c('cmsClient.createBatchRequest()')}. With ${c('translate: true')} and the ${a('/docs/localization/#translations-manager-v2', 'v2 translations manager')}, it also loads the translations for the docs it returns, for the ${c('locales')} you pass:`
             ),
           ],
           [
@@ -1940,7 +1966,7 @@ req.addQuery('guides', 'Guides', {orderBy: 'sys.sortKey'});`
           'Translations',
           [
             p(
-              `Each doc's translations are stored with the doc, in the translations manager. ${c('createRoute()')} loads them for the page's locale, along with the translations for docs the page references and docs in its batch request. In your components, translate strings with ${c('useTranslations()')}:`
+              `${c('createRoute()')} loads the translations for the page's locale: the doc's own strings and the strings tagged ${c('common')}. With the ${a('/docs/localization/#translations-manager-v2', 'v2 translations manager')}, it loads the translations for docs the page references and docs in its batch request instead of ${c('common')}. In your components, translate strings with ${c('useTranslations()')}:`
             ),
           ],
           [
@@ -1969,7 +1995,7 @@ createRoute({
             ),
             copy(
               p(
-                `Outside a route, use a batch request with ${c('translate: true')} and ${c('res.getTranslations(locale)')} (see ${a('#batch-requests-outside-routes', 'Batch requests outside a route')}). Avoid ${c('cmsClient.loadTranslations()')}, which reads the v1 translations from before Root.js v4.`
+                `Outside a route, use ${c("cmsClient.loadTranslationsForLocale(locale, {tags: ['common']})")}. With the v2 translations manager, use a batch request with ${c('translate: true')} and ${c('res.getTranslations(locale)')} instead (see ${a('#batch-requests-outside-routes', 'Batch requests outside a route')}), since ${c('loadTranslations()')} and ${c('loadTranslationsForLocale()')} only read the v1 translations.`
               )
             ),
           ]
@@ -2087,7 +2113,7 @@ function apiPackageDoc(
 
 const MIGRATION_V4: DocCopy = {
   slug: 'migration--v4',
-  note: 'Adds an "Upgrade with an AI agent" section and the translations.migrate command.',
+  note: 'Makes the v2 translations manager opt-in, so upgrading no longer migrates translations or needs Firestore access to build.',
   fields: {
     meta: {
       title: 'Migrating to Root.js v4 – Root.js',
@@ -2100,7 +2126,7 @@ const MIGRATION_V4: DocCopy = {
       title: 'Migrating to Root.js v4',
       body: richtext(
         p(
-          'Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if your build runs without Firestore access or you relied on the old defaults.'
+          'Root.js v4 turns on several features by default that were opt-in in v3, removes the legacy EditorJS rich text editor, and rebrands the CMS UI. Most projects only need to update their packages, but check the sections below if you relied on the old defaults.'
         )
       ),
       sections: [
@@ -2123,37 +2149,16 @@ https://rootjs.dev/skills/root-v4-upgrade.md`
                 `Or start Claude Code with the prompt in one line: ${c('claude "Upgrade this project to Root.js v4. Follow https://rootjs.dev/skills/root-v4-upgrade.md"')}`
               ),
               p(
-                `The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything, updates the packages, and runs the translations migration (after checking with you). It also suggests moving CMS routes to ${c('createRoute()')}, secrets to ${c('root secrets')} and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left.`
+                `The agent works on a new branch, one commit per step. It snapshots your site's pages before changing anything and updates the packages. It also suggests moving CMS routes to ${c('createRoute()')}, secrets to ${c('root secrets')} and CMS reads to batch requests, and applies the changes you agree to. It then compares the pages before and after, runs your build and tests, and offers to file GitHub issues for anything left.`
               )
             ),
           ]
         ),
-        section(
-          'translations',
-          'Translations manager v2',
-          [
-            p(
-              `The v2 translations manager is now on by default. On the first dev server start or ${c('root build')}, the CMS copies your v1 translations into the new format. The v1 data is left in place as a backup. To run the migration yourself, as a step of the upgrade, use ${c('root-cms translations.migrate')}, and ${c('--status')} to check whether it has run.`
-            ),
-            p(
-              `The migration runs before each build, so <b>${c('root build')} now needs Firestore access</b>. Make sure your CI has application default credentials, e.g. ${c('gcloud auth application-default login')} or ${c('GOOGLE_APPLICATION_CREDENTIALS')}.`
-            ),
-          ],
-          [
-            copy(
-              p(
-                `If you set ${c('experiments: {v2TranslationsManager: true}')}, you can remove it. To stay on the v1 translations system, opt out:`
-              )
-            ),
-            code(
-              'ts',
-              `
-cmsPlugin({
-  experiments: {v2TranslationsManager: false},
-});`
-            ),
-          ]
-        ),
+        section('translations', 'Translations', [
+          p(
+            `The v1 translations system is still the default, so your translations don't need to be migrated. The v2 translations manager stays opt-in while it's experimental. If you set ${c('experiments: {v2TranslationsManager: true}')}, keep it. To try it, see ${a('/docs/localization/#translations-manager-v2', 'Translations manager v2')}.`
+          ),
+        ]),
         section(
           'dependency-graph',
           'Dependency graph',

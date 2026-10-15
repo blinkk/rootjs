@@ -77,9 +77,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
     });
 
     it('getTranslationsManager() throws when the flag is disabled', () => {
-      const disabledClient = createTestCmsClient({
-        experiments: {v2TranslationsManager: false},
-      });
+      const disabledClient = createTestCmsClient({experiments: {}});
       expect(() => disabledClient.getTranslationsManager()).toThrowError(
         /v2TranslationsManager/
       );

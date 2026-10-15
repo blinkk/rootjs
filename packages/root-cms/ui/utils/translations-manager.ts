@@ -502,9 +502,9 @@ export async function deleteTranslationsForDocIds(ids: string[]) {
 }
 
 /**
- * Returns true if the v2 translations manager is enabled. It's enabled by
- * default, unless `experiments.v2TranslationsManager` is set to `false`.
+ * Returns true if the v2 translations manager is enabled via the
+ * `experiments.v2TranslationsManager` flag.
  */
 export function testV2TranslationsEnabled(): boolean {
-  return window.__ROOT_CTX.experiments?.v2TranslationsManager !== false;
+  return Boolean(window.__ROOT_CTX.experiments?.v2TranslationsManager);
 }

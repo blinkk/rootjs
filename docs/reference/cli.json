@@ -935,7 +935,7 @@
           "aliases": [],
           "usage": "root-cms translations.migrate [options]",
           "summary": "migrates v1 translations to the v2 translations manager",
-          "description": "The CMS runs this automatically on the first `root dev` or `root build`. Run it on demand to migrate as a deliberate step, e.g. when upgrading to Root.js v4. The v1 translations are left in place as a backup, and the migrated translations are published.",
+          "description": "Requires `experiments: {v2TranslationsManager: true}`. The CMS runs this automatically on the first `root dev` or `root build`. Run it on demand to migrate as a deliberate step, e.g. when opting in. The v1 translations are left in place as a backup, and the migrated translations are published.",
           "examples": [
             "root-cms translations.migrate --status",
             "root-cms translations.migrate",

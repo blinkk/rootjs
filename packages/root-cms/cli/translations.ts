@@ -17,8 +17,8 @@ export interface TranslationsMigrateOptions {
 /**
  * Migrates the project's v1 translations to the v2 translations manager.
  *
- * The CMS runs the same migration automatically on the first `root dev` or
- * `root build` (unless `v2TranslationsManager` is disabled). This command
+ * When `experiments.v2TranslationsManager` is enabled, the CMS runs the same
+ * migration automatically on the first `root dev` or `root build`. This command
  * runs it on demand, e.g. as a step of an upgrade, and with `--status`
  * reports whether it has run without changing anything.
  *
@@ -40,8 +40,8 @@ export async function translationsMigrate(
 
   if (!cmsClient.isV2TranslationsEnabled()) {
     console.error(
-      red('the v2 translations manager is disabled in root.config.ts.') +
-        ' remove `experiments: {v2TranslationsManager: false}` from ' +
+      red('the v2 translations manager is not enabled in root.config.ts.') +
+        ' add `experiments: {v2TranslationsManager: true}` to ' +
         'cmsPlugin() to migrate.'
     );
     process.exitCode = 1;

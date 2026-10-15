@@ -2,10 +2,10 @@
 name: root-v4-upgrade
 description: >-
   Upgrade a Root.js project (@blinkk/root, @blinkk/root-cms) from v3 to v4:
-  snapshot the site before changing anything, update the packages, run the v1
-  -> v2 translations migration, move CMS routes to createRoute(), move secrets
-  to the Root.js secrets manager, batch CMS data fetching, then compare the
-  site before and after and offer to file GitHub issues for anything left.
+  snapshot the site before changing anything, update the packages, move
+  secrets to the Root.js secrets manager, batch CMS data fetching, optionally
+  move CMS routes to createRoute() (only if the user wants it), then compare
+  the site before and after and offer to file GitHub issues for anything left.
   Use this when asked to "upgrade to Root.js v4", "migrate to Root v4", or to
   follow https://rootjs.dev/skills/root-v4-upgrade.md.
 ---
@@ -13,15 +13,15 @@ description: >-
 # Upgrading a Root.js project to v4
 
 The goal is a project on Root.js v4 that renders the same pages as before,
-with its translations in the v2 translations manager, and a short report of
-what changed, what was tested and what's left. The parts:
+and a short report of what changed, what was tested and what's left. The
+parts:
 
-1. **Required**: update the packages, and migrate the CMS translations from v1
-   to the v2 translations manager.
-2. **Recommended**: move CMS routes to `createRoute()`, move secrets to
-   `root secrets`, and load CMS data with batch requests. Suggest these and
-   apply the ones the user agrees to.
-3. **Verify**: compare the site's pages before and after, plus the build,
+1. **Required**: update the packages.
+2. **Recommended**: move secrets to `root secrets`, and load CMS data with
+   batch requests. Suggest these and apply the ones the user agrees to.
+3. **Optional**: move CMS routes to `createRoute()`. Ask the user whether they
+   want this refactor, and only do it if they say yes.
+4. **Verify**: compare the site's pages before and after, plus the build,
    type check and tests, and file issues for anything that's left.
 
 Everything you need is in this file and one helper script. The full list of
@@ -32,8 +32,10 @@ v4 changes is at `https://rootjs.dev/docs/migration/v4/`.
 - Work on a new git branch, and commit each step separately so the user can
   review (or revert) them one at a time. Never push, deploy or publish unless
   the user asks.
-- The translations migration writes to the project's **production
-  Firestore**. Get an explicit go-ahead before running it (step 5).
+- Don't opt the project in to the v2 translations manager. It's still
+  experimental in v4, and the v1 translations system is the default. Only
+  projects that already set `experiments: {v2TranslationsManager: true}` use
+  it (see step 5).
 - Never print, log, commit or paste secret values, including in GitHub
   issues. Refer to secrets by name.
 - Ask before creating GitHub issues, and show the user what you'll file.
@@ -55,8 +57,8 @@ grep -n '"@blinkk/' package.json
 
 Use the package manager that matches the lockfile (the examples below use
 pnpm). If the project uses the CMS (`cmsPlugin()` in `root.config.ts`), also
-check that Google Cloud credentials work, since both the dev server and the
-migration read Firestore:
+check that Google Cloud credentials work, since the dev server reads
+Firestore:
 
 ```bash
 gcloud auth application-default print-access-token > /dev/null && echo "adc ok"
@@ -80,8 +82,9 @@ If rootjs.dev is unreachable, the same file is at
 `https://raw.githubusercontent.com/blinkk/rootjs/main/packages/root-cms/skills/root-v4-upgrade/scripts/root-v4-upgrade.mjs`.
 
 Run the audit. It lists the packages to update, config flags that are now
-defaults, CMS routes and data fetching to modernize, hard-coded secrets
-(values are redacted), and CI jobs affected by v4:
+defaults, whether the project uses the v2 translations manager, CMS routes and
+data fetching to modernize, hard-coded secrets (values are redacted), and CI
+jobs affected by v4:
 
 ```bash
 node .root/upgrade/root-v4-upgrade.mjs audit | tee .root/upgrade/audit-before.md
@@ -96,9 +99,10 @@ Then summarize the plan for the user and ask, **in one message**:
 | Question | Default |
 | --- | --- |
 | Branch name | `root-v4-upgrade` |
-| Apply the recommended changes (createRoute, secrets, batch requests), or only list them? | Apply, one commit each, after showing the plan for each |
+| Apply the recommended changes (secrets, batch requests), or only list them? | Apply, one commit each, after showing the plan for each |
+| Move the CMS routes the audit lists to `createRoute()`? It's optional: the existing routes keep working on v4. Mention how many routes it would touch. | Don't refactor them (list them in the report instead) |
 | Any pages that must be checked (e.g. the most important or most localized ones)? | Crawl the site from `/` |
-| Is anyone editing translations in the CMS right now? (see step 5) | Ask |
+| Only if the project already uses the v2 translations manager: is anyone editing translations in the CMS right now? (see step 5) | Ask |
 
 Create the branch once they answer: `git checkout -b root-v4-upgrade`.
 
@@ -139,8 +143,8 @@ only chase problems the upgrade caused.
    Good sources: `dist/html/` after an SSG build, the site's `sitemap.xml`, or
    the CMS (`pnpm exec root-cms client.call listDocs '["Pages", {"mode":
    "published"}]'`). Include pages in several locales, since those show
-   whether the translations migration worked. For large sites, a few pages
-   per route and locale is enough.
+   whether translations still load after the changes. For large sites, a few
+   pages per route and locale is enough.
 
    Stop the dev server when the snapshot is done.
 
@@ -159,11 +163,13 @@ Then:
 - If `.node-version`, `.nvmrc`, `engines.node` or a CI config pins Node below
   24, update it to 24.
 - Remove the config flags v4 turns on by default (the audit lists them):
-  `experiments.v2TranslationsManager: true`, `dependencyGraph: true`,
-  `modulePreload: true` and `experiments.taskManager: true`. Leave any flag
-  set to `false`; that's an opt-out. If `v2TranslationsManager: false` is
-  set, ask the user whether to remove it. Without removing it, the
-  translations stay on v1 and step 5 doesn't apply.
+  `dependencyGraph: true`, `modulePreload: true` and
+  `experiments.taskManager: true`. Leave any of these set to `false`; that's
+  an opt-out.
+- **Keep `experiments.v2TranslationsManager: true`** if it's set. The v2
+  translations manager is still opt-in in v4, so removing the flag would
+  switch the project back to v1 translations. Don't add it if it isn't set.
+  `v2TranslationsManager: false` is the default and can be removed.
 - If the project has a `root-cms.d.ts`, regenerate it with
   `pnpm exec root-cms generate-types`.
 - If the project has installed Root.js agent skills (e.g.
@@ -171,10 +177,10 @@ Then:
   `pnpm exec root-cms skill.install --force`.
 
 Run `pnpm build` and `pnpm exec tsc --noEmit` and fix any errors the upgrade
-caused. **Don't start the dev server or run `root build` with CMS access yet
-if the translations haven't been migrated.** In v4, both run the migration
-automatically, and step 5 should be deliberate. If the build needs Firestore
-and you haven't reached step 5, do step 5 first.
+caused. If the project uses the v2 translations manager and its translations
+haven't been migrated yet (see step 5), **don't start the dev server or run
+`root build` with CMS access until step 5**: both run the migration
+automatically, and it should be deliberate.
 
 Commit: `chore: upgrade to root.js v4`.
 
@@ -192,30 +198,38 @@ or in the HTML:
   doesn't change.
 - **The CMS is rebranded** (Root.js name, pink accent, beet favicon). The
   `favicon`, `minimalBranding` and `themes` options of `cmsPlugin()` change it.
-- **`root build` needs Firestore access**, because it runs the translations
-  migration before building. CI jobs that build the site need application
-  default credentials or `GOOGLE_APPLICATION_CREDENTIALS` (the audit lists
-  the CI files that build).
+- **Translations don't change.** The v1 translations system is still the
+  default, and the v2 translations manager is still opt-in.
 
-## Step 5 — Migrate the translations (CMS projects only)
+## Step 5 — Check the translations migration (v2 translations manager only)
 
-v4 stores translations in the v2 translations manager (per-locale docs that
-are drafted and published like content) instead of the v1 `Translations`
-collection. The migration copies every v1 string into v2 and publishes it.
-It's safe in these ways:
+**Skip this step unless `root.config.ts` sets
+`experiments: {v2TranslationsManager: true}`.** Projects on the v1
+translations system (the default) keep their translations as they are.
+
+The v2 translations manager stores translations in per-locale docs that are
+drafted and published like content, instead of the v1 `Translations`
+collection. When the flag is on, the CMS copies every v1 string into v2 and
+publishes it, once. Projects that opted in on v3 have usually migrated
+already, but check. The migration writes to the project's **production
+Firestore**, so get an explicit go-ahead before running it. It's safe in these
+ways:
 
 - The v1 data is left in place as a backup.
-- The live v3 site keeps reading v1, so it isn't affected.
+- A live site that hasn't migrated yet keeps reading v1, so it isn't
+  affected.
 - It runs once. A lock in Firestore stops two runs at the same time, and a
   failed run resumes where it stopped.
 
 It has one catch, which the user needs to know about: **it's a one-time
-copy**. Translation edits made in a v3 CMS *after* the migration (e.g. by
-editors using the deployed site's CMS before v4 is deployed) aren't copied.
+copy**. Translation edits made in the v1 CMS *after* the migration (e.g. by
+editors using the deployed site's CMS before the upgrade is deployed) aren't
+copied.
 Options:
 
-- Ask editors to pause translation edits until v4 is deployed (best).
-- Or re-run with `--force` right before deploying v4. This re-copies v1 and
+- Ask editors to pause translation edits until the upgrade is deployed
+  (best).
+- Or re-run with `--force` right before deploying. This re-copies v1 and
   **overwrites any edits made in the v2 translations manager since the first
   run**.
 
@@ -225,7 +239,7 @@ Check the status first. It's read-only:
 pnpm exec root-cms translations.migrate --status
 ```
 
-If it says `complete`, someone (or a v4 dev server or build) already ran it.
+If it says `complete`, someone (or a dev server or build) already ran it.
 Skip to step 6. If it says `running`, wait a few minutes and check again.
 Otherwise, explain the above, **get a go-ahead**, then run:
 
@@ -239,8 +253,7 @@ table. If it fails, read the error. An auth error means the credentials
 from step 1 are missing or lack access to the project. Re-running resumes
 where it stopped.
 
-Then verify the translations, which is the most important check in this
-upgrade:
+Then verify the translations:
 
 1. Start the v4 dev server and snapshot the site:
 
@@ -255,29 +268,35 @@ upgrade:
 
 2. Read `.root/upgrade/report.md`. On localized pages, look for text that
    changed from a translation back to the source language. That means a
-   string didn't migrate, or the page reads translations in a way v4
-   doesn't support (see "Data fetching" below).
+   string didn't migrate, or the page reads translations in a way the v2
+   translations manager doesn't support (see step 6c).
 
 3. **Code that reads v1 translations directly** (`loadTranslations()`,
    `loadTranslationsForLocale()`, flagged as an `[action]` by the audit) still
    works right after the migration, since v1 and v2 hold the same strings.
-   But it serves stale strings as soon as someone edits a translation in v4.
+   But it serves stale strings as soon as someone edits a translation in the
+   v2 translations manager.
    The comparison can't catch this, so fix every one of these (see step 6c).
    It's required, not optional.
 
-## Step 6 — Recommended changes
+## Step 6 — Recommended and optional changes
 
-For each of these, show the user what you'd change (files and a short
+For each of these that the user agreed to in step 1, show the user what you'd change (files and a short
 before/after), apply it if they agree, then re-run `snapshot` (to a fresh
 `after` dir) and `compare`. The report should be unchanged by these refactors.
 Commit each one separately.
 
-### 6a. CMS routes → `createRoute()`
+### 6a. CMS routes → `createRoute()` (optional)
+
+**Only do this if the user said yes in step 1.** If they said no, skip to 6b
+and list the routes under "What's left" in the report. If they said yes,
+still show the plan for each route (or group of similar routes) before
+changing it, since this is the largest refactor in the upgrade.
 
 A route that loads a CMS doc by hand in `handle` or `getStaticProps` (the
 audit lists them) can usually be replaced by `createRoute()`. It handles
 preview mode (`?preview=true`), locale resolution, translations (including
-for referenced docs), 404s, `Cache-Control`, read caching and batched reads.
+for referenced docs, with the v2 translations manager), 404s, `Cache-Control`, read caching and batched reads.
 
 ```tsx
 // Before.
@@ -322,6 +341,13 @@ ssg: true})`. Map custom logic to options rather than dropping it:
 | Custom 404 page | `notFoundHook(req, res)` |
 | Response headers | `setResponseHeaders`, `cacheControl` |
 | Preview-only route | `previewOnly: true` |
+
+On the v1 translations system (the default), `createRoute()` loads the
+strings tagged `common`, the route's doc id, and any tags from the
+`translations` option. A route that called `loadTranslationsForLocale(locale)`
+with no tags (like the example above) loaded *every* string, so add the tags
+of other docs the page renders (e.g. `translations: () => ({tags:
+['Global/header']})`), and check localized pages in the comparison.
 
 Check the old route's behavior that has no option (e.g. a non-default
 `Cache-Control`, a fallback page, or a special case for the dev server) and
@@ -381,12 +407,16 @@ Notes:
 ### 6c. Data fetching → batch requests
 
 A page that makes several CMS reads one after another (`getDoc`, `listDocs`,
-`getFromDataSource`, `loadTranslations`, …) pays a Firestore round trip for
-each. A batch request fetches docs, queries, data sources and translations in
-parallel, and loads the translations for every doc it returns (v2
-translations, for the requested locales only).
+`getFromDataSource`, …) pays a Firestore round trip for each. A batch request
+fetches docs, queries and data sources in parallel. With the v2 translations
+manager, it also loads the translations for every doc it returns, for the
+requested locales only. **Batch request translations only read v2
+translations**, so on the v1 translations system (the default), keep loading
+translations with `loadTranslationsForLocale()` and use batch requests for
+the content only.
 
-Inside `createRoute()`, use the `batchRequest` option:
+In routes that use `createRoute()` (already, or after 6a), use the
+`batchRequest` option:
 
 ```tsx
 // Before: fetched after the route's doc, without translations.
@@ -415,8 +445,9 @@ createRoute({
 });
 ```
 
-Outside `createRoute()` (custom handlers, plugins, `getStaticProps`), and to
-replace any `loadTranslations()`/`loadTranslationsForLocale()` call:
+Outside `createRoute()` (custom handlers, plugins, `getStaticProps`), and, on
+the v2 translations manager only, to replace any
+`loadTranslations()`/`loadTranslationsForLocale()` call:
 
 ```ts
 const req = cmsClient.createBatchRequest({mode, translate: true, locales: [locale]});
@@ -432,10 +463,13 @@ fetch the content first and the translations second:
 `const res = await req.fetchContent();` then, once the locale is known,
 `await req.fetchTranslations(res, {locales: [locale]});`.
 
+On the v1 translations system, drop `translate: true` and `addTranslations()`,
+and keep the existing `loadTranslationsForLocale(locale, {tags})` call.
+
 Notes:
 
-- v1 translations were filtered by tag. In v2, each doc's strings live under
-  the doc's id (e.g. `Pages/index`). Other v1 tags (e.g. `common`) became
+- On v2: v1 translations were filtered by tag. In v2, each doc's strings
+  live under the doc's id (e.g. `Pages/index`). Other v1 tags (e.g. `common`) became
   translations ids with the same name. `loadTranslationsForLocale(locale)`
   with no tags loaded *every* string. The batch equivalent is the docs on
   the page, which is what createRoute() loads.
@@ -476,21 +510,22 @@ With every change in place:
 Give the user a short summary:
 
 - Versions before and after, and the commits on the branch.
-- The translations migration result (strings, docs, locales) and how you
-  verified it.
+- If the project uses the v2 translations manager: the translations
+  migration status (or result, if you ran it) and how you verified it.
 - Check results (build, types, tests, lint) before vs. after.
 - The comparison: pages checked and how each critical/major change was
   resolved.
 - What's left: recommended changes not applied, items to verify in
-  production, CI credentials for `root build`, secrets to rotate.
-- Before deploying: deploy the v4 site soon after the migration (see step 5),
-  and make sure production has every env var that moved to `root secrets`.
+  production, secrets to rotate.
+- Before deploying: make sure production has every env var that moved to
+  `root secrets`. If you ran the translations migration, deploy soon after it
+  (see step 5).
 
 Then **offer** to create GitHub issues, and wait for an answer:
 
 - **In the project's repo**, one issue per open item (e.g. "Move
-  routes/blog/[slug].tsx to createRoute()", "Give CI access to Firestore for
-  root build", "Rotate the key that was in .env"). Each should be
+  routes/blog/[slug].tsx to createRoute()", "Rotate the key that was in
+  .env"). Each should be
   self-contained: what, why, where (files and lines), and how to fix.
 - **In `blinkk/rootjs`**, for problems that look like Root.js bugs (e.g.
   a page that renders differently with no project change to explain it). Include the
@@ -513,15 +548,19 @@ instead.
 ## Guidance for agents
 
 - Ask the step 1 questions together, once. Then work through the steps
-  without asking again, except for the go-aheads: the migration, applying
-  each recommended change, and filing issues.
+  without asking again, except for the go-aheads: the translations migration
+  (v2 translations manager only), applying each recommended change, the
+  optional `createRoute()` refactor, and filing issues. Never move routes to
+  `createRoute()` without a yes.
 - Snapshot **before** upgrading. Once the packages are updated, there's no
   way to get a clean baseline.
-- Don't run `root dev` or `root build` on v4 before step 5 unless the user
-  agrees. Both run the translations migration automatically.
+- Don't opt the project in to the v2 translations manager, and don't remove
+  the flag from a project that has it. If it's on and the migration hasn't
+  run, don't run `root dev` or `root build` on v4 before step 5 unless the
+  user agrees. Both run the migration automatically.
 - Keep refactors behavior preserving. When unsure what custom route logic
   does, keep it (as a `createRoute()` option or a hook) and mention it.
 - If the comparison shows many changes, look for a single cause before
-  fixing pages one by one (e.g. a layout reading v1 translations, or a
-  config flag).
+  fixing pages one by one (e.g. a layout reading translations that
+  `createRoute()` doesn't load, or a config flag).
 - Never print or commit secret values, and never put them in an issue.
