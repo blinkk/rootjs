@@ -350,3 +350,78 @@ describe('gslides_get', () => {
     });
   });
 });
+
+describe('gdoc_get suggestions', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  function mockDocsApi(docsResponse: Response) {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.startsWith('https://www.googleapis.com/drive/v3/files/')) {
+        return Response.json({
+          id: SLIDES_ID,
+          name: 'Launch brief',
+          mimeType: 'application/vnd.google-apps.document',
+        });
+      }
+      if (url.startsWith('https://docs.googleapis.com/v1/documents/')) {
+        return docsResponse;
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+  }
+
+  async function runTool(suggestions: string) {
+    const tools = createGoogleTools(createClientGoogleToolBackend());
+    return await (tools.gdoc_get as any).execute(
+      {url: SLIDES_ID, maxChars: 20000, suggestions},
+      {toolCallId: 'call-1', messages: []}
+    );
+  }
+
+  it('reads the suggested version via the Docs API', async () => {
+    mockDocsApi(
+      Response.json({
+        body: {
+          content: [
+            {paragraph: {elements: [{textRun: {content: 'Ships today.\n'}}]}},
+          ],
+        },
+      })
+    );
+    const result = await runTool('accepted');
+    expect(result.doc).toMatchObject({
+      text: 'Ships today.',
+      suggestions: 'accepted',
+      truncated: false,
+    });
+    const docsUrl = fetchMock.mock.calls
+      .map(([url]) => url as string)
+      .find((url) => url.startsWith('https://docs.googleapis.com/'));
+    expect(docsUrl).toContain(
+      'suggestionsViewMode=PREVIEW_SUGGESTIONS_ACCEPTED'
+    );
+  });
+
+  it('explains when the user cannot see suggestions', async () => {
+    mockDocsApi(
+      Response.json(
+        {error: {code: 400, message: 'Invalid suggestions view mode.'}},
+        {status: 400}
+      )
+    );
+    const result = await runTool('inline');
+    expect(result).toMatchObject({
+      success: false,
+      error: 'GOOGLE_PERMISSION_DENIED',
+    });
+  });
+});
