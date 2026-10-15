@@ -19,6 +19,8 @@
   --chip-background: #efefef;
   --chip-text-color: #000;
   --header-height: 48px;
+  /* Height of the doc editor toolbar row below the header on mobile. */
+  --doc-toolbar-height: 40px;
   --sidebar-width-collapsed: 48px;
   --sidebar-width-expanded: 208px;
   --sidebar-border-width: 1px;

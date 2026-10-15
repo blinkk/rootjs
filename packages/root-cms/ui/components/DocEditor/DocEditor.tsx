@@ -495,206 +495,219 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   return (
     <div className="DocEditor__statusBar">
-      <div className="DocEditor__statusBar__viewers">
-        <Viewers
-          id={`doc/${props.docId}`}
-          onViewerClick={onViewerClick}
-          getFieldLabel={getFieldLabel}
-        />
-      </div>
-      <DocEditor.SaveState />
-      {data?.sys && (
-        <div className="DocEditor__statusBar__statusBadges">
-          <DocStatusBadges
-            doc={data as CMSDoc}
-            docId={props.docId}
-            onPublishingLockClick={canEdit ? onPublishingLockClick : undefined}
+      <div className="DocEditor__statusBar__info">
+        <div className="DocEditor__statusBar__viewers">
+          <Viewers
+            id={`doc/${props.docId}`}
+            onViewerClick={onViewerClick}
+            getFieldLabel={getFieldLabel}
           />
         </div>
-      )}
-      <div className="DocEditor__statusBar__buttonGroup">
-        <div className="DocEditor__statusBar__search">
-          <Tooltip label="⌘ + Shift + f" transition="pop" withArrow>
-            <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                searchActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconSearch size={16} />}
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('root:toggle-search'));
-              }}
-            >
-              Search
-            </Button>
-          </Tooltip>
-        </div>
-        {fieldComments && (
-          <div className="DocEditor__statusBar__comments">
-            <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                commentsActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconMessageCircle size={16} />}
-              rightIcon={
-                fieldComments.openCount > 0 ? (
-                  <span className="DocEditor__statusBar__comments__count">
-                    {fieldComments.openCount}
-                  </span>
-                ) : undefined
+        <DocEditor.SaveState />
+        {data?.sys && (
+          <div className="DocEditor__statusBar__statusBadges">
+            <DocStatusBadges
+              doc={data as CMSDoc}
+              docId={props.docId}
+              onPublishingLockClick={
+                canEdit ? onPublishingLockClick : undefined
               }
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent(TOGGLE_COMMENTS_EVENT));
-              }}
-            >
-              Comments
-            </Button>
+            />
           </div>
         )}
-        {(window.__ROOT_CTX.checks || []).length > 0 && (
-          <div className="DocEditor__statusBar__checks">
-            <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                checksActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconListCheck size={16} />}
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('root:toggle-checks'));
-              }}
-            >
-              Checks
-            </Button>
-          </div>
-        )}
-        {aiAvailable && (
-          <div className="DocEditor__statusBar__ai">
-            <Tooltip label="⌘ + i" transition="pop" withArrow>
+      </div>
+      <div className="DocEditor__statusBar__tools">
+        <div className="DocEditor__statusBar__buttonGroup">
+          <div className="DocEditor__statusBar__search">
+            <Tooltip label="⌘ + Shift + f" transition="pop" withArrow>
               <Button
                 className={joinClassNames(
                   'DocEditor__statusBar__buttonGroup__button',
-                  aiActive
+                  searchActive
                     ? 'DocEditor__statusBar__buttonGroup__button--active'
                     : ''
                 )}
                 variant="default"
                 color="dark"
                 size="xs"
-                leftIcon={<IconRobot size={16} />}
+                leftIcon={<IconSearch size={16} />}
+                aria-label="Search"
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+                  window.dispatchEvent(new CustomEvent('root:toggle-search'));
                 }}
               >
-                Root AI
+                Search
               </Button>
             </Tooltip>
           </div>
-        )}
-      </div>
-      <div className="DocEditor__statusBar__i18n">
-        <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconPlanet size={16} />}
-          onClick={() => {
-            // When the v2 translations manager is enabled, the doc's
-            // translations are edited in the translations manager.
-            if (testV2TranslationsEnabled()) {
-              route(`/cms/translations/${props.docId}`);
-              return;
-            }
-            localizationModal.open({
-              docId: props.docId,
-              collection: props.collection,
-              draft: draft.controller,
-              locale: (query.locale as string) || undefined,
-            });
-          }}
-        >
-          Localization
-        </Button>
-      </div>
-      <div className="DocEditor__statusBar__publishButton">
-        {loading ? (
+          {fieldComments && (
+            <div className="DocEditor__statusBar__comments">
+              <Button
+                className={joinClassNames(
+                  'DocEditor__statusBar__buttonGroup__button',
+                  commentsActive
+                    ? 'DocEditor__statusBar__buttonGroup__button--active'
+                    : ''
+                )}
+                variant="default"
+                color="dark"
+                size="xs"
+                leftIcon={<IconMessageCircle size={16} />}
+                aria-label="Comments"
+                rightIcon={
+                  fieldComments.openCount > 0 ? (
+                    <span className="DocEditor__statusBar__comments__count">
+                      {fieldComments.openCount}
+                    </span>
+                  ) : undefined
+                }
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent(TOGGLE_COMMENTS_EVENT));
+                }}
+              >
+                Comments
+              </Button>
+            </div>
+          )}
+          {(window.__ROOT_CTX.checks || []).length > 0 && (
+            <div className="DocEditor__statusBar__checks">
+              <Button
+                className={joinClassNames(
+                  'DocEditor__statusBar__buttonGroup__button',
+                  checksActive
+                    ? 'DocEditor__statusBar__buttonGroup__button--active'
+                    : ''
+                )}
+                variant="default"
+                color="dark"
+                size="xs"
+                leftIcon={<IconListCheck size={16} />}
+                aria-label="Checks"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('root:toggle-checks'));
+                }}
+              >
+                Checks
+              </Button>
+            </div>
+          )}
+          {aiAvailable && (
+            <div className="DocEditor__statusBar__ai">
+              <Tooltip label="⌘ + i" transition="pop" withArrow>
+                <Button
+                  className={joinClassNames(
+                    'DocEditor__statusBar__buttonGroup__button',
+                    aiActive
+                      ? 'DocEditor__statusBar__buttonGroup__button--active'
+                      : ''
+                  )}
+                  variant="default"
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconRobot size={16} />}
+                  aria-label="Root AI"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+                  }}
+                >
+                  Root AI
+                </Button>
+              </Tooltip>
+            </div>
+          )}
+        </div>
+        <div className="DocEditor__statusBar__i18n">
           <Button
+            variant="default"
             color="dark"
             size="xs"
-            onClick={() => publishDocModal.open()}
-            loading
-            disabled
+            leftIcon={<IconPlanet size={16} />}
+            aria-label="Localization"
+            onClick={() => {
+              // When the v2 translations manager is enabled, the doc's
+              // translations are edited in the translations manager.
+              if (testV2TranslationsEnabled()) {
+                route(`/cms/translations/${props.docId}`);
+                return;
+              }
+              localizationModal.open({
+                docId: props.docId,
+                collection: props.collection,
+                draft: draft.controller,
+                locale: (query.locale as string) || undefined,
+              });
+            }}
           >
-            Publish
+            Localization
           </Button>
-        ) : testIsScheduled(data as CMSDoc) ? (
-          <Tooltip
-            label={`Scheduled ${formatDateTime(data.sys!.scheduledAt!)} by ${
-              data.sys!.scheduledBy
-            }`}
-            transition="pop"
-          >
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconRocket size={16} />}
-              disabled
-            >
-              Publish
-            </Button>
-          </Tooltip>
-        ) : testPublishingLocked(data as CMSDoc) ? (
-          <Tooltip
-            label={getPublishingLockedLabel(data as CMSDoc)}
-            transition="pop"
-          >
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconLock size={16} />}
-              disabled
-            >
-              Publish
-            </Button>
-          </Tooltip>
-        ) : (
-          <ConditionalTooltip
-            label="You don't have access to publish this document"
-            condition={!canPublish}
-          >
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconRocket size={16} />}
-              onClick={() => publishDocModal.open()}
-              disabled={!canPublish}
-            >
-              Publish
-            </Button>
-          </ConditionalTooltip>
-        )}
+        </div>
       </div>
-      <div className="DocEditor__statusBar__actionsMenu">
-        <DocActionsMenu
-          docId={props.docId}
-          data={data as CMSDoc}
-          onAction={onDocAction}
-        />
+      <div className="DocEditor__statusBar__actions">
+        <div className="DocEditor__statusBar__publishButton">
+          {loading ? (
+            <Button
+              color="dark"
+              size="xs"
+              onClick={() => publishDocModal.open()}
+              loading
+              disabled
+            >
+              Publish
+            </Button>
+          ) : testIsScheduled(data as CMSDoc) ? (
+            <Tooltip
+              label={`Scheduled ${formatDateTime(data.sys!.scheduledAt!)} by ${
+                data.sys!.scheduledBy
+              }`}
+              transition="pop"
+            >
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconRocket size={16} />}
+                disabled
+              >
+                Publish
+              </Button>
+            </Tooltip>
+          ) : testPublishingLocked(data as CMSDoc) ? (
+            <Tooltip
+              label={getPublishingLockedLabel(data as CMSDoc)}
+              transition="pop"
+            >
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconLock size={16} />}
+                disabled
+              >
+                Publish
+              </Button>
+            </Tooltip>
+          ) : (
+            <ConditionalTooltip
+              label="You don't have access to publish this document"
+              condition={!canPublish}
+            >
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconRocket size={16} />}
+                onClick={() => publishDocModal.open()}
+                disabled={!canPublish}
+              >
+                Publish
+              </Button>
+            </ConditionalTooltip>
+          )}
+        </div>
+        <div className="DocEditor__statusBar__actionsMenu">
+          <DocActionsMenu
+            docId={props.docId}
+            data={data as CMSDoc}
+            onAction={onDocAction}
+          />
+        </div>
       </div>
     </div>
   );

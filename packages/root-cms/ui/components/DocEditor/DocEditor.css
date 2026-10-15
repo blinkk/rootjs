@@ -94,6 +94,92 @@
   margin-left: 4px;
 }
 
+/**
+ * The status bar is split into groups so that the mobile layout can stack them.
+ * On desktop the groups don't affect the layout.
+ */
+.DocEditor__statusBar__info,
+.DocEditor__statusBar__tools,
+.DocEditor__statusBar__actions {
+  display: contents;
+}
+
+/**
+ * On mobile the status bar is stacked into two rows. The first row sits in the
+ * top bar (next to the menu button) with the status badges and the publish
+ * button, and the second row sits below the top bar with the panel toggles and
+ * the localization button, which are icon-only. Viewers and save state are
+ * hidden.
+ */
+@media (max-width: 768px) {
+  .DocEditor__statusBar {
+    left: 0;
+    z-index: 20;
+    height: auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'info actions'
+      'tools tools';
+    /* Let clicks through to the top bar's menu button. */
+    pointer-events: none;
+  }
+
+  .DocEditor__statusBar__info,
+  .DocEditor__statusBar__tools,
+  .DocEditor__statusBar__actions {
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+  }
+
+  .DocEditor__statusBar__info {
+    grid-area: info;
+    height: var(--header-height);
+    min-width: 0;
+    /* Leave room for the top bar's menu button. */
+    margin-left: 48px;
+  }
+
+  .DocEditor__statusBar__actions {
+    grid-area: actions;
+    height: var(--header-height);
+    padding-right: 8px;
+  }
+
+  .DocEditor__statusBar__tools {
+    grid-area: tools;
+    height: var(--doc-toolbar-height);
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-border);
+    background: white;
+  }
+
+  .DocEditor__statusBar__viewers,
+  .DocEditor__statusBar__saveState {
+    display: none;
+  }
+
+  .DocEditor__statusBar__statusBadges {
+    min-width: 0;
+    margin-right: 8px;
+    overflow: hidden;
+  }
+
+  .DocEditor__statusBar__tools .mantine-Button-root {
+    padding: 0 10px;
+  }
+
+  .DocEditor__statusBar__tools .mantine-Button-label {
+    display: none;
+  }
+
+  .DocEditor__statusBar__tools .mantine-Button-leftIcon {
+    margin-right: 0;
+  }
+}
+
 .DocEditor__fields {
   display: flex;
   flex-direction: column;
