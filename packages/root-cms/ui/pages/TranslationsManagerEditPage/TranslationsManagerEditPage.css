@@ -112,7 +112,7 @@
 .TranslationsManagerEditPage__Table__portButton {
   float: right;
   margin: -2px -6px 0 8px;
-  opacity: 0.4;
+  opacity: 0.8;
   transition: opacity 0.15s;
 }
 

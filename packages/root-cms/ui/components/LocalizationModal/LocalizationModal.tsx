@@ -1534,7 +1534,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                           <ActionIcon
                             className="LocalizationModal__sourceCell__port"
                             size="sm"
-                            variant="subtle"
                             aria-label="Port translations from another string"
                             onClick={() => openPortModal(source)}
                           >

@@ -1,11 +1,9 @@
 import {describe, expect, it} from 'vitest';
 import {
   applyReplaceRule,
-  carryOverSourceEdits,
   classifySourceChange,
   diffStrings,
   findPlaceholderMismatches,
-  getSourceHunks,
   portTranslation,
   rankBySimilarity,
   similarity,
@@ -26,109 +24,6 @@ describe('diffStrings', () => {
       {type: 'equal', text: 'Hello'},
     ]);
     expect(diffStrings('', 'Hello')).toEqual([{type: 'insert', text: 'Hello'}]);
-  });
-});
-
-describe('getSourceHunks', () => {
-  it('returns each contiguous change', () => {
-    expect(getSourceHunks('Pixel 9 Pro', 'Pixel 10 Ultra')).toEqual([
-      {oldText: '9', newText: '10'},
-      {oldText: 'Pro', newText: 'Ultra'},
-    ]);
-  });
-});
-
-describe('carryOverSourceEdits', () => {
-  it('replaces untranslated text that changed in the source', () => {
-    const result = carryOverSourceEdits(
-      '© 2025 Google LLC. All rights reserved.',
-      '© 2026 Google LLC. All rights reserved.',
-      '© 2025 Google LLC. Alle Rechte vorbehalten.'
-    );
-    expect(result.text).toBe('© 2026 Google LLC. Alle Rechte vorbehalten.');
-    expect(result.changes).toEqual([
-      {oldText: '2025', newText: '2026', status: 'applied'},
-    ]);
-  });
-
-  it('replaces repeated changes in every occurrence', () => {
-    const result = carryOverSourceEdits(
-      'Pixel 9 and Pixel 9 Pro',
-      'Pixel 10 and Pixel 10 Pro',
-      'Pixel 9 y Pixel 9 Pro'
-    );
-    expect(result.text).toBe('Pixel 10 y Pixel 10 Pro');
-    expect(result.changes.every((c) => c.status === 'applied')).toBe(true);
-  });
-
-  it('does not replace text within a larger word', () => {
-    const result = carryOverSourceEdits(
-      'Pixel 9 costs $999',
-      'Pixel 10 costs $999',
-      'Pixel 9 kostet 999 $'
-    );
-    expect(result.text).toBe('Pixel 10 kostet 999 $');
-  });
-
-  it('applies all changes against the original translation', () => {
-    const result = carryOverSourceEdits(
-      'Versions 9 and 10',
-      'Versions 10 and 11',
-      'Versionen 9 und 10'
-    );
-    expect(result.text).toBe('Versionen 10 und 11');
-  });
-
-  it('marks translated text as not found', () => {
-    const result = carryOverSourceEdits(
-      'Sign up today',
-      'Sign up now',
-      'Regístrate hoy'
-    );
-    expect(result.text).toBe('Regístrate hoy');
-    expect(result.changes).toEqual([
-      {oldText: 'today', newText: 'now', status: 'not-found'},
-    ]);
-  });
-
-  it('marks insertions', () => {
-    const result = carryOverSourceEdits(
-      'Learn more',
-      'Learn more about Pixel',
-      'Más información'
-    );
-    expect(result.changes).toEqual([
-      {oldText: '', newText: ' about Pixel', status: 'insertion'},
-    ]);
-  });
-
-  it('carries over deletions of untranslated text', () => {
-    const result = carryOverSourceEdits(
-      '© Google LLC',
-      '© Google',
-      '© Google LLC'
-    );
-    expect(result.text).toBe('© Google');
-  });
-
-  it('skips changes when only some occurrences changed', () => {
-    const result = carryOverSourceEdits(
-      'Since 2025, through 2025',
-      'Since 2025, through 2026',
-      'Desde 2025, hasta 2025'
-    );
-    expect(result.text).toBe('Desde 2025, hasta 2025');
-    expect(result.changes[0].status).toBe('ambiguous');
-  });
-
-  it('skips changes that appear more often in the translation', () => {
-    const result = carryOverSourceEdits(
-      'Pixel 9',
-      'Pixel 10',
-      'Pixel 9 (Pixel 9)'
-    );
-    expect(result.text).toBe('Pixel 9 (Pixel 9)');
-    expect(result.changes[0].status).toBe('ambiguous');
   });
 });
 
@@ -195,29 +90,15 @@ describe('applyReplaceRule', () => {
 });
 
 describe('portTranslation', () => {
-  it('copies the translation as-is by default', () => {
+  it('applies rules in order', () => {
     const result = portTranslation({
-      oldSource: 'Hello world',
-      newSource: 'Hello, world!',
-      translation: 'Hola mundo',
-    });
-    expect(result).toEqual({text: 'Hola mundo', changes: [], ruleCounts: []});
-  });
-
-  it('carries over edits then applies rules in order', () => {
-    const result = portTranslation({
-      oldSource: 'Get Pixel 9 in 2025',
-      newSource: 'Get Pixel 10 in 2026',
       translation: 'Hol dir Pixel 9 in 2025',
-      carryOverSourceEdits: true,
       rules: [
         {find: 'Hol dir', replace: 'Kaufe'},
         {find: 'Kaufe', replace: 'Kauf'},
       ],
     });
-    expect(result.text).toBe('Kauf Pixel 10 in 2026');
-    expect(result.ruleCounts).toEqual([1, 1]);
-    expect(result.changes.map((c) => c.status)).toEqual(['applied', 'applied']);
+    expect(result).toEqual({text: 'Kauf Pixel 9 in 2025', ruleCounts: [1, 1]});
   });
 });
 

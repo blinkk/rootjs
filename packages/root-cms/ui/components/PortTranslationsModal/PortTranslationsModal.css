@@ -53,26 +53,6 @@
   flex: 1;
 }
 
-.PortTranslationsModal__changes {
-  margin: 0;
-  padding-left: 28px;
-  font-size: 12px;
-  line-height: 1.8;
-}
-
-.PortTranslationsModal__changes code {
-  font-size: 12px;
-  padding: 1px 4px;
-  background: #f1f3f5;
-  border-radius: 3px;
-  white-space: pre-wrap;
-}
-
-.PortTranslationsModal__changes__count {
-  margin-left: 8px;
-  color: #868e96;
-}
-
 .PortTranslationsModal__rules {
   display: flex;
   flex-direction: column;
@@ -84,6 +64,10 @@
   grid-template-columns: 1fr 1fr auto auto auto;
   align-items: center;
   gap: 8px;
+}
+
+.PortTranslationsModal__rule .mantine-Checkbox-label {
+  padding-left: 6px;
 }
 
 .PortTranslationsModal__table {
@@ -113,9 +97,13 @@
   width: 1px;
 }
 
+.PortTranslationsModal__table th:nth-child(2),
 .PortTranslationsModal__table__lang {
   width: 1px;
   white-space: nowrap;
+}
+
+.PortTranslationsModal__table__lang {
   font-weight: 500;
 }
 
