@@ -16,6 +16,7 @@ import {
   IconArrowBackUp,
   IconArrowsTransferDown,
   IconPlus,
+  IconRobot,
   IconSearch,
   IconTrash,
 } from '@tabler/icons-preact';
@@ -31,6 +32,7 @@ import {
 } from '../../../shared/translation-port.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {logAction} from '../../utils/actions.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getTranslationForLanguage} from '../../utils/l10n.js';
 import {Text} from '../Text/Text.js';
@@ -93,7 +95,7 @@ export function usePortTranslationsModal() {
 /**
  * Modal for porting the translations of one source string to another, e.g.
  * after a source string is edited slightly. Translations can optionally be
- * transformed by find/replace rules.
+ * transformed by find/replace rules or by an AI prompt.
  */
 export function PortTranslationsModal(
   modalProps: ContextModalProps<PortTranslationsModalProps>
@@ -108,6 +110,13 @@ export function PortTranslationsModal(
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiTransforming, setAiTransforming] = useState(false);
+  /** AI-transformed translations, keyed by language. */
+  const [aiResults, setAiResults] = useState<Record<string, string>>({});
+  /** Prompts that produced the current `aiResults`, for logging. */
+  const [aiPrompts, setAiPrompts] = useState<string[]>([]);
+  const aiEnabled = testAiEnabled();
 
   const rankedCandidates = useMemo(
     () => rankBySimilarity(props.targetSource, candidates),
@@ -168,6 +177,8 @@ export function PortTranslationsModal(
   ) {
     setSelectedSource(source);
     setOverrides({});
+    setAiResults({});
+    setAiPrompts([]);
     const candidate = candidatesList.find((c) => c.source === source);
     const langs = new Set<string>();
     if (candidate) {
@@ -248,13 +259,20 @@ export function PortTranslationsModal(
       );
       const result = portTranslation({translation: from, rules: validRules});
       const overridden = lang in overrides;
-      const value = overridden ? overrides[lang] : result.text;
+      const aiTransformed = !overridden && lang in aiResults;
+      let value = result.text;
+      if (overridden) {
+        value = overrides[lang];
+      } else if (aiTransformed) {
+        value = aiResults[lang];
+      }
       return {
         lang,
         from,
         existing,
         value,
         overridden,
+        aiTransformed,
         modified: Boolean(from) && value !== from,
         placeholders: value
           ? findPlaceholderMismatches(props.targetSource, value)
@@ -268,6 +286,7 @@ export function PortTranslationsModal(
     props.targetTranslations,
     validRules,
     overrides,
+    aiResults,
   ]);
 
   const changeType = selectedCandidate
@@ -288,6 +307,72 @@ export function PortTranslationsModal(
       }
       return next;
     });
+  }
+
+  /**
+   * Transforms the current ported translations (after find/replace rules and
+   * manual edits) using the AI prompt.
+   */
+  async function aiTransform() {
+    const prompt = aiPrompt.trim();
+    if (!selectedCandidate || !prompt) {
+      return;
+    }
+    const translations: Record<string, string> = {};
+    rows.forEach((row) => {
+      if (row.from && row.value.trim()) {
+        translations[row.lang] = row.value;
+      }
+    });
+    if (Object.keys(translations).length === 0) {
+      return;
+    }
+    setAiTransforming(true);
+    try {
+      const res = await window.fetch('/cms/api/ai.transform_translations', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          prompt,
+          translations,
+          oldSource: selectedCandidate.source,
+          newSource: props.targetSource,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.status !== 200 || !data?.success) {
+        throw new Error(data?.error || `Request failed: ${res.status}`);
+      }
+      const transformed: Record<string, string> = data.translations || {};
+      const langs = Object.keys(transformed);
+      if (langs.length === 0) {
+        throw new Error('The AI did not return any translations.');
+      }
+      setAiResults((current) => ({...current, ...transformed}));
+      // The transform was applied on top of any manual edits, so the edits
+      // are now part of the AI result.
+      setOverrides((current) => {
+        const next = {...current};
+        langs.forEach((lang) => delete next[lang]);
+        return next;
+      });
+      setAiPrompts((current) => [...current, prompt]);
+      showNotification({
+        title: 'Transformed translations',
+        message: `Transformed ${langs.length} translation(s). Review the changes below.`,
+        color: 'green',
+        autoClose: 5000,
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'AI transform failed',
+        message: String((err as Error)?.message || err),
+        color: 'red',
+      });
+    } finally {
+      setAiTransforming(false);
+    }
   }
 
   function updateRule(index: number, updates: Partial<ReplaceRule>) {
@@ -314,6 +399,7 @@ export function PortTranslationsModal(
           toSource: props.targetSource,
           languages: Object.keys(translations),
           rules: validRules,
+          aiPrompts: aiPrompts.length > 0 ? aiPrompts : undefined,
         },
       });
       showNotification({
@@ -507,6 +593,65 @@ export function PortTranslationsModal(
             </div>
           </div>
 
+          {aiEnabled && (
+            <div className="PortTranslationsModal__section">
+              <div className="PortTranslationsModal__label">
+                Transform with AI
+              </div>
+              <Text size="body-sm" color="gray">
+                Optionally describe how AI should update the ported
+                translations, e.g. "Change the year to 2026" or "Use the
+                informal tone".
+              </Text>
+              <div className="PortTranslationsModal__ai">
+                <Textarea
+                  className="PortTranslationsModal__ai__input"
+                  size="xs"
+                  autosize
+                  minRows={1}
+                  maxRows={6}
+                  placeholder="Describe the transformation"
+                  value={aiPrompt}
+                  disabled={aiTransforming}
+                  onChange={(e: Event) =>
+                    setAiPrompt((e.target as HTMLTextAreaElement).value)
+                  }
+                  onKeyDown={(e: KeyboardEvent) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      aiTransform();
+                    }
+                  }}
+                />
+                <Button
+                  variant="default"
+                  size="xs"
+                  leftIcon={<IconRobot size={14} />}
+                  loading={aiTransforming}
+                  disabled={!aiPrompt.trim()}
+                  onClick={() => aiTransform()}
+                >
+                  Transform
+                </Button>
+                {Object.keys(aiResults).length > 0 && (
+                  <Tooltip label="Discard AI changes" position="top" withArrow>
+                    <ActionIcon
+                      variant="default"
+                      size="md"
+                      disabled={aiTransforming}
+                      onClick={() => {
+                        setAiResults({});
+                        setAiPrompts([]);
+                      }}
+                    >
+                      <IconArrowBackUp size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="PortTranslationsModal__section">
             <div className="PortTranslationsModal__label">Translations</div>
             <table className="PortTranslationsModal__table">
@@ -573,6 +718,11 @@ export function PortTranslationsModal(
                                 modified
                               </Badge>
                             )}
+                            {row.aiTransformed && (
+                              <Badge size="xs" color="violet" variant="outline">
+                                AI
+                              </Badge>
+                            )}
                             {row.existing && (
                               <Tooltip
                                 label={`Current: ${row.existing}`}
@@ -611,21 +761,32 @@ export function PortTranslationsModal(
                                 </Badge>
                               </Tooltip>
                             )}
-                            {row.overridden && (
+                            {(row.overridden || row.aiTransformed) && (
                               <Tooltip
-                                label="Discard manual edits"
+                                label={
+                                  row.overridden
+                                    ? 'Discard manual edits'
+                                    : 'Discard AI changes'
+                                }
                                 position="top"
                                 withArrow
                               >
                                 <ActionIcon
                                   size="xs"
-                                  onClick={() =>
-                                    setOverrides((current) => {
+                                  onClick={() => {
+                                    const discard = (
+                                      current: Record<string, string>
+                                    ) => {
                                       const next = {...current};
                                       delete next[row.lang];
                                       return next;
-                                    })
-                                  }
+                                    };
+                                    if (row.overridden) {
+                                      setOverrides(discard);
+                                    } else {
+                                      setAiResults(discard);
+                                    }
+                                  }}
                                 >
                                   <IconArrowBackUp size={12} />
                                 </ActionIcon>

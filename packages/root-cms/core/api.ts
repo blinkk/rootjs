@@ -23,6 +23,7 @@ import {
   prepareClientModel,
   serializeAiConfig,
   summarizeDiff,
+  transformTranslations,
   translateString,
 } from './ai.js';
 import {type CMSCheck} from './checks.js';
@@ -1582,6 +1583,81 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
+
+  /**
+   * Transforms existing translations according to a prompt.
+   *
+   * ```
+   * POST /cms/api/ai.transform_translations
+   * {
+   *   "prompt": "Change the year to 2026",
+   *   "translations": {"de": "© 2025 Google LLC."},
+   *   "oldSource": "© 2025 Google LLC.",
+   *   "newSource": "© 2026 Google LLC."
+   * }
+   * ```
+   */
+  server.use(
+    '/cms/api/ai.transform_translations',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const reqBody = req.body || {};
+      const prompt =
+        typeof reqBody.prompt === 'string' ? reqBody.prompt.trim() : '';
+      if (!prompt) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'prompt',
+        });
+        return;
+      }
+      const translations: Record<string, string> = {};
+      if (reqBody.translations && typeof reqBody.translations === 'object') {
+        Object.entries(reqBody.translations).forEach(([locale, value]) => {
+          if (typeof value === 'string' && value) {
+            translations[locale] = value;
+          }
+        });
+      }
+      if (Object.keys(translations).length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'translations',
+        });
+        return;
+      }
+      try {
+        const transformed = await transformTranslations(req.rootConfig!, {
+          prompt,
+          translations,
+          oldSource:
+            typeof reqBody.oldSource === 'string'
+              ? reqBody.oldSource
+              : undefined,
+          newSource:
+            typeof reqBody.newSource === 'string'
+              ? reqBody.newSource
+              : undefined,
+        });
+        res.status(200).json({success: true, translations: transformed});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
 
   /**
    * Runs a registered check against a document.
