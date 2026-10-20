@@ -1,0 +1,1143 @@
+# Update the developer docs: cms, cms--schemas, cms--checks, cms--notifications, cms--customization
+
+- **id:** `2026-10-19-cms-feature-docs`
+- **version:** 1
+- **author:** scripts/propose_docs_copy.ts
+- **generated:** 2026-10-20T00:09:50.904Z
+
+## Summary
+
+- Docs/cms: Links the plugin options section to the new Checks, Notifications and integrations, and Customizing the CMS pages.
+- Docs/cms--schemas: Adds a "Collection options" section covering group, previewUrl, slugRegex, autoSlug, autolock, sortOptions, customSorting, viewOptions and publishing checks.
+- Docs/cms--checks: New page on CMS checks: defining them, running them from the editor, gating publishing, and the built-in missing translations check.
+- Docs/cms--notifications: New page on CMS actions, the onAction hook, notification services (email and comment emails), email delivery and translation services.
+- Docs/cms--customization: New page on customizing the CMS: sidebar tools, branding and themes, access control, embedding, live preview messages, image serving, search, the dependency graph and other plugin options.
+
+## Edit `Docs/cms`
+
+Links the plugin options section to the new Checks, Notifications and integrations, and Customizing the CMS pages.
+
+### Set `content.sections`
+
+```diff yaml
+ - id: "plugin-options"
+   title: "Plugin options"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Only <code>firebaseConfig</code> is required. Common options include:"
+       - type: "unorderedList"
+         data:
+           style: "unordered"
+           items:
+             - content: "<code>id</code>: namespaces the site's content in Firestore, so several sites can share one Firebase project. Defaults to <code>default</code>."
+               items: []
+             - content: "<code>name</code>: the site name shown in the CMS."
+               items: []
+             - content: "<code>firebaseConfig</code>: the web app config from the Firebase console."
+               items: []
+             - content: "<code>gapi</code>: a Google API key and OAuth client id, for the Google Drive and Sheets features."
+               items: []
+             - content: "<code>ai</code>: the models available to Root AI."
+               items: []
+             - content: "<code>isUserAuthorized</code>: a custom check for whether a user can access the CMS."
+               items: []
+       - type: "paragraph"
+         data:
+-          text: "See <code>CMSPluginOptions</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions\">API reference</a> for every option."
++          text: "<a href=\"/docs/cms/checks/\">Checks</a>, <a href=\"/docs/cms/notifications/\">Notifications and integrations</a> and <a href=\"/docs/cms/customization/\">Customizing the CMS</a> cover the rest, and <code>CMSPluginOptions</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions\">API reference</a> lists every option."
+     time: 1790905585769
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/root.config.ts
+
+         import {defineConfig} from '@blinkk/root';
+         import {cmsPlugin} from '@blinkk/root-cms/plugin';
+
+         export default defineConfig({
+           plugins: [
+             cmsPlugin({
+               id: 'my-site',
+               name: 'My Site',
+               firebaseConfig: {
+                 apiKey: '...',
+                 authDomain: 'my-project.firebaseapp.com',
+                 projectId: 'my-project',
+                 storageBucket: 'my-project.appspot.com',
+               },
+             }),
+           ],
+         });
+       _arrayKey: "8fcXLQ"
+   _arrayKey: "R7zaCR"
+ - id: "manual-setup"
+   title: "Setting up Firebase by hand"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "<code>root-cms setup</code> does all of this for you (see <a href=\"/docs/#set-up-cms\">Getting started</a>). To set up a project by hand instead:"
+       - type: "orderedList"
+         data:
+           style: "ordered"
+           items:
+             - content: "Create a project in the <a href=\"https://console.firebase.google.com/\">Firebase console</a>, or add Firebase to an existing Google Cloud project."
+               items: []
+             - content: "Create a Firestore database in <b>Native mode</b>."
+               items: []
+             - content: "Under <b>Authentication</b>, enable the <b>Google</b> sign-in provider. If your site will serve on a custom domain, add it to the authorized domains."
+               items: []
+             - content: "Under <b>Project settings</b>, register a web app and copy its <code>firebaseConfig</code> values into <code>cmsPlugin()</code>:"
+               items: []
+     time: 1790905585769
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/root.config.ts
+
+         cmsPlugin({
+           id: 'starter',
+           name: 'Starter',
+           // From Project settings > Your apps in the Firebase console.
+           firebaseConfig: {
+             apiKey: '...',
+             authDomain: 'my-project.firebaseapp.com',
+             projectId: 'my-project',
+             storageBucket: 'my-project.appspot.com',
+           },
+         }),
+       _arrayKey: "5N5tGy"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "Before you deploy, also replace <code>sessionCookieSecret</code> with a long random value. The server reads and writes Firestore with <a href=\"https://cloud.google.com/docs/authentication/application-default-credentials\">application default credentials</a>; for local development, sign in with the gcloud CLI:"
+         time: 1790905585769
+         version: "2.28.2"
+       _arrayKey: "MqcF0J"
+     - _type: "CodeBlock"
+       language: "bash"
+       code: |-
+         gcloud auth login
+         gcloud auth application-default login
+       _arrayKey: "P1BTkP"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "Finally, apply the security rules and add yourself as an admin, as described <a href=\"#security-rules\">below</a>."
+         time: 1790905585769
+         version: "2.28.2"
+       _arrayKey: "vy6dTB"
+   _arrayKey: "nSjmyG"
+ - id: "security-rules"
+   title: "Security rules and roles"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Content access is controlled by Firestore security rules and a list of roles per site. The easiest way to set both up is with <code>init-firebase</code>, which applies the rules and makes you an ADMIN:"
+     time: 1790905585769
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "bash"
+       code: "pnpm exec root-cms init-firebase --admin=you@example.com"
+       _arrayKey: "OAMaS4"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:"
+         time: 1790905585769
+         version: "2.28.2"
+       _arrayKey: "dtZa2G"
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         rules_version = '2';
+         service cloud.firestore {
+           match /databases/{database}/documents {
+             match /{document=**} {
+               allow read, write: if false;
+             }
+
+             match /Projects/{project} {
+               allow write:
+                 if isSignedIn() && userIsAdmin();
+               allow read:
+                 if isSignedIn() && userCanRead();
+
+               match /{collection}/{document=**} {
+                 allow write:
+                   if isSignedIn() && userCanPublish();
+                 allow read:
+                   if isSignedIn() && userCanRead();
+               }
+
+               match /Collections/{collectionId}/Drafts/{document=**} {
+                 allow write:
+                   if isSignedIn() && userCanEdit();
+               }
+
+               function isSignedIn() {
+                 return request.auth != null;
+               }
+
+               function getRoles() {
+                 return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+               }
+
+               function userCanRead() {
+                 let roles = getRoles();
+                 let email = request.auth.token.email;
+                 let domain = '*@' + email.split('@')[1];
+                 return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
+               }
+
+               function userCanPublish() {
+                 let roles = getRoles();
+                 let email = request.auth.token.email;
+                 let domain = '*@' + email.split('@')[1];
+                 return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+               }
+
+               function userCanEdit() {
+                 let roles = getRoles();
+                 let email = request.auth.token.email;
+                 let domain = '*@' + email.split('@')[1];
+                 return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+               }
+
+               function userIsAdmin() {
+                 let roles = getRoles();
+                 let email = request.auth.token.email;
+                 let domain = '*@' + email.split('@')[1];
+                 return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
+               }
+             }
+           }
+         }
+       _arrayKey: "NHIE1Q"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "Then, in Firestore, create a doc at <code>Projects/&lt;id&gt;</code> (where <code>&lt;id&gt;</code> is the plugin's <code>id</code>) with a <code>roles</code> map from your email to <code>ADMIN</code>. After that, manage users from the CMS's settings page."
+           - type: "paragraph"
+             data:
+               text: "The roles are:"
+           - type: "unorderedList"
+             data:
+               style: "unordered"
+               items:
+                 - content: "<b>ADMIN</b>: everything, including managing users and settings."
+                   items: []
+                 - content: "<b>EDITOR</b>: edit and publish content."
+                   items: []
+                 - content: "<b>CONTRIBUTOR</b>: edit drafts, but not publish."
+                   items: []
+                 - content: "<b>VIEWER</b>: read-only access."
+                   items: []
+           - type: "paragraph"
+             data:
+               text: "A role can be granted to a whole domain with an entry like <code>*@example.com</code>. Anyone with a verified email on that domain gets the role, so use it sparingly, never with a free email provider, and prefer per-email grants for ADMIN and EDITOR."
+         time: 1790905585769
+         version: "2.28.2"
+       _arrayKey: "sOK2cS"
+   _arrayKey: "A6XcuX"
+ - id: "google-apis"
+   title: "Google Drive and Sheets"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Some CMS features, like importing from Google Sheets and Drive, use Google APIs on the editor's behalf. To enable them:"
+       - type: "orderedList"
+         data:
+           style: "ordered"
+           items:
+             - content: "In the Google Cloud console, enable the Google Sheets API and Google Drive API."
+               items: []
+             - content: "Create an <a href=\"https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow\">OAuth client id</a> (web application) and an API key."
+               items: []
+             - content: "Pass them to the plugin as <code>gapi: {clientId, apiKey}</code>, e.g. from environment variables."
+               items: []
+     time: 1790905585769
+     version: "2.28.2"
+   blocks: []
+   _arrayKey: "fIbA5M"
+ - id: "ai"
+   title: "Root AI"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Root AI lets editors chat with, draft and translate content in the CMS. Enable it with the <code>ai</code> option, listing the models editors can choose from and their API keys. See the <a href=\"/docs/migration/v3/#ai\">v3 migration guide</a> for an example."
+     time: 1790905585769
+     version: "2.28.2"
+   blocks: []
+   _arrayKey: "ClMyOB"
+ - id: "cron-jobs"
+   title: "Scheduled jobs"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Scheduled publishing, version history and a few other features rely on a job that calls the <code>/cms/api/cron.run</code> endpoint every few minutes."
+       - type: "paragraph"
+         data:
+           text: "<b>Firebase</b>: if your site is deployed to Cloud Functions for Firebase, export the <code>cron</code> function from <code>@blinkk/root-cms/functions</code>:"
+     time: 1790905585769
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/index.ts
+
+         import {server} from '@blinkk/root/functions';
+         import {cron} from '@blinkk/root-cms/functions';
+
+         export const www = {
+           server: server({mode: 'production'}),
+           cron: cron(),
+         };
+       _arrayKey: "imfmRx"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "<b>Other hosting</b>: on App Engine, Cloud Run or elsewhere, create a <a href=\"https://cloud.google.com/scheduler/docs/creating\">Cloud Scheduler</a> job that calls <code>/cms/api/cron.run</code> on your site every few minutes."
+         time: 1790905585769
+         version: "2.28.2"
+       _arrayKey: "U0gRoy"
+   _arrayKey: "NvTH7l"
+ - id: "credentials"
+   title: "Credentials in production"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "The server accesses Firestore with application default credentials. On Google Cloud (App Engine, Cloud Run, Cloud Functions), the runtime's service account is used, so give it access to Firestore. Elsewhere, set <code>GOOGLE_APPLICATION_CREDENTIALS</code> to a service account key file."
+     time: 1790905585769
+     version: "2.28.2"
+   blocks: []
+   _arrayKey: "cY3bZ1"
+```
+
+## Edit `Docs/cms--schemas`
+
+Adds a "Collection options" section covering group, previewUrl, slugRegex, autoSlug, autolock, sortOptions, customSorting, viewOptions and publishing checks.
+
+### Set `content.sections`
+
+```diff yaml
+ - id: "overview"
+   title: "Overview"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "CMS content models are defined in code, in <code>.schema.ts</code> files. They're versioned with the rest of your site, type-checked by TypeScript, and used to generate types for your templates with <code>root-cms generate-types</code>."
+     time: 1790660317218
+     version: "2.28.2"
+   blocks: []
+   _arrayKey: "ncsnJx"
+ - id: "creating-cms-collections"
+   title: "Collections"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "A collection is a group of docs that share a schema, like blog posts or landing pages. To add one, create <code>collections/&lt;Name&gt;.schema.ts</code>:"
+     time: 1790660317218
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/collections/BlogPosts.schema.ts
+
+         import {schema} from '@blinkk/root-cms';
+
+         export default schema.collection({
+           name: 'BlogPosts',
+           description: 'Posts for the blog.',
+           url: '/blog/[slug]',
+           preview: {
+             title: 'title',
+             image: 'image',
+           },
+           fields: [
+             schema.string({
+               id: 'title',
+               label: 'Title',
+               translate: true,
+             }),
+             schema.image({
+               id: 'image',
+               label: 'Image',
+               help: 'Upload a 1600x900 JPG.',
+             }),
+             schema.richtext({
+               id: 'content',
+               label: 'Content',
+               translate: true,
+             }),
+           ],
+         });
+       _arrayKey: "1OLsKj"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "The <code>url</code> tells the CMS where each doc is served, for live preview and links."
+         time: 1790660317218
+         version: "2.28.2"
+       _arrayKey: "0dtMmb"
+   _arrayKey: "ylgmCm"
+ - id: "composing-schemas"
+   title: "Reusable schemas"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Use <code>schema.define()</code> for content models that are used in more than one place, like page modules. <code>schema.glob()</code> collects every schema that matches a pattern, so adding a template file adds it to the CMS:"
+     time: 1790660317218
+     version: "2.28.2"
+   blocks:
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/templates/TemplateHero/TemplateHero.schema.ts
+
+         import {schema} from '@blinkk/root-cms';
+
+         export default schema.define({
+           name: 'TemplateHero',
+           fields: [
+             schema.string({id: 'title', translate: true}),
+             schema.richtext({id: 'body', translate: true}),
+             schema.image({id: 'image'}),
+           ],
+         });
+       _arrayKey: "wQlsBi"
+     - _type: "CodeBlock"
+       language: "ts"
+       code: |-
+         // @/collections/Pages.schema.ts
+
+         import {schema} from '@blinkk/root-cms';
+
+         export default schema.collection({
+           name: 'Pages',
+           url: '/[...slug]',
+           fields: [
+             schema.array({
+               id: 'modules',
+               label: 'Modules',
+               of: schema.oneOf({
+                 types: schema.glob('/templates/*/*.schema.ts'),
+               }),
+             }),
+           ],
+         });
+       _arrayKey: "Fil0ZX"
+     - _type: "CopyBlock"
+       body:
+         blocks:
+           - type: "paragraph"
+             data:
+               text: "Each <code>schema.define()</code> name must be unique across the project."
+         time: 1790660317218
+         version: "2.28.2"
+       _arrayKey: "Kco2K3"
+   _arrayKey: "hEdT12"
++- id: "collection-options"
++  title: "Collection options"
++  body:
++    blocks:
++      - type: "paragraph"
++        data:
++          text: "Besides <code>name</code>, <code>url</code>, <code>preview</code> and <code>fields</code>, a collection can set how its docs are listed, named and published in the CMS:"
++      - type: "unorderedList"
++        data:
++          style: "unordered"
++          items:
++            - content: "<code>group</code>: groups collections together in the CMS's content list."
++              items: []
++            - content: "<code>previewUrl</code>: the URL the editor's preview pane loads, if it's different from <code>url</code>. <code>domain</code> sets the domain for multi-domain sites."
++              items: []
++            - content: "<code>preview.defaultImage</code> and <code>preview.fit</code>: a fallback image for docs without one, and whether images are cropped (<code>'cover'</code>, the default) or not (<code>'contain'</code>)."
++              items: []
++            - content: "<code>slugRegex</code>: a regular expression (as a string) that new slugs must match."
++              items: []
++            - content: "<code>autoSlug</code>: pre-fills the slug of new docs from a template, e.g. <code>'{date:YYYYMMDD}-{adjective}-{noun}'</code>. Tokens are <code>{date}</code>, <code>{date:FORMAT}</code>, <code>{adjective}</code>, <code>{noun}</code> and <code>{random:N}</code>."
++              items: []
++            - content: "<code>autolock</code> and <code>autolockReason</code>: lock publishing whenever a doc is edited, so a change has to be unlocked deliberately before it goes live."
++              items: []
++            - content: "<code>sortOptions</code>: extra sort options for the doc list, e.g. <code>{id: 'title', label: 'Title', field: 'fields.meta.title'}</code>. The first use of a new sort may return an error with a link to create the Firestore index it needs."
++              items: []
++            - content: "<code>customSorting</code>: lets editors drag docs into a custom order (see below)."
++              items: []
++            - content: "<code>viewOptions.compact</code>: always lists docs in the compact table view, for collections without useful preview images or titles, like redirects."
++              items: []
++            - content: "<code>publishing.checks</code>: checks that run before docs are published (see <a href=\"/docs/cms/checks/#publishing-checks\">Checks</a>)."
++              items: []
++    time: 1792454989530
++    version: "2.28.2"
++  blocks:
++    - _type: "CopyBlock"
++      body:
++        blocks:
++          - type: "paragraph"
++            data:
++              text: "With <code>customSorting: true</code>, the doc list has a <b>Custom order</b> sort where editors drag docs into place. The order is saved at <code>sys.sortKey</code> on the draft, so like any edit it goes live when the moved docs are published, and <code>listDocs()</code> returns docs in that order by default. Docs created outside the CMS have no position until an editor assigns one from the banner on the doc list; scripts can assign them with <code>generateKeyBetween()</code> and <code>generateNKeysBetween()</code> from <code>@blinkk/root-cms</code>."
++        time: 1792454989530
++        version: "2.28.2"
+ - id: "schema-field-types"
+   title: "Field types"
+   body:
+     blocks:
+       - type: "paragraph"
+         data:
+           text: "Fields include <code>string</code>, <code>richtext</code>, <code>image</code>, <code>file</code>, <code>select</code>, <code>multiselect</code>, <code>boolean</code>, <code>number</code>, <code>date</code>, <code>datetime</code>, <code>reference</code>, <code>object</code>, <code>array</code> and <code>oneOf</code>. For every field and option, see <code>schema</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-schema\">API reference</a>."
+     time: 1790660317218
+     version: "2.28.2"
+   blocks: []
+   _arrayKey: "WhImRV"
+```
+
+## Create `Docs/cms--checks`
+
+New page on CMS checks: defining them, running them from the editor, gating publishing, and the built-in missing translations check.
+
+```yaml
+meta:
+  title: "Checks – Root.js"
+  description: "Validate CMS docs with checks that editors run from the editor, and use them to gate publishing."
+  category: "cms"
+content:
+  title: "Checks"
+  body:
+    blocks:
+      - type: "paragraph"
+        data:
+          text: "A check is a function on your server that looks at a doc and reports whether it's ready, e.g. that it has SEO metadata or that every string is translated. Editors can run checks on demand from the doc editor, and a collection can require them to pass before its docs are published."
+      - type: "paragraph"
+        data:
+          text: "Checks are in beta, so their interface may change between versions."
+    time: 1792454989530
+    version: "2.28.2"
+  sections:
+    - id: "defining-checks"
+      title: "Defining a check"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Register checks with the <code>checks</code> option of <code>cmsPlugin()</code>. Each one has an <code>id</code>, a <code>label</code> and a <code>run()</code> function that returns a <code>status</code> of <code>success</code>, <code>warning</code> or <code>error</code>, with a message in Markdown:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            import {defineConfig} from '@blinkk/root';
+            import {cmsPlugin, translationsCheck} from '@blinkk/root-cms/plugin';
+
+            export default defineConfig({
+              plugins: [
+                cmsPlugin({
+                  // ...
+                  checks: [
+                    translationsCheck(),
+                    {
+                      id: 'seo-meta',
+                      label: 'SEO metadata',
+                      description: 'Checks that the doc has a meta title and description.',
+                      collections: ['Pages', 'BlogPosts'],
+                      run: async (ctx) => {
+                        const doc = await ctx.cmsClient.getRawDoc(
+                          ctx.collectionId,
+                          ctx.slug,
+                          {mode: 'draft'}
+                        );
+                        const meta = doc?.fields?.meta || {};
+                        if (!meta.title || !meta.description) {
+                          return {
+                            status: 'error',
+                            message: 'Add a `meta.title` and `meta.description`.',
+                          };
+                        }
+                        return {status: 'success', message: 'All good!'};
+                      },
+                    },
+                  ],
+                }),
+              ],
+            });
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "The <code>ctx</code> passed to <code>run()</code> has the <code>docId</code>, <code>collectionId</code> and <code>slug</code> of the doc being checked, its <code>collectionSchema</code>, the <code>rootConfig</code> and a <code>cmsClient</code> for reading content. Checks run on the server, so they can also call internal services or APIs that need credentials."
+              - type: "paragraph"
+                data:
+                  text: "<code>collections</code> limits a check to docs in those collections. Without it, the check applies to every collection."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "running-checks"
+      title: "Running checks in the editor"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "When a project has checks, the doc editor's status bar shows a <b>Checks</b> button. It opens a panel that lists the checks for the doc's collection, and editors can run each one against the current draft and read its message."
+        time: 1792454989530
+        version: "2.28.2"
+      blocks: []
+    - id: "publishing-checks"
+      title: "Gating publishing"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "To run checks as part of publishing, list them under <code>publishing.checks</code> in a collection's schema. Each entry is a check id or an <code>{id, level}</code> object:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/collections/Pages.schema.ts
+
+            import {schema} from '@blinkk/root-cms';
+
+            export default schema.collection({
+              name: 'Pages',
+              url: '/[...slug]',
+              publishing: {
+                checks: [
+                  // A bare id is a required check.
+                  'seo-meta',
+                  {id: 'root-cms/translations', level: 'warning'},
+                ],
+              },
+              fields: [
+                // ...
+              ],
+            });
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "A <b>required</b> check (the default) stops publishing when it returns an <code>error</code>. A <b>warning</b> check never stops publishing; its message is shown once the content is live, and an <code>error</code> from it is treated as a warning. The same check can be required in one collection and a warning in another."
+              - type: "paragraph"
+                data:
+                  text: "Checks run when a doc is published or scheduled, and when a release is published or scheduled, where a failed required check on any of its docs stops the whole release. Scheduled content is checked when it is scheduled, not again when it goes live."
+              - type: "paragraph"
+                data:
+                  text: "Admins can skip the checks, or publish anyway after a required check fails. Publishing writes go straight from the browser to Firestore, so checks are a workflow guardrail rather than a security boundary. Every publish records what the checks did, including skips and overrides, in the action's metadata. A check that throws is reported as an <code>error</code> for that check only, and a check id that isn't registered is skipped."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "translations-check"
+      title: "Missing translations"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "<code>translationsCheck()</code> is a built-in check with the id <code>root-cms/translations</code>. It finds the doc's translatable strings (fields with <code>translate: true</code>) and reports any that are missing a translation for one of the doc's enabled locales. Pass <code>{collections: ['Pages']}</code> to limit it to some collections."
+        time: 1792454989530
+        version: "2.28.2"
+      blocks: []
+```
+
+## Create `Docs/cms--notifications`
+
+New page on CMS actions, the onAction hook, notification services (email and comment emails), email delivery and translation services.
+
+```yaml
+meta:
+  title: "Notifications and integrations – Root.js"
+  description: "React to CMS actions with the onAction hook and notification services, send email, and connect a translation service."
+  category: "cms"
+  navLabel: "Notifications and integrations"
+content:
+  title: "Notifications and integrations"
+  body:
+    blocks:
+      - type: "paragraph"
+        data:
+          text: "The CMS records every change as an action, which your server can react to, e.g. to email a team when a page is published. It can also send strings to an external translation service and import the results."
+    time: 1792454989530
+    version: "2.28.2"
+  sections:
+    - id: "actions"
+      title: "Actions"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Each action has a name like <code>doc.publish</code>, <code>doc.save</code>, <code>release.publish</code> or <code>doc.comment.add</code>, the email of the user who performed it (<code>by</code>, or <code>system</code> for scheduled jobs), a <code>timestamp</code> and <code>metadata</code> such as the <code>docId</code>. Actions are stored at <code>Projects/&lt;id&gt;/ActionLogs</code> in Firestore and listed in the CMS's action log."
+          - type: "paragraph"
+            data:
+              text: "The <code>onAction</code> option is called on the server with every action. It isn't awaited, so use it for quick, fire-and-forget work:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              onAction: (action) => {
+                if (action.action === 'doc.publish') {
+                  console.log(`${action.by} published ${action.metadata?.docId}`);
+                }
+              },
+            }),
+    - id: "notification-services"
+      title: "Notification services"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "For notifications, register services with the <code>notifications</code> option. Each service has an <code>id</code>, a <code>label</code> and an async <code>onAction(ctx, action)</code> handler, and each one decides for itself which actions to handle. <code>ctx</code> has the <code>rootConfig</code>, a <code>cmsClient</code> and the <code>user</code> who performed the action. For example, to post to a Slack webhook:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              notifications: [
+                {
+                  id: 'slack',
+                  label: 'Slack',
+                  onAction: async (ctx, action) => {
+                    if (action.action !== 'doc.publish') {
+                      return;
+                    }
+                    await fetch(process.env.SLACK_WEBHOOK_URL!, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({
+                        text: `${action.by} published ${action.metadata?.docId}`,
+                      }),
+                    });
+                    return {status: 'success'};
+                  },
+                },
+              ],
+            }),
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "A handler can return <code>{status: 'success' | 'info' | 'error', message}</code> to describe what it did. Errors are logged and don't affect the action or the other services."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "email-notifications"
+      title: "Email notifications"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "<code>emailNotifications()</code> is a built-in service that emails a list of people when matching actions happen. <code>actions</code> takes patterns where <code>*</code> matches anything, and <code>to</code> can be a list or a function that returns the recipients for an action:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            import {
+              cmsPlugin,
+              commentEmailNotifications,
+              emailNotifications,
+            } from '@blinkk/root-cms/plugin';
+
+            cmsPlugin({
+              // ...
+              notifications: [
+                emailNotifications({
+                  actions: ['doc.publish', 'release.*'],
+                  to: ['web-team@example.com'],
+                  template: {
+                    subject: '[My Site] {action} by {by}',
+                    body: '{by} ran {action} on {metadata.docId}.',
+                  },
+                  emailService: 'https://my-email-service.appspot.com',
+                }),
+                commentEmailNotifications({
+                  emailService: 'https://my-email-service.appspot.com',
+                }),
+              ],
+            }),
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "Templates fill <code>{placeholder}</code> values from the action, including nested ones like <code>{metadata.docId}</code>, and can set <code>subject</code>, a plain-text <code>body</code> and <code>html</code>. Without a template, a default email describes the action. For full control, pass a function that returns the email. <code>filter</code> can skip actions (e.g. ones by a bot account), and <code>transformData</code> changes the data the template sees."
+              - type: "paragraph"
+                data:
+                  text: "<code>commentEmailNotifications()</code> emails the people <code>@mentioned</code> in a field comment and everyone who has already commented in the thread, when a comment is added, resolved or reopened. Links in the email point to <code>rootConfig.domain</code> unless you set <code>cmsUrl</code>."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "email-delivery"
+      title: "Delivering email"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Emails are queued in Firestore at <code>Projects/&lt;id&gt;/Emails</code> and sent by the Root.js email service, a small App Engine app (<code>apps/root-services</code> in the Root.js repo) that reads the queue and sends with the App Engine Mail API. Deploy it to App Engine in the Google Cloud project that has your Firestore database, and set <code>emailService</code> to its URL so new emails are sent right away."
+          - type: "paragraph"
+            data:
+              text: "Emails are sent from <code>noreply@&lt;project-id&gt;.appspotmail.com</code> by default. A different <code>from</code> address must be an authorized sender for the Mail API. Set <code>expireAfterMinutes</code> to skip emails that couldn't be sent in time instead of sending them late."
+          - type: "paragraph"
+            data:
+              text: "Your own server code can send email through the same queue with <code>cmsClient.sendEmail({to, subject, body, htmlBody})</code>."
+        time: 1792454989530
+        version: "2.28.2"
+      blocks: []
+    - id: "translation-services"
+      title: "Translation services"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "To connect a translation platform like Crowdin or Smartling, register a service with the <code>translations</code> option. It appears in the <b>Import</b> and <b>Export</b> menus of a doc's localization modal. <code>onExport</code> receives the doc's strings and their current translations, and <code>onImport</code> returns translated rows to merge into the CMS:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              translations: [
+                {
+                  id: 'my-tms',
+                  label: 'My TMS',
+                  onExport: async (ctx, rows) => {
+                    // rows: [{source, translations: {de: '...', fr: '...'}}, ...]
+                    const job = await myTms.upload(ctx.docId, rows);
+                    return {
+                      status: 'success',
+                      message: `Sent ${rows.length} strings.`,
+                      link: {url: job.url, label: 'Open in My TMS'},
+                    };
+                  },
+                  onImport: async (ctx) => {
+                    return await myTms.download(ctx.docId, ctx.translationLanguages);
+                  },
+                },
+              ],
+            }),
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "<code>ctx</code> has the doc's <code>docId</code>, the project's <code>locales</code> and its <code>translationLanguages</code> (the keys used in <code>translations</code>; see <code>i18n.translationLanguages</code> in <code>root.config.ts</code>). Either handler can return a <code>title</code>, <code>message</code>, <code>link</code> and <code>status</code> to show in a notification, and <code>onImport</code> can return one of these instead of rows when there's nothing to import."
+              - type: "paragraph"
+                data:
+                  text: "<code>excludeLocalesFromTranslations</code> leaves locales out of every import and export, including CSV and Google Sheets. It takes patterns like <code>['ALL_*']</code>, which is useful for pseudo-locales that are never translated."
+            time: 1792454989530
+            version: "2.28.2"
+```
+
+## Create `Docs/cms--customization`
+
+New page on customizing the CMS: sidebar tools, branding and themes, access control, embedding, live preview messages, image serving, search, the dependency graph and other plugin options.
+
+```yaml
+meta:
+  title: "Customizing the CMS – Root.js"
+  description: "Add sidebar tools, brand and theme the CMS, control access, embed the editor, and tune search, images and other plugin options."
+  category: "cms"
+  navLabel: "Customizing the CMS"
+content:
+  title: "Customizing the CMS"
+  body:
+    blocks:
+      - type: "paragraph"
+        data:
+          text: "These <code>cmsPlugin()</code> options change how the CMS looks and behaves for your team. For every option, see <code>CMSPluginOptions</code> in the <a href=\"/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions\">API reference</a>."
+    time: 1792454989530
+    version: "2.28.2"
+  sections:
+    - id: "sidebar"
+      title: "Sidebar tools"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "<code>sidebar.tools</code> adds your own entries to the CMS sidebar, e.g. an internal dashboard or a link to a style guide. A tool with an <code>iframeUrl</code> renders that page inside the CMS at <code>/cms/tools/&lt;id&gt;</code>. <code>cmsUrl</code> links to a CMS page instead, and <code>externalUrl</code> opens a new tab:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              sidebar: {
+                tools: {
+                  launches: {
+                    label: 'Launch calendar',
+                    icon: 'data:image/svg+xml;base64,...',
+                    iframeUrl: '/internal/launches/',
+                  },
+                  styleguide: {
+                    label: 'Style guide',
+                    externalUrl: 'https://example.com/styleguide',
+                  },
+                },
+                hiddenBuiltInTools: ['data', 'releases'],
+              },
+            }),
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "The iframe's path, query and hash are mirrored into the CMS URL, so a tool's pages survive a refresh and can be shared. For icons that match the CMS, pick one from <a href=\"https://tabler.io/icons\">Tabler Icons</a> with a stroke width of 1.5 and paste its data URI."
+              - type: "paragraph"
+                data:
+                  text: "<code>hiddenBuiltInTools</code> hides built-in tools from the sidebar and the home page: <code>home</code>, <code>content</code>, <code>releases</code>, <code>data</code>, <code>assets</code>, <code>translations</code>, <code>ai</code> and <code>settings</code>. Their pages still work by URL. The task manager can be turned off with <code>experiments: {taskManager: false}</code>."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "branding"
+      title: "Branding and themes"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "<code>name</code> is shown in the CMS header and <code>favicon</code> replaces the browser tab icon. <code>minimalBranding: true</code> hides the Root.js logo and shows the project name instead."
+          - type: "paragraph"
+            data:
+              text: "Themes restyle the CMS. They're experimental. A theme is a stylesheet loaded after the CMS's own, from a <code>file</code> relative to the project root or a <code>css</code> string:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              themes: [{id: 'brand', name: 'Brand', file: './cms/brand.css'}],
+              defaultTheme: 'brand',
+            }),
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "Each user picks a theme under <b>Settings → Theme</b>, and <code>defaultTheme</code> applies until they do. The same page lets admins add CSS for the whole project, and anyone add CSS for themselves, without a deploy."
+              - type: "paragraph"
+                data:
+                  text: "To write a theme, copy <code>packages/root-cms/ui/styles/theme.css</code> from the Root.js repo and change its values. Its <code>--cms-*</code> custom properties are kept stable across releases. Rules that target the CMS's class names work, but may break with any release."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "access"
+      title: "Access control"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Users sign in with Google, and what they can do comes from their role (see <a href=\"/docs/cms/#security-rules\">Security rules and roles</a>). Sign-in is always required for <code>/cms/</code> pages and for any page with <code>?preview=true</code>, which is how the editor's preview loads draft content."
+          - type: "paragraph"
+            data:
+              text: "<code>isLoginRequired(req)</code> requires sign-in for more of your site, e.g. a staging server or an internal section. <code>isUserAuthorized(req, user)</code> adds your own rule for who can sign in at all:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              isLoginRequired: (req) => req.path.startsWith('/internal/'),
+              isUserAuthorized: (req, user) => user.email.endsWith('@example.com'),
+            }),
+    - id: "embedding"
+      title: "Embedding the editor"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "<code>@blinkk/root-cms/browser-client</code> opens the CMS editor or Root AI from another site, e.g. an \"Edit this page\" button on a staging site. The CMS can't be framed by default, so list the embedding site in <code>allowedIframeOrigins</code>:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              allowedIframeOrigins: ['https://staging.example.com'],
+            }),
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // On https://staging.example.com
+
+            import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+            const cms = new RootCMSBrowserClient({cmsOrigin: 'https://example.com'});
+
+            button.addEventListener('click', () => {
+              const editor = cms.openEditor('Pages/about', {deeplink: 'hero.title'});
+              editor.on('published', () => location.reload());
+            });
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "<code>openEditor()</code> opens a pop-up by default; pass <code>{mode: 'iframe', container}</code> to render it in the page instead. The editor emits <code>ready</code>, <code>saved</code>, <code>published</code>, <code>error</code> and <code>close</code> events, and doesn't autosave. <code>openRootAI({docId})</code> opens Root AI with a doc as context."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "preview"
+      title: "Live preview messages"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Your pages can talk to the editor while they're shown in its preview pane. With <code>RootCMSBrowserClient.connectPreview()</code>, a page can scroll the editor to a field (for \"click to edit\"), highlight the field being edited, and switch the editor to another doc as the user navigates. Turn on the messages with <code>preview.channel</code>: <code>true</code> for both directions, or <code>'to-preview'</code> or <code>'from-preview'</code> for one."
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // @/root.config.ts
+
+            cmsPlugin({
+              // ...
+              preview: {channel: true},
+            }),
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            // In your page's client-side code.
+
+            import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+            const preview = RootCMSBrowserClient.connectPreview();
+            if (preview.isEmbedded) {
+              // Keep the editor on the doc for the page being previewed.
+              preview.navigateToDoc('Pages/about');
+              // Outline the element for the field being edited.
+              preview.on('highlight', ({deepKey, scroll}) => {
+                // ...
+              });
+              // Click an element to edit its field.
+              heroTitle.addEventListener('click', () => preview.focusField('hero.title'));
+            }
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "Outside the preview pane, <code>isEmbedded</code> is false and the calls do nothing, so the code is safe to ship. <code>navigateToDoc()</code> asks the editor to confirm before switching docs; pass <code>{confirm: false}</code> to switch straight away."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "images"
+      title: "Image serving"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "By default, uploaded images are served straight from Cloud Storage. With <code>gci: true</code>, uploaded images are served from a Google image-serving URL instead, which can resize and convert them on the fly. It uses the hosted service at <code>services.rootjs.dev</code>; set <code>gci</code> to a URL to use your own. The storage bucket needs fine-grained permissions, and the service's account (listed at <code>https://services.rootjs.dev/_/service_account</code>) needs owner access to it."
+        time: 1792454989530
+        version: "2.28.2"
+      blocks: []
+    - id: "search-and-dependencies"
+      title: "Search and the dependency graph"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "The CMS's global search indexes every doc, and the index is kept up to date by the <a href=\"/docs/cms/#cron-jobs\">scheduled job</a>. <code>searchIndex</code> limits what's indexed, with <code>includeCollections</code>, <code>excludeCollections</code>, <code>includeDocIds</code> and <code>excludeDocIds</code> (doc ids look like <code>Pages/about</code>)."
+          - type: "paragraph"
+            data:
+              text: "The dependency graph tracks which docs reference which, through <code>schema.reference()</code> and <code>schema.references()</code> fields. It's on by default and also kept up to date by the scheduled job. Use it to fetch everything a page needs in one batch request:"
+        time: 1792454989530
+        version: "2.28.2"
+      blocks:
+        - _type: "CodeBlock"
+          language: "ts"
+          code: |-
+            const depIds = await cmsClient.getDocDependencies(['Pages/index'], {
+              mode: 'published',
+            });
+            const req = cmsClient.createBatchRequest({mode: 'published'});
+            req.addDoc('Pages/index');
+            depIds.forEach((docId) => req.addDoc(docId));
+            const res = await req.fetch();
+        - _type: "CopyBlock"
+          body:
+            blocks:
+              - type: "paragraph"
+                data:
+                  text: "Dependencies are followed transitively unless you pass <code>transitive: false</code>. <code>dependencyGraph: false</code> turns the graph off, and <code>{includeCollections, excludeCollections}</code> limits which collections are scanned for references."
+            time: 1792454989530
+            version: "2.28.2"
+    - id: "other-options"
+      title: "Other options"
+      body:
+        blocks:
+          - type: "unorderedList"
+            data:
+              style: "unordered"
+              items:
+                - content: "<code>defaultOneOfVariant</code>: <code>'dropdown'</code> (the default) or <code>'picker'</code>, the default UI for <code>oneOf</code> fields. A field's own <code>variant</code> overrides it."
+                  items: []
+                - content: "<code>logLevel</code>: how much the CMS logs to the console, from <code>'debug'</code> to <code>'silent'</code>. Defaults to <code>'info'</code>."
+                  items: []
+                - content: "<code>watch</code>: set to <code>false</code> to stop the dev server from watching schema files and regenerating <code>root-cms.d.ts</code>."
+                  items: []
+                - content: "<code>firebaseConfig.databaseId</code>: use a named Firestore database instead of the default one."
+                  items: []
+        time: 1792454989530
+        version: "2.28.2"
+      blocks: []
+```

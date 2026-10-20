@@ -78,6 +78,20 @@ describe('proposalCheck', () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it('reads .md files as Markdown proposals', async () => {
+    await proposalCheck(
+      write(
+        'ok.md',
+        '- **id:** `hero-refresh`\n- **version:** 1\n\n## Duplicate `Pages/home` to `Pages/home-v2`\n'
+      )
+    );
+    const envelope = JSON.parse(stdout);
+    expect(envelope.ok).toBe(true);
+    expect(envelope.result.changes).toEqual([
+      {index: 0, kind: 'doc.duplicate', target: 'Pages/home -> Pages/home-v2'},
+    ]);
+  });
+
   it('fails when the file does not exist', async () => {
     await proposalCheck(path.join(dir, 'missing.yaml'));
     const envelope = JSON.parse(stdout);

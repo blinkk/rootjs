@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import {parseProposal, type Proposal} from '../shared/proposal.js';
+import {parseProposalFile} from '../shared/proposal-markdown.js';
+import type {Proposal} from '../shared/proposal.js';
 import {getCliUser} from './cli-user.js';
 
 export interface ProposalApplyCliOptions {
@@ -23,7 +24,7 @@ export interface ProposalApplyCliOptions {
  * as a CI gate on a pull request that adds or edits a proposal.
  *
  * Usage:
- *   root-cms proposal.check cms-proposals/hero-refresh.yaml
+ *   root-cms proposal.check cms-proposals/hero-refresh.md
  */
 export async function proposalCheck(filepath: string) {
   try {
@@ -51,7 +52,7 @@ export async function proposalCheck(filepath: string) {
  * write, without writing anything.
  *
  * Usage:
- *   root-cms proposal.diff cms-proposals/hero-refresh.yaml
+ *   root-cms proposal.diff cms-proposals/hero-refresh.md
  */
 export async function proposalDiff(
   filepath: string,
@@ -68,9 +69,9 @@ export async function proposalDiff(
  * the proposal resolves cleanly.
  *
  * Usage:
- *   root-cms proposal.apply cms-proposals/hero-refresh.yaml
- *   root-cms proposal.apply cms-proposals/hero-refresh.yaml --dry-run
- *   root-cms proposal.apply cms-proposals/hero-refresh.yaml --verify-before
+ *   root-cms proposal.apply cms-proposals/hero-refresh.md
+ *   root-cms proposal.apply cms-proposals/hero-refresh.md --dry-run
+ *   root-cms proposal.apply cms-proposals/hero-refresh.md --verify-before
  */
 export async function proposalApply(
   filepath: string,
@@ -135,7 +136,7 @@ function readProposal(filepath: string): Proposal {
   if (!fs.existsSync(filepath)) {
     throw new Error(`file not found: ${filepath}`);
   }
-  const res = parseProposal(fs.readFileSync(filepath, 'utf8'));
+  const res = parseProposalFile(fs.readFileSync(filepath, 'utf8'), filepath);
   if (!res.ok) {
     const details = res.errors
       .map((err) => {

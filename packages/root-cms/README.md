@@ -137,26 +137,38 @@ as `{"_seconds","_nanoseconds"}`, `{"_latitude","_longitude"}`, and
 ## Change proposals
 
 AI agents can **propose** content changes instead of writing them straight to
-Firestore. A proposal is a single YAML file describing the edits — doc id,
+Firestore. A proposal is a single Markdown file describing the edits — doc id,
 field path, old value, new value — that gets committed to your repo and
 reviewed in a pull request. Nothing touches the database until you apply it.
 
-```yaml
-version: 1
-id: 2026-08-20-hero-refresh
-title: Refresh the homepage hero
-changes:
-  - kind: doc.edit
-    docId: Pages/home
-    ops:
-      - op: set
-        path: hero.title
-        before: "Welcome to Acme"
-        after: "Build faster with Acme"
+Each change and op is a heading, and each edited value is a `diff` code block,
+so the pull request shows exactly which lines change:
+
+````md
+# Refresh the homepage hero
+
+- **id:** `2026-08-20-hero-refresh`
+- **version:** 1
+
+## Edit `Pages/home`
+
+### Set `hero.title`
+
+```diff text
+-Welcome to Acme
++Build faster with Acme
 ```
+````
+
+A value block is `text` (the string, verbatim), `yaml`, or `json`. A `diff`
+block holds the whole value with each line prefixed by `" "` (unchanged), `-`
+(before), or `+` (after). Proposals can also be written in YAML (`.yaml`
+files), the original format.
 
 Supported change kinds are `doc.edit`, `doc.create`, `doc.duplicate`,
-`release.create`, `release.update`, and `translations`. Edit operations
+`release.create`, `release.update`, and `translations` (headings `## Edit`,
+`## Create`, `## Duplicate … to …`, `## Create release`, `## Update release`,
+and `## Translations`). Edit operations
 (`set`, `insert_item`, `remove_item`) use dotted field paths with zero-based
 array indices, and apply in order.
 
@@ -164,14 +176,14 @@ Three commands drive the workflow:
 
 ```bash
 # Check the proposal format. No db access, so it works as a CI gate on a PR.
-root-cms proposal.check cms-proposals/2026-08-20-hero-refresh.yaml
+root-cms proposal.check cms-proposals/2026-08-20-hero-refresh.md
 
 # Resolve against the live db, validate against collection schemas, and
 # report what it would write.
-root-cms proposal.diff cms-proposals/2026-08-20-hero-refresh.yaml
+root-cms proposal.diff cms-proposals/2026-08-20-hero-refresh.md
 
 # Apply it.
-root-cms proposal.apply cms-proposals/2026-08-20-hero-refresh.yaml
+root-cms proposal.apply cms-proposals/2026-08-20-hero-refresh.md
 ```
 
 Applying writes **drafts only** — it never publishes, schedules, or deletes —
@@ -187,9 +199,10 @@ they are not checked against the database unless you pass `--verify-before`.
 you can see proposed content rendered on a running site before accepting it:
 
 ```ts
-import {RootCMSClient, parseProposal} from '@blinkk/root-cms/core';
+import {RootCMSClient, parseProposalFile} from '@blinkk/root-cms/core';
 
-const res = parseProposal(fs.readFileSync('cms-proposals/x.yaml', 'utf8'));
+const filepath = 'cms-proposals/x.md';
+const res = parseProposalFile(fs.readFileSync(filepath, 'utf8'), filepath);
 if (res.ok) {
   const client = new RootCMSClient(rootConfig, {proposal: res.proposal});
   // getDoc(), listDocs(), and batch reads now reflect the proposal.

@@ -18,11 +18,11 @@
  * `--only` limits the proposal to the listed doc slugs, so a change to a few
  * pages doesn't sweep in unrelated edits made in the CMS since the last run.
  *
- * The proposal is written to `cms-proposals/<id>.yaml` and checked against the
+ * The proposal is written to `cms-proposals/<id>.md` and checked against the
  * collection schema (a dry run of `proposal.apply`). Once it's approved, apply
  * it with:
  *
- *   npx root-cms proposal.apply cms-proposals/<id>.yaml
+ *   npx root-cms proposal.apply cms-proposals/<id>.md
  *
  * The writes are attributed to the active gcloud account. Pass
  * `--modified-by <email>` to attribute them to someone else.
@@ -52,8 +52,8 @@ import {
   applyProposal,
   compareSortKeys,
   generateNKeysBetween,
-  parseProposal,
-  serializeProposal,
+  parseProposalMarkdown,
+  serializeProposalMarkdown,
   type Proposal,
   type ProposalChange,
   type ProposalOp,
@@ -174,6 +174,59 @@ function isEqual(a: any, b: any) {
   return JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 }
 
+function isObject(value: any): value is Record<string, any> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Copies the values the CMS adds on save (array keys and rich text
+ * timestamps) from the current draft onto the proposed value, so the
+ * proposal's diff only shows real content changes. Array items are matched by
+ * their `id` when they have one, otherwise by index.
+ */
+function carryOverCmsValues(before: any, after: any): any {
+  if (Array.isArray(after)) {
+    if (!Array.isArray(before)) {
+      return after;
+    }
+    const byId = new Map(
+      before
+        .filter((item) => typeof item?.id === 'string')
+        .map((item) => [item.id, item])
+    );
+    // Each key may only be used once, since it identifies the array item.
+    const usedKeys = new Set<string>();
+    return after.map((item, i) => {
+      const match =
+        typeof item?.id === 'string' ? byId.get(item.id) : before[i];
+      const out = carryOverCmsValues(match, item);
+      if (isObject(out) && typeof out._arrayKey === 'string') {
+        if (usedKeys.has(out._arrayKey)) {
+          delete out._arrayKey;
+          return out;
+        }
+        usedKeys.add(out._arrayKey);
+      }
+      return out;
+    });
+  }
+  if (!isObject(after) || !isObject(before)) {
+    return after;
+  }
+  const out: Record<string, any> = {};
+  for (const [key, child] of Object.entries(after)) {
+    out[key] = carryOverCmsValues(before[key], child);
+  }
+  if (typeof before._arrayKey === 'string' && after._arrayKey === undefined) {
+    out._arrayKey = before._arrayKey;
+  }
+  // Rich text.
+  if (typeof before.time === 'number' && 'time' in after && 'blocks' in after) {
+    out.time = before.time;
+  }
+  return out;
+}
+
 /** Builds the `doc.edit` (or `doc.create`) change for one doc. */
 function buildChange(
   doc: DocCopy,
@@ -187,11 +240,11 @@ function buildChange(
   }
   const ops: ProposalOp[] = [];
   for (const fieldPath of FIELD_PATHS) {
-    const after = getPath(fields, fieldPath);
+    const before = getPath(currentFields, fieldPath);
+    const after = carryOverCmsValues(before, getPath(fields, fieldPath));
     if (after === undefined) {
       continue;
     }
-    const before = getPath(currentFields, fieldPath);
     if (isEqual(before, after)) {
       continue;
     }
@@ -249,8 +302,8 @@ async function main() {
             ].join('\n'),
       changes,
     };
-    const yaml = serializeProposal(proposal);
-    const parsed = parseProposal(yaml);
+    const markdown = serializeProposalMarkdown(proposal);
+    const parsed = parseProposalMarkdown(markdown);
     if (!parsed.ok) {
       throw new Error(`invalid proposal: ${JSON.stringify(parsed.errors)}`);
     }
@@ -261,8 +314,8 @@ async function main() {
       throw new Error(`proposal failed: ${JSON.stringify(dryRun.errors)}`);
     }
     await mkdir(PROPOSALS_DIR, {recursive: true});
-    const outPath = path.join(PROPOSALS_DIR, `${proposal.id}.yaml`);
-    await writeFile(outPath, yaml);
+    const outPath = path.join(PROPOSALS_DIR, `${proposal.id}.md`);
+    await writeFile(outPath, markdown);
     console.log(`wrote ${path.relative(DOCS_DIR, outPath)}`);
     console.log(
       `apply: npx root-cms proposal.apply ${path.relative(DOCS_DIR, outPath)}`
