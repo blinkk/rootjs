@@ -78,6 +78,11 @@ interface ImageEditorDialogProps {
    * The first one is selected by default.
    */
   aspectRatios?: AspectRatio[];
+  /**
+   * When provided, a "Save as copy" button is shown alongside "Save" that
+   * calls this callback with the cropped image instead of `onSave`.
+   */
+  onSaveAsCopy?: (file: File) => void;
 }
 
 /** An aspect ratio option selectable in the editor. */
@@ -349,7 +354,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (onSave: (file: File) => void) => {
     if (!outputCrop) {
       return;
     }
@@ -362,7 +367,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
         fileType
       );
       if (croppedImage) {
-        props.onSave(croppedImage);
+        onSave(croppedImage);
       }
     } catch (e) {
       console.error(e);
@@ -661,9 +666,19 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
             >
               Cancel
             </Button>
+            {props.onSaveAsCopy && (
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => handleSave(props.onSaveAsCopy!)}
+                disabled={saving || !outputCrop}
+              >
+                Save as copy
+              </Button>
+            )}
             <Button
               size="xs"
-              onClick={handleSave}
+              onClick={() => handleSave(props.onSave)}
               loading={saving}
               disabled={!outputCrop}
               leftIcon={<IconCheck size={20} />}
