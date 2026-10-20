@@ -1433,7 +1433,7 @@ export function blogRedirectPlugin(): Plugin {
 
 const CMS_CONFIGURATION: DocCopy = {
   slug: 'cms',
-  note: 'Adds a "Setting up Firebase by hand" section with the manual steps that "Getting started" replaced with the `root-cms setup` wizard.',
+  note: 'Links the plugin options section to the new Checks, Notifications and integrations, and Customizing the CMS pages.',
   fields: {
     meta: {
       title: 'CMS configuration – Root.js',
@@ -1466,7 +1466,7 @@ const CMS_CONFIGURATION: DocCopy = {
               `${c('isUserAuthorized')}: a custom check for whether a user can access the CMS.`
             ),
             p(
-              `See ${c('CMSPluginOptions')} in the ${a('/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions', 'API reference')} for every option.`
+              `${a('/docs/cms/checks/', 'Checks')}, ${a('/docs/cms/notifications/', 'Notifications and integrations')} and ${a('/docs/cms/customization/', 'Customizing the CMS')} cover the rest, and ${c('CMSPluginOptions')} in the ${a('/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions', 'API reference')} lists every option.`
             ),
           ],
           [
@@ -1624,7 +1624,7 @@ export const www = {
 
 const SCHEMAS: DocCopy = {
   slug: 'cms--schemas',
-  note: 'Replaces "Root CMS" with "the CMS", uses schema.glob() in the composition example, and links field types to the generated API reference.',
+  note: 'Adds a "Collection options" section covering group, previewUrl, slugRegex, autoSlug, autolock, sortOptions, customSorting, viewOptions and publishing checks.',
   fields: {
     meta: {
       title: 'Schemas – Root.js',
@@ -1739,6 +1739,34 @@ export default schema.collection({
             copy(
               p(
                 `Each ${c('schema.define()')} name must be unique across the project.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'collection-options',
+          'Collection options',
+          [
+            p(
+              `Besides ${c('name')}, ${c('url')}, ${c('preview')} and ${c('fields')}, a collection can set how its docs are listed, named and published in the CMS:`
+            ),
+            ul(
+              `${c('group')}: groups collections together in the CMS's content list.`,
+              `${c('previewUrl')}: the URL the editor's preview pane loads, if it's different from ${c('url')}. ${c('domain')} sets the domain for multi-domain sites.`,
+              `${c('preview.defaultImage')} and ${c('preview.fit')}: a fallback image for docs without one, and whether images are cropped (${c("'cover'")}, the default) or not (${c("'contain'")}).`,
+              `${c('slugRegex')}: a regular expression (as a string) that new slugs must match.`,
+              `${c('autoSlug')}: pre-fills the slug of new docs from a template, e.g. ${c("'{date:YYYYMMDD}-{adjective}-{noun}'")}. Tokens are ${c('{date}')}, ${c('{date:FORMAT}')}, ${c('{adjective}')}, ${c('{noun}')} and ${c('{random:N}')}.`,
+              `${c('autolock')} and ${c('autolockReason')}: lock publishing whenever a doc is edited, so a change has to be unlocked deliberately before it goes live.`,
+              `${c('sortOptions')}: extra sort options for the doc list, e.g. ${c("{id: 'title', label: 'Title', field: 'fields.meta.title'}")}. The first use of a new sort may return an error with a link to create the Firestore index it needs.`,
+              `${c('customSorting')}: lets editors drag docs into a custom order (see below).`,
+              `${c('viewOptions.compact')}: always lists docs in the compact table view, for collections without useful preview images or titles, like redirects.`,
+              `${c('publishing.checks')}: checks that run before docs are published (see ${a('/docs/cms/checks/#publishing-checks', 'Checks')}).`
+            ),
+          ],
+          [
+            copy(
+              p(
+                `With ${c('customSorting: true')}, the doc list has a <b>Custom order</b> sort where editors drag docs into place. The order is saved at ${c('sys.sortKey')} on the draft, so like any edit it goes live when the moved docs are published, and ${c('listDocs()')} returns docs in that order by default. Docs created outside the CMS have no position until an editor assigns one from the banner on the doc list; scripts can assign them with ${c('generateKeyBetween()')} and ${c('generateNKeysBetween()')} from ${c('@blinkk/root-cms')}.`
               )
             ),
           ]
@@ -2020,6 +2048,596 @@ const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});`
             ),
           ]
         ),
+      ],
+    },
+  },
+};
+
+const CHECKS: DocCopy = {
+  slug: 'cms--checks',
+  note: 'New page on CMS checks: defining them, running them from the editor, gating publishing, and the built-in missing translations check.',
+  fields: {
+    meta: {
+      title: 'Checks – Root.js',
+      description:
+        'Validate CMS docs with checks that editors run from the editor, and use them to gate publishing.',
+      category: 'cms',
+    },
+    content: {
+      title: 'Checks',
+      body: richtext(
+        p(
+          "A check is a function on your server that looks at a doc and reports whether it's ready, e.g. that it has SEO metadata or that every string is translated. Editors can run checks on demand from the doc editor, and a collection can require them to pass before its docs are published."
+        ),
+        p('Checks are in beta, so their interface may change between versions.')
+      ),
+      sections: [
+        section(
+          'defining-checks',
+          'Defining a check',
+          [
+            p(
+              `Register checks with the ${c('checks')} option of ${c('cmsPlugin()')}. Each one has an ${c('id')}, a ${c('label')} and a ${c('run()')} function that returns a ${c('status')} of ${c('success')}, ${c('warning')} or ${c('error')}, with a message in Markdown:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+import {defineConfig} from '@blinkk/root';
+import {cmsPlugin, translationsCheck} from '@blinkk/root-cms/plugin';
+
+export default defineConfig({
+  plugins: [
+    cmsPlugin({
+      // ...
+      checks: [
+        translationsCheck(),
+        {
+          id: 'seo-meta',
+          label: 'SEO metadata',
+          description: 'Checks that the doc has a meta title and description.',
+          collections: ['Pages', 'BlogPosts'],
+          run: async (ctx) => {
+            const doc = await ctx.cmsClient.getRawDoc(
+              ctx.collectionId,
+              ctx.slug,
+              {mode: 'draft'}
+            );
+            const meta = doc?.fields?.meta || {};
+            if (!meta.title || !meta.description) {
+              return {
+                status: 'error',
+                message: 'Add a \`meta.title\` and \`meta.description\`.',
+              };
+            }
+            return {status: 'success', message: 'All good!'};
+          },
+        },
+      ],
+    }),
+  ],
+});`
+            ),
+            copy(
+              p(
+                `The ${c('ctx')} passed to ${c('run()')} has the ${c('docId')}, ${c('collectionId')} and ${c('slug')} of the doc being checked, its ${c('collectionSchema')}, the ${c('rootConfig')} and a ${c('cmsClient')} for reading content. Checks run on the server, so they can also call internal services or APIs that need credentials.`
+              ),
+              p(
+                `${c('collections')} limits a check to docs in those collections. Without it, the check applies to every collection.`
+              )
+            ),
+          ]
+        ),
+        section('running-checks', 'Running checks in the editor', [
+          p(
+            "When a project has checks, the doc editor's status bar shows a <b>Checks</b> button. It opens a panel that lists the checks for the doc's collection, and editors can run each one against the current draft and read its message."
+          ),
+        ]),
+        section(
+          'publishing-checks',
+          'Gating publishing',
+          [
+            p(
+              `To run checks as part of publishing, list them under ${c('publishing.checks')} in a collection's schema. Each entry is a check id or an ${c('{id, level}')} object:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/collections/Pages.schema.ts
+
+import {schema} from '@blinkk/root-cms';
+
+export default schema.collection({
+  name: 'Pages',
+  url: '/[...slug]',
+  publishing: {
+    checks: [
+      // A bare id is a required check.
+      'seo-meta',
+      {id: 'root-cms/translations', level: 'warning'},
+    ],
+  },
+  fields: [
+    // ...
+  ],
+});`
+            ),
+            copy(
+              p(
+                `A <b>required</b> check (the default) stops publishing when it returns an ${c('error')}. A <b>warning</b> check never stops publishing; its message is shown once the content is live, and an ${c('error')} from it is treated as a warning. The same check can be required in one collection and a warning in another.`
+              ),
+              p(
+                'Checks run when a doc is published or scheduled, and when a release is published or scheduled, where a failed required check on any of its docs stops the whole release. Scheduled content is checked when it is scheduled, not again when it goes live.'
+              ),
+              p(
+                `Admins can skip the checks, or publish anyway after a required check fails. Publishing writes go straight from the browser to Firestore, so checks are a workflow guardrail rather than a security boundary. Every publish records what the checks did, including skips and overrides, in the action's metadata. A check that throws is reported as an ${c('error')} for that check only, and a check id that isn't registered is skipped.`
+              )
+            ),
+          ]
+        ),
+        section('translations-check', 'Missing translations', [
+          p(
+            `${c('translationsCheck()')} is a built-in check with the id ${c('root-cms/translations')}. It finds the doc's translatable strings (fields with ${c('translate: true')}) and reports any that are missing a translation for one of the doc's enabled locales. Pass ${c("{collections: ['Pages']}")} to limit it to some collections.`
+          ),
+        ]),
+      ],
+    },
+  },
+};
+
+const NOTIFICATIONS: DocCopy = {
+  slug: 'cms--notifications',
+  note: 'New page on CMS actions, the onAction hook, notification services (email and comment emails), email delivery and translation services.',
+  fields: {
+    meta: {
+      title: 'Notifications and integrations – Root.js',
+      description:
+        'React to CMS actions with the onAction hook and notification services, send email, and connect a translation service.',
+      category: 'cms',
+      navLabel: 'Notifications and integrations',
+    },
+    content: {
+      title: 'Notifications and integrations',
+      body: richtext(
+        p(
+          'The CMS records every change as an action, which your server can react to, e.g. to email a team when a page is published. It can also send strings to an external translation service and import the results.'
+        )
+      ),
+      sections: [
+        section(
+          'actions',
+          'Actions',
+          [
+            p(
+              `Each action has a name like ${c('doc.publish')}, ${c('doc.save')}, ${c('release.publish')} or ${c('doc.comment.add')}, the email of the user who performed it (${c('by')}, or ${c('system')} for scheduled jobs), a ${c('timestamp')} and ${c('metadata')} such as the ${c('docId')}. Actions are stored at ${c('Projects/&lt;id&gt;/ActionLogs')} in Firestore and listed in the CMS's action log.`
+            ),
+            p(
+              `The ${c('onAction')} option is called on the server with every action. It isn't awaited, so use it for quick, fire-and-forget work:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  onAction: (action) => {
+    if (action.action === 'doc.publish') {
+      console.log(\`\${action.by} published \${action.metadata?.docId}\`);
+    }
+  },
+}),`
+            ),
+          ]
+        ),
+        section(
+          'notification-services',
+          'Notification services',
+          [
+            p(
+              `For notifications, register services with the ${c('notifications')} option. Each service has an ${c('id')}, a ${c('label')} and an async ${c('onAction(ctx, action)')} handler, and each one decides for itself which actions to handle. ${c('ctx')} has the ${c('rootConfig')}, a ${c('cmsClient')} and the ${c('user')} who performed the action. For example, to post to a Slack webhook:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  notifications: [
+    {
+      id: 'slack',
+      label: 'Slack',
+      onAction: async (ctx, action) => {
+        if (action.action !== 'doc.publish') {
+          return;
+        }
+        await fetch(process.env.SLACK_WEBHOOK_URL!, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            text: \`\${action.by} published \${action.metadata?.docId}\`,
+          }),
+        });
+        return {status: 'success'};
+      },
+    },
+  ],
+}),`
+            ),
+            copy(
+              p(
+                `A handler can return ${c("{status: 'success' | 'info' | 'error', message}")} to describe what it did. Errors are logged and don't affect the action or the other services.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'email-notifications',
+          'Email notifications',
+          [
+            p(
+              `${c('emailNotifications()')} is a built-in service that emails a list of people when matching actions happen. ${c('actions')} takes patterns where ${c('*')} matches anything, and ${c('to')} can be a list or a function that returns the recipients for an action:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+import {
+  cmsPlugin,
+  commentEmailNotifications,
+  emailNotifications,
+} from '@blinkk/root-cms/plugin';
+
+cmsPlugin({
+  // ...
+  notifications: [
+    emailNotifications({
+      actions: ['doc.publish', 'release.*'],
+      to: ['web-team@example.com'],
+      template: {
+        subject: '[My Site] {action} by {by}',
+        body: '{by} ran {action} on {metadata.docId}.',
+      },
+      emailService: 'https://my-email-service.appspot.com',
+    }),
+    commentEmailNotifications({
+      emailService: 'https://my-email-service.appspot.com',
+    }),
+  ],
+}),`
+            ),
+            copy(
+              p(
+                `Templates fill ${c('{placeholder}')} values from the action, including nested ones like ${c('{metadata.docId}')}, and can set ${c('subject')}, a plain-text ${c('body')} and ${c('html')}. Without a template, a default email describes the action. For full control, pass a function that returns the email. ${c('filter')} can skip actions (e.g. ones by a bot account), and ${c('transformData')} changes the data the template sees.`
+              ),
+              p(
+                `${c('commentEmailNotifications()')} emails the people ${c('@mentioned')} in a field comment and everyone who has already commented in the thread, when a comment is added, resolved or reopened. Links in the email point to ${c('rootConfig.domain')} unless you set ${c('cmsUrl')}.`
+              )
+            ),
+          ]
+        ),
+        section('email-delivery', 'Delivering email', [
+          p(
+            `Emails are queued in Firestore at ${c('Projects/&lt;id&gt;/Emails')} and sent by the Root.js email service, a small App Engine app (${c('apps/root-services')} in the Root.js repo) that reads the queue and sends with the App Engine Mail API. Deploy it to App Engine in the Google Cloud project that has your Firestore database, and set ${c('emailService')} to its URL so new emails are sent right away.`
+          ),
+          p(
+            `Emails are sent from ${c('noreply@&lt;project-id&gt;.appspotmail.com')} by default. A different ${c('from')} address must be an authorized sender for the Mail API. Set ${c('expireAfterMinutes')} to skip emails that couldn't be sent in time instead of sending them late.`
+          ),
+          p(
+            `Your own server code can send email through the same queue with ${c('cmsClient.sendEmail({to, subject, body, htmlBody})')}.`
+          ),
+        ]),
+        section(
+          'translation-services',
+          'Translation services',
+          [
+            p(
+              `To connect a translation platform like Crowdin or Smartling, register a service with the ${c('translations')} option. It appears in the <b>Import</b> and <b>Export</b> menus of a doc's localization modal. ${c('onExport')} receives the doc's strings and their current translations, and ${c('onImport')} returns translated rows to merge into the CMS:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  translations: [
+    {
+      id: 'my-tms',
+      label: 'My TMS',
+      onExport: async (ctx, rows) => {
+        // rows: [{source, translations: {de: '...', fr: '...'}}, ...]
+        const job = await myTms.upload(ctx.docId, rows);
+        return {
+          status: 'success',
+          message: \`Sent \${rows.length} strings.\`,
+          link: {url: job.url, label: 'Open in My TMS'},
+        };
+      },
+      onImport: async (ctx) => {
+        return await myTms.download(ctx.docId, ctx.translationLanguages);
+      },
+    },
+  ],
+}),`
+            ),
+            copy(
+              p(
+                `${c('ctx')} has the doc's ${c('docId')}, the project's ${c('locales')} and its ${c('translationLanguages')} (the keys used in ${c('translations')}; see ${c('i18n.translationLanguages')} in ${c('root.config.ts')}). Either handler can return a ${c('title')}, ${c('message')}, ${c('link')} and ${c('status')} to show in a notification, and ${c('onImport')} can return one of these instead of rows when there's nothing to import.`
+              ),
+              p(
+                `${c('excludeLocalesFromTranslations')} leaves locales out of every import and export, including CSV and Google Sheets. It takes patterns like ${c("['ALL_*']")}, which is useful for pseudo-locales that are never translated.`
+              )
+            ),
+          ]
+        ),
+      ],
+    },
+  },
+};
+
+const CUSTOMIZATION: DocCopy = {
+  slug: 'cms--customization',
+  note: 'New page on customizing the CMS: sidebar tools, branding and themes, access control, embedding, live preview messages, image serving, search, the dependency graph and other plugin options.',
+  fields: {
+    meta: {
+      title: 'Customizing the CMS – Root.js',
+      description:
+        'Add sidebar tools, brand and theme the CMS, control access, embed the editor, and tune search, images and other plugin options.',
+      category: 'cms',
+      navLabel: 'Customizing the CMS',
+    },
+    content: {
+      title: 'Customizing the CMS',
+      body: richtext(
+        p(
+          `These ${c('cmsPlugin()')} options change how the CMS looks and behaves for your team. For every option, see ${c('CMSPluginOptions')} in the ${a('/docs/api/root-cms/#blinkk-root-cms-plugin-cmspluginoptions', 'API reference')}.`
+        )
+      ),
+      sections: [
+        section(
+          'sidebar',
+          'Sidebar tools',
+          [
+            p(
+              `${c('sidebar.tools')} adds your own entries to the CMS sidebar, e.g. an internal dashboard or a link to a style guide. A tool with an ${c('iframeUrl')} renders that page inside the CMS at ${c('/cms/tools/&lt;id&gt;')}. ${c('cmsUrl')} links to a CMS page instead, and ${c('externalUrl')} opens a new tab:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  sidebar: {
+    tools: {
+      launches: {
+        label: 'Launch calendar',
+        icon: 'data:image/svg+xml;base64,...',
+        iframeUrl: '/internal/launches/',
+      },
+      styleguide: {
+        label: 'Style guide',
+        externalUrl: 'https://example.com/styleguide',
+      },
+    },
+    hiddenBuiltInTools: ['data', 'releases'],
+  },
+}),`
+            ),
+            copy(
+              p(
+                `The iframe's path, query and hash are mirrored into the CMS URL, so a tool's pages survive a refresh and can be shared. For icons that match the CMS, pick one from ${a('https://tabler.io/icons', 'Tabler Icons')} with a stroke width of 1.5 and paste its data URI.`
+              ),
+              p(
+                `${c('hiddenBuiltInTools')} hides built-in tools from the sidebar and the home page: ${c('home')}, ${c('content')}, ${c('releases')}, ${c('data')}, ${c('assets')}, ${c('translations')}, ${c('ai')} and ${c('settings')}. Their pages still work by URL. The task manager can be turned off with ${c('experiments: {taskManager: false}')}.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'branding',
+          'Branding and themes',
+          [
+            p(
+              `${c('name')} is shown in the CMS header and ${c('favicon')} replaces the browser tab icon. ${c('minimalBranding: true')} hides the Root.js logo and shows the project name instead.`
+            ),
+            p(
+              `Themes restyle the CMS. They're experimental. A theme is a stylesheet loaded after the CMS's own, from a ${c('file')} relative to the project root or a ${c('css')} string:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  themes: [{id: 'brand', name: 'Brand', file: './cms/brand.css'}],
+  defaultTheme: 'brand',
+}),`
+            ),
+            copy(
+              p(
+                `Each user picks a theme under <b>Settings → Theme</b>, and ${c('defaultTheme')} applies until they do. The same page lets admins add CSS for the whole project, and anyone add CSS for themselves, without a deploy.`
+              ),
+              p(
+                `To write a theme, copy ${c('packages/root-cms/ui/styles/theme.css')} from the Root.js repo and change its values. Its ${c('--cms-*')} custom properties are kept stable across releases. Rules that target the CMS's class names work, but may break with any release.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'access',
+          'Access control',
+          [
+            p(
+              `Users sign in with Google, and what they can do comes from their role (see ${a('/docs/cms/#security-rules', 'Security rules and roles')}). Sign-in is always required for ${c('/cms/')} pages and for any page with ${c('?preview=true')}, which is how the editor's preview loads draft content.`
+            ),
+            p(
+              `${c('isLoginRequired(req)')} requires sign-in for more of your site, e.g. a staging server or an internal section. ${c('isUserAuthorized(req, user)')} adds your own rule for who can sign in at all:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  isLoginRequired: (req) => req.path.startsWith('/internal/'),
+  isUserAuthorized: (req, user) => user.email.endsWith('@example.com'),
+}),`
+            ),
+          ]
+        ),
+        section(
+          'embedding',
+          'Embedding the editor',
+          [
+            p(
+              `${c('@blinkk/root-cms/browser-client')} opens the CMS editor or Root AI from another site, e.g. an "Edit this page" button on a staging site. The CMS can't be framed by default, so list the embedding site in ${c('allowedIframeOrigins')}:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  allowedIframeOrigins: ['https://staging.example.com'],
+}),`
+            ),
+            code(
+              'ts',
+              `
+// On https://staging.example.com
+
+import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+const cms = new RootCMSBrowserClient({cmsOrigin: 'https://example.com'});
+
+button.addEventListener('click', () => {
+  const editor = cms.openEditor('Pages/about', {deeplink: 'hero.title'});
+  editor.on('published', () => location.reload());
+});`
+            ),
+            copy(
+              p(
+                `${c('openEditor()')} opens a pop-up by default; pass ${c("{mode: 'iframe', container}")} to render it in the page instead. The editor emits ${c('ready')}, ${c('saved')}, ${c('published')}, ${c('error')} and ${c('close')} events, and doesn't autosave. ${c('openRootAI({docId})')} opens Root AI with a doc as context.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'preview',
+          'Live preview messages',
+          [
+            p(
+              `Your pages can talk to the editor while they're shown in its preview pane. With ${c('RootCMSBrowserClient.connectPreview()')}, a page can scroll the editor to a field (for "click to edit"), highlight the field being edited, and switch the editor to another doc as the user navigates. Turn on the messages with ${c('preview.channel')}: ${c('true')} for both directions, or ${c("'to-preview'")} or ${c("'from-preview'")} for one.`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  preview: {channel: true},
+}),`
+            ),
+            code(
+              'ts',
+              `
+// In your page's client-side code.
+
+import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+const preview = RootCMSBrowserClient.connectPreview();
+if (preview.isEmbedded) {
+  // Keep the editor on the doc for the page being previewed.
+  preview.navigateToDoc('Pages/about');
+  // Outline the element for the field being edited.
+  preview.on('highlight', ({deepKey, scroll}) => {
+    // ...
+  });
+  // Click an element to edit its field.
+  heroTitle.addEventListener('click', () => preview.focusField('hero.title'));
+}`
+            ),
+            copy(
+              p(
+                `Outside the preview pane, ${c('isEmbedded')} is false and the calls do nothing, so the code is safe to ship. ${c('navigateToDoc()')} asks the editor to confirm before switching docs; pass ${c('{confirm: false}')} to switch straight away.`
+              )
+            ),
+          ]
+        ),
+        section('images', 'Image serving', [
+          p(
+            `By default, uploaded images are served straight from Cloud Storage. With ${c('gci: true')}, uploaded images are served from a Google image-serving URL instead, which can resize and convert them on the fly. It uses the hosted service at ${c('services.rootjs.dev')}; set ${c('gci')} to a URL to use your own. The storage bucket needs fine-grained permissions, and the service's account (listed at ${c('https://services.rootjs.dev/_/service_account')}) needs owner access to it.`
+          ),
+        ]),
+        section(
+          'search-and-dependencies',
+          'Search and the dependency graph',
+          [
+            p(
+              `The CMS's global search indexes every doc, and the index is kept up to date by the ${a('/docs/cms/#cron-jobs', 'scheduled job')}. ${c('searchIndex')} limits what's indexed, with ${c('includeCollections')}, ${c('excludeCollections')}, ${c('includeDocIds')} and ${c('excludeDocIds')} (doc ids look like ${c('Pages/about')}).`
+            ),
+            p(
+              `The dependency graph tracks which docs reference which, through ${c('schema.reference()')} and ${c('schema.references()')} fields. It's on by default and also kept up to date by the scheduled job. Use it to fetch everything a page needs in one batch request:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+const depIds = await cmsClient.getDocDependencies(['Pages/index'], {
+  mode: 'published',
+});
+const req = cmsClient.createBatchRequest({mode: 'published'});
+req.addDoc('Pages/index');
+depIds.forEach((docId) => req.addDoc(docId));
+const res = await req.fetch();`
+            ),
+            copy(
+              p(
+                `Dependencies are followed transitively unless you pass ${c('transitive: false')}. ${c('dependencyGraph: false')} turns the graph off, and ${c('{includeCollections, excludeCollections}')} limits which collections are scanned for references.`
+              )
+            ),
+          ]
+        ),
+        section('other-options', 'Other options', [
+          ul(
+            `${c('defaultOneOfVariant')}: ${c("'dropdown'")} (the default) or ${c("'picker'")}, the default UI for ${c('oneOf')} fields. A field's own ${c('variant')} overrides it.`,
+            `${c('logLevel')}: how much the CMS logs to the console, from ${c("'debug'")} to ${c("'silent'")}. Defaults to ${c("'info'")}.`,
+            `${c('watch')}: set to ${c('false')} to stop the dev server from watching schema files and regenerating ${c('root-cms.d.ts')}.`,
+            `${c('firebaseConfig.databaseId')}: use a named Firestore database instead of the default one.`
+          ),
+        ]),
       ],
     },
   },
@@ -2869,6 +3487,9 @@ export const DOCS_COPY: DocCopy[] = [
   CMS_CONFIGURATION,
   SCHEMAS,
   DATA_FETCHING,
+  CHECKS,
+  NOTIFICATIONS,
+  CUSTOMIZATION,
   CLI,
   API,
   apiPackageDoc(
