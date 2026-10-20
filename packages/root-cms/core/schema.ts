@@ -30,6 +30,53 @@ export interface CommonFieldProps {
   deprecated?: boolean;
   /** Hides just the field label in the CMS UI. */
   hideLabel?: boolean;
+  /**
+   * Only shows the field in the CMS UI when the value of a sibling field
+   * matches a condition. When an array of conditions is provided, all of them
+   * must match. Data for a hidden field is preserved.
+   *
+   * ```ts
+   * schema.object({
+   *   fields: [
+   *     schema.boolean({id: 'showCta', checkboxLabel: 'Show CTA'}),
+   *     schema.string({id: 'ctaLabel', showWhen: {field: 'showCta'}}),
+   *     schema.oneOf({id: 'media', types: [ImageSchema, VideoSchema]}),
+   *     schema.boolean({
+   *       id: 'autoplay',
+   *       showWhen: {field: 'media._type', equals: 'Video'},
+   *     }),
+   *   ],
+   * });
+   * ```
+   */
+  showWhen?: FieldCondition | FieldCondition[];
+}
+
+/**
+ * A condition that tests the value of a sibling field. Only one comparison
+ * operator should be set. When no operator is set, the condition matches if
+ * the sibling value is truthy (e.g. a checked boolean field).
+ */
+export interface FieldCondition {
+  /**
+   * The ID of the sibling field to test. Dot-paths are supported for nested
+   * values, e.g. `media._type` or `cta.variant`.
+   */
+  field: string;
+  /** Matches if the sibling value strictly equals this value. */
+  equals?: any;
+  /** Matches if the sibling value does not strictly equal this value. */
+  notEquals?: any;
+  /** Matches if the sibling value is one of these values. */
+  in?: any[];
+  /** Matches if the sibling value is not one of these values. */
+  notIn?: any[];
+  /**
+   * When `true`, matches if the sibling value is non-empty. When `false`,
+   * matches if the sibling value is empty (`undefined`, `null`, `''`, or an
+   * empty array).
+   */
+  exists?: boolean;
 }
 
 /**
