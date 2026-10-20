@@ -13,6 +13,7 @@
  *   node scripts/propose_docs_copy.ts --id <id>     # custom proposal id
  *   node scripts/propose_docs_copy.ts --only index,cms
  *   node scripts/propose_docs_copy.ts --assign-order
+ *   node scripts/propose_docs_copy.ts --assign-order --dry-run
  *
  * `--only` limits the proposal to the listed doc slugs, so a change to a few
  * pages doesn't sweep in unrelated edits made in the CMS since the last run.
@@ -29,13 +30,19 @@
  * Proposals can't set `sys` values, so the sidebar order (`sys.sortKey`, see
  * the collection's `customSorting` option) is not part of the proposal. Pass
  * `--assign-order` to write the order from `DOCS_ORDER` to the drafts directly.
- * It only touches `sys.sortKey`, and docs need to be published for the new
- * order to show on the live site.
+ * It keeps every existing key that's already in order and only moves the docs
+ * that are out of place or have no key yet, so as few docs as possible need to
+ * be republished. Moved docs get a new `sys.modifiedAt`, so the CMS shows them
+ * as having unpublished changes; publish them for the new order to show on the
+ * live site. `--dry-run` prints the moves without writing them, and
+ * `--modified-by <email>` sets who they're attributed to (defaults to
+ * `ROOT_CMS_USER` or the active gcloud account).
  *
  * Requires application-default credentials for the project's Firestore, e.g.
  * `gcloud auth application-default login`.
  */
 
+import {execFileSync} from 'node:child_process';
 import {mkdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -43,6 +50,7 @@ import {loadRootConfig} from '@blinkk/root/node';
 import {
   RootCMSClient,
   applyProposal,
+  compareSortKeys,
   generateNKeysBetween,
   parseProposal,
   serializeProposal,
@@ -50,6 +58,7 @@ import {
   type ProposalChange,
   type ProposalOp,
 } from '@blinkk/root-cms';
+import {Timestamp} from 'firebase-admin/firestore';
 import {DOCS_COPY, DOCS_ORDER, type DocCopy} from './docs_copy_content.ts';
 
 const DOCS_DIR = path.resolve(
@@ -64,16 +73,21 @@ const AUTHOR = 'scripts/propose_docs_copy.ts';
 interface Args {
   id: string;
   assignOrder: boolean;
+  /** Prints the `--assign-order` moves without writing them. */
+  dryRun: boolean;
+  /** Email the `--assign-order` writes are attributed to. */
+  modifiedBy?: string;
   /** Doc slugs to include. Empty means every doc in `DOCS_COPY`. */
   only: string[];
 }
 
-/** Parses `--id`, `--only` and `--assign-order` flags from argv. */
+/** Parses the command-line flags from argv. */
 function parseArgs(argv: string[]): Args {
   const today = new Date().toISOString().slice(0, 10);
   const args: Args = {
     id: `${today}-docs-copy-refresh`,
     assignOrder: false,
+    dryRun: false,
     only: [],
   };
   for (let i = 0; i < argv.length; i++) {
@@ -97,6 +111,14 @@ function parseArgs(argv: string[]): Args {
       args.only = slugs;
     } else if (flag === '--assign-order') {
       args.assignOrder = true;
+    } else if (flag === '--dry-run') {
+      args.dryRun = true;
+    } else if (flag === '--modified-by') {
+      const email = inlineValue ?? argv[++i];
+      if (!email || !email.includes('@')) {
+        throw new Error(`invalid --modified-by value: ${arg}`);
+      }
+      args.modifiedBy = email;
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
@@ -250,7 +272,10 @@ async function main() {
   }
 
   if (args.assignOrder) {
-    await assignOrder(client);
+    await assignOrder(client, {
+      dryRun: args.dryRun,
+      modifiedBy: args.modifiedBy || getCliUser(),
+    });
   }
 }
 
@@ -265,23 +290,141 @@ function summarizeNotes(changes: ProposalChange[]): string {
 }
 
 /**
- * Writes `sys.sortKey` to each draft in `DOCS_ORDER`, so the sidebar lists the
- * docs in that order. Docs that don't exist yet are skipped.
+ * Returns the email writes are attributed to: `ROOT_CMS_USER`, or the active
+ * gcloud account (the same lookup `root-cms proposal.apply` uses).
  */
-async function assignOrder(client: RootCMSClient) {
-  const keys = generateNKeysBetween(null, null, DOCS_ORDER.length);
-  for (let i = 0; i < DOCS_ORDER.length; i++) {
-    const slug = DOCS_ORDER[i];
+function getCliUser(): string | undefined {
+  const fromEnv =
+    process.env.ROOT_CMS_USER?.trim() ||
+    process.env.CLOUDSDK_CORE_ACCOUNT?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  try {
+    const account = execFileSync('gcloud', ['config', 'get-value', 'account'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return account || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Returns the indexes of the longest run of keys that are already in
+ * increasing order (not necessarily adjacent), skipping missing keys. Those
+ * docs can keep their keys; only the rest need to move.
+ */
+function findKeysInOrder(keys: Array<string | null>): Set<number> {
+  // `tails[n]` is the index ending the best increasing run of length n + 1,
+  // and `prev[i]` is the index before `i` in the run ending at `i`.
+  const tails: number[] = [];
+  const prev: number[] = new Array(keys.length).fill(-1);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (!key) {
+      continue;
+    }
+    let lo = 0;
+    let hi = tails.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (compareSortKeys(keys[tails[mid]]!, key) < 0) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    prev[i] = lo > 0 ? tails[lo - 1] : -1;
+    tails[lo] = i;
+  }
+  const kept = new Set<number>();
+  let i = tails.length > 0 ? tails[tails.length - 1] : -1;
+  while (i !== -1) {
+    kept.add(i);
+    i = prev[i];
+  }
+  return kept;
+}
+
+/**
+ * Writes `sys.sortKey` to the drafts in `DOCS_ORDER` that are out of place,
+ * so the sidebar lists the docs in that order. Docs that don't exist yet are
+ * skipped.
+ */
+async function assignOrder(
+  client: RootCMSClient,
+  options: {dryRun: boolean; modifiedBy?: string}
+) {
+  const slugs: string[] = [];
+  const keys: Array<string | null> = [];
+  for (const slug of DOCS_ORDER) {
     const existing = await client.getRawDoc(COLLECTION, slug, {mode: 'draft'});
     if (!existing) {
       console.log(`skipped order for ${COLLECTION}/${slug} (no draft yet)`);
       continue;
     }
-    await client
-      .dbDocRef(COLLECTION, slug, {mode: 'draft'})
-      .update({'sys.sortKey': keys[i]});
+    slugs.push(slug);
+    keys.push(existing.sys?.sortKey || null);
   }
-  console.log(`assigned sidebar order to ${DOCS_ORDER.length} docs`);
+
+  // Keep the keys that are already in order, and generate new keys for each
+  // run of docs between two kept keys.
+  const kept = findKeysInOrder(keys);
+  const newKeys = [...keys];
+  let start = 0;
+  while (start < slugs.length) {
+    if (kept.has(start)) {
+      start++;
+      continue;
+    }
+    let end = start;
+    while (end < slugs.length && !kept.has(end)) {
+      end++;
+    }
+    const before = start > 0 ? newKeys[start - 1] : null;
+    const after = end < slugs.length ? newKeys[end] : null;
+    const generated = generateNKeysBetween(before, after, end - start);
+    for (let i = start; i < end; i++) {
+      newKeys[i] = generated[i - start];
+    }
+    start = end;
+  }
+
+  if (!options.dryRun && !options.modifiedBy) {
+    throw new Error(
+      'could not determine the user for --assign-order, pass --modified-by'
+    );
+  }
+  let moved = 0;
+  for (let i = 0; i < slugs.length; i++) {
+    if (newKeys[i] === keys[i]) {
+      continue;
+    }
+    moved++;
+    const docId = `${COLLECTION}/${slugs[i]}`;
+    console.log(`order: ${docId} ${keys[i] || '(none)'} -> ${newKeys[i]}`);
+    if (options.dryRun) {
+      continue;
+    }
+    // Like reordering in the CMS, bump `modifiedAt` so the doc shows as having
+    // unpublished changes.
+    await client.dbDocRef(COLLECTION, slugs[i], {mode: 'draft'}).update({
+      'sys.sortKey': newKeys[i],
+      'sys.modifiedAt': Timestamp.now(),
+      'sys.modifiedBy': options.modifiedBy,
+    });
+  }
+  if (moved === 0) {
+    console.log('sidebar order is up to date');
+  } else if (options.dryRun) {
+    console.log(`dry run: would move ${moved} doc(s)`);
+  } else {
+    console.log(
+      `moved ${moved} doc(s), publish them for the new order to go live`
+    );
+  }
 }
 
 main().then(
