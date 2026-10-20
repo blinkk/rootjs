@@ -22,6 +22,7 @@ import {
   IconChevronUp,
   IconCloudDownload,
   IconCopy,
+  IconCrop,
   IconDotsVertical,
   IconDownload,
   IconFileUpload,
@@ -98,7 +99,7 @@ import {getTimeAgo} from '../../utils/time.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
-import {AssetDetailsModal} from './AssetDetailsModal.js';
+import {AssetDetailsModal, testIsCroppableAsset} from './AssetDetailsModal.js';
 import {
   AssetThumbnail,
   copyAssetUrl,
@@ -182,6 +183,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
     null
   );
   const [detailsTarget, setDetailsTarget] = useState<AssetFile | null>(null);
+  const [detailsCropping, setDetailsCropping] = useState(false);
   // Multi-select for bulk actions (manage mode), keyed by asset id.
   const [selected, setSelected] = useState<Map<string, Asset>>(new Map());
   // The current folder's own db doc (for its sync-source connection).
@@ -982,6 +984,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
                             asset={asset}
                             canManage={canManage}
                             onDetails={() => setDetailsTarget(asset)}
+                            onCrop={() => {
+                              setDetailsCropping(true);
+                              setDetailsTarget(asset);
+                            }}
                             onRename={() => setRenameTarget(asset)}
                             onMove={() => setMoveTarget([asset])}
                             onDelete={() => setDeleteTarget([asset])}
@@ -1067,10 +1073,16 @@ export function AssetBrowser(props: AssetBrowserProps) {
         <AssetDetailsModal
           asset={detailsTarget}
           canManage={canManage}
-          onClose={() => setDetailsTarget(null)}
+          initialCropping={detailsCropping}
+          onClose={() => {
+            setDetailsTarget(null);
+            setDetailsCropping(false);
+          }}
           onChanged={() => reload(folder)}
+          onCreated={() => reload(folder)}
           onDeleted={() => {
             setDetailsTarget(null);
+            setDetailsCropping(false);
             reload(folder);
           }}
         />
@@ -1271,6 +1283,7 @@ function FileActionsMenu(props: {
   asset: AssetFile;
   canManage: boolean;
   onDetails: () => void;
+  onCrop: () => void;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
@@ -1304,6 +1317,11 @@ function FileActionsMenu(props: {
       </Menu.Item>
       {props.canManage && (
         <>
+          {testIsCroppableAsset(asset) && (
+            <Menu.Item icon={<IconCrop size={14} />} onClick={props.onCrop}>
+              Crop
+            </Menu.Item>
+          )}
           <Menu.Item icon={<IconPencil size={14} />} onClick={props.onRename}>
             Rename
           </Menu.Item>

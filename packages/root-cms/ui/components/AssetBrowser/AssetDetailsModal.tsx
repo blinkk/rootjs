@@ -12,18 +12,21 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {
   IconCopy,
+  IconCrop,
   IconDownload,
   IconExternalLink,
   IconFile,
   IconFileUpload,
   IconTrash,
 } from '@tabler/icons-preact';
-import {ChangeEvent} from 'preact/compat';
+import {ChangeEvent, lazy, Suspense} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {
   AssetFile,
+  createAssetFile,
   deleteAsset,
   findDocsUsingAsset,
+  getAvailableAssetFileName,
   replaceAssetFile,
   replaceFileExt,
   resolveFolderUploadOptions,
@@ -47,12 +50,36 @@ import {
   getAssetPreviewUrl,
 } from './AssetPreview.js';
 
+const ImageEditorDialog = lazy(() =>
+  import('../DocEditor/fields/ImageEditorDialog.js').then((m) => ({
+    default: m.ImageEditorDialog,
+  }))
+);
+
+/**
+ * Image extensions that can be cropped. Other formats (e.g. animated gifs)
+ * would lose fidelity when re-encoded by the cropper.
+ */
+const CROPPABLE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
+
+/** Returns true if the asset is an image that can be cropped. */
+export function testIsCroppableAsset(asset: AssetFile): boolean {
+  const filename = asset.file?.filename || asset.name;
+  return (
+    Boolean(asset.file?.src) && CROPPABLE_EXTS.includes(getFileExt(filename))
+  );
+}
+
 export interface AssetDetailsModalProps {
   asset: AssetFile;
   canManage: boolean;
+  /** Whether to open the image cropper when the modal opens. */
+  initialCropping?: boolean;
   onClose: () => void;
   /** Called when the asset is changed (e.g. alt text update, file replace). */
   onChanged: (asset: AssetFile) => void;
+  /** Called when a new asset is created (e.g. saving a cropped copy). */
+  onCreated?: (asset: AssetFile) => void;
   onDeleted: () => void;
 }
 
@@ -73,6 +100,10 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   const filename = file.filename || asset.name;
   const isImage = testIsImageFile(filename);
   const isVideo = testIsVideoFile(filename);
+  const canCrop = props.canManage && testIsCroppableAsset(asset);
+  const [cropping, setCropping] = useState(
+    Boolean(props.initialCropping && canCrop)
+  );
   const altDirty = altText !== (file.alt || '');
   const altDisabled = file.altDisabled === true;
 
@@ -156,6 +187,60 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
     setSaving(false);
   }
 
+  /**
+   * Replaces the asset's file with a cropped version of the image. The
+   * original image is kept as `originalSrc` so it can be restored later.
+   */
+  async function onSaveCrop(croppedFile: File) {
+    setCropping(false);
+    setSaving(true);
+    await notifyErrors(async () => {
+      const previousFile = {...file};
+      const uploadOptions = await resolveFolderUploadOptions(asset.parent);
+      const uploadedFile = await uploadFileToGCS(croppedFile, uploadOptions);
+      uploadedFile.originalSrc = file.originalSrc || file.src;
+      const updated = await replaceAssetFile(asset, uploadedFile);
+      setAsset(updated);
+      props.onChanged(updated);
+      showNotification({message: `Cropped "${asset.name}".`, color: 'green'});
+      await syncDocs(updated, previousFile);
+    });
+    setSaving(false);
+  }
+
+  /**
+   * Saves a cropped version of the image as a new asset in the same folder,
+   * leaving the original asset (and docs that use it) untouched.
+   */
+  async function onSaveCropAsCopy(croppedFile: File) {
+    setCropping(false);
+    setSaving(true);
+    await notifyErrors(async () => {
+      const name = await getAvailableAssetFileName(
+        asset.parent,
+        addNameSuffix(asset.name, '-cropped')
+      );
+      // Name the uploaded file after the copy so its `filename` (and URL, for
+      // folders that preserve filenames) match the new asset.
+      const renamedFile = new File([croppedFile], name, {
+        type: croppedFile.type,
+      });
+      const uploadOptions = await resolveFolderUploadOptions(asset.parent);
+      const uploadedFile = await uploadFileToGCS(renamedFile, uploadOptions);
+      uploadedFile.originalSrc = file.originalSrc || file.src;
+      uploadedFile.alt = file.alt;
+      uploadedFile.altDisabled = file.altDisabled;
+      const created = await createAssetFile({
+        parent: asset.parent,
+        file: uploadedFile,
+        name,
+      });
+      props.onCreated?.(created);
+      showNotification({message: `Saved copy as "${name}".`, color: 'green'});
+    });
+    setSaving(false);
+  }
+
   async function onToggleAltDisabled(disabled: boolean) {
     setSaving(true);
     await notifyErrors(async () => {
@@ -177,6 +262,22 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
       props.onDeleted();
     });
     setSaving(false);
+  }
+
+  if (cropping) {
+    return (
+      <Suspense fallback={null}>
+        <ImageEditorDialog
+          opened
+          onClose={() => setCropping(false)}
+          src={file.src}
+          originalSrc={file.originalSrc}
+          filename={filename}
+          onSave={(croppedFile) => onSaveCrop(croppedFile)}
+          onSaveAsCopy={(croppedFile) => onSaveCropAsCopy(croppedFile)}
+        />
+      </Suspense>
+    );
   }
 
   return (
@@ -365,6 +466,17 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           </Button>
           {props.canManage && (
             <>
+              {canCrop && (
+                <Button
+                  variant="default"
+                  size="xs"
+                  leftIcon={<IconCrop size={14} />}
+                  disabled={saving}
+                  onClick={() => setCropping(true)}
+                >
+                  Crop
+                </Button>
+              )}
               <Button
                 variant="default"
                 size="xs"
@@ -464,4 +576,13 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
       </div>
     </Modal>
   );
+}
+
+/** Adds a suffix before a name's extension, e.g. `a.jpg` -> `a-cropped.jpg`. */
+function addNameSuffix(name: string, suffix: string): string {
+  const dotIndex = name.lastIndexOf('.');
+  if (dotIndex <= 0) {
+    return `${name}${suffix}`;
+  }
+  return `${name.slice(0, dotIndex)}${suffix}${name.slice(dotIndex)}`;
 }

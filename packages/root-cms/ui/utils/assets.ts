@@ -500,6 +500,25 @@ export async function findAssetFile(
   return res;
 }
 
+/**
+ * Returns `name` if no file in the folder uses it, otherwise appends a
+ * numbered suffix before the extension until the name is free, e.g.
+ * `hero.jpg` -> `hero-2.jpg`.
+ */
+export async function getAvailableAssetFileName(
+  parent: string,
+  name: string
+): Promise<string> {
+  const dotIndex = name.lastIndexOf('.');
+  const base = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+  const ext = dotIndex > 0 ? name.slice(dotIndex) : '';
+  let candidate = name;
+  for (let i = 2; await findAssetFile(parent, candidate); i++) {
+    candidate = `${base}-${i}${ext}`;
+  }
+  return candidate;
+}
+
 /** Options for {@link createAssetFolder}. */
 export interface CreateAssetFolderOptions {
   /** Enables {@link AssetFolder.preserveFilename} on the new folder. */
