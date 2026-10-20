@@ -130,8 +130,7 @@ test('security headers: CSP nonce is injected for components in <Head>', async (
     const csp = res.headers.get('content-security-policy-report-only') || '';
     const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
     expect(nonce).toBeTruthy();
-    expect(html).toMatch(
-      new RegExp(`<head>[\\s\\S]*<script nonce="${nonce}">`)
-    );
+    const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
+    expect(head).toContain(`<script nonce="${nonce}">`);
   }
 });
