@@ -122,3 +122,15 @@ test('security headers: CSP nonce is injected for the root jsx runtime', async (
   expect(html).toContain(`<script nonce="${nonce}">`);
   expect(html).toContain(`<style nonce="${nonce}">`);
 });
+
+test('security headers: CSP nonce is injected for components in <Head>', async () => {
+  for (const urlPath of ['/head-component/', '/root-jsx-head-component/']) {
+    const res = await fetch(`http://localhost:${port}${urlPath}`);
+    const html = await res.text();
+    const csp = res.headers.get('content-security-policy-report-only') || '';
+    const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
+    expect(nonce).toBeTruthy();
+    const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
+    expect(head).toContain(`<script nonce="${nonce}">`);
+  }
+});
