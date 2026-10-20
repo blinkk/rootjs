@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 4.1.1
+
+### Patch Changes
+
+- 930386c: feat: add image cropping to the asset library
+- ecd468e: feat: add a Markdown format for CMS change proposals
+- fbf3994: feat: add an AI transform option to the port translations modal
+- 1132ad2: feat: add `showWhen` to conditionally show fields based on a sibling field's value
+- Updated dependencies [9a84939]
+  - @blinkk/root@4.1.1
+
 ## 4.0.1
 
 ### Patch Changes
