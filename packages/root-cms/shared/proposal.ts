@@ -1,8 +1,8 @@
 /**
  * CMS change proposals: a reviewable, deterministic description of content
- * edits that an AI agent wants to make, serialized as YAML so it can be
- * committed to a repo and reviewed in a pull request before anything is
- * written to the database.
+ * edits that an AI agent wants to make, serialized as YAML (or Markdown, see
+ * `proposal-markdown.ts`) so it can be committed to a repo and reviewed in a
+ * pull request before anything is written to the database.
  *
  * The op vocabulary (`set` / `insert_item` / `remove_item`) is deliberately
  * identical to `DocEditOperation` in `core/ai-tools.ts`, so a change's `ops`
@@ -324,23 +324,45 @@ export function parseProposal(yamlText: string): ParseProposalResult {
     };
   }
 
+  return validateProposalData(data, () => buildLineIndex(doc, yamlText));
+}
+
+/**
+ * Checks parsed proposal data against the proposal format. Shared by the YAML
+ * and Markdown parsers, which each supply a lazily-built index of the source
+ * line of every dotted path so errors can point at a real line.
+ */
+export function validateProposalData(
+  data: unknown,
+  getLineIndex: () => Map<string, number>
+): ParseProposalResult {
   const result = proposalSchema.safeParse(data);
   if (!result.success) {
-    const lines = buildLineIndex(doc, yamlText);
+    const lines = getLineIndex();
     return {
       ok: false,
       errors: result.error.issues.map((issue) => {
         const path = issue.path.map(String).join('.');
-        return {
-          line: lines.get(path) ?? lines.get(parentPath(path)),
-          path,
-          message: issue.message,
-        };
+        return {line: findLine(lines, path), path, message: issue.message};
       }),
     };
   }
-
   return {ok: true, proposal: result.data as Proposal};
+}
+
+/** Returns the line of `path`, or of its nearest ancestor that has one. */
+function findLine(
+  lines: Map<string, number>,
+  path: string
+): number | undefined {
+  let current = path;
+  while (true) {
+    const line = lines.get(current);
+    if (line !== undefined || current === '') {
+      return line;
+    }
+    current = parentPath(current);
+  }
 }
 
 /**

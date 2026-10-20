@@ -1,21 +1,24 @@
 ---
 name: root-cms-apply
 description: >-
-  Review and apply a Root.js CMS (@blinkk/root-cms) change proposal — a YAML
-  file describing proposed content edits — to the CMS database. Use this when
+  Review and apply a Root.js CMS (@blinkk/root-cms) change proposal — a
+  Markdown (or YAML) file describing proposed content edits — to the CMS
+  database. Use this when
   asked to accept, apply, land, or merge proposed CMS changes, to preview what
   a proposal would do, or to check a proposal in CI. Triggers on requests
   mentioning "apply the proposal", "accept the CMS changes", "cms-proposals",
-  or a `.yaml` file under a proposals directory.
+  or a `.md` or `.yaml` file under a proposals directory.
 ---
 
 # Applying Root.js CMS change proposals
 
-A **change proposal** is a YAML file describing content edits that have not
+A **change proposal** is a Markdown file describing content edits that have not
 been written to the database yet (see the `root-cms-propose` skill for how they
 are authored). Applying one writes the changes to the CMS.
 
-Proposals usually live in `cms-proposals/*.yaml` in the project repo.
+Proposals usually live in `cms-proposals/*.md` in the project repo. Older
+proposals may be YAML (`*.yaml`); every command reads both, picking the format
+from the file extension.
 
 ## Prerequisites
 
@@ -38,7 +41,7 @@ failure anywhere aborts the whole proposal, so a partial apply cannot happen.
 ## Step 1 — Check that the proposal is valid
 
 ```bash
-npx root-cms proposal.check cms-proposals/2026-08-20-hero-refresh.yaml
+npx root-cms proposal.check cms-proposals/2026-08-20-hero-refresh.md
 ```
 
 Parses the file and checks it against the proposal format. Needs no database
@@ -49,7 +52,7 @@ Exits non-zero on failure.
 ## Step 2 — See what it would write
 
 ```bash
-npx root-cms proposal.diff cms-proposals/2026-08-20-hero-refresh.yaml
+npx root-cms proposal.diff cms-proposals/2026-08-20-hero-refresh.md
 ```
 
 Resolves every change against the live database, validates the result against
@@ -59,7 +62,7 @@ Use this to review before applying. `proposal.apply --dry-run` is equivalent.
 ## Step 3 — Apply
 
 ```bash
-npx root-cms proposal.apply cms-proposals/2026-08-20-hero-refresh.yaml
+npx root-cms proposal.apply cms-proposals/2026-08-20-hero-refresh.md
 ```
 
 Useful flags:
@@ -98,7 +101,8 @@ on success / `1` on failure:
 ```
 
 Always parse stdout as JSON and branch on `ok`. On failure, `errors` names the
-offending change by index, so you can map it back to the YAML.
+offending change by index, so you can map it back to the file (the Nth `##`
+change heading, counting from zero and skipping `## Summary`).
 
 ## Previewing a proposal on a running site
 
@@ -108,9 +112,10 @@ it:
 
 ```ts
 import {RootCMSClient} from '@blinkk/root-cms/client';
-import {parseProposal} from '@blinkk/root-cms/core';
+import {parseProposalFile} from '@blinkk/root-cms/core';
 
-const res = parseProposal(fs.readFileSync('cms-proposals/x.yaml', 'utf8'));
+const filepath = 'cms-proposals/x.md';
+const res = parseProposalFile(fs.readFileSync(filepath, 'utf8'), filepath);
 if (res.ok) {
   const client = new RootCMSClient(rootConfig, {proposal: res.proposal});
   // getDoc/listDocs/batch reads now reflect the proposal.

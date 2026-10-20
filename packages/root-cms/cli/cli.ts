@@ -253,12 +253,13 @@ class CliRunner {
       .command('proposal.check <file>')
       .description(
         'checks a CMS change proposal without touching the database\n\n' +
-          'Parses the YAML, checks it against the proposal format, and prints\n' +
-          'a summary of the changes it describes. Collection schemas are not\n' +
-          'checked here (that needs db access — use proposal.diff). Exits\n' +
-          'non-zero on any error, so it works as a CI gate on a pull request.\n\n' +
+          'Parses a Markdown (.md) or YAML proposal, checks it against the\n' +
+          'proposal format, and prints a summary of the changes it describes.\n' +
+          'Collection schemas are not checked here (that needs db access — use\n' +
+          'proposal.diff). Exits non-zero on any error, so it works as a CI\n' +
+          'gate on a pull request.\n\n' +
           'Usage examples:\n' +
-          '  $ root-cms proposal.check cms-proposals/hero-refresh.yaml'
+          '  $ root-cms proposal.check cms-proposals/hero-refresh.md'
       )
       .action(proposalCheck);
     program
@@ -267,7 +268,7 @@ class CliRunner {
         'resolves a proposal against the live database and reports what it\n' +
           'would write, without writing anything\n\n' +
           'Usage examples:\n' +
-          '  $ root-cms proposal.diff cms-proposals/hero-refresh.yaml'
+          '  $ root-cms proposal.diff cms-proposals/hero-refresh.md'
       )
       .option('--skip-validation', 'skip collection schema validation')
       .action(proposalDiff);
@@ -282,9 +283,9 @@ class CliRunner {
           'documentation for the human reviewer and are not checked against\n' +
           'the database. Pass --verify-before to fail on drift instead.\n\n' +
           'Usage examples:\n' +
-          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml\n' +
-          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml --dry-run\n' +
-          '  $ root-cms proposal.apply cms-proposals/hero-refresh.yaml --verify-before'
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.md\n' +
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.md --dry-run\n' +
+          '  $ root-cms proposal.apply cms-proposals/hero-refresh.md --verify-before'
       )
       .option('--dry-run', 'resolve and validate everything, but write nothing')
       .option(

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import type {RootConfig} from '@blinkk/root';
-import {parseProposal, type CreateRouteOptions} from '@blinkk/root-cms';
+import {parseProposalFile, type CreateRouteOptions} from '@blinkk/root-cms';
 import {
   RootCMSClient,
   type RootCMSClientOptions,
@@ -9,10 +9,10 @@ import {
 
 /**
  * Creates a `RootCMSClient`. When the `CMS_PROPOSAL` env var is set to the path
- * of a change proposal (e.g. `cms-proposals/<id>.yaml`), the proposal is
+ * of a change proposal (e.g. `cms-proposals/<id>.md`), the proposal is
  * overlaid on every read, so it can be previewed before it's applied:
  *
- *   CMS_PROPOSAL=cms-proposals/<id>.yaml pnpm dev
+ *   CMS_PROPOSAL=cms-proposals/<id>.md pnpm dev
  *
  * Nothing is written to the CMS. Only use this for local previews.
  */
@@ -24,7 +24,7 @@ export function createCmsClient(
   const proposalPath = process.env.CMS_PROPOSAL;
   if (proposalPath) {
     const filePath = path.resolve(rootConfig.rootDir, proposalPath);
-    const result = parseProposal(readFileSync(filePath, 'utf8'));
+    const result = parseProposalFile(readFileSync(filePath, 'utf8'), filePath);
     if (!result.ok) {
       throw new Error(
         `invalid proposal ${proposalPath}: ${JSON.stringify(result.errors)}`
