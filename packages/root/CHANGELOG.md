@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 4.1.1
+
+### Patch Changes
+
+- 9a84939: fix: inject CSP nonces for sites using the @blinkk/root/jsx runtime
+
 ## 4.0.1
 
 ### Patch Changes
