@@ -112,3 +112,13 @@ test('security headers: can be disabled via `server.security` config', async () 
   expect(redirect.status).toBe(301);
   expect(redirect.headers.get('strict-transport-security')).toBeNull();
 });
+
+test('security headers: CSP nonce is injected for the root jsx runtime', async () => {
+  const res = await fetch(`http://localhost:${port}/root-jsx/`);
+  const html = await res.text();
+  const csp = res.headers.get('content-security-policy-report-only') || '';
+  const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
+  expect(nonce).toBeTruthy();
+  expect(html).toContain(`<script nonce="${nonce}">`);
+  expect(html).toContain(`<style nonce="${nonce}">`);
+});

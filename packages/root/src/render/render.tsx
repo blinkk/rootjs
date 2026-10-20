@@ -35,6 +35,7 @@ import {
   JsxRenderOptions,
   renderJsxToString,
 } from '../jsx/jsx-render.js';
+import {options as rootJsxOptions} from '../jsx/jsx-runtime.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
@@ -212,34 +213,48 @@ export class Renderer {
     // allows concurrent renders to interleave, leaking a stale hook (and its
     // nonce) into other requests.
     const renderJsxFn = await this.getJsxRenderFn({mode: options.renderMode});
+    // Sites compiled with `jsxImportSource: "@blinkk/root/jsx"` create vnodes
+    // through Root's JSX runtime, which has its own `options` object, so the
+    // hook is installed on both.
+    const injectNonce = (vnode: VNode<any>) => {
+      if (!vnode) {
+        return;
+      }
+      // Inject nonce to `<script>` and `<style>` tags.
+      if (vnode.type === 'script' || vnode.type === 'style') {
+        vnode.props.nonce = nonce;
+      }
+      // Inject nonce to `<link rel="stylesheet">` tags.
+      if (vnode.type === 'link' && vnode.props.rel === 'stylesheet') {
+        vnode.props.nonce = nonce;
+      }
+    };
     const preactHook = preactOptions.vnode;
+    const rootJsxHook = rootJsxOptions.vnode;
     let mainHtml: string;
     try {
       preactOptions.vnode = (vnode: VNode<any>) => {
-        // Inject nonce to `<script>` tags.
-        if (vnode && vnode.type === 'script') {
-          vnode.props.nonce = nonce;
-        }
-        // Inject nonce to `<style>` tags.
-        if (vnode && vnode.type === 'style') {
-          vnode.props.nonce = nonce;
-        }
-        // Inject nonce to `<link rel="stylesheet">` tags.
-        if (
-          vnode &&
-          vnode.type === 'link' &&
-          vnode.props.rel === 'stylesheet'
-        ) {
-          vnode.props.nonce = nonce;
-        }
+        injectNonce(vnode);
         // Call the normal preact hook.
         if (preactHook) {
           preactHook(vnode);
         }
       };
+      // When `preact` is aliased to `@blinkk/root/jsx` (see
+      // `preactToRootJsxPlugin`), both refer to the same object and the hook
+      // above already covers it.
+      if (rootJsxOptions !== (preactOptions as unknown)) {
+        rootJsxOptions.vnode = (vnode: VNode<any>) => {
+          injectNonce(vnode);
+          if (rootJsxHook) {
+            rootJsxHook(vnode);
+          }
+        };
+      }
       mainHtml = renderJsxFn(vdom);
     } finally {
       preactOptions.vnode = preactHook;
+      rootJsxOptions.vnode = rootJsxHook;
     }
 
     const jsDeps = new Set<string>();
