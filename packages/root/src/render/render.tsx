@@ -86,6 +86,11 @@ interface RenderHtmlOptions {
    * `jsxRenderer.mode` specified in `root.config.ts`.
    */
   renderMode?: JsxRenderMode;
+  /**
+   * CSP nonce to auto-inject into `<script>`, `<style>` and
+   * `<link rel="stylesheet">` tags rendered by the head components.
+   */
+  nonce?: string;
 }
 
 export class Renderer {
@@ -192,70 +197,27 @@ export class Renderer {
       scriptDeps: [],
       styleDeps: [],
     };
-    const vdom = (
+    // Wraps children in the context providers. This is used for both the main
+    // render and the `<Head>` children, which are rendered separately within
+    // `renderHtml()`.
+    const withProviders = (children: ComponentChildren) => (
       <ASSET_MAP_CONTEXT.Provider value={this.assetMap}>
         <REQUEST_CONTEXT.Provider value={ctx}>
           <I18N_CONTEXT.Provider value={{locale, translations}}>
             <HTML_CONTEXT.Provider value={htmlContext}>
-              <Component {...props} />
+              {children}
             </HTML_CONTEXT.Provider>
           </I18N_CONTEXT.Provider>
         </REQUEST_CONTEXT.Provider>
       </ASSET_MAP_CONTEXT.Provider>
     );
+    const vdom = withProviders(<Component {...props} />);
 
-    // Create a hook to auto-inject nonce values.
-    // https://preactjs.com/guide/v10/options/
-    // NOTE: `preactOptions.vnode` is a global, so the hook must be installed
-    // and restored within a single synchronous block. Resolve the JSX
-    // renderer first (which may involve a dynamic import) so that no `await`
-    // occurs while the hook is swapped. Awaiting inside the swapped window
-    // allows concurrent renders to interleave, leaking a stale hook (and its
-    // nonce) into other requests.
+    // Resolve the JSX renderer first (which may involve a dynamic import) so
+    // that no `await` occurs while the nonce hook is installed. See
+    // `withNonceHooks()`.
     const renderJsxFn = await this.getJsxRenderFn({mode: options.renderMode});
-    // Sites compiled with `jsxImportSource: "@blinkk/root/jsx"` create vnodes
-    // through Root's JSX runtime, which has its own `options` object, so the
-    // hook is installed on both.
-    const injectNonce = (vnode: VNode<any>) => {
-      if (!vnode) {
-        return;
-      }
-      // Inject nonce to `<script>` and `<style>` tags.
-      if (vnode.type === 'script' || vnode.type === 'style') {
-        vnode.props.nonce = nonce;
-      }
-      // Inject nonce to `<link rel="stylesheet">` tags.
-      if (vnode.type === 'link' && vnode.props.rel === 'stylesheet') {
-        vnode.props.nonce = nonce;
-      }
-    };
-    const preactHook = preactOptions.vnode;
-    const rootJsxHook = rootJsxOptions.vnode;
-    let mainHtml: string;
-    try {
-      preactOptions.vnode = (vnode: VNode<any>) => {
-        injectNonce(vnode);
-        // Call the normal preact hook.
-        if (preactHook) {
-          preactHook(vnode);
-        }
-      };
-      // When `preact` is aliased to `@blinkk/root/jsx` (see
-      // `preactToRootJsxPlugin`), both refer to the same object and the hook
-      // above already covers it.
-      if (rootJsxOptions !== (preactOptions as unknown)) {
-        rootJsxOptions.vnode = (vnode: VNode<any>) => {
-          injectNonce(vnode);
-          if (rootJsxHook) {
-            rootJsxHook(vnode);
-          }
-        };
-      }
-      mainHtml = renderJsxFn(vdom);
-    } finally {
-      preactOptions.vnode = preactHook;
-      rootJsxOptions.vnode = rootJsxHook;
-    }
+    const mainHtml = this.withNonceHooks(nonce, () => renderJsxFn(vdom));
 
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
@@ -336,15 +298,74 @@ export class Renderer {
       htmlAttrs: htmlContext.htmlAttrs,
       headAttrs: htmlContext.headAttrs,
       bodyAttrs: htmlContext.bodyAttrs,
+      // Components passed as `<Head>` children are only rendered here, so they
+      // need the same context providers and nonce hooks as the main render.
       headComponents: [
-        ...htmlContext.headComponents,
+        withProviders(htmlContext.headComponents),
         ...styleTags,
         ...preloadTags,
         ...scriptTags,
       ],
       renderMode: options.renderMode,
+      nonce,
     });
     return {html};
+  }
+
+  /**
+   * Runs a synchronous render function with a hook installed that auto-injects
+   * the CSP nonce into `<script>`, `<style>` and `<link rel="stylesheet">`
+   * vnodes.
+   *
+   * NOTE: `preactOptions.vnode` is a global, so the hook must be installed and
+   * restored within a single synchronous block. Awaiting inside the swapped
+   * window allows concurrent renders to interleave, leaking a stale hook (and
+   * its nonce) into other requests.
+   *
+   * https://preactjs.com/guide/v10/options/
+   */
+  private withNonceHooks<T>(nonce: string | undefined, fn: () => T): T {
+    const injectNonce = (vnode: VNode<any>) => {
+      if (!vnode) {
+        return;
+      }
+      // Inject nonce to `<script>` and `<style>` tags.
+      if (vnode.type === 'script' || vnode.type === 'style') {
+        vnode.props.nonce = nonce;
+      }
+      // Inject nonce to `<link rel="stylesheet">` tags.
+      if (vnode.type === 'link' && vnode.props.rel === 'stylesheet') {
+        vnode.props.nonce = nonce;
+      }
+    };
+    const preactHook = preactOptions.vnode;
+    const rootJsxHook = rootJsxOptions.vnode;
+    try {
+      preactOptions.vnode = (vnode: VNode<any>) => {
+        injectNonce(vnode);
+        // Call the normal preact hook.
+        if (preactHook) {
+          preactHook(vnode);
+        }
+      };
+      // Sites compiled with `jsxImportSource: "@blinkk/root/jsx"` create vnodes
+      // through Root's JSX runtime, which has its own `options` object, so the
+      // hook is installed on both. When `preact` is aliased to
+      // `@blinkk/root/jsx` (see `preactToRootJsxPlugin`), both refer to the
+      // same object and the hook above already covers it.
+      if (rootJsxOptions !== (preactOptions as unknown)) {
+        rootJsxOptions.vnode = (vnode: VNode<any>) => {
+          injectNonce(vnode);
+          if (rootJsxHook) {
+            rootJsxHook(vnode);
+          }
+        };
+      }
+      return fn();
+    } finally {
+      preactOptions.vnode = preactHook;
+      rootJsxOptions.vnode = rootJsxHook;
+    }
   }
 
   /** SSG renders a route. */
@@ -725,7 +746,11 @@ export class Renderer {
         />
       </html>
     );
-    const content = await this.renderJsx(page, {mode: options?.renderMode});
+    const renderJsxFn = await this.getJsxRenderFn({mode: options?.renderMode});
+    const nonce = options?.nonce;
+    const content = nonce
+      ? this.withNonceHooks(nonce, () => renderJsxFn(page))
+      : renderJsxFn(page);
     return `<!doctype html>\n${content}`;
   }
 
