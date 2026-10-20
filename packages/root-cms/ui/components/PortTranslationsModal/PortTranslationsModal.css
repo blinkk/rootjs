@@ -135,3 +135,13 @@
   gap: 8px;
   padding-top: 8px;
 }
+
+.PortTranslationsModal__ai {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.PortTranslationsModal__ai__input {
+  flex: 1;
+}
