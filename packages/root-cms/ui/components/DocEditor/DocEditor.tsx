@@ -64,6 +64,11 @@ import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
 import {countThreadComments} from '../../../shared/comments.js';
 import {
+  getSiblingDeepKey,
+  testShowWhen,
+  toFieldConditions,
+} from '../../../shared/field-conditions.js';
+import {
   FIRESTORE_MAX_NESTING_DEPTH,
   getRemainingNestingDepth,
   NESTING_DEPTH_WARNING_BUFFER,
@@ -915,10 +920,44 @@ DocEditor.FocusTracker = (props: {rootRef: RefObject<HTMLDivElement>}) => {
 };
 
 DocEditor.Field = (props: FieldProps) => {
+  if (props.field.showWhen) {
+    return <DocEditor.ConditionalField {...props} />;
+  }
+  return renderVisibleField(props);
+};
+
+function renderVisibleField(props: FieldProps) {
   if (props.field.deprecated) {
     return <DocEditor.DeprecatedField {...props} />;
   }
   return <DocEditor.FieldBody {...props} />;
+}
+
+/** Renders a field only when its `showWhen` conditions match. */
+DocEditor.ConditionalField = (props: FieldProps) => {
+  const {controller} = useDraftDoc();
+  const testVisible = () =>
+    testShowWhen(props.field.showWhen, (path) =>
+      controller.getValue(getSiblingDeepKey(props.deepKey, path))
+    );
+  const [visible, setVisible] = useState(testVisible);
+
+  useEffect(() => {
+    const conditions = toFieldConditions(props.field.showWhen);
+    const unsubscribes = conditions.map((condition) =>
+      controller.subscribe(
+        getSiblingDeepKey(props.deepKey, condition.field),
+        () => setVisible(testVisible())
+      )
+    );
+    setVisible(testVisible());
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  }, [controller, props.deepKey, props.field]);
+
+  if (!visible) {
+    return null;
+  }
+  return renderVisibleField(props);
 };
 
 /** Renders deprecated fields only when existing data still needs editing. */

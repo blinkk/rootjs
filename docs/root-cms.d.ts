@@ -435,6 +435,16 @@ export interface SandboxFields {
 /** Generated from `/collections/Sandbox.schema.ts`. */
 export type SandboxDoc = RootCMSDoc<SandboxFields>;
 
+export interface SandboxImageFields {
+  /** Image */
+  image?: RootCMSImage;
+}
+
+export interface SandboxVideoFields {
+  /** YouTube ID */
+  youtubeId?: string;
+}
+
 /** Generated from `/templates/Section/Section.schema.ts`. */
 export interface SectionFields {
   /** ID. Used for deep linking, tracking, etc. */
@@ -739,6 +749,17 @@ export interface TemplateSandboxFields {
   jsonString?: string;
   /** RichTextField */
   richtext?: RootCMSRichText;
+  /** Conditional fields (showWhen) */
+  conditional?: {
+    /** Show CTA */
+    showCta?: boolean;
+    /** CTA label. Only shown when 'Show CTA' is checked. */
+    ctaLabel?: string;
+    /** Media */
+    media?: RootCMSOneOf<RootCMSOneOfOption<'SandboxImage', SandboxImageFields> | RootCMSOneOfOption<'SandboxVideo', SandboxVideoFields>>;
+    /** Autoplay. Only shown when the media type is 'SandboxVideo'. */
+    autoplay?: boolean;
+  };
   /** Modules */
   modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateBlogPosts', TemplateBlogPostsFields> | RootCMSOneOfOption<'TemplateCodeShowcase', TemplateCodeShowcaseFields> | RootCMSOneOfOption<'TemplateFeatureGrid', TemplateFeatureGridFields> | RootCMSOneOfOption<'TemplateFeatureSpotlight', TemplateFeatureSpotlightFields> | RootCMSOneOfOption<'TemplateGuides', TemplateGuidesFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePillars', TemplatePillarsFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }

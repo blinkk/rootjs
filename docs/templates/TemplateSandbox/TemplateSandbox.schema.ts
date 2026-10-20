@@ -104,6 +104,45 @@ export default schema.define({
         }),
       ],
     }),
+    schema.object({
+      id: 'conditional',
+      label: 'Conditional fields (showWhen)',
+      variant: 'inline',
+      fields: [
+        schema.boolean({
+          id: 'showCta',
+          label: 'Show CTA',
+          checkboxLabel: 'Show CTA',
+        }),
+        schema.string({
+          id: 'ctaLabel',
+          label: 'CTA label',
+          help: 'Only shown when "Show CTA" is checked.',
+          showWhen: {field: 'showCta'},
+        }),
+        schema.oneOf({
+          id: 'media',
+          label: 'Media',
+          types: [
+            schema.define({
+              name: 'SandboxImage',
+              fields: [schema.image({id: 'image', label: 'Image'})],
+            }),
+            schema.define({
+              name: 'SandboxVideo',
+              fields: [schema.string({id: 'youtubeId', label: 'YouTube ID'})],
+            }),
+          ],
+        }),
+        schema.boolean({
+          id: 'autoplay',
+          label: 'Autoplay',
+          checkboxLabel: 'Autoplay video',
+          help: 'Only shown when the media type is "SandboxVideo".',
+          showWhen: {field: 'media._type', equals: 'SandboxVideo'},
+        }),
+      ],
+    }),
     schema.array({
       id: 'modules',
       label: 'Modules',
