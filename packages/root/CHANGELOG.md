@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 4.1.2
+
+### Patch Changes
+
+- 3521faa: fix: inject csp nonce for components rendered inside `<Head>`
+
 ## 4.1.1
 
 ### Patch Changes
