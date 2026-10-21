@@ -728,8 +728,10 @@ CollectionPage.DocsList = (props: {
       e.action === 'unarchive' ||
       e.action === 'delete' ||
       e.action === 'publish' ||
+      e.action === 'revert-draft' ||
       e.action === 'schedule' ||
       e.action === 'unpublish' ||
+      e.action === 'unschedule' ||
       e.action === 'locked' ||
       e.action === 'unlocked'
     ) {
