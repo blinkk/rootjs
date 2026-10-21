@@ -31,6 +31,7 @@ import {
 } from '../../../shared/marshal.js';
 import {isSlugValid} from '../../../shared/slug.js';
 import {fetchProjectRoles} from '../../hooks/useProjectRoles.js';
+import {logAction} from '../../utils/actions.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {
@@ -109,6 +110,14 @@ function getCtx(): RootCtxLike {
     rootConfig: w.__ROOT_CTX.rootConfig,
     firebase: w.firebase,
   };
+}
+
+/**
+ * Logs a doc write made by Root AI to the action log. The `source` metadata
+ * distinguishes AI edits from the user's own edits.
+ */
+function logAiDocAction(action: string, metadata: Record<string, any>) {
+  logAction(action, {metadata: {...metadata, source: 'root-ai'}});
 }
 
 function getDocAdminUrl(docId: string): string {
@@ -1132,6 +1141,7 @@ async function docSet(input: {docId: string; fields: Record<string, any>}) {
     fields: marshalData(input.fields),
   };
   await setDoc(ref, data);
+  logAiDocAction('doc.save', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
@@ -1191,6 +1201,7 @@ async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
     fields: input.fields ? marshalData(input.fields) : {},
   };
   await setDoc(ref, data);
+  logAiDocAction('doc.create', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
@@ -1266,6 +1277,7 @@ async function docUpdateField(input: {
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
   });
+  logAiDocAction('doc.save', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
@@ -1336,6 +1348,7 @@ async function docEdit(input: {docId: string; operations: any[]}) {
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
   });
+  logAiDocAction('doc.save', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
@@ -1402,6 +1415,10 @@ async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
     fields: fromData.fields || {},
   };
   await setDoc(toRef, data);
+  logAiDocAction('doc.create', {
+    docId: input.toDocId,
+    fromDocId: input.fromDocId,
+  });
   return {
     success: true,
     fromDocId: input.fromDocId,
