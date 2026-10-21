@@ -2643,6 +2643,156 @@ const res = await req.fetch();`
   },
 };
 
+const MULTI_SITE: DocCopy = {
+  slug: 'cms--multi-site',
+  note: 'New page on serving multiple sites from one deployment with the resolveSite option: resolving the site per request, creating sites, access and storage, and scripts and scheduled jobs.',
+  fields: {
+    meta: {
+      title: 'Serving multiple sites – Root.js',
+      description:
+        'Serve many sites from one deployment, each with its own content, uploads and roles, by resolving the site for each request.',
+      category: 'cms',
+      navLabel: 'Multiple sites',
+    },
+    content: {
+      title: 'Serving multiple sites',
+      body: richtext(
+        p(
+          "One deployment can serve many sites, each with its own content, uploads bucket and roles. That's useful when sites are created at runtime, e.g. a site per subdomain for each customer or trial, and a deploy per site isn't practical."
+        ),
+        p(
+          `Each site's content is stored under ${c('Projects/&lt;id&gt;')} in Firestore, the same as a single site configured with the ${c('id')} option. The difference is that the site is chosen for each request instead of in ${c('root.config.ts')}.`
+        )
+      ),
+      sections: [
+        section(
+          'resolve-site',
+          'Resolving the site',
+          [
+            p(
+              `${c('resolveSite(req)')} is called once per request and returns the site to serve. For the rest of the request, its ${c('id')}, ${c('name')} and ${c('storageBucket')} replace the ${c('id')}, ${c('name')} and ${c('firebaseConfig.storageBucket')} options, and its ${c('domain')} replaces ${c('domain')} in ${c('root.config.ts')}, which the CMS uses for doc URLs and live links. Everything that runs during the request picks up the site, including the CMS, its sign-in page and any ${c('RootCMSClient')} your routes create:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // Used outside of a request, e.g. by scripts. See below.
+  id: 'www',
+  firebaseConfig: {
+    // ...
+  },
+  resolveSite: async (req) => {
+    const site = await lookupSite(req.hostname);
+    if (!site) {
+      return null;
+    }
+    return {
+      id: site.id,
+      name: site.name,
+      storageBucket: site.bucket,
+      domain: \`https://\${req.hostname}\`,
+    };
+  },
+}),`
+            ),
+            copy(
+              p(
+                `Only ${c('id')} is required; the other values fall back to the static options. Returning ${c('null')} responds with a 404.`
+              ),
+              p(
+                `${c('resolveSite')} runs for every request the server handles, not only CMS pages, so return a site for every host you serve (including your main domain) and cache lookups that hit a database.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'creating-sites',
+          'Creating a site',
+          [
+            p(
+              `A site exists once its ${c('Projects/&lt;id&gt;')} doc has roles, the same list of roles that the Settings page edits. To create one from your own code, e.g. a sign-up flow, write the doc with the plugin's Firestore instance:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+const cmsPlugin = getCmsPlugin(rootConfig);
+const db = cmsPlugin.getFirestore();
+await db.doc(\`Projects/\${siteId}\`).set({
+  roles: {'owner@example.com': 'ADMIN'},
+});`
+            ),
+          ]
+        ),
+        section(
+          'access-and-storage',
+          'Access and storage',
+          [
+            p(
+              `Sites are isolated by the same ${a('/docs/cms/#security-rules', 'security rules')} as a single site. Users can only sign in to a site where they have a role, and Firestore and Storage only let them read and write that site's data.`
+            ),
+            p(
+              `${c('isUserAuthorized(req, user, site)')} gets the resolved site as its third argument, for rules that depend on the site:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+cmsPlugin({
+  // ...
+  isUserAuthorized: async (req, user, site) => {
+    const account = await lookupSite(site.id);
+    return !account?.expired;
+  },
+}),`
+            ),
+            copy(
+              p(
+                `Uploads are stored under ${c('&lt;id&gt;/uploads/')} in the site's bucket. A bucket other than your default one needs the CMS's Storage rules too.`
+              )
+            ),
+          ]
+        ),
+        section(
+          'outside-requests',
+          'Scripts and scheduled jobs',
+          [
+            p(
+              `Outside of a request, the static ${c('id')} option is used. ${c('runWithSite()')} runs code as a specific site, e.g. in a script that seeds a new site's content:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+const cmsPlugin = getCmsPlugin(rootConfig);
+await cmsPlugin.runWithSite({id: 'acme'}, async () => {
+  const cmsClient = new RootCMSClient(rootConfig);
+  await cmsClient.saveDraftData('Pages/index', {
+    meta: {title: 'Welcome'},
+  });
+});`
+            ),
+            copy(
+              p(
+                `The ${a('/docs/cms/#cron-jobs', 'scheduled job')} runs for one site at a time. The ${c('/cms/api/cron.run')} endpoint runs it for the site its request resolves to, so schedule a call to each site's host. The ${c('cron')} function from ${c('@blinkk/root-cms/functions')} only runs it for the static ${c('id')}.`
+              )
+            ),
+          ]
+        ),
+      ],
+    },
+  },
+};
+
 const CLI: DocCopy = {
   slug: 'cli',
   note: 'Replaces the hand-written command list with a reference generated from the CLI source code (see docs/scripts/generate_reference.ts).',
@@ -3490,6 +3640,7 @@ export const DOCS_COPY: DocCopy[] = [
   CHECKS,
   NOTIFICATIONS,
   CUSTOMIZATION,
+  MULTI_SITE,
   CLI,
   API,
   apiPackageDoc(
