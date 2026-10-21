@@ -91,6 +91,7 @@ export async function listActions(options?: ListActionsOptions) {
       prevAction.action === 'doc.save' &&
       action.by === prevAction.by &&
       action.metadata.docId === prevAction.metadata.docId &&
+      action.metadata.source === prevAction.metadata.source &&
       action.timestamp.toMillis() - prevAction.timestamp.toMillis() <
         60 * TIME_UNITS.minute
     );
