@@ -9,7 +9,8 @@ out/
 .turbo/
 *.code-workspace
 .vitest-attachments/
-.claude/
+.claude/*
+!.claude/skills/
 .root/
 
 # Visual test screenshots (generated locally by `pnpm test:visual`).

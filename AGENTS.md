@@ -9,6 +9,8 @@
   and the local playground for testing framework/CMS changes.
   Its product screenshots are rendered from code; see
   `docs/screenshots/README.md` to update them.
+  Docs pages live in the site's CMS, not in Markdown; see
+  `.claude/skills/rootjs-docs/SKILL.md` to add or edit them.
 - `examples/` — example projects. `apps/` — internal, unpublished.
 
 ## Development
