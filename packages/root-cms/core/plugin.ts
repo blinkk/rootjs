@@ -1,3 +1,4 @@
+import {AsyncLocalStorage} from 'node:async_hooks';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -388,6 +389,25 @@ export interface CMSSidebarTool {
   externalUrl?: string;
 }
 
+/**
+ * A site served by the CMS. See the `resolveSite` option.
+ */
+export interface ResolvedSite {
+  /** Site id. Content is stored under `Projects/<id>` in Firestore. */
+  id: string;
+  /** Name shown in the CMS header. Defaults to the `name` option. */
+  name?: string;
+  /**
+   * Storage bucket for uploads. Defaults to `firebaseConfig.storageBucket`.
+   */
+  storageBucket?: string;
+  /**
+   * Origin used for doc URLs and live links, e.g.
+   * `https://foo.example.com`. Defaults to `domain` in `root.config.ts`.
+   */
+  domain?: string;
+}
+
 export type CMSPluginOptions = {
   /**
    * The ID of the project. Data will be stored under the namespace
@@ -437,10 +457,50 @@ export type CMSPluginOptions = {
    */
   cookieSecret?: string | string[];
 
-  /** Function called to check if a user should have access to the CMS. */
+  /**
+   * Resolves the site to serve for a request, which lets a single deployment
+   * serve multiple sites, each with its own content, uploads bucket and
+   * roles (e.g. one site per subdomain). Called once per request. The
+   * resolved site replaces the `id`, `name` and `firebaseConfig.storageBucket`
+   * options (and `domain` in `root.config.ts`) for the rest of the request,
+   * including any `RootCMSClient` created while handling it.
+   *
+   * Returning `null` (e.g. for an unknown site) responds with a 404. When
+   * omitted, the static `id`, `name` and `firebaseConfig` options are used.
+   *
+   * Outside of a request (scripts, seeders, etc.), use
+   * `cmsPlugin.runWithSite()` to choose the site.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   resolveSite: async (req) => {
+   *     const site = await lookupSite(req.hostname);
+   *     if (!site) {
+   *       return null;
+   *     }
+   *     return {
+   *       id: site.id,
+   *       name: site.name,
+   *       storageBucket: site.bucket,
+   *       domain: `https://${req.hostname}`,
+   *     };
+   *   },
+   * });
+   * ```
+   */
+  resolveSite?: (
+    req: Request
+  ) => ResolvedSite | null | Promise<ResolvedSite | null>;
+
+  /**
+   * Function called to check if a user should have access to the CMS. The
+   * `site` is the site being accessed (see `resolveSite`).
+   */
   isUserAuthorized?: (
     req: Request,
-    user: CMSUser
+    user: CMSUser,
+    site: ResolvedSite
   ) => boolean | Promise<boolean>;
 
   /**
@@ -811,6 +871,8 @@ export type CMSPluginOptions = {
 export type CMSPlugin = Plugin & {
   name: 'root-cms';
   getConfig: () => CMSPluginOptions;
+  getSite: () => ResolvedSite;
+  runWithSite: <T>(site: ResolvedSite, fn: () => T) => T;
   getFirebaseApp: () => App;
   getFirestore: (options?: {databaseId?: string}) => Firestore;
 };
@@ -858,6 +920,39 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    */
   let devViteContext: {viteServer: DevViteServer; rootDir: string} | null =
     null;
+  /**
+   * The current site (see `resolveSite`), along with the plugin config for
+   * that site.
+   */
+  const siteStorage = new AsyncLocalStorage<{
+    site: ResolvedSite;
+    config: CMSPluginOptions;
+  }>();
+
+  function runWithSite<T>(site: ResolvedSite, fn: () => T): T {
+    const config: CMSPluginOptions = {
+      ...options,
+      id: site.id,
+      name: site.name ?? options.name,
+      firebaseConfig: {
+        ...firebaseConfig,
+        storageBucket: site.storageBucket || firebaseConfig.storageBucket,
+      },
+    };
+    return siteStorage.run({site, config}, fn);
+  }
+
+  function getSite(): ResolvedSite {
+    const store = siteStorage.getStore();
+    if (store) {
+      return store.site;
+    }
+    return {
+      id: options.id || 'default',
+      name: options.name,
+      storageBucket: firebaseConfig.storageBucket,
+    };
+  }
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
@@ -934,9 +1029,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       // Verify the project's `isUserAuthorized()` config option.
       if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, {
-          email: user.email,
-        });
+        const authorized = await options.isUserAuthorized(
+          req,
+          {email: user.email},
+          getSite()
+        );
         if (!authorized) {
           console.log('login failed: user is not authorized');
           return {authorized: false, reason: 'not authorized'};
@@ -995,9 +1092,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
       // Check whether user is authorized.
       if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, {
-          email: jwt.email,
-        });
+        const authorized = await options.isUserAuthorized(
+          req,
+          {email: jwt.email},
+          getSite()
+        );
         if (!authorized) {
           console.log('session failed: not authorized');
           return null;
@@ -1042,9 +1141,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     }
     // Check whether user is authorized.
     if (options.isUserAuthorized) {
-      const authorized = await options.isUserAuthorized(req, {
-        email: jwt.email,
-      });
+      const authorized = await options.isUserAuthorized(
+        req,
+        {email: jwt.email},
+        getSite()
+      );
       if (!authorized) {
         console.log('session failed: not authorized');
         return null;
@@ -1077,11 +1178,33 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     name: 'root-cms',
 
     /**
-     * Returns the config options passed to the plugin.
+     * Returns the config options passed to the plugin. When a site is active
+     * (see `resolveSite`), the `id`, `name` and `firebaseConfig.storageBucket`
+     * values are replaced with the site's.
      */
     getConfig: () => {
-      return options;
+      return siteStorage.getStore()?.config || options;
     },
+
+    /**
+     * Returns the current site (see `resolveSite`), or the site configured by
+     * the static `id` and `name` options.
+     */
+    getSite,
+
+    /**
+     * Runs `fn` with `site` as the current site. Use this to access a site
+     * outside of a request, e.g. from a script.
+     *
+     * Example:
+     * ```ts
+     * await cmsPlugin.runWithSite({id: 'foo'}, async () => {
+     *   const cmsClient = new RootCMSClient(rootConfig);
+     *   await cmsClient.getDoc('Pages', 'index', {mode: 'draft'});
+     * });
+     * ```
+     */
+    runWithSite,
 
     /**
      * Returns the Firebase App instance used by the plugin.
@@ -1178,6 +1301,29 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server: Server,
       serverOptions: ConfigureServerOptions
     ) => {
+      // Resolve the site for each request and handle the rest of the request
+      // within that site's context.
+      if (options.resolveSite) {
+        const resolveSite = options.resolveSite;
+        server.use(async (req: Request, res: Response, next: NextFunction) => {
+          let site: ResolvedSite | null;
+          try {
+            site = await resolveSite(req);
+          } catch (err) {
+            next(err);
+            return;
+          }
+          if (!site) {
+            res.status(404).send('Not Found');
+            return;
+          }
+          if (site.domain && req.rootConfig) {
+            req.rootConfig = {...req.rootConfig, domain: site.domain};
+          }
+          runWithSite(site, () => next());
+        });
+      }
+
       // Capture the vite dev server for the schema watcher below.
       if (serverOptions.type === 'dev') {
         const viteServer = server.get('viteServer') as DevViteServer | null;
@@ -1333,7 +1479,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           const app = await getRenderer(req);
           app.renderSignIn(req, res, {
             rootConfig: req.rootConfig!,
-            cmsConfig: options,
+            cmsConfig: plugin.getConfig(),
           });
         } catch (err) {
           console.error(err);
@@ -1491,7 +1637,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           const app = await getRenderer(req);
           await app.renderApp(req, res, {
             rootConfig: req.rootConfig!,
-            cmsConfig: options,
+            cmsConfig: plugin.getConfig(),
           });
         } catch (err) {
           // TODO(stevenle): render a custom error page.

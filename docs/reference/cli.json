@@ -3,7 +3,7 @@
     {
       "bin": "create-root",
       "packageName": "@blinkk/create-root",
-      "version": "4.0.0",
+      "version": "4.1.2",
       "commands": [
         {
           "name": "create-root",
@@ -44,7 +44,7 @@
     {
       "bin": "root",
       "packageName": "@blinkk/root",
-      "version": "4.0.0",
+      "version": "4.1.2",
       "commands": [
         {
           "name": "root build",
@@ -429,7 +429,7 @@
     {
       "bin": "root-cms",
       "packageName": "@blinkk/root-cms",
-      "version": "4.0.0",
+      "version": "4.1.2",
       "commands": [
         {
           "name": "root-cms init-firebase",
@@ -819,9 +819,9 @@
           "aliases": [],
           "usage": "root-cms proposal.check <file>",
           "summary": "checks a CMS change proposal without touching the database",
-          "description": "Parses the YAML, checks it against the proposal format, and prints a summary of the changes it describes. Collection schemas are not checked here (that needs db access — use proposal.diff). Exits non-zero on any error, so it works as a CI gate on a pull request.",
+          "description": "Parses a Markdown (.md) or YAML proposal, checks it against the proposal format, and prints a summary of the changes it describes. Collection schemas are not checked here (that needs db access — use proposal.diff). Exits non-zero on any error, so it works as a CI gate on a pull request.",
           "examples": [
-            "root-cms proposal.check cms-proposals/hero-refresh.yaml"
+            "root-cms proposal.check cms-proposals/hero-refresh.md"
           ],
           "arguments": [
             {
@@ -841,7 +841,7 @@
           "summary": "resolves a proposal against the live database and reports what it would write, without writing anything",
           "description": "",
           "examples": [
-            "root-cms proposal.diff cms-proposals/hero-refresh.yaml"
+            "root-cms proposal.diff cms-proposals/hero-refresh.md"
           ],
           "arguments": [
             {
@@ -866,9 +866,9 @@
           "summary": "applies a CMS change proposal to the database",
           "description": "Writes drafts, release contents, and draft translations only — never publishes, schedules, or deletes. Nothing is written unless every change in the proposal resolves cleanly.\n\nBy default a proposal's recorded `before` values are treated as documentation for the human reviewer and are not checked against the database. Pass --verify-before to fail on drift instead.",
           "examples": [
-            "root-cms proposal.apply cms-proposals/hero-refresh.yaml",
-            "root-cms proposal.apply cms-proposals/hero-refresh.yaml --dry-run",
-            "root-cms proposal.apply cms-proposals/hero-refresh.yaml --verify-before"
+            "root-cms proposal.apply cms-proposals/hero-refresh.md",
+            "root-cms proposal.apply cms-proposals/hero-refresh.md --dry-run",
+            "root-cms proposal.apply cms-proposals/hero-refresh.md --verify-before"
           ],
           "arguments": [
             {
@@ -965,7 +965,7 @@
     {
       "bin": "root-password-protect",
       "packageName": "@blinkk/root-password-protect",
-      "version": "4.0.0",
+      "version": "4.1.2",
       "commands": [
         {
           "name": "root-password-protect generate-hash",

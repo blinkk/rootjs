@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "@blinkk/root-cms",
-      "version": "4.0.0",
+      "version": "4.1.2",
       "entryPoints": [
         {
           "importPath": "@blinkk/root-cms",
@@ -1055,6 +1055,14 @@
               "examples": []
             },
             {
+              "name": "diffLines",
+              "kind": "function",
+              "signature": "function diffLines(a: string[], b: string[]): Array<[\n    ' ' | '-' | '+',\n    string\n]>;",
+              "members": [],
+              "doc": "Returns a line diff of `a` -> `b` as `[prefix, line]` pairs, where the\nprefix is \" \" (in both), \"-\" (only in `a`), or \"+\" (only in `b`).\n\nUses Myers' algorithm after trimming the common prefix and suffix, which is\nwhere most of a proposal's unchanged lines are.",
+              "examples": []
+            },
+            {
               "name": "Doc",
               "kind": "interface",
               "signature": "interface Doc<Fields = any>",
@@ -1859,6 +1867,22 @@
               "signature": "function parseProposal(yamlText: string): ParseProposalResult;",
               "members": [],
               "doc": "Parses a YAML change proposal.\n\nSyntax errors are reported by the YAML parser with real line numbers;\nstructural errors come from the schema and are mapped back onto source lines\nby walking the parsed document.",
+              "examples": []
+            },
+            {
+              "name": "parseProposalFile",
+              "kind": "function",
+              "signature": "function parseProposalFile(text: string, filepath: string): ParseProposalResult;",
+              "members": [],
+              "doc": "Parses a proposal in the format its file extension names: `.md` (or\n`.markdown`) files are Markdown, and anything else is read as YAML.",
+              "examples": []
+            },
+            {
+              "name": "parseProposalMarkdown",
+              "kind": "function",
+              "signature": "function parseProposalMarkdown(markdown: string): ParseProposalResult;",
+              "members": [],
+              "doc": "Parses a Markdown change proposal.\n\nErrors carry the 1-based source line they were found on. Structural\nproblems (an unknown heading, a missing value block, a malformed diff) are\nreported first; the assembled proposal is then checked against the same\nschema as the YAML format.",
               "examples": []
             },
             {
@@ -3369,6 +3393,12 @@
                   "examples": []
                 },
                 {
+                  "name": "schema.FieldCondition",
+                  "signature": "interface FieldCondition",
+                  "doc": "A condition that tests the value of a sibling field. Only one comparison\noperator should be set. When no operator is set, the condition matches if\nthe sibling value is truthy (e.g. a checked boolean field).",
+                  "examples": []
+                },
+                {
                   "name": "schema.FieldValueSource",
                   "signature": "type FieldValueSource = DocumentSource;",
                   "doc": "The source of selectable values for a field. Currently only a CMS document\nsource is supported; other source types may be added in the future.",
@@ -3665,6 +3695,14 @@
               "signature": "function serializeProposal(proposal: Proposal): string;",
               "members": [],
               "doc": "Serializes a proposal back to YAML.\n\nDeterministic by construction: keys are emitted in a fixed order, and every\nstring is quoted or written as a block scalar so it can never be re-read as a\nboolean, number, or date. `parse -> serialize -> parse` is a fixed point.",
+              "examples": []
+            },
+            {
+              "name": "serializeProposalMarkdown",
+              "kind": "function",
+              "signature": "function serializeProposalMarkdown(proposal: Proposal): string;",
+              "members": [],
+              "doc": "Serializes a proposal as Markdown.\n\nDeterministic: serializing an unchanged proposal is byte-stable, and\n`parse -> serialize -> parse` is a fixed point. The title, metadata values,\nand ids are written on a single line, and the summary and notes are trimmed.",
               "examples": []
             },
             {
@@ -4335,6 +4373,14 @@
               "signature": "type UserRole = 'ADMIN' | 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER';",
               "members": [],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "validateProposalData",
+              "kind": "function",
+              "signature": "function validateProposalData(data: unknown, getLineIndex: () => Map<string, number>): ParseProposalResult;",
+              "members": [],
+              "doc": "Checks parsed proposal data against the proposal format. Shared by the YAML\nand Markdown parsers, which each supply a lazily-built index of the source\nline of every dotted path so errors can point at a real line.",
               "examples": []
             },
             {
@@ -7216,7 +7262,7 @@
             {
               "name": "CMSPlugin",
               "kind": "type",
-              "signature": "type CMSPlugin = Plugin & {\n    name: 'root-cms';\n    getConfig: () => CMSPluginOptions;\n    getFirebaseApp: () => App;\n    getFirestore: (options?: {\n        databaseId?: string;\n    }) => Firestore;\n};",
+              "signature": "type CMSPlugin = Plugin & {\n    name: 'root-cms';\n    getConfig: () => CMSPluginOptions;\n    getSite: () => ResolvedSite;\n    runWithSite: <T>(site: ResolvedSite, fn: () => T) => T;\n    getFirebaseApp: () => App;\n    getFirestore: (options?: {\n        databaseId?: string;\n    }) => Firestore;\n};",
               "members": [],
               "doc": "",
               "examples": []
@@ -7224,7 +7270,7 @@
             {
               "name": "CMSPluginOptions",
               "kind": "type",
-              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    isUserAuthorized?: (req: Request, user: CMSUser) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
+              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    resolveSite?: (req: Request) => ResolvedSite | null | Promise<ResolvedSite | null>;\n    isUserAuthorized?: (req: Request, user: CMSUser, site: ResolvedSite) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
               "members": [],
               "doc": "",
               "examples": []
@@ -8143,6 +8189,39 @@
               "signature": "function renderEmailTemplate(template: string, data: any, options?: {\n    escapeHtml?: boolean;\n}): string;",
               "members": [],
               "doc": "Renders a `{placeholder}` template string using values from `data`.\nPlaceholders support dot notation for nested lookups, e.g.\n`{metadata.docId}`. Unknown placeholders are left untouched. Values are\nstringified based on their type: firestore timestamps and dates are\nconverted to ISO strings and objects are converted to formatted JSON. When\n`escapeHtml` is set, values are HTML-escaped before injection.",
+              "examples": []
+            },
+            {
+              "name": "ResolvedSite",
+              "kind": "interface",
+              "signature": "interface ResolvedSite",
+              "members": [
+                {
+                  "name": "id",
+                  "signature": "id: string;",
+                  "doc": "Site id. Content is stored under `Projects/<id>` in Firestore.",
+                  "examples": []
+                },
+                {
+                  "name": "name",
+                  "signature": "name?: string;",
+                  "doc": "Name shown in the CMS header. Defaults to the `name` option.",
+                  "examples": []
+                },
+                {
+                  "name": "storageBucket",
+                  "signature": "storageBucket?: string;",
+                  "doc": "Storage bucket for uploads. Defaults to `firebaseConfig.storageBucket`.",
+                  "examples": []
+                },
+                {
+                  "name": "domain",
+                  "signature": "domain?: string;",
+                  "doc": "Origin used for doc URLs and live links, e.g.\n`https://foo.example.com`. Defaults to `domain` in `root.config.ts`.",
+                  "examples": []
+                }
+              ],
+              "doc": "A site served by the CMS. See the `resolveSite` option.",
               "examples": []
             },
             {
