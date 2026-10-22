@@ -2052,19 +2052,45 @@ DocEditor.ArrayField = (props: FieldProps) => {
         } of nesting. ${nestingLimitMessage}`
       : '';
 
-  /** Blocks item creation once the array has bottomed out on nesting depth. */
-  const testCanAddItem = () => {
-    if (canAddItem) {
-      return true;
+  const maxItems = field.maxItems;
+  const maxItemsReached =
+    typeof maxItems === 'number' && order.length >= maxItems;
+  const maxItemsMessage = `This field accepts at most ${maxItems} ${
+    maxItems === 1 ? 'item' : 'items'
+  }. Remove an item before adding another.`;
+
+  /**
+   * Blocks item creation once the array has bottomed out on nesting depth or
+   * reached its `maxItems` limit. Moves (cut+paste) don't change the item
+   * count, so they skip the `maxItems` check.
+   */
+  const testCanAddItem = (options?: {isMove?: boolean}) => {
+    if (!canAddItem) {
+      showNotification({
+        title: 'Nesting limit reached',
+        message: nestingWarning,
+        color: 'red',
+        autoClose: false,
+      });
+      return false;
     }
-    showNotification({
-      title: 'Nesting limit reached',
-      message: nestingWarning,
-      color: 'red',
-      autoClose: false,
-    });
-    return false;
+    if (maxItemsReached && !options?.isMove) {
+      showNotification({
+        title: 'Item limit reached',
+        message: maxItemsMessage,
+        color: 'red',
+      });
+      return false;
+    }
+    return true;
   };
+
+  /** Reason the "add" actions are disabled, if any. */
+  const addDisabledReason = !canAddItem
+    ? nestingWarning
+    : maxItemsReached
+      ? maxItemsMessage
+      : '';
 
   // For arrays of oneOf fields using the "picker" variant, adding an item
   // opens the component picker first and the item is created with the
@@ -2136,8 +2162,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
-  const pasteAfter = (index: number, data: ClipboardData) => {
-    if (!testCanAddItem()) {
+  const pasteAfter = (
+    index: number,
+    data: ClipboardData,
+    options?: {isMove?: boolean}
+  ) => {
+    if (!testCanAddItem(options)) {
       return;
     }
     dispatch({
@@ -2280,7 +2310,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
     // Group so that a cut+paste (move) undoes as a single step.
     draft.history.group('Moved item', () => {
-      pasteAfter(index, data);
+      pasteAfter(index, data, {isMove: cutIndex !== null});
       if (cutIndex !== null) {
         let indexToRemove = cutIndex;
         if (index < cutIndex) {
@@ -2389,14 +2419,17 @@ DocEditor.ArrayField = (props: FieldProps) => {
         </div>
       )}
       <div className="DocEditor__ArrayField__add">
-        <ConditionalTooltip label={nestingWarning} condition={!canAddItem}>
+        <ConditionalTooltip
+          label={addDisabledReason}
+          condition={!!addDisabledReason}
+        >
           <Button
             className="DocEditor__ArrayField__add__button"
             color="dark"
             size="xs"
             leftIcon={<IconCirclePlus size={16} />}
             onClick={() => add()}
-            disabled={!canAddItem}
+            disabled={!!addDisabledReason}
           >
             {field.buttonLabel || 'Add'}
           </Button>
@@ -2414,7 +2447,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
             className="DocEditor__ArrayField__menu__item"
             icon={<IconRowInsertBottom size={18} />}
             onClick={() => pasteFromVirtualClipboard(order.length - 1)}
-            disabled={!canAddItem}
+            disabled={!canAddItem || (maxItemsReached && cutIndex === null)}
           >
             Paste item to end
           </Menu.Item>
@@ -2472,7 +2505,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                       !!field.defaultOpen
                     }
                     isCut={cutIndex === i}
-                    canAddItem={canAddItem}
+                    canAddItem={canAddItem && !maxItemsReached}
                     aiEnabled={testAiEnabled()}
                     onFocusHeader={focusFieldHeader}
                     onHeaderKeyDown={handleKeyDown}
@@ -2508,8 +2541,9 @@ interface ArrayFieldItemProps {
   initialOpen: boolean;
   isCut: boolean;
   /**
-   * Whether another item can be nested here without blowing past Firestore's
-   * field nesting limit. When false, the insert and paste actions are disabled.
+   * Whether another item can be added here, i.e. without blowing past
+   * Firestore's field nesting limit or the field's `maxItems`. When false, the
+   * insert, duplicate, and paste actions are disabled.
    */
   canAddItem: boolean;
   aiEnabled: boolean;

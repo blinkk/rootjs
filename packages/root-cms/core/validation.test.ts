@@ -411,6 +411,36 @@ test('validates object fields', () => {
   ).toMatchInlineSnapshot('[]');
 });
 
+test('validates array maxItems', () => {
+  const testSchema = schema.define({
+    name: 'TestSchema',
+    fields: [
+      schema.array({
+        id: 'items',
+        maxItems: 2,
+        of: schema.object({fields: [schema.string({id: 'name'})]}),
+      }),
+    ],
+  });
+
+  expect(
+    validateFields({items: [{name: 'a'}, {name: 'b'}]}, testSchema)
+  ).toMatchInlineSnapshot('[]');
+
+  expect(
+    validateFields({items: [{name: 'a'}, {name: 'b'}, {name: 'c'}]}, testSchema)
+  ).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "array with at most 2 items",
+        "message": "Expected at most 2 items, received 3",
+        "path": "items",
+        "received": "array with 3 items",
+      },
+    ]
+  `);
+});
+
 test('validates array fields with object items', () => {
   const testSchema = schema.define({
     name: 'TestSchema',
