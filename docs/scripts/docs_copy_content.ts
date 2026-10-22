@@ -1624,7 +1624,7 @@ export const www = {
 
 const SCHEMAS: DocCopy = {
   slug: 'cms--schemas',
-  note: 'Adds a "Collection options" section covering group, previewUrl, slugRegex, autoSlug, autolock, sortOptions, customSorting, viewOptions and publishing checks.',
+  note: 'Mentions the new `maxItems` option for array fields in "Field types".',
   fields: {
     meta: {
       title: 'Schemas – Root.js',
@@ -1775,7 +1775,66 @@ export default schema.collection({
           p(
             `Fields include ${c('string')}, ${c('richtext')}, ${c('image')}, ${c('file')}, ${c('select')}, ${c('multiselect')}, ${c('boolean')}, ${c('number')}, ${c('date')}, ${c('datetime')}, ${c('reference')}, ${c('object')}, ${c('array')} and ${c('oneOf')}. For every field and option, see ${c('schema')} in the ${a('/docs/api/root-cms/#blinkk-root-cms-schema', 'API reference')}.`
           ),
+          p(
+            `To cap how many items an ${c('array')} holds, like the modules on a page, set ${c('maxItems')}. Once it's reached, the CMS stops editors from adding, duplicating or pasting items, and writes from the API or Root AI that go over the limit fail validation.`
+          ),
         ]),
+        section(
+          'conditional-fields',
+          'Conditional fields',
+          [
+            p('<i>Available in version 4.1.0 and later.</i>'),
+            p(
+              `Use ${c('showWhen')} to show a field in the editor only when a sibling field has a certain value, like a CTA label that only appears when a &quot;Show CTA&quot; checkbox is checked. ${c('field')} is the ID of a field in the same object, and dot-paths read nested values, e.g. ${c('&#039;media._type&#039;')} for the type picked in a ${c('oneOf')} field.`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/templates/TemplateHero/TemplateHero.schema.ts
+
+import {schema} from '@blinkk/root-cms';
+
+export default schema.define({
+  name: 'TemplateHero',
+  fields: [
+    schema.boolean({id: 'showCta', checkboxLabel: 'Show CTA'}),
+    schema.string({
+      id: 'ctaLabel',
+      // Shown when the "Show CTA" checkbox is checked.
+      showWhen: {field: 'showCta'},
+    }),
+    schema.oneOf({
+      id: 'media',
+      types: [ImageSchema, VideoSchema],
+    }),
+    schema.boolean({
+      id: 'autoplay',
+      checkboxLabel: 'Autoplay',
+      // Shown when a Video is picked for "media".
+      showWhen: {field: 'media._type', equals: 'Video'},
+    }),
+  ],
+});`
+            ),
+            copy(
+              p('A condition can set one of these operators:'),
+              ul(
+                `None: the sibling value is truthy, e.g. a checked ${c('boolean')}.`,
+                `${c('equals')} and ${c('notEquals')}: the sibling value is (or isn't) exactly this value.`,
+                `${c('in')} and ${c('notIn')}: the sibling value is (or isn't) one of a list of values, e.g. ${c("{field: 'layout', in: ['split', 'stacked']}")}.`,
+                `${c('exists')}: with ${c('true')}, the sibling has a value; with ${c('false')}, it's empty (unset, ${c("''")} or an empty array).`
+              ),
+              p(
+                `Pass an array of conditions to require all of them, e.g. ${c("showWhen: [{field: 'showCta'}, {field: 'variant', equals: 'button'}]")}.`
+              ),
+              p(
+                `${c('showWhen')} only changes what the editor shows. Hiding a field doesn't clear its data, so an editor can uncheck a box and check it again without losing what they entered, and the value is still published and returned by the API. Check the same condition when you render the field, e.g. ${c('{fields.showCta && fields.ctaLabel}')}.`
+              )
+            ),
+          ]
+        ),
       ],
     },
   },

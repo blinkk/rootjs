@@ -3286,7 +3286,7 @@
                 },
                 {
                   "name": "schema.ArrayField",
-                  "signature": "type ArrayField = CommonFieldProps & {\n    type: 'array';\n    default?: any[];\n    itemDefault?: Record<string, any>;\n    preview?: string | string[];\n    of: ObjectLikeField;\n    buttonLabel?: string;\n    defaultOpen?: boolean;\n};",
+                  "signature": "type ArrayField = CommonFieldProps & {\n    type: 'array';\n    default?: any[];\n    itemDefault?: Record<string, any>;\n    preview?: string | string[];\n    of: ObjectLikeField;\n    buttonLabel?: string;\n    defaultOpen?: boolean;\n    maxItems?: number;\n};",
                   "doc": "",
                   "examples": []
                 },
