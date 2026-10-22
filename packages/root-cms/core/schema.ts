@@ -411,6 +411,11 @@ export type ArrayField = CommonFieldProps & {
    * `false`, meaning items start collapsed.
    */
   defaultOpen?: boolean;
+  /**
+   * Maximum number of items the array accepts. Once reached, the CMS UI
+   * disables adding, duplicating, and pasting new items.
+   */
+  maxItems?: number;
 };
 
 export function array(field: Omit<ArrayField, 'type'>): ArrayField {

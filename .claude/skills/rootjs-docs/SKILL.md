@@ -109,6 +109,16 @@ New pages also need a sidebar position:
 Don't run `proposal.apply` or `--assign-order` without being asked, because
 they write to the production CMS.
 
+## Releases
+
+When asked to add updated docs to a release, write a separate proposal with a
+`## Create release \`<id>\`` change that sets `description` and `docIds` (e.g.
+`Docs/cms--schemas`), then check and apply it like any other proposal.
+
+Release IDs use the `autoSlug` format `{date:YYYYMMDD}-{adjective}-{noun}`, e.g.
+`20261021-wise-tiger`. Pick the words from `ADJECTIVES` and `NOUNS` in
+`packages/root-cms/shared/auto-slug-words.ts`.
+
 ## Changesets
 
 Docs-only changes don't need a changeset.

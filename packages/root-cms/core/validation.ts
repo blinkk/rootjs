@@ -268,10 +268,23 @@ export function validateValue(
       }
       const arrayField = field as ArrayField;
       const itemField = arrayField.of as FieldWithId;
+      const errors: ValidationError[] = [];
+      if (
+        typeof arrayField.maxItems === 'number' &&
+        value.length > arrayField.maxItems
+      ) {
+        errors.push({
+          path,
+          message: `Expected at most ${arrayField.maxItems} items, received ${value.length}`,
+          expected: `array with at most ${arrayField.maxItems} items`,
+          received: `array with ${value.length} items`,
+        });
+      }
       // Synthesize an 'id' for validation context if missing, though it's not used in path construction directly here.
-      return value.flatMap((item, index) => {
-        return validateValue(item, itemField, `${path}.${index}`);
+      value.forEach((item, index) => {
+        errors.push(...validateValue(item, itemField, `${path}.${index}`));
       });
+      return errors;
     }
 
     case 'oneof': {
