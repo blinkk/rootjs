@@ -50,6 +50,15 @@ export interface CommonFieldProps {
    * ```
    */
   showWhen?: FieldCondition | FieldCondition[];
+  /**
+   * Whether editors can set "localized values" for the field, i.e. override
+   * the field's value for specific locales. Defaults to `true` for fields
+   * with a single value (e.g. strings, images, files and references) and
+   * `false` for `object`, `array` and `oneof` fields, whose localized values
+   * would duplicate the field's entire contents for each locale. Has no
+   * effect for sites with a single locale.
+   */
+  localizable?: boolean;
 }
 
 /**

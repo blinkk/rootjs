@@ -23,7 +23,50 @@
  * chain have a localized value.
  */
 
+import type {Field} from '../core/schema.js';
 import {isRichTextData} from './marshal.js';
+
+/** Field types that are localizable by default (see `field.localizable`). */
+const LOCALIZABLE_FIELD_TYPES = new Set([
+  'boolean',
+  'date',
+  'datetime',
+  'file',
+  'image',
+  'multiselect',
+  'number',
+  'reference',
+  'references',
+  'richtext',
+  'select',
+  'string',
+]);
+
+/**
+ * Returns whether editors can set localized values for a field.
+ */
+export function testFieldLocalizable(field: Field): boolean {
+  if (!field.id) {
+    return false;
+  }
+  if (typeof field.localizable === 'boolean') {
+    return field.localizable;
+  }
+  return LOCALIZABLE_FIELD_TYPES.has(field.type);
+}
+
+/**
+ * Returns the locales in a field's `localizedValues` map. Keys starting with
+ * `@` hold metadata for a localized value (e.g. `@de`) and are excluded.
+ */
+export function getLocalizedValueLocales(localizedValues: any): string[] {
+  if (!isPlainObject(localizedValues)) {
+    return [];
+  }
+  return Object.keys(localizedValues).filter(
+    (key) => !key.startsWith('@') && localizedValues[key] !== undefined
+  );
+}
 
 export interface ResolveLocalizedValuesOptions {
   /**
