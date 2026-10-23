@@ -1433,7 +1433,7 @@ export function blogRedirectPlugin(): Plugin {
 
 const CMS_CONFIGURATION: DocCopy = {
   slug: 'cms',
-  note: 'Links the plugin options section to the new Checks, Notifications and integrations, and Customizing the CMS pages.',
+  note: 'Adds a section on custom Root AI tools and skills.',
   fields: {
     meta: {
       title: 'CMS configuration – Root.js',
@@ -1580,6 +1580,61 @@ gcloud auth application-default login`
             `Root AI lets editors chat with, draft and translate content in the CMS. Enable it with the ${c('ai')} option, listing the models editors can choose from and their API keys. See the ${a('/docs/migration/v3/#ai', 'v3 migration guide')} for an example.`
           ),
         ]),
+        section(
+          'ai-tools',
+          'Custom AI tools and skills',
+          [
+            p(
+              `Root AI can call your own tools alongside the built-in ones for reading and editing docs. Add them to ${c('ai.tools')}. The chat runs in the browser, but a tool's ${c('execute')} function always runs on the server, so it can use API keys and server-only code. The input is checked against ${c('inputSchema')} (a zod schema, or ${c('jsonSchema()')} from ${c('ai')}) before ${c('execute')} runs, and whatever it returns is sent back to the model.`
+            ),
+            p(
+              `Skills are reusable instructions an editor runs by typing ${c('/')} and the skill's name in the chat box, like ${c('/launch-checklist Pages/home')}. The model gets the skill's ${c('instructions')} plus whatever was typed after the name.`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+import {cmsPlugin, defineAiSkill, defineAiTool} from '@blinkk/root-cms/plugin';
+import {z} from 'zod';
+
+cmsPlugin({
+  ai: {
+    models: [
+      // ...
+    ],
+    tools: [
+      defineAiTool({
+        name: 'inventory_lookup',
+        description: 'Looks up the stock level for a product SKU.',
+        inputSchema: z.object({sku: z.string()}),
+        execute: async ({sku}, ctx) => {
+          return await fetchStock(sku, {user: ctx.user.email});
+        },
+      }),
+    ],
+    skills: [
+      defineAiSkill({
+        name: 'launch-checklist',
+        description: 'Reviews a page against the launch checklist.',
+        instructions: 'Read the page with doc_get, then check that ...',
+      }),
+    ],
+  },
+});`
+            ),
+            copy(
+              p(
+                `Set ${c('write: true')} on a tool that changes anything. Write tools aren't offered in the chat's read-only mode, and they always wait for the editor to approve each call, even in auto-apply mode. By default, read tools are available to every role and write tools to admins, editors and contributors; set ${c('roles')} to restrict a tool further. Tool names can't reuse the name of a built-in tool such as ${c('doc_get')}.`
+              ),
+              p(
+                `Other plugins can contribute tools and skills too, by setting ${c('rootAi: {tools, skills}')} on the plugin object (see ${c('RootAiPlugin')} in the ${a('/docs/api/root-cms/#blinkk-root-cms-plugin-rootaiplugin', 'API reference')}).`
+              )
+            ),
+          ]
+        ),
         section(
           'cron-jobs',
           'Scheduled jobs',

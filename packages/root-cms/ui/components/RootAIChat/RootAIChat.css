@@ -730,6 +730,55 @@
   padding: 10px 12px 12px;
 }
 
+.RootAIChat__skillMenu {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  left: 20px;
+  right: 20px;
+  max-width: 800px;
+  max-height: 240px;
+  margin: 0 auto;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--surface-background);
+  box-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px;
+}
+
+.RootAIChat--panel .RootAIChat__skillMenu {
+  left: 12px;
+  right: 12px;
+}
+
+.RootAIChat__skillMenu__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.RootAIChat__skillMenu__item--active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.RootAIChat__skillMenu__name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.RootAIChat__skillMenu__description {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
 /* Vertically align the composer buttons. */
 .RootAIChat__composer__attachTooltip,
 .RootAIChat__composer__button {
