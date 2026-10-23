@@ -492,6 +492,53 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     expect(result.translations).toEqual({hello: 'hallo', about: 'über'});
   });
 
+  it('resolves localized field values for the locale', async () => {
+    const localizedFields = {
+      image: {src: 'en.png'},
+      '@image': {localizedValues: {'en-GB': {src: 'gb.png'}}},
+    };
+    await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'en-CA']});
+    await seedDoc(cmsClient, 'Global/header');
+    for (const docId of ['Pages/about', 'Global/header']) {
+      const [collection, slug] = docId.split('/');
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/${collection}/Published/${slug}`
+        )
+        .update({fields: localizedFields});
+    }
+
+    const resolveDoc = vi.fn((ctx) => {
+      // `resolveDoc()` receives the unresolved doc.
+      expect(ctx.doc.fields.image).toEqual({src: 'en.png'});
+      return null;
+    });
+    const routeOptions: CreateRouteOptions = {
+      collection: 'Pages',
+      resolveDoc,
+      batchRequest: (req) => req.addDoc('Global/header'),
+      preRenderHook: (props, ctx) => ({
+        ...props,
+        header: ctx.batchResponse!.getDoc('Global/header'),
+      }),
+    };
+    // en-CA falls back to en-GB.
+    const result = await renderRoute(rootConfig, routeOptions, {
+      slug: 'about',
+      locale: 'en-CA',
+    });
+    expect(resolveDoc).toHaveBeenCalledOnce();
+    expect(result.props.doc.fields).toEqual({image: {src: 'gb.png'}});
+    expect(result.props.header.fields).toEqual({image: {src: 'gb.png'}});
+
+    const disabled = await renderRoute(
+      rootConfig,
+      {...routeOptions, localizedValues: false},
+      {slug: 'about', locale: 'en-CA'}
+    );
+    expect(disabled.props.doc.fields).toEqual(localizedFields);
+  });
+
   it('generates ssg props', async () => {
     await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de']});
     const tm = cmsClient.getTranslationsManager();

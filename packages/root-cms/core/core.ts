@@ -1,3 +1,4 @@
+export * from '../shared/localized-values.js';
 export * from '../shared/proposal-markdown.js';
 export * from '../shared/proposal.js';
 export * from '../shared/sort-key.js';
