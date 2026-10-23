@@ -129,6 +129,14 @@
   padding-right: 116px;
 }
 
+.DocEditor__FieldHeader--localizable {
+  padding-right: 78px;
+}
+
+.DocEditor__FieldHeader--localizable.DocEditor__FieldHeader--hasViewers {
+  padding-right: 138px;
+}
+
 .DocEditor__FieldHeader__viewers {
   margin-right: 2px;
 }

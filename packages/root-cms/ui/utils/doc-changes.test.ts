@@ -190,6 +190,42 @@ describe('diffDocFields', () => {
     expect(changes[0].path).toEqual(['Related pages']);
   });
 
+  it('reports changes to localized values', () => {
+    const changes = diffDocFields(
+      collection,
+      {
+        meta: {
+          image: {src: 'en.png'},
+          '@image': {localizedValues: {de: {src: 'de.png'}}},
+        },
+      },
+      {
+        meta: {
+          image: {src: 'en.png'},
+          '@image': {
+            localizedValues: {
+              de: {src: 'de-v2.png'},
+              fr: {src: 'fr.png'},
+              '@fr': {alt: false},
+            },
+          },
+        },
+      }
+    );
+    expect(changes.map((c) => [c.type, c.deepKey, c.path])).toEqual([
+      [
+        'modified',
+        'fields.meta.@image.localizedValues.de',
+        ['Meta', 'Share image (de)'],
+      ],
+      [
+        'added',
+        'fields.meta.@image.localizedValues.fr',
+        ['Meta', 'Share image (fr)'],
+      ],
+    ]);
+  });
+
   it('compares values that are not in the schema', () => {
     const changes = diffDocFields(
       collection,
