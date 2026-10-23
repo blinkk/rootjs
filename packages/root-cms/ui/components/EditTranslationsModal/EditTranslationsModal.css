@@ -111,6 +111,26 @@
   width: 100%;
 }
 
+.EditTranslationsModal__table__source__port {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+}
+
+.EditTranslationsModal__table__source__portButton {
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.EditTranslationsModal__table__source:hover
+  .EditTranslationsModal__table__source__port,
+.EditTranslationsModal__table__source__port:focus-within {
+  opacity: 1;
+}
+
 .EditTranslationsModal__StringsEditor {
   display: flex;
   flex-direction: column;

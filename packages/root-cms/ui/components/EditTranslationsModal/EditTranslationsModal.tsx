@@ -11,6 +11,7 @@ import {
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
+  IconArrowsTransferDown,
   IconExternalLink,
   IconInfoCircle,
   IconRobot,
@@ -25,14 +26,20 @@ import {joinClassNames} from '../../utils/classes.js';
 import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {
+  batchSaveTranslations,
+  getTranslationByHash,
   getTranslationForLanguage,
+  isLocaleExcludedFromTranslations,
   loadTranslations,
+  sourceHash,
+  toLocaleTranslations,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {FieldHistory} from '../FieldHistory/FieldHistory.js';
 import {Heading} from '../Heading/Heading.js';
+import {usePortTranslationsModal} from '../PortTranslationsModal/PortTranslationsModal.js';
 
 const MODAL_ID = 'EditTranslationsModal';
 
@@ -92,6 +99,7 @@ export function EditTranslationsModal(
   const [activeTab, setActiveTab] = useState<'translations' | 'history'>(
     'translations'
   );
+  const portModal = usePortTranslationsModal();
 
   // Use draft from props (passed from DocEditor).
   const draft = props.draft || null;
@@ -203,6 +211,46 @@ export function EditTranslationsModal(
       return Array.from(newValue);
     });
     setHasChanges(true);
+  }
+
+  function openPortModal(source: string) {
+    const targetRow = translationsMap[source] || {source};
+    portModal.open({
+      id: props.docId,
+      targetSource: source,
+      targetTranslations: toLocaleTranslations(targetRow),
+      languages: toTranslationLanguages(
+        (i18nConfig.locales || ['en']).filter(
+          (locale: string) => !isLocaleExcludedFromTranslations(locale)
+        )
+      ),
+      // Candidates are the strings tagged with the doc, which include the
+      // field's previous source strings.
+      loadCandidates: async () =>
+        Object.values(translationsMap).map((row) => ({
+          source: row.source,
+          translations: toLocaleTranslations(row),
+          label: strings.includes(row.source) ? undefined : 'unused',
+        })),
+      lookupSource: async (lookupSource) => {
+        const translation = await getTranslationByHash(
+          await sourceHash(lookupSource)
+        );
+        const translations = toLocaleTranslations(translation);
+        return Object.keys(translations).length > 0 ? translations : null;
+      },
+      onSave: async (translations) => {
+        await batchSaveTranslations([{source, locales: translations}], {
+          tags: [props.docId],
+        });
+        // The ported translations are already saved, so they're merged in
+        // without being marked as changed.
+        setTranslationsMap((current) => ({
+          ...current,
+          [source]: {...(current[source] || {}), ...translations, source},
+        }));
+      },
+    });
   }
 
   async function generateAiTranslations() {
@@ -431,6 +479,22 @@ export function EditTranslationsModal(
                       <td>
                         <div className="EditTranslationsModal__table__source">
                           {source}
+                          <Tooltip
+                            className="EditTranslationsModal__table__source__port"
+                            label="Port translations from another string"
+                            position="top"
+                            withArrow
+                          >
+                            <ActionIcon
+                              className="EditTranslationsModal__table__source__portButton"
+                              size="sm"
+                              variant="subtle"
+                              aria-label="Port translations from another string"
+                              onClick={() => openPortModal(source)}
+                            >
+                              <IconArrowsTransferDown size={16} />
+                            </ActionIcon>
+                          </Tooltip>
                         </div>
                       </td>
                       <td>

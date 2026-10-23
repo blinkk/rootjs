@@ -207,10 +207,8 @@
   white-space: pre-wrap;
 }
 
-.LocalizationModal__sourceCell__link {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+.LocalizationModal__sourceCell__link,
+.LocalizationModal__sourceCell__port {
   opacity: 0;
   background: white;
   border: 1px solid var(--mantine-color-gray-4, #ced4da);
@@ -218,7 +216,10 @@
   padding: 4px;
 }
 
-.LocalizationModal__sourceCell:hover .LocalizationModal__sourceCell__link {
+.LocalizationModal__sourceCell:hover .LocalizationModal__sourceCell__link,
+.LocalizationModal__sourceCell:hover .LocalizationModal__sourceCell__port,
+.LocalizationModal__sourceCell:focus-within .LocalizationModal__sourceCell__link,
+.LocalizationModal__sourceCell:focus-within .LocalizationModal__sourceCell__port {
   opacity: 1;
 }
 
@@ -286,15 +287,6 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-}
-
-.LocalizationModal__sourceCell__icons .LocalizationModal__sourceCell__link {
-  position: static;
-  opacity: 0;
-}
-
-.LocalizationModal__sourceCell__icons:hover .LocalizationModal__sourceCell__link {
-  opacity: 1;
 }
 
 @keyframes shimmer-border {

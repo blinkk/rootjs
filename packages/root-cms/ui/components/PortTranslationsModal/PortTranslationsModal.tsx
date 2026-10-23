@@ -34,7 +34,10 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {logAction} from '../../utils/actions.js';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {getTranslationForLanguage} from '../../utils/l10n.js';
+import {
+  getTranslationForLanguage,
+  getTranslationLanguage,
+} from '../../utils/l10n.js';
 import {Text} from '../Text/Text.js';
 import './PortTranslationsModal.css';
 
@@ -63,7 +66,10 @@ export interface PortTranslationsModalProps {
   targetSource: string;
   /** Existing translations for the target, keyed by root locale. */
   targetTranslations: Record<string, string>;
-  /** The translation languages to port. */
+  /**
+   * The translation languages to port. The source language (the default
+   * locale) is excluded, since the source string is its "translation".
+   */
   languages: string[];
   /** Loads the source strings to port translations from. */
   loadCandidates: () => Promise<PortTranslationsCandidate[]>;
@@ -87,6 +93,9 @@ export function usePortTranslationsModal() {
         title: 'Port translations',
         innerProps,
         size: 'clamp(70%, 880px, 1040px)',
+        // Scroll the body within the modal so the sticky actions bar stays
+        // visible for long lists of locales.
+        overflow: 'inside',
       });
     },
   };
@@ -117,6 +126,11 @@ export function PortTranslationsModal(
   /** Prompts that produced the current `aiResults`, for logging. */
   const [aiPrompts, setAiPrompts] = useState<string[]>([]);
   const aiEnabled = testAiEnabled();
+  const languages = useMemo(() => {
+    const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+    const sourceLang = getTranslationLanguage(i18nConfig.defaultLocale || 'en');
+    return props.languages.filter((lang) => lang !== sourceLang);
+  }, [props.languages]);
 
   const rankedCandidates = useMemo(
     () => rankBySimilarity(props.targetSource, candidates),
@@ -139,7 +153,7 @@ export function PortTranslationsModal(
         const filtered = results.filter(
           (c) =>
             c.source !== props.targetSource &&
-            props.languages.some((lang) =>
+            languages.some((lang) =>
               getTranslationForLanguage(c.translations, lang)
             )
         );
@@ -182,7 +196,7 @@ export function PortTranslationsModal(
     const candidate = candidatesList.find((c) => c.source === source);
     const langs = new Set<string>();
     if (candidate) {
-      props.languages.forEach((lang) => {
+      languages.forEach((lang) => {
         const from = getTranslationForLanguage(candidate.translations, lang);
         const existing = getTranslationForLanguage(
           props.targetTranslations,
@@ -248,7 +262,7 @@ export function PortTranslationsModal(
     if (!selectedCandidate) {
       return [];
     }
-    return props.languages.map((lang) => {
+    return languages.map((lang) => {
       const from = getTranslationForLanguage(
         selectedCandidate.translations,
         lang
@@ -281,7 +295,7 @@ export function PortTranslationsModal(
     });
   }, [
     selectedCandidate,
-    props.languages,
+    languages,
     props.targetSource,
     props.targetTranslations,
     validRules,
@@ -462,6 +476,7 @@ export function PortTranslationsModal(
                   : 'No other translated strings found, look one up below'
               }
               nothingFound="No matching strings"
+              withinPortal
               data={selectData}
               value={selectedSource}
               onChange={(value: string | null) => selectSource(value)}
