@@ -35,6 +35,7 @@ import {
   RouteParams,
 } from '@blinkk/root';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
+import {resolveLocalizedValues} from '../shared/localized-values.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {
   BatchRequest,
@@ -419,6 +420,20 @@ export interface CreateRouteOptions {
   translate?: boolean | ((context: RouteContext) => boolean);
 
   /**
+   * Whether to resolve localized field values (per-locale overrides of a
+   * field's value, stored in the field's `@<id>.localizedValues` metadata)
+   * for the rendered locale and its fallbacks. Applies to the route's doc and
+   * the batch response's docs and queries once the locale is resolved, so
+   * `resolveLocale()` and `resolveDoc()` receive the unresolved doc, while
+   * `translations()`, `preRenderHook()` and the page's props receive the
+   * resolved doc. Defaults to `true`.
+   *
+   * To resolve localized values for other docs (e.g. in `fetchData()`), use
+   * `resolveLocalizedValues()`.
+   */
+  localizedValues?: boolean;
+
+  /**
    * Sets Cache-Control header to `private`.
    */
   disableCacheControl?: boolean;
@@ -778,6 +793,38 @@ export function createRoute(options: CreateRouteOptions): Route {
   }
 
   /**
+   * Resolves the localized field values of the route's doc and the batch
+   * response's docs for the resolved locale (see `options.localizedValues`).
+   */
+  function resolveLocalizedContent(routeContext: RouteContext) {
+    if (options.localizedValues === false) {
+      return;
+    }
+    const locales = resolveLocaleFallbacks(
+      routeContext.cmsClient.rootConfig.i18n,
+      routeContext.locale!
+    );
+    if (routeContext.doc) {
+      routeContext.doc = resolveLocalizedValues(routeContext.doc, locales);
+    }
+    const batchResponse = routeContext.batchResponse;
+    if (batchResponse) {
+      for (const docId in batchResponse.docs) {
+        batchResponse.docs[docId] = resolveLocalizedValues(
+          batchResponse.docs[docId],
+          locales
+        );
+      }
+      for (const queryId in batchResponse.queries) {
+        batchResponse.queries[queryId] = resolveLocalizedValues(
+          batchResponse.queries[queryId],
+          locales
+        );
+      }
+    }
+  }
+
+  /**
    * Loads the translations for the resolved locale. Translations are loaded
    * for any `options.translations()` tags, the docs referenced by the route's
    * doc, the route's doc (and the doc returned by `options.resolveDoc()`, if
@@ -849,6 +896,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     }
     routeContext.locale = docLocale;
     await resolveDoc(routeContext, data);
+    resolveLocalizedContent(routeContext);
 
     const translations = await loadTranslations(
       routeContext,
@@ -1030,6 +1078,7 @@ export function createRoute(options: CreateRouteOptions): Route {
       }
       routeContext.locale = locale;
       await resolveDoc(routeContext, data);
+      resolveLocalizedContent(routeContext);
 
       const translations = await loadTranslations(
         routeContext,
