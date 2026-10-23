@@ -20,10 +20,19 @@ vi.mock('../../utils/doc.js', () => ({
     mockCmsDocImportTranslations(...args),
 }));
 
+vi.mock('../PortTranslationsModal/PortTranslationsModal.js', () => ({
+  usePortTranslationsModal: () => ({open: vi.fn()}),
+}));
+
 vi.mock('@mantine/core', async () => {
   const actual: any = await vi.importActual('@mantine/core');
   return {
     ...actual,
+    ActionIcon: ({children, onClick, className}: any) => (
+      <button className={className} onClick={onClick}>
+        {children}
+      </button>
+    ),
     Button: ({children, onClick, ...props}: any) => (
       <button onClick={onClick} {...props}>
         {children}

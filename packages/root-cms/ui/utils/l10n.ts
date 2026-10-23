@@ -319,6 +319,22 @@ export function getTranslationForLanguage(
 }
 
 /**
+ * Returns the locale translations of a v1 translations doc, excluding the
+ * `source` and `tags` fields.
+ */
+export function toLocaleTranslations(
+  translation?: Record<string, unknown>
+): Record<string, string> {
+  const results: Record<string, string> = {};
+  Object.entries(translation || {}).forEach(([key, value]) => {
+    if (key !== 'source' && key !== 'tags' && typeof value === 'string') {
+      results[key] = value;
+    }
+  });
+  return results;
+}
+
+/**
  * Batch-saves locale translations for multiple source strings without modifying
  * tags. Each entry maps a source string to its locale translations. Only the
  * provided locale keys are written (merged into existing docs).

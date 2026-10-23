@@ -133,7 +133,12 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 12px 0 2px;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
 }
 
 .PortTranslationsModal__ai {

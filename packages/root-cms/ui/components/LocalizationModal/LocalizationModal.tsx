@@ -77,6 +77,7 @@ import {
   loadTranslations,
   loadTranslationsByHashes,
   sourceHash,
+  toLocaleTranslations,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
@@ -1534,6 +1535,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                           <ActionIcon
                             className="LocalizationModal__sourceCell__port"
                             size="sm"
+                            variant="subtle"
                             aria-label="Port translations from another string"
                             onClick={() => openPortModal(source)}
                           >
@@ -1625,22 +1627,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     </div>
   );
 };
-
-/**
- * Returns the locale translations of a v1 translations doc, excluding the
- * `source` and `tags` fields.
- */
-function toLocaleTranslations(
-  translation?: Record<string, unknown>
-): Record<string, string> {
-  const results: Record<string, string> = {};
-  Object.entries(translation || {}).forEach(([key, value]) => {
-    if (key !== 'source' && key !== 'tags' && typeof value === 'string') {
-      results[key] = value;
-    }
-  });
-  return results;
-}
 
 interface TranslationCellProps {
   source: string;
