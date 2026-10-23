@@ -38,6 +38,7 @@ import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isGoogleWriteTool} from '../../../core/ai-tools-google.js';
+import type {SerializedAiSkillSummary} from '../../../shared/ai/extensions.js';
 import {
   testClientModelExpired,
   type SerializedClientModel,
@@ -69,6 +70,11 @@ import {
   createClientGoogleTools,
   maybeAuthorizeGoogle,
 } from './clientGoogleTools.js';
+import {
+  createClientPluginTools,
+  executePluginTool,
+  previewPluginWriteTool,
+} from './clientPluginTools.js';
 import type {CmsToolPreview} from './cmsToolHandlers.js';
 import {
   executeCmsTool,
@@ -121,6 +127,8 @@ interface AiConfigResponse {
   models?: ModelInfo[];
   /** Whether the signed-in user may use the auto-apply execution mode. */
   canAutoApply?: boolean;
+  /** Skills the user can invoke with `/<name>` in the composer. */
+  skills?: SerializedAiSkillSummary[];
 }
 
 interface AttachmentPreview {
@@ -468,6 +476,7 @@ function ChatExperience(props: {
           initialMessages={initialMessages}
           executionMode={executionMode}
           canAutoApply={props.config.canAutoApply ?? false}
+          skills={props.config.skills || []}
           models={models}
           selectedModel={selectedModel}
           docContext={props.docContext}
@@ -662,6 +671,7 @@ function ChatPane(props: {
   initialMessages: UIMessage[];
   executionMode: ExecutionMode;
   canAutoApply: boolean;
+  skills: SerializedAiSkillSummary[];
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   docContext?: RootAIChatDocContext;
@@ -693,6 +703,8 @@ function ChatPane(props: {
   const turnCacheRef = useRef<{key: string; config: ClientTurnConfig} | null>(
     null
   );
+  // Names of the custom (plugin) write tools offered in the current turn.
+  const pluginWriteToolsRef = useRef<Set<string>>(new Set());
   const [pendingApprovals, setPendingApprovals] = useState<
     Record<string, PendingToolApproval>
   >({});
@@ -759,6 +771,34 @@ function ChatPane(props: {
 
   const resolveToolOutput = useCallback(
     async (toolCall: {toolCallId: string; toolName: string; input: any}) => {
+      // Custom write tools can act outside the CMS (there's no draft to fall
+      // back on), so they always pause for approval, even in auto mode.
+      if (pluginWriteToolsRef.current.has(toolCall.toolName)) {
+        const decision = await waitForApproval(
+          toolCall.toolCallId,
+          toolCall.toolName,
+          toolCall.input,
+          previewPluginWriteTool(toolCall.toolName, toolCall.input)
+        );
+        if (decision === 'reject') {
+          return {
+            success: false,
+            error: 'USER_REJECTED',
+            message:
+              'The user rejected this tool call. Do not retry unless they ask you to.',
+          };
+        }
+        try {
+          return await executePluginTool(toolCall.toolName, toolCall.input);
+        } finally {
+          setPendingApprovals((prev) => {
+            const next = {...prev};
+            delete next[toolCall.toolCallId];
+            return next;
+          });
+        }
+      }
+
       const isGoogleWrite = isGoogleWriteTool(toolCall.toolName);
       if (!isGoogleWrite && !isCmsWriteTool(toolCall.toolName)) {
         return await executeCmsTool(toolCall.toolName, toolCall.input);
@@ -898,6 +938,8 @@ function ChatPane(props: {
             model: data.model,
             system: data.system,
             maxSteps: data.maxSteps,
+            tools: data.tools || [],
+            skills: data.skills || [],
           };
           modelConfigRef.current = data.model;
           effectiveModeRef.current = (data.executionMode ||
@@ -905,7 +947,11 @@ function ChatPane(props: {
           turnCacheRef.current = {key, config};
           return config;
         },
-        buildTools: (model) => {
+        buildTools: (model, turn) => {
+          const pluginTools = turn.tools || [];
+          pluginWriteToolsRef.current = new Set(
+            pluginTools.filter((t) => t.write).map((t) => t.name)
+          );
           if (!model.capabilities.tools) {
             return {};
           }
@@ -919,6 +965,7 @@ function ChatPane(props: {
           return {
             ...cmsTools,
             ...createClientGoogleTools({write: !readOnly}),
+            ...createClientPluginTools(pluginTools),
           };
         },
         onFinish: persistChat,
@@ -982,6 +1029,7 @@ function ChatPane(props: {
         disabled={!props.model}
         canAttach={props.model?.capabilities.attachments ?? false}
         isStreaming={isStreaming}
+        skills={props.skills}
         onStop={stop}
         controls={
           <ChatHeader
@@ -1476,11 +1524,14 @@ function ChatComposer(props: {
   disabled: boolean;
   canAttach: boolean;
   isStreaming: boolean;
+  skills: SerializedAiSkillSummary[];
   onSend: (text: string, attachments: AttachmentPreview[]) => void;
   onStop: () => void;
   controls?: ComponentChildren;
 }) {
   const [text, setText] = useState('');
+  const [skillIndex, setSkillIndex] = useState(0);
+  const [skillMenuDismissed, setSkillMenuDismissed] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1499,6 +1550,27 @@ function ChatComposer(props: {
 
   useEffect(fitTextarea, [text, attachments]);
 
+  // While the text is just `/` plus a partial name, suggest matching skills.
+  const skillQuery = text.match(/^\/([a-zA-Z0-9_-]*)$/)?.[1];
+  const skillMatches =
+    skillQuery !== undefined && !skillMenuDismissed
+      ? props.skills.filter((skill) =>
+          skill.name.toLowerCase().startsWith(skillQuery.toLowerCase())
+        )
+      : [];
+  const activeSkillIndex = Math.min(skillIndex, skillMatches.length - 1);
+
+  const updateText = (value: string) => {
+    setText(value);
+    setSkillIndex(0);
+    setSkillMenuDismissed(false);
+  };
+
+  const selectSkill = (skill: SerializedAiSkillSummary) => {
+    updateText(`/${skill.name} `);
+    textareaRef.current?.focus();
+  };
+
   const submit = () => {
     if (props.disabled || props.isStreaming) {
       return;
@@ -1515,6 +1587,25 @@ function ChatComposer(props: {
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (skillMatches.length > 0) {
+      const count = skillMatches.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setSkillIndex((activeSkillIndex + step + count) % count);
+        return;
+      }
+      if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+        e.preventDefault();
+        selectSkill(skillMatches[activeSkillIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSkillMenuDismissed(true);
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -1557,6 +1648,33 @@ function ChatComposer(props: {
 
   return (
     <div className="RootAIChat__composer">
+      {skillMatches.length > 0 && (
+        <div className="RootAIChat__skillMenu" role="listbox">
+          {skillMatches.map((skill, i) => (
+            <button
+              key={skill.name}
+              type="button"
+              role="option"
+              aria-selected={i === activeSkillIndex}
+              className={joinClassNames(
+                'RootAIChat__skillMenu__item',
+                i === activeSkillIndex && 'RootAIChat__skillMenu__item--active'
+              )}
+              // Keep focus in the textarea.
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => setSkillIndex(i)}
+              onClick={() => selectSkill(skill)}
+            >
+              <span className="RootAIChat__skillMenu__name">/{skill.name}</span>
+              {skill.description && (
+                <span className="RootAIChat__skillMenu__description">
+                  {skill.description}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       {attachments.length > 0 && (
         <div className="RootAIChat__composer__attachments">
           {attachments.map((a, i) => (
@@ -1611,13 +1729,19 @@ function ChatComposer(props: {
         <textarea
           ref={textareaRef}
           className="RootAIChat__composer__textarea"
-          placeholder={props.disabled ? 'Select a model…' : 'Ask anything…'}
+          placeholder={
+            props.disabled
+              ? 'Select a model…'
+              : props.skills.length > 0
+                ? 'Ask anything, or type / for skills…'
+                : 'Ask anything…'
+          }
           value={text}
           rows={1}
           autofocus
           disabled={props.disabled}
           onKeyDown={onKeyDown}
-          onChange={(e) => setText((e.target as HTMLTextAreaElement).value)}
+          onChange={(e) => updateText((e.target as HTMLTextAreaElement).value)}
           onPaste={(e) => {
             const items = e.clipboardData?.items || [];
             for (const item of items) {

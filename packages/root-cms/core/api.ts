@@ -11,6 +11,14 @@ import {
 } from '../shared/publish-checks.js';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
+  AiToolCallError,
+  callAiTool,
+  getAiExtensions,
+  serializeAiSkills,
+  serializeAiSkillSummaries,
+  serializeAiTools,
+} from './ai-extensions.js';
+import {
   buildChatSystemPrompt,
   buildEditSystemPrompt,
   editImage,
@@ -27,7 +35,7 @@ import {
   translateString,
 } from './ai.js';
 import {type CMSCheck} from './checks.js';
-import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
+import {RootCMSClient, UserRole, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 import {
@@ -1392,10 +1400,12 @@ export function api(server: Server, options: ApiOptions) {
     }
     const cmsClient = new RootCMSClient(req.rootConfig!);
     const role = await cmsClient.getUserRole(req.user.email).catch(() => null);
+    const {skills} = getAiExtensions(req.rootConfig!);
     res.status(200).json({
       success: true,
       enabled: true,
       ...serializeAiConfig(aiConfig),
+      skills: serializeAiSkillSummaries(skills),
       role: role || null,
       canAutoApply: role === 'ADMIN' || role === 'EDITOR',
     });
@@ -1447,13 +1457,15 @@ export function api(server: Server, options: ApiOptions) {
       // publishers. Auto requested by a non-publisher is downgraded to "approve"
       // so the system prompt and the client approval flow stay in sync.
       let canAutoApply: boolean;
+      let role: UserRole;
       try {
         const cmsClient = new RootCMSClient(req.rootConfig!);
-        const role = await cmsClient.getUserRole(req.user.email);
-        if (!role) {
+        const userRole = await cmsClient.getUserRole(req.user.email);
+        if (!userRole) {
           res.status(403).json({success: false, error: 'FORBIDDEN'});
           return;
         }
+        role = userRole;
         canAutoApply = role === 'ADMIN' || role === 'EDITOR';
       } catch (err) {
         console.error('failed to resolve user role:', err);
@@ -1470,6 +1482,7 @@ export function api(server: Server, options: ApiOptions) {
           executionMode,
           activeDocId,
         });
+        const extensions = getAiExtensions(req.rootConfig!);
         res.status(200).json({
           success: true,
           model: await prepareClientModel(req.rootConfig!, model),
@@ -1477,6 +1490,11 @@ export function api(server: Server, options: ApiOptions) {
           executionMode,
           canAutoApply,
           maxSteps: aiConfig.maxSteps ?? 10,
+          tools: await serializeAiTools(extensions.tools, {
+            role,
+            readOnly: executionMode === 'read',
+          }),
+          skills: serializeAiSkills(extensions.skills),
         });
       } catch (err: any) {
         console.error(err.stack || err);
@@ -1484,6 +1502,83 @@ export function api(server: Server, options: ApiOptions) {
       }
     }
   );
+
+  /**
+   * Runs a custom AI tool registered via `cmsPlugin({ai: {tools}})` or a
+   * plugin's `rootAi` config. The chat streams from the browser, so the
+   * browser calls this endpoint whenever the model calls one of these tools.
+   *
+   * ```
+   * POST /cms/api/ai.tools.call
+   * {"name": "inventory_lookup", "input": {"sku": "abc-123"}}
+   * ```
+   */
+  server.use('/cms/api/ai.tools.call', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    if (!getAiConfig(req.rootConfig!)) {
+      res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+      return;
+    }
+    const body = req.body || {};
+    const name = typeof body.name === 'string' ? body.name : '';
+    if (!name) {
+      res.status(400).json({
+        success: false,
+        error: 'MISSING_REQUIRED_FIELD',
+        field: 'name',
+      });
+      return;
+    }
+
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    let role: UserRole | null;
+    try {
+      role = await cmsClient.getUserRole(req.user.email);
+    } catch (err) {
+      console.error('failed to resolve user role:', err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+      return;
+    }
+    if (!role) {
+      res.status(403).json({success: false, error: 'FORBIDDEN'});
+      return;
+    }
+
+    try {
+      const {tools} = getAiExtensions(req.rootConfig!);
+      const output = await callAiTool(tools, name, body.input, {
+        req,
+        rootConfig: req.rootConfig!,
+        user: {email: req.user.email},
+        role,
+        cmsClient,
+      });
+      res.status(200).json({success: true, output: output ?? null});
+    } catch (err: any) {
+      if (err instanceof AiToolCallError) {
+        res
+          .status(err.status)
+          .json({success: false, error: err.code, message: err.message});
+        return;
+      }
+      console.error(`ai tool "${name}" failed:`, err?.stack || err);
+      res.status(500).json({
+        success: false,
+        error: 'TOOL_ERROR',
+        message: err?.message || String(err),
+      });
+    }
+  });
 
   /**
    * Prepares a client-side "Edit with AI" turn (array-item diff-viewer flow).

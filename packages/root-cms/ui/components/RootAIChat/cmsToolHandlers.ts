@@ -80,7 +80,8 @@ export interface CmsToolReceipt {
 }
 
 export interface CmsToolPreview {
-  toolName: CmsWriteToolName | GoogleWriteToolName;
+  /** A CMS or Google write tool, or a custom tool from a plugin. */
+  toolName: CmsWriteToolName | GoogleWriteToolName | (string & {});
   title: string;
   summary: string;
   docId?: string;

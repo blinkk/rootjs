@@ -26,6 +26,7 @@ import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {MAX_CSV_IMPORT_BYTES} from '../shared/csv.js';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
+import {type AiExtensions} from './ai-extensions.js';
 import {type AiConfig} from './ai.js';
 import {api} from './api.js';
 import {getInvalidTokenErrorCode} from './auth-errors.js';
@@ -44,6 +45,14 @@ import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
 
 export type {AiConfig, AiModelConfig, AiProvider} from './ai.js';
+export {defineAiTool} from './ai-extensions.js';
+export type {
+  AiExtensions,
+  AiSkill,
+  AiTool,
+  AiToolContext,
+  RootAiPlugin,
+} from './ai-extensions.js';
 export type {
   CMSCheck,
   CheckResult,
@@ -680,8 +689,38 @@ export type CMSPluginOptions = {
    * For project-specific guidance (conventions, patterns, naming rules, etc.),
    * drop a `ROOT.md` file at the project root. Its contents are appended to
    * the system prompt for every chat — similar to `AGENTS.md` / `CLAUDE.md`.
+   *
+   * `tools` adds custom tools the chat model can call. Each tool's `execute`
+   * runs on the server (via `/cms/api/ai.tools.call`), so it can use secrets
+   * and server-only APIs. `skills` adds reusable instructions that users
+   * invoke by typing `/<name>` in the chat composer. Other plugins can
+   * contribute tools and skills through a `rootAi` property (see
+   * `RootAiPlugin`).
+   *
+   * ```ts
+   * cmsPlugin({
+   *   ai: {
+   *     models: [...],
+   *     tools: [
+   *       defineAiTool({
+   *         name: 'inventory_lookup',
+   *         description: 'Looks up the stock level for a product SKU.',
+   *         inputSchema: z.object({sku: z.string()}),
+   *         execute: async ({sku}) => fetchStock(sku),
+   *       }),
+   *     ],
+   *     skills: [
+   *       {
+   *         name: 'seo-review',
+   *         description: 'Reviews a page for SEO issues.',
+   *         instructions: 'Read the page with doc_get, then ...',
+   *       },
+   *     ],
+   *   },
+   * });
+   * ```
    */
-  ai?: AiConfig;
+  ai?: AiConfig & AiExtensions;
 
   /**
    * Experimental config options. Note: these are subject to change at any time.

@@ -6976,6 +6976,27 @@
               "examples": []
             },
             {
+              "name": "AiExtensions",
+              "kind": "interface",
+              "signature": "interface AiExtensions",
+              "members": [
+                {
+                  "name": "tools",
+                  "signature": "tools?: AiTool[];",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "skills",
+                  "signature": "skills?: AiSkill[];",
+                  "doc": "",
+                  "examples": []
+                }
+              ],
+              "doc": "Custom tools and skills contributed to Root AI.",
+              "examples": []
+            },
+            {
               "name": "AiModelConfig",
               "kind": "interface",
               "signature": "interface AiModelConfig",
@@ -7056,6 +7077,117 @@
               "signature": "type AiProvider = 'openai' | 'openai-compatible' | 'anthropic' | 'google' | 'google-vertex';",
               "members": [],
               "doc": "Provider type for an AI model. Use `openai-compatible` for any OpenAI-style\nendpoint (e.g. local Ollama, vLLM, OpenRouter). Use `google-vertex` to call\nGemini through Vertex AI with Google Cloud credentials instead of a Gemini\nAPI key.",
+              "examples": []
+            },
+            {
+              "name": "AiSkill",
+              "kind": "interface",
+              "signature": "interface AiSkill",
+              "members": [
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "Skill name, typed as `/<name>`. Same naming rules as tools.",
+                  "examples": []
+                },
+                {
+                  "name": "description",
+                  "signature": "description?: string;",
+                  "doc": "Short description shown in the composer's autocomplete menu.",
+                  "examples": []
+                },
+                {
+                  "name": "instructions",
+                  "signature": "instructions: string;",
+                  "doc": "Instructions sent to the model when the skill is invoked, along with\nanything the user typed after `/<name>`.",
+                  "examples": []
+                }
+              ],
+              "doc": "A reusable set of instructions the user can invoke from the chat composer\nby typing `/<name>`.",
+              "examples": []
+            },
+            {
+              "name": "AiTool",
+              "kind": "interface",
+              "signature": "interface AiTool<INPUT = any, OUTPUT = unknown>",
+              "members": [
+                {
+                  "name": "name",
+                  "signature": "name: string;",
+                  "doc": "Unique tool name, e.g. `inventory_lookup`. Must start with a letter and\ncontain only letters, numbers, `_` and `-` (max 64 chars), and must not\nclash with a built-in tool.",
+                  "examples": []
+                },
+                {
+                  "name": "description",
+                  "signature": "description: string;",
+                  "doc": "Tells the model what the tool does and when to use it.",
+                  "examples": []
+                },
+                {
+                  "name": "inputSchema",
+                  "signature": "inputSchema: FlexibleSchema<INPUT>;",
+                  "doc": "Input schema, e.g. a zod schema or `jsonSchema()` from `ai`.",
+                  "examples": []
+                },
+                {
+                  "name": "write",
+                  "signature": "write?: boolean;",
+                  "doc": "Set to `true` if the tool has side effects (writes data, sends messages,\netc.). Write tools are left out in the chat's read-only mode and always\npause for the user's approval before running, in every mode.",
+                  "examples": []
+                },
+                {
+                  "name": "roles",
+                  "signature": "roles?: UserRole[];",
+                  "doc": "Roles allowed to use the tool. Defaults to every role for read tools and\nto `ADMIN`, `EDITOR` and `CONTRIBUTOR` for write tools.",
+                  "examples": []
+                },
+                {
+                  "name": "execute",
+                  "signature": "execute: (input: INPUT, ctx: AiToolContext) => OUTPUT | Promise<OUTPUT>;",
+                  "doc": "Runs the tool on the server. The input has already been validated against\n`inputSchema`. The return value is sent back to the model and must be\nJSON-serializable. Throw to report an error to the model.",
+                  "examples": []
+                }
+              ],
+              "doc": "A custom tool the Root AI chat model can call.",
+              "examples": []
+            },
+            {
+              "name": "AiToolContext",
+              "kind": "interface",
+              "signature": "interface AiToolContext",
+              "members": [
+                {
+                  "name": "req",
+                  "signature": "req: Request;",
+                  "doc": "The incoming `/cms/api/ai.tools.call` request.",
+                  "examples": []
+                },
+                {
+                  "name": "rootConfig",
+                  "signature": "rootConfig: RootConfig;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "user",
+                  "signature": "user: {\n    email: string;\n};",
+                  "doc": "The signed-in CMS user.",
+                  "examples": []
+                },
+                {
+                  "name": "role",
+                  "signature": "role: UserRole;",
+                  "doc": "The user's role on the CMS project.",
+                  "examples": []
+                },
+                {
+                  "name": "cmsClient",
+                  "signature": "cmsClient: RootCMSClient;",
+                  "doc": "A CMS client for reading and writing CMS content.",
+                  "examples": []
+                }
+              ],
+              "doc": "Context passed to a custom tool's `execute` function.",
               "examples": []
             },
             {
@@ -7270,7 +7402,7 @@
             {
               "name": "CMSPluginOptions",
               "kind": "type",
-              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    resolveSite?: (req: Request) => ResolvedSite | null | Promise<ResolvedSite | null>;\n    isUserAuthorized?: (req: Request, user: CMSUser, site: ResolvedSite) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
+              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    resolveSite?: (req: Request) => ResolvedSite | null | Promise<ResolvedSite | null>;\n    isUserAuthorized?: (req: Request, user: CMSUser, site: ResolvedSite) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig & AiExtensions;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
               "members": [],
               "doc": "",
               "examples": []
@@ -7693,6 +7825,14 @@
               "signature": "const DEFAULT_EMAIL_TEMPLATE: Readonly<Required<EmailNotificationTemplate>>;",
               "members": [],
               "doc": "Default templates used by {@link emailNotifications} when no custom\ntemplate content is provided. Exported so custom templates can compose with\nthe defaults, e.g.\n`template: {...DEFAULT_EMAIL_TEMPLATE, subject: 'Custom subject'}`.",
+              "examples": []
+            },
+            {
+              "name": "defineAiTool",
+              "kind": "function",
+              "signature": "function defineAiTool<INPUT, OUTPUT>(tool: AiTool<INPUT, OUTPUT>): AiTool<INPUT, OUTPUT>;",
+              "members": [],
+              "doc": "Helper for defining a custom tool with the `execute` input type inferred\nfrom `inputSchema`.",
               "examples": []
             },
             {
@@ -8222,6 +8362,14 @@
                 }
               ],
               "doc": "A site served by the CMS. See the `resolveSite` option.",
+              "examples": []
+            },
+            {
+              "name": "RootAiPlugin",
+              "kind": "type",
+              "signature": "type RootAiPlugin = Plugin & {\n    rootAi?: AiExtensions;\n};",
+              "members": [],
+              "doc": "A Root.js plugin that contributes custom tools and skills to Root AI.",
               "examples": []
             },
             {

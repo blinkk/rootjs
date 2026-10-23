@@ -25,6 +25,11 @@ import {
 } from 'ai';
 import {formatAiErrorMessage} from '../../../shared/ai/errors.js';
 import {
+  expandSkillInvocations,
+  type SerializedAiSkill,
+  type SerializedAiTool,
+} from '../../../shared/ai/extensions.js';
+import {
   resolveLanguageModel,
   withBrowserHeaders,
   type SerializedClientModel,
@@ -39,6 +44,10 @@ export interface ClientTurnConfig {
   system: string;
   /** Maximum tool-loop steps before stopping. */
   maxSteps: number;
+  /** Custom tools registered by the project or its plugins. */
+  tools?: SerializedAiTool[];
+  /** Skills the user can invoke with `/<name>`. */
+  skills?: SerializedAiSkill[];
 }
 
 export interface ClientChatTransportOptions {
@@ -53,7 +62,7 @@ export interface ClientChatTransportOptions {
    * write tools are schema-only and surface via `onToolCall`. Return `{}` to
    * disable tools. `model` is provided so callers can honor model capabilities.
    */
-  buildTools: (model: SerializedClientModel) => ToolSet;
+  buildTools: (model: SerializedClientModel, turn: ClientTurnConfig) => ToolSet;
   /**
    * Called once the stream finishes with the final message list (used to
    * persist chat history). Errors thrown here are swallowed by the SDK, so
@@ -74,7 +83,7 @@ export function createClientChatTransport(
       abortSignal,
     }): Promise<ReadableStream<UIMessageChunk>> {
       const turn = await options.loadTurnConfig();
-      const tools = options.buildTools(turn.model);
+      const tools = options.buildTools(turn.model, turn);
       const languageModel = resolveLanguageModel(
         withBrowserHeaders(turn.model)
       );
@@ -82,7 +91,12 @@ export function createClientChatTransport(
       // Heal any tool calls left unresolved by an abandoned turn (e.g. the
       // user closed the chat mid-approval) so every `tool_use` keeps a
       // matching `tool_result` when the history is converted for the model.
-      const sanitized = sanitizeDanglingToolCalls(messages);
+      // `/skill` invocations are expanded into the skill's instructions for
+      // the model only, so the transcript keeps what the user typed.
+      const sanitized = expandSkillInvocations(
+        sanitizeDanglingToolCalls(messages),
+        turn.skills
+      );
       const modelMessages = await convertToModelMessages(sanitized, {tools});
 
       const result = streamText({
