@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 4.1.3
+
+### Patch Changes
+
+- 4dea899: feat: add `maxItems` option to array fields
+- 1f1a3a0: feat: resolve localized field values in cms routes
+- 31ed6f6: feat: add `resolveSite` option for serving multiple sites from one deployment
+- 518035c: feat: port translations from the field translations modal
+- 79ecfe1: fix: log root ai doc edits to the action log
+- 84d387e: feat: add custom tools and skills for root ai
+  - @blinkk/root@4.1.3
+
 ## 4.1.2
 
 ### Patch Changes
