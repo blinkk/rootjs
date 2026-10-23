@@ -1597,7 +1597,7 @@ gcloud auth application-default login`
               `
 // @/root.config.ts
 
-import {cmsPlugin, defineAiTool} from '@blinkk/root-cms/plugin';
+import {cmsPlugin, defineAiSkill, defineAiTool} from '@blinkk/root-cms/plugin';
 import {z} from 'zod';
 
 cmsPlugin({
@@ -1616,11 +1616,11 @@ cmsPlugin({
       }),
     ],
     skills: [
-      {
+      defineAiSkill({
         name: 'launch-checklist',
         description: 'Reviews a page against the launch checklist.',
         instructions: 'Read the page with doc_get, then check that ...',
-      },
+      }),
     ],
   },
 });`

@@ -45,7 +45,7 @@ import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
 
 export type {AiConfig, AiModelConfig, AiProvider} from './ai.js';
-export {defineAiTool} from './ai-extensions.js';
+export {defineAiSkill, defineAiTool} from './ai-extensions.js';
 export type {
   AiExtensions,
   AiSkill,
@@ -710,11 +710,11 @@ export type CMSPluginOptions = {
    *       }),
    *     ],
    *     skills: [
-   *       {
+   *       defineAiSkill({
    *         name: 'seo-review',
    *         description: 'Reviews a page for SEO issues.',
    *         instructions: 'Read the page with doc_get, then ...',
-   *       },
+   *       }),
    *     ],
    *   },
    * });

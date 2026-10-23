@@ -5,7 +5,11 @@
  * Root.js plugin can contribute them through a `rootAi` property:
  *
  * ```ts
- * import {defineAiTool, type RootAiPlugin} from '@blinkk/root-cms/plugin';
+ * import {
+ *   defineAiSkill,
+ *   defineAiTool,
+ *   type RootAiPlugin,
+ * } from '@blinkk/root-cms/plugin';
  * import {z} from 'zod';
  *
  * export function inventoryPlugin(): RootAiPlugin {
@@ -23,11 +27,11 @@
  *         }),
  *       ],
  *       skills: [
- *         {
+ *         defineAiSkill({
  *           name: 'launch-checklist',
  *           description: 'Reviews a page against the launch checklist.',
  *           instructions: 'Read the page with doc_get, then ...',
- *         },
+ *         }),
  *       ],
  *     },
  *   };
@@ -130,6 +134,11 @@ export function defineAiTool<INPUT, OUTPUT>(
   tool: AiTool<INPUT, OUTPUT>
 ): AiTool<INPUT, OUTPUT> {
   return tool;
+}
+
+/** Helper for defining a skill, for consistency with `defineAiTool`. */
+export function defineAiSkill(skill: AiSkill): AiSkill {
+  return skill;
 }
 
 const RESERVED_TOOL_NAMES = new Set<string>([

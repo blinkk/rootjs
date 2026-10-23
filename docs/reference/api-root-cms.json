@@ -7828,6 +7828,14 @@
               "examples": []
             },
             {
+              "name": "defineAiSkill",
+              "kind": "function",
+              "signature": "function defineAiSkill(skill: AiSkill): AiSkill;",
+              "members": [],
+              "doc": "Helper for defining a skill, for consistency with `defineAiTool`.",
+              "examples": []
+            },
+            {
               "name": "defineAiTool",
               "kind": "function",
               "signature": "function defineAiTool<INPUT, OUTPUT>(tool: AiTool<INPUT, OUTPUT>): AiTool<INPUT, OUTPUT>;",
