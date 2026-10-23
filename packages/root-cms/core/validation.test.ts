@@ -1166,3 +1166,48 @@ test('validates password fields', () => {
     ]
   `);
 });
+
+test('validates localized values', () => {
+  const testSchema = schema.define({
+    name: 'TestSchema',
+    fields: [
+      schema.string({id: 'title'}),
+      schema.object({
+        id: 'hero',
+        fields: [schema.image({id: 'image'})],
+      }),
+    ],
+  });
+
+  expect(
+    validateFields(
+      {
+        title: 'Hello',
+        '@title': {
+          translate: false,
+          localizedValues: {de: 'Hallo', fr: null, '@de': {foo: 1}},
+        },
+        hero: {
+          '@image': {localizedValues: {de: {src: 'de.png'}, fr: 'fr.png'}},
+        },
+        '@hero': {localizedValues: []},
+      },
+      testSchema
+    )
+  ).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "object",
+        "message": "Expected object, received string",
+        "path": "hero.@image.localizedValues.fr",
+        "received": "string",
+      },
+      {
+        "expected": "object",
+        "message": "Expected object, received array",
+        "path": "@hero.localizedValues",
+        "received": "array",
+      },
+    ]
+  `);
+});

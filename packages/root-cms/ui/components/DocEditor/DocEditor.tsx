@@ -157,6 +157,11 @@ import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslation
 import {FieldErrorBoundary} from '../FieldErrorBoundary/FieldErrorBoundary.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
+import {
+  LocalizedValuesButton,
+  LocalizedValuesPanel,
+  testLocalizedValuesEnabled,
+} from '../LocalizedValuesPanel/LocalizedValuesPanel.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {clampPinnedWindowPosition} from '../PinnedCommentThreads/PinnedCommentThreads.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
@@ -983,6 +988,11 @@ DocEditor.FieldBody = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
+  const localizable = useMemo(
+    () => testLocalizedValuesEnabled(field, props.deepKey, props.isArrayChild),
+    [field, props.deepKey, props.isArrayChild]
+  );
+  const [localizedValuesOpened, setLocalizedValuesOpened] = useState(false);
 
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
@@ -1013,7 +1023,19 @@ DocEditor.FieldBody = (props: FieldProps) => {
       id={props.deepKey}
       ref={ref}
     >
-      {showFieldHeader && <DocEditor.FieldHeader {...props} />}
+      {showFieldHeader && (
+        <DocEditor.FieldHeader
+          {...props}
+          localizedValues={
+            localizable
+              ? {
+                  opened: localizedValuesOpened,
+                  onToggle: () => setLocalizedValuesOpened((value) => !value),
+                }
+              : undefined
+          }
+        />
+      )}
       <div className="DocEditor__field__input">
         <FieldErrorBoundary deepKey={props.deepKey}>
           {field.type === 'array' ? (
@@ -1055,11 +1077,56 @@ DocEditor.FieldBody = (props: FieldProps) => {
           )}
         </FieldErrorBoundary>
       </div>
+      {localizable && (
+        <DocEditor.LocalizedValues
+          field={field}
+          deepKey={props.deepKey}
+          level={level}
+          opened={localizedValuesOpened}
+          onClose={() => setLocalizedValuesOpened(false)}
+        />
+      )}
     </div>
   );
 };
 
-DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
+interface LocalizedValuesProps {
+  field: schema.Field;
+  deepKey: string;
+  level: number;
+  opened: boolean;
+  onClose: () => void;
+}
+
+/** Renders the localized values panel with an editor for each locale. */
+DocEditor.LocalizedValues = (props: LocalizedValuesProps) => {
+  const types = useCollectionSchemaTypes();
+  return (
+    <LocalizedValuesPanel
+      field={props.field}
+      deepKey={props.deepKey}
+      opened={props.opened}
+      onClose={props.onClose}
+      types={types}
+      renderField={(deepKey) => (
+        <DocEditor.FieldBody
+          field={props.field}
+          deepKey={deepKey}
+          level={props.level}
+          hideHeader
+        />
+      )}
+    />
+  );
+};
+
+interface FieldHeaderProps extends FieldProps {
+  className?: string;
+  /** Shows the localized values toggle, see `DocEditor.LocalizedValues`. */
+  localizedValues?: {opened: boolean; onToggle: () => void};
+}
+
+DocEditor.FieldHeader = (props: FieldHeaderProps) => {
   const field = props.field;
   const label = field.label || field.id;
 
@@ -1075,7 +1142,8 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       className={joinClassNames(
         props.className,
         'DocEditor__FieldHeader',
-        fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers'
+        fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers',
+        props.localizedValues && 'DocEditor__FieldHeader--localizable'
       )}
       data-field-header-for={props.deepKey}
     >
@@ -1110,6 +1178,13 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
             emails={fieldViewers.map((viewer) => viewer.email)}
             size={20}
             max={3}
+          />
+        )}
+        {props.localizedValues && (
+          <LocalizedValuesButton
+            deepKey={props.deepKey}
+            opened={props.localizedValues.opened}
+            onToggle={props.localizedValues.onToggle}
           />
         )}
         <DocEditor.FieldHeaderCommentActionIcon
