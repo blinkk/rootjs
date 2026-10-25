@@ -249,7 +249,8 @@ Finish with a short summary for the user:
   `https://rootjs.dev/docs/deployment/`.
 - Teammates who clone the repo run `pnpm install`, sign in with gcloud, and
   run `pnpm dev`, which syncs `.env` from Secret Manager. An admin adds them
-  in the CMS under Settings.
+  in the CMS under Settings. Their agent can walk them through it with the
+  root-dev-setup skill, which step 7 installed.
 - What to try next, e.g. "add a template for a feature grid" or "add a blog
   collection".
 
