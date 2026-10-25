@@ -291,13 +291,13 @@ const GETTING_STARTED: DocCopy = {
           'Set up with an AI agent',
           [
             p(
-              `The quickest way to a working site is to let a coding agent, such as ${a('https://claude.com/claude-code', 'Claude Code')}, run the steps on this page for you. Start it in the folder where you keep your projects and paste this prompt:`
+              `The quickest way to a working site is to let a coding agent (such as ${a('https://claude.com/claude-code', 'Claude Code')}) run the steps on this page for you. Start it in the folder where you keep your projects and paste this prompt:`
             ),
           ],
           [
             plain(
               `
-Set up a new Root.js site with the CMS in ./my-site. Follow the instructions at
+Set up a new Root.js site. Follow the instructions at
 https://rootjs.dev/skills/root-cms-setup.md`
             ),
             copy(
