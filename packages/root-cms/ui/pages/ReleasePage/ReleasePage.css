@@ -146,3 +146,18 @@
 .ReleasePage__footer {
   margin-top: 40px;
 }
+
+.ReleasePage__rollbackConflicts {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ffcecb;
+  border-radius: 4px;
+  background: #fff5f5;
+}
+
+.ReleasePage__rollbackConflicts ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 200px;
+  overflow-y: auto;
+}

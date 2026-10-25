@@ -19,6 +19,7 @@ import {
 import {logAction} from './actions.js';
 import {MultiBatch} from './batch.js';
 import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
+import type {ReleaseRollbackRecorder} from './release-rollback.js';
 
 export type DataSourceType = 'http' | 'gsheet';
 
@@ -397,7 +398,15 @@ export async function unpublishDataSource(id: string) {
 
 export async function cmsPublishDataSources(
   ids: string[],
-  options?: {batch?: MultiBatch; commitBatch?: boolean}
+  options?: {
+    batch?: MultiBatch;
+    commitBatch?: boolean;
+    /**
+     * Records each data source's pre-release state so the release can be
+     * rolled back. See `release-rollback.ts`.
+     */
+    rollbackRecorder?: ReleaseRollbackRecorder;
+  }
 ) {
   if (ids.length === 0) {
     return;
@@ -414,10 +423,10 @@ export async function cmsPublishDataSources(
       throw new Error(`data source is archived: ${id}`);
     }
     const dataRes = await getFromDataSource(id, {mode: 'draft'});
-    // Each published data source adds 3 writes to the batch. Reserve capacity
-    // for all of them so the writes for a single data source are committed
-    // atomically.
-    batch.ensureCapacity(3);
+    // Each published data source adds 3 writes to the batch (plus 1 for its
+    // rollback snapshot). Reserve capacity for all of them so the writes for a
+    // single data source are committed atomically.
+    batch.ensureCapacity(options?.rollbackRecorder ? 4 : 3);
     const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
     const dataDocRefDraft = doc(
       db,
@@ -452,6 +461,7 @@ export async function cmsPublishDataSources(
       publishedAt: serverTimestamp(),
       publishedBy: window.firebase.user.email!,
     });
+    options?.rollbackRecorder?.recordDataSource(batch, id);
     logAction('datasource.publish', {metadata: {datasourceId: id}});
   }
   if (!options?.batch || options?.commitBatch) {

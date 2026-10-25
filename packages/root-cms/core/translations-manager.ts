@@ -482,11 +482,14 @@ export class TranslationsManager {
    * to a batch. For each locale doc, the draft doc's `sys` is updated with
    * `publishedAt/By` and a copy is saved to the published collection. Returns
    * the number of ops added to the batch (2 per locale doc).
+   *
+   * Pass `publishedAt` to stamp every locale doc with the same timestamp (e.g.
+   * so a release rollback snapshot can record the exact value).
    */
   addPublishTranslationsOps(
     localeDocs: TranslationsLocaleDocWithRef[],
     batch: WriteBatch,
-    options?: {publishedBy?: string}
+    options?: {publishedBy?: string; publishedAt?: Timestamp}
   ): number {
     const db = this.cmsClient.db;
     const project = this.cmsClient.projectId;
@@ -496,7 +499,7 @@ export class TranslationsManager {
       const data = localeDoc.data;
       const sys = {
         ...data.sys,
-        publishedAt: Timestamp.now(),
+        publishedAt: options?.publishedAt ?? Timestamp.now(),
         publishedBy: publishedBy,
       };
       batch.update(localeDoc.ref, {sys});

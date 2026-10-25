@@ -53,6 +53,18 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
       </Tooltip>
     );
   }
+  if (testIsValidTimestamp(release.rolledBackAt)) {
+    return (
+      <Tooltip
+        {...TOOLTIP_PROPS}
+        label={`Rolled back ${timeDiff(release.rolledBackAt)} by ${
+          release.rolledBackBy
+        }`}
+      >
+        <StatusBadge tone="draft">Rolled back</StatusBadge>
+      </Tooltip>
+    );
+  }
   return <StatusBadge tone="draft">Unpublished</StatusBadge>;
 }
 

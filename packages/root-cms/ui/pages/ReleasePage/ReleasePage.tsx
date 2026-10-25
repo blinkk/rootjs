@@ -36,12 +36,17 @@ import {errorMessage, notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {testHasPublishChecks} from '../../utils/publish-checks.js';
 import {
+  ReleaseRollbackConflict,
+  getReleaseRollbackPlan,
+} from '../../utils/release-rollback.js';
+import {
   Release,
   cancelScheduledRelease,
   getRelease,
   publishRelease,
+  rollbackRelease,
 } from '../../utils/release.js';
-import {timestamp} from '../../utils/time.js';
+import {getTimeAgo, timestamp} from '../../utils/time.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 
 export function ReleasePage(props: {id: string}) {
@@ -144,6 +149,7 @@ ReleasePage.PublishStatus = (props: {
 
   const release = props.release;
   const [publishLoading, setPublishLoading] = useState(false);
+  const [rollbackLoading, setRollbackLoading] = useState(false);
   const [checksRunning, setChecksRunning] = useState(false);
   const [skipChecks, setSkipChecks] = useState(false);
 
@@ -264,6 +270,111 @@ ReleasePage.PublishStatus = (props: {
     setPublishLoading(false);
   }
 
+  /**
+   * Checks whether any items in the release have changed since the release
+   * was published and asks the user to confirm the rollback.
+   */
+  async function onRollbackClicked() {
+    setRollbackLoading(true);
+    let plan;
+    try {
+      plan = await getReleaseRollbackPlan(release.id);
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Cannot roll back release',
+        message: `Failed to load rollback data: ${errorMessage(err)}`,
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    } finally {
+      setRollbackLoading(false);
+    }
+    if (plan.items.length === 0) {
+      showNotification({
+        title: 'Cannot roll back release',
+        message:
+          'No rollback data found. Releases published before rollbacks were supported cannot be rolled back.',
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    }
+
+    const conflicts = plan.conflicts;
+    const numItems = plan.items.filter(
+      (item) => item.snapshot.type !== 'translations'
+    ).length;
+    modals.openConfirmModal({
+      ...modalTheme,
+      title: `Roll back release: ${release.id}`,
+      children: (
+        <>
+          <Text size="body-sm" weight="semi-bold">
+            Are you sure you want to roll back this release? The {numItems}{' '}
+            items in the release will be restored to their published state from
+            before the release was published. Drafts are not changed.
+          </Text>
+          {conflicts.length > 0 && (
+            <div className="ReleasePage__rollbackConflicts">
+              <Text size="body-sm" weight="semi-bold">
+                Warning: the following items have been published or unpublished
+                since the release was published. Rolling back will overwrite
+                those changes.
+              </Text>
+              <ul>
+                {conflicts.map((conflict) => (
+                  <li key={rollbackConflictLabel(conflict)}>
+                    <Text size="body-sm">
+                      <code>{rollbackConflictLabel(conflict)}</code>{' '}
+                      {rollbackConflictDetails(conflict)}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      ),
+      labels: {
+        confirm: conflicts.length > 0 ? 'Roll back anyway' : 'Roll back',
+        cancel: 'Cancel',
+      },
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: conflicts.length > 0 ? 'red' : 'dark', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: true,
+      onConfirm: () => {
+        rollback({force: conflicts.length > 0});
+      },
+    });
+  }
+
+  async function rollback(options: {force: boolean}) {
+    setRollbackLoading(true);
+    await notifyErrors(async () => {
+      const notificationId = `rollback-release-${release.id}`;
+      showNotification({
+        id: notificationId,
+        title: 'Rolling back release',
+        message: `Rolling back ${release.id}...`,
+        loading: true,
+        autoClose: false,
+      });
+      await rollbackRelease(release.id, {force: options.force});
+      updateNotification({
+        id: notificationId,
+        title: 'Rolled back release!',
+        message: `Successfully rolled back ${release.id}.`,
+        loading: false,
+        autoClose: 5000,
+      });
+      props.onAction('rollback');
+    });
+    setRollbackLoading(false);
+  }
+
   function onScheduleClicked() {
     scheduleReleaseModal.open();
   }
@@ -372,6 +483,34 @@ ReleasePage.PublishStatus = (props: {
                         </Tooltip>
                       </ConditionalTooltip>
                     ))}
+                  {!release.archivedAt &&
+                    !release.scheduledAt &&
+                    release.publishedAt && (
+                      <ConditionalTooltip
+                        label="You don't have access to roll back this release"
+                        condition={!canPublish}
+                      >
+                        <Tooltip
+                          label="Restore the items in the release to their state before the release was published"
+                          position="bottom"
+                          withArrow
+                          wrapLines
+                          width={220}
+                          disabled={!canPublish}
+                        >
+                          <Button
+                            variant="default"
+                            size="xs"
+                            compact
+                            onClick={() => onRollbackClicked()}
+                            loading={rollbackLoading}
+                            disabled={!canPublish || publishLoading}
+                          >
+                            Roll back
+                          </Button>
+                        </Tooltip>
+                      </ConditionalTooltip>
+                    )}
                 </div>
                 {!release.archivedAt &&
                   releaseHasChecks &&
@@ -502,3 +641,19 @@ ReleasePage.DataSourcesList = (props: {release: Release}) => {
     </div>
   );
 };
+
+function rollbackConflictLabel(conflict: ReleaseRollbackConflict) {
+  return conflict.locale ? `${conflict.id} (${conflict.locale})` : conflict.id;
+}
+
+function rollbackConflictDetails(conflict: ReleaseRollbackConflict) {
+  const verb = conflict.reason === 'published' ? 'published' : 'unpublished';
+  const parts = [verb];
+  if (conflict.publishedAt?.toMillis) {
+    parts.push(getTimeAgo(conflict.publishedAt.toMillis()));
+  }
+  if (conflict.publishedBy) {
+    parts.push(`by ${conflict.publishedBy}`);
+  }
+  return parts.join(' ');
+}
