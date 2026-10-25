@@ -253,7 +253,7 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: "Adds a copy-paste prompt for setting up a site with an AI agent, replaces the manual Firebase steps with the `root-cms setup` wizard (the manual steps move to CMS configuration), and fixes the home page step to use the starter's TemplateHero template.",
+  note: 'Adds a section on setting up a cloned project on a new machine, with a prompt for the root-dev-setup agent skill, and points the AI agents section at that skill instead of `root-cms setup`.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
@@ -309,6 +309,45 @@ https://rootjs.dev/skills/root-cms-setup.md`
               ),
               p(
                 "If you'd rather do it yourself, the rest of this page covers the same steps."
+              )
+            ),
+          ]
+        ),
+        section(
+          'existing-project',
+          'Set up an existing project',
+          [
+            p(
+              `If you're joining a team whose site is already set up, you don't need ${c('root-cms setup')}. Clone the repo, open an agent in it, and paste this prompt:`
+            ),
+          ],
+          [
+            plain(
+              `
+Set up this Root.js project on my machine. Follow the instructions at
+https://rootjs.dev/skills/root-dev-setup.md`
+            ),
+            copy(
+              p(
+                `The agent checks Node.js, pnpm and ${c('gcloud')}, asks you to sign in to Google Cloud, installs the dependencies, downloads the team's shared secrets into ${c('.env')}, checks that you can reach the CMS and starts the dev server. It doesn't change the project's Google Cloud setup; if you're missing access, it tells you what to ask for.`
+              ),
+              p('To do it yourself:')
+            ),
+            code(
+              'bash',
+              `
+pnpm install
+
+# Sign in with the account your team added to the project. Both open a browser.
+gcloud auth login
+gcloud auth application-default login
+
+# Downloads the shared secrets into .env, then starts the server.
+pnpm dev`
+            ),
+            copy(
+              p(
+                `To use the CMS, you need access to the site's Google Cloud project (for Firestore and Secret Manager) and a role in the CMS, which an admin adds under <b>Settings</b>. If Firestore returns ${c('PERMISSION_DENIED')} locally, run ${c('gcloud auth application-default set-quota-project &lt;project-id&gt;')}.`
               )
             ),
           ]
@@ -468,7 +507,7 @@ pnpm exec root secrets sync`
               ul(
                 'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
-                `Connect a teammate's checkout, or a new environment, to Google Cloud with ${c('root-cms setup')}.`
+                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`
               ),
               p(
                 `The skills install to an existing agent skills folder, such as ${c('.claude/skills')}, or to ${c('.agent/skills')} if there isn't one. Re-run the command with ${c('--force')} after upgrading ${c('@blinkk/root-cms')} to pick up new versions.`
