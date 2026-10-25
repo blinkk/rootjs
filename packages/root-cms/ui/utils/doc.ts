@@ -37,6 +37,7 @@ import {
   sourceHash,
 } from './l10n.js';
 import {type PublishChecksAuditMetadata} from './publish-checks.js';
+import type {ReleaseRollbackRecorder} from './release-rollback.js';
 import {
   TranslationsLocaleDocWithRef,
   addDeleteTranslationsOpsToBatch,
@@ -181,6 +182,11 @@ export async function cmsPublishDocs(
     publishMessage?: string;
     /** Outcome of the publishing checks, recorded in the action log. */
     checksAudit?: PublishChecksAuditMetadata;
+    /**
+     * Records each doc's pre-release state so the release can be rolled back.
+     * See `release-rollback.ts`.
+     */
+    rollbackRecorder?: ReleaseRollbackRecorder;
   }
 ) {
   if (docIds.length === 0) {
@@ -204,16 +210,19 @@ export async function cmsPublishDocs(
   if (options?.releaseId) {
     versionTags.push(`release:${options.releaseId}`);
   }
+  const recorder = options?.rollbackRecorder;
   docIds.forEach((docId) => {
     const draftData = draftDocs[docId];
     if (!draftData) {
       throw new Error(`doc does not exist: ${docId}`);
     }
     // Reserve capacity for the doc's writes plus its translations writes (2
-    // per locale doc) so the doc and its translations are committed
-    // atomically within a single underlying batch.
+    // per locale doc), and their rollback snapshots, so the doc and its
+    // translations are committed atomically within a single underlying batch.
     const translationsLocaleDocs = translationsByDocId[docId] || [];
-    batch.ensureCapacity(4 + 2 * translationsLocaleDocs.length);
+    const numWrites = 4 + 2 * translationsLocaleDocs.length;
+    const numSnapshots = recorder ? 1 + translationsLocaleDocs.length : 0;
+    batch.ensureCapacity(numWrites + numSnapshots);
     updatePublishedDocDataInBatch(
       batch,
       docId,
@@ -221,8 +230,15 @@ export async function cmsPublishDocs(
       versionTags,
       options?.publishMessage
     );
+    recorder?.recordDoc(batch, docId);
     if (v2TranslationsEnabled) {
-      addPublishTranslationsOpsToBatch(batch, translationsLocaleDocs);
+      const publishedAt = Timestamp.now();
+      addPublishTranslationsOpsToBatch(batch, translationsLocaleDocs, {
+        publishedAt,
+      });
+      translationsLocaleDocs.forEach((localeDoc) => {
+        recorder?.recordTranslations(batch, localeDoc.data, publishedAt);
+      });
     }
   });
   const commitsBatch = !options?.batch || options?.commitBatch;
@@ -1001,6 +1017,19 @@ export function getVersionDocRef(docId: string, versionId: string) {
 export async function getDraftDocs(
   docIds: string[]
 ): Promise<Record<string, CMSDoc>> {
+  return getDocsInMode(docIds, 'Drafts');
+}
+
+export async function getPublishedDocs(
+  docIds: string[]
+): Promise<Record<string, CMSDoc>> {
+  return getDocsInMode(docIds, 'Published');
+}
+
+async function getDocsInMode(
+  docIds: string[],
+  mode: 'Drafts' | 'Published'
+): Promise<Record<string, CMSDoc>> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const collectionSlugs: Record<string, string[]> = {};
@@ -1021,7 +1050,7 @@ export async function getDraftDocs(
       chunks.push({collectionId, slugs: slugs.slice(i, i + CHUNK_SIZE)});
     }
   });
-  const drafts: Record<string, CMSDoc> = {};
+  const docs: Record<string, CMSDoc> = {};
   await Promise.all(
     chunks.map(async ({collectionId, slugs}) => {
       const dbCollection = collection(
@@ -1030,17 +1059,17 @@ export async function getDraftDocs(
         projectId,
         'Collections',
         collectionId,
-        'Drafts'
+        mode
       );
       const q = query(dbCollection, where(documentId(), 'in', slugs));
       const res = await getDocs(q);
       res.forEach((doc) => {
         const docId = `${collectionId}/${doc.id}`;
-        drafts[docId] = doc.data() as CMSDoc;
+        docs[docId] = doc.data() as CMSDoc;
       });
     })
   );
-  return drafts;
+  return docs;
 }
 
 export interface ListVersionsResult {

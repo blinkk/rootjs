@@ -16,8 +16,14 @@ import {renderAutoSlug} from '../../shared/auto-slug.js';
 import {logAction} from './actions.js';
 import {MultiBatch} from './batch.js';
 import {cmsPublishDataSources} from './data-source.js';
+import {removeDocsFromCache} from './doc-cache.js';
 import {cmsPublishDocs, cmsSyncDependencyGraph} from './doc.js';
 import {type PublishChecksAuditMetadata} from './publish-checks.js';
+import {
+  ReleaseRollbackRecorder,
+  addReleaseRollbackOpsToBatch,
+  getReleaseRollbackPlan,
+} from './release-rollback.js';
 
 export interface Release {
   id: string;
@@ -32,6 +38,12 @@ export interface Release {
   publishedBy?: string;
   archivedAt?: Timestamp;
   archivedBy?: string;
+  /**
+   * Set when a published release is rolled back. A rolled back release is no
+   * longer published, so it can be edited and re-published.
+   */
+  rolledBackAt?: Timestamp;
+  rolledBackBy?: string;
 }
 
 const COLLECTION_ID = 'Releases';
@@ -287,6 +299,13 @@ export async function publishRelease(
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
 
+  // Fetch the current published state of the release's items, which is saved
+  // alongside each item's publish so the release can be rolled back.
+  const rollbackRecorder = await ReleaseRollbackRecorder.load(id, {
+    docIds,
+    dataSourceIds,
+  });
+
   // Create a batch request that publishes the release's docs and data sources
   // and updates the release. `MultiBatch` automatically splits the writes
   // across multiple batch requests as needed to stay within firestore's
@@ -294,13 +313,18 @@ export async function publishRelease(
   // release.
   const batch = new MultiBatch(db);
   if (dataSourceIds.length > 0) {
-    await cmsPublishDataSources(dataSourceIds, {batch, commitBatch: false});
+    await cmsPublishDataSources(dataSourceIds, {
+      batch,
+      commitBatch: false,
+      rollbackRecorder,
+    });
   }
   await cmsPublishDocs(docIds, {
     batch,
     releaseId: id,
     publishMessage: release.description,
     checksAudit: options?.checksAudit,
+    rollbackRecorder,
   });
   // Update the release's publishedAt. This write is intentionally added last
   // so that if any of the previous batches fails to commit, the release is
@@ -310,6 +334,8 @@ export async function publishRelease(
     publishedBy: window.firebase.user.email,
     scheduledAt: deleteField(),
     scheduledBy: deleteField(),
+    rolledBackAt: deleteField(),
+    rolledBackBy: deleteField(),
   });
   await batch.commit();
   updateReleaseInCache(id, {
@@ -317,6 +343,8 @@ export async function publishRelease(
     publishedBy: window.firebase.user.email,
     scheduledAt: undefined,
     scheduledBy: undefined,
+    rolledBackAt: undefined,
+    rolledBackBy: undefined,
   });
   console.log(`published release: ${id}`);
   // Update the dependency graph for the released docs (cmsPublishDocs skips
@@ -336,6 +364,77 @@ export async function publishRelease(
   logAction('release.publish', {
     metadata,
   });
+}
+
+/**
+ * Rolls back a published release, restoring each doc, translation and data
+ * source in the release to its published state from before the release was
+ * published. Drafts keep the release's changes.
+ *
+ * If any item has been published or unpublished by someone else since the
+ * release, rolling back would overwrite that change, so an error is thrown
+ * unless `force` is set. Use `getReleaseRollbackPlan()` to list those items.
+ */
+export async function rollbackRelease(id: string, options?: {force?: boolean}) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+  if (!release.publishedAt) {
+    throw new Error(`release is not published: ${id}`);
+  }
+  const plan = await getReleaseRollbackPlan(id);
+  if (plan.items.length === 0) {
+    throw new Error(
+      `no rollback data for release: ${id} (releases published before rollbacks were supported cannot be rolled back)`
+    );
+  }
+  if (plan.conflicts.length > 0 && !options?.force) {
+    throw new Error(
+      `cannot rollback release ${id}: ${plan.conflicts.length} item(s) changed since the release was published`
+    );
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  const batch = new MultiBatch(db);
+  addReleaseRollbackOpsToBatch(batch, plan);
+  // Added last so the release stays published (and the rollback can be
+  // retried) if any of the previous batches fails to commit.
+  batch.update(docRef, {
+    publishedAt: deleteField(),
+    publishedBy: deleteField(),
+    rolledBackAt: serverTimestamp(),
+    rolledBackBy: window.firebase.user.email,
+  });
+  await batch.commit();
+  updateReleaseInCache(id, {
+    publishedAt: undefined,
+    publishedBy: undefined,
+    rolledBackAt: Timestamp.now(),
+    rolledBackBy: window.firebase.user.email,
+  });
+  console.log(`rolled back release: ${id}`);
+
+  const restoredIds = (type: string) =>
+    plan.items
+      .filter((item) => item.snapshot.type === type && !item.deleted)
+      .map((item) => item.snapshot.id);
+  const docIds = restoredIds('doc');
+  removeDocsFromCache(docIds);
+  await cmsSyncDependencyGraph(docIds);
+  const metadata: Record<string, unknown> = {
+    releaseId: id,
+    docIds,
+    dataSourceIds: restoredIds('dataSource'),
+  };
+  if (plan.conflicts.length > 0) {
+    metadata.overwritten = plan.conflicts.map((conflict) =>
+      conflict.locale ? `${conflict.id}:${conflict.locale}` : conflict.id
+    );
+  }
+  logAction('release.rollback', {metadata});
 }
 
 export async function scheduleRelease(

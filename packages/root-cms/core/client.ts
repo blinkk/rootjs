@@ -70,6 +70,7 @@ import {
   type ReadCache,
   type ReadCacheType,
 } from './read-cache.js';
+import {ReleaseRollbackRecorder} from './release-rollback.js';
 import {Collection} from './schema.js';
 import {
   TranslationsLocaleDoc,
@@ -318,6 +319,12 @@ export interface Release {
   scheduledBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  /**
+   * Set when a published release is rolled back. A rolled back release is no
+   * longer published, so it can be edited and re-published.
+   */
+  rolledBackAt?: Timestamp;
+  rolledBackBy?: string;
 }
 
 export interface Action<T = any> {
@@ -1350,7 +1357,16 @@ export class RootCMSClient {
    */
   async publishDocs(
     docIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch; releaseId?: string}
+    options?: {
+      publishedBy: string;
+      batch?: WriteBatch;
+      releaseId?: string;
+      /**
+       * Records each doc's pre-release state so the release can be rolled
+       * back. See `release-rollback.ts`.
+       */
+      rollbackRecorder?: ReleaseRollbackRecorder;
+    }
   ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
     const publishedBy = options?.publishedBy || this.user;
@@ -1492,13 +1508,31 @@ export class RootCMSClient {
       });
       batchCount += 1;
 
+      // Save the doc's pre-release state for rollbacks, in the same batch as
+      // the publish.
+      const recorder = options?.rollbackRecorder;
+      if (recorder) {
+        batchCount += recorder.recordDoc(batch, id);
+      }
+
       // Publish the doc's translations within the same batch so the doc and
       // its translations go live atomically.
       if (tm) {
         const localeDocs = translationsByDocId[id] || [];
+        const publishedAt = Timestamp.now();
         batchCount += tm.addPublishTranslationsOps(localeDocs, batch, {
           publishedBy,
+          publishedAt,
         });
+        if (recorder) {
+          for (const localeDoc of localeDocs) {
+            batchCount += recorder.recordTranslations(
+              batch,
+              localeDoc.data,
+              publishedAt
+            );
+          }
+        }
       }
 
       publishedDocs.push(doc);
@@ -2010,14 +2044,25 @@ export class RootCMSClient {
       const release = snapshot.data() as Release;
       const publishedBy = release.scheduledBy || 'root-cms-client';
       const dataSourceIds = release.dataSourceIds || [];
-      if (dataSourceIds.length > 0) {
-        await this.publishDataSources(dataSourceIds, {publishedBy});
-      }
       const docIds = release.docIds || [];
+      // Fetch the current published state of the release's items, which is
+      // saved alongside each item's publish so the release can be rolled back.
+      const rollbackRecorder = await ReleaseRollbackRecorder.load(
+        this,
+        release.id,
+        {docIds, dataSourceIds}
+      );
+      if (dataSourceIds.length > 0) {
+        await this.publishDataSources(dataSourceIds, {
+          publishedBy,
+          rollbackRecorder,
+        });
+      }
       if (docIds.length > 0) {
         await this.publishDocs(docIds, {
           publishedBy,
           releaseId: release.id,
+          rollbackRecorder,
         });
       }
 
@@ -2029,6 +2074,8 @@ export class RootCMSClient {
         publishedBy: publishedBy,
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
+        rolledBackAt: FieldValue.delete(),
+        rolledBackBy: FieldValue.delete(),
       });
 
       // Log an action for the published release.
@@ -2513,7 +2560,16 @@ export class RootCMSClient {
 
   async publishDataSources(
     dataSourceIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch; commitBatch?: boolean}
+    options?: {
+      publishedBy: string;
+      batch?: WriteBatch;
+      commitBatch?: boolean;
+      /**
+       * Records each data source's pre-release state so the release can be
+       * rolled back. See `release-rollback.ts`.
+       */
+      rollbackRecorder?: ReleaseRollbackRecorder;
+    }
   ) {
     const publishedBy = options?.publishedBy || this.user;
     const batch = options?.batch || this.db.batch();
@@ -2551,6 +2607,7 @@ export class RootCMSClient {
         publishedAt: FieldValue.serverTimestamp(),
         publishedBy,
       });
+      options?.rollbackRecorder?.recordDataSource(batch, id);
     }
     if (!options?.batch || options?.commitBatch) {
       await batch.commit();

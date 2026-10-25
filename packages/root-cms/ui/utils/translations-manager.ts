@@ -113,7 +113,7 @@ function getTranslationsManagerCollection(mode: TranslationsDocMode) {
   );
 }
 
-function getTranslationsLocaleDocRef(
+export function getTranslationsLocaleDocRef(
   mode: TranslationsDocMode,
   id: string,
   locale: string
@@ -357,10 +357,14 @@ export async function saveDraftTranslations(
  * to a batch: updates each draft doc's `sys` with `publishedAt/By` and copies
  * the doc to the published collection. Returns the number of ops added to
  * the batch (2 per locale doc).
+ *
+ * Pass `publishedAt` to stamp every locale doc with the same timestamp (e.g.
+ * so a release rollback snapshot can record the exact value).
  */
 export function addPublishTranslationsOpsToBatch(
   batch: WriteBatch | MultiBatch,
-  localeDocs: TranslationsLocaleDocWithRef[]
+  localeDocs: TranslationsLocaleDocWithRef[],
+  options?: {publishedAt?: Timestamp}
 ): number {
   const publishedBy = window.firebase.user.email || 'root-cms-ui';
   let numOps = 0;
@@ -368,7 +372,7 @@ export function addPublishTranslationsOpsToBatch(
     const data = localeDoc.data;
     const sys = {
       ...data.sys,
-      publishedAt: Timestamp.now(),
+      publishedAt: options?.publishedAt ?? Timestamp.now(),
       publishedBy: publishedBy,
     };
     batch.update(localeDoc.ref, {sys});
