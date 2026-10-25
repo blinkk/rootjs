@@ -1,0 +1,1 @@
+../../../packages/root-cms/skills/root-dev-setup/SKILL.md

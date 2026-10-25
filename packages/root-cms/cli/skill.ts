@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 export const SKILL_NAMES = [
   'root-cms-setup',
+  'root-dev-setup',
   'root-cms-cli',
   'root-cms-propose',
   'root-cms-apply',
