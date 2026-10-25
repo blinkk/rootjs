@@ -282,7 +282,7 @@ ReleasePage.PublishStatus = (props: {
     } catch (err) {
       console.error(err);
       showNotification({
-        title: 'Cannot roll back release',
+        title: 'Cannot rollback release',
         message: `Failed to load rollback data: ${errorMessage(err)}`,
         color: 'red',
         autoClose: false,
@@ -293,7 +293,7 @@ ReleasePage.PublishStatus = (props: {
     }
     if (plan.items.length === 0) {
       showNotification({
-        title: 'Cannot roll back release',
+        title: 'Cannot rollback release',
         message:
           'No rollback data found. Releases published before rollbacks were supported cannot be rolled back.',
         color: 'red',
@@ -308,13 +308,13 @@ ReleasePage.PublishStatus = (props: {
     ).length;
     modals.openConfirmModal({
       ...modalTheme,
-      title: `Roll back release: ${release.id}`,
+      title: `Rollback release: ${release.id}`,
       children: (
         <>
           <Text size="body-sm" weight="semi-bold">
-            Are you sure you want to roll back this release? The {numItems}{' '}
-            items in the release will be restored to their published state from
-            before the release was published. Drafts are not changed.
+            Are you sure you want to rollback this release? The {numItems} items
+            in the release will be restored to their published state from before
+            the release was published. Drafts are not changed.
           </Text>
           {conflicts.length > 0 && (
             <div className="ReleasePage__rollbackConflicts">
@@ -338,7 +338,7 @@ ReleasePage.PublishStatus = (props: {
         </>
       ),
       labels: {
-        confirm: conflicts.length > 0 ? 'Roll back anyway' : 'Roll back',
+        confirm: conflicts.length > 0 ? 'Rollback anyway' : 'Rollback',
         cancel: 'Cancel',
       },
       cancelProps: {size: 'xs'},
@@ -487,7 +487,7 @@ ReleasePage.PublishStatus = (props: {
                     !release.scheduledAt &&
                     release.publishedAt && (
                       <ConditionalTooltip
-                        label="You don't have access to roll back this release"
+                        label="You don't have access to rollback this release"
                         condition={!canPublish}
                       >
                         <Tooltip
@@ -506,7 +506,7 @@ ReleasePage.PublishStatus = (props: {
                             loading={rollbackLoading}
                             disabled={!canPublish || publishLoading}
                           >
-                            Roll back
+                            Rollback
                           </Button>
                         </Tooltip>
                       </ConditionalTooltip>

@@ -391,7 +391,7 @@ export async function rollbackRelease(id: string, options?: {force?: boolean}) {
   }
   if (plan.conflicts.length > 0 && !options?.force) {
     throw new Error(
-      `cannot roll back release ${id}: ${plan.conflicts.length} item(s) changed since the release was published`
+      `cannot rollback release ${id}: ${plan.conflicts.length} item(s) changed since the release was published`
     );
   }
 
