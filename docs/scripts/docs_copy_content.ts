@@ -1401,7 +1401,7 @@ export default defineConfig({
 
 const PLUGINS: DocCopy = {
   slug: 'plugins',
-  note: 'Tightens the copy, and mentions that the CMS is itself a plugin.',
+  note: 'Links to the new Pods page.',
   fields: {
     meta: {
       title: 'Plugins – Root.js',
@@ -1414,6 +1414,9 @@ const PLUGINS: DocCopy = {
       body: richtext(
         p(
           `Plugins hook into the Root.js server and build. They're added to the ${c('plugins')} list in ${c('root.config.ts')}. The CMS itself is a plugin (${c('cmsPlugin()')}), and you can write your own. For every hook, see ${c('Plugin')} in the ${a('/docs/api/root/#blinkk-root-plugin', 'API reference')}.`
+        ),
+        p(
+          `A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a ${a('/docs/plugins/pods/', 'pod')}.`
         )
       ),
       sections: [
@@ -1462,6 +1465,187 @@ export function blogRedirectPlugin(): Plugin {
     },
   };
 }`
+            ),
+          ]
+        ),
+      ],
+    },
+  },
+};
+
+const PODS: DocCopy = {
+  slug: 'plugins--pods',
+  note: 'New page on pods: plugins that add routes, custom elements, bundles and CMS collections to a site, and the rootConfig.pods overrides.',
+  fields: {
+    meta: {
+      title: 'Pods – Root.js',
+      description:
+        'Ship routes, custom elements and CMS collections from a plugin, and mount them into any Root.js site.',
+      category: 'framework',
+      navLabel: 'Pods',
+    },
+    content: {
+      title: 'Pods',
+      body: richtext(
+        p(
+          `A pod is a small Root.js site that a plugin merges into yours: a folder of routes, custom elements, bundles and CMS collections, laid out like a project's own. Pods are how a plugin ships pages and content models, e.g. a tool that opens in the CMS sidebar, or a set of collections that several sites share, without copying files into each project.`
+        )
+      ),
+      sections: [
+        section(
+          'defining-a-pod',
+          'Defining a pod',
+          [
+            p(
+              `A plugin registers a pod with its ${c('pod')} field. The pod's ${c('name')} must be unique across the site, and each directory is an absolute path, so resolve them from the plugin's own file. That way they still work once the plugin is installed from ${c('node_modules')}:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/plugins/launches-pod.ts
+
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import type {Plugin} from '@blinkk/root';
+
+const POD_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+export function launchesPod(): Plugin {
+  return {
+    name: 'launches-pod',
+    pod: {
+      name: 'launches-pod',
+      mount: '/internal/launches',
+      routesDir: path.join(POD_DIR, 'routes'),
+      elementsDirs: [path.join(POD_DIR, 'elements')],
+      collectionsDir: path.join(POD_DIR, 'collections'),
+    },
+  };
+}`
+            ),
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+import {defineConfig} from '@blinkk/root';
+import {launchesPod} from './plugins/launches-pod';
+
+export default defineConfig({
+  plugins: [launchesPod()],
+});`
+            ),
+            copy(
+              p(
+                `${c('pod')} can also be a list of pods, or a function that receives ${c('{rootConfig}')} and returns one (or a promise of one), for a pod that depends on the site's config. Wrap a standalone pod in ${c('definePod()')} to type-check it. Every directory is optional, and the fields are listed under ${c('Pod')} in the ${a('/docs/api/root/#blinkk-root-pod', 'API reference')}.`
+              ),
+              p(
+                `The dev server watches the pod's directories, so adding or deleting a file reloads the page the same as it does in your own project.`
+              )
+            ),
+          ]
+        ),
+        section('routes', 'Routes', [
+          p(
+            `Files in ${c('routesDir')} follow the same rules as ${a('/docs/routes/', 'routes/')}: ${c('index.tsx')} serves its directory, ${c('[slug].tsx')} and catch-alls take params, ${c('getStaticPaths()')} lists the pages to prerender, and files starting with ${c('_')} are skipped. They're served under the pod's ${c('mount')}, which defaults to ${c('/')}. With the pod above, ${c('routes/index.tsx')} serves ${c('/internal/launches')} and ${c('routes/[id].tsx')} serves ${c('/internal/launches/&lt;id&gt;')}.`
+          ),
+          p(
+            `The site's ${c('base')} and ${a('/docs/localization/', 'localized URL format')} apply to pod routes too, and ${c('root build')} prerenders them along with yours. Keep pod URLs clear of your own routes, since which one serves an overlapping path isn't something to rely on. Change the ${c('mount')} or exclude the route instead, as shown ${a('#configuring-pods', 'below')}.`
+          ),
+          p(
+            `Routes are keyed by file path, so two pods can't share one ${c('routesDir')}. If a plugin registers the same pages more than once, e.g. at two mounts, give each pod its own directory and re-export the page from a shared module.`
+          ),
+        ]),
+        section('elements-and-bundles', 'Elements and bundles', [
+          p(
+            `Each directory in ${c('elementsDirs')} is scanned like ${a('/docs/project-structure/#elements', 'elements/')}, so a page that uses one of the pod's custom elements loads it automatically, whether the page comes from the pod or from your site. Tag names share one namespace with your own elements, so prefix them with something specific to the pod.`
+          ),
+          p(
+            `Scripts at the top level of ${c('bundlesDir')} are built with your ${a('/docs/project-structure/#bundles', 'bundles/')}.`
+          ),
+        ]),
+        section('collections', 'CMS collections', [
+          p(
+            `Every ${c('*.schema.ts')} file in ${c('collectionsDir')} becomes a collection in the CMS, named after its file the same as your own ${a('/docs/cms/schemas/', 'schemas')}, and is included in the generated ${c('root-cms.d.ts')} types. If the site has a collection with the same id, the site's own schema is used and the pod's is ignored. That makes it possible to override a pod's schema by copying it into ${c('collections/')} and editing it.`
+          ),
+          p(
+            `Two pods that define the same collection id fail with an error. Rename one of them with ${c('collections.rename')}, which changes the id the CMS uses, so do it before anyone saves docs to the collection.`
+          ),
+        ]),
+        section(
+          'cms-tools',
+          'Opening a pod in the CMS',
+          [
+            p(
+              `A pod's pages can be shown inside the CMS by pointing a ${a('/docs/cms/customization/#sidebar', 'sidebar tool')} at its mount. This is how this site's own Templates tool works:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+export default defineConfig({
+  plugins: [
+    templatesPod(), // Mounted at /cms-tools/templates.
+    cmsPlugin({
+      // ...
+      sidebar: {
+        tools: {
+          templates: {
+            label: 'Templates',
+            iframeUrl: '/cms-tools/templates/',
+          },
+        },
+      },
+    }),
+  ],
+});`
+            ),
+          ]
+        ),
+        section(
+          'configuring-pods',
+          'Configuring a pod',
+          [
+            p(
+              `${c('pods')} in ${c('root.config.ts')} overrides a pod's settings for one site, keyed by the pod's ${c('name')}. It can turn a pod off, move it, and drop or rename some of what it adds:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/root.config.ts
+
+export default defineConfig({
+  plugins: [launchesPod(), blogPod()],
+  pods: {
+    'launches-pod': {
+      mount: '/tools/launches',
+      routes: {
+        exclude: ['archive/', /\\.preview\\.tsx$/],
+      },
+    },
+    'blog-pod': {
+      collections: {
+        exclude: ['Authors'],
+        rename: {Posts: 'BlogPosts'},
+      },
+    },
+    'legacy-pod': {
+      enabled: false,
+    },
+  },
+});`
+            ),
+            copy(
+              p(
+                `A string in ${c('routes.exclude')} skips every route file whose path, relative to the pod's ${c('routesDir')}, contains it, and a regex is tested against that path. ${c('collections.exclude')} and the keys in ${c('collections.rename')} are the pod's own collection ids. For the full list, see ${c('PodConfig')} in the ${a('/docs/api/root/#blinkk-root-podconfig', 'API reference')}.`
+              )
             ),
           ]
         ),
@@ -3787,6 +3971,7 @@ export const DOCS_COPY: DocCopy[] = [
   LOCALIZATION,
   CONFIG,
   PLUGINS,
+  PODS,
   CMS_CONFIGURATION,
   SCHEMAS,
   DATA_FETCHING,
