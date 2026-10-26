@@ -1628,6 +1628,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Register API handlers.
       api(server, {
         getRenderer,
+        staticDir,
         checks: options.checks,
         translations: options.translations,
       });

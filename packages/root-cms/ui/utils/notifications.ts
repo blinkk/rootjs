@@ -38,6 +38,11 @@ export interface ShowErrorNotificationOptions {
    * within the dedupe window. Defaults to true.
    */
   dedupe?: boolean;
+  /**
+   * Id of the error's report in the error log, shown in the notification so
+   * the user can pass it along to a developer.
+   */
+  errorId?: string;
 }
 
 /**
@@ -56,7 +61,10 @@ export function showErrorNotification(
 ) {
   const title = options?.title || 'Error';
   console.error(err);
-  const message = errorMessage(err);
+  let message = errorMessage(err);
+  if (options?.errorId) {
+    message = `${message} (Error ID: ${options.errorId})`;
+  }
   if (options?.dedupe !== false) {
     const key = `${title}:${message}`;
     const now = Date.now();

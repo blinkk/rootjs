@@ -42,8 +42,10 @@ import {
   DependencyGraphService,
   DependencyGraphRebuildResult,
 } from './dependency-graph.js';
+import {normalizeErrorReport, resolveStack} from './error-logs.js';
 import * as schema from './schema.js';
 import {SearchIndexService, RebuildResult} from './search-index.js';
+import {CMS_VERSION} from './server-version.js';
 import {type CMSTranslationService} from './translations.js';
 import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
 
@@ -227,6 +229,11 @@ function isDocVersion(value: unknown): value is DocVersion {
 
 export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
+  /**
+   * Dir containing the CMS UI bundle and its source maps, used to resolve the
+   * stack traces in UI error reports.
+   */
+  staticDir: string;
   /** Checks registered via the CMS plugin config. */
   checks?: CMSCheck[];
   /**
@@ -918,6 +925,57 @@ export function api(server: Server, options: ApiOptions) {
         links: reqBody.links,
       });
       res.status(200).json({success: true});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Logs an error thrown by the CMS UI. Frames in the stack trace that point
+   * at the minified UI bundle are resolved to the original source using the
+   * bundle's source maps, so the stored report is readable by a developer.
+   */
+  server.use('/cms/api/errors.log', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const report = normalizeErrorReport(req.body);
+    if (!report) {
+      res.status(400).json({success: false, error: 'INVALID_ERROR_REPORT'});
+      return;
+    }
+    report.by = req.user.email;
+    report.cmsVersion = CMS_VERSION;
+    // Use the server's clock so reports from clients with a skewed clock are
+    // still listed in the right order.
+    report.timestamp = Date.now();
+    if (report.stack) {
+      try {
+        const resolved = resolveStack(report.stack, options.staticDir);
+        if (resolved !== report.stack) {
+          report.rawStack = report.stack;
+          report.stack = resolved;
+        }
+      } catch (err) {
+        console.error('failed to resolve error stack:', err);
+      }
+    }
+
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    try {
+      await cmsClient.logError(report);
+      res.status(200).json({success: true, data: {stack: report.stack}});
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});

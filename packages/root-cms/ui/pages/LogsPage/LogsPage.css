@@ -4,7 +4,16 @@
 }
 
 .LogsPage__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
   margin-bottom: 30px;
+}
+
+.LogsPage__errorLogsLink {
+  font-size: 14px;
+  color: inherit;
 }
 
 .LogsPage p {
