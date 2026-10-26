@@ -145,8 +145,8 @@
 }
 
 .ReleasePage__Overview__side {
-  flex: 1 1 280px;
-  max-width: 360px;
+  flex: 1 1 420px;
+  max-width: 460px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -222,10 +222,8 @@
 
 .ReleasePage__Contents__modified {
   font-size: 13px;
-  color: var(--color-text-gray);
 }
 
-.ReleasePage__details__date,
 .ReleasePage__Contents__modified__date {
   text-decoration: underline dotted;
   text-underline-offset: 3px;

@@ -873,15 +873,7 @@ ReleasePage.DetailsRow = (props: {
     <>
       <dt>{props.label}</dt>
       <dd>
-        {hasDate ? (
-          <Tooltip label={formatDate(props.at)} transition="pop" withArrow>
-            <span className="ReleasePage__details__date">
-              {formatShortDate(props.at)}
-            </span>
-          </Tooltip>
-        ) : (
-          '—'
-        )}
+        {hasDate ? formatDetailsDate(props.at) : '—'}
         {hasDate && props.by && ` by ${props.by}`}
       </dd>
     </>
@@ -1203,12 +1195,14 @@ function formatDate(ts: unknown): string {
   );
 }
 
-/** Formats a Firestore timestamp as e.g. "Oct 26, 2026". */
-function formatShortDate(ts: unknown): string {
-  return new Date(toMillis(ts)).toLocaleDateString('en-US', {
+/** Formats a Firestore timestamp as e.g. "Oct 26, 2026, 1:30 PM". */
+function formatDetailsDate(ts: unknown): string {
+  return new Date(toMillis(ts)).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
