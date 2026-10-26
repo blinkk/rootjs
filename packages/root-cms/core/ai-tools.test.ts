@@ -485,6 +485,7 @@ describe('release tools wiring', () => {
           status: 'unpublished' as const,
         };
       },
+      getReleaseDiff: async () => null,
     };
   }
 

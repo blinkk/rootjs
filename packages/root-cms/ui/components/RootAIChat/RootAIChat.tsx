@@ -94,6 +94,21 @@ export interface RootAIChatDocContext {
   docId: string;
 }
 
+export interface RootAIChatReleaseContext {
+  /** Id of the release the user is currently viewing. */
+  releaseId: string;
+}
+
+/** A message to send to the chat on behalf of the user. */
+export interface RootAIChatPrompt {
+  /**
+   * Unique id for the prompt. Changing the id sends the prompt again, e.g.
+   * when the user clicks the same "summarize" button twice.
+   */
+  id: string | number;
+  text: string;
+}
+
 export interface RootAIChatProps {
   /**
    * `page` is the full `/cms/ai` route with chat history sidebar. `panel` is
@@ -105,6 +120,15 @@ export interface RootAIChatProps {
   initialChatId?: string;
   /** When set, the AI is told which document the user is currently editing. */
   docContext?: RootAIChatDocContext;
+  /** When set, the AI is told which release the user is currently viewing. */
+  releaseContext?: RootAIChatReleaseContext;
+  /**
+   * A message to send once the chat is ready. Sent at most once per prompt
+   * id, into the current conversation.
+   */
+  prompt?: RootAIChatPrompt;
+  /** Example prompts shown as shortcuts when the chat is empty. */
+  suggestedPrompts?: string[];
   /** Called when the user clicks close. `panel` variant only. */
   onClose?: () => void;
 }
@@ -283,6 +307,9 @@ export function RootAIChat(props: RootAIChatProps) {
             props.variant === 'panel' ? undefined : props.initialChatId
           }
           docContext={props.docContext}
+          releaseContext={props.releaseContext}
+          prompt={props.prompt}
+          suggestedPrompts={props.suggestedPrompts}
           onClose={props.onClose}
         />
       ) : (
@@ -326,6 +353,9 @@ function ChatExperience(props: {
   config: AiConfigResponse;
   initialChatId?: string;
   docContext?: RootAIChatDocContext;
+  releaseContext?: RootAIChatReleaseContext;
+  prompt?: RootAIChatPrompt;
+  suggestedPrompts?: string[];
   onClose?: () => void;
 }) {
   const isPanel = props.variant === 'panel';
@@ -359,6 +389,13 @@ function ChatExperience(props: {
   // "open chat"). Auto-assigning a chat id from ChatPane does NOT bump this,
   // so messages aren't lost mid-conversation.
   const [resetKey, setResetKey] = useState(0);
+  // Id of the last prompt sent, so a remounted ChatPane (e.g. "new chat")
+  // doesn't send it again.
+  const [sentPromptId, setSentPromptId] = useState<string | number | null>(
+    null
+  );
+  const pendingPrompt =
+    props.prompt && props.prompt.id !== sentPromptId ? props.prompt : undefined;
 
   const refreshChats = async () => {
     if (isPanel) {
@@ -480,6 +517,10 @@ function ChatExperience(props: {
           models={models}
           selectedModel={selectedModel}
           docContext={props.docContext}
+          releaseContext={props.releaseContext}
+          prompt={pendingPrompt}
+          onPromptSent={setSentPromptId}
+          suggestedPrompts={props.suggestedPrompts}
           onSelectModel={selectModel}
           onSelectExecutionMode={setExecutionMode}
           onChatPersisted={(id) => {
@@ -675,6 +716,10 @@ function ChatPane(props: {
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   docContext?: RootAIChatDocContext;
+  releaseContext?: RootAIChatReleaseContext;
+  prompt?: RootAIChatPrompt;
+  onPromptSent: (id: string | number) => void;
+  suggestedPrompts?: string[];
   onSelectModel: (id: string) => void;
   onSelectExecutionMode: (mode: ExecutionMode) => void;
   onChatPersisted: (id: string) => void;
@@ -692,6 +737,8 @@ function ChatPane(props: {
   executionModeRef.current = props.executionMode;
   const docContextRef = useRef(props.docContext);
   docContextRef.current = props.docContext;
+  const releaseContextRef = useRef(props.releaseContext);
+  releaseContextRef.current = props.releaseContext;
   const onChatPersistedRef = useRef(props.onChatPersisted);
   onChatPersistedRef.current = props.onChatPersisted;
   // The connection config + effective execution mode from the most recent
@@ -913,7 +960,8 @@ function ChatPane(props: {
           const modelId = modelRef.current;
           const mode = executionModeRef.current;
           const docId = docContextRef.current?.docId;
-          const key = `${modelId}|${mode}|${docId || ''}`;
+          const releaseId = releaseContextRef.current?.releaseId;
+          const key = `${modelId}|${mode}|${docId || ''}|${releaseId || ''}`;
           const cached = turnCacheRef.current;
           if (
             cached &&
@@ -926,7 +974,12 @@ function ChatPane(props: {
             method: 'POST',
             credentials: 'include',
             headers: {'content-type': 'application/json'},
-            body: JSON.stringify({modelId, executionMode: mode, docId}),
+            body: JSON.stringify({
+              modelId,
+              executionMode: mode,
+              docId,
+              releaseId,
+            }),
           });
           const data = await res.json();
           if (!res.ok || !data.success) {
@@ -1004,12 +1057,50 @@ function ChatPane(props: {
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
+  const send = async (text: string, attachments: AttachmentPreview[] = []) => {
+    if (!text && attachments.length === 0) {
+      return;
+    }
+    const preparedAttachments = prepareAttachmentsForSend(attachments);
+    const messageText = [text, preparedAttachments.text]
+      .filter(Boolean)
+      .join('\n\n');
+    // Grant Google access up front (while the send click still counts as
+    // a user gesture) when the chat references a Drive/Docs/Sheets link
+    // or already used a Google tool, so the tools have a token mid-turn.
+    await maybeAuthorizeGoogle(
+      [messageText, ...messages.map(getMessageText)],
+      messages
+    );
+    sendMessage({
+      text: messageText,
+      files: preparedAttachments.files.map((a) => ({
+        type: 'file',
+        mediaType: a.mediaType,
+        url: a.url,
+        filename: a.filename,
+      })),
+    });
+  };
+
+  // Sends a prompt provided by the parent, e.g. from a "summarize" button.
+  useEffect(() => {
+    const prompt = props.prompt;
+    if (!prompt || !props.model || isStreaming) {
+      return;
+    }
+    props.onPromptSent(prompt.id);
+    send(prompt.text);
+  }, [props.prompt?.id, props.model?.id, isStreaming]);
+
   return (
     <>
       <ChatTranscript
         messages={messages}
         isStreaming={isStreaming}
         emptyMessage={!props.model ? 'Select a model to start.' : undefined}
+        suggestedPrompts={props.model ? props.suggestedPrompts : undefined}
+        onSelectSuggestedPrompt={(text) => send(text)}
         toolApprovals={{
           approvals: pendingApprovals,
           onApprove: approveToolCall,
@@ -1041,31 +1132,7 @@ function ChatPane(props: {
             onSelectExecutionMode={props.onSelectExecutionMode}
           />
         }
-        onSend={async (text, attachments) => {
-          if (!text && attachments.length === 0) {
-            return;
-          }
-          const preparedAttachments = prepareAttachmentsForSend(attachments);
-          const messageText = [text, preparedAttachments.text]
-            .filter(Boolean)
-            .join('\n\n');
-          // Grant Google access up front (while the send click still counts as
-          // a user gesture) when the chat references a Drive/Docs/Sheets link
-          // or already used a Google tool, so the tools have a token mid-turn.
-          await maybeAuthorizeGoogle(
-            [messageText, ...messages.map(getMessageText)],
-            messages
-          );
-          sendMessage({
-            text: messageText,
-            files: preparedAttachments.files.map((a) => ({
-              type: 'file',
-              mediaType: a.mediaType,
-              url: a.url,
-              filename: a.filename,
-            })),
-          });
-        }}
+        onSend={send}
       />
     </>
   );
@@ -1075,6 +1142,8 @@ function ChatTranscript(props: {
   messages: UIMessage[];
   isStreaming: boolean;
   emptyMessage?: string;
+  suggestedPrompts?: string[];
+  onSelectSuggestedPrompt?: (text: string) => void;
   toolApprovals?: ToolApprovalControls;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -1099,6 +1168,20 @@ function ChatTranscript(props: {
           <div className="RootAIChat__welcome__body">
             {props.emptyMessage || 'What are we going to get done today?'}
           </div>
+          {props.suggestedPrompts && props.suggestedPrompts.length > 0 && (
+            <div className="RootAIChat__welcome__suggestions">
+              {props.suggestedPrompts.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  className="RootAIChat__welcome__suggestion"
+                  onClick={() => props.onSelectSuggestedPrompt?.(text)}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

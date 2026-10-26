@@ -1450,6 +1450,10 @@ export function api(server: Server, options: ApiOptions) {
         typeof body.docId === 'string' && body.docId.trim()
           ? body.docId.trim()
           : undefined;
+      const activeReleaseId =
+        typeof body.releaseId === 'string' && body.releaseId.trim()
+          ? body.releaseId.trim()
+          : undefined;
 
       // Require the user to have an assigned role on this project. Write tools
       // dispatched by the model are gated by Firestore rules, but we still deny
@@ -1481,6 +1485,7 @@ export function api(server: Server, options: ApiOptions) {
           config: aiConfig,
           executionMode,
           activeDocId,
+          activeReleaseId,
         });
         const extensions = getAiExtensions(req.rootConfig!);
         res.status(200).json({

@@ -36,6 +36,10 @@ import {
   unmarshalData,
 } from '../../utils/doc.js';
 import {
+  getReleaseDiff,
+  serializeReleaseDiffForModel,
+} from '../../utils/release-diff.js';
+import {
   Release,
   getRelease as cmsGetRelease,
   listReleases as cmsListReleases,
@@ -156,6 +160,14 @@ export function createClientCmsToolBackend(): CmsToolReadBackend {
     async getRelease(releaseId) {
       const release = await cmsGetRelease(releaseId);
       return release ? shapeRelease(release) : null;
+    },
+
+    async getReleaseDiff(releaseId) {
+      const release = await cmsGetRelease(releaseId);
+      if (!release) {
+        return null;
+      }
+      return serializeReleaseDiffForModel(await getReleaseDiff(release));
     },
   };
 }

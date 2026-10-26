@@ -37,6 +37,8 @@ export function prettyToolName(toolName: string, input: any): string {
       return 'List releases';
     case 'release_get':
       return `Read release ${input?.releaseId || ''}`.trim();
+    case 'release_getDiff':
+      return `Read changes in release ${input?.releaseId || ''}`.trim();
     case 'release_create':
       return `Create release ${input?.releaseId || ''}`.trim();
     case 'release_update':

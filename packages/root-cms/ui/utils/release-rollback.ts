@@ -122,7 +122,7 @@ function getDataSourceDataRef(id: string, mode: 'draft' | 'published') {
 }
 
 /** Lists a release's rollback snapshots, keyed by snapshot key. */
-async function listSnapshots(
+export async function listReleaseRollbackSnapshots(
   releaseId: string
 ): Promise<Record<string, Snapshot>> {
   const res = await getDocs(getSnapshotsCollection(releaseId));
@@ -223,7 +223,7 @@ export class ReleaseRollbackRecorder {
   ): Promise<ReleaseRollbackRecorder> {
     const docIds = items.docIds || [];
     const [existing, current] = await Promise.all([
-      listSnapshots(releaseId),
+      listReleaseRollbackSnapshots(releaseId),
       fetchPublishedStates({
         docIds,
         translationsIds: testV2TranslationsEnabled() ? docIds : [],
@@ -295,7 +295,7 @@ export class ReleaseRollbackRecorder {
 export async function getReleaseRollbackPlan(
   releaseId: string
 ): Promise<ReleaseRollbackPlan> {
-  const snapshots = await listSnapshots(releaseId);
+  const snapshots = await listReleaseRollbackSnapshots(releaseId);
   const entries = Object.entries(snapshots);
   const idsOfType = (type: ReleaseRollbackItemType) =>
     Array.from(

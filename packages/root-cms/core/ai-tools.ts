@@ -60,6 +60,7 @@ export const CMS_TOOL_NAMES = [
   'schema_get',
   'releases_list',
   'release_get',
+  'release_getDiff',
   'release_create',
   'release_update',
 ] as const;
@@ -81,6 +82,7 @@ export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
   'schema_get',
   'releases_list',
   'release_get',
+  'release_getDiff',
 ] as const;
 
 /** A CMS document shaped for the model (fields/sys already unmarshalled). */
@@ -219,6 +221,11 @@ export interface CmsToolReadBackend {
   listReleases(options: {limit: number}): Promise<CmsToolRelease[]>;
   /** Reads a single release, or `null` if it does not exist. */
   getRelease(releaseId: string): Promise<CmsToolRelease | null>;
+  /**
+   * Returns the content changes made by the docs in a release, or `null` if
+   * the release does not exist.
+   */
+  getReleaseDiff(releaseId: string): Promise<unknown | null>;
 }
 
 /**
@@ -242,8 +249,8 @@ export function createReadOnlyCmsTools(backend: CmsToolReadBackend): ToolSet {
  *
  * Read tools (`collections_list`, `docs_list`, `docs_search`, `doc_get`,
  * `doc_getVersion`, `doc_listVersions`, `schema_get`, `releases_list`,
- * `release_get`) carry an `execute` that delegates to the supplied
- * `CmsToolReadBackend`. Write tools (`doc_set`, `doc_create`,
+ * `release_get`, `release_getDiff`) carry an `execute` that delegates to the
+ * supplied `CmsToolReadBackend`. Write tools (`doc_set`, `doc_create`,
  * `doc_updateField`, `doc_duplicate`, `doc_translateField`,
  * `release_create`, `release_update`) remain schema-only — the browser
  * executes them via `onToolCall` so the user can approve diffs before
@@ -622,6 +629,30 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
       execute: async ({releaseId}) => {
         const release = await backend.getRelease(releaseId);
         return release ? {found: true, release} : {found: false};
+      },
+    }),
+
+    release_getDiff: tool({
+      description:
+        'Read the content changes made by every doc in a CMS release, in ' +
+        'a single call. For a release that has not been published yet, ' +
+        "each doc's published version is compared to its draft (what " +
+        'publishing the release would change). For a published release, ' +
+        "each doc's state before the release is compared to its current " +
+        'published version (what the release changed). Each doc includes ' +
+        'its status ("added", "removed", "modified", "unchanged" or ' +
+        '"missing"), who last modified/published each version, locale ' +
+        'changes, and a list of field changes labeled by schema path with ' +
+        'before/after values (long values are truncated). Prefer this over ' +
+        'reading each doc version separately when reviewing a release.',
+      inputSchema: z.object({
+        releaseId: z
+          .string()
+          .describe('Release id, e.g. "20260318-golden-meadow".'),
+      }),
+      execute: async ({releaseId}) => {
+        const diff = await backend.getReleaseDiff(releaseId);
+        return diff ? {found: true, diff} : {found: false};
       },
     }),
 
