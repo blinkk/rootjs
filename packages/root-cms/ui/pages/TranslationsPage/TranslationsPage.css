@@ -1,6 +1,6 @@
 .TranslationsPage {
   background: var(--page-background);
-  padding: var(--page-padding-lg) var(--page-padding-lg) 20px;
+  padding: var(--page-padding) var(--page-padding) 20px;
 }
 
 .TranslationsPage__header {
@@ -49,41 +49,48 @@
   border-bottom: 1px solid #dee2e6;
 }
 
-.TranslationsPage__TranslationsTable tr:nth-child(1) td[data-col="tags"],
-.TranslationsPage__TranslationsTable tr:nth-child(1) th[data-col="tags"] {
+.TranslationsPage__TranslationsTable tr:nth-child(1) td[data-col='tags'],
+.TranslationsPage__TranslationsTable tr:nth-child(1) th[data-col='tags'] {
   max-width: 250px;
   width: 250px;
 }
 
-.TranslationsPage__TranslationsTable .TranslationsPage__TranslationsTable__cell:has(.TranslationsPage__TranslationsTable__localeHeader) {
+.TranslationsPage__TranslationsTable
+  .TranslationsPage__TranslationsTable__cell:has(
+    .TranslationsPage__TranslationsTable__localeHeader
+  ) {
   cursor: pointer;
   padding: 0;
 }
 
-.TranslationsPage__TranslationsTable td[data-col="tags"] .TranslationsPage__TranslationsTable__Tag {
+.TranslationsPage__TranslationsTable
+  td[data-col='tags']
+  .TranslationsPage__TranslationsTable__Tag {
   display: inline-block;
   white-space: nowrap;
 }
 
-.TranslationsPage__TranslationsTable tr:nth-child(1) .TranslationsPage__TranslationsTable__cell:not([data-col="hash"]) {
+.TranslationsPage__TranslationsTable
+  tr:nth-child(1)
+  .TranslationsPage__TranslationsTable__cell:not([data-col='hash']) {
   max-width: 300px;
   width: 300px;
   overflow: auto;
 }
 
-.TranslationsPage__TranslationsTable td[data-col="tags"],
-.TranslationsPage__TranslationsTable th[data-col="tags"] {
+.TranslationsPage__TranslationsTable td[data-col='tags'],
+.TranslationsPage__TranslationsTable th[data-col='tags'] {
   overflow: auto;
 }
 
-.TranslationsPage__TranslationsTable tr:nth-child(1) td[data-col="hash"],
-.TranslationsPage__TranslationsTable tr:nth-child(1) th[data-col="hash"] {
+.TranslationsPage__TranslationsTable tr:nth-child(1) td[data-col='hash'],
+.TranslationsPage__TranslationsTable tr:nth-child(1) th[data-col='hash'] {
   max-width: 80px;
   width: 80px;
 }
 
-.TranslationsPage__TranslationsTable td[data-col="hash"],
-.TranslationsPage__TranslationsTable th[data-col="hash"] {
+.TranslationsPage__TranslationsTable td[data-col='hash'],
+.TranslationsPage__TranslationsTable th[data-col='hash'] {
   background: #fafafa;
   overflow: hidden;
   text-overflow: ellipsis;

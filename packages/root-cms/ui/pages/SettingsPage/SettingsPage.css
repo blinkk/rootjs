@@ -1,13 +1,13 @@
 .SettingsPage {
   background: var(--page-background);
-  padding: var(--page-padding-lg);
+  padding: var(--page-padding);
 }
 
 .SettingsPage__section {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: start;
-  gap: var(--page-padding-lg);
+  gap: 60px;
   max-width: 1280px;
 }
 
@@ -30,7 +30,7 @@
 }
 
 .SettingsPage__section + .SettingsPage__section {
-  margin-top: var(--page-padding-lg);
+  margin-top: 60px;
 }
 
 .SettingsPage__section__setting {

@@ -12,21 +12,21 @@ import {
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
+  IconDatabase,
+  IconFile,
   IconListSearch,
   IconRobot,
   IconSettings,
   IconSparkles,
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {
-  AiSummaryResult,
-  AiSummaryStatus,
-} from '../../components/AiSummary/AiSummary.js';
+import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
-import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
 import {DocDiffViewer} from '../../components/DocDiffViewer/DocDiffViewer.js';
-import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
+import {
+  DocStatusBadges,
+  StatusBadge,
+} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
@@ -37,6 +37,7 @@ import {
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
+import {UserActionTooltip} from '../../components/UserActionTooltip/UserActionTooltip.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -60,7 +61,6 @@ import {
   ReleaseDiff,
   ReleaseDocDiff,
   ReleaseDocDiffStatus,
-  cmsGetReleaseSummary,
   getReleaseDiff,
   getReleaseDiffLabels,
 } from '../../utils/release-diff.js';
@@ -79,6 +79,10 @@ import {getTimeAgo} from '../../utils/time.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 
 type ReleasePageTab = 'overview' | 'changes';
+
+const SUMMARIZE_PROMPT =
+  'Summarize the changes in this release as a short bulleted list, grouped ' +
+  'by doc. Point out anything that looks unintentional.';
 
 const AUDIT_PROMPT =
   'Audit the changes in this release. Flag anything that looks ' +
@@ -114,20 +118,11 @@ export function ReleasePage(props: {id: string}) {
     setAiPrompt(undefined);
     setAiVisible(() => false);
   }, [setAiVisible]);
-  const summary = useReleaseSummary();
 
   /** Opens the Root AI panel and sends a prompt to it. */
   function askAi(text: string) {
     setAiPrompt({id: Date.now(), text});
     setAiVisible(() => true);
-  }
-
-  /** Switches to the changes tab and summarizes the changes. */
-  function summarize() {
-    setTabParam('changes');
-    if (release && diff) {
-      summary.generate(release, diff);
-    }
   }
 
   async function init() {
@@ -151,7 +146,6 @@ export function ReleasePage(props: {id: string}) {
 
   async function loadDiff(release: Release) {
     setDiffLoading(true);
-    summary.reset();
     await notifyErrors(async () => {
       const diff = await withTimeout(
         getReleaseDiff(release),
@@ -278,7 +272,9 @@ export function ReleasePage(props: {id: string}) {
                 release={release}
                 diff={diff}
                 diffLoading={diffLoading}
-                onSummarize={aiEnabled ? summarize : undefined}
+                onSummarize={
+                  aiEnabled ? () => askAi(SUMMARIZE_PROMPT) : undefined
+                }
                 onAudit={aiEnabled ? () => askAi(AUDIT_PROMPT) : undefined}
               />
             ) : (
@@ -286,8 +282,6 @@ export function ReleasePage(props: {id: string}) {
                 release={release}
                 diff={diff}
                 diffLoading={diffLoading}
-                summary={aiEnabled ? summary : undefined}
-                onAudit={aiEnabled ? () => askAi(AUDIT_PROMPT) : undefined}
               />
             )
           ) : null}
@@ -323,50 +317,6 @@ function getReleaseMeta(release: Release): string {
     );
   }
   return parts.join(' · ');
-}
-
-type ReleaseSummary = ReturnType<typeof useReleaseSummary>;
-
-/**
- * Summarizes a release's changes with Root AI. The summary is never generated
- * automatically; call `generate()` in response to a user action.
- */
-function useReleaseSummary() {
-  const [status, setStatus] = useState<AiSummaryStatus>('idle');
-  const [summary, setSummary] = useState('');
-  const [error, setError] = useState('');
-  // Ignores responses from requests superseded by a newer call.
-  const requestIdRef = useRef(0);
-
-  async function generate(release: Release, diff: ReleaseDiff) {
-    const requestId = ++requestIdRef.current;
-    setStatus('loading');
-    setError('');
-    try {
-      const res = await cmsGetReleaseSummary(release, diff);
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-      setSummary(res);
-      setStatus('success');
-    } catch (err) {
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-      console.error(err);
-      setError(errorMessage(err));
-      setStatus('error');
-    }
-  }
-
-  function reset() {
-    requestIdRef.current++;
-    setStatus('idle');
-    setSummary('');
-    setError('');
-  }
-
-  return {status, summary, error, generate, reset};
 }
 
 interface ReleasePageAiPanelProps {
@@ -855,7 +805,6 @@ ReleasePage.Overview = (props: {
                 compact
                 leftIcon={<IconSparkles size={14} />}
                 onClick={props.onSummarize}
-                disabled={props.diffLoading || !props.diff}
               >
                 Summarize
               </Button>
@@ -919,17 +868,22 @@ ReleasePage.DetailsRow = (props: {
   at?: unknown;
   by?: string;
 }) => {
-  let value = '—';
-  if (testTimestamp(props.at)) {
-    value = formatTimeAgo(props.at);
-    if (props.by) {
-      value += ` by ${props.by}`;
-    }
-  }
+  const hasDate = testTimestamp(props.at);
   return (
     <>
       <dt>{props.label}</dt>
-      <dd>{value}</dd>
+      <dd>
+        {hasDate ? (
+          <Tooltip label={formatDate(props.at)} transition="pop" withArrow>
+            <span className="ReleasePage__details__date">
+              {formatShortDate(props.at)}
+            </span>
+          </Tooltip>
+        ) : (
+          '—'
+        )}
+        {hasDate && props.by && ` by ${props.by}`}
+      </dd>
     </>
   );
 };
@@ -952,12 +906,17 @@ ReleasePage.ContentsDocRow = (props: {
           className="ReleasePage__Contents__item"
           href={`/cms/content/${docId}`}
         >
-          <div className="ReleasePage__Contents__item__title">
-            {title || docId}
+          <div className="ReleasePage__Contents__item__icon ReleasePage__Contents__item__icon--doc">
+            <IconFile size={16} stroke={1.5} />
           </div>
-          {title && (
-            <div className="ReleasePage__Contents__item__id">{docId}</div>
-          )}
+          <div className="ReleasePage__Contents__item__text">
+            <div className="ReleasePage__Contents__item__title">
+              {title || docId}
+            </div>
+            {title && (
+              <div className="ReleasePage__Contents__item__id">{docId}</div>
+            )}
+          </div>
         </a>
       </td>
       <td>
@@ -971,8 +930,10 @@ ReleasePage.ContentsDocRow = (props: {
           </Text>
         )}
       </td>
-      <td className="ReleasePage__Contents__modified">
-        {sys?.modifiedBy && formatBy(sys.modifiedBy, sys.modifiedAt)}
+      <td>
+        <div className="ReleasePage__Contents__modified">
+          <ReleasePage.ModifiedBy at={sys?.modifiedAt} by={sys?.modifiedBy} />
+        </div>
       </td>
     </tr>
   );
@@ -983,12 +944,6 @@ ReleasePage.ContentsDataSourceRow = (props: {
   dataSource?: DataSource;
 }) => {
   const ds = props.dataSource;
-  let status = 'Not synced';
-  if (testTimestamp(ds?.publishedAt)) {
-    status = `Published ${formatTimeAgo(ds!.publishedAt)}`;
-  } else if (testTimestamp(ds?.syncedAt)) {
-    status = `Synced ${formatTimeAgo(ds!.syncedAt)}`;
-  }
   return (
     <tr>
       <td>
@@ -996,40 +951,99 @@ ReleasePage.ContentsDataSourceRow = (props: {
           className="ReleasePage__Contents__item"
           href={`/cms/data/${props.id}`}
         >
-          <div className="ReleasePage__Contents__item__title">
-            <DataSourceIcon
-              className="ReleasePage__Contents__item__icon"
-              type={ds?.type}
-            />
-            {props.id}
+          <div className="ReleasePage__Contents__item__icon ReleasePage__Contents__item__icon--dataSource">
+            <IconDatabase size={16} stroke={1.5} />
           </div>
-          <div className="ReleasePage__Contents__item__id">
-            {ds?.description || 'Data source'}
+          <div className="ReleasePage__Contents__item__text">
+            <div className="ReleasePage__Contents__item__title">{props.id}</div>
+            <div className="ReleasePage__Contents__item__id">
+              {ds?.description || 'Data source'}
+            </div>
           </div>
         </a>
       </td>
+      <td>{ds && <ReleasePage.DataSourceStatusBadges dataSource={ds} />}</td>
       <td>
-        <Text size="body-sm" color="gray">
-          {status}
-        </Text>
-      </td>
-      <td className="ReleasePage__Contents__modified">
-        {ds?.syncedBy && formatBy(ds.syncedBy, ds.syncedAt)}
+        <div className="ReleasePage__Contents__modified">
+          <ReleasePage.ModifiedBy at={ds?.syncedAt} by={ds?.syncedBy} />
+        </div>
       </td>
     </tr>
   );
 };
 
 /**
- * The changes tab: a summary of the release's changes from Root AI, and the
- * diff of each doc in the release.
+ * Renders e.g. "2 days ago by jane@example.com", with the date and time in a
+ * tooltip.
  */
+ReleasePage.ModifiedBy = (props: {at?: unknown; by?: string}) => {
+  const hasDate = testTimestamp(props.at);
+  if (!hasDate && !props.by) {
+    return null;
+  }
+  return (
+    <>
+      {hasDate && (
+        <Tooltip label={formatDate(props.at)} transition="pop" withArrow>
+          <span className="ReleasePage__Contents__modified__date">
+            {formatTimeAgo(props.at)}
+          </span>
+        </Tooltip>
+      )}
+      {hasDate && props.by && ' by '}
+      {props.by}
+    </>
+  );
+};
+
+/**
+ * Renders a data source's status using the same badges as docs: "Draft" when
+ * the synced data hasn't been published, and "Published" once it has.
+ */
+ReleasePage.DataSourceStatusBadges = (props: {dataSource: DataSource}) => {
+  const ds = props.dataSource;
+  const synced = testTimestamp(ds.syncedAt);
+  const published = testTimestamp(ds.publishedAt);
+  const hasUnpublishedSync =
+    synced && (!published || toMillis(ds.syncedAt) > toMillis(ds.publishedAt));
+  return (
+    <div className="DocStatusBadges">
+      {(hasUnpublishedSync || !synced) && (
+        <UserActionTooltip
+          heading={published ? 'Unpublished changes' : undefined}
+          message={
+            synced ? `Synced ${formatTimeAgo(ds.syncedAt)}` : 'Not synced yet'
+          }
+          user={synced ? ds.syncedBy : undefined}
+        >
+          <StatusBadge tone="draft">Draft</StatusBadge>
+        </UserActionTooltip>
+      )}
+      {published && (
+        <UserActionTooltip
+          message={`Published ${formatTimeAgo(ds.publishedAt)}`}
+          user={ds.publishedBy}
+        >
+          <StatusBadge tone="published">Published</StatusBadge>
+        </UserActionTooltip>
+      )}
+      {testTimestamp(ds.archivedAt) && (
+        <UserActionTooltip
+          message={`Archived ${formatTimeAgo(ds.archivedAt)}`}
+          user={ds.archivedBy}
+        >
+          <StatusBadge tone="archived">Archived</StatusBadge>
+        </UserActionTooltip>
+      )}
+    </div>
+  );
+};
+
+/** The changes tab: the diff of each doc in the release. */
 ReleasePage.Changes = (props: {
   release: Release;
   diff: ReleaseDiff | null;
   diffLoading: boolean;
-  summary?: ReleaseSummary;
-  onAudit?: () => void;
 }) => {
   const diff = props.diff;
   const docs = diff?.docs || [];
@@ -1052,7 +1066,6 @@ ReleasePage.Changes = (props: {
 
   const labels = getReleaseDiffLabels(diff.mode);
   const numChanged = docs.filter((doc) => doc.status !== 'unchanged').length;
-  const summary = props.summary;
 
   return (
     <div className="ReleasePage__Changes">
@@ -1064,56 +1077,6 @@ ReleasePage.Changes = (props: {
             ' These are the changes made when the release was published.'}
         </Text>
       </div>
-
-      {summary && (
-        <div className="ReleasePage__summary">
-          <div className="ReleasePage__summary__header">
-            <IconSparkles size={16} />
-            <div className="ReleasePage__summary__header__label">
-              Root AI summary
-            </div>
-            <div className="ReleasePage__summary__header__buttons">
-              <Button
-                variant="default"
-                size="xs"
-                compact
-                onClick={() => summary.generate(props.release, diff)}
-                loading={summary.status === 'loading'}
-              >
-                {summary.status === 'idle' ? 'Summarize' : 'Regenerate'}
-              </Button>
-              {props.onAudit && (
-                <Button
-                  variant="default"
-                  size="xs"
-                  compact
-                  leftIcon={<IconListSearch size={14} />}
-                  onClick={props.onAudit}
-                >
-                  Audit
-                </Button>
-              )}
-            </div>
-          </div>
-          {summary.status === 'idle' ? (
-            <Text
-              className="ReleasePage__summary__help"
-              size="body-sm"
-              color="gray"
-            >
-              Summarize the changes in this release, or audit them for anything
-              that looks unintentional.
-            </Text>
-          ) : (
-            <AiSummaryResult
-              className="ReleasePage__summary__result"
-              status={summary.status}
-              summary={summary.summary}
-              error={summary.error}
-            />
-          )}
-        </div>
-      )}
 
       <Surface className="ReleasePage__Changes__panes">
         <div className="ReleasePage__Changes__list" role="listbox">
@@ -1218,19 +1181,35 @@ function getDocTitle(docId: string, doc: CMSDoc): string {
   return typeof title === 'string' ? title : '';
 }
 
-function formatBy(by: string, at?: unknown): string {
-  if (testTimestamp(at)) {
-    return `${by} · ${formatTimeAgo(at)}`;
-  }
-  return by;
-}
-
 /**
  * Formats a Firestore timestamp as e.g. "2 days ago". Accepts serialized
  * timestamps (e.g. `{seconds, nanoseconds}`), which don't have `toMillis()`.
  */
 function formatTimeAgo(ts: unknown): string {
   return getTimeAgo(toMillis(ts));
+}
+
+/**
+ * Formats a Firestore timestamp as e.g. "2026-10-24 01:30 PM" in local time.
+ */
+function formatDate(ts: unknown): string {
+  const date = new Date(toMillis(ts));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const hours = date.getHours();
+  const ampm = hours < 12 ? 'AM' : 'PM';
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(hours % 12 || 12)}:${pad(date.getMinutes())} ${ampm}`
+  );
+}
+
+/** Formats a Firestore timestamp as e.g. "Oct 26, 2026". */
+function formatShortDate(ts: unknown): string {
+  return new Date(toMillis(ts)).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function rollbackConflictLabel(conflict: ReleaseRollbackConflict) {

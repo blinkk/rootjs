@@ -1,6 +1,6 @@
 .DataPage {
   background: var(--page-background);
-  padding: var(--page-padding-lg);
+  padding: var(--page-padding);
 }
 
 .DataPage__header {

@@ -88,7 +88,7 @@
 
 .DocTranslationsPage__Table th {
   border: 1px solid var(--color-border);
-  background: #F8F9FA;
+  background: #f8f9fa;
   text-align: left;
 }
 
@@ -128,7 +128,7 @@
 }
 
 .DocTranslationsPage__Table__sourceCellWrap {
-  background: #F8F9FA;
+  background: #f8f9fa;
   position: sticky;
   left: 0;
 }
@@ -159,16 +159,16 @@
 }
 
 .DocTranslationsPage__Textarea--empty {
-  background-color: #FFF5F5;
+  background-color: #fff5f5;
 }
 
 .DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea--hasChanges) {
-  background-color: #FFF9DB;
+  background-color: #fff9db;
 }
 
 .DocTranslationsPage__Textarea:focus {
   outline: none;
-  border: 1px solid #1C7ED6;
+  border: 1px solid #1c7ed6;
 }
 
 /* .DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea:focus) {

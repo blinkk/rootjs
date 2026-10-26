@@ -1,6 +1,6 @@
 .DataSourcePage {
   background: var(--page-background);
-  padding: 48px var(--page-padding-lg) var(--page-padding-lg);
+  padding: var(--page-padding);
 }
 
 .DataSourcePage__header {

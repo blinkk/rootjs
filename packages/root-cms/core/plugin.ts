@@ -1410,16 +1410,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
 
       // The AI "prepare" routes can carry a moderately large body (the edit
-      // flow sends the JSON object being edited, the release summary sends the
-      // release's changes). Use a larger limit for those
+      // flow sends the JSON object being edited). Use a larger limit for those
       // routes only; body-parser short-circuits when `req._body` is already
       // set, so the global parser below is a no-op for them.
       server.use(
-        [
-          '/cms/api/ai.chat.prepare',
-          '/cms/api/ai.edit.prepare',
-          '/cms/api/ai.release_summary',
-        ],
+        ['/cms/api/ai.chat.prepare', '/cms/api/ai.edit.prepare'],
         bodyParser.json({limit: '4mb'})
       );
       // Image editing iterates on its own output, so the request body can
