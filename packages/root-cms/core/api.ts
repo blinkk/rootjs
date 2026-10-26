@@ -31,6 +31,7 @@ import {
   prepareClientModel,
   serializeAiConfig,
   summarizeDiff,
+  summarizeRelease,
   transformTranslations,
   translateString,
 } from './ai.js';
@@ -1150,6 +1151,59 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
+
+  /**
+   * Summarizes the changes in a release. The diff is computed by the CMS UI
+   * (see `ui/utils/release-diff.ts`).
+   *
+   * ```
+   * POST /cms/api/ai.release_summary
+   * {"releaseId": "spring-launch", "description": "...", "diff": {...}}
+   * ```
+   */
+  server.use(
+    '/cms/api/ai.release_summary',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+
+      const reqBody = req.body || {};
+      const releaseId =
+        typeof reqBody.releaseId === 'string' ? reqBody.releaseId.trim() : '';
+      if (!releaseId || !reqBody.diff) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: releaseId ? 'diff' : 'releaseId',
+        });
+        return;
+      }
+
+      try {
+        const summary = await summarizeRelease(req.rootConfig!, {
+          releaseId,
+          description:
+            typeof reqBody.description === 'string'
+              ? reqBody.description
+              : undefined,
+          diff: reqBody.diff,
+        });
+        res.status(200).json({success: true, summary});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
 
   /**
    * Generates an image from a text prompt using the configured image model.

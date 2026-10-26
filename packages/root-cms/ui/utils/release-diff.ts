@@ -288,3 +288,33 @@ function truncate(str: string): string {
   }
   return `${str.slice(0, MAX_MODEL_STRING_LENGTH)}… [truncated]`;
 }
+
+/**
+ * Generates a short markdown summary of a release's changes with Root AI.
+ */
+export async function cmsGetReleaseSummary(
+  release: Release,
+  diff: ReleaseDiff
+): Promise<string> {
+  const res = await window.fetch('/cms/api/ai.release_summary', {
+    method: 'POST',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({
+      releaseId: release.id,
+      description: release.description || '',
+      diff: serializeReleaseDiffForModel(diff),
+    }),
+  });
+  let resData: any = null;
+  try {
+    resData = await res.json();
+  } catch {
+    // Ignore JSON parsing errors and fall back to the status code below.
+  }
+  if (!res.ok || !resData?.success) {
+    throw new Error(
+      resData?.error || `Failed to summarize the release: ${res.status}`
+    );
+  }
+  return String(resData.summary || '');
+}

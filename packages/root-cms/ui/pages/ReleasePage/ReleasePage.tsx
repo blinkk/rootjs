@@ -12,18 +12,21 @@ import {
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
-  IconChevronRight,
   IconListSearch,
   IconRobot,
   IconSettings,
   IconSparkles,
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
-import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {
+  AiSummaryResult,
+  AiSummaryStatus,
+} from '../../components/AiSummary/AiSummary.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
 import {DocDiffViewer} from '../../components/DocDiffViewer/DocDiffViewer.js';
-import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
+import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
@@ -42,17 +45,22 @@ import {
   usePublishChecks,
   type PublishChecksDecision,
 } from '../../hooks/usePublishChecks.js';
+import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {DataSource, getDataSource} from '../../utils/data-source.js';
+import {testTimestamp, toMillis} from '../../utils/doc-changes.js';
+import {CMSDoc} from '../../utils/doc.js';
 import {errorMessage, notifyErrors} from '../../utils/notifications.js';
+import {getNestedValue} from '../../utils/objects.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {testHasPublishChecks} from '../../utils/publish-checks.js';
 import {
   ReleaseDiff,
   ReleaseDocDiff,
   ReleaseDocDiffStatus,
+  cmsGetReleaseSummary,
   getReleaseDiff,
   getReleaseDiffLabels,
 } from '../../utils/release-diff.js';
@@ -67,12 +75,10 @@ import {
   publishRelease,
   rollbackRelease,
 } from '../../utils/release.js';
-import {getTimeAgo, timestamp} from '../../utils/time.js';
+import {getTimeAgo} from '../../utils/time.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 
-const SUMMARIZE_PROMPT =
-  'Summarize the changes in this release. Group related changes together ' +
-  'and keep it brief.';
+type ReleasePageTab = 'overview' | 'changes';
 
 const AUDIT_PROMPT =
   'Audit the changes in this release. Flag anything that looks ' +
@@ -89,7 +95,10 @@ const SUGGESTED_PROMPTS = [
 export function ReleasePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);
   const [release, setRelease] = useState<Release | null>(null);
-  const [updated, setUpdated] = useState(0);
+  const [diff, setDiff] = useState<ReleaseDiff | null>(null);
+  const [diffLoading, setDiffLoading] = useState(true);
+  const [tabParam, setTabParam] = useStringParam('tab', 'overview');
+  const tab: ReleasePageTab = tabParam === 'changes' ? 'changes' : 'overview';
   const id = props.id;
   usePageTitle(`Release: ${id}`);
 
@@ -105,6 +114,7 @@ export function ReleasePage(props: {id: string}) {
     setAiPrompt(undefined);
     setAiVisible(() => false);
   }, [setAiVisible]);
+  const summary = useReleaseSummary();
 
   /** Opens the Root AI panel and sends a prompt to it. */
   function askAi(text: string) {
@@ -112,18 +122,45 @@ export function ReleasePage(props: {id: string}) {
     setAiVisible(() => true);
   }
 
+  /** Switches to the changes tab and summarizes the changes. */
+  function summarize() {
+    setTabParam('changes');
+    if (release && diff) {
+      summary.generate(release, diff);
+    }
+  }
+
   async function init() {
     setLoading(true);
+    let release: Release | null = null;
     await notifyErrors(async () => {
-      const release = await withTimeout(
+      release = await withTimeout(
         getRelease(id),
         undefined,
         'loading the release'
       );
       setRelease(release);
-      setUpdated(timestamp());
     });
     setLoading(false);
+    if (release) {
+      await loadDiff(release);
+    } else {
+      setDiffLoading(false);
+    }
+  }
+
+  async function loadDiff(release: Release) {
+    setDiffLoading(true);
+    summary.reset();
+    await notifyErrors(async () => {
+      const diff = await withTimeout(
+        getReleaseDiff(release),
+        undefined,
+        'loading the release changes'
+      );
+      setDiff(diff);
+    });
+    setDiffLoading(false);
   }
 
   useEffect(() => {
@@ -135,6 +172,10 @@ export function ReleasePage(props: {id: string}) {
     init();
   }
 
+  const numChanged = diff
+    ? diff.docs.filter((doc) => doc.status !== 'unchanged').length
+    : 0;
+
   return (
     <Layout>
       <div className="ReleasePage__layout">
@@ -145,34 +186,41 @@ export function ReleasePage(props: {id: string}) {
               <div>{id}</div>
             </Breadcrumbs>
             <div className="ReleasePage__header__titleWrap">
-              <Heading size="h1">Release: {id}</Heading>
-              <div className="ReleasePage__header__controls">
+              <Heading size="h1">{id}</Heading>
+              {release && <ReleaseStatusBadge release={release} />}
+              <div className="ReleasePage__header__actions">
+                {aiEnabled && (
+                  <Button
+                    className={joinClassNames(
+                      'ReleasePage__header__ai',
+                      aiVisible && 'ReleasePage__header__ai--active'
+                    )}
+                    variant="default"
+                    color="dark"
+                    size="xs"
+                    leftIcon={<IconRobot size={16} />}
+                    onClick={() =>
+                      aiVisible ? closeAi() : setAiVisible(() => true)
+                    }
+                  >
+                    Root AI
+                  </Button>
+                )}
                 <Tooltip label="Configure">
                   <ActionIcon
+                    className="ReleasePage__header__configure"
                     component="a"
+                    variant="default"
+                    size={30}
                     href={`/cms/releases/${props.id}/edit`}
                   >
-                    <IconSettings size={24} stroke="1.5" />
+                    <IconSettings size={16} stroke="1.5" />
                   </ActionIcon>
                 </Tooltip>
+                {release && (
+                  <ReleasePage.Actions release={release} onAction={onAction} />
+                )}
               </div>
-              {aiEnabled && (
-                <Button
-                  className={joinClassNames(
-                    'ReleasePage__header__ai',
-                    aiVisible && 'ReleasePage__header__ai--active'
-                  )}
-                  variant="default"
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconRobot size={16} />}
-                  onClick={() =>
-                    aiVisible ? closeAi() : setAiVisible(() => true)
-                  }
-                >
-                  Root AI
-                </Button>
-              )}
             </div>
             {release?.description && (
               <Markdown
@@ -180,41 +228,69 @@ export function ReleasePage(props: {id: string}) {
                 code={release.description}
               />
             )}
+            {release && (
+              <Text
+                className="ReleasePage__header__meta"
+                size="body-sm"
+                color="gray"
+              >
+                {getReleaseMeta(release)}
+              </Text>
+            )}
+            <div className="ReleasePage__tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'overview'}
+                className={joinClassNames(
+                  'ReleasePage__tabs__tab',
+                  tab === 'overview' && 'ReleasePage__tabs__tab--active'
+                )}
+                onClick={() => setTabParam('overview')}
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'changes'}
+                className={joinClassNames(
+                  'ReleasePage__tabs__tab',
+                  tab === 'changes' && 'ReleasePage__tabs__tab--active'
+                )}
+                onClick={() => setTabParam('changes')}
+              >
+                Changes
+                {diff && (
+                  <span className="ReleasePage__tabs__tab__count">
+                    {numChanged}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {loading ? (
             <Loader color="gray" size="xl" />
-          ) : (
-            <>
-              {release && (
-                <ReleasePage.PublishStatus
-                  release={release}
-                  onAction={onAction}
-                />
-              )}
-              {release && release.docIds && release.docIds.length > 0 && (
-                <ReleasePage.Changes
-                  release={release}
-                  key={`changes-${updated}`}
-                  onAskAi={aiEnabled ? askAi : undefined}
-                />
-              )}
-              {release && release.docIds && release.docIds.length > 0 && (
-                <ReleasePage.DocsList
-                  release={release}
-                  key={`docs-list-${updated}`}
-                />
-              )}
-              {release &&
-                release.dataSourceIds &&
-                release.dataSourceIds.length > 0 && (
-                  <ReleasePage.DataSourcesList
-                    release={release}
-                    key={`data-sources-${updated}`}
-                  />
-                )}
-            </>
-          )}
+          ) : release ? (
+            tab === 'overview' ? (
+              <ReleasePage.Overview
+                release={release}
+                diff={diff}
+                diffLoading={diffLoading}
+                onSummarize={aiEnabled ? summarize : undefined}
+                onAudit={aiEnabled ? () => askAi(AUDIT_PROMPT) : undefined}
+              />
+            ) : (
+              <ReleasePage.Changes
+                release={release}
+                diff={diff}
+                diffLoading={diffLoading}
+                summary={aiEnabled ? summary : undefined}
+                onAudit={aiEnabled ? () => askAi(AUDIT_PROMPT) : undefined}
+              />
+            )
+          ) : null}
         </div>
         {aiEnabled && aiVisible && (
           <ReleasePageAiPanel
@@ -226,6 +302,71 @@ export function ReleasePage(props: {id: string}) {
       </div>
     </Layout>
   );
+}
+
+/** Returns e.g. "Created by jane@example.com 2 days ago · 5 docs". */
+function getReleaseMeta(release: Release): string {
+  const parts: string[] = [];
+  if (release.createdBy) {
+    let created = `Created by ${release.createdBy}`;
+    if (testTimestamp(release.createdAt)) {
+      created += ` ${formatTimeAgo(release.createdAt)}`;
+    }
+    parts.push(created);
+  }
+  const numDocs = release.docIds?.length || 0;
+  parts.push(numDocs === 1 ? '1 doc' : `${numDocs} docs`);
+  const numDataSources = release.dataSourceIds?.length || 0;
+  if (numDataSources > 0) {
+    parts.push(
+      numDataSources === 1 ? '1 data source' : `${numDataSources} data sources`
+    );
+  }
+  return parts.join(' · ');
+}
+
+type ReleaseSummary = ReturnType<typeof useReleaseSummary>;
+
+/**
+ * Summarizes a release's changes with Root AI. The summary is never generated
+ * automatically; call `generate()` in response to a user action.
+ */
+function useReleaseSummary() {
+  const [status, setStatus] = useState<AiSummaryStatus>('idle');
+  const [summary, setSummary] = useState('');
+  const [error, setError] = useState('');
+  // Ignores responses from requests superseded by a newer call.
+  const requestIdRef = useRef(0);
+
+  async function generate(release: Release, diff: ReleaseDiff) {
+    const requestId = ++requestIdRef.current;
+    setStatus('loading');
+    setError('');
+    try {
+      const res = await cmsGetReleaseSummary(release, diff);
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+      setSummary(res);
+      setStatus('success');
+    } catch (err) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+      console.error(err);
+      setError(errorMessage(err));
+      setStatus('error');
+    }
+  }
+
+  function reset() {
+    requestIdRef.current++;
+    setStatus('idle');
+    setSummary('');
+    setError('');
+  }
+
+  return {status, summary, error, generate, reset};
 }
 
 interface ReleasePageAiPanelProps {
@@ -253,7 +394,10 @@ function ReleasePageAiPanel(props: ReleasePageAiPanelProps) {
   );
 }
 
-ReleasePage.PublishStatus = (props: {
+/**
+ * The release's publishing actions: publish, schedule and rollback.
+ */
+ReleasePage.Actions = (props: {
   release: Release;
   onAction: (action: string) => void;
 }) => {
@@ -499,151 +643,118 @@ ReleasePage.PublishStatus = (props: {
   }
 
   return (
-    <div className="ReleasePage__PublishStatus">
-      <Heading size="h2">Status</Heading>
-      <Surface>
-        <Table
-          className="ReleasePage__PublishStatus__table"
-          verticalSpacing="xs"
-          striped
-          fontSize="xs"
-        >
-          <thead>
-            <tr>
-              <th>status</th>
-              <th>actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <ReleaseStatusBadge release={release} />
-              </td>
-              <td>
-                <div className="ReleasePage__PublishStatus__actions">
-                  {!release.archivedAt && !release.scheduledAt && (
-                    <ConditionalTooltip
-                      label="You don't have access to publish this release"
-                      condition={!canPublish}
-                    >
-                      <Tooltip
-                        label="Publish the release immediately"
-                        position="bottom"
-                        withArrow
-                        disabled={!canPublish}
-                      >
-                        <Button
-                          variant="default"
-                          size="xs"
-                          compact
-                          onClick={() => onPublishClicked()}
-                          loading={publishLoading || checksRunning}
-                          disabled={!canPublish}
-                        >
-                          {checksRunning
-                            ? 'Running checks'
-                            : release.publishedAt
-                              ? 'Re-publish'
-                              : 'Publish'}
-                        </Button>
-                      </Tooltip>
-                    </ConditionalTooltip>
-                  )}
-                  {!release.archivedAt &&
-                    (release.scheduledAt ? (
-                      <ConditionalTooltip
-                        label="You don't have access to manage scheduled releases"
-                        condition={!canPublish}
-                      >
-                        <Tooltip
-                          label="Cancel the scheduled release"
-                          position="bottom"
-                          withArrow
-                          disabled={!canPublish}
-                        >
-                          <Button
-                            variant="default"
-                            size="xs"
-                            compact
-                            onClick={() => onCancelScheduleClicked()}
-                            disabled={!canPublish}
-                          >
-                            Cancel Schedule
-                          </Button>
-                        </Tooltip>
-                      </ConditionalTooltip>
-                    ) : (
-                      <ConditionalTooltip
-                        label="You don't have access to manage scheduled releases"
-                        condition={!canPublish}
-                      >
-                        <Tooltip
-                          label="Schedule the release to be published at a future date"
-                          position="bottom"
-                          withArrow
-                          wrapLines
-                          width={180}
-                          disabled={!canPublish}
-                        >
-                          <Button
-                            variant="default"
-                            size="xs"
-                            compact
-                            onClick={() => onScheduleClicked()}
-                            disabled={!canPublish}
-                          >
-                            Schedule
-                          </Button>
-                        </Tooltip>
-                      </ConditionalTooltip>
-                    ))}
-                  {!release.archivedAt &&
-                    !release.scheduledAt &&
-                    release.publishedAt && (
-                      <ConditionalTooltip
-                        label="You don't have access to rollback this release"
-                        condition={!canPublish}
-                      >
-                        <Tooltip
-                          label="Restore the items in the release to their state before the release was published"
-                          position="bottom"
-                          withArrow
-                          wrapLines
-                          width={220}
-                          disabled={!canPublish}
-                        >
-                          <Button
-                            variant="default"
-                            size="xs"
-                            compact
-                            onClick={() => onRollbackClicked()}
-                            loading={rollbackLoading}
-                            disabled={!canPublish || publishLoading}
-                          >
-                            Rollback
-                          </Button>
-                        </Tooltip>
-                      </ConditionalTooltip>
-                    )}
-                </div>
-                {!release.archivedAt &&
-                  releaseHasChecks &&
-                  publishChecks.isAdmin && (
-                    <Checkbox
-                      className="ReleasePage__PublishStatus__skipChecks"
-                      label="Skip publishing checks (admins only)"
-                      size="xs"
-                      checked={skipChecks}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        setSkipChecks(e.currentTarget.checked);
-                      }}
-                    />
-                  )}
-              </td>
-            </tr>
-          </tbody>
-        </Table>
-      </Surface>
+    <div className="ReleasePage__actions">
+      <div className="ReleasePage__actions__buttons">
+        {!release.archivedAt && !release.scheduledAt && release.publishedAt && (
+          <ConditionalTooltip
+            label="You don't have access to rollback this release"
+            condition={!canPublish}
+          >
+            <Tooltip
+              label="Restore the items in the release to their state before the release was published"
+              position="bottom"
+              withArrow
+              wrapLines
+              width={220}
+              disabled={!canPublish}
+            >
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => onRollbackClicked()}
+                loading={rollbackLoading}
+                disabled={!canPublish || publishLoading}
+              >
+                Rollback
+              </Button>
+            </Tooltip>
+          </ConditionalTooltip>
+        )}
+        {!release.archivedAt &&
+          (release.scheduledAt ? (
+            <ConditionalTooltip
+              label="You don't have access to manage scheduled releases"
+              condition={!canPublish}
+            >
+              <Tooltip
+                label="Cancel the scheduled release"
+                position="bottom"
+                withArrow
+                disabled={!canPublish}
+              >
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={() => onCancelScheduleClicked()}
+                  disabled={!canPublish}
+                >
+                  Cancel schedule
+                </Button>
+              </Tooltip>
+            </ConditionalTooltip>
+          ) : (
+            <ConditionalTooltip
+              label="You don't have access to manage scheduled releases"
+              condition={!canPublish}
+            >
+              <Tooltip
+                label="Schedule the release to be published at a future date"
+                position="bottom"
+                withArrow
+                wrapLines
+                width={180}
+                disabled={!canPublish}
+              >
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={() => onScheduleClicked()}
+                  disabled={!canPublish}
+                >
+                  Schedule
+                </Button>
+              </Tooltip>
+            </ConditionalTooltip>
+          ))}
+        {!release.archivedAt && !release.scheduledAt && (
+          <ConditionalTooltip
+            label="You don't have access to publish this release"
+            condition={!canPublish}
+          >
+            <Tooltip
+              label="Publish the release immediately"
+              position="bottom"
+              withArrow
+              disabled={!canPublish}
+            >
+              <Button
+                color="dark"
+                size="xs"
+                onClick={() => onPublishClicked()}
+                loading={publishLoading || checksRunning}
+                disabled={!canPublish}
+              >
+                {checksRunning
+                  ? 'Running checks'
+                  : release.publishedAt
+                    ? 'Re-publish'
+                    : 'Publish'}
+              </Button>
+            </Tooltip>
+          </ConditionalTooltip>
+        )}
+      </div>
+      {!release.archivedAt && releaseHasChecks && publishChecks.isAdmin && (
+        <Checkbox
+          className="ReleasePage__actions__skipChecks"
+          label="Skip publishing checks (admins only)"
+          size="xs"
+          checked={skipChecks}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            setSkipChecks(e.currentTarget.checked);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -657,218 +768,417 @@ const DOC_DIFF_STATUS_LABELS: Record<ReleaseDocDiffStatus, string> = {
 };
 
 /**
- * Shows the content changes made by the docs in the release, with buttons to
- * have Root AI summarize or audit them.
+ * The overview tab: the docs and data sources in the release, plus details
+ * about the release.
  */
-ReleasePage.Changes = (props: {
+ReleasePage.Overview = (props: {
   release: Release;
-  onAskAi?: (prompt: string) => void;
+  diff: ReleaseDiff | null;
+  diffLoading: boolean;
+  onSummarize?: () => void;
+  onAudit?: () => void;
 }) => {
   const release = props.release;
-  const [loading, setLoading] = useState(true);
-  const [diff, setDiff] = useState<ReleaseDiff | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function init() {
-      setLoading(true);
-      await notifyErrors(async () => {
-        const diff = await withTimeout(
-          getReleaseDiff(release),
-          undefined,
-          'loading the release changes'
-        );
-        if (!cancelled) {
-          setDiff(diff);
-        }
-      });
-      if (!cancelled) {
-        setLoading(false);
-      }
-    }
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [release.id]);
-
-  const labels = getReleaseDiffLabels(diff?.mode || 'pending');
-  const numChanged = (diff?.docs || []).filter(
-    (doc) => doc.status !== 'unchanged'
-  ).length;
+  const docIds = release.docIds || [];
+  const dataSourceIds = release.dataSourceIds || [];
+  const dataSources = useDataSources(dataSourceIds);
+  const docDiffs: Record<string, ReleaseDocDiff> = {};
+  for (const doc of props.diff?.docs || []) {
+    docDiffs[doc.docId] = doc;
+  }
 
   return (
-    <div className="ReleasePage__Changes">
-      <div className="ReleasePage__Changes__header">
-        <Heading size="h2">Changes</Heading>
-        {props.onAskAi && (
-          <div className="ReleasePage__Changes__header__ai">
-            <Tooltip
-              label="Have Root AI summarize the changes in the release"
-              position="bottom"
-              withArrow
-              wrapLines
-              width={200}
-            >
+    <div className="ReleasePage__Overview">
+      <div className="ReleasePage__Overview__main">
+        <div className="ReleasePage__sectionHeader">
+          <Heading size="h2">Contents</Heading>
+          <Button
+            component="a"
+            variant="default"
+            size="xs"
+            compact
+            href={`/cms/releases/${release.id}/edit`}
+          >
+            Edit
+          </Button>
+        </div>
+        {docIds.length === 0 && dataSourceIds.length === 0 ? (
+          <Text size="body-sm" color="gray">
+            Nothing has been added to this release yet.
+          </Text>
+        ) : (
+          <Surface className="ReleasePage__Contents">
+            <Table verticalSpacing="sm" fontSize="sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Status</th>
+                  <th>Last modified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {docIds.map((docId) => (
+                  <ReleasePage.ContentsDocRow
+                    key={docId}
+                    docId={docId}
+                    docDiff={docDiffs[docId]}
+                    loading={props.diffLoading}
+                  />
+                ))}
+                {dataSourceIds.map((id) => (
+                  <ReleasePage.ContentsDataSourceRow
+                    key={id}
+                    id={id}
+                    dataSource={dataSources[id]}
+                  />
+                ))}
+              </tbody>
+            </Table>
+          </Surface>
+        )}
+      </div>
+      <div className="ReleasePage__Overview__side">
+        {props.onSummarize && props.onAudit && (
+          <Surface className="ReleasePage__card">
+            <div className="ReleasePage__card__title">
+              <IconRobot size={16} />
+              Root AI
+            </div>
+            <Text size="body-sm" color="gray">
+              Get a summary of what this release changes, or have it checked for
+              anything that looks unintentional.
+            </Text>
+            <div className="ReleasePage__card__buttons">
               <Button
                 variant="default"
                 size="xs"
                 compact
                 leftIcon={<IconSparkles size={14} />}
-                onClick={() => props.onAskAi!(SUMMARIZE_PROMPT)}
+                onClick={props.onSummarize}
+                disabled={props.diffLoading || !props.diff}
               >
                 Summarize
               </Button>
-            </Tooltip>
-            <Tooltip
-              label="Have Root AI review the changes for anything unintentional"
-              position="bottom"
-              withArrow
-              wrapLines
-              width={200}
-            >
               <Button
                 variant="default"
                 size="xs"
                 compact
                 leftIcon={<IconListSearch size={14} />}
-                onClick={() => props.onAskAi!(AUDIT_PROMPT)}
+                onClick={props.onAudit}
               >
                 Audit
               </Button>
-            </Tooltip>
-          </div>
-        )}
-      </div>
-      {loading ? (
-        <Loader color="gray" size="sm" />
-      ) : diff ? (
-        <>
-          <Text
-            className="ReleasePage__Changes__summary"
-            size="body-sm"
-            color="gray"
-          >
-            {numChanged} of {diff.docs.length}{' '}
-            {diff.docs.length === 1 ? 'doc' : 'docs'} changed, comparing{' '}
-            {labels.before} to {labels.after}.
-            {diff.mode === 'released' &&
-              ' These are the changes made when the release was published.'}
-          </Text>
-          <Surface className="ReleasePage__Changes__docs">
-            {diff.docs.map((doc) => (
-              <ReleasePage.DocChanges
-                key={doc.docId}
-                doc={doc}
-                mode={diff.mode}
-              />
-            ))}
+            </div>
           </Surface>
-        </>
-      ) : null}
+        )}
+        <Surface className="ReleasePage__card">
+          <div className="ReleasePage__card__title">Details</div>
+          <dl className="ReleasePage__details">
+            <ReleasePage.DetailsRow
+              label="Created"
+              at={release.createdAt}
+              by={release.createdBy}
+            />
+            {release.scheduledAt && (
+              <ReleasePage.DetailsRow
+                label="Scheduled"
+                at={release.scheduledAt}
+                by={release.scheduledBy}
+              />
+            )}
+            {release.publishedAt && (
+              <ReleasePage.DetailsRow
+                label="Published"
+                at={release.publishedAt}
+                by={release.publishedBy}
+              />
+            )}
+            {release.rolledBackAt && (
+              <ReleasePage.DetailsRow
+                label="Rolled back"
+                at={release.rolledBackAt}
+                by={release.rolledBackBy}
+              />
+            )}
+            {release.archivedAt && (
+              <ReleasePage.DetailsRow
+                label="Archived"
+                at={release.archivedAt}
+                by={release.archivedBy}
+              />
+            )}
+          </dl>
+        </Surface>
+      </div>
     </div>
   );
 };
 
-ReleasePage.DocChanges = (props: {
-  doc: ReleaseDocDiff;
-  mode: ReleaseDiff['mode'];
+ReleasePage.DetailsRow = (props: {
+  label: string;
+  at?: unknown;
+  by?: string;
 }) => {
-  const doc = props.doc;
-  const [expanded, setExpanded] = useState(false);
-  const labels = getReleaseDiffLabels(props.mode);
-  const canExpand = doc.status !== 'unchanged' && doc.status !== 'missing';
-  const modifiedBy = (doc.after?.sys || doc.before?.sys)?.modifiedBy;
-  const numChanges = doc.changes.length;
+  let value = '—';
+  if (testTimestamp(props.at)) {
+    value = formatTimeAgo(props.at);
+    if (props.by) {
+      value += ` by ${props.by}`;
+    }
+  }
+  return (
+    <>
+      <dt>{props.label}</dt>
+      <dd>{value}</dd>
+    </>
+  );
+};
+
+ReleasePage.ContentsDocRow = (props: {
+  docId: string;
+  docDiff?: ReleaseDocDiff;
+  loading: boolean;
+}) => {
+  const docId = props.docId;
+  // For a published release, `after` is the published doc, otherwise it's
+  // the draft.
+  const doc = props.docDiff?.after || props.docDiff?.before || null;
+  const title = doc ? getDocTitle(docId, doc) : '';
+  const sys: any = doc?.sys;
+  return (
+    <tr>
+      <td>
+        <a
+          className="ReleasePage__Contents__item"
+          href={`/cms/content/${docId}`}
+        >
+          <div className="ReleasePage__Contents__item__title">
+            {title || docId}
+          </div>
+          {title && (
+            <div className="ReleasePage__Contents__item__id">{docId}</div>
+          )}
+        </a>
+      </td>
+      <td>
+        {doc ? (
+          <DocStatusBadges doc={doc} docId={docId} hideReleases />
+        ) : props.loading ? (
+          <Loader size="xs" color="gray" />
+        ) : (
+          <Text size="body-sm" color="gray">
+            Not found
+          </Text>
+        )}
+      </td>
+      <td className="ReleasePage__Contents__modified">
+        {sys?.modifiedBy && formatBy(sys.modifiedBy, sys.modifiedAt)}
+      </td>
+    </tr>
+  );
+};
+
+ReleasePage.ContentsDataSourceRow = (props: {
+  id: string;
+  dataSource?: DataSource;
+}) => {
+  const ds = props.dataSource;
+  let status = 'Not synced';
+  if (testTimestamp(ds?.publishedAt)) {
+    status = `Published ${formatTimeAgo(ds!.publishedAt)}`;
+  } else if (testTimestamp(ds?.syncedAt)) {
+    status = `Synced ${formatTimeAgo(ds!.syncedAt)}`;
+  }
+  return (
+    <tr>
+      <td>
+        <a
+          className="ReleasePage__Contents__item"
+          href={`/cms/data/${props.id}`}
+        >
+          <div className="ReleasePage__Contents__item__title">
+            <DataSourceIcon
+              className="ReleasePage__Contents__item__icon"
+              type={ds?.type}
+            />
+            {props.id}
+          </div>
+          <div className="ReleasePage__Contents__item__id">
+            {ds?.description || 'Data source'}
+          </div>
+        </a>
+      </td>
+      <td>
+        <Text size="body-sm" color="gray">
+          {status}
+        </Text>
+      </td>
+      <td className="ReleasePage__Contents__modified">
+        {ds?.syncedBy && formatBy(ds.syncedBy, ds.syncedAt)}
+      </td>
+    </tr>
+  );
+};
+
+/**
+ * The changes tab: a summary of the release's changes from Root AI, and the
+ * diff of each doc in the release.
+ */
+ReleasePage.Changes = (props: {
+  release: Release;
+  diff: ReleaseDiff | null;
+  diffLoading: boolean;
+  summary?: ReleaseSummary;
+  onAudit?: () => void;
+}) => {
+  const diff = props.diff;
+  const docs = diff?.docs || [];
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const selected =
+    docs.find((doc) => doc.docId === selectedDocId) ||
+    docs.find((doc) => doc.status !== 'unchanged') ||
+    docs[0];
+
+  if (props.diffLoading) {
+    return <Loader color="gray" size="md" />;
+  }
+  if (!diff || docs.length === 0) {
+    return (
+      <Text size="body-sm" color="gray">
+        There are no docs in this release.
+      </Text>
+    );
+  }
+
+  const labels = getReleaseDiffLabels(diff.mode);
+  const numChanged = docs.filter((doc) => doc.status !== 'unchanged').length;
+  const summary = props.summary;
 
   return (
-    <div
-      className={joinClassNames(
-        'ReleasePage__DocChanges',
-        expanded && 'ReleasePage__DocChanges--expanded'
-      )}
-    >
-      <button
-        type="button"
-        className="ReleasePage__DocChanges__row"
-        onClick={() => setExpanded((expanded) => !expanded)}
-        disabled={!canExpand}
-      >
-        <IconChevronRight
-          className="ReleasePage__DocChanges__row__chevron"
-          size={14}
-        />
-        <span className="ReleasePage__DocChanges__row__docId">{doc.docId}</span>
-        <span
-          className={joinClassNames(
-            'ReleasePage__DocChanges__row__status',
-            `ReleasePage__DocChanges__row__status--${doc.status}`
+    <div className="ReleasePage__Changes">
+      <div className="ReleasePage__Changes__toolbar">
+        <Text size="body-sm" color="gray">
+          {numChanged} of {docs.length} {docs.length === 1 ? 'doc' : 'docs'}{' '}
+          changed, comparing <b>{labels.before}</b> to <b>{labels.after}</b>.
+          {diff.mode === 'released' &&
+            ' These are the changes made when the release was published.'}
+        </Text>
+      </div>
+
+      {summary && (
+        <div className="ReleasePage__summary">
+          <div className="ReleasePage__summary__header">
+            <IconSparkles size={16} />
+            <div className="ReleasePage__summary__header__label">
+              Root AI summary
+            </div>
+            <div className="ReleasePage__summary__header__buttons">
+              <Button
+                variant="default"
+                size="xs"
+                compact
+                onClick={() => summary.generate(props.release, diff)}
+                loading={summary.status === 'loading'}
+              >
+                {summary.status === 'idle' ? 'Summarize' : 'Regenerate'}
+              </Button>
+              {props.onAudit && (
+                <Button
+                  variant="default"
+                  size="xs"
+                  compact
+                  leftIcon={<IconListSearch size={14} />}
+                  onClick={props.onAudit}
+                >
+                  Audit
+                </Button>
+              )}
+            </div>
+          </div>
+          {summary.status === 'idle' ? (
+            <Text
+              className="ReleasePage__summary__help"
+              size="body-sm"
+              color="gray"
+            >
+              Summarize the changes in this release, or audit them for anything
+              that looks unintentional.
+            </Text>
+          ) : (
+            <AiSummaryResult
+              className="ReleasePage__summary__result"
+              status={summary.status}
+              summary={summary.summary}
+              error={summary.error}
+            />
           )}
-        >
-          {DOC_DIFF_STATUS_LABELS[doc.status]}
-        </span>
-        {doc.status === 'modified' && numChanges > 0 && (
-          <span className="ReleasePage__DocChanges__row__count">
-            {numChanges === 1 ? '1 change' : `${numChanges} changes`}
-          </span>
-        )}
-        {modifiedBy && (
-          <span className="ReleasePage__DocChanges__row__modifiedBy">
-            {modifiedBy}
-          </span>
-        )}
-      </button>
-      {expanded && (
-        <div className="ReleasePage__DocChanges__diff">
-          <DocDiffViewer
-            left={{docId: doc.docId, versionId: labels.before}}
-            right={{docId: doc.docId, versionId: labels.after}}
-            docs={{left: doc.before, right: doc.after}}
-            showAiSummary={false}
-          />
         </div>
       )}
-    </div>
-  );
-};
 
-ReleasePage.DocsList = (props: {release: Release}) => {
-  const release = props.release;
-  const docIds = release.docIds || [];
-  return (
-    <div className="ReleasePage__DocsList">
-      <div className="ReleasePage__DocsList__header">
-        <Heading size="h2">Docs</Heading>
-        <Button
-          component="a"
-          variant="default"
-          size="xs"
-          compact
-          href={`/cms/releases/${release.id}/edit`}
-        >
-          Edit
-        </Button>
-      </div>
-      <Surface className="ReleasePage__DocsList__cards">
-        {docIds.map((docId) => (
-          <div key={docId} className="ReleasePage__DocsList__card">
-            <a href={`/cms/content/${docId}`}>
-              <DocPreviewCard docId={docId} statusBadges hideReleases />
-            </a>
-          </div>
-        ))}
+      <Surface className="ReleasePage__Changes__panes">
+        <div className="ReleasePage__Changes__list" role="listbox">
+          {docs.map((doc) => (
+            <button
+              key={doc.docId}
+              type="button"
+              role="option"
+              aria-selected={doc === selected}
+              className={joinClassNames(
+                'ReleasePage__Changes__list__item',
+                doc === selected && 'ReleasePage__Changes__list__item--active'
+              )}
+              onClick={() => setSelectedDocId(doc.docId)}
+            >
+              <div className="ReleasePage__Changes__list__item__docId">
+                {doc.docId}
+              </div>
+              <div className="ReleasePage__Changes__list__item__meta">
+                <span
+                  className={joinClassNames(
+                    'ReleasePage__status',
+                    `ReleasePage__status--${doc.status}`
+                  )}
+                >
+                  {DOC_DIFF_STATUS_LABELS[doc.status]}
+                </span>
+                {doc.status === 'modified' && doc.changes.length > 0 && (
+                  <span>
+                    {doc.changes.length === 1
+                      ? '1 change'
+                      : `${doc.changes.length} changes`}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="ReleasePage__Changes__diff">
+          {selected && (
+            <>
+              <div className="ReleasePage__Changes__diff__header">
+                <Heading size="h3">{selected.docId}</Heading>
+                <a href={`/cms/content/${selected.docId}`}>Open doc</a>
+              </div>
+              <DocDiffViewer
+                key={selected.docId}
+                left={{docId: selected.docId, versionId: labels.before}}
+                right={{docId: selected.docId, versionId: labels.after}}
+                docs={{left: selected.before, right: selected.after}}
+                showAiSummary={false}
+              />
+            </>
+          )}
+        </div>
       </Surface>
     </div>
   );
 };
 
-ReleasePage.DataSourcesList = (props: {release: Release}) => {
-  const release = props.release;
-  const ids = release.dataSourceIds || [];
+/** Fetches the data sources with the given ids, keyed by id. */
+function useDataSources(ids: string[]): Record<string, DataSource> {
   const [dataSources, setDataSources] = useState<Record<string, DataSource>>(
     {}
   );
-
   useEffect(() => {
     let cancelled = false;
     async function fetchAll() {
@@ -894,51 +1204,34 @@ ReleasePage.DataSourcesList = (props: {release: Release}) => {
       cancelled = true;
     };
   }, [ids.join(',')]);
+  return dataSources;
+}
 
-  return (
-    <div className="ReleasePage__DataSourcesList">
-      <div className="ReleasePage__DataSourcesList__header">
-        <Heading size="h2">Data Sources</Heading>
-        <Button
-          component="a"
-          variant="default"
-          size="xs"
-          compact
-          href={`/cms/releases/${release.id}/edit`}
-        >
-          Edit
-        </Button>
-      </div>
-      <Surface className="ReleasePage__DataSourcesList__items">
-        {ids.map((id) => {
-          const ds = dataSources[id];
-          return (
-            <a
-              key={id}
-              className="ReleasePage__DataSourcesList__item"
-              href={`/cms/data/${id}`}
-            >
-              <DataSourceIcon
-                className="ReleasePage__DataSourcesList__item__icon"
-                type={ds?.type}
-              />
-              <div className="ReleasePage__DataSourcesList__item__info">
-                <div className="ReleasePage__DataSourcesList__item__id">
-                  {id}
-                </div>
-                {ds?.description && (
-                  <div className="ReleasePage__DataSourcesList__item__description">
-                    {ds.description}
-                  </div>
-                )}
-              </div>
-            </a>
-          );
-        })}
-      </Surface>
-    </div>
+/** Returns a doc's title, using the collection's preview config. */
+function getDocTitle(docId: string, doc: CMSDoc): string {
+  const collectionId = docId.split('/')[0];
+  const collection = window.__ROOT_CTX.collections[collectionId];
+  const title = getNestedValue(
+    doc.fields || {},
+    collection?.preview?.title || 'meta.title'
   );
-};
+  return typeof title === 'string' ? title : '';
+}
+
+function formatBy(by: string, at?: unknown): string {
+  if (testTimestamp(at)) {
+    return `${by} · ${formatTimeAgo(at)}`;
+  }
+  return by;
+}
+
+/**
+ * Formats a Firestore timestamp as e.g. "2 days ago". Accepts serialized
+ * timestamps (e.g. `{seconds, nanoseconds}`), which don't have `toMillis()`.
+ */
+function formatTimeAgo(ts: unknown): string {
+  return getTimeAgo(toMillis(ts));
+}
 
 function rollbackConflictLabel(conflict: ReleaseRollbackConflict) {
   return conflict.locale ? `${conflict.id} (${conflict.locale})` : conflict.id;
@@ -947,8 +1240,8 @@ function rollbackConflictLabel(conflict: ReleaseRollbackConflict) {
 function rollbackConflictDetails(conflict: ReleaseRollbackConflict) {
   const verb = conflict.reason === 'published' ? 'published' : 'unpublished';
   const parts = [verb];
-  if (conflict.publishedAt?.toMillis) {
-    parts.push(getTimeAgo(conflict.publishedAt.toMillis()));
+  if (testTimestamp(conflict.publishedAt)) {
+    parts.push(formatTimeAgo(conflict.publishedAt));
   }
   if (conflict.publishedBy) {
     parts.push(`by ${conflict.publishedBy}`);
