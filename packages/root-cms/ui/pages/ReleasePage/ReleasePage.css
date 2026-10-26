@@ -22,9 +22,7 @@
 /* Header. */
 
 .ReleasePage__header {
-  margin: 0 calc(-1 * var(--page-padding)) 28px;
-  padding: 0 var(--page-padding);
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
 }
 
 .ReleasePage__header__breadcrumbs {
@@ -92,39 +90,19 @@
 /* Tabs. */
 
 .ReleasePage__tabs {
-  display: flex;
-  gap: 24px;
-  margin-top: 16px;
+  margin-bottom: 20px;
 }
 
-.ReleasePage__tabs__tab {
+.ReleasePage__tabs__label {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 0;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--color-text-gray);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
 }
 
-.ReleasePage__tabs__tab:hover {
-  color: inherit;
-}
-
-.ReleasePage__tabs__tab--active {
-  border-bottom-color: currentColor;
-  color: inherit;
-  font-weight: 600;
-}
-
-.ReleasePage__tabs__tab__count {
+.ReleasePage__tabs__count {
   padding: 0 6px;
   border-radius: 8px;
-  background: #f1f3f5;
+  background: rgba(0, 0, 0, 0.06);
   font-size: 12px;
   font-weight: 500;
 }
@@ -132,6 +110,8 @@
 /* Overview tab. */
 
 .ReleasePage__Overview {
+  --ReleasePage-sectionHeader-height: 32px;
+  --ReleasePage-sectionHeader-margin: 16px;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -145,6 +125,11 @@
 }
 
 .ReleasePage__Overview__side {
+  /* Aligns the cards with the top of the contents table. */
+  padding-top: calc(
+    var(--ReleasePage-sectionHeader-height) +
+      var(--ReleasePage-sectionHeader-margin)
+  );
   flex: 1 1 420px;
   max-width: 460px;
   display: flex;
@@ -156,7 +141,8 @@
   display: flex;
   gap: 16px;
   align-items: center;
-  margin-bottom: 16px;
+  height: var(--ReleasePage-sectionHeader-height);
+  margin-bottom: var(--ReleasePage-sectionHeader-margin);
 }
 
 .ReleasePage__Contents {
@@ -334,14 +320,13 @@
 
 .ReleasePage__Changes__diff__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
 }
 
-.ReleasePage__Changes__diff__header a {
+.ReleasePage__Changes__diff__header__open {
   margin-left: auto;
-  font-size: 12px;
 }
 
 .ReleasePage__status {

@@ -6,6 +6,7 @@ import {
   Button,
   Checkbox,
   Loader,
+  SegmentedControl,
   Table,
   Tooltip,
 } from '@mantine/core';
@@ -183,6 +184,17 @@ export function ReleasePage(props: {id: string}) {
               <Heading size="h1">{id}</Heading>
               {release && <ReleaseStatusBadge release={release} />}
               <div className="ReleasePage__header__actions">
+                <Tooltip label="Configure">
+                  <ActionIcon
+                    className="ReleasePage__header__configure"
+                    component="a"
+                    variant="default"
+                    size={30}
+                    href={`/cms/releases/${props.id}/edit`}
+                  >
+                    <IconSettings size={16} stroke="1.5" />
+                  </ActionIcon>
+                </Tooltip>
                 {aiEnabled && (
                   <Button
                     className={joinClassNames(
@@ -200,17 +212,6 @@ export function ReleasePage(props: {id: string}) {
                     Root AI
                   </Button>
                 )}
-                <Tooltip label="Configure">
-                  <ActionIcon
-                    className="ReleasePage__header__configure"
-                    component="a"
-                    variant="default"
-                    size={30}
-                    href={`/cms/releases/${props.id}/edit`}
-                  >
-                    <IconSettings size={16} stroke="1.5" />
-                  </ActionIcon>
-                </Tooltip>
                 {release && (
                   <ReleasePage.Actions release={release} onAction={onAction} />
                 )}
@@ -231,38 +232,29 @@ export function ReleasePage(props: {id: string}) {
                 {getReleaseMeta(release)}
               </Text>
             )}
-            <div className="ReleasePage__tabs" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'overview'}
-                className={joinClassNames(
-                  'ReleasePage__tabs__tab',
-                  tab === 'overview' && 'ReleasePage__tabs__tab--active'
-                )}
-                onClick={() => setTabParam('overview')}
-              >
-                Overview
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'changes'}
-                className={joinClassNames(
-                  'ReleasePage__tabs__tab',
-                  tab === 'changes' && 'ReleasePage__tabs__tab--active'
-                )}
-                onClick={() => setTabParam('changes')}
-              >
-                Changes
-                {diff && (
-                  <span className="ReleasePage__tabs__tab__count">
-                    {numChanged}
-                  </span>
-                )}
-              </button>
-            </div>
           </div>
+          <SegmentedControl
+            className="ReleasePage__tabs"
+            size="sm"
+            value={tab}
+            onChange={(value: string) => setTabParam(value)}
+            data={[
+              {label: 'Overview', value: 'overview'},
+              {
+                label: (
+                  <span className="ReleasePage__tabs__label">
+                    Changes
+                    {diff && (
+                      <span className="ReleasePage__tabs__count">
+                        {numChanged}
+                      </span>
+                    )}
+                  </span>
+                ),
+                value: 'changes',
+              },
+            ]}
+          />
 
           {loading ? (
             <Loader color="gray" size="xl" />
@@ -1112,7 +1104,16 @@ ReleasePage.Changes = (props: {
             <>
               <div className="ReleasePage__Changes__diff__header">
                 <Heading size="h3">{selected.docId}</Heading>
-                <a href={`/cms/content/${selected.docId}`}>Open doc</a>
+                <Button
+                  className="ReleasePage__Changes__diff__header__open"
+                  component="a"
+                  variant="default"
+                  size="xs"
+                  compact
+                  href={`/cms/content/${selected.docId}`}
+                >
+                  Open doc
+                </Button>
               </div>
               <DocDiffViewer
                 key={selected.docId}
