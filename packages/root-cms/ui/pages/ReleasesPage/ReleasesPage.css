@@ -4,7 +4,16 @@
 }
 
 .ReleasesPage__header {
-  margin-bottom: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 1000px;
+  margin-bottom: 28px;
+}
+
+.ReleasesPage__header__text {
+  flex: 1 1 400px;
 }
 
 .ReleasesPage p {
@@ -12,12 +21,150 @@
   max-width: 70ch;
 }
 
-.ReleasesPage__header__buttons {
-  margin-top: 20px;
-}
-
 .ReleasesPage__ReleasesTable {
   max-width: 1000px;
+}
+
+.ReleasesPage__ReleasesTable__filters {
+  margin-bottom: 16px;
+}
+
+.ReleasesPage__ReleasesTable__filters .mantine-SegmentedControl-root {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ReleasesPage__ReleasesTable__filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ReleasesPage__ReleasesTable__filter__count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-text-gray);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ReleasesPage__ReleasesTable__surface.Surface {
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.ReleasesPage__ReleasesTable__table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ReleasesPage__ReleasesTable__table th {
+  padding: 10px 16px;
+  border-bottom: 1px solid #ececea;
+  background: #fafaf8;
+  color: var(--color-text-gray);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ReleasesPage__ReleasesTable__table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f1ee;
+  vertical-align: middle;
+}
+
+.ReleasesPage__ReleasesTable__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ReleasesPage__ReleasesTable__table tbody tr:hover td {
+  background: var(--surface-background-hover);
+}
+
+.ReleasesPage__ReleasesTable__release {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ReleasesPage__ReleasesTable__release:hover
+  .ReleasesPage__ReleasesTable__release__title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ReleasesPage__ReleasesTable__release__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f1f3f5;
+  color: #4b5563;
+}
+
+.ReleasesPage__ReleasesTable__release__icon--scheduled {
+  background: #eef3fd;
+  color: #1d4ed8;
+}
+
+.ReleasesPage__ReleasesTable__release__icon--published {
+  background: #eef5f0;
+  color: #2f6b4a;
+}
+
+.ReleasesPage__ReleasesTable__release__icon--rolledBack {
+  background: #fdf3ea;
+  color: #9a3412;
+}
+
+.ReleasesPage__ReleasesTable__release__text {
+  min-width: 0;
+}
+
+.ReleasesPage__ReleasesTable__release__title {
+  color: var(--color-text-dark);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ReleasesPage__ReleasesTable__release__id {
+  margin-top: 2px;
+  color: var(--color-text-gray);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ReleasesPage__ReleasesTable__contents {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.ReleasesPage__ReleasesTable__createdBy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ReleasesPage__ReleasesTable__empty {
+  color: var(--color-text-gray);
 }
 
 .ReleasesPage__ReleasesTable__publishStatus {
@@ -26,23 +173,29 @@
   align-items: center;
 }
 
-.ReleasesPage__ReleasesTable__publishStatus__icon {
-  color: #12b886;
-}
-
-.ReleasesPage__ReleasesTable__filters {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
-}
-
-.ReleasesPage__ReleasesTable__table {
-  border: none;
-}
-
 .ReleasesPage__ReleasesTable__noResults {
   padding: 40px 20px;
   text-align: center;
+}
+
+.ReleasesPage__contentsTooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+  text-align: left;
+}
+
+.ReleasesPage__contentsTooltip__title {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.ReleasesPage__contentsTooltip__id {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ReleasesPage__EmptyState {

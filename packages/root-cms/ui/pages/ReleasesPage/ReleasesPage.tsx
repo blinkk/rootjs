@@ -1,9 +1,10 @@
 import './ReleasesPage.css';
 
-import {Button, Loader, SegmentedControl, Table} from '@mantine/core';
+import {Button, Loader, SegmentedControl, Tooltip} from '@mantine/core';
 import {
   IconCalendarTime,
   IconFilePlus,
+  IconPlus,
   IconRocket,
   IconStack2,
 } from '@tabler/icons-preact';
@@ -14,9 +15,12 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
+import {UserAvatar} from '../../components/UserAvatar/UserAvatar.js';
+import {UserTag} from '../../components/UserTag/UserTag.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {Release, listReleases} from '../../utils/release.js';
@@ -34,34 +38,78 @@ export function ReleasesPage() {
     <Layout>
       <div className="ReleasesPage">
         <div className="ReleasesPage__header">
-          <Heading size="h1">Releases</Heading>
-          <Text as="p">
-            Bundle one or more documents and publish them together. Schedule a
-            release to go live at a specific time, or publish manually when
-            you're ready.
-          </Text>
-          <div className="ReleasesPage__header__buttons">
-            <ConditionalTooltip
-              label="You don't have access to create new releases"
-              condition={!canPublish}
-            >
-              <Button
-                component="a"
-                color="blue"
-                size="xs"
-                href="/cms/releases/new"
-                disabled={!canPublish}
-                style={!canPublish ? {pointerEvents: 'none'} : undefined}
-              >
-                New release
-              </Button>
-            </ConditionalTooltip>
+          <div className="ReleasesPage__header__text">
+            <Heading size="h1">Releases</Heading>
+            <Text as="p">
+              Bundle one or more documents and publish them together. Schedule a
+              release to go live at a specific time, or publish manually when
+              you're ready.
+            </Text>
           </div>
+          <ConditionalTooltip
+            label="You don't have access to create new releases"
+            condition={!canPublish}
+          >
+            <Button
+              component="a"
+              color="blue"
+              size="xs"
+              leftIcon={<IconPlus size={16} />}
+              href="/cms/releases/new"
+              disabled={!canPublish}
+              style={!canPublish ? {pointerEvents: 'none'} : undefined}
+            >
+              New release
+            </Button>
+          </ConditionalTooltip>
         </div>
         <ReleasesPage.ReleasesTable canPublish={canPublish} />
       </div>
     </Layout>
   );
+}
+
+const FILTER_OPTIONS: Array<{label: string; value: ReleaseListFilter}> = [
+  {label: 'Active', value: 'active'},
+  {label: 'Unpublished', value: 'unpublished'},
+  {label: 'Published', value: 'published'},
+  {label: 'Archived', value: 'archived'},
+];
+
+function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
+  const isArchived = Boolean(release.archivedAt);
+  const isPublished = Boolean(release.publishedAt);
+  if (filter === 'active') {
+    return !isArchived;
+  }
+  if (filter === 'unpublished') {
+    return !isArchived && !isPublished;
+  }
+  if (filter === 'published') {
+    return !isArchived && isPublished;
+  }
+  return isArchived;
+}
+
+/** Returns the status tone used to tint a release's icon. */
+function getReleaseTone(release: Release) {
+  if (release.archivedAt) {
+    return 'archived';
+  }
+  if (release.scheduledAt) {
+    return 'scheduled';
+  }
+  if (release.publishedAt) {
+    return 'published';
+  }
+  if (release.rolledBackAt) {
+    return 'rolledBack';
+  }
+  return 'unpublished';
+}
+
+function pluralize(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
@@ -82,21 +130,18 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   }
 
   const filteredReleases = useMemo(() => {
-    return tableData.filter((release) => {
-      const isArchived = Boolean(release.archivedAt);
-      const isPublished = Boolean(release.publishedAt);
-      if (filter === 'active') {
-        return !isArchived;
-      }
-      if (filter === 'unpublished') {
-        return !isArchived && !isPublished;
-      }
-      if (filter === 'published') {
-        return !isArchived && isPublished;
-      }
-      return isArchived;
-    });
+    return tableData.filter((release) => testMatchesFilter(release, filter));
   }, [tableData, filter]);
+
+  const filterCounts = useMemo(() => {
+    const counts: Partial<Record<ReleaseListFilter, number>> = {};
+    FILTER_OPTIONS.forEach((option) => {
+      counts[option.value] = tableData.filter((release) =>
+        testMatchesFilter(release, option.value)
+      ).length;
+    });
+    return counts;
+  }, [tableData]);
 
   useEffect(() => {
     init();
@@ -112,47 +157,58 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
         <>
           <div className="ReleasesPage__ReleasesTable__filters">
             <SegmentedControl
+              aria-label="Release filters"
               size="sm"
               value={filter}
               onChange={(value: ReleaseListFilter) => setFilter(value)}
-              data={[
-                {label: 'Active', value: 'active'},
-                {label: 'Unpublished', value: 'unpublished'},
-                {label: 'Published', value: 'published'},
-                {label: 'Archived', value: 'archived'},
-              ]}
+              data={FILTER_OPTIONS.map((option) => ({
+                value: option.value,
+                label: (
+                  <span className="ReleasesPage__ReleasesTable__filter">
+                    {option.label}
+                    <span className="ReleasesPage__ReleasesTable__filter__count">
+                      {filterCounts[option.value] ?? 0}
+                    </span>
+                  </span>
+                ),
+              }))}
             />
           </div>
           {filteredReleases.length > 0 && (
-            <Surface>
-              <Table
-                className="ReleasesPage__ReleasesTable__table"
-                verticalSpacing="xs"
-                striped
-                highlightOnHover
-                fontSize="xs"
-              >
+            <Surface className="ReleasesPage__ReleasesTable__surface">
+              <table className="ReleasesPage__ReleasesTable__table">
                 <thead>
                   <tr>
-                    <th>id</th>
-                    <th>description</th>
-                    <th>content</th>
-                    <th>status</th>
+                    <th>Release</th>
+                    <th>Contents</th>
+                    <th>Created by</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredReleases.map((release) => (
                     <tr key={release.id}>
                       <td>
-                        <a href={`/cms/releases/${release.id}`}>{release.id}</a>
+                        <ReleasesPage.ReleaseCell release={release} />
                       </td>
-                      <td>{release.description || ''}</td>
                       <td>
-                        {(release.docIds || []).map((docId) => (
-                          <div key={docId}>
-                            <a href={`/cms/content/${docId}`}>{docId}</a>
+                        <ReleasesPage.ContentsCell release={release} />
+                      </td>
+                      <td>
+                        {release.createdBy ? (
+                          <div className="ReleasesPage__ReleasesTable__createdBy">
+                            <UserAvatar
+                              email={release.createdBy}
+                              size={24}
+                              withTooltip={false}
+                            />
+                            <UserTag email={release.createdBy} />
                           </div>
-                        ))}
+                        ) : (
+                          <span className="ReleasesPage__ReleasesTable__empty">
+                            —
+                          </span>
+                        )}
                       </td>
                       <td>
                         <div className="ReleasesPage__ReleasesTable__publishStatus">
@@ -162,7 +218,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                     </tr>
                   ))}
                 </tbody>
-              </Table>
+              </table>
             </Surface>
           )}
           {filteredReleases.length === 0 && (
@@ -179,6 +235,88 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
         </>
       )}
     </div>
+  );
+};
+
+/** The release's description (or id) and id, linking to the release page. */
+ReleasesPage.ReleaseCell = (props: {release: Release}) => {
+  const release = props.release;
+  const tone = getReleaseTone(release);
+  return (
+    <a
+      className="ReleasesPage__ReleasesTable__release"
+      href={`/cms/releases/${release.id}`}
+    >
+      <div
+        className={joinClassNames(
+          'ReleasesPage__ReleasesTable__release__icon',
+          `ReleasesPage__ReleasesTable__release__icon--${tone}`
+        )}
+      >
+        <IconRocket size={18} stroke={1.5} />
+      </div>
+      <div className="ReleasesPage__ReleasesTable__release__text">
+        <div className="ReleasesPage__ReleasesTable__release__title">
+          {release.description || release.id}
+        </div>
+        {release.description && (
+          <div className="ReleasesPage__ReleasesTable__release__id">
+            {release.id}
+          </div>
+        )}
+      </div>
+    </a>
+  );
+};
+
+/**
+ * Summarizes a release's docs and data sources (e.g. "3 docs · 1 data
+ * source"), with a tooltip listing their ids.
+ */
+ReleasesPage.ContentsCell = (props: {release: Release}) => {
+  const docIds = props.release.docIds || [];
+  const dataSourceIds = props.release.dataSourceIds || [];
+  if (docIds.length === 0 && dataSourceIds.length === 0) {
+    return <span className="ReleasesPage__ReleasesTable__empty">—</span>;
+  }
+  const summary = [];
+  if (docIds.length > 0) {
+    summary.push(pluralize(docIds.length, 'doc', 'docs'));
+  }
+  if (dataSourceIds.length > 0) {
+    summary.push(
+      pluralize(dataSourceIds.length, 'data source', 'data sources')
+    );
+  }
+  const sections = [
+    {title: 'Docs', ids: docIds},
+    {title: 'Data sources', ids: dataSourceIds},
+  ].filter((section) => section.ids.length > 0);
+  const label = (
+    <div className="ReleasesPage__contentsTooltip">
+      {sections.map((section) => (
+        <div
+          className="ReleasesPage__contentsTooltip__section"
+          key={section.title}
+        >
+          <div className="ReleasesPage__contentsTooltip__title">
+            {section.title}
+          </div>
+          {section.ids.map((id) => (
+            <div className="ReleasesPage__contentsTooltip__id" key={id}>
+              {id}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <Tooltip label={label} position="bottom" withArrow transition="pop">
+      <span className="ReleasesPage__ReleasesTable__contents">
+        {summary.join(' · ')}
+      </span>
+    </Tooltip>
   );
 };
 
