@@ -92,6 +92,10 @@ export interface UserSelectProps {
   disabled?: boolean;
   /** Optional className for the wrapping element. */
   className?: string;
+  /** Focuses the input on mount. */
+  autoFocus?: boolean;
+  /** Opens the dropdown on mount, e.g. when rendered inside a popover. */
+  initiallyOpened?: boolean;
 }
 
 /**
@@ -116,6 +120,8 @@ export function UserSelect(props: UserSelectProps) {
       onChange={(newValue: string | null) => props.onChange(newValue || '')}
       placeholder={props.placeholder || 'Search or enter an email'}
       disabled={props.disabled}
+      autoFocus={props.autoFocus}
+      initiallyOpened={props.initiallyOpened}
       searchable
       clearable
       creatable
