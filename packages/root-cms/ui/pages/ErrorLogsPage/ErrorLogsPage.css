@@ -1,6 +1,6 @@
 .ErrorLogsPage {
   background: var(--page-background);
-  padding: var(--page-padding-lg);
+  padding: var(--page-padding);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -10,18 +10,26 @@
   margin-bottom: 14px;
 }
 
+.ErrorLogsPage__header__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
 .ErrorLogsPage__header p {
-  margin: 16px 0 8px;
+  margin: 16px 0 0;
   max-width: 600px;
 }
 
 .ErrorLogsPage__header code {
+  padding: 2px 6px;
   font-family: var(--font-family-mono);
-}
-
-.ErrorLogsPage__actionLogsLink {
-  font-size: 14px;
-  color: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  background: var(--chip-background);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
 }
 
 .ErrorLogsPage__search {
