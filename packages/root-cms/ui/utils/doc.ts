@@ -821,19 +821,20 @@ export function testIsScheduled(docData: CMSDoc) {
  * Checks if a doc has a publishing lock.
  */
 export function testPublishingLocked(docData: CMSDoc) {
-  return testPublishingLockedAt(docData, Timestamp.now().toMillis());
+  return testPublishingLockedAt(docData);
 }
 
 /**
- * Checks if a doc's publishing lock is in effect at the given time. A lock
- * with an `until` time only blocks publishing before that time, e.g. a doc
- * can be scheduled to publish after its lock expires.
+ * Checks if a doc's publishing lock is in effect at the given time (defaults
+ * to now). A lock with an `until` time only blocks publishing before that
+ * time, e.g. a doc can be scheduled to publish after its lock expires.
  */
-export function testPublishingLockedAt(docData: CMSDoc, millis: number) {
+export function testPublishingLockedAt(docData: CMSDoc, millis?: number) {
   if (docData?.sys?.publishingLocked) {
     if (docData.sys.publishingLocked.until) {
+      const at = millis ?? Timestamp.now().toMillis();
       const until = docData.sys.publishingLocked.until.toMillis();
-      return millis < until;
+      return at < until;
     }
     return true;
   }
