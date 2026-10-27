@@ -23,7 +23,7 @@ import {
 } from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
-  usePageTitle(`Edit Release: ${props.id}`);
+  usePageTitle(`Edit release: ${props.id}`);
   const {route} = useLocation();
   const [release, setRelease] = useState<Release | null>(null);
   const modals = useModals();
@@ -126,7 +126,7 @@ export function EditReleasePage(props: {id: string}) {
             <div>Edit</div>
           </Breadcrumbs>
           <div className="EditReleasePage__header__titleWrap">
-            <Heading size="h1">Edit Release: {props.id}</Heading>
+            <Heading size="h1">Edit release: {props.id}</Heading>
             <div className="EditReleasePage__header__controls">
               <ConditionalTooltip
                 label="You don't have access to archive releases"

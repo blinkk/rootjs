@@ -724,6 +724,7 @@ ReleasePage.Overview = (props: {
   const docIds = release.docIds || [];
   const dataSourceIds = release.dataSourceIds || [];
   const dataSources = useDataSources(dataSourceIds);
+  const isEmpty = docIds.length === 0 && dataSourceIds.length === 0;
   const docDiffs: Record<string, ReleaseDocDiff> = {};
   for (const doc of props.diff?.docs || []) {
     docDiffs[doc.docId] = doc;
@@ -744,7 +745,7 @@ ReleasePage.Overview = (props: {
             Edit
           </Button>
         </div>
-        {docIds.length === 0 && dataSourceIds.length === 0 ? (
+        {isEmpty ? (
           <Text size="body-sm" color="gray">
             Nothing has been added to this release yet.
           </Text>
@@ -779,78 +780,81 @@ ReleasePage.Overview = (props: {
           </Surface>
         )}
       </div>
-      <div className="ReleasePage__Overview__side">
-        {props.onSummarize && props.onAudit && (
+      {/* The sidebar is hidden until something is added to the release. */}
+      {!isEmpty && (
+        <div className="ReleasePage__Overview__side">
+          {props.onSummarize && props.onAudit && (
+            <Surface className="ReleasePage__card">
+              <div className="ReleasePage__card__title">
+                <IconRobot size={16} />
+                Root AI
+              </div>
+              <Text size="body-sm" color="gray">
+                Get a summary of what this release changes, or have it checked
+                for anything that looks unintentional.
+              </Text>
+              <div className="ReleasePage__card__buttons">
+                <Button
+                  variant="default"
+                  size="xs"
+                  compact
+                  leftIcon={<IconSparkles size={14} />}
+                  onClick={props.onSummarize}
+                >
+                  Summarize
+                </Button>
+                <Button
+                  variant="default"
+                  size="xs"
+                  compact
+                  leftIcon={<IconListSearch size={14} />}
+                  onClick={props.onAudit}
+                >
+                  Audit
+                </Button>
+              </div>
+            </Surface>
+          )}
           <Surface className="ReleasePage__card">
-            <div className="ReleasePage__card__title">
-              <IconRobot size={16} />
-              Root AI
-            </div>
-            <Text size="body-sm" color="gray">
-              Get a summary of what this release changes, or have it checked for
-              anything that looks unintentional.
-            </Text>
-            <div className="ReleasePage__card__buttons">
-              <Button
-                variant="default"
-                size="xs"
-                compact
-                leftIcon={<IconSparkles size={14} />}
-                onClick={props.onSummarize}
-              >
-                Summarize
-              </Button>
-              <Button
-                variant="default"
-                size="xs"
-                compact
-                leftIcon={<IconListSearch size={14} />}
-                onClick={props.onAudit}
-              >
-                Audit
-              </Button>
-            </div>
+            <div className="ReleasePage__card__title">Details</div>
+            <dl className="ReleasePage__details">
+              <ReleasePage.DetailsRow
+                label="Created"
+                at={release.createdAt}
+                by={release.createdBy}
+              />
+              {release.scheduledAt && (
+                <ReleasePage.DetailsRow
+                  label="Scheduled"
+                  at={release.scheduledAt}
+                  by={release.scheduledBy}
+                />
+              )}
+              {release.publishedAt && (
+                <ReleasePage.DetailsRow
+                  label="Published"
+                  at={release.publishedAt}
+                  by={release.publishedBy}
+                />
+              )}
+              {release.rolledBackAt && (
+                <ReleasePage.DetailsRow
+                  label="Rolled back"
+                  at={release.rolledBackAt}
+                  by={release.rolledBackBy}
+                />
+              )}
+              {release.archivedAt && (
+                <ReleasePage.DetailsRow
+                  label="Archived"
+                  at={release.archivedAt}
+                  by={release.archivedBy}
+                />
+              )}
+            </dl>
           </Surface>
-        )}
-        <Surface className="ReleasePage__card">
-          <div className="ReleasePage__card__title">Details</div>
-          <dl className="ReleasePage__details">
-            <ReleasePage.DetailsRow
-              label="Created"
-              at={release.createdAt}
-              by={release.createdBy}
-            />
-            {release.scheduledAt && (
-              <ReleasePage.DetailsRow
-                label="Scheduled"
-                at={release.scheduledAt}
-                by={release.scheduledBy}
-              />
-            )}
-            {release.publishedAt && (
-              <ReleasePage.DetailsRow
-                label="Published"
-                at={release.publishedAt}
-                by={release.publishedBy}
-              />
-            )}
-            {release.rolledBackAt && (
-              <ReleasePage.DetailsRow
-                label="Rolled back"
-                at={release.rolledBackAt}
-                by={release.rolledBackBy}
-              />
-            )}
-            {release.archivedAt && (
-              <ReleasePage.DetailsRow
-                label="Archived"
-                at={release.archivedAt}
-                by={release.archivedBy}
-              />
-            )}
-          </dl>
-        </Surface>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
