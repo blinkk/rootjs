@@ -1,8 +1,9 @@
 import './ReleasesPage.css';
 
-import {Button, Loader, SegmentedControl, Tooltip} from '@mantine/core';
+import {Button, Loader, SegmentedControl} from '@mantine/core';
 import {
   IconCalendarTime,
+  IconDatabase,
   IconFilePlus,
   IconPlus,
   IconRocket,
@@ -21,6 +22,7 @@ import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {Release, listReleases} from '../../utils/release.js';
@@ -52,7 +54,7 @@ export function ReleasesPage() {
           >
             <Button
               component="a"
-              color="blue"
+              color="dark"
               size="xs"
               leftIcon={<IconPlus size={16} />}
               href="/cms/releases/new"
@@ -89,10 +91,6 @@ function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
     return !isArchived && isPublished;
   }
   return isArchived;
-}
-
-function pluralize(count: number, singular: string, plural: string) {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
@@ -248,54 +246,64 @@ ReleasesPage.ReleaseCell = (props: {release: Release}) => {
   );
 };
 
+/** Max number of chips to show before collapsing the rest. */
+const CONTENTS_CHIP_LIMIT = 6;
+
 /**
- * Summarizes a release's docs and data sources (e.g. "3 docs · 1 data
- * source"), with a tooltip listing their ids.
+ * Lists a release's data sources and docs as chips. Long lists collapse to the
+ * first few chips plus a "+N more" chip that expands the rest.
  */
 ReleasesPage.ContentsCell = (props: {release: Release}) => {
-  const docIds = props.release.docIds || [];
-  const dataSourceIds = props.release.dataSourceIds || [];
-  if (docIds.length === 0 && dataSourceIds.length === 0) {
+  const [expanded, setExpanded] = useState(false);
+  const items = [
+    ...(props.release.dataSourceIds || []).map((id) => ({
+      id,
+      href: `/cms/data/${id}`,
+      isDataSource: true,
+    })),
+    ...(props.release.docIds || []).map((id) => ({
+      id,
+      href: `/cms/content/${id}`,
+      isDataSource: false,
+    })),
+  ];
+  if (items.length === 0) {
     return <span className="ReleasesPage__ReleasesTable__empty">—</span>;
   }
-  const summary = [];
-  if (docIds.length > 0) {
-    summary.push(pluralize(docIds.length, 'doc', 'docs'));
-  }
-  if (dataSourceIds.length > 0) {
-    summary.push(
-      pluralize(dataSourceIds.length, 'data source', 'data sources')
-    );
-  }
-  const sections = [
-    {title: 'Docs', ids: docIds},
-    {title: 'Data sources', ids: dataSourceIds},
-  ].filter((section) => section.ids.length > 0);
-  const label = (
-    <div className="ReleasesPage__contentsTooltip">
-      {sections.map((section) => (
-        <div
-          className="ReleasesPage__contentsTooltip__section"
-          key={section.title}
-        >
-          <div className="ReleasesPage__contentsTooltip__title">
-            {section.title}
-          </div>
-          {section.ids.map((id) => (
-            <div className="ReleasesPage__contentsTooltip__id" key={id}>
-              {id}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
+  const collapsed = !expanded && items.length > CONTENTS_CHIP_LIMIT;
+  const visibleItems = collapsed
+    ? items.slice(0, CONTENTS_CHIP_LIMIT - 1)
+    : items;
   return (
-    <Tooltip label={label} position="bottom" withArrow transition="pop">
-      <span className="ReleasesPage__ReleasesTable__contents">
-        {summary.join(' · ')}
-      </span>
-    </Tooltip>
+    <div className="ReleasesPage__contents">
+      {visibleItems.map((item) => (
+        <a
+          className={joinClassNames(
+            'ReleasesPage__contents__chip',
+            item.isDataSource && 'ReleasesPage__contents__chip--dataSource'
+          )}
+          href={item.href}
+          title={item.id}
+          key={item.href}
+        >
+          {item.isDataSource && (
+            <IconDatabase size={12} stroke={2} aria-label="Data source" />
+          )}
+          <span className="ReleasesPage__contents__chip__label">{item.id}</span>
+        </a>
+      ))}
+      {items.length > CONTENTS_CHIP_LIMIT && (
+        <button
+          className="ReleasesPage__contents__chip ReleasesPage__contents__chip--more"
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {collapsed
+            ? `+${items.length - visibleItems.length} more`
+            : 'Show less'}
+        </button>
+      )}
+    </div>
   );
 };
 

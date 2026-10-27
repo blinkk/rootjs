@@ -77,7 +77,7 @@
 .ReleasesPage__ReleasesTable__table td {
   padding: 12px 16px;
   border-bottom: 1px solid #f1f1ee;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .ReleasesPage__ReleasesTable__table tbody tr:last-child td {
@@ -116,11 +116,63 @@
   overflow-wrap: anywhere;
 }
 
-.ReleasesPage__ReleasesTable__contents {
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
+.ReleasesPage__contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 420px;
+}
+
+.ReleasesPage__contents__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 240px;
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: var(--color-text-default);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  text-decoration: none;
   white-space: nowrap;
-  cursor: default;
+}
+
+.ReleasesPage__contents__chip:hover {
+  background: #e9eaec;
+}
+
+.ReleasesPage__contents__chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ReleasesPage__contents__chip svg {
+  flex-shrink: 0;
+}
+
+.ReleasesPage__contents__chip--dataSource {
+  background: #ebfbee;
+  color: #2b6a37;
+}
+
+.ReleasesPage__contents__chip--dataSource:hover {
+  background: #dcf5e1;
+}
+
+.ReleasesPage__contents__chip--more {
+  border: 1px dashed #c9c9c4;
+  background: #fff;
+  color: #4b5563;
+  font-family: var(--font-family-default);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ReleasesPage__contents__chip--more:hover {
+  background: #f5f5f2;
 }
 
 .ReleasesPage__ReleasesTable__createdBy {
@@ -143,26 +195,6 @@
 .ReleasesPage__ReleasesTable__noResults {
   padding: 40px 20px;
   text-align: center;
-}
-
-.ReleasesPage__contentsTooltip {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 320px;
-  text-align: left;
-}
-
-.ReleasesPage__contentsTooltip__title {
-  margin-bottom: 2px;
-  font-weight: 600;
-}
-
-.ReleasesPage__contentsTooltip__id {
-  font-family: var(--font-family-mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .ReleasesPage__EmptyState {
