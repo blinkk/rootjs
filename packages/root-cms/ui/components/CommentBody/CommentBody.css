@@ -25,12 +25,14 @@
 .CommentBody__markdown blockquote,
 .CommentBody__markdown pre,
 .CommentBody__richText p,
+.CommentBody__richText h2,
+.CommentBody__richText h3,
 .CommentBody__richText h4,
 .CommentBody__richText ul,
 .CommentBody__richText ol,
 .CommentBody__richText blockquote,
 .CommentBody__richText pre {
-  margin: 0 0 10px;
+  margin: 0 0 16px;
 }
 
 .CommentBody__markdown > :last-child,

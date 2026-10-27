@@ -539,17 +539,6 @@
   margin-top: 10px;
 }
 
-.TaskPage__comment__body .CommentBody__markdown blockquote,
-.TaskPage__comment__body .CommentBody__markdown pre,
-.TaskPage__comment__body .CommentBody__richText > * {
-  margin-bottom: 16px;
-}
-
-.TaskPage__comment__body .CommentBody__markdown > :last-child,
-.TaskPage__comment__body .CommentBody__richText > :last-child {
-  margin-bottom: 0;
-}
-
 .TaskPage__comment__edit {
   margin-top: 8px;
 }
