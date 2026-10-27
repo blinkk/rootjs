@@ -10,7 +10,7 @@
   height: 18px;
   justify-content: center;
   min-width: 18px;
-  opacity: 0;
+  opacity: 0.35;
   padding: 0 2px;
   transition: opacity 0.2s ease, background-color 0.15s ease;
 }
@@ -29,8 +29,9 @@
   color: var(--color-text-default);
 }
 
+/* Matches the translations ActionIcon (Mantine gray.7). */
 .LocalizedValuesButton--hasValues {
-  color: rgb(28, 126, 214);
+  color: #495057;
 }
 
 .LocalizedValuesButton__count {
@@ -42,7 +43,6 @@
 .LocalizedValuesPanel {
   border: 1px solid var(--color-border);
   border-left: 3px solid rgb(28, 126, 214);
-  border-radius: 4px;
   display: flex;
   flex-direction: column;
   gap: 12px;

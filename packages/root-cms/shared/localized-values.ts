@@ -56,16 +56,18 @@ export function testFieldLocalizable(field: Field): boolean {
 }
 
 /**
- * Returns the locales in a field's `localizedValues` map. Keys starting with
- * `@` hold metadata for a localized value (e.g. `@de`) and are excluded.
+ * Returns the locales in a field's `localizedValues` map, sorted
+ * alphabetically (Firestore doesn't preserve the key order of maps). Keys
+ * starting with `@` hold metadata for a localized value (e.g. `@de`) and are
+ * excluded.
  */
 export function getLocalizedValueLocales(localizedValues: any): string[] {
   if (!isPlainObject(localizedValues)) {
     return [];
   }
-  return Object.keys(localizedValues).filter(
-    (key) => !key.startsWith('@') && localizedValues[key] !== undefined
-  );
+  return Object.keys(localizedValues)
+    .filter((key) => !key.startsWith('@') && localizedValues[key] !== undefined)
+    .sort();
 }
 
 export interface ResolveLocalizedValuesOptions {

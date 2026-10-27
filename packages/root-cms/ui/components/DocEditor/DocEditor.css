@@ -161,7 +161,7 @@
   height: 18px;
   justify-content: center;
   min-width: 18px;
-  opacity: 0;
+  opacity: 0.35;
   padding: 0 2px;
   transition: opacity 0.2s ease, background-color 0.15s ease;
 }
@@ -180,8 +180,9 @@
   color: var(--color-text-default);
 }
 
+/* Matches the translations ActionIcon (Mantine gray.7). */
 .DocEditor__FieldHeader__comments__button--open {
-  color: rgb(28, 126, 214);
+  color: #495057;
 }
 
 .DocEditor__FieldHeader__comments__count {

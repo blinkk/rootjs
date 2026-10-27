@@ -141,10 +141,21 @@ export function LocalizedValuesButton(props: LocalizedValuesButtonProps) {
   );
 }
 
+/**
+ * Returns whether a field has any localized values in the draft doc.
+ */
+export function testHasLocalizedValues(
+  controller: {getValue: (key: string) => any},
+  deepKey: string
+): boolean {
+  const localizedValues = controller.getValue(getLocalizedValuesKey(deepKey));
+  return getLocalizedValueLocales(localizedValues).length > 0;
+}
+
 export interface LocalizedValuesPanelProps {
   field: schema.Field;
   deepKey: string;
-  /** Whether the panel was opened from the field header. */
+  /** Whether the panel is open, see `testHasLocalizedValues()`. */
   opened: boolean;
   onClose: () => void;
   /** Schema types, for testing whether one-of values are empty. */
@@ -155,9 +166,8 @@ export interface LocalizedValuesPanelProps {
 
 /**
  * Lists a field's localized values, i.e. the field's value overrides for
- * specific locales, with an editor for each. The panel is always shown when
- * the field has localized values, so that they're visible to editors (and
- * deeplinks to them resolve), and otherwise only when opened.
+ * specific locales, with an editor for each. Fields with localized values
+ * should start with the panel open, so that they're visible to editors.
  */
 export function LocalizedValuesPanel(props: LocalizedValuesPanelProps) {
   const {
@@ -173,16 +183,11 @@ export function LocalizedValuesPanel(props: LocalizedValuesPanelProps) {
   const [pendingLocales, setPendingLocales] = useState<string[]>([]);
 
   const rowLocales = useMemo(() => {
-    const rows = [...locales];
-    for (const locale of pendingLocales) {
-      if (!rows.includes(locale)) {
-        rows.push(locale);
-      }
-    }
-    return rows;
+    const rows = new Set([...locales, ...pendingLocales]);
+    return Array.from(rows).sort();
   }, [locales, pendingLocales]);
 
-  if (rowLocales.length === 0 && !props.opened) {
+  if (!props.opened) {
     return null;
   }
 
@@ -237,13 +242,11 @@ export function LocalizedValuesPanel(props: LocalizedValuesPanelProps) {
               onChange={addLocale}
             />
           )}
-          {props.opened && (
-            <Tooltip label="Close" withArrow>
-              <ActionIcon size="xs" onClick={() => props.onClose()}>
-                <IconX size={14} />
-              </ActionIcon>
-            </Tooltip>
-          )}
+          <Tooltip label="Close" withArrow>
+            <ActionIcon size="xs" onClick={() => props.onClose()}>
+              <IconX size={14} />
+            </ActionIcon>
+          </Tooltip>
         </div>
       </div>
       {rowLocales.length === 0 ? (

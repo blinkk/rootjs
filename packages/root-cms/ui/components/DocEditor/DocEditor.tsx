@@ -159,6 +159,8 @@ import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {
   LocalizedValuesButton,
   LocalizedValuesPanel,
+  getLocalizedValuesKey,
+  testHasLocalizedValues,
   testLocalizedValuesEnabled,
 } from '../LocalizedValuesPanel/LocalizedValuesPanel.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
@@ -985,7 +987,18 @@ DocEditor.FieldBody = (props: FieldProps) => {
     () => testLocalizedValuesEnabled(field, props.deepKey, props.isArrayChild),
     [field, props.deepKey, props.isArrayChild]
   );
-  const [localizedValuesOpened, setLocalizedValuesOpened] = useState(false);
+  const draft = useDraftDoc();
+  // Fields with localized values start open, so the values are visible.
+  const [localizedValuesOpened, setLocalizedValuesOpened] = useState(
+    () => localizable && testHasLocalizedValues(draft.controller, props.deepKey)
+  );
+  useEffect(() => {
+    // Open the panel when deeplinking to one of the field's localized values.
+    const prefix = `${getLocalizedValuesKey(props.deepKey)}.`;
+    if (localizable && deeplink.value?.startsWith(prefix)) {
+      setLocalizedValuesOpened(true);
+    }
+  }, [localizable, deeplink.value, props.deepKey]);
 
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
@@ -1173,6 +1186,10 @@ DocEditor.FieldHeader = (props: FieldHeaderProps) => {
             max={3}
           />
         )}
+        <DocEditor.FieldHeaderCommentActionIcon
+          field={field}
+          deepKey={props.deepKey}
+        />
         {props.localizedValues && (
           <LocalizedValuesButton
             deepKey={props.deepKey}
@@ -1180,10 +1197,6 @@ DocEditor.FieldHeader = (props: FieldHeaderProps) => {
             onToggle={props.localizedValues.onToggle}
           />
         )}
-        <DocEditor.FieldHeaderCommentActionIcon
-          field={field}
-          deepKey={props.deepKey}
-        />
         <DocEditor.FieldHeaderTranslationsActionIcon
           field={field}
           deepKey={props.deepKey}
@@ -1207,7 +1220,8 @@ DocEditor.FieldHeaderCommentActionIcon = (
   props: FieldHeaderCommentActionIconProps
 ) => {
   const comments = useFieldComments();
-  if (!comments || !props.deepKey) {
+  // Comments go on an object's child fields rather than the object itself.
+  if (!comments || !props.deepKey || props.field.type === 'object') {
     return null;
   }
   return <DocEditor.FieldHeaderCommentActionIconInner {...props} />;
