@@ -54,9 +54,7 @@
 }
 
 .MentionNode {
-  background: rgba(33, 111, 219, 0.08);
-  border-radius: 4px;
-  color: rgb(33, 111, 219);
-  font-weight: 500;
-  padding: 0 2px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

@@ -1,5 +1,7 @@
 import './CommentBody.css';
 
+import {ComponentChildren, h} from 'preact';
+import {useMemo} from 'preact/hooks';
 import {
   RichTextBlock,
   RichTextData,
@@ -8,6 +10,7 @@ import {
 import {sanitizeInlineHtml} from '../../../shared/sanitize.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {Markdown} from '../Markdown/Markdown.js';
+import {UserTag} from '../UserTag/UserTag.js';
 
 export interface CommentBodyProps {
   /** Rich text body of the comment. */
@@ -83,31 +86,58 @@ function isCmsInternalUrl(href: string) {
 }
 
 /**
- * Decorates sanitized comment HTML: `@mention` links get a marker class and
- * non-CMS links get `target="_blank"` and an external-link marker class so
- * they bypass SPA navigation.
+ * Renders sanitized inline comment HTML as Preact elements. `@mention` links
+ * render as a {@link UserTag} (with the user hover card), and non-CMS links get
+ * `target="_blank"` and an external-link marker class so they bypass SPA
+ * navigation.
  */
-function decorateCommentHtml(html: string) {
-  if (!html.includes('<a')) {
-    return html;
+function CommentInlineHtml(props: {html: string}) {
+  const children = useMemo(() => {
+    const template = document.createElement('template');
+    template.innerHTML = sanitizeInlineHtml(props.html);
+    return Array.from(template.content.childNodes).map(toVNode);
+  }, [props.html]);
+  return <>{children}</>;
+}
+
+/** Converts a DOM node from sanitized comment HTML into a Preact element. */
+function toVNode(node: Node, key: number): ComponentChildren {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
   }
-  const template = document.createElement('template');
-  template.innerHTML = html;
-  template.content.querySelectorAll('a[href]').forEach((link) => {
-    if (link.hasAttribute('data-mention')) {
-      link.classList.add('CommentBody__mention');
-      link.setAttribute('title', link.getAttribute('data-mention') || '');
-      return;
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+  const el = node as Element;
+  const children = Array.from(el.childNodes).map(toVNode);
+  const mentionEmail = el.getAttribute('data-mention');
+  if (el.tagName === 'A' && mentionEmail) {
+    return (
+      <UserTag key={key} className="CommentBody__mention" email={mentionEmail}>
+        {children}
+      </UserTag>
+    );
+  }
+  const attrs: Record<string, string | number | undefined> = {key};
+  Array.from(el.attributes).forEach((attr) => {
+    // Event handler attributes are stripped by the sanitizer; skip them here
+    // too so Preact never treats them as listeners.
+    if (!attr.name.toLowerCase().startsWith('on')) {
+      attrs[attr.name] = attr.value;
     }
-    const href = link.getAttribute('href') || '';
-    if (href.startsWith('#') || isCmsInternalUrl(href)) {
-      return;
-    }
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    link.classList.add('CommentBody__externalLink');
   });
-  return template.innerHTML;
+  if (el.tagName === 'A') {
+    const href = el.getAttribute('href') || '';
+    if (!href.startsWith('#') && !isCmsInternalUrl(href)) {
+      attrs.target = '_blank';
+      attrs.rel = 'noopener noreferrer';
+      attrs.class = joinClassNames(
+        el.getAttribute('class'),
+        'CommentBody__externalLink'
+      );
+    }
+  }
+  return h(el.tagName.toLowerCase(), attrs, children);
 }
 
 /** Renders `RichTextData` as read-only HTML. */
@@ -181,11 +211,9 @@ function CommentRichTextHtml(props: {
   }
   const Component = props.tag;
   return (
-    <Component
-      dangerouslySetInnerHTML={{
-        __html: decorateCommentHtml(sanitizeInlineHtml(props.html)),
-      }}
-    />
+    <Component>
+      <CommentInlineHtml html={props.html} />
+    </Component>
   );
 }
 
@@ -193,11 +221,9 @@ function CommentRichTextListItem(props: {item: RichTextListItem}) {
   return (
     <li>
       {props.item.content && (
-        <span
-          dangerouslySetInnerHTML={{
-            __html: decorateCommentHtml(sanitizeInlineHtml(props.item.content)),
-          }}
-        />
+        <span>
+          <CommentInlineHtml html={props.item.content} />
+        </span>
       )}
       {props.item.items && props.item.items.length > 0 && (
         <ul>
