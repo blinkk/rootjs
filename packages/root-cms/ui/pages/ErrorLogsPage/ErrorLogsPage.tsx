@@ -50,15 +50,17 @@ export function ErrorLogsPage() {
     <Layout>
       <div className="ErrorLogsPage">
         <div className="ErrorLogsPage__header">
-          <Heading size="h1">Error Logs</Heading>
+          <div className="ErrorLogsPage__header__title">
+            <Heading size="h1">Error Logs</Heading>
+            <Button component="a" href="/cms/logs" variant="default" size="xs">
+              View action logs
+            </Button>
+          </div>
           <p>
             Errors that users ran into in the CMS UI. Stack traces are mapped to
             the original source files. Errors can also be viewed from the
             command line with <code>root-cms errors.get &lt;id&gt;</code>.
           </p>
-          <a className="ErrorLogsPage__actionLogsLink" href="/cms/logs">
-            View action logs
-          </a>
         </div>
         <TextInput
           className="ErrorLogsPage__search"

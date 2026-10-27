@@ -1,3 +1,4 @@
+import {Button} from '@mantine/core';
 import {ActionLogs} from '../../components/ActionLogs/ActionLogs.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -11,9 +12,14 @@ export function LogsPage() {
       <div className="LogsPage">
         <div className="LogsPage__header">
           <Heading size="h1">Action Logs</Heading>
-          <a className="LogsPage__errorLogsLink" href="/cms/logs/errors">
+          <Button
+            component="a"
+            href="/cms/logs/errors"
+            variant="default"
+            size="xs"
+          >
             View error logs
-          </a>
+          </Button>
         </div>
         <ActionLogs />
       </div>
