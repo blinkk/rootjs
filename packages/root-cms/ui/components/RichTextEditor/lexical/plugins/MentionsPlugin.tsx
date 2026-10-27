@@ -7,8 +7,9 @@ import {
   MenuTextMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import {$createTextNode, TextNode} from 'lexical';
+import {createContext} from 'preact';
 import {createPortal} from 'preact/compat';
-import {useCallback, useMemo, useState} from 'preact/hooks';
+import {useCallback, useContext, useMemo, useState} from 'preact/hooks';
 import {
   ProjectUser,
   useProjectUsers,
@@ -22,6 +23,19 @@ const MAX_SUGGESTIONS = 8;
 
 /** Max length of the text after `@` that still triggers the menu. */
 const MAX_QUERY_LENGTH = 64;
+
+/**
+ * Emails of users related to the current context (e.g. a task's creator,
+ * assignee, cc list, and commenters). These are suggested alongside project
+ * users, even if they aren't project members, and ranked ahead of other users
+ * with an equally good match.
+ *
+ * Example:
+ *   <MentionSuggestionsContext.Provider value={['alex@example.com']}>
+ *     <CommentEditor ... />
+ *   </MentionSuggestionsContext.Provider>
+ */
+export const MentionSuggestionsContext = createContext<string[]>([]);
 
 /** A user shown in the mentions menu. */
 class MentionOption extends MenuOption {
@@ -78,42 +92,84 @@ function scoreUser(user: ProjectUser, query: string): number {
 export function rankMentionUsers(
   users: ProjectUser[],
   query: string,
-  max = MAX_SUGGESTIONS
+  options?: {
+    /** Emails to rank ahead of other users with an equal score. */
+    preferred?: string[];
+    max?: number;
+  }
 ): ProjectUser[] {
   const q = query.trim().toLowerCase();
+  const preferred = new Set(options?.preferred || []);
   return users
-    .map((user) => ({user, score: scoreUser(user, q)}))
+    .map((user) => ({
+      user,
+      score: scoreUser(user, q),
+      preferred: preferred.has(user.email),
+    }))
     .filter(({score}) => score > 0)
     .sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
       }
+      if (a.preferred !== b.preferred) {
+        return a.preferred ? -1 : 1;
+      }
       const aLabel = (a.user.displayName || a.user.email).toLowerCase();
       const bLabel = (b.user.displayName || b.user.email).toLowerCase();
       return aLabel.localeCompare(bLabel);
     })
-    .slice(0, max)
+    .slice(0, options?.max ?? MAX_SUGGESTIONS)
     .map(({user}) => user);
 }
 
 /**
+ * Merges suggested emails into the list of project users, skipping duplicates
+ * and anything that doesn't look like an email address. Returns the merged
+ * list and the normalized suggested emails.
+ */
+export function mergeMentionSuggestions(
+  users: ProjectUser[],
+  suggestions: string[]
+): {users: ProjectUser[]; preferred: string[]} {
+  const preferred = Array.from(
+    new Set(
+      suggestions
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => /^[^\s@]+@[^\s@]+$/.test(email))
+    )
+  );
+  const known = new Set(users.map((user) => user.email));
+  const extra = preferred
+    .filter((email) => !known.has(email))
+    .map((email) => ({email}));
+  return {users: [...users, ...extra], preferred};
+}
+
+/**
  * Adds `@mention` autocomplete to the editor. Typing `@` followed by part of
- * a user's name or email opens a menu of matching project users; selecting
- * one inserts a {@link MentionNode}.
+ * a user's name or email opens a menu of matching project users (plus any
+ * users from {@link MentionSuggestionsContext}); selecting one inserts a
+ * {@link MentionNode}.
  */
 export function MentionsPlugin() {
   const [editor] = useLexicalComposerContext();
-  const {users} = useProjectUsers();
+  const {users: projectUsers} = useProjectUsers();
+  const suggestions = useContext(MentionSuggestionsContext);
   const [query, setQuery] = useState<string | null>(null);
+
+  const {users, preferred} = useMemo(
+    () => mergeMentionSuggestions(projectUsers, suggestions),
+    [projectUsers, suggestions]
+  );
 
   const options = useMemo(() => {
     if (query === null) {
       return [];
     }
-    return rankMentionUsers(users, query).map(
+    return rankMentionUsers(users, query, {preferred}).map(
       (user) => new MentionOption(user)
     );
-  }, [users, query]);
+  }, [users, preferred, query]);
 
   const onSelectOption = useCallback(
     (

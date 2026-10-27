@@ -129,13 +129,10 @@
   object-fit: contain;
 }
 
-.CommentBody__richText a.CommentBody__mention {
-  background: rgba(33, 111, 219, 0.08);
-  border-radius: 4px;
-  color: rgb(33, 111, 219);
-  font-weight: 500;
-  padding: 0 2px;
-  text-decoration: none;
+.CommentBody__mention {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   white-space: nowrap;
 }
 

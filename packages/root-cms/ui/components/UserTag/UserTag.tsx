@@ -1,6 +1,7 @@
 import './UserTag.css';
 
 import {Tooltip} from '@mantine/core';
+import {ComponentChildren} from 'preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useUserProfile} from '../../hooks/useUserProfile.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -11,6 +12,11 @@ export interface UserTagProps {
   email: string;
   /** Optional className for the wrapping element. */
   className?: string;
+  /**
+   * Custom label to render instead of the user's name (e.g. `@Name` for a
+   * mention).
+   */
+  children?: ComponentChildren;
 }
 
 /**
@@ -49,7 +55,7 @@ export function UserTag(props: UserTagProps) {
     // Not an email (e.g. "unknown"); render as plain text without a tooltip.
     return (
       <span className={joinClassNames('UserTag', props.className)}>
-        {email}
+        {props.children ?? email}
       </span>
     );
   }
@@ -82,7 +88,7 @@ export function UserTag(props: UserTagProps) {
       onPointerLeave={scheduleClose}
     >
       <span className={joinClassNames('UserTag', props.className)}>
-        {displayName || shortName}
+        {props.children ?? (displayName || shortName)}
       </span>
     </Tooltip>
   );
