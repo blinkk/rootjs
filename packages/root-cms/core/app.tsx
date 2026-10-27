@@ -5,6 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {beetMarkDataUri} from '../shared/beet.js';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
+import {BOOTSTRAP_CSS} from './bootstrap-styles.js';
 import {getBuildInfo} from './build-info.js';
 import {resolveDependencyGraphConfig} from './dependency-graph.js';
 import {CMSPluginOptions} from './plugin.js';
@@ -15,6 +16,17 @@ import {loadThemes, resolveDefaultTheme, themeUrl} from './theme.js';
 
 /** The default favicon: the Root.js beet mark. */
 const DEFAULT_FAVICON_URL = beetMarkDataUri();
+
+/**
+ * Inlines the "Loading..." screen's styles so it's styled even if the external
+ * stylesheet fails to load. Rendered before the external stylesheets so they
+ * can still override it.
+ */
+function BootstrapStyles() {
+  return (
+    <style dangerouslySetInnerHTML={{__html: BOOTSTRAP_CSS}} nonce="{NONCE}" />
+  );
+}
 
 /**
  * Renders the favicon `<link>`. The type is omitted for custom favicons so
@@ -59,6 +71,7 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <Favicon url={props.favicon} />
+        <BootstrapStyles />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
@@ -261,6 +274,7 @@ function SignIn(props: SignInProps) {
           nonce="{NONCE}"
         />
         <Favicon url={props.favicon} />
+        <BootstrapStyles />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
       </head>
       <body>
