@@ -137,7 +137,11 @@
 
 .TaskManager__composer__submit {
   grid-area: submit;
-  height: 36px;
+}
+
+/* Match the height of the composer controls. */
+.TaskManager__composer .TaskManager__composer__submit {
+  height: 32px;
 }
 
 .TaskManager__composer__menuItem--active {
