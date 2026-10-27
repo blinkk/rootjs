@@ -68,8 +68,18 @@ async function runCronJob(
 
 async function runPublishScheduledDocs(rootConfig: RootConfig) {
   const cmsClient = new RootCMSClient(rootConfig);
-  await cmsClient.publishScheduledDocs();
+  // Publish scheduled releases even if publishing scheduled docs fails, so a
+  // bad scheduled doc doesn't block releases from going out.
+  let docsError: unknown;
+  try {
+    await cmsClient.publishScheduledDocs();
+  } catch (err) {
+    docsError = err;
+  }
   await cmsClient.publishScheduledReleases();
+  if (docsError) {
+    throw docsError;
+  }
 }
 
 async function runSyncScheduledDataSources(rootConfig: RootConfig) {

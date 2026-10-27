@@ -1,12 +1,13 @@
 /** @deprecated Use client.ts instead. */
 
 import {RootConfig} from '@blinkk/root';
-import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
+import {Query} from 'firebase-admin/firestore';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {
   LoadTranslationsOptions,
   LocaleTranslations,
+  RootCMSClient,
   Translation,
   TranslationsMap,
   getCmsPlugin,
@@ -123,112 +124,8 @@ export async function numDocs(
  * @deprecated Use RootCMSClient.publishScheduledDocs() instead.
  */
 export async function publishScheduledDocs(rootConfig: RootConfig) {
-  const cmsPlugin = getCmsPlugin(rootConfig);
-  const cmsPluginOptions = cmsPlugin.getConfig();
-  const projectId = cmsPluginOptions.id || 'default';
-  const db = cmsPlugin.getFirestore();
-
-  const projectCollectionsPath = `Projects/${projectId}/Collections`;
-  const now = Math.ceil(new Date().getTime());
-
-  const snapshot = await db.collectionGroup('Scheduled').get();
-  const docs = snapshot.docs
-    .filter((d) => {
-      // Filter docs by project.
-      if (!d.ref.path.startsWith(projectCollectionsPath)) {
-        return false;
-      }
-      // Filter docs where scheduledAt is in the past.
-      // NOTE(stevenle): the filtering is done manually instead of using a query
-      // to avoid having to create an index in firestore.
-      const data = d.data() || {};
-      const scheduledAt: Timestamp | undefined = data.sys?.scheduledAt;
-      return (
-        scheduledAt && scheduledAt.toMillis && scheduledAt.toMillis() <= now
-      );
-    })
-    .map((d) => {
-      const dbPath = d.ref.path;
-      const segments = dbPath.split('/');
-      const slug = segments.at(-1);
-      const collection = segments.at(-3);
-      const id = `${collection}/${slug}`;
-      return {
-        data: d.data(),
-        id,
-        collection,
-        slug,
-      };
-    });
-
-  if (docs.length === 0) {
-    return [];
-  }
-
-  // Each transaction or batch can write a max of 500 ops.
-  // https://firebase.google.com/docs/firestore/manage-data/transactions
-  let batchCount = 0;
-  const batch = db.batch();
-  const publishedDocs: any[] = [];
-  for (const doc of docs) {
-    const {id, collection, slug, data} = doc;
-    const draftRef = db.doc(
-      `${projectCollectionsPath}/${collection}/Drafts/${slug}`
-    );
-    const scheduledRef = db.doc(
-      `${projectCollectionsPath}/${collection}/Scheduled/${slug}`
-    );
-    const publishedRef = db.doc(
-      `${projectCollectionsPath}/${collection}/Published/${slug}`
-    );
-    const {scheduledAt, scheduledBy, ...sys} = data.sys || {};
-
-    // Only update `firstPublished` if it doesn't already exist.
-    const firstPublishedAt = sys.firstPublishedAt ?? scheduledAt;
-    const firstPublishedBy = sys.firstPublishedBy ?? (scheduledBy || '');
-
-    // Save published doc.
-    batch.set(publishedRef, {
-      id,
-      collection,
-      slug,
-      fields: data.fields || {},
-      sys: {
-        ...sys,
-        firstPublishedAt: firstPublishedAt,
-        firstPublishedBy: firstPublishedBy,
-        publishedAt: FieldValue.serverTimestamp(),
-        publishedBy: scheduledBy || '',
-      },
-    });
-    batchCount += 1;
-
-    // Remove published doc.
-    batch.delete(scheduledRef);
-    batchCount += 1;
-
-    // Update the draft doc to remove `scheduledAt` and `scheduledBy` fields
-    // and update the `publishedAt` and `publishedBy` fields.
-    batch.update(draftRef, {
-      'sys.scheduledAt': FieldValue.delete(),
-      'sys.scheduledBy': FieldValue.delete(),
-      'sys.firstPublishedAt': firstPublishedAt,
-      'sys.firstPublishedBy': firstPublishedBy,
-      'sys.publishedAt': FieldValue.serverTimestamp(),
-      'sys.publishedBy': scheduledBy || '',
-    });
-    batchCount += 1;
-
-    publishedDocs.push(doc);
-
-    if (batchCount >= 498) {
-      break;
-    }
-  }
-
-  await batch.commit();
-  console.log(`published ${publishedDocs.length} docs!`);
-  return publishedDocs;
+  const cmsClient = new RootCMSClient(rootConfig);
+  return await cmsClient.publishScheduledDocs();
 }
 
 /**
