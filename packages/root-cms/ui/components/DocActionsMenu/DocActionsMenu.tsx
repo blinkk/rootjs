@@ -32,6 +32,7 @@ import {
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
+import {errorMessage} from '../../utils/notifications.js';
 import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
 import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
@@ -193,7 +194,21 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           loading: true,
           autoClose: false,
         });
-        await cmsUnpublishDoc(docId);
+        try {
+          await cmsUnpublishDoc(docId);
+        } catch (err) {
+          console.error(err);
+          updateNotification({
+            id: notificationId,
+            title: 'Unpublish failed',
+            message: `Failed to unpublish ${docId}: ${errorMessage(err)}`,
+            color: 'red',
+            loading: false,
+            autoClose: false,
+          });
+          modals.closeModal(modalId);
+          return;
+        }
         updateNotification({
           id: notificationId,
           title: 'Unpublished!',
@@ -463,9 +478,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         <Menu.Item
           icon={<IconCloudOff size={20} />}
           onClick={() => onUnpublishDoc()}
-          disabled={!canPublish}
+          // A doc with a pending scheduled publish needs to be unscheduled
+          // before it can be unpublished.
+          disabled={!canPublish || testIsScheduled(data)}
         >
           Unpublish
+          {testIsScheduled(data) && (
+            <div className="DocActionsMenu__itemNote">
+              Unschedule the upcoming publish first.
+            </div>
+          )}
         </Menu.Item>
       )}
       {!isArchived && sys.scheduledAt && (

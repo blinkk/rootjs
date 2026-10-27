@@ -509,6 +509,12 @@ export async function cmsUnpublishDoc(docId: string) {
     'Published',
     slug
   );
+  const draftDoc = await getDoc(draftDocRef);
+  if (testIsScheduled(draftDoc.data() as CMSDoc)) {
+    throw new Error(
+      `cannot unpublish ${docId}: unschedule the upcoming publish first`
+    );
+  }
   const batch = writeBatch(db);
   // Update the "sys" metadata in the draft doc.
   batch.update(draftDocRef, {
@@ -518,8 +524,9 @@ export async function cmsUnpublishDoc(docId: string) {
     'sys.publishedBy': deleteField(),
     'sys.firstPublishedAt': deleteField(),
     'sys.firstPublishedBy': deleteField(),
-    // Unpublishing cancels any pending scheduled publish, so clear the
-    // "scheduled" values along with the "scheduled" doc below.
+    // Clear any "scheduled" values left over from a scheduled publish that's
+    // past due but hasn't been processed yet, along with the "scheduled" doc
+    // below.
     'sys.scheduledAt': deleteField(),
     'sys.scheduledBy': deleteField(),
   });

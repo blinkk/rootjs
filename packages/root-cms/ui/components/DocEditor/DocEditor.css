@@ -94,6 +94,23 @@
   margin-left: 4px;
 }
 
+.DocEditor__scheduledNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: var(--cms-field-gap);
+  padding: 10px 12px;
+  background: #fff9db;
+  border: 1px solid #ffe066;
+  border-radius: 6px;
+  text-wrap: pretty;
+}
+
+.DocEditor__scheduledNotice__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .DocEditor__fields {
   display: flex;
   flex-direction: column;
@@ -163,7 +180,9 @@
   min-width: 18px;
   opacity: 0.35;
   padding: 0 2px;
-  transition: opacity 0.2s ease, background-color 0.15s ease;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.15s ease;
 }
 
 .DocEditor__FieldHeader:hover .DocEditor__FieldHeader__comments__button,
