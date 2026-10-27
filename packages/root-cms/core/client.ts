@@ -19,6 +19,7 @@ import {
   marshalDataSourceData,
   unmarshalDataSourceData,
 } from '../shared/data-source.js';
+import {type ErrorReport} from '../shared/error-reports.js';
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {verifyPassword, type PasswordHash} from '../shared/password.js';
 
@@ -64,6 +65,7 @@ import type {
   DependencyGraphService,
 } from './dependency-graph.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
+import {toErrorReport} from './error-logs.js';
 import {CMSPlugin} from './plugin.js';
 import {
   clearReadCaches,
@@ -2895,6 +2897,47 @@ export class RootCMSClient {
 
     const snapshot = await queryRef.get();
     return snapshot.docs.map((doc) => doc.data() as Action);
+  }
+
+  /**
+   * Saves an error report from the CMS UI to the database, so a developer can
+   * look it up by the id shown to the user. The report is also written to the
+   * server logs.
+   */
+  async logError(report: ErrorReport) {
+    const docRef = this.db.doc(
+      `Projects/${this.projectId}/ErrorLogs/${report.id}`
+    );
+    // Use `create()` so a report can't overwrite an existing one.
+    await docRef.create({
+      ...report,
+      timestamp: Timestamp.fromMillis(report.timestamp),
+    });
+    console.error(
+      `[${report.timestamp}] cms ui error ${report.id} (${report.by || 'unknown user'}): ${report.message}\n${report.stack || ''}`
+    );
+  }
+
+  /**
+   * Lists the most recent UI error reports, newest first.
+   */
+  async listErrorLogs(options?: {limit?: number}): Promise<ErrorReport[]> {
+    const snapshot = await this.db
+      .collection(`Projects/${this.projectId}/ErrorLogs`)
+      .orderBy('timestamp', 'desc')
+      .limit(options?.limit ?? 20)
+      .get();
+    return snapshot.docs.map((doc) => toErrorReport(doc.data()));
+  }
+
+  /**
+   * Gets a UI error report by its id. Returns `null` if not found.
+   */
+  async getErrorLog(id: string): Promise<ErrorReport | null> {
+    const snapshot = await this.db
+      .doc(`Projects/${this.projectId}/ErrorLogs/${id}`)
+      .get();
+    return snapshot.exists ? toErrorReport(snapshot.data()) : null;
   }
 
   /**

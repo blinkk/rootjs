@@ -1,5 +1,8 @@
 import packageJson from '../package.json' with {type: 'json'};
 
+/** Version of the `@blinkk/root-cms` package. */
+export const CMS_VERSION: string = packageJson?.version || '';
+
 const SERVER_STARTUP_TS = String(Math.floor(new Date().getTime() / 1000));
 
 /**

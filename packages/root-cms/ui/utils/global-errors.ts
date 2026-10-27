@@ -1,3 +1,4 @@
+import {reportError} from './error-reports.js';
 import {errorMessage, showErrorNotification} from './notifications.js';
 
 /**
@@ -15,7 +16,9 @@ function testIsIgnored(message: string): boolean {
 let installed = false;
 
 /**
- * Surfaces uncaught errors and unhandled promise rejections as notifications.
+ * Surfaces uncaught errors and unhandled promise rejections as notifications,
+ * and saves them to the error log so a developer can look them up by the
+ * error id shown in the notification.
  *
  * Without this, anything thrown outside of a render pass — an editor plugin's
  * update listener, a DOM event handler, a floating promise — is swallowed by
@@ -44,7 +47,11 @@ export function installGlobalErrorHandlers() {
     if (testIsIgnored(errorMessage(err))) {
       return;
     }
-    showErrorNotification(err, {title: 'Something went wrong'});
+    const report = reportError(err, {source: 'uncaught'});
+    showErrorNotification(err, {
+      title: 'Something went wrong',
+      errorId: report.id,
+    });
   });
 
   window.addEventListener(
@@ -54,7 +61,11 @@ export function installGlobalErrorHandlers() {
       if (testIsIgnored(errorMessage(err))) {
         return;
       }
-      showErrorNotification(err, {title: 'Something went wrong'});
+      const report = reportError(err, {source: 'unhandledrejection'});
+      showErrorNotification(err, {
+        title: 'Something went wrong',
+        errorId: report.id,
+      });
     }
   );
 }

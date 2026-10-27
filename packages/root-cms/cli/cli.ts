@@ -3,6 +3,7 @@ import {bgGreen, black} from 'kleur/colors';
 import {assetsUpload} from './assets.js';
 import {clientCall, clientMethods} from './client-cli.js';
 import {docsGet, docsSet, docsDownload, docsUpload} from './docs.js';
+import {errorsGet, errorsList} from './errors.js';
 import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
@@ -216,6 +217,29 @@ class CliRunner {
       .option('--no-sync', 'skip updating docs that use a replaced asset')
       .option('--modified-by <email>', 'email attributed as the author')
       .action(assetsUpload);
+    program
+      .command('errors.list')
+      .description(
+        'lists the most recent errors reported by the cms ui\n\n' +
+          'When the CMS UI crashes, the error screen shows the user an error\n' +
+          'id and saves the full report (with a source-mapped stack trace) to\n' +
+          'the database.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms errors.list\n' +
+          '  $ root-cms errors.list --limit 50 --json'
+      )
+      .option('--limit <n>', 'max number of errors to list (default: 20)')
+      .option('--json', 'output machine-readable JSON')
+      .action(errorsList);
+    program
+      .command('errors.get <id>')
+      .description(
+        'prints the full report for an error reported by the cms ui\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms errors.get k3x9q2m7pa'
+      )
+      .option('--json', 'output machine-readable JSON')
+      .action(errorsGet);
     program
       .command('client.call <method> [jsonArgs]')
       .description(

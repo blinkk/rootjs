@@ -1,13 +1,23 @@
 import {Button} from '@mantine/core';
 import {IconCloudOff, IconReload} from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
+import {ErrorReport} from '../../utils/error-reports.js';
 import {errorMessage} from '../../utils/notifications.js';
+import {ErrorDetails} from '../ErrorDetails/ErrorDetails.js';
 import './DataLoadError.css';
 
 export interface DataLoadErrorProps {
   /** Title shown above the error message. Defaults to a generic title. */
   title?: string;
+  /** Text shown below the title. Defaults to a hint to reload the page. */
+  body?: ComponentChildren;
   /** The error that caused the data to fail to load. */
   error?: unknown;
+  /**
+   * A report for the error. When set, the error id and a button to copy the
+   * full report are shown in place of the error message.
+   */
+  report?: ErrorReport;
 }
 
 /**
@@ -26,8 +36,8 @@ export function DataLoadError(props: DataLoadErrorProps) {
         {props.title || 'Failed to load'}
       </h2>
       <p className="DataLoadError__body">
-        Reload the page to try again. If the problem persists, check your
-        network connection.
+        {props.body ||
+          'Reload the page to try again. If the problem persists, check your network connection.'}
       </p>
       <Button
         color="dark"
@@ -37,6 +47,7 @@ export function DataLoadError(props: DataLoadErrorProps) {
         Reload page
       </Button>
       {message && <code className="DataLoadError__error">{message}</code>}
+      {props.report && <ErrorDetails report={props.report} />}
     </div>
   );
 }

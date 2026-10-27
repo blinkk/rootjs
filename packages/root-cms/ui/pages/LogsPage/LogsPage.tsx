@@ -11,6 +11,9 @@ export function LogsPage() {
       <div className="LogsPage">
         <div className="LogsPage__header">
           <Heading size="h1">Action Logs</Heading>
+          <a className="LogsPage__errorLogsLink" href="/cms/logs/errors">
+            View error logs
+          </a>
         </div>
         <ActionLogs />
       </div>

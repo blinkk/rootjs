@@ -33,3 +33,13 @@
   font-family: var(--font-family-monospace, monospace);
   word-break: break-word;
 }
+
+.FieldErrorBoundary__id {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.FieldErrorBoundary__id span {
+  font-family: var(--font-family-monospace, monospace);
+  user-select: all;
+}

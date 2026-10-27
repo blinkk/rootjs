@@ -108,6 +108,9 @@ const EditReleasePage = lazyRoute(() =>
     (m) => m.EditReleasePage
   )
 );
+const ErrorLogsPage = lazyRoute(() =>
+  import('./pages/ErrorLogsPage/ErrorLogsPage.js').then((m) => m.ErrorLogsPage)
+);
 const LogsPage = lazyRoute(() =>
   import('./pages/LogsPage/LogsPage.js').then((m) => m.LogsPage)
 );
@@ -438,6 +441,10 @@ function App() {
                                 component={EditDataSourcePage}
                               />
                               <Route path="/cms/logs" component={LogsPage} />
+                              <Route
+                                path="/cms/logs/errors"
+                                component={ErrorLogsPage}
+                              />
                               <Route
                                 path="/cms/releases"
                                 component={ReleasesPage}

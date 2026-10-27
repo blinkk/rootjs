@@ -1,7 +1,8 @@
 import './FieldErrorBoundary.css';
 
 import {IconAlertTriangle} from '@tabler/icons-preact';
-import {Component, ComponentChildren} from 'preact';
+import {Component, ComponentChildren, ErrorInfo} from 'preact';
+import {ErrorReport, reportError} from '../../utils/error-reports.js';
 
 export interface FieldErrorBoundaryProps {
   /** The deepKey of the field being rendered, used for error reporting. */
@@ -11,6 +12,7 @@ export interface FieldErrorBoundaryProps {
 
 interface FieldErrorBoundaryState {
   error: Error | null;
+  report: ErrorReport | null;
 }
 
 /**
@@ -23,19 +25,24 @@ export class FieldErrorBoundary extends Component<
   FieldErrorBoundaryProps,
   FieldErrorBoundaryState
 > {
-  state: FieldErrorBoundaryState = {error: null};
+  state: FieldErrorBoundaryState = {error: null, report: null};
 
-  static getDerivedStateFromError(error: Error): FieldErrorBoundaryState {
+  static getDerivedStateFromError(error: Error) {
     return {error};
   }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, errorInfo?: ErrorInfo) {
     console.error(
       `Error rendering field${
         this.props.deepKey ? ` "${this.props.deepKey}"` : ''
       }:`,
       error
     );
+    const report = reportError(error, {
+      source: 'field',
+      componentStack: errorInfo?.componentStack,
+    });
+    this.setState({report});
   }
 
   render() {
@@ -54,6 +61,11 @@ export class FieldErrorBoundary extends Component<
               This field failed to render.
             </div>
             <div className="FieldErrorBoundary__message">{message}</div>
+            {this.state.report && (
+              <div className="FieldErrorBoundary__id">
+                Error ID: <span>{this.state.report.id}</span>
+              </div>
+            )}
           </div>
         </div>
       );
