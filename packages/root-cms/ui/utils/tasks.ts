@@ -30,6 +30,13 @@ export interface Task {
   cc?: string[];
   priority?: TaskPriority;
   status?: string;
+  /**
+   * How the target launch is specified. Tasks saved before this field existed
+   * only have `targetLaunchDate`, which reads as `date`. Use
+   * `getTaskTargetLaunch()` rather than reading these fields directly.
+   */
+  targetLaunchType?: TaskTargetLaunchType | null;
+  /** Local midnight for `date`, the exact time for `datetime`, else null. */
   targetLaunchDate?: Timestamp | null;
   createdAt: Timestamp;
   createdBy: string;
@@ -41,6 +48,25 @@ export interface Task {
 }
 
 export type TaskPriority = 'high' | 'medium' | 'normal';
+
+/**
+ * How a task's target launch is specified: `anytime` (no deadline), `asap`
+ * (urgent), `date` (any time on a given day), or `datetime` (an exact time).
+ */
+export type TaskTargetLaunchType = 'anytime' | 'asap' | 'date' | 'datetime';
+
+/** A task's target launch, as read from the DB. */
+export interface TaskTargetLaunch {
+  type: TaskTargetLaunchType;
+  /** Set for `date` and `datetime`, null otherwise. */
+  date: Timestamp | null;
+}
+
+/** A target launch to save. `date` is required for `date` and `datetime`. */
+export interface TaskTargetLaunchInput {
+  type: TaskTargetLaunchType;
+  date: Date | null;
+}
 export type TaskUnsubscribe = () => void;
 
 export interface TaskAttachment extends UploadedFile {
@@ -89,6 +115,9 @@ export interface TaskEvent {
   field: TaskMetadataField;
   oldValue: string | Timestamp | null;
   newValue: string | Timestamp | null;
+  /** For `targetLaunchDate` events, the launch types before and after. */
+  oldTargetLaunchType?: TaskTargetLaunchType | null;
+  newTargetLaunchType?: TaskTargetLaunchType | null;
   createdAt: Timestamp;
   createdBy: string;
 }
@@ -164,7 +193,7 @@ export async function createTask(options: {
   description?: string;
   assignee?: string | null;
   priority?: TaskPriority;
-  targetLaunchDate?: Date | Timestamp | null;
+  targetLaunch?: TaskTargetLaunchInput | null;
 }) {
   if (!options.title) {
     throw new Error('missing task title');
@@ -174,9 +203,7 @@ export async function createTask(options: {
   const assignee = options.assignee ?? (await getDefaultTaskAssignee());
   const priority = options.priority || 'normal';
   const status = 'new';
-  const targetLaunchDate = normalizeTaskTargetLaunchDate(
-    options.targetLaunchDate
-  );
+  const targetLaunch = normalizeTaskTargetLaunchInput(options.targetLaunch);
   const taskId = await runTransaction(db, async (transaction) => {
     const counterRef = taskCounterDocRef();
     const counterSnapshot = await transaction.get(counterRef);
@@ -204,7 +231,8 @@ export async function createTask(options: {
           assignee: assignee ?? null,
           priority,
           status,
-          targetLaunchDate,
+          targetLaunchType: targetLaunch.type,
+          targetLaunchDate: targetLaunch.date,
           createdAt: serverTimestamp(),
           createdBy: window.firebase.user.email || '',
           updatedAt: serverTimestamp(),
@@ -222,11 +250,103 @@ export async function createTask(options: {
   return taskId;
 }
 
-function normalizeTaskTargetLaunchDate(value?: Date | Timestamp | null) {
-  if (value instanceof Date) {
-    return Timestamp.fromDate(value);
+/** Converts a target launch to the values stored on the task doc. */
+function normalizeTaskTargetLaunchInput(input?: TaskTargetLaunchInput | null): {
+  type: TaskTargetLaunchType | null;
+  date: Timestamp | null;
+} {
+  if (!input) {
+    return {type: null, date: null};
   }
-  return value ?? null;
+  if (input.type === 'anytime' || input.type === 'asap') {
+    return {type: input.type, date: null};
+  }
+  if (!input.date) {
+    throw new Error(`target launch type "${input.type}" requires a date`);
+  }
+  return {type: input.type, date: Timestamp.fromDate(input.date)};
+}
+
+/**
+ * Builds a target launch from its stored type and date, or returns null if
+ * none is set. A date with no type (saved before types existed) is a `date`.
+ */
+export function toTaskTargetLaunch(
+  type?: TaskTargetLaunchType | null,
+  date?: Timestamp | null
+): TaskTargetLaunch | null {
+  if (type === 'anytime' || type === 'asap') {
+    return {type, date: null};
+  }
+  if (!date?.toMillis) {
+    return null;
+  }
+  return {type: type === 'datetime' ? 'datetime' : 'date', date};
+}
+
+/** Returns the task's target launch, or null if none is set. */
+export function getTaskTargetLaunch(
+  task: Pick<Task, 'targetLaunchType' | 'targetLaunchDate'>
+) {
+  return toTaskTargetLaunch(task.targetLaunchType, task.targetLaunchDate);
+}
+
+/**
+ * Returns true once a target launch has passed: the end of the day for
+ * `date`, the exact time for `datetime`. `anytime` and `asap` never are.
+ */
+export function isTaskTargetLaunchPast(
+  launch: TaskTargetLaunch | null,
+  now = Date.now()
+) {
+  if (!launch?.date) {
+    return false;
+  }
+  if (launch.type === 'datetime') {
+    return launch.date.toMillis() < now;
+  }
+  const nextDay = new Date(launch.date.toMillis());
+  nextDay.setHours(0, 0, 0, 0);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.getTime() <= now;
+}
+
+/**
+ * Formats a target launch for display, e.g. "ASAP", "Nov 14, 2026", or
+ * "Nov 14, 2026, 9:00 AM". With `short`, the year is dropped and today's date
+ * reads as "Today".
+ */
+export function formatTaskTargetLaunch(
+  launch: TaskTargetLaunch | null,
+  options?: {short?: boolean}
+) {
+  if (!launch) {
+    return 'No date';
+  }
+  if (launch.type === 'anytime') {
+    return 'Anytime';
+  }
+  if (launch.type === 'asap') {
+    return 'ASAP';
+  }
+  const date = new Date(launch.date!.toMillis());
+  const time =
+    launch.type === 'datetime'
+      ? date.toLocaleTimeString('en', {hour: 'numeric', minute: '2-digit'})
+      : '';
+  if (options?.short) {
+    const day =
+      date.toDateString() === new Date().toDateString()
+        ? 'Today'
+        : date.toLocaleDateString('en', {month: 'short', day: 'numeric'});
+    return time ? `${day}, ${time}` : day;
+  }
+  const day = date.toLocaleDateString('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  return time ? `${day}, ${time}` : day;
 }
 
 export function isOpenTaskStatus(status?: string) {
@@ -518,23 +638,61 @@ export async function updateTaskPriority(
   }
 }
 
-export async function updateTaskTargetLaunchDate(
+/**
+ * Sets (or clears, with null) a task's target launch. The type and date are
+ * saved together with a single history event.
+ */
+export async function updateTaskTargetLaunch(
   taskId: string,
-  targetLaunchDate?: Date | Timestamp | null
+  targetLaunch: TaskTargetLaunchInput | null
 ) {
   if (!taskId) {
     throw new Error('missing task id');
   }
-  const normalizedTargetLaunchDate =
-    normalizeTaskTargetLaunchDate(targetLaunchDate);
-  const didUpdate = await updateTaskMetadataField(
-    taskId,
-    'targetLaunchDate',
-    normalizedTargetLaunchDate
-  );
+  const next = normalizeTaskTargetLaunchInput(targetLaunch);
+  const db = window.firebase.db;
+  const taskRef = taskDocRef(taskId);
+  const eventRef = taskEventDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+
+  const didUpdate = await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(taskRef);
+    if (!snapshot.exists()) {
+      throw new Error('task not found');
+    }
+    const prev = getTaskTargetLaunch(snapshot.data() as Task);
+    const prevType = prev?.type ?? null;
+    const prevDate = prev?.date ?? null;
+    if (
+      prevType === next.type &&
+      taskMetadataValuesEqual(prevDate, next.date)
+    ) {
+      return false;
+    }
+
+    transaction.update(taskRef, {
+      targetLaunchType: next.type,
+      targetLaunchDate: next.date,
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+    transaction.set(eventRef, {
+      id: eventRef.id,
+      taskId,
+      type: 'metadata',
+      field: 'targetLaunchDate',
+      oldValue: prevDate,
+      newValue: next.date,
+      oldTargetLaunchType: prevType,
+      newTargetLaunchType: next.type,
+      createdAt: serverTimestamp(),
+      createdBy: userEmail,
+    });
+    return true;
+  });
   if (didUpdate) {
-    logAction('tasks.updateTargetLaunchDate', {
-      metadata: {taskId},
+    logAction('tasks.updateTargetLaunch', {
+      metadata: {taskId, type: next.type},
     });
   }
 }

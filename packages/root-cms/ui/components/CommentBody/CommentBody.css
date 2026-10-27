@@ -45,6 +45,29 @@
   padding-left: 22px;
 }
 
+/*
+ * Code blocks wrap long lines instead of overflowing the comment, with a
+ * scrollbar as a fallback for content that can't break.
+ */
+.CommentBody__markdown pre,
+.CommentBody__richText pre {
+  background: #f6f6f4;
+  border-radius: 6px;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+
+.CommentBody__markdown pre code,
+.CommentBody__richText pre code {
+  background: none;
+  padding: 0;
+}
+
 .CommentBody__markdown code,
 .CommentBody__richText code {
   background: #efefef;

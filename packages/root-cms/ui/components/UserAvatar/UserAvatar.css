@@ -1,7 +1,14 @@
 .UserAvatar {
-  border: 2px solid var(--mantine-color-body, #fff);
-  box-sizing: content-box;
   transition: opacity 0.2s ease;
+}
+
+/*
+ * Stacked avatars get a ring so the overlaps stay legible. Containers on a
+ * non-white background can match it with `--user-avatar-ring-color`.
+ */
+.UserAvatarGroup__avatar {
+  border: 2px solid var(--user-avatar-ring-color, #fff);
+  box-sizing: content-box;
 }
 
 .UserAvatar--inactive {

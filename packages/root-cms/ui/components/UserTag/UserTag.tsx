@@ -14,8 +14,9 @@ export interface UserTagProps {
 }
 
 /**
- * Renders a user's short name (the local part of their email) with a hover
- * tooltip showing their avatar, display name (if available), and full email.
+ * Renders a user's display name (falling back to the local part of their email
+ * until a profile is saved) with a hover tooltip showing their avatar, display
+ * name, and full email.
  *
  * Example:
  *   <UserTag email="me@example.com" />
@@ -81,7 +82,7 @@ export function UserTag(props: UserTagProps) {
       onPointerLeave={scheduleClose}
     >
       <span className={joinClassNames('UserTag', props.className)}>
-        {shortName}
+        {displayName || shortName}
       </span>
     </Tooltip>
   );

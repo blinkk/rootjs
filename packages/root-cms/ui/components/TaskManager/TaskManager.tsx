@@ -7,7 +7,6 @@ import {
   Menu,
   Popover,
   SegmentedControl,
-  TextInput,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -18,22 +17,35 @@ import {
   IconPlus,
   IconUser,
 } from '@tabler/icons-preact';
-import {ChangeEvent} from 'preact/compat';
+import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {
   createTask,
+  formatTaskTargetLaunch,
+  getTaskTargetLaunch,
   isOpenTaskStatus,
+  isTaskTargetLaunchPast,
   normalizeTaskStatus,
   subscribeOpenTasks,
   subscribeTasks,
   Task,
   TaskPriority,
+  TaskTargetLaunchInput,
+  toTaskTargetLaunch,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
+import {
+  parseTaskTargetLaunchDraft,
+  TaskTargetLaunchDraft,
+  TaskTargetLaunchLabel,
+  TaskTargetLaunchPicker,
+  toTaskTargetLaunchDraft,
+} from '../TaskTargetLaunch/TaskTargetLaunch.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
+import {UserSelect} from '../UserSelect/UserSelect.js';
 import {UserTag} from '../UserTag/UserTag.js';
 
 type TaskFilter =
@@ -113,7 +125,10 @@ export function TaskManager(props: TaskManagerProps) {
   const [assigneeEmail, setAssigneeEmail] = useState('');
   const [assignPopoverOpen, setAssignPopoverOpen] = useState(false);
   const [priority, setPriority] = useState<TaskPriority>('normal');
-  const [targetLaunchDate, setTargetLaunchDate] = useState('');
+  const [targetLaunch, setTargetLaunch] =
+    useState<TaskTargetLaunchInput | null>(null);
+  const [targetLaunchDraft, setTargetLaunchDraft] =
+    useState<TaskTargetLaunchDraft>(() => toTaskTargetLaunchDraft(null));
   const [targetDatePopoverOpen, setTargetDatePopoverOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -137,6 +152,26 @@ export function TaskManager(props: TaskManagerProps) {
   const canCreate = Boolean(title.trim()) && !creating;
   const descriptionOpen = Boolean(title.trim() || description);
 
+  function openTargetDatePopover() {
+    setTargetLaunchDraft(
+      toTaskTargetLaunchDraft(toDisplayLaunch(targetLaunch))
+    );
+    setTargetDatePopoverOpen(true);
+  }
+
+  /** Closes the target date popover, keeping the draft if it's complete. */
+  function closeTargetDatePopover(options?: {clear?: boolean}) {
+    setTargetDatePopoverOpen(false);
+    if (options?.clear) {
+      setTargetLaunch(null);
+      return;
+    }
+    const value = parseTaskTargetLaunchDraft(targetLaunchDraft);
+    if (value) {
+      setTargetLaunch(value);
+    }
+  }
+
   async function onSubmit(e: Event) {
     e.preventDefault();
     const taskTitle = title.trim();
@@ -150,13 +185,13 @@ export function TaskManager(props: TaskManagerProps) {
         description: description.trim(),
         assignee: assigneeEmail.trim() || undefined,
         priority,
-        targetLaunchDate: parseTargetLaunchDate(targetLaunchDate),
+        targetLaunch,
       });
       setTitle('');
       setDescription('');
       setAssigneeEmail('');
       setPriority('normal');
-      setTargetLaunchDate('');
+      setTargetLaunch(null);
       showNotification({
         title: 'Task created',
         message: taskTitle,
@@ -247,48 +282,24 @@ export function TaskManager(props: TaskManagerProps) {
                   <IconUser size={14} strokeWidth="2" />
                 )}
                 <span>
-                  {assigneeEmail ? formatTaskUser(assigneeEmail) : 'Assignee'}
+                  {assigneeEmail ? (
+                    <UserTag email={assigneeEmail} />
+                  ) : (
+                    'Assignee'
+                  )}
                 </span>
               </button>
             }
           >
-            <div className="TaskManager__composer__popover">
-              <TextInput
-                autoFocus
-                label="Email"
-                placeholder="teammate@example.com"
-                size="xs"
-                type="email"
-                value={assigneeEmail}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setAssigneeEmail(e.currentTarget.value)
-                }
-                onKeyDown={(e: KeyboardEvent) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setAssignPopoverOpen(false);
-                  }
-                }}
-              />
-              <div className="TaskManager__composer__popover__actions">
-                <Button
-                  compact
-                  size="xs"
-                  variant="default"
-                  onClick={() => setAssigneeEmail('')}
-                >
-                  Clear
-                </Button>
-                <Button
-                  compact
-                  size="xs"
-                  color="dark"
-                  onClick={() => setAssignPopoverOpen(false)}
-                >
-                  Done
-                </Button>
-              </div>
-            </div>
+            <UserSelect
+              autoFocus
+              initiallyOpened
+              value={assigneeEmail}
+              onChange={(email: string) => {
+                setAssigneeEmail(email);
+                setAssignPopoverOpen(false);
+              }}
+            />
           </Popover>
           <Menu
             position="bottom"
@@ -326,62 +337,42 @@ export function TaskManager(props: TaskManagerProps) {
           </Menu>
           <Popover
             opened={targetDatePopoverOpen}
-            onClose={() => setTargetDatePopoverOpen(false)}
+            onClose={() => closeTargetDatePopover()}
             position="bottom"
             shadow="md"
-            width={260}
+            width={300}
             withArrow
             target={
               <button
                 className={joinClassNames(
                   'TaskManager__composer__control',
-                  targetLaunchDate && 'TaskManager__composer__control--set'
+                  targetLaunch && 'TaskManager__composer__control--set'
                 )}
                 type="button"
                 aria-expanded={targetDatePopoverOpen}
-                onClick={() => setTargetDatePopoverOpen(!targetDatePopoverOpen)}
+                onClick={() =>
+                  targetDatePopoverOpen
+                    ? closeTargetDatePopover()
+                    : openTargetDatePopover()
+                }
               >
                 <IconCalendar size={14} strokeWidth="2" />
                 <span>
-                  {targetLaunchDate
-                    ? formatTargetLaunchDateLabel(targetLaunchDate)
+                  {targetLaunch
+                    ? formatTaskTargetLaunch(toDisplayLaunch(targetLaunch), {
+                        short: true,
+                      })
                     : 'Target date'}
                 </span>
               </button>
             }
           >
-            <div className="TaskManager__composer__popover">
-              <label className="TaskManager__composer__dateLabel">
-                Target launch date
-                <input
-                  type="date"
-                  value={targetLaunchDate}
-                  onInput={(e) => {
-                    setTargetLaunchDate(
-                      (e.currentTarget as HTMLInputElement).value
-                    );
-                  }}
-                />
-              </label>
-              <div className="TaskManager__composer__popover__actions">
-                <Button
-                  compact
-                  size="xs"
-                  variant="default"
-                  onClick={() => setTargetLaunchDate('')}
-                >
-                  Clear
-                </Button>
-                <Button
-                  compact
-                  size="xs"
-                  color="dark"
-                  onClick={() => setTargetDatePopoverOpen(false)}
-                >
-                  Done
-                </Button>
-              </div>
-            </div>
+            <TaskTargetLaunchPicker
+              value={targetLaunchDraft}
+              onChange={setTargetLaunchDraft}
+              onClear={() => closeTargetDatePopover({clear: true})}
+              onDone={() => closeTargetDatePopover()}
+            />
           </Popover>
         </div>
         <Button
@@ -397,27 +388,26 @@ export function TaskManager(props: TaskManagerProps) {
       </form>
 
       <div className="TaskManager__listHeader">
-        <nav className="TaskManager__tabs" aria-label="Task filters">
-          {filterOptions.map((option) => (
-            <button
-              key={option.value}
-              className={joinClassNames(
-                'TaskManager__tab',
-                filter === option.value && 'TaskManager__tab--active'
-              )}
-              type="button"
-              aria-pressed={filter === option.value}
-              onClick={() => setFilter(option.value)}
-            >
-              {option.label}
-              {!loading && (
-                <span className="TaskManager__tab__count">
-                  {filterCounts[option.value] ?? 0}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+        <SegmentedControl
+          className="TaskManager__filters"
+          aria-label="Task filters"
+          size="sm"
+          value={filter}
+          onChange={(value: TaskFilter) => setFilter(value)}
+          data={filterOptions.map((option) => ({
+            value: option.value,
+            label: (
+              <span className="TaskManager__filter">
+                {option.label}
+                {!loading && (
+                  <span className="TaskManager__filter__count">
+                    {filterCounts[option.value] ?? 0}
+                  </span>
+                )}
+              </span>
+            ),
+          }))}
+        />
         <div className="TaskManager__listHeader__actions">
           {showPageLayout ? (
             <SegmentedControl
@@ -538,12 +528,13 @@ function TaskGroupedList(props: {filter: TaskFilter; tasks: Task[]}) {
 function TaskListRow(props: {task: Task}) {
   const {task} = props;
   const priority = formatTaskPriority(task.priority);
+  const targetLaunch = getTaskTargetLaunch(task);
   const overdue =
-    isOpenTaskStatus(task.status) && isPastDate(task.targetLaunchDate);
+    isOpenTaskStatus(task.status) && isTaskTargetLaunchPast(targetLaunch);
   return (
     <a className="TaskManager__listRow" href={`/cms/tasks/${task.id}`}>
       {task.assignee ? (
-        <UserAvatar email={task.assignee} size={28} />
+        <UserAvatar email={task.assignee} size={24} />
       ) : (
         <span
           className="TaskManager__listRow__unassigned"
@@ -558,13 +549,16 @@ function TaskListRow(props: {task: Task}) {
         <span className="TaskManager__listRow__id">#{task.id}</span>
       </span>
       <TaskPriorityBadge priority={priority} />
-      <span
-        className={joinClassNames(
-          'TaskManager__listRow__date',
-          overdue && 'TaskManager__listRow__date--overdue'
+      <span className="TaskManager__listRow__date">
+        {targetLaunch ? (
+          <TaskTargetLaunchLabel
+            launch={targetLaunch}
+            overdue={overdue}
+            short
+          />
+        ) : (
+          '—'
         )}
-      >
-        {task.targetLaunchDate ? formatTargetDate(task.targetLaunchDate) : '—'}
       </span>
     </a>
   );
@@ -581,7 +575,7 @@ const TASK_PRIORITY_GRADIENTS: Record<
 };
 
 /** Renders a gradient pill for a task's priority. */
-function TaskPriorityBadge(props: {priority: TaskPriority}) {
+export function TaskPriorityBadge(props: {priority: TaskPriority}) {
   return (
     <Badge
       size="sm"
@@ -600,7 +594,7 @@ function TaskPriorityBadge(props: {priority: TaskPriority}) {
 }
 
 /** Renders a small ring icon that reflects a task's status. */
-function TaskStatusRing(props: {status: string}) {
+export function TaskStatusRing(props: {status: string}) {
   return (
     <span
       className={`TaskManager__statusRing TaskManager__statusRing--${props.status}`}
@@ -619,10 +613,18 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
           (task) => getTaskStatusValue(task) === column.value
         );
         return (
-          <section className="TaskManager__boardColumn" key={column.value}>
+          <section
+            className={`TaskManager__boardColumn TaskManager__boardColumn--${column.value}`}
+            key={column.value}
+          >
             <div className="TaskManager__boardColumn__header">
-              <span>{column.label}</span>
-              <span>{columnTasks.length}</span>
+              <TaskStatusRing status={column.value} />
+              <h2 className="TaskManager__boardColumn__title">
+                {column.label}
+              </h2>
+              <span className="TaskManager__boardColumn__count">
+                {columnTasks.length}
+              </span>
             </div>
             <div className="TaskManager__boardColumn__tasks">
               {columnTasks.length === 0 && (
@@ -642,27 +644,43 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
 /** Renders a single task card for the board. */
 function TaskBoardCard(props: {task: Task}) {
   const {task} = props;
-  const createdBy = task.createdBy || 'unknown';
+  const targetLaunch = getTaskTargetLaunch(task);
+  const overdue =
+    isOpenTaskStatus(task.status) && isTaskTargetLaunchPast(targetLaunch);
   return (
     <a className="TaskManager__boardCard" href={`/cms/tasks/${task.id}`}>
+      <div className="TaskManager__boardCard__header">
+        <span className="TaskManager__boardCard__id">#{task.id}</span>
+        <TaskPriorityBadge priority={formatTaskPriority(task.priority)} />
+      </div>
       <div className="TaskManager__boardCard__title">{task.title}</div>
       {task.description && (
         <div className="TaskManager__boardCard__description">
           {task.description}
         </div>
       )}
-      <div className="TaskManager__boardCard__meta">
-        #{task.id} opened {formatTaskDate(task.createdAt)} by{' '}
-        <UserTag email={createdBy} />
-      </div>
-      <div className="TaskManager__boardCard__badges">
-        <TaskPriorityBadge priority={formatTaskPriority(task.priority)} />
-        <span className="TaskManager__boardCard__badge">
-          {task.assignee ? <UserTag email={task.assignee} /> : 'Unassigned'}
+      <div className="TaskManager__boardCard__footer">
+        <span className="TaskManager__boardCard__date">
+          {targetLaunch ? (
+            <TaskTargetLaunchLabel
+              launch={targetLaunch}
+              overdue={overdue}
+              short
+              withIcon
+            />
+          ) : (
+            'No date'
+          )}
         </span>
-        {task.targetLaunchDate && (
-          <span className="TaskManager__boardCard__badge">
-            target {formatTaskDate(task.targetLaunchDate)}
+        {task.assignee ? (
+          <UserAvatar email={task.assignee} size={24} />
+        ) : (
+          <span
+            className="TaskManager__listRow__unassigned"
+            title="Unassigned"
+            aria-label="Unassigned"
+          >
+            <IconUser size={12} strokeWidth="2" />
           </span>
         )}
       </div>
@@ -673,6 +691,7 @@ function TaskBoardCard(props: {task: Task}) {
 function TaskRow(props: {task: Task}) {
   const {task} = props;
   const createdBy = task.createdBy || 'unknown';
+  const targetLaunch = getTaskTargetLaunch(task);
   return (
     <a className="TaskManager__taskRow" href={`/cms/tasks/${task.id}`}>
       <div className="TaskManager__taskRow__avatar">
@@ -691,9 +710,9 @@ function TaskRow(props: {task: Task}) {
           {formatTaskStatus(task.status)}
         </div>
         <TaskPriorityBadge priority={formatTaskPriority(task.priority)} />
-        {task.targetLaunchDate && (
+        {targetLaunch && (
           <div className="TaskManager__taskRow__date">
-            target {formatTaskDate(task.targetLaunchDate)}
+            target {formatTaskTargetLaunch(targetLaunch)}
           </div>
         )}
       </div>
@@ -764,10 +783,6 @@ function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
   }
 }
 
-function formatTaskUser(email: string) {
-  return email.split('@')[0] || email;
-}
-
 function formatTaskDate(ts?: Task['createdAt']) {
   if (!ts?.toMillis) {
     return 'just now';
@@ -776,28 +791,6 @@ function formatTaskDate(ts?: Task['createdAt']) {
     month: 'short',
     day: 'numeric',
   });
-}
-
-/** Formats a target date as "Today" or a short date (e.g. "Aug 12"). */
-function formatTargetDate(ts: Task['createdAt']) {
-  if (!ts?.toMillis) {
-    return '—';
-  }
-  const date = new Date(ts.toMillis());
-  if (date.toDateString() === new Date().toDateString()) {
-    return 'Today';
-  }
-  return formatTaskDate(ts);
-}
-
-/** Returns true if the timestamp falls on a day before today. */
-function isPastDate(ts?: Task['createdAt'] | null) {
-  if (!ts?.toMillis) {
-    return false;
-  }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return ts.toMillis() < today.getTime();
 }
 
 function formatTaskStatus(status?: string) {
@@ -836,24 +829,13 @@ function formatTaskPriorityLabel(priority: TaskPriority) {
   return priority.charAt(0).toUpperCase() + priority.slice(1);
 }
 
-function parseTargetLaunchDate(value: string) {
-  if (!value) {
+/** Converts an unsaved target launch to the stored shape for display. */
+function toDisplayLaunch(input: TaskTargetLaunchInput | null) {
+  if (!input) {
     return null;
   }
-  const [year, month, day] = value.split('-').map(Number);
-  if (!year || !month || !day) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-}
-
-function formatTargetLaunchDateLabel(value: string) {
-  const date = parseTargetLaunchDate(value);
-  if (!date) {
-    return 'target launch date';
-  }
-  return date.toLocaleDateString('en', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return toTaskTargetLaunch(
+    input.type,
+    input.date ? Timestamp.fromDate(input.date) : null
+  );
 }
