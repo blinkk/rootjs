@@ -41,6 +41,13 @@ export interface DocDiffViewerProps {
   showExpandButton?: boolean;
   /** Whether to show the AI summary section. */
   showAiSummary?: boolean;
+  /**
+   * Preloaded versions of the docs to compare. When set, the versions aren't
+   * fetched, so `left` and `right` are only used for labels. Useful for
+   * versions that aren't stored as doc versions, e.g. a release's pre-release
+   * snapshot.
+   */
+  docs?: {left: CMSDoc | null; right: CMSDoc | null};
 }
 
 export function DocDiffViewer(props: DocDiffViewerProps) {
@@ -80,6 +87,13 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   async function init() {
     setLoading(true);
+    if (props.docs) {
+      setLeftDoc(props.docs.left);
+      setRightDoc(props.docs.right);
+      setCollection(await loadCollection());
+      setLoading(false);
+      return;
+    }
     await notifyErrors(async () => {
       const [leftDoc, rightDoc] = await withTimeout(
         Promise.all([
