@@ -580,7 +580,9 @@ function TaskGroupedList(props: {filter: TaskFilter; tasks: Task[]}) {
         }
         return (
           <Surface className="TaskManager__group" key={column.value}>
-            <div className="TaskManager__group__header">
+            <div
+              className={`TaskManager__group__header TaskManager__group__header--${column.value}`}
+            >
               <TaskStatusRing status={column.value} />
               <h2 className="TaskManager__group__title">{column.label}</h2>
               <span className="TaskManager__group__count">

@@ -1,4 +1,10 @@
 .TaskManager {
+  /* Status colors shared by the list group headers and board columns. The
+     default matches the Mantine segmented control background (gray[1]). */
+  --task-status-bg: #f1f3f5;
+  --task-status-bg-in-progress: #eef3fd;
+  --task-status-bg-in-review: #fdf3ea;
+  --task-status-bg-closed: #eef5f0;
   display: flex;
   flex-direction: column;
 }
@@ -373,11 +379,23 @@
 
 .TaskManager__group__header {
   align-items: center;
-  background: #f7f7f4;
+  background: var(--task-status-bg);
   border-bottom: 1px solid #ececea;
   display: flex;
   gap: 10px;
   padding: 10px 16px;
+}
+
+.TaskManager__group__header--in-progress {
+  background: var(--task-status-bg-in-progress);
+}
+
+.TaskManager__group__header--in-review {
+  background: var(--task-status-bg-in-review);
+}
+
+.TaskManager__group__header--closed {
+  background: var(--task-status-bg-closed);
 }
 
 .TaskManager__group__title {
@@ -500,7 +518,7 @@
 }
 
 .TaskManager__boardColumn {
-  background: #f3f3f0;
+  background: var(--task-status-bg);
   border-radius: 14px;
   display: flex;
   flex-direction: column;
@@ -517,15 +535,15 @@
 }
 
 .TaskManager__boardColumn--in-progress {
-  background: #eef3fd;
+  background: var(--task-status-bg-in-progress);
 }
 
 .TaskManager__boardColumn--in-review {
-  background: #fdf3ea;
+  background: var(--task-status-bg-in-review);
 }
 
 .TaskManager__boardColumn--closed {
-  background: #eef5f0;
+  background: var(--task-status-bg-closed);
 }
 
 .TaskManager__boardColumn__header {
