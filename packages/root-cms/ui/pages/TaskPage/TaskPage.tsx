@@ -45,6 +45,7 @@ import {
 } from '../../components/CommentBody/CommentBody.js';
 import {CommentEditor} from '../../components/CommentEditor/CommentEditor.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {MentionSuggestionsContext} from '../../components/RichTextEditor/lexical/plugins/MentionsPlugin.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {
   TaskPriorityBadge,
@@ -146,6 +147,20 @@ export function TaskPage(props: {id: string}) {
 
   usePageTitle(task ? `Task: ${task.title}` : `Task: ${taskId}`);
 
+  // Suggest the task's participants in `@mention` autocomplete, since they
+  // may not be project members (e.g. cc'd external users).
+  const participants = useMemo(() => {
+    if (!task) {
+      return [];
+    }
+    return [
+      task.createdBy,
+      task.assignee || '',
+      ...(task.cc || []),
+      ...comments.map((comment) => comment.createdBy),
+    ].filter(Boolean);
+  }, [task, comments]);
+
   useEffect(() => {
     setLoading(true);
     setError('');
@@ -210,32 +225,38 @@ export function TaskPage(props: {id: string}) {
         {!loading && !error && task && (
           <>
             {task.deleted && <TaskDeletedBanner task={task} />}
-            <div className="TaskPage__body">
-              <main className="TaskPage__main">
-                <TaskDescription task={task} />
-                <TaskAttachments task={task} />
-                <h2 className="TaskPage__sectionHeader__title TaskPage__activityHeading">
-                  Activity
-                </h2>
-                <TaskTimeline task={task} comments={comments} events={events} />
-                <div className="TaskPage__composer">
-                  <TaskCommentComposer taskId={task.id} />
-                </div>
-              </main>
-              <aside className="TaskPage__side">
-                <TaskMetadataPanel task={task} />
-                <Switch
-                  className="TaskPage__monoToggle"
-                  size="xs"
-                  color="dark"
-                  label="Monospace font"
-                  checked={monoText}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setMonoText(e.currentTarget.checked)
-                  }
-                />
-              </aside>
-            </div>
+            <MentionSuggestionsContext.Provider value={participants}>
+              <div className="TaskPage__body">
+                <main className="TaskPage__main">
+                  <TaskDescription task={task} />
+                  <TaskAttachments task={task} />
+                  <h2 className="TaskPage__sectionHeader__title TaskPage__activityHeading">
+                    Activity
+                  </h2>
+                  <TaskTimeline
+                    task={task}
+                    comments={comments}
+                    events={events}
+                  />
+                  <div className="TaskPage__composer">
+                    <TaskCommentComposer taskId={task.id} />
+                  </div>
+                </main>
+                <aside className="TaskPage__side">
+                  <TaskMetadataPanel task={task} />
+                  <Switch
+                    className="TaskPage__monoToggle"
+                    size="xs"
+                    color="dark"
+                    label="Monospace font"
+                    checked={monoText}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setMonoText(e.currentTarget.checked)
+                    }
+                  />
+                </aside>
+              </div>
+            </MentionSuggestionsContext.Provider>
           </>
         )}
       </div>
