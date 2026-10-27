@@ -1,5 +1,29 @@
 # @blinkk/root-cms
 
+## 4.2.1
+
+### Patch Changes
+
+- 4dea899: feat: add `maxItems` option to array fields
+- d3badc3: fix: keep doc scheduling state in sync when unpublishing, discarding edits, archiving or locking a scheduled doc, require unscheduling before unpublishing, and show a hint when editing a scheduled doc (#1550)
+- 92ecad4: fix: inline the cms "Loading..." screen styles so it's never unstyled when the stylesheet fails to load
+- d4ace2e: feat: support localized field values in root ai
+- d4ace2e: feat: add localized field values to the cms editor
+- 1f1a3a0: feat: resolve localized field values in cms routes
+- 31ed6f6: feat: add `resolveSite` option for serving multiple sites from one deployment
+- 518035c: feat: port translations from the field translations modal
+- 0b264d2: feat: add root ai and a changes view to the release page
+- c708178: feat: add the ability to roll back a published release
+- 79ecfe1: fix: log root ai doc edits to the action log
+- 84d387e: feat: add custom tools and skills for root ai
+- e58089b: feat: add a root-dev-setup agent skill for setting up a cloned project
+- 496ec59: feat: default the tasks page to the board layout and cap board column width
+- 183ae7f: feat: refresh the task details page, add anytime/asap target launches, and show user display names
+- 228aec1: feat: add task sorting and drag/drop status changes to the tasks board
+- 9f966a3: feat: refresh the tasks page with a grouped list and a new task composer
+- d41aeeb: feat: add error ids, copyable error details and an error log for cms ui errors
+  - @blinkk/root@4.2.1
+
 ## 4.1.2
 
 ### Patch Changes
