@@ -422,7 +422,7 @@ export interface CreateRouteOptions {
   /**
    * Whether to resolve localized field values (per-locale overrides of a
    * field's value, stored in the field's `@<id>.localizedValues` metadata)
-   * for the rendered locale and its fallbacks. Applies to the route's doc and
+   * for the rendered locale. Applies to the route's doc and
    * the batch response's docs and queries once the locale is resolved, so
    * `resolveLocale()` and `resolveDoc()` receive the unresolved doc, while
    * `translations()`, `preRenderHook()` and the page's props receive the
@@ -800,25 +800,24 @@ export function createRoute(options: CreateRouteOptions): Route {
     if (options.localizedValues === false) {
       return;
     }
-    const locales = resolveLocaleFallbacks(
-      routeContext.cmsClient.rootConfig.i18n,
-      routeContext.locale!
-    );
+    // Localized values don't follow the `i18n.fallbacks` config, which only
+    // applies to translations.
+    const locale = routeContext.locale!;
     if (routeContext.doc) {
-      routeContext.doc = resolveLocalizedValues(routeContext.doc, locales);
+      routeContext.doc = resolveLocalizedValues(routeContext.doc, locale);
     }
     const batchResponse = routeContext.batchResponse;
     if (batchResponse) {
       for (const docId in batchResponse.docs) {
         batchResponse.docs[docId] = resolveLocalizedValues(
           batchResponse.docs[docId],
-          locales
+          locale
         );
       }
       for (const queryId in batchResponse.queries) {
         batchResponse.queries[queryId] = resolveLocalizedValues(
           batchResponse.queries[queryId],
-          locales
+          locale
         );
       }
     }

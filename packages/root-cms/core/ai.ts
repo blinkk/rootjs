@@ -413,7 +413,7 @@ export function buildLocalizedValuesPrompt(rootConfig: RootConfig): string {
   return [
     'Localized field values:',
     '- A field can override its value for specific locales. Overrides live in the field\'s `@<fieldId>` metadata next to the default value, e.g. `{"image": {...}, "@image": {"localizedValues": {"de": {...}}}}`.',
-    '- An override replaces the whole field value for that locale (no merging), and locales fall back through `i18n.fallbacks` to the default value. A `null` override hides the field for that locale.',
+    '- An override replaces the whole field value for that locale (no merging), and locales without an override use the default value (overrides do not follow `i18n.fallbacks`). A `null` override hides the field for that locale.',
     '- Use them for content that differs by locale (e.g. a different image, link or offer). Translations of the same copy belong in the translations workflow, not in overrides.',
     `- Never add an override for the default locale (${defaultLocale}); edit the default value instead. Only use the site locales listed above.`,
     '- By default boolean, date, datetime, file, image, multiselect, number, reference, references, richtext, select and string fields are localizable, and object, array and oneof fields are not. A schema field with `localizable: true` or `localizable: false` overrides that.',

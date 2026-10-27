@@ -1,0 +1,157 @@
+.LocalizedValuesButton {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-gray);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 3px;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  opacity: 0.35;
+  padding: 0 2px;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.15s ease;
+}
+
+.DocEditor__FieldHeader:hover .LocalizedValuesButton,
+.DocEditor__FieldHeader:focus-within .LocalizedValuesButton,
+.LocalizedValuesButton:focus-visible,
+.LocalizedValuesButton--hasValues,
+.LocalizedValuesButton--active {
+  opacity: 1;
+}
+
+.LocalizedValuesButton:hover,
+.LocalizedValuesButton--active {
+  background: var(--button-background-hover);
+  color: var(--color-text-default);
+}
+
+/* Matches the translations ActionIcon (Mantine gray.7). */
+.LocalizedValuesButton--hasValues {
+  color: #495057;
+}
+
+.LocalizedValuesButton__count {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.LocalizedValues {
+  align-items: start;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: max-content minmax(0, 1fr) 22px;
+}
+
+.LocalizedValues__locale {
+  align-items: center;
+  background: #f1f3f5;
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: #343a40;
+  display: flex;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  font-weight: 600;
+  height: 30px;
+  justify-content: center;
+  min-width: 56px;
+  padding: 0 8px;
+}
+
+.LocalizedValues__locale--default {
+  background: none;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-gray);
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.LocalizedValues__field {
+  min-width: 0;
+}
+
+.LocalizedValues__remove {
+  margin-top: 4px;
+}
+
+.LocalizedValues__warning {
+  color: var(--mantine-color-yellow-9);
+  font-size: var(--cms-help-size);
+  margin-top: 4px;
+}
+
+.LocalizedValues__add {
+  grid-column: 2;
+}
+
+.LocalizedValues__add__button {
+  align-items: center;
+  background: none;
+  border: none;
+  color: rgb(25, 113, 194);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12px;
+  gap: 4px;
+  padding: 0;
+}
+
+.LocalizedValues__add__button:hover {
+  text-decoration: underline;
+}
+
+.LocalePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.LocalePicker__options {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.LocalePicker__option {
+  align-items: baseline;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 8px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.LocalePicker__option:hover,
+.LocalePicker__option:focus-visible {
+  background: var(--button-background-hover);
+}
+
+.LocalePicker__option__locale {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.LocalePicker__option__name,
+.LocalePicker__empty {
+  color: var(--cms-help-color);
+  font-size: var(--cms-help-size);
+}
+
+.LocalePicker__empty {
+  padding: 6px 8px;
+}

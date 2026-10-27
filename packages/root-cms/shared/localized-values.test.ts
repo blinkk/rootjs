@@ -14,19 +14,19 @@ describe('resolveLocalizedValues', () => {
     },
   };
 
-  it('uses the first locale in the chain with a localized value', () => {
-    expect(resolveLocalizedValues(fields, ['en-CA', 'en-GB', 'en'])).toEqual({
+  it('uses the localized value for the locale or its fallbacks', () => {
+    expect(resolveLocalizedValues(fields, 'DE')).toEqual({
       title: 'Hello',
-      image: {src: 'gb.png'},
+      image: {src: 'de.png'},
       '@image': {translate: false},
     });
-    expect(resolveLocalizedValues(fields, 'DE').image).toEqual({
-      src: 'de.png',
-    });
-    // Falls back to the default value.
-    expect(resolveLocalizedValues(fields, ['es', 'en']).image).toEqual({
+    // Fallbacks only apply when provided.
+    expect(resolveLocalizedValues(fields, 'en-CA').image).toEqual({
       src: 'en.png',
     });
+    expect(
+      resolveLocalizedValues(fields, 'en-CA', {fallbacks: ['en-GB']}).image
+    ).toEqual({src: 'gb.png'});
   });
 
   it('resolves nested fields and arrays without mutating the input', () => {
@@ -51,7 +51,7 @@ describe('resolveLocalizedValues', () => {
       ],
     };
     const snapshot = structuredClone(input);
-    const result = resolveLocalizedValues(input, ['de', 'en']);
+    const result = resolveLocalizedValues(input, 'de');
     expect(result.modules[1]).toEqual({
       _type: 'Promo',
       // `null` overrides the value for the locale.
@@ -62,11 +62,11 @@ describe('resolveLocalizedValues', () => {
     // Unchanged subtrees are not copied.
     expect(result.modules[0]).toBe(input.modules[0]);
     const plain = {a: {b: [1, 2]}};
-    expect(resolveLocalizedValues(plain, ['de'])).toBe(plain);
+    expect(resolveLocalizedValues(plain, 'de')).toBe(plain);
   });
 
   it('optionally keeps the localized values', () => {
-    const result = resolveLocalizedValues(fields, ['de'], {
+    const result = resolveLocalizedValues(fields, 'de', {
       keepLocalizedValues: true,
     });
     expect(result.image).toEqual({src: 'de.png'});

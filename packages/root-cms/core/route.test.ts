@@ -495,7 +495,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
   it('resolves localized field values for the locale', async () => {
     const localizedFields = {
       image: {src: 'en.png'},
-      '@image': {localizedValues: {'en-GB': {src: 'gb.png'}}},
+      '@image': {localizedValues: {'en-CA': {src: 'ca.png'}}},
     };
     await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'en-CA']});
     await seedDoc(cmsClient, 'Global/header');
@@ -522,14 +522,13 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
         header: ctx.batchResponse!.getDoc('Global/header'),
       }),
     };
-    // en-CA falls back to en-GB.
     const result = await renderRoute(rootConfig, routeOptions, {
       slug: 'about',
       locale: 'en-CA',
     });
     expect(resolveDoc).toHaveBeenCalledOnce();
-    expect(result.props.doc.fields).toEqual({image: {src: 'gb.png'}});
-    expect(result.props.header.fields).toEqual({image: {src: 'gb.png'}});
+    expect(result.props.doc.fields).toEqual({image: {src: 'ca.png'}});
+    expect(result.props.header.fields).toEqual({image: {src: 'ca.png'}});
 
     const disabled = await renderRoute(
       rootConfig,

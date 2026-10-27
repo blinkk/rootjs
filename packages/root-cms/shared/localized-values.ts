@@ -19,8 +19,8 @@
  *
  * A localized value replaces the field's entire value (there's no deep merge).
  * A `null` localized value is a valid override (e.g. to hide an image for a
- * locale). The default value is used when none of the locales in the fallback
- * chain have a localized value.
+ * locale). The default value is used when the locale (and any of its
+ * `fallbacks`, see `resolveLocalizedValues()`) has no localized value.
  */
 
 import type {Field} from '../core/schema.js';
@@ -72,6 +72,13 @@ export function getLocalizedValueLocales(localizedValues: any): string[] {
 
 export interface ResolveLocalizedValuesOptions {
   /**
+   * Locales to check, in order of precedence, when the locale has no localized
+   * value, e.g. `["en-GB"]` for `en-CA`. Unlike translations, localized values
+   * don't follow the `i18n.fallbacks` config, so by default a locale without a
+   * localized value uses the field's default value.
+   */
+  fallbacks?: string[];
+  /**
    * Keeps the `localizedValues` in the `@<id>` metadata of the returned data.
    * By default they're removed, since they're no longer needed once resolved
    * and can be large (e.g. an image for every locale).
@@ -81,28 +88,23 @@ export interface ResolveLocalizedValuesOptions {
 
 /**
  * Returns a copy of `data` with each field that has localized values replaced
- * by the localized value for the first matching locale in `locales`.
- *
- * `locales` is the locale fallback chain in order of precedence, e.g.
- * `["en-CA", "en-GB", "en"]`. A single locale is not expanded through any
- * fallbacks, use `resolveLocaleFallbacks()` to build the chain from the root
- * config. Locales are matched case-insensitively.
+ * by the localized value for `locale`, or for the first of
+ * `options.fallbacks` with one. Locales are matched case-insensitively.
  *
  * The input is never mutated. Objects that don't contain any localized values
  * are returned as-is (not copied), so unchanged subtrees are shared between
  * the input and the output.
  *
  * ```ts
- * const locales = resolveLocaleFallbacks(rootConfig.i18n, 'en-CA');
- * const doc = resolveLocalizedValues(rawDoc, locales);
+ * const doc = resolveLocalizedValues(rawDoc, 'en-CA', {fallbacks: ['en-GB']});
  * ```
  */
 export function resolveLocalizedValues<T>(
   data: T,
-  locales: string | string[],
+  locale: string,
   options?: ResolveLocalizedValuesOptions
 ): T {
-  const chain = Array.isArray(locales) ? locales : [locales];
+  const chain = [locale, ...(options?.fallbacks || [])];
   return resolveNode(data, chain, options || {});
 }
 
