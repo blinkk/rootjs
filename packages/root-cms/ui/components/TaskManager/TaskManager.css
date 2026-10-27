@@ -515,7 +515,8 @@
   align-items: stretch;
   display: grid;
   gap: 16px;
-  grid-auto-columns: minmax(250px, 1fr);
+  /* Cap columns at the width they have in the 3-up (open) layout. */
+  grid-auto-columns: minmax(250px, calc((100% - 32px) / 3));
   grid-auto-flow: column;
   overflow-x: auto;
   padding-bottom: 4px;

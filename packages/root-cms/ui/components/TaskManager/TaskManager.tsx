@@ -137,7 +137,7 @@ export function TaskManager(props: TaskManagerProps) {
   const [filter, setFilter] = useState<TaskFilter>('open');
   const [layout, setLayout] = useLocalStorage<TaskLayout>(
     'root-cms-task-manager-layout-v3',
-    'list'
+    'board'
   );
   const [sort, setSort] = useLocalStorage<TaskSort>(
     'root-cms-task-manager-sort',
