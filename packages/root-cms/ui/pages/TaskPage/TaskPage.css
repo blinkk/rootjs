@@ -445,7 +445,7 @@
 .TaskPage__comment {
   display: flex;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px 16px 20px;
   scroll-margin-top: 16px;
 }
 
