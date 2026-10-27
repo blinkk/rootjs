@@ -32,7 +32,7 @@ import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
   className?: string;
-  releaseId: string;
+  releaseId?: string;
   buttonLabel?: string;
 }
 
