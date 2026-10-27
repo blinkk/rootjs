@@ -213,6 +213,44 @@ describe('validateValueAtPath', () => {
       validateValueAtPath(collection, 'unknown.deeply.nested', 'anything')
     ).toEqual([]);
   });
+
+  it('validates localized values against the field', () => {
+    expect(
+      validateValueAtPath(collection, 'sections.0.@image.localizedValues.de', {
+        src: '/de.png',
+      })
+    ).toEqual([]);
+    expect(
+      validateValueAtPath(collection, '@title.localizedValues.de', null)
+    ).toEqual([]);
+    expect(
+      validateValueAtPath(collection, '@title.localizedValues.de', 42)[0]
+    ).toMatchObject({
+      path: '@title.localizedValues.de',
+      expected: 'string',
+    });
+  });
+
+  it('validates a whole localized values map', () => {
+    const errors = validateValueAtPath(collection, '@title.localizedValues', {
+      de: 'Hallo',
+      fr: 42,
+      '@fr': {translate: false},
+    });
+    expect(errors.map((e) => e.path)).toEqual(['@title.localizedValues.fr']);
+  });
+
+  it('rejects localized values for fields that are not localizable', () => {
+    const errors = validateValueAtPath(
+      collection,
+      '@content.localizedValues.de',
+      {subtitle: 'Hallo'}
+    );
+    expect(errors[0]).toMatchObject({
+      path: '@content.localizedValues',
+      expected: 'localizable field',
+    });
+  });
 });
 
 describe('applyDocEdits', () => {

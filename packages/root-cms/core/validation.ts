@@ -104,7 +104,7 @@ function validateNestedFields(
  * field. A `null` localized value is valid (it clears the field's value for
  * the locale).
  */
-function validateLocalizedValues(
+export function validateLocalizedValues(
   metadata: any,
   field: FieldWithId,
   path: string

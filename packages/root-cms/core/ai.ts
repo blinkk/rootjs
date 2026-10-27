@@ -401,6 +401,28 @@ function buildWorkspacePrompt(rootConfig: RootConfig): string {
 }
 
 /**
+ * Describes localized field values (per-locale overrides of a field's value)
+ * for sites with more than one locale. Returns an empty string otherwise.
+ */
+export function buildLocalizedValuesPrompt(rootConfig: RootConfig): string {
+  const locales = rootConfig.i18n?.locales;
+  if (!Array.isArray(locales) || locales.length <= 1) {
+    return '';
+  }
+  const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
+  return [
+    'Localized field values:',
+    '- A field can override its value for specific locales. Overrides live in the field\'s `@<fieldId>` metadata next to the default value, e.g. `{"image": {...}, "@image": {"localizedValues": {"de": {...}}}}`.',
+    '- An override replaces the whole field value for that locale (no merging), and locales fall back through `i18n.fallbacks` to the default value. A `null` override hides the field for that locale.',
+    '- Use them for content that differs by locale (e.g. a different image, link or offer). Translations of the same copy belong in the translations workflow, not in overrides.',
+    `- Never add an override for the default locale (${defaultLocale}); edit the default value instead. Only use the site locales listed above.`,
+    '- By default boolean, date, datetime, file, image, multiselect, number, reference, references, richtext, select and string fields are localizable, and object, array and oneof fields are not. A schema field with `localizable: true` or `localizable: false` overrides that.',
+    '- Write an override with `doc_updateField` or a `doc_edit` "set" at "<parent>.@<fieldId>.localizedValues.<locale>" (e.g. "hero.@image.localizedValues.de"). To remove one, set "<parent>.@<fieldId>.localizedValues" to the map without that locale; setting it to `null` hides the field instead.',
+    '- Keys starting with `@` are field metadata. Keep them when rewriting a doc or object (e.g. with `doc_set`), otherwise the overrides are deleted.',
+  ].join('\n');
+}
+
+/**
  * Whether the project configured Google API credentials on the cmsPlugin.
  * When set, the browser adds the Google tools (`gdoc_get`, `gsheet_get`,
  * `gsheet_updateValues`, ...) to the chat tool set, so the system prompt
@@ -558,6 +580,10 @@ export async function buildChatSystemPrompt(
     '',
     buildExecutionModePrompt(executionMode),
   ];
+  const localizedValuesPrompt = buildLocalizedValuesPrompt(rootConfig);
+  if (localizedValuesPrompt) {
+    promptSections.push('', localizedValuesPrompt);
+  }
   if (testGoogleApiEnabled(rootConfig)) {
     promptSections.push(
       '',
@@ -611,6 +637,16 @@ export async function buildEditSystemPrompt(
 
   if (testGoogleApiEnabled(rootConfig)) {
     promptParts.push('', buildGoogleToolsPrompt());
+  }
+
+  if ((rootConfig.i18n?.locales || []).length > 1) {
+    promptParts.push(
+      '',
+      'Field metadata:',
+      '- Keys starting with `@` (e.g. `@image`) hold field metadata, such as',
+      '  per-locale overrides in `@<fieldId>.localizedValues.<locale>`. Copy',
+      '  them unchanged unless the user asks to change a locale override.'
+    );
   }
 
   // Append the project's root-cms.d.ts type definitions if present so the

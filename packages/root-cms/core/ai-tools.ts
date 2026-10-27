@@ -21,16 +21,14 @@
  */
 import {tool, ToolSet} from 'ai';
 import {z} from 'zod';
+import {testFieldLocalizable} from '../shared/localized-values.js';
 import {createPathError, validatePathSyntax} from './doc-edits.js';
+import {ArrayField, Field, ObjectField, OneOfField, Schema} from './schema.js';
 import {
-  ArrayField,
-  Collection,
-  Field,
-  ObjectField,
-  OneOfField,
-  Schema,
-} from './schema.js';
-import {validateFields, validateValue} from './validation.js';
+  validateFields,
+  validateLocalizedValues,
+  validateValue,
+} from './validation.js';
 import type {ValidationError} from './validation.js';
 
 // The doc-edit engine moved to `./doc-edits.js` so it can be used without
@@ -412,7 +410,10 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
         'Paths are relative to the doc fields object; do not prefix them ' +
         'with "fields.". Use dotted paths (e.g. "hero.title") and ' +
         'zero-based array indices. For example, update the first module ' +
-        'title with path "content.modules.0.title". To insert or remove ' +
+        'title with path "content.modules.0.title". To set a localized ' +
+        'value (a per-locale override), use the path ' +
+        '"<parent>.@<fieldId>.localizedValues.<locale>", e.g. ' +
+        '"hero.@image.localizedValues.de". To insert or remove ' +
         'array items, prefer `doc_edit` (it supports insert/remove ' +
         'operations); alternatively set the whole array path here (e.g. ' +
         '"content.modules") to the updated array. The value is ' +
@@ -457,6 +458,8 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
         'on any error — nothing is written unless every operation succeeds. ' +
         'Paths are relative to the doc fields object; do not prefix them ' +
         'with "fields.". Use dotted paths and zero-based array indices. ' +
+        'Localized values use "<parent>.@<fieldId>.localizedValues.<locale>" ' +
+        'paths (e.g. "hero.@image.localizedValues.de"). ' +
         'Only writes the draft version; users must publish separately. ' +
         'Format: pass `value` as plain JSON. Arrays must be plain JSON ' +
         'arrays — do NOT use the `_array` object notation. The tool ' +
@@ -705,6 +708,8 @@ export function simplifyFields(fields: Field[]): unknown[] {
     if (f.description) out.description = f.description;
     if (f.required) out.required = true;
     if (f.translate) out.translate = true;
+    // Only explicit values, the defaults are described in the system prompt.
+    if (typeof f.localizable === 'boolean') out.localizable = f.localizable;
     if (f.options) out.options = f.options;
     if (f.type === 'object' && f.fields) {
       out.fields = simplifyFields(f.fields);
@@ -732,10 +737,15 @@ export function simplifyFields(fields: Field[]): unknown[] {
  * blocking the write.
  */
 export function validateValueAtPath(
-  collection: Collection,
+  collection: Schema,
   path: string,
   value: any
 ): Array<{path: string; message: string; expected?: string; received?: any}> {
+  const segments = path.trim().split('.');
+  const metadataIndex = segments.findIndex((s) => s.startsWith('@'));
+  if (metadataIndex !== -1 && !validatePathSyntax(path)) {
+    return validateMetadataAtPath(collection, segments, metadataIndex, value);
+  }
   const resolution = resolveFieldAtPath(collection, path);
   if (resolution.error) {
     return [resolution.error];
@@ -745,6 +755,76 @@ export function validateValueAtPath(
     return [];
   }
   return validateValue(value, field, path);
+}
+
+/**
+ * Validates a value written into a field's `@<id>` metadata, e.g. a localized
+ * value at "hero.@image.localizedValues.de". Other metadata (e.g.
+ * `@<id>.translate`) isn't validated.
+ */
+function validateMetadataAtPath(
+  collection: Schema,
+  segments: string[],
+  metadataIndex: number,
+  value: any
+): ValidationError[] {
+  const fieldSegments = [
+    ...segments.slice(0, metadataIndex),
+    segments[metadataIndex].slice(1),
+  ];
+  const resolution = resolveFieldAtPath(collection, fieldSegments.join('.'));
+  if (resolution.error) {
+    return [resolution.error];
+  }
+  const field = resolution.field;
+  // The segments after "@<id>", e.g. ["localizedValues", "de"].
+  const rest = segments.slice(metadataIndex + 1);
+  if (!field || (rest.length > 0 && rest[0] !== 'localizedValues')) {
+    return [];
+  }
+  const metadataPath = segments.slice(0, metadataIndex + 1).join('.');
+  if (rest.length === 0 && value?.localizedValues === undefined) {
+    return [];
+  }
+  if (!testFieldLocalizable(field)) {
+    return [
+      createPathError(
+        `${metadataPath}.localizedValues`,
+        `Field "${field.id}" is not localizable. Set \`localizable: true\` on the field to allow localized values.`,
+        'localizable field',
+        field.type
+      ),
+    ];
+  }
+
+  const path = segments.join('.');
+  if (rest.length === 0) {
+    return validateLocalizedValues(value, field, metadataPath);
+  }
+  if (rest.length === 1) {
+    return validateLocalizedValues(
+      {localizedValues: value},
+      field,
+      metadataPath
+    );
+  }
+  // Keys starting with "@" hold metadata for a localized value (e.g. "@de").
+  const locale = rest[1];
+  if (locale.startsWith('@')) {
+    return [];
+  }
+  if (rest.length === 2) {
+    return value === null ? [] : validateValue(value, field, path);
+  }
+  // A path within the localized value (e.g. ".de.src"), resolved against a
+  // schema with the field as its only top-level field.
+  const valueSchema = {name: '', fields: [{...field, id: locale}]} as Schema;
+  return validateValueAtPath(valueSchema, rest.slice(1).join('.'), value).map(
+    (error) => ({
+      ...error,
+      path: `${metadataPath}.localizedValues.${error.path}`,
+    })
+  );
 }
 
 export {validateFields};
