@@ -10,7 +10,9 @@ import {
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconArrowsSort,
   IconCalendar,
+  IconCheck,
   IconColumns3,
   IconFlag,
   IconLayoutList,
@@ -35,6 +37,7 @@ import {
   TaskPriority,
   TaskTargetLaunchInput,
   toTaskTargetLaunch,
+  updateTaskStatus,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
 import {
@@ -54,6 +57,7 @@ type TaskLayout = 'list' | 'board';
 type TaskListLayout = TaskLayout | 'compact';
 type TaskManagerVariant = 'compact' | 'page';
 type TaskScope = 'all' | 'open';
+type TaskSort = 'created' | 'priority' | 'target-launch';
 
 const TASK_STATUS_COLUMNS = [
   {value: 'new', label: 'New'},
@@ -61,6 +65,9 @@ const TASK_STATUS_COLUMNS = [
   {value: 'in-review', label: 'In review'},
   {value: 'closed', label: 'Closed'},
 ];
+
+/** Data transfer type used when dragging a task card on the board. */
+const TASK_DRAG_MIME_TYPE = 'application/x-root-cms-task-id';
 
 const TASK_OPEN_STATUS_COLUMNS = TASK_STATUS_COLUMNS.filter(
   (column) => column.value !== 'closed'
@@ -91,6 +98,18 @@ const TASK_LAYOUT_OPTIONS = [
   },
 ];
 
+const TASK_SORT_OPTIONS: Array<{value: TaskSort; label: string}> = [
+  {value: 'created', label: 'Create date'},
+  {value: 'priority', label: 'Priority'},
+  {value: 'target-launch', label: 'Target launch'},
+];
+
+const TASK_PRIORITY_RANK: Record<TaskPriority, number> = {
+  high: 0,
+  medium: 1,
+  normal: 2,
+};
+
 const TASK_COMPACT_FILTER_OPTIONS: Array<{value: TaskFilter; label: string}> = [
   {value: 'open', label: 'Active'},
   {value: 'assigned-to-me', label: 'Assigned to me'},
@@ -120,6 +139,10 @@ export function TaskManager(props: TaskManagerProps) {
     'root-cms-task-manager-layout-v3',
     'list'
   );
+  const [sort, setSort] = useLocalStorage<TaskSort>(
+    'root-cms-task-manager-sort',
+    'created'
+  );
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeEmail, setAssigneeEmail] = useState('');
@@ -136,8 +159,9 @@ export function TaskManager(props: TaskManagerProps) {
     ? TASK_PAGE_FILTER_OPTIONS
     : TASK_COMPACT_FILTER_OPTIONS;
   const visibleTasks = useMemo(() => {
-    return filterTasks(tasks, filter, currentUserEmail);
-  }, [tasks, filter, currentUserEmail]);
+    const filteredTasks = filterTasks(tasks, filter, currentUserEmail);
+    return sortTasks(filteredTasks, showPageLayout ? sort : 'created');
+  }, [tasks, filter, currentUserEmail, showPageLayout, sort]);
   const filterCounts = useMemo(() => {
     const counts: Partial<Record<TaskFilter, number>> = {};
     filterOptions.forEach((option) => {
@@ -410,13 +434,16 @@ export function TaskManager(props: TaskManagerProps) {
         />
         <div className="TaskManager__listHeader__actions">
           {showPageLayout ? (
-            <SegmentedControl
-              className="TaskManager__layoutToggle"
-              size="sm"
-              value={layout}
-              onChange={(value: TaskLayout) => setLayout(value)}
-              data={TASK_LAYOUT_OPTIONS}
-            />
+            <>
+              <TaskSortMenu value={sort} onChange={setSort} />
+              <SegmentedControl
+                className="TaskManager__layoutToggle"
+                size="sm"
+                value={layout}
+                onChange={(value: TaskLayout) => setLayout(value)}
+                data={TASK_LAYOUT_OPTIONS}
+              />
+            </>
           ) : (
             <Button
               component="a"
@@ -439,6 +466,52 @@ export function TaskManager(props: TaskManagerProps) {
         tasks={visibleTasks}
       />
     </div>
+  );
+}
+
+/** Renders a menu for choosing how tasks are sorted. */
+function TaskSortMenu(props: {
+  value: TaskSort;
+  onChange: (value: TaskSort) => void;
+}) {
+  const current =
+    TASK_SORT_OPTIONS.find((option) => option.value === props.value) ||
+    TASK_SORT_OPTIONS[0];
+  return (
+    <Menu
+      position="bottom"
+      placement="end"
+      shadow="md"
+      control={
+        <button
+          className="TaskManager__sortToggle"
+          type="button"
+          aria-label={`Sort by ${current.label.toLowerCase()}`}
+        >
+          <IconArrowsSort size={16} strokeWidth="1.8" />
+          <span>{current.label}</span>
+        </button>
+      }
+    >
+      <Menu.Label>Sort by</Menu.Label>
+      {TASK_SORT_OPTIONS.map((option) => (
+        <Menu.Item
+          key={option.value}
+          icon={
+            <IconCheck
+              size={14}
+              strokeWidth="2"
+              style={{
+                visibility: option.value === props.value ? 'visible' : 'hidden',
+              }}
+            />
+          }
+          onClick={() => props.onChange(option.value)}
+        >
+          {option.label}
+        </Menu.Item>
+      ))}
+    </Menu>
   );
 }
 
@@ -603,19 +676,112 @@ export function TaskStatusRing(props: {status: string}) {
   );
 }
 
-/** Renders tasks grouped by status in a board. */
+/**
+ * Renders tasks grouped by status in a board. Cards can be dragged between
+ * columns to change their status.
+ */
 function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
-  const columns = getTaskStatusColumns(props.tasks, props.filter);
+  // Statuses set by a drop that haven't been reflected in `props.tasks` yet,
+  // keyed by task id. Status updates run in a transaction, so the snapshot
+  // listener doesn't see them until the write commits.
+  const [pendingStatuses, setPendingStatuses] = useState<
+    Record<string, string>
+  >({});
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+  const tasks = useMemo(() => {
+    return props.tasks.map((task) => {
+      const pendingStatus = pendingStatuses[task.id];
+      return pendingStatus ? {...task, status: pendingStatus} : task;
+    });
+  }, [props.tasks, pendingStatuses]);
+  const columns = getTaskStatusColumns(tasks, props.filter);
+
+  // Drop pending statuses once the snapshot catches up.
+  useEffect(() => {
+    setPendingStatuses((prev) => {
+      const next = {...prev};
+      let changed = false;
+      props.tasks.forEach((task) => {
+        if (next[task.id] && getTaskStatusValue(task) === next[task.id]) {
+          delete next[task.id];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [props.tasks]);
+
+  function clearPendingStatus(taskId: string) {
+    setPendingStatuses((prev) => {
+      const next = {...prev};
+      delete next[taskId];
+      return next;
+    });
+  }
+
+  async function moveTask(taskId: string, status: string) {
+    const task = tasks.find((task) => task.id === taskId);
+    if (!task || getTaskStatusValue(task) === status) {
+      return;
+    }
+    setPendingStatuses((prev) => ({...prev, [taskId]: status}));
+    try {
+      await updateTaskStatus(taskId, status);
+    } catch (err) {
+      clearPendingStatus(taskId);
+      showNotification({
+        title: 'Could not update task status',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+  }
+
+  function onDrop(e: DragEvent, status: string) {
+    e.preventDefault();
+    setDropTarget(null);
+    setDraggingTaskId(null);
+    const taskId = e.dataTransfer?.getData(TASK_DRAG_MIME_TYPE);
+    if (taskId) {
+      moveTask(taskId, status);
+    }
+  }
+
   return (
     <div className="TaskManager__board">
       {columns.map((column) => {
-        const columnTasks = props.tasks.filter(
+        const columnTasks = tasks.filter(
           (task) => getTaskStatusValue(task) === column.value
         );
         return (
           <section
-            className={`TaskManager__boardColumn TaskManager__boardColumn--${column.value}`}
+            className={joinClassNames(
+              'TaskManager__boardColumn',
+              `TaskManager__boardColumn--${column.value}`,
+              dropTarget === column.value &&
+                'TaskManager__boardColumn--dropTarget'
+            )}
             key={column.value}
+            onDragOver={(e) => {
+              if (!e.dataTransfer?.types.includes(TASK_DRAG_MIME_TYPE)) {
+                return;
+              }
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dropTarget !== column.value) {
+                setDropTarget(column.value);
+              }
+            }}
+            onDragLeave={(e) => {
+              const related = e.relatedTarget as Node | null;
+              if (!related || !e.currentTarget.contains(related)) {
+                setDropTarget((prev) => (prev === column.value ? null : prev));
+              }
+            }}
+            onDrop={(e) => onDrop(e, column.value)}
           >
             <div className="TaskManager__boardColumn__header">
               <TaskStatusRing status={column.value} />
@@ -631,7 +797,16 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
                 <div className="TaskManager__boardColumn__empty">No tasks</div>
               )}
               {columnTasks.map((task) => (
-                <TaskBoardCard key={task.id} task={task} />
+                <TaskBoardCard
+                  key={task.id}
+                  task={task}
+                  dragging={draggingTaskId === task.id}
+                  onDragStart={() => setDraggingTaskId(task.id)}
+                  onDragEnd={() => {
+                    setDraggingTaskId(null);
+                    setDropTarget(null);
+                  }}
+                />
               ))}
             </div>
           </section>
@@ -641,14 +816,38 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
   );
 }
 
-/** Renders a single task card for the board. */
-function TaskBoardCard(props: {task: Task}) {
+interface TaskBoardCardProps {
+  task: Task;
+  /** Whether the card is currently being dragged. */
+  dragging?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+}
+
+/** Renders a single draggable task card for the board. */
+function TaskBoardCard(props: TaskBoardCardProps) {
   const {task} = props;
   const targetLaunch = getTaskTargetLaunch(task);
   const overdue =
     isOpenTaskStatus(task.status) && isTaskTargetLaunchPast(targetLaunch);
   return (
-    <a className="TaskManager__boardCard" href={`/cms/tasks/${task.id}`}>
+    <a
+      className={joinClassNames(
+        'TaskManager__boardCard',
+        props.dragging && 'TaskManager__boardCard--dragging'
+      )}
+      href={`/cms/tasks/${task.id}`}
+      draggable
+      onDragStart={(e) => {
+        if (!e.dataTransfer) {
+          return;
+        }
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData(TASK_DRAG_MIME_TYPE, task.id);
+        props.onDragStart?.();
+      }}
+      onDragEnd={() => props.onDragEnd?.()}
+    >
       <div className="TaskManager__boardCard__header">
         <span className="TaskManager__boardCard__id">#{task.id}</span>
         <TaskPriorityBadge priority={formatTaskPriority(task.priority)} />
@@ -763,6 +962,43 @@ function filterTasks(
     default:
       return tasks.filter((task) => isOpenTaskStatus(task.status));
   }
+}
+
+/** Returns a sorted copy of the tasks. Ties fall back to newest first. */
+function sortTasks(tasks: Task[], sort: TaskSort) {
+  return [...tasks].sort((a, b) => {
+    let diff = 0;
+    if (sort === 'priority') {
+      diff =
+        TASK_PRIORITY_RANK[formatTaskPriority(a.priority)] -
+        TASK_PRIORITY_RANK[formatTaskPriority(b.priority)];
+    } else if (sort === 'target-launch') {
+      diff = getTargetLaunchSortKey(a) - getTargetLaunchSortKey(b);
+    }
+    return diff || getCreatedMillis(b) - getCreatedMillis(a);
+  });
+}
+
+/**
+ * Returns a sort key for a task's target launch: ASAP first, then dated
+ * launches soonest first, then "anytime", then tasks with no target launch.
+ */
+function getTargetLaunchSortKey(task: Task) {
+  const launch = getTaskTargetLaunch(task);
+  if (!launch) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  if (launch.type === 'asap') {
+    return Number.MIN_SAFE_INTEGER;
+  }
+  if (launch.type === 'anytime' || !launch.date) {
+    return Number.MAX_SAFE_INTEGER - 1;
+  }
+  return launch.date.toMillis();
+}
+
+function getCreatedMillis(task: Task) {
+  return task.createdAt?.toMillis?.() || 0;
 }
 
 function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
