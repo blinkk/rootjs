@@ -38,6 +38,7 @@ import {
   IconRobot,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
 import {
   MAX_CSV_IMPORT_BYTES,
@@ -80,6 +81,7 @@ import {
   toLocaleTranslations,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
+import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {usePortTranslationsModal} from '../PortTranslationsModal/PortTranslationsModal.js';
@@ -151,7 +153,14 @@ export function LocalizationModal(
     <div className="LocalizationModal">
       <div className="LocalizationModal__layout">
         <LocalizationModal.ConfigLocales {...props} />
-        <LocalizationModal.Translations {...props} />
+        {testV2TranslationsEnabled() ? (
+          <LocalizationModal.TranslationsManagerLink
+            docId={props.docId}
+            onNavigate={() => modalProps.context.closeModal(modalProps.id)}
+          />
+        ) : (
+          <LocalizationModal.Translations {...props} />
+        )}
       </div>
     </div>
   );
@@ -332,6 +341,50 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
         None
       </Button>
     </Group>
+  );
+};
+
+interface TranslationsManagerLinkProps {
+  docId: string;
+  onNavigate: () => void;
+}
+
+/**
+ * Links to the v2 translations manager, which replaces the modal's
+ * translations editor when `experiments.v2TranslationsManager` is enabled.
+ */
+LocalizationModal.TranslationsManagerLink = (
+  props: TranslationsManagerLinkProps
+) => {
+  const {route} = useLocation();
+  return (
+    <div className="LocalizationModal__translations">
+      <Stack spacing={16} pt={30}>
+        <Heading
+          className="LocalizationModal__translations__title LocalizationModal__iconTitle"
+          size="h2"
+        >
+          <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
+        </Heading>
+        <Text size="sm" color="dimmed">
+          Translations for this doc are managed in the translations manager.
+        </Text>
+        <div>
+          <Button
+            variant="default"
+            color="dark"
+            size="xs"
+            leftIcon={<IconArrowUpRight size={16} />}
+            onClick={() => {
+              props.onNavigate();
+              route(`/cms/translations/${props.docId}`);
+            }}
+          >
+            Edit translations
+          </Button>
+        </div>
+      </Stack>
+    </div>
   );
 };
 
