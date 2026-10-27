@@ -19,6 +19,7 @@ import {
 import {useModals} from '@mantine/modals';
 import {hideNotification, showNotification} from '@mantine/notifications';
 import {
+  IconAlarm,
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowForwardUp,
@@ -294,6 +295,9 @@ export function DocEditor(props: DocEditorProps) {
                 draft={draft}
                 collection={collection.schema!}
               />
+            )}
+            {!loading && !props.hideStatusBar && (
+              <DocEditor.ScheduledNotice draft={draft} />
             )}
             <div className="DocEditor__fields">
               {fields.map((field) => (
@@ -700,6 +704,31 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           onAction={onDocAction}
         />
       </div>
+    </div>
+  );
+};
+
+/**
+ * Lets editors know that a scheduled publish uses the doc's content from when
+ * it was scheduled, so edits made afterwards aren't included.
+ */
+DocEditor.ScheduledNotice = (props: {draft: DraftDocContext}) => {
+  const [sys, setSys] = useState<CMSDoc['sys'] | null>(
+    props.draft.controller.getData()?.sys || null
+  );
+  useDraftDocField('sys', (sys: CMSDoc['sys']) => setSys(sys));
+  if (!sys || !testIsScheduled({sys} as CMSDoc)) {
+    return null;
+  }
+  return (
+    <div className="DocEditor__scheduledNotice">
+      <IconAlarm size={16} className="DocEditor__scheduledNotice__icon" />
+      <Text size="body-sm">
+        Scheduled to publish {formatDateTime(sys.scheduledAt!)} by{' '}
+        {sys.scheduledBy}. Edits made after scheduling won't be included in the
+        scheduled publish. To include them, unschedule and schedule the doc
+        again.
+      </Text>
     </div>
   );
 };

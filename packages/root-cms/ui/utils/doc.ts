@@ -445,6 +445,12 @@ export async function cmsScheduleDoc(
     }
 
     const data = {...draftDoc.data()};
+    if (testIsArchived(data as CMSDoc)) {
+      throw new Error(`cannot schedule archived doc: ${docId}`);
+    }
+    if (testPublishingLockedAt(data as CMSDoc, millis)) {
+      throw new Error(`publishing is locked for doc: ${docId}`);
+    }
     const sys = data.sys ?? {};
     sys.modifiedAt = serverTimestamp();
     sys.modifiedBy = window.firebase.user.email;
@@ -503,6 +509,12 @@ export async function cmsUnpublishDoc(docId: string) {
     'Published',
     slug
   );
+  const draftDoc = await getDoc(draftDocRef);
+  if (testIsScheduled(draftDoc.data() as CMSDoc)) {
+    throw new Error(
+      `cannot unpublish ${docId}: unschedule the upcoming publish first`
+    );
+  }
   const batch = writeBatch(db);
   // Update the "sys" metadata in the draft doc.
   batch.update(draftDocRef, {
@@ -512,6 +524,11 @@ export async function cmsUnpublishDoc(docId: string) {
     'sys.publishedBy': deleteField(),
     'sys.firstPublishedAt': deleteField(),
     'sys.firstPublishedBy': deleteField(),
+    // Clear any "scheduled" values left over from a scheduled publish that's
+    // past due but hasn't been processed yet, along with the "scheduled" doc
+    // below.
+    'sys.scheduledAt': deleteField(),
+    'sys.scheduledBy': deleteField(),
   });
   // Delete the "scheduled" doc.
   batch.delete(scheduledDocRef);
@@ -550,6 +567,15 @@ export async function cmsRevertDraft(docId: string) {
     'Drafts',
     slug
   );
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
   const publishedDocRef = doc(
     db,
     'Projects',
@@ -565,7 +591,11 @@ export async function cmsRevertDraft(docId: string) {
       throw new Error(`${publishedDocRef.id} does not exist`);
     }
     const data = publishedDoc.data();
+    // The published doc has no "scheduled" values, so overwriting the draft
+    // clears them. Delete the "scheduled" doc too, otherwise the discarded
+    // edits would still be published at the scheduled time.
     transaction.set(draftDocRef, data);
+    transaction.delete(scheduledDocRef);
   });
   console.log(`reverted draft ${docId}`);
   logAction('doc.revert', {metadata: {docId}});
@@ -647,11 +677,29 @@ export async function cmsUnlockPublishing(docId: string) {
  * otherwise left intact. Use {@link cmsUnarchiveDoc} to restore.
  */
 export async function cmsArchiveDoc(docId: string) {
-  const docRef = getDraftDocRef(docId);
-  await updateDoc(docRef, {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
+  const batch = writeBatch(db);
+  // Archived docs can't be published, so archiving also cancels any pending
+  // scheduled publish.
+  batch.update(getDraftDocRef(docId), {
     'sys.archivedAt': serverTimestamp(),
     'sys.archivedBy': window.firebase.user.email,
+    'sys.scheduledAt': deleteField(),
+    'sys.scheduledBy': deleteField(),
   });
+  batch.delete(scheduledDocRef);
+  await batch.commit();
   logAction('doc.archive', {metadata: {docId}});
 }
 
@@ -773,11 +821,20 @@ export function testIsScheduled(docData: CMSDoc) {
  * Checks if a doc has a publishing lock.
  */
 export function testPublishingLocked(docData: CMSDoc) {
+  return testPublishingLockedAt(docData);
+}
+
+/**
+ * Checks if a doc's publishing lock is in effect at the given time (defaults
+ * to now). A lock with an `until` time only blocks publishing before that
+ * time, e.g. a doc can be scheduled to publish after its lock expires.
+ */
+export function testPublishingLockedAt(docData: CMSDoc, millis?: number) {
   if (docData?.sys?.publishingLocked) {
     if (docData.sys.publishingLocked.until) {
-      const now = Timestamp.now().toMillis();
+      const at = millis ?? Timestamp.now().toMillis();
       const until = docData.sys.publishingLocked.until.toMillis();
-      return now < until;
+      return at < until;
     }
     return true;
   }

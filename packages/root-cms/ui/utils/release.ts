@@ -255,13 +255,19 @@ export async function archiveRelease(id: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  // Archived releases can't be published, so archiving also cancels any
+  // pending scheduled publish.
   await updateDoc(docRef, {
     archivedAt: serverTimestamp(),
     archivedBy: window.firebase.user.email,
+    scheduledAt: deleteField(),
+    scheduledBy: deleteField(),
   });
   updateReleaseInCache(id, {
     archivedAt: Timestamp.now(),
     archivedBy: window.firebase.user.email,
+    scheduledAt: undefined,
+    scheduledBy: undefined,
   });
   logAction('release.archive', {metadata: {releaseId: id}});
 }
@@ -474,7 +480,7 @@ export async function scheduleRelease(
   if (options?.checksAudit) {
     metadata.checks = options.checksAudit;
   }
-  logAction('release.publish', {metadata});
+  logAction('release.schedule', {metadata});
 }
 
 /** Generates a release ID like `20260318-golden-meadow`. */

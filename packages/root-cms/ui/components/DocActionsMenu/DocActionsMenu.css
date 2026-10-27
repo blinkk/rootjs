@@ -1,3 +1,8 @@
 .DocActionsMenu__confirmText {
   text-wrap: pretty;
 }
+
+.DocActionsMenu__itemNote {
+  font-size: 12px;
+  margin-top: 2px;
+}

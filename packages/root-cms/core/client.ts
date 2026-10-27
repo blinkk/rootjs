@@ -136,6 +136,12 @@ export interface Doc<Fields = any> {
      * collection. See the `customSorting` collection option.
      */
     sortKey?: string;
+    /** Set when the doc is scheduled to be published in the future. */
+    scheduledAt?: Timestamp;
+    scheduledBy?: string;
+    /** Set when the doc is archived. Archived docs can't be published. */
+    archivedAt?: Timestamp;
+    archivedBy?: string;
   };
   fields: Fields;
 }
@@ -327,6 +333,8 @@ export interface Release {
    */
   rolledBackAt?: Timestamp;
   rolledBackBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 export interface Action<T = any> {
@@ -1396,10 +1404,14 @@ export class RootCMSClient {
       return [];
     }
 
-    // Verify there are no publishing locks on any docs.
+    // Verify there are no publishing locks on any docs and that none of the
+    // docs are archived.
     for (const doc of docs) {
       if (this.testPublishingLocked(doc)) {
         throw new Error(`publishing is locked for doc: ${doc.id}`);
+      }
+      if (doc.sys?.archivedAt) {
+        throw new Error(`cannot publish archived doc: ${doc.id}`);
       }
     }
 
@@ -1647,7 +1659,9 @@ export class RootCMSClient {
         `${projectCollectionsPath}/${collection}/Published/${slug}`
       );
 
-      // Update the draft doc to remove published fields.
+      // Update the draft doc to remove published fields. Unpublishing also
+      // cancels any pending scheduled publish, so remove the scheduled fields
+      // along with the scheduled doc below.
       batch.update(draftRef, {
         'sys.modifiedAt': FieldValue.serverTimestamp(),
         'sys.modifiedBy': unpublishedBy,
@@ -1655,6 +1669,8 @@ export class RootCMSClient {
         'sys.publishedBy': FieldValue.delete(),
         'sys.firstPublishedAt': FieldValue.delete(),
         'sys.firstPublishedBy': FieldValue.delete(),
+        'sys.scheduledAt': FieldValue.delete(),
+        'sys.scheduledBy': FieldValue.delete(),
       });
       batchCount += 1;
 
@@ -1720,7 +1736,7 @@ export class RootCMSClient {
     const now = Math.ceil(new Date().getTime());
 
     const snapshot = await this.db.collectionGroup('Scheduled').get();
-    const docs = snapshot.docs
+    const dueDocs = snapshot.docs
       .filter((d) => {
         // Filter docs by project.
         if (!d.ref.path.startsWith(projectCollectionsPath)) {
@@ -1748,6 +1764,41 @@ export class RootCMSClient {
           slug,
         };
       });
+
+    if (dueDocs.length === 0) {
+      console.log('no docs to schedule');
+      return [];
+    }
+
+    // Fetch the current draft for each scheduled doc. The scheduled doc is a
+    // snapshot of the draft at the time it was scheduled, but publishing locks
+    // and archiving are applied to the draft afterwards.
+    const draftSnapshots = await this.db.getAll(
+      ...dueDocs.map((doc) =>
+        this.db.doc(
+          `${projectCollectionsPath}/${doc.collection}/Drafts/${doc.slug}`
+        )
+      )
+    );
+    const docs: Array<(typeof dueDocs)[number] & {draft: Doc}> = [];
+    dueDocs.forEach((doc, i) => {
+      const draft = draftSnapshots[i].data() as Doc | undefined;
+      if (!draft) {
+        console.warn(`skipping scheduled doc ${doc.id}: draft does not exist`);
+        return;
+      }
+      if (draft.sys?.archivedAt) {
+        console.warn(`skipping scheduled doc ${doc.id}: doc is archived`);
+        return;
+      }
+      // Locked docs remain scheduled and are published on a later run, once
+      // the lock is removed or expires.
+      if (this.testPublishingLocked(draft)) {
+        console.warn(`skipping scheduled doc ${doc.id}: publishing is locked`);
+        return;
+      }
+      docs.push({...doc, draft});
+    });
 
     if (docs.length === 0) {
       console.log('no docs to schedule');
@@ -1786,7 +1837,7 @@ export class RootCMSClient {
     const versionTags = ['published'];
     const publishedDocs: any[] = [];
     for (const doc of docs) {
-      const {id, collection, slug, data} = doc;
+      const {id, collection, slug, data, draft} = doc;
       const draftRef = this.db.doc(
         `${projectCollectionsPath}/${collection}/Drafts/${slug}`
       );
@@ -1803,6 +1854,17 @@ export class RootCMSClient {
       const firstPublishedBy =
         sys.firstPublishedBy ?? (scheduledBy || 'root-cms-client');
 
+      // If the draft was edited after it was scheduled, the published content
+      // (the scheduled snapshot) is older than the draft. The CMS shows a doc
+      // as having unpublished changes when `modifiedAt > publishedAt`, so use
+      // explicit timestamps to keep the draft's `modifiedAt` after
+      // `publishedAt`. Otherwise the newer draft edits would appear published.
+      const hasNewerDraftEdits =
+        toMillis(draft.sys?.modifiedAt) > toMillis(sys.modifiedAt);
+      const publishedAt = hasNewerDraftEdits
+        ? Timestamp.now()
+        : FieldValue.serverTimestamp();
+
       // Save published doc.
       batch.set(publishedRef, {
         id,
@@ -1813,7 +1875,7 @@ export class RootCMSClient {
           ...sys,
           firstPublishedAt: firstPublishedAt,
           firstPublishedBy: firstPublishedBy,
-          publishedAt: FieldValue.serverTimestamp(),
+          publishedAt: publishedAt,
           publishedBy: scheduledBy || '',
         },
       });
@@ -1832,7 +1894,7 @@ export class RootCMSClient {
           ...sys,
           firstPublishedAt: firstPublishedAt,
           firstPublishedBy: firstPublishedBy,
-          publishedAt: FieldValue.serverTimestamp(),
+          publishedAt: publishedAt,
           publishedBy: scheduledBy || '',
         },
         tags: versionTags,
@@ -1854,8 +1916,15 @@ export class RootCMSClient {
         'sys.scheduledBy': FieldValue.delete(),
         'sys.firstPublishedAt': firstPublishedAt,
         'sys.firstPublishedBy': firstPublishedBy,
-        'sys.publishedAt': FieldValue.serverTimestamp(),
+        'sys.publishedAt': publishedAt,
         'sys.publishedBy': scheduledBy || 'root-cms-client',
+        ...(hasNewerDraftEdits
+          ? {
+              'sys.modifiedAt': Timestamp.fromMillis(
+                (publishedAt as Timestamp).toMillis() + 1
+              ),
+            }
+          : {}),
       });
       batchCount += 1;
 
@@ -2042,54 +2111,81 @@ export class RootCMSClient {
       .where('scheduledAt', '<=', Timestamp.fromMillis(now));
     const querySnapshot = await query.get();
 
+    const errors: unknown[] = [];
     for (const snapshot of querySnapshot.docs) {
       const release = snapshot.data() as Release;
-      const publishedBy = release.scheduledBy || 'root-cms-client';
-      const dataSourceIds = release.dataSourceIds || [];
-      const docIds = release.docIds || [];
-      // Fetch the current published state of the release's items, which is
-      // saved alongside each item's publish so the release can be rolled back.
-      const rollbackRecorder = await ReleaseRollbackRecorder.load(
-        this,
-        release.id,
-        {docIds, dataSourceIds}
+      if (release.archivedAt) {
+        console.warn(`skipping scheduled release ${release.id}: archived`);
+        continue;
+      }
+      // Publish each release independently so that one failing release (e.g.
+      // one containing a locked doc) doesn't block the others.
+      try {
+        await this.publishScheduledRelease(snapshot.ref, release);
+      } catch (err) {
+        console.error(
+          `failed to publish scheduled release ${release.id}:`,
+          String(err)
+        );
+        errors.push(err);
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        `failed to publish ${errors.length} scheduled release(s)`
       );
-      if (dataSourceIds.length > 0) {
-        await this.publishDataSources(dataSourceIds, {
-          publishedBy,
-          rollbackRecorder,
-        });
-      }
-      if (docIds.length > 0) {
-        await this.publishDocs(docIds, {
-          publishedBy,
-          releaseId: release.id,
-          rollbackRecorder,
-        });
-      }
+    }
+  }
 
-      // Mark the release as published only after the doc and data source
-      // writes above have been committed. If any of those writes fails, the
-      // release remains scheduled and publishing is retried on the next run.
-      await snapshot.ref.update({
-        publishedAt: Timestamp.now(),
-        publishedBy: publishedBy,
-        scheduledAt: FieldValue.delete(),
-        scheduledBy: FieldValue.delete(),
-        rolledBackAt: FieldValue.delete(),
-        rolledBackBy: FieldValue.delete(),
-      });
-
-      // Log an action for the published release.
-      await this.logAction('release.scheduled_publish', {
-        by: publishedBy,
-        metadata: {
-          releaseId: release.id,
-          docIds: release.docIds || [],
-          dataSourceIds: release.dataSourceIds || [],
-        },
+  private async publishScheduledRelease(
+    releaseRef: DocumentReference,
+    release: Release
+  ) {
+    const publishedBy = release.scheduledBy || 'root-cms-client';
+    const dataSourceIds = release.dataSourceIds || [];
+    const docIds = release.docIds || [];
+    // Fetch the current published state of the release's items, which is
+    // saved alongside each item's publish so the release can be rolled back.
+    const rollbackRecorder = await ReleaseRollbackRecorder.load(
+      this,
+      release.id,
+      {docIds, dataSourceIds}
+    );
+    if (dataSourceIds.length > 0) {
+      await this.publishDataSources(dataSourceIds, {
+        publishedBy,
+        rollbackRecorder,
       });
     }
+    if (docIds.length > 0) {
+      await this.publishDocs(docIds, {
+        publishedBy,
+        releaseId: release.id,
+        rollbackRecorder,
+      });
+    }
+
+    // Mark the release as published only after the doc and data source
+    // writes above have been committed. If any of those writes fails, the
+    // release remains scheduled and publishing is retried on the next run.
+    await releaseRef.update({
+      publishedAt: Timestamp.now(),
+      publishedBy: publishedBy,
+      scheduledAt: FieldValue.delete(),
+      scheduledBy: FieldValue.delete(),
+      rolledBackAt: FieldValue.delete(),
+      rolledBackBy: FieldValue.delete(),
+    });
+
+    // Log an action for the published release.
+    await this.logAction('release.scheduled_publish', {
+      by: publishedBy,
+      metadata: {
+        releaseId: release.id,
+        docIds: release.docIds || [],
+        dataSourceIds: release.dataSourceIds || [],
+      },
+    });
   }
 
   /**
@@ -3302,6 +3398,17 @@ export function unmarshalData(data: any): any {
  * @param value - The value to check
  * @returns True if the value is defined, false otherwise
  */
+/**
+ * Returns the millis of a firestore timestamp value, or 0 if the value is not
+ * a timestamp.
+ */
+function toMillis(value: any): number {
+  if (value && typeof value.toMillis === 'function') {
+    return value.toMillis();
+  }
+  return 0;
+}
+
 function isDef(value: any): boolean {
   return value !== undefined && value !== null;
 }
