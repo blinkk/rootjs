@@ -20,6 +20,9 @@
 }
 
 .CommentBody__markdown p,
+.CommentBody__markdown h2,
+.CommentBody__markdown h3,
+.CommentBody__markdown h4,
 .CommentBody__markdown ul,
 .CommentBody__markdown ol,
 .CommentBody__markdown blockquote,
@@ -93,10 +96,30 @@
   text-underline-offset: 3px;
 }
 
+/* Heading sizes are relative to the body text, so they scale with it. */
+.CommentBody__markdown h2,
+.CommentBody__markdown h3,
+.CommentBody__markdown h4,
+.CommentBody__richText h2,
+.CommentBody__richText h3,
 .CommentBody__richText h4 {
-  font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.CommentBody__markdown h2,
+.CommentBody__richText h2 {
+  font-size: 1.3em;
+}
+
+.CommentBody__markdown h3,
+.CommentBody__richText h3 {
+  font-size: 1.15em;
+}
+
+.CommentBody__markdown h4,
+.CommentBody__richText h4 {
+  font-size: 1em;
 }
 
 .CommentBody__richText img {
