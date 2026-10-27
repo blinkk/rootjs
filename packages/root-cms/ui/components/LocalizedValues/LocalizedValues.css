@@ -100,8 +100,10 @@
   display: inline-flex;
   font: inherit;
   font-size: 12px;
+  font-weight: 500;
   gap: 4px;
   padding: 0;
+  text-underline-offset: 3px;
 }
 
 .LocalizedValues__add__button:hover {
@@ -146,10 +148,15 @@
   font-weight: 600;
 }
 
+.LocalePicker__help,
 .LocalePicker__option__name,
 .LocalePicker__empty {
   color: var(--cms-help-color);
   font-size: var(--cms-help-size);
+}
+
+.LocalePicker__help {
+  padding: 2px 2px 0;
 }
 
 .LocalePicker__empty {

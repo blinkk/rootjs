@@ -269,7 +269,7 @@ export function LocalizedValues(props: LocalizedValuesProps) {
                 onClick={() => toggle()}
               >
                 <IconPlus size={12} strokeWidth="2.2" />
-                Override for a locale
+                Add locale value
               </button>
             )}
           />
@@ -333,6 +333,9 @@ function LocalePicker(props: LocalePickerProps) {
         </div>
       ) : (
         <div className="LocalePicker">
+          <div className="LocalePicker__help">
+            Override the value for a locale.
+          </div>
           <TextInput
             size="xs"
             placeholder="Search locales"
