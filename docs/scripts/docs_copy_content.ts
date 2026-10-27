@@ -1033,7 +1033,7 @@ export default function Page() {
 
 const LOCALIZATION: DocCopy = {
   slug: 'localization',
-  note: 'Links to the new localized values page from Translating CMS content.',
+  note: 'Links to localized values in Data fetching from Translating CMS content.',
   fields: {
     meta: {
       title: 'Localization – Root.js',
@@ -1135,7 +1135,7 @@ export default function Page(props) {
             `Translations are stored in the CMS. ${c('createRoute()')} loads them for each page, and ${c('cmsClient.loadTranslationsForLocale()')} loads them anywhere else. Pass them to ${c('ctx.render()')} to use them with ${c('useTranslations()')}. See ${a('/docs/cms/data-fetching/#translations', 'Data fetching')}.`
           ),
           p(
-            `For content that differs by locale but isn't a translation, like a localized image or link, use ${a('/docs/cms/localized-values/', 'localized values')}.`
+            `For content that differs by locale but isn't a translation, like a localized image or link, use ${a('/docs/cms/data-fetching/#localized-values', 'localized values')}.`
           ),
         ]),
         section(
@@ -2123,12 +2123,12 @@ export default schema.define({
 
 const DATA_FETCHING: DocCopy = {
   slug: 'cms--data-fetching',
-  note: 'Notes that batch request translations need the opt-in v2 translations manager, and how to load v1 translations outside a route.',
+  note: 'Adds sections on localized values: the stored JSON format, the localizable schema option, and resolving them in routes and with resolveLocalizedValues().',
   fields: {
     meta: {
       title: 'Data fetching – Root.js',
       description:
-        'Read CMS content in routes with createRoute() and batch requests: docs, lists, custom ordering and translations.',
+        'Read CMS content in routes with createRoute() and batch requests: docs, lists, custom ordering, translations and localized values.',
       category: 'cms',
     },
     content: {
@@ -2369,57 +2369,13 @@ createRoute({
           ]
         ),
         section(
-          'reading-docs-directly',
-          'Reading docs directly',
+          'localized-values',
+          'Localized values',
           [
+            p('<i>Available as of version 4.3.1.</i>'),
             p(
-              `For a single read, e.g. in a script, use ${c('RootCMSClient')}. Every read takes a ${c('mode')}: ${c('published')} for live content, or ${c('draft')} for the latest edits.`
+              'Fields in the CMS can have localized values, which allows a user to override a value for a specific locale, such as for localized images.'
             ),
-          ],
-          [
-            code(
-              'ts',
-              `
-import {RootCMSClient} from '@blinkk/root-cms';
-
-const cmsClient = new RootCMSClient(rootConfig);
-const doc = await cmsClient.getDoc('Pages', 'index', {mode: 'published'});
-const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});`
-            ),
-          ]
-        ),
-      ],
-    },
-  },
-};
-
-const LOCALIZED_VALUES: DocCopy = {
-  slug: 'cms--localized-values',
-  note: 'New page on localized field values: the stored JSON format, the localizable schema option, and resolving values in routes and with resolveLocalizedValues().',
-  fields: {
-    meta: {
-      title: 'Localized values – Root.js',
-      description:
-        'Override a CMS field’s value for specific locales, and resolve the overrides when rendering a page.',
-      category: 'cms',
-    },
-    content: {
-      title: 'Localized values',
-      body: richtext(
-        p(
-          `A localized value replaces a field's value for one locale. It's for content that changes by locale but isn't a translation: a hero image with localized text baked in, a link to a regional store, or a price. Strings that only need translating should use ${a('/docs/localization/#cms-content', 'translations')} instead.`
-        )
-      ),
-      sections: [
-        section('editing', 'Editing', [
-          p(
-            "On sites with more than one locale, localizable fields have a globe button in the field header. It opens a locale picker that lists the doc's enabled locales, except the default locale. The field's existing value becomes the default for every locale without an override, and each override gets its own editor below it, starting as a copy of the default."
-          ),
-        ]),
-        section(
-          'data-format',
-          'Data format',
-          [
             p(
               `Overrides are stored in the field's ${c('@&lt;fieldId&gt;')} metadata key, next to the field's default value, in a ${c('localizedValues')} map keyed by locale:`
             ),
@@ -2447,19 +2403,11 @@ const LOCALIZED_VALUES: DocCopy = {
               ),
               p(
                 `Overrides are supported for fields in a doc's ${c('fields')}, including fields nested in objects, but not for array items, which have no ${c('@&lt;fieldId&gt;')} key, or for fields inside rich text blocks.`
+              ),
+              p(
+                `Fields with a single value are localizable by default: ${c('string')}, ${c('richtext')}, ${c('image')}, ${c('file')}, ${c('number')}, ${c('boolean')}, ${c('date')}, ${c('datetime')}, ${c('select')}, ${c('multiselect')}, ${c('reference')} and ${c('references')}. ${c('object')}, ${c('array')} and ${c('oneof')} fields aren't, because an override would copy all of their contents for each locale. Set ${c('localizable')} to change the default for a field:`
               )
             ),
-          ]
-        ),
-        section(
-          'localizable',
-          'Which fields are localizable',
-          [
-            p(
-              `Fields with a single value are localizable by default: ${c('string')}, ${c('richtext')}, ${c('image')}, ${c('file')}, ${c('number')}, ${c('boolean')}, ${c('date')}, ${c('datetime')}, ${c('select')}, ${c('multiselect')}, ${c('reference')} and ${c('references')}. ${c('object')}, ${c('array')} and ${c('oneof')} fields aren't, because an override would copy all of their contents for each locale. Set ${c('localizable')} to change the default for a field:`
-            ),
-          ],
-          [
             code(
               'ts',
               `
@@ -2477,18 +2425,16 @@ schema.object({id: 'promo', variant: 'inline', localizable: true, fields: [
             ),
           ]
         ),
-        section('routes', 'Resolving in routes', [
-          p(
-            `${c('createRoute()')} resolves localized values for you, for both server-rendered and static routes. Once the locale is known, it replaces each field with its override for that locale, in the route's doc and in the docs and queries of its ${a('/docs/cms/data-fetching/#batch-requests', 'batch request')}, and removes the ${c('localizedValues')} maps. ${c('translations()')}, ${c('preRenderHook()')} and the page's props get the resolved doc.`
-          ),
-          p(
-            `${c('resolveLocale()')} and ${c('resolveDoc()')} run before the locale is final, so they get the unresolved doc. To get the raw data in the page, e.g. to resolve it yourself, set ${c('localizedValues: false')} on the route.`
-          ),
-        ]),
         section(
-          'resolve-localized-values',
-          'resolveLocalizedValues()',
+          'resolving-localized-values',
+          'Resolving localized values',
           [
+            p(
+              `${c('createRoute()')} resolves localized values for you, for both server-rendered and static routes. Once the locale is known, it replaces each field with its override for that locale, in the route's doc and in the docs and queries of its ${a('#batch-requests', 'batch request')}, and removes the ${c('localizedValues')} maps. ${c('translations()')}, ${c('preRenderHook()')} and the page's props get the resolved doc.`
+            ),
+            p(
+              `${c('resolveLocale()')} and ${c('resolveDoc()')} run before the locale is final, so they get the unresolved doc. To get the raw data in the page, e.g. to resolve it yourself, set ${c('localizedValues: false')} on the route.`
+            ),
             p(
               `Content loaded outside ${c('createRoute()')}'s doc and batch request, e.g. with ${c('cmsClient.getDoc()')} or in ${c('getStaticProps()')}, isn't resolved. Use ${c('resolveLocalizedValues()')}, which works on a doc, a list of docs or any part of one:`
             ),
@@ -2505,24 +2451,36 @@ const doc = resolveLocalizedValues(rawDoc, 'de');`
             copy(
               p(
                 `It returns a copy and never changes its input. Parts without overrides are shared with the input rather than copied. Pass ${c('keepLocalizedValues: true')} to keep the ${c('localizedValues')} maps in the result.`
+              ),
+              p(
+                `Localized values don't follow ${c('i18n.fallbacks')}, which only applies to translations. A locale without its own override gets the field's default value, even if a fallback locale has one. ${c('createRoute()')} always resolves the exact locale. With ${c('resolveLocalizedValues()')}, pass ${c('fallbacks')} to check other locales, in order, when the locale has no override:`
               )
+            ),
+            code(
+              'ts',
+              `
+// Uses the en-CA override, then en-GB, then the default value.
+const doc = resolveLocalizedValues(rawDoc, 'en-CA', {fallbacks: ['en-GB']});`
             ),
           ]
         ),
         section(
-          'fallbacks',
-          'Fallbacks',
+          'reading-docs-directly',
+          'Reading docs directly',
           [
             p(
-              `Localized values don't follow ${c('i18n.fallbacks')}, which only applies to translations. A locale without its own override gets the field's default value, even if a fallback locale has one. ${c('createRoute()')} always resolves the exact locale. With ${c('resolveLocalizedValues()')}, pass ${c('fallbacks')} to check other locales, in order, when the locale has no override:`
+              `For a single read, e.g. in a script, use ${c('RootCMSClient')}. Every read takes a ${c('mode')}: ${c('published')} for live content, or ${c('draft')} for the latest edits.`
             ),
           ],
           [
             code(
               'ts',
               `
-// Uses the en-CA override, then en-GB, then the default value.
-const doc = resolveLocalizedValues(rawDoc, 'en-CA', {fallbacks: ['en-GB']});`
+import {RootCMSClient} from '@blinkk/root-cms';
+
+const cmsClient = new RootCMSClient(rootConfig);
+const doc = await cmsClient.getDoc('Pages', 'index', {mode: 'published'});
+const res = await cmsClient.listDocs('BlogPosts', {mode: 'published'});`
             ),
           ]
         ),
@@ -4116,7 +4074,6 @@ export const DOCS_COPY: DocCopy[] = [
   CMS_CONFIGURATION,
   SCHEMAS,
   DATA_FETCHING,
-  LOCALIZED_VALUES,
   CHECKS,
   NOTIFICATIONS,
   CUSTOMIZATION,
