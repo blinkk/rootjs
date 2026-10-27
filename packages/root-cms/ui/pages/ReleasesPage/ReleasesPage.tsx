@@ -17,10 +17,10 @@ import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {UserAvatar} from '../../components/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../components/UserTag/UserTag.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
-import {joinClassNames} from '../../utils/classes.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {Release, listReleases} from '../../utils/release.js';
@@ -91,23 +91,6 @@ function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
   return isArchived;
 }
 
-/** Returns the status tone used to tint a release's icon. */
-function getReleaseTone(release: Release) {
-  if (release.archivedAt) {
-    return 'archived';
-  }
-  if (release.scheduledAt) {
-    return 'scheduled';
-  }
-  if (release.publishedAt) {
-    return 'published';
-  }
-  if (release.rolledBackAt) {
-    return 'rolledBack';
-  }
-  return 'unpublished';
-}
-
 function pluralize(count: number, singular: string, plural: string) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -115,7 +98,14 @@ function pluralize(count: number, singular: string, plural: string) {
 ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<Release[]>([]);
-  const [filter, setFilter] = useState<ReleaseListFilter>('active');
+  const [storedFilter, setFilter] = useLocalStorage<ReleaseListFilter>(
+    'root-cms-releases-filter',
+    'active'
+  );
+  // Fall back to the default if the stored value is no longer a valid filter.
+  const filter = FILTER_OPTIONS.some((option) => option.value === storedFilter)
+    ? storedFilter
+    : 'active';
 
   async function init() {
     await notifyErrors(async () => {
@@ -241,30 +231,19 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
 /** The release's description (or id) and id, linking to the release page. */
 ReleasesPage.ReleaseCell = (props: {release: Release}) => {
   const release = props.release;
-  const tone = getReleaseTone(release);
   return (
     <a
       className="ReleasesPage__ReleasesTable__release"
       href={`/cms/releases/${release.id}`}
     >
-      <div
-        className={joinClassNames(
-          'ReleasesPage__ReleasesTable__release__icon',
-          `ReleasesPage__ReleasesTable__release__icon--${tone}`
-        )}
-      >
-        <IconRocket size={18} stroke={1.5} />
+      <div className="ReleasesPage__ReleasesTable__release__title">
+        {release.description || release.id}
       </div>
-      <div className="ReleasesPage__ReleasesTable__release__text">
-        <div className="ReleasesPage__ReleasesTable__release__title">
-          {release.description || release.id}
+      {release.description && (
+        <div className="ReleasesPage__ReleasesTable__release__id">
+          {release.id}
         </div>
-        {release.description && (
-          <div className="ReleasesPage__ReleasesTable__release__id">
-            {release.id}
-          </div>
-        )}
-      </div>
+      )}
     </a>
   );
 };
