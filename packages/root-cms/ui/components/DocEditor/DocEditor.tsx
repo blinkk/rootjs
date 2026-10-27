@@ -50,7 +50,7 @@ import {
   IconTriangleFilled,
   IconX,
 } from '@tabler/icons-preact';
-import {createContext, RefObject} from 'preact';
+import {ComponentChildren, createContext, RefObject} from 'preact';
 import {
   useContext,
   useEffect,
@@ -135,7 +135,6 @@ import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
-import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {CommentThread} from '../CommentThread/CommentThread.js';
 import {
@@ -157,6 +156,12 @@ import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslation
 import {FieldErrorBoundary} from '../FieldErrorBoundary/FieldErrorBoundary.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
+import {
+  LocalizedValues,
+  LocalizedValuesButton,
+  LocalizedValuesFieldProps,
+  testLocalizedValuesEnabled,
+} from '../LocalizedValues/LocalizedValues.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {clampPinnedWindowPosition} from '../PinnedCommentThreads/PinnedCommentThreads.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
@@ -619,12 +624,6 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           size="xs"
           leftIcon={<IconPlanet size={16} />}
           onClick={() => {
-            // When the v2 translations manager is enabled, the doc's
-            // translations are edited in the translations manager.
-            if (testV2TranslationsEnabled()) {
-              route(`/cms/translations/${props.docId}`);
-              return;
-            }
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,
@@ -983,6 +982,21 @@ DocEditor.FieldBody = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
+  const localizable = useMemo(
+    () => testLocalizedValuesEnabled(field, props.deepKey, props.isArrayChild),
+    [field, props.deepKey, props.isArrayChild]
+  );
+  const types = useCollectionSchemaTypes();
+  const [pendingLocales, setPendingLocales] = useState<string[]>([]);
+  const localizedValues: LocalizedValuesFieldProps | undefined = localizable
+    ? {
+        field,
+        deepKey: props.deepKey,
+        types,
+        pendingLocales,
+        setPendingLocales,
+      }
+    : undefined;
 
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
@@ -1001,6 +1015,45 @@ DocEditor.FieldBody = (props: FieldProps) => {
     }
   }, [targeted]);
 
+  const input =
+    field.type === 'array' ? (
+      <DocEditor.ArrayField {...props} />
+    ) : field.type === 'boolean' ? (
+      <BooleanField {...props} />
+    ) : field.type === 'date' ? (
+      <DateField {...props} />
+    ) : field.type === 'datetime' ? (
+      <DateTimeField {...props} />
+    ) : field.type === 'file' ? (
+      <FileField {...props} />
+    ) : field.type === 'image' ? (
+      <ImageField {...props} />
+    ) : field.type === 'multiselect' ? (
+      <MultiSelectField {...props} />
+    ) : field.type === 'number' ? (
+      <NumberField {...props} />
+    ) : field.type === 'object' ? (
+      <DocEditor.ObjectField {...props} />
+    ) : field.type === 'oneof' ? (
+      <DocEditor.OneOfField {...props} />
+    ) : field.type === 'password' ? (
+      <PasswordField {...props} />
+    ) : field.type === 'reference' ? (
+      <ReferenceField {...props} />
+    ) : field.type === 'references' ? (
+      <ReferencesField {...props} />
+    ) : field.type === 'richtext' ? (
+      <RichTextField {...props} />
+    ) : field.type === 'select' ? (
+      <SelectField {...props} />
+    ) : field.type === 'string' ? (
+      <StringField {...props} />
+    ) : (
+      <div className="DocEditor__field__input__unknown">
+        Unknown field type: {(field as any).type}
+      </div>
+    );
+
   return (
     <div
       className={joinClassNames(
@@ -1013,45 +1066,17 @@ DocEditor.FieldBody = (props: FieldProps) => {
       id={props.deepKey}
       ref={ref}
     >
-      {showFieldHeader && <DocEditor.FieldHeader {...props} />}
+      {showFieldHeader && (
+        <DocEditor.FieldHeader {...props} localizedValues={localizedValues} />
+      )}
       <div className="DocEditor__field__input">
         <FieldErrorBoundary deepKey={props.deepKey}>
-          {field.type === 'array' ? (
-            <DocEditor.ArrayField {...props} />
-          ) : field.type === 'boolean' ? (
-            <BooleanField {...props} />
-          ) : field.type === 'date' ? (
-            <DateField {...props} />
-          ) : field.type === 'datetime' ? (
-            <DateTimeField {...props} />
-          ) : field.type === 'file' ? (
-            <FileField {...props} />
-          ) : field.type === 'image' ? (
-            <ImageField {...props} />
-          ) : field.type === 'multiselect' ? (
-            <MultiSelectField {...props} />
-          ) : field.type === 'number' ? (
-            <NumberField {...props} />
-          ) : field.type === 'object' ? (
-            <DocEditor.ObjectField {...props} />
-          ) : field.type === 'oneof' ? (
-            <DocEditor.OneOfField {...props} />
-          ) : field.type === 'password' ? (
-            <PasswordField {...props} />
-          ) : field.type === 'reference' ? (
-            <ReferenceField {...props} />
-          ) : field.type === 'references' ? (
-            <ReferencesField {...props} />
-          ) : field.type === 'richtext' ? (
-            <RichTextField {...props} />
-          ) : field.type === 'select' ? (
-            <SelectField {...props} />
-          ) : field.type === 'string' ? (
-            <StringField {...props} />
+          {localizedValues ? (
+            <DocEditor.LocalizedValues {...localizedValues} level={level}>
+              {input}
+            </DocEditor.LocalizedValues>
           ) : (
-            <div className="DocEditor__field__input__unknown">
-              Unknown field type: {(field as any).type}
-            </div>
+            input
           )}
         </FieldErrorBoundary>
       </div>
@@ -1059,7 +1084,36 @@ DocEditor.FieldBody = (props: FieldProps) => {
   );
 };
 
-DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
+interface DocEditorLocalizedValuesProps extends LocalizedValuesFieldProps {
+  level: number;
+  children: ComponentChildren;
+}
+
+/** Renders the field's default value editor and its localized values. */
+DocEditor.LocalizedValues = (props: DocEditorLocalizedValuesProps) => {
+  const {level, ...rest} = props;
+  return (
+    <LocalizedValues
+      {...rest}
+      renderField={(deepKey) => (
+        <DocEditor.FieldBody
+          field={props.field}
+          deepKey={deepKey}
+          level={level}
+          hideHeader
+        />
+      )}
+    />
+  );
+};
+
+interface FieldHeaderProps extends FieldProps {
+  className?: string;
+  /** Shows the localized values button, see `DocEditor.LocalizedValues`. */
+  localizedValues?: LocalizedValuesFieldProps;
+}
+
+DocEditor.FieldHeader = (props: FieldHeaderProps) => {
   const field = props.field;
   const label = field.label || field.id;
 
@@ -1075,7 +1129,8 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       className={joinClassNames(
         props.className,
         'DocEditor__FieldHeader',
-        fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers'
+        fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers',
+        props.localizedValues && 'DocEditor__FieldHeader--localizable'
       )}
       data-field-header-for={props.deepKey}
     >
@@ -1116,6 +1171,9 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
           field={field}
           deepKey={props.deepKey}
         />
+        {props.localizedValues && (
+          <LocalizedValuesButton {...props.localizedValues} />
+        )}
         <DocEditor.FieldHeaderTranslationsActionIcon
           field={field}
           deepKey={props.deepKey}
@@ -1139,7 +1197,8 @@ DocEditor.FieldHeaderCommentActionIcon = (
   props: FieldHeaderCommentActionIconProps
 ) => {
   const comments = useFieldComments();
-  if (!comments || !props.deepKey) {
+  // Comments go on an object's child fields rather than the object itself.
+  if (!comments || !props.deepKey || props.field.type === 'object') {
     return null;
   }
   return <DocEditor.FieldHeaderCommentActionIconInner {...props} />;

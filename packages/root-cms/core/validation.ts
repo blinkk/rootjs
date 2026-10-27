@@ -1,3 +1,4 @@
+import {getLocalizedValueLocales} from '../shared/localized-values.js';
 import {
   checkNestingDepth,
   formatNestingDepthMessage,
@@ -59,26 +60,74 @@ export function validateFields(
     ];
   }
 
-  const errors: ValidationError[] = [];
-
-  for (const field of schema.fields) {
-    if (!field.id) {
-      continue;
-    }
-
-    // Only validate if the field is present in the data (partial validation).
-    // Note: We might want to support required fields in the future.
-    if (!(field.id in fieldsData)) {
-      continue;
-    }
-
-    const value = fieldsData[field.id];
-    errors.push(...validateValue(value, field, field.id));
-  }
-
+  const errors = validateNestedFields(fieldsData, schema.fields, '');
   errors.push(...validateNestingDepth(fieldsData));
 
   return errors;
+}
+
+/**
+ * Validates the fields of an object (e.g. the doc's fields or an object
+ * field's value), including any localized values stored in each field's
+ * `@<id>` metadata. Only fields present in the data are validated (partial
+ * validation).
+ */
+function validateNestedFields(
+  data: Record<string, any>,
+  fields: FieldWithId[],
+  path: string
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const prefix = path ? `${path}.` : '';
+  for (const field of fields) {
+    if (!field.id) {
+      continue;
+    }
+    if (field.id in data) {
+      errors.push(
+        ...validateValue(data[field.id], field, `${prefix}${field.id}`)
+      );
+    }
+    errors.push(
+      ...validateLocalizedValues(
+        data[`@${field.id}`],
+        field,
+        `${prefix}@${field.id}`
+      )
+    );
+  }
+  return errors;
+}
+
+/**
+ * Validates the localized values in a field's `@<id>` metadata against the
+ * field. A `null` localized value is valid (it clears the field's value for
+ * the locale).
+ */
+export function validateLocalizedValues(
+  metadata: any,
+  field: FieldWithId,
+  path: string
+): ValidationError[] {
+  const localizedValues = metadata?.localizedValues;
+  if (localizedValues === undefined) {
+    return [];
+  }
+  const localizedValuesPath = `${path}.localizedValues`;
+  if (
+    typeof localizedValues !== 'object' ||
+    localizedValues === null ||
+    Array.isArray(localizedValues)
+  ) {
+    return [createError(localizedValuesPath, 'object', localizedValues)];
+  }
+  return getLocalizedValueLocales(localizedValues).flatMap((locale) => {
+    const value = localizedValues[locale];
+    if (value === null) {
+      return [];
+    }
+    return validateValue(value, field, `${localizedValuesPath}.${locale}`);
+  });
 }
 
 /**
@@ -246,20 +295,7 @@ export function validateValue(
         return [createError(path, 'object', value)];
       }
       const objectField = field as ObjectField;
-      const errors: ValidationError[] = [];
-      for (const nestedField of objectField.fields) {
-        if (!nestedField.id || !(nestedField.id in value)) {
-          continue;
-        }
-        errors.push(
-          ...validateValue(
-            value[nestedField.id],
-            nestedField,
-            `${path}.${nestedField.id}`
-          )
-        );
-      }
-      return errors;
+      return validateNestedFields(value, objectField.fields, path);
     }
 
     case 'array': {
@@ -332,20 +368,7 @@ export function validateValue(
         return [];
       }
 
-      const errors: ValidationError[] = [];
-      for (const nestedField of matchedSchema.fields) {
-        if (!nestedField.id || !(nestedField.id in value)) {
-          continue;
-        }
-        errors.push(
-          ...validateValue(
-            value[nestedField.id],
-            nestedField,
-            `${path}.${nestedField.id}`
-          )
-        );
-      }
-      return errors;
+      return validateNestedFields(value, matchedSchema.fields, path);
     }
 
     case 'richtext': {

@@ -1,4 +1,5 @@
 import * as schema from '../../core/schema.js';
+import {getLocalizedValueLocales} from '../../shared/localized-values.js';
 import {
   RichTextBlock,
   RichTextData,
@@ -61,7 +62,7 @@ interface DiffContext {
  * Array items are matched by their stable array keys, so moving an item is
  * reported as a reorder rather than as every item changing. Values that
  * aren't in the schema are still compared, labeled by their raw key. Field
- * metadata (`@<id>` keys) is ignored.
+ * metadata (`@<id>` keys) is ignored, except for localized values.
  *
  * ```ts
  * const changes = diffDocFields(collection, published.fields, draft.fields);
@@ -102,13 +103,23 @@ function diffFields(
       continue;
     }
     knownKeys.add(field.id);
+    const label = getFieldLabel(field);
     diffValue(
       ctx,
       field,
       before[field.id],
       after[field.id],
       `${deepKey}.${field.id}`,
-      [...path, getFieldLabel(field)],
+      [...path, label],
+      changes
+    );
+    diffLocalizedValues(
+      ctx,
+      field,
+      before[`@${field.id}`]?.localizedValues,
+      after[`@${field.id}`]?.localizedValues,
+      `${deepKey}.@${field.id}.localizedValues`,
+      [...path, label],
       changes
     );
   }
@@ -129,6 +140,40 @@ function diffFields(
       after[key],
       `${deepKey}.${key}`,
       [...path, key],
+      changes
+    );
+  }
+}
+
+/**
+ * Compares a field's localized values (stored in the field's `@<id>`
+ * metadata), labeling each locale's change as e.g. `Hero › Image (de)`.
+ */
+function diffLocalizedValues(
+  ctx: DiffContext,
+  field: schema.Field,
+  before: any,
+  after: any,
+  deepKey: string,
+  path: string[],
+  changes: DocChange[]
+) {
+  const locales = new Set([
+    ...getLocalizedValueLocales(before),
+    ...getLocalizedValueLocales(after),
+  ]);
+  if (locales.size === 0) {
+    return;
+  }
+  const label = path[path.length - 1];
+  for (const locale of Array.from(locales).sort()) {
+    diffValue(
+      ctx,
+      field,
+      before?.[locale],
+      after?.[locale],
+      `${deepKey}.${locale}`,
+      [...path.slice(0, -1), `${label} (${locale})`],
       changes
     );
   }

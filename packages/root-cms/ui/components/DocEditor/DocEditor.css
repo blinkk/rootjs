@@ -129,6 +129,14 @@
   padding-right: 116px;
 }
 
+.DocEditor__FieldHeader--localizable {
+  padding-right: 78px;
+}
+
+.DocEditor__FieldHeader--localizable.DocEditor__FieldHeader--hasViewers {
+  padding-right: 138px;
+}
+
 .DocEditor__FieldHeader__viewers {
   margin-right: 2px;
 }
@@ -153,7 +161,7 @@
   height: 18px;
   justify-content: center;
   min-width: 18px;
-  opacity: 0;
+  opacity: 0.35;
   padding: 0 2px;
   transition: opacity 0.2s ease, background-color 0.15s ease;
 }
@@ -172,8 +180,9 @@
   color: var(--color-text-default);
 }
 
+/* Matches the translations ActionIcon (Mantine gray.7). */
 .DocEditor__FieldHeader__comments__button--open {
-  color: rgb(28, 126, 214);
+  color: #495057;
 }
 
 .DocEditor__FieldHeader__comments__count {
