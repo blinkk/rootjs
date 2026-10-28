@@ -46,8 +46,10 @@
   /* Headings and emphasized text. */
   --cms-color-text-strong: #1f1f1f;
   /* Secondary text: help, metadata, timestamps. */
-  --cms-color-text-muted: #6b7280;
-  /* Placeholders, disabled text and decorative icons. */
+  --cms-color-text-muted: #646b77;
+  /* Placeholders, disabled text and decorative icons. Below 4.5:1 contrast
+   * on purpose, so never use it for text that needs to be read.
+   */
   --cms-color-text-subtle: #a3a3a0;
   /* Text on a filled, dark background. */
   --cms-color-text-inverse: #ffffff;
@@ -70,16 +72,17 @@
 
   /* --- Color: status --------------------------------------------------- *
    * Each status has a strong color (text, icons, filled badges), a soft
-   * background and a line color for borders.
+   * background and a line color for borders. Strong colors keep at least
+   * 4.5:1 contrast on both the soft background and white.
    */
 
   --cms-color-info: #1971c2;
   --cms-color-info-soft: #e7f5ff;
   --cms-color-info-line: #a5d8ff;
-  --cms-color-success: #2b8a3e;
+  --cms-color-success: #2b7a3b;
   --cms-color-success-soft: #ebfbee;
   --cms-color-success-line: #b2f2bb;
-  --cms-color-warning: #e67700;
+  --cms-color-warning: #a85b00;
   --cms-color-warning-soft: #fff9db;
   --cms-color-warning-line: #ffe066;
   --cms-color-danger: #c92a2a;

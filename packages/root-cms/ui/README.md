@@ -19,7 +19,7 @@ defaults, so only on-scale utilities exist:
 | --- | --- |
 | Surfaces | `bg-page` `bg-surface` `bg-surface-hover` `bg-surface-active` `bg-chip` `bg-overlay` |
 | Lines | `border-border` `border-border-strong` (also `divide-*`, `outline-*`, `ring-*`) |
-| Text | `text-fg` `text-strong` `text-muted` `text-subtle` `text-inverse` `text-link` |
+| Text | `text-fg` `text-strong` `text-muted` `text-subtle` (placeholders and disabled only; it fails contrast by design) `text-inverse` `text-link` |
 | Actions | `bg-primary` `bg-primary-hover` `text-on-primary` `bg-accent` `ring-focus` |
 | Status | `{text,bg,border}-{info,success,warning,danger}`, with `-soft` (background) and `-line` (border) variants |
 | Type | `font-sans` `font-mono`; `text-xs` 11 · `text-sm` 12 · `text-base` 14 · `text-lg` 16 · `text-xl` 20 · `text-2xl` 24 |

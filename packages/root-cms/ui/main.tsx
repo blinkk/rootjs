@@ -135,6 +135,9 @@ const NewReleasePage = lazyRoute(() =>
     (m) => m.NewReleasePage
   )
 );
+const GalleryPage = lazyRoute(() =>
+  import('./dev/gallery/GalleryPage.js').then((m) => m.GalleryPage)
+);
 const NotFoundPage = lazyRoute(() =>
   import('./app/NotFoundPage/NotFoundPage.js').then((m) => m.NotFoundPage)
 );
@@ -198,6 +201,12 @@ const TranslationsPage = lazyRoute(() =>
 );
 
 type CollectionMeta = Omit<Collection, 'fields'>;
+
+/**
+ * Whether the CMS is running on the dev server (`root dev`), which enables
+ * dev-only tools like the UI gallery at `/cms/_ui`.
+ */
+const IS_DEV_SERVER = !window.__ROOT_CTX.build;
 
 declare global {
   interface Window {
@@ -496,6 +505,12 @@ function App() {
                                 component={SidebarToolsPage}
                               />
                               {translationsRoutes}
+                              <Route
+                                path="/cms/_ui/:entryId?"
+                                component={
+                                  IS_DEV_SERVER ? GalleryPage : NotFoundPage
+                                }
+                              />
                               <Route default component={NotFoundPage} />
                             </Router>
                           </AppErrorBoundary>
