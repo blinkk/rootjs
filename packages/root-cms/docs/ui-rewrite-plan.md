@@ -325,25 +325,46 @@ until you've signed off.
       - `ui.tsx` was only renamed to `main.tsx`. Splitting it into
         `app/App.tsx` + `routes.ts` + `providers.tsx` is code, so it moves to
         2.1.
-- [ ] 0.0b Design audit script and proposed token scales (D2a).
-- [ ] 0.1 Spike: Tailwind v4 + esbuild build integration (`build:ui`, `dev:ui`
-      watch, `build:ui:clean` interplay, served CSS path). Confirm Mantine pages
-      still render unchanged.
-- [ ] 0.2 Token layer: expand `theme.css`, add `tailwind.css` `@theme inline`
-      mapping, alias the legacy vars.
-- [ ] 0.3 `cn()` (+ `tailwind-merge` if approved), the conventions doc
-      `ui/components/ui/README.md` (BEM + utilities + tokens + mobile rules +
-      file layout), and an AGENTS.md update (replace the "Mantine is pinned"
-      note).
-- [ ] 0.4 Gallery route `/cms/_ui` with viewport, theme, and pointer toggles,
-      plus `test-theme.css`.
-- [ ] 0.5 `renderVisual()` helper + axe.
-- [ ] 0.6 Page snapshot script + diff report (includes the auth/seed spike).
-- [ ] 0.7 Mantine ratchet lint rule + `ui:progress`.
-- [ ] 0.8 Subagent brief template (see below).
+- [x] 0.0b Design audit. Inventory: 236 distinct colors, 36 font sizes, 61
+      spacings, 23 radii, 19 shadows. The scales and the legacy → token
+      snapping table are in `ui/README.md`.
+- [x] 0.1 Tailwind v4 CLI → gitignored `ui/styles/tailwind.out.css`,
+      imported first by `main.tsx`. Watch mode is wired into `pnpm dev`, and
+      a newly used class reaches the served CSS in about 3s. No current class
+      name collides with a utility, so nothing changes visually.
+- [x] 0.2 `theme.css` holds the full token contract, `tailwind.css` maps
+      tokens with `@theme inline` and clears Tailwind's defaults, legacy vars
+      are aliased, and `global.css` moved into `@layer base`. axe flagged the
+      contrast of the muted, success, and warning tokens, so they're darkened
+      slightly.
+- [x] 0.3 `cn()` (tailwind-merge, verified against our token names), the
+      conventions doc at `ui/README.md`, and an AGENTS.md update.
+- [x] 0.4 Gallery at `/cms/_ui/:entry`, gated on the dev server
+      (`__ROOT_CTX.build` is null), with viewport toggles (375 / 768 / 1280,
+      one iframe each) and the test-theme toggle. The pointer toggle was
+      dropped because an iframe can't emulate `pointer: coarse`; use devtools
+      device mode for that.
+- [x] 0.5 `testGallery(entry)`: reuses gallery stories as screenshot + axe
+      tests at 375 and 1280.
+- [x] 0.6 `pnpm ui:snapshots` (`--login` once, `--label`, `--compare a,b`).
+      It runs against the docs dev server with your real sign-in; the session
+      is saved, IndexedDB included, to `.ui-snapshots/auth.json`.
+- [x] 0.7 ESLint ratchet + `ui/mantine-allowlist.json` (154 files) +
+      `pnpm ui:progress [--fix]`.
+- [x] 0.8 Subagent brief template (appendix below).
 
-**Checkpoint 0:** you review the token names, conventions doc, gallery, and
-tooling.
+**Checkpoint 0:** you review the token names and values (open `/cms/_ui/tokens`
+on the dev server, and toggle the test theme), the conventions doc, and the
+tooling. To review:
+
+1. **13px text** (86 uses in 41 components) sits between `text-sm` (12) and
+   `text-base` (14). Options: snap it to 12 (denser), snap it to 14 (roomier),
+   or decide per context (12 in tables, lists, and editor chrome; 14 in body
+   copy and form controls).
+2. Token names: `fg` / `strong` / `muted` / `subtle` for text, and `border`
+   / `border-strong` for lines.
+3. Run `pnpm ui:snapshots --login` once, then `--label baseline`, so Phase 2+
+   has a pre-rewrite baseline.
 
 ### Phase 1: Primitives (parallel, 5 agents in worktrees)
 
@@ -484,3 +505,49 @@ types → preview → publish).
    sibling of `components/`, and data modules living inside their feature?
 2. Should the `core/` tidy-up happen on this branch, or as a follow-up
    (recommended)?
+
+## Appendix: subagent brief template
+
+Each agent gets this brief with the `{…}` filled in, and runs in its own
+worktree branched from `cms-ui-rewrite`.
+
+```
+You're migrating part of the Root CMS UI off Mantine onto Tailwind, as one
+workstream of a staged rewrite. Work only in this worktree.
+
+Read first:
+- packages/root-cms/docs/ui-rewrite-plan.md (context, decisions, baseline)
+- packages/root-cms/ui/README.md (tokens, class naming, mobile, a11y,
+  legacy value snapping; follow it exactly)
+- AGENTS.md (repo conventions: comments end in punctuation, .js import
+  extensions, conventional commits)
+
+Your workstream: {phase/id and name}
+Files you own (don't edit anything else): {paths or globs}
+Primitives available: {list, with their import paths}
+
+Do:
+- {specific goals, e.g. "replace every @mantine import in your files with
+  primitives", "apply the mobile patterns", "convert CSS to utilities + BEM"}
+- Remove the migrated files from ui/mantine-allowlist.json
+  (`pnpm ui:progress --fix` in packages/root-cms).
+- If you need a primitive change or a new token, don't make it. Note it as
+  an open question.
+
+Definition of done:
+- `pnpm lint` passes from the repo root.
+- `npx tsc -p packages/root-cms/ui/tsconfig.json --noEmit` shows no new
+  errors compared with the baseline in the plan (compare sorted messages).
+- `npx vitest run ui` passes in packages/root-cms.
+- `pnpm build` passes in packages/root-cms.
+- {primitives: gallery entry + `testGallery()` visual test passing, goldens
+  reviewed by eye at 375 and 1280}
+- {pages: you checked the layout at 375px; snapshots are taken by the lead}
+- One commit: `chore: {summary}` with the attribution trailer.
+
+Report back (keep it short):
+- What changed, per file group.
+- Any visible design changes caused by snapping to the scales.
+- Screenshot paths you looked at.
+- Open questions and anything you skipped.
+```
