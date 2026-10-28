@@ -514,7 +514,7 @@ overflowing the mobile header, and array item headers sized without
       browser's list/heading defaults back from a `Prose` class. Visible
       changes: bare `<code>` uses the CMS mono font at the text's size, and
       second-level bullets are circles everywhere.
-- [ ] 5.3 Finalize `theme.css` + `docs/themes.md`, and generate the BEM hooks
+- [x] 5.3 Finalize `theme.css` + `docs/themes.md`, and generate the BEM hooks
       reference.
 - [ ] 5.4 Update the `docs/screenshots` scenes if they mirror Mantine markup,
       then re-render. Port the docs site's own themes

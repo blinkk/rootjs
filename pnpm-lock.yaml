@@ -672,6 +672,9 @@ importers:
       preact-render-to-string:
         specifier: 6.7.0
         version: 6.7.0(preact@10.29.8)
+      prettier:
+        specifier: 3.9.9
+        version: 3.9.9
       react:
         specifier: npm:@preact/compat@18.3.2
         version: '@preact/compat@18.3.2(preact@10.29.8)'

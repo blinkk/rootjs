@@ -13,7 +13,7 @@
 
   /* Keep field groups inside the column instead of bleeding to the edges. */
   --cms-drawer-bleed: 0;
-  --cms-drawer-border: 1px solid var(--color-border);
+  --cms-drawer-border: 1px solid var(--cms-color-border);
   --cms-drawer-radius: 8px;
   --cms-drawer-bg: var(--cms-color-surface);
   --cms-drawer-header-bg: #f4f4f1;

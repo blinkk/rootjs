@@ -71,7 +71,8 @@
     "test": "pnpm build && firebase emulators:exec 'vitest run --exclude=**/*.visual.test.tsx'",
     "test:visual": "pnpm build:ui:css && vitest run --config=vitest.config.visual.ts",
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'",
-    "ui:snapshots": "node scripts/ui-snapshots.ts"
+    "ui:snapshots": "node scripts/ui-snapshots.ts",
+    "ui:theme-reference": "node scripts/ui-theme-reference.ts"
   },
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "32.3.9",
@@ -160,6 +161,7 @@
     "preact": "10.29.8",
     "preact-iso": "2.12.2",
     "preact-render-to-string": "6.7.0",
+    "prettier": "3.9.9",
     "react": "npm:@preact/compat@18.3.2",
     "react-dom": "npm:@preact/compat@18.3.2",
     "react-json-view-compare": "2.0.2",

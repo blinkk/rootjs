@@ -12,8 +12,10 @@
  * resolves to one of these properties (see tailwind.css), so changing a value
  * here restyles both utility classes and component CSS.
  *
- * Rules that target the CMS's class names are a different matter: they work
- * today and may break with any release. Themes are experimental.
+ * For what properties can't reach, components carry BEM class hooks
+ * (`Button`, `Dialog__panel`, `Button--variant-primary`), listed with these
+ * properties in the generated reference in docs/themes.md. Utility classes
+ * and DOM structure aren't part of the contract. Themes are experimental.
  */
 
 :root {
@@ -271,7 +273,7 @@
    * threads: above dropdowns, below modals.
    */
   --cms-z-floating: 150;
-  --cms-z-modal: 200;
+  /* Modals need no z-index: they're native <dialog>s, in the top layer. */
   --cms-z-toast: 300;
   --cms-z-tooltip: 400;
 }
