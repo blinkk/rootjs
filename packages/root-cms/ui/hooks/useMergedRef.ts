@@ -1,9 +1,18 @@
-import type {Ref} from 'preact';
-import {useCallback} from 'preact/hooks';
+import type {Ref, RefCallback} from 'preact';
+import {useMemo} from 'preact/hooks';
+
+/** Sets a callback or object ref. */
+export function assignRef<T>(ref: Ref<T> | null | undefined, value: T | null) {
+  if (typeof ref === 'function') {
+    ref(value);
+  } else if (ref) {
+    ref.current = value;
+  }
+}
 
 /**
- * Combines a component's own ref with the one forwarded to it, so both see
- * the DOM node.
+ * A stable callback ref that sets every ref passed in, e.g. a component's own
+ * ref plus the one forwarded to it.
  *
  * ```tsx
  * const innerRef = useRef<HTMLInputElement>(null);
@@ -12,18 +21,10 @@ import {useCallback} from 'preact/hooks';
  * ```
  */
 export function useMergedRef<T>(
-  local: {current: T | null},
-  forwarded: Ref<T> | undefined
-) {
-  return useCallback(
-    (node: T | null) => {
-      local.current = node;
-      if (typeof forwarded === 'function') {
-        forwarded(node);
-      } else if (forwarded) {
-        forwarded.current = node;
-      }
-    },
-    [local, forwarded]
+  ...refs: Array<Ref<T> | null | undefined>
+): RefCallback<T> {
+  return useMemo(
+    () => (value: T | null) => refs.forEach((ref) => assignRef(ref, value)),
+    refs
   );
 }

@@ -12,10 +12,12 @@ import {IconButtonGallery} from '../../primitives/IconButton/IconButton.gallery.
 import {JsonInputGallery} from '../../primitives/JsonInput/JsonInput.gallery.js';
 import {KbdGallery} from '../../primitives/Kbd/Kbd.gallery.js';
 import {LoadingOverlayGallery} from '../../primitives/LoadingOverlay/LoadingOverlay.gallery.js';
+import {MenuGallery} from '../../primitives/Menu/Menu.gallery.js';
 import {ModalsGallery} from '../../primitives/modals/ModalsProvider.gallery.js';
 import {NumberInputGallery} from '../../primitives/NumberInput/NumberInput.gallery.js';
 import {PaginationGallery} from '../../primitives/Pagination/Pagination.gallery.js';
 import {PasswordInputGallery} from '../../primitives/PasswordInput/PasswordInput.gallery.js';
+import {PopoverGallery} from '../../primitives/Popover/Popover.gallery.js';
 import {SegmentedControlGallery} from '../../primitives/SegmentedControl/SegmentedControl.gallery.js';
 import {SkeletonGallery} from '../../primitives/Skeleton/Skeleton.gallery.js';
 import {SpinnerGallery} from '../../primitives/Spinner/Spinner.gallery.js';
@@ -25,6 +27,7 @@ import {TabsGallery} from '../../primitives/Tabs/Tabs.gallery.js';
 import {TextareaGallery} from '../../primitives/Textarea/Textarea.gallery.js';
 import {TextInputGallery} from '../../primitives/TextInput/TextInput.gallery.js';
 import {ToastGallery} from '../../primitives/Toast/Toast.gallery.js';
+import {TooltipGallery} from '../../primitives/Tooltip/Tooltip.gallery.js';
 import {TokensGallery} from './TokensGallery.js';
 import type {GalleryEntry} from './types.js';
 
@@ -48,10 +51,12 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   JsonInputGallery,
   KbdGallery,
   LoadingOverlayGallery,
+  MenuGallery,
   ModalsGallery,
   NumberInputGallery,
   PaginationGallery,
   PasswordInputGallery,
+  PopoverGallery,
   SegmentedControlGallery,
   SkeletonGallery,
   SpinnerGallery,
@@ -61,4 +66,5 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   TextareaGallery,
   TextInputGallery,
   ToastGallery,
+  TooltipGallery,
 ];
