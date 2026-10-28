@@ -123,7 +123,7 @@ export function CollectionPage(props: CollectionPageProps) {
     <Layout>
       {/*
        * On desktop the collection list is 370px wide (402px less the 32px
-       * page gutter) with a 24px gap, matching the home page's columns.
+       * page gutter) with a 32px gap, matching the home page's columns.
        */}
       <div className="CollectionPage bg-page lg:flex">
         <div className="CollectionPage__side px-4 pt-4 md:px-8 md:pt-8 lg:h-full lg:w-100.5 lg:shrink-0 lg:overflow-y-auto lg:pb-8 lg:pr-0">
@@ -159,7 +159,7 @@ export function CollectionPage(props: CollectionPageProps) {
             />
           </div>
         </div>
-        <div className="CollectionPage__main min-w-0 flex-1 px-4 pt-4 md:px-8 md:pt-8 lg:h-full lg:pl-6 lg:overflow-y-auto">
+        <div className="CollectionPage__main min-w-0 flex-1 px-4 pt-4 md:px-8 md:pt-8 lg:h-full lg:overflow-y-auto">
           {props.collection && (
             <CollectionPage.Collection
               key={props.collection}

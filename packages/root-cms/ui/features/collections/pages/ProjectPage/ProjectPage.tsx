@@ -15,11 +15,11 @@ export function ProjectPage() {
       <div className="ProjectPage bg-page p-page">
         <div className="ProjectPage__main flex max-w-320 flex-col gap-7">
           {/*
-           * The collections column (370px, then a 24px gap) matches the
+           * The collections column (370px, then a 32px gap) matches the
            * collection list on the collection page; the action logs take the
            * rest.
            */}
-          <div className="ProjectPage__section flex flex-col gap-6 lg:flex-row">
+          <div className="ProjectPage__section flex flex-col gap-6 lg:flex-row lg:gap-8">
             <ProjectPage.Collections />
             <ProjectPage.ActionLogs />
           </div>
