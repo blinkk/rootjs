@@ -62,6 +62,22 @@ ag-grid or Lexical, and changes to `core/` behavior.
 - Tests: vitest. Visual tests (`*.visual.test.tsx`, Playwright) exist with
   local-only goldens. `docs/screenshots/` renders product scenes from TSX.
 
+## Baseline health (measured on `main` @ `084c2d55`)
+
+These failures already exist. Agents must not make them worse, and fixing
+them isn't in scope unless they block a phase.
+
+- `tsc -p ui/tsconfig.json --noEmit`: **355 errors**. Nothing in CI
+  typechecks the UI; esbuild strips types. Typecheck gate: **no new errors**
+  (compare sorted messages).
+- UI unit tests (`vitest run ui`, jsdom, no emulator needed): **540/540 pass**.
+- Visual tests that already fail: `TranslationsTable` (3/3, vi.mock factory
+  error), `FieldHistory` (1/1), `PortTranslationsModal` (1/2),
+  `ImagePastePlugin` (1/1), `PublishDocModal` (crashes the runner). When a
+  crash aborts the run, run visual files one at a time.
+- Local Java is 17, but the Firestore emulator (firebase-tools ≥ 15) needs
+  21, so core integration tests can't run here.
+
 ## Key decisions (proposed defaults)
 
 ### D1. Tailwind v4, no preflight until Mantine is gone
@@ -300,7 +316,15 @@ until you've signed off.
 
 ### Phase 0: Foundation (serial, one agent / me)
 
-- [ ] 0.0 Folder reorg (D7): a pure-move commit, verified green.
+- [x] 0.0 Folder reorg (D7): a pure-move commit, verified green (`ce52e51e`).
+      Differences from the proposal:
+      - `hooks/` also keeps the app-wide context hooks (`useFirebase`, `useSSE`,
+        `useSiteSettings`, `useUserPreferences`, `useTheme`).
+      - Two features were added: `features/users/` (avatars, tags, user
+        select, roles/permissions, profiles) and `features/sidebar-tools/`.
+      - `ui.tsx` was only renamed to `main.tsx`. Splitting it into
+        `app/App.tsx` + `routes.ts` + `providers.tsx` is code, so it moves to
+        2.1.
 - [ ] 0.0b Design audit script and proposed token scales (D2a).
 - [ ] 0.1 Spike: Tailwind v4 + esbuild build integration (`build:ui`, `dev:ui`
       watch, `build:ui:clean` interplay, served CSS path). Confirm Mantine pages

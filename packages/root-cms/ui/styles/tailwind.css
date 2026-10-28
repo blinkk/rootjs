@@ -1,0 +1,25 @@
+/*
+ * Tailwind entry point, compiled by `pnpm build:ui:css` into
+ * `tailwind.out.css` (imported first by `main.tsx`, so the layer order below
+ * is declared before any other CSS).
+ *
+ * Cascade, lowest to highest priority:
+ *   theme       Tailwind's design tokens, mapped onto `--cms-*` (theme.css).
+ *   base        Element defaults (global.css).
+ *   components  Component-level rules that utilities can't express.
+ *   utilities   Tailwind utility classes.
+ *   (unlayered) Legacy component CSS, Mantine, project themes and custom CSS.
+ *
+ * Project themes load unlayered, so they win over every utility without
+ * needing extra specificity.
+ *
+ * Preflight is intentionally not imported while Mantine is still in use; it
+ * is enabled once Mantine is removed.
+ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source '../';

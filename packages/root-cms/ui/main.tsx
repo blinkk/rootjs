@@ -1,3 +1,4 @@
+import './styles/tailwind.out.css';
 import './styles/global.css';
 import './styles/mantine.css';
 import './styles/theme.css';
