@@ -1,29 +1,40 @@
-import {Breadcrumbs, Button, Table, Textarea} from '@mantine/core';
 import {IconFileDownload} from '@tabler/icons-preact';
 import {ChangeEvent, useState} from 'preact/compat';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../../primitives/Table/Table.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {getDraftDocs} from '../../../documents/doc.js';
 import {Arb} from '../../arb.js';
 import {extractStringsWithMetadataForDoc} from '../../extract.js';
 import {sourceHash} from '../../l10n.js';
 
-import './TranslationsArbPage.css';
-
 export function TranslationsArbPage() {
   usePageTitle('ARB Translations');
   return (
     <Layout>
-      <div className="TranslationsArbPage">
-        <div className="TranslationsArbPage__header">
-          <Breadcrumbs className="TranslationsArbPage__header__breadcrumbs">
-            <a href="/cms/translations">Translations</a>
-            <div>ARB</div>
-          </Breadcrumbs>
+      <div className="TranslationsArbPage px-4 pb-4 pt-6 md:p-15 md:pt-12">
+        <div className="TranslationsArbPage__header max-w-150">
+          <Breadcrumbs
+            className="TranslationsArbPage__headerBreadcrumbs mb-3"
+            items={[
+              {label: 'Translations', href: '/cms/translations'},
+              {label: 'ARB'},
+            ]}
+          />
           <Heading size="h1">ARB Translations</Heading>
-          <Text as="p">
+          <Text as="p" className="mt-1">
             Enter doc ids below (separated by newlines) to include in an ARB
             file.
           </Text>
@@ -127,17 +138,16 @@ TranslationsArbPage.RequestForm = () => {
 
   return (
     <form
-      className="TranslationsArbPage__RequestForm"
+      className="TranslationsArbPage__requestForm mt-5 flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         onDownloadArb();
       }}
     >
-      <div className="TranslationsArbPage__RequestForm__textareaWrapper">
+      <div className="TranslationsArbPage__requestFormTextareaWrapper max-w-150">
         <Textarea
           required={true}
-          size="xs"
-          radius={0}
+          aria-label="Doc ids"
           autosize
           minRows={8}
           maxRows={20}
@@ -148,22 +158,22 @@ TranslationsArbPage.RequestForm = () => {
           }}
         />
       </div>
-      <div className="TranslationsArbPage__RequestForm__submit">
-        <Button variant="default" color="dark" size="xs" onClick={onPreview}>
-          Preview
-        </Button>
+      <div className="TranslationsArbPage__requestFormSubmit sticky -top-6 z-(--cms-z-sticky) flex flex-row flex-wrap gap-2.5 bg-surface py-2 md:-top-12">
+        <Button onClick={onPreview}>Preview</Button>
         <Button
-          color="blue"
-          size="xs"
+          variant="primary"
           loading={loading}
           type="submit"
-          leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+          icon={<IconFileDownload size={16} strokeWidth={1.75} />}
         >
           Download ARB
         </Button>
       </div>
       {error && (
-        <Text as="p" className="TranslationsArbPage__RequestForm__error">
+        <Text
+          as="p"
+          className="TranslationsArbPage__requestFormError text-danger"
+        >
           {error}
         </Text>
       )}
@@ -176,27 +186,32 @@ TranslationsArbPage.Preview = (props: {arb: Arb}) => {
   const values = props.arb.list().filter((item) => !!item.meta);
   console.log(values);
   return (
-    <Table verticalSpacing="xs" highlightOnHover fontSize="xs">
-      <thead>
-        <tr>
-          <th>source</th>
-          <th>context</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table
+      dense
+      hover
+      label="ARB preview"
+      className="TranslationsArbPage__preview"
+    >
+      <TableHead>
+        <TableRow>
+          <TableHeaderCell>source</TableHeaderCell>
+          <TableHeaderCell>context</TableHeaderCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
         {values.map((item) => (
-          <tr
+          <TableRow
             key={item.source}
-            class="TranslationsArbPage__Preview__Table__row"
+            className="TranslationsArbPage__previewTableRow"
           >
-            <td>{item.source}</td>
-            <td>
+            <TableCell>{item.source}</TableCell>
+            <TableCell>
               {item.meta?.context}
               {item.meta?.description && <>/ {item.meta.description}</>}
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         ))}
-      </tbody>
+      </TableBody>
     </Table>
   );
 };

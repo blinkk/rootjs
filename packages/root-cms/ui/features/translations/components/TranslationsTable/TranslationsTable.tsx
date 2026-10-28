@@ -13,18 +13,6 @@ import {AgGridReact} from '@ag-grid-community/react';
 import '@ag-grid-community/styles/ag-grid.css';
 import '@ag-grid-community/styles/ag-theme-alpine.css';
 import {
-  ActionIcon,
-  Button,
-  Divider,
-  Group,
-  Loader,
-  Menu,
-  Modal,
-  MultiSelect,
-  Text,
-  TextInput,
-} from '@mantine/core';
-import {
   IconCheck,
   IconDots,
   IconSearch,
@@ -34,10 +22,23 @@ import {
   IconWorld,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
 import {
   useArrayParam,
   useStringParam,
 } from '../../../../hooks/useQueryParam.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {
+  Menu,
+  MenuDivider,
+  MenuGroup,
+  MenuItem,
+} from '../../../../primitives/Menu/Menu.js';
+import {MultiSelect} from '../../../../primitives/MultiSelect/MultiSelect.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
@@ -291,39 +292,36 @@ export function TranslationsTable() {
   const visibleLocales =
     selectedLocales.length > 0 ? selectedLocales : allLocales;
 
+  // Pinned columns don't scroll, so they're only pinned when there's room
+  // for the locale columns beside them.
+  const isDesktop = useMediaQuery('(width >= 48rem)');
+
   const columnDefs = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
       {
         field: 'source',
         headerName: 'Source',
         headerClass: 'no-border-header',
-        pinned: 'left',
+        pinned: isDesktop ? 'left' : null,
         lockPinned: true,
         lockPosition: true,
         suppressMovable: true,
-        width: 310,
+        width: isDesktop ? 310 : 220,
         sortable: true,
         resizable: true,
         wrapText: true,
         autoHeight: true,
         cellRenderer: (params: ICellRendererParams) => {
           return (
-            <div
-              style={{
-                whiteSpace: 'normal',
-                lineHeight: '1.5',
-                padding: '8px 0',
-                fontSize: '12px',
-              }}
-            >
-              <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+            <div className="TranslationsTable__cell whitespace-normal py-2 text-sm leading-normal">
+              <div className="flex items-center gap-1">
                 <span>{params.value}</span>
               </div>
               {showHashes && (
-                <div style={{fontSize: '0.8em', color: '#888', marginTop: 4}}>
+                <div className="TranslationsTable__hash mt-1 text-xs text-muted">
                   <a
+                    className="text-inherit no-underline"
                     href={`/cms/translations/${params.data.hash}`}
-                    style={{textDecoration: 'none', color: 'inherit'}}
                   >
                     {params.data.hash}
                   </a>
@@ -339,21 +337,14 @@ export function TranslationsTable() {
       cols.push({
         field: locale,
         headerName: locale,
-        width: 300,
+        width: isDesktop ? 300 : 220,
         editable: false,
         resizable: true,
         wrapText: true,
         autoHeight: true,
         cellRenderer: (params: ICellRendererParams) => {
           return (
-            <div
-              style={{
-                whiteSpace: 'normal',
-                lineHeight: '1.5',
-                padding: '8px 0',
-                fontSize: '12px',
-              }}
-            >
+            <div className="TranslationsTable__cell whitespace-normal py-2 text-sm leading-normal">
               {params.value}
             </div>
           );
@@ -366,7 +357,7 @@ export function TranslationsTable() {
       headerName: 'Actions',
       field: 'actions',
       headerClass: 'no-border-header',
-      pinned: 'right',
+      pinned: isDesktop ? 'right' : null,
       lockPinned: true,
       lockPosition: true,
       suppressMovable: true,
@@ -375,12 +366,9 @@ export function TranslationsTable() {
       cellRenderer: (params: ICellRendererParams) => {
         return (
           <Button
-            component="a"
+            className="TranslationsTable__edit"
             href={`/cms/translations/${params.data.hash}`}
             size="xs"
-            variant="outline"
-            color="dark"
-            compact
           >
             Edit
           </Button>
@@ -394,12 +382,11 @@ export function TranslationsTable() {
       headerName: 'Tags',
       headerComponent: (props: IHeaderParams) => (
         <div
-          className="ag-header-cell-label"
+          className="ag-header-cell-label cursor-pointer gap-2.5"
           role="presentation"
-          style={{gap: 10, cursor: 'pointer'}}
           onClick={(e) => props.progressSort && props.progressSort(e.shiftKey)}
         >
-          <IconTag size={18} />
+          <IconTag size={16} />
           <span>{props.displayName}</span>
           {props.enableSorting && (
             <div className="ag-sort-indicator-container">
@@ -427,7 +414,7 @@ export function TranslationsTable() {
           )}
         </div>
       ),
-      pinned: 'right',
+      pinned: isDesktop ? 'right' : null,
       lockPinned: true,
       lockPosition: true,
       width: 150,
@@ -444,35 +431,17 @@ export function TranslationsTable() {
           return null;
         }
         return (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              padding: '8px 0',
-            }}
-          >
+          <div className="TranslationsTable__tags flex flex-col gap-0.5 py-2">
             {params.value.map((tag: string) => (
               <div
                 key={tag}
-                style={{
-                  fontSize: '12px',
-                  lineHeight: '1.2',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                }}
+                className="TranslationsTable__tag truncate text-sm leading-tight"
               >
-                <span
+                <button
+                  type="button"
                   title={tag}
-                  style={{
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    textOverflow: 'ellipsis',
-                    display: 'block',
-                  }}
+                  aria-pressed={selectedTags.includes(tag)}
+                  className="TranslationsTable__tagButton m-0 block w-full max-w-full cursor-pointer appearance-none truncate border-0 bg-transparent p-0 text-left font-sans text-sm leading-tight text-inherit underline"
                   onClick={() => {
                     if (selectedTags.includes(tag)) {
                       setSelectedTags(selectedTags.filter((t) => t !== tag));
@@ -482,7 +451,7 @@ export function TranslationsTable() {
                   }}
                 >
                   {tag}
-                </span>
+                </button>
               </div>
             ))}
           </div>
@@ -491,7 +460,7 @@ export function TranslationsTable() {
     });
 
     return cols;
-  }, [visibleLocales, showHashes, selectedTags]);
+  }, [visibleLocales, showHashes, selectedTags, isDesktop]);
 
   const gridOptions: GridOptions = {
     headerHeight: 40,
@@ -502,99 +471,92 @@ export function TranslationsTable() {
 
   return (
     <div className="TranslationsTable">
-      <div style={{marginBottom: 16, display: 'flex', gap: 16}}>
+      <div className="TranslationsTable__toolbar mb-4 flex flex-wrap gap-2 md:flex-nowrap md:gap-4">
         <TextInput
+          className="TranslationsTable__search w-full md:w-auto md:flex-1"
+          size="md"
+          aria-label="Search translations"
           placeholder="Search translations"
-          icon={<IconSearch size={18} />}
+          leftSection={<IconSearch />}
           value={inputValue}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setInputValue(e.currentTarget.value)
-          }
-          style={{flex: 1}}
+          onInput={(e) => setInputValue(e.currentTarget.value)}
         />
         <MultiSelect
+          className="TranslationsTable__locales min-w-0 flex-1 md:w-72 md:flex-none"
+          size="md"
+          aria-label="Filter locales"
           data={allLocales}
           value={selectedLocales}
-          onChange={setSelectedLocales}
+          onValueChange={setSelectedLocales}
           placeholder={
             selectedLocales.length === 0 ? 'All locales' : 'Filter locales'
           }
-          searchable
           clearable
-          icon={<IconWorld size={18} />}
+          leftSection={<IconWorld />}
           maxDropdownHeight={600}
-          style={{width: 300}}
         />
         <MultiSelect
+          className="TranslationsTable__tagsFilter min-w-0 flex-1 md:w-72 md:flex-none"
+          size="md"
+          aria-label="Filter tags"
           data={availableTags}
           value={selectedTags}
-          onChange={setSelectedTags}
+          onValueChange={setSelectedTags}
           placeholder={selectedTags.length === 0 ? 'All tags' : 'Filter tags'}
-          searchable
           clearable
-          icon={<IconTag size={18} />}
+          leftSection={<IconTag />}
           maxDropdownHeight={600}
-          style={{width: 300}}
         />
         <Menu
-          shadow="md"
-          control={
-            <ActionIcon variant="outline" size="lg" style={{height: 36}}>
-              <IconDots size={18} />
-            </ActionIcon>
+          placement="bottom-end"
+          trigger={
+            <IconButton
+              className="TranslationsTable__menuButton"
+              label="Table options"
+              variant="default"
+              size="md"
+            >
+              <IconDots />
+            </IconButton>
           }
         >
-          <Menu.Label>View Options</Menu.Label>
-          <Menu.Item
-            icon={showHashes ? <IconCheck size={14} /> : null}
-            onClick={() => setShowHashes(!showHashes)}
-          >
-            Show Hashes
-          </Menu.Item>
-          <Menu.Item
-            icon={exactMatchesOnly ? <IconCheck size={14} /> : null}
-            onClick={() => setExactMatchesOnly(!exactMatchesOnly)}
-          >
-            Exact Matches Only
-          </Menu.Item>
-          <Divider />
-          <Menu.Label>Bulk Edit Tags</Menu.Label>
-          <Menu.Item
-            icon={<IconTagPlus size={14} />}
-            onClick={() => setIsAddTagsModalOpen(true)}
-          >
-            Add tags...
-          </Menu.Item>
-          <Menu.Item
-            icon={<IconTagMinus size={14} />}
-            onClick={() => setIsRemoveTagsModalOpen(true)}
-          >
-            Remove tags...
-          </Menu.Item>
+          <MenuGroup label="View Options">
+            <MenuItem
+              icon={showHashes ? <IconCheck /> : null}
+              onClick={() => setShowHashes(!showHashes)}
+            >
+              Show Hashes
+            </MenuItem>
+            <MenuItem
+              icon={exactMatchesOnly ? <IconCheck /> : null}
+              onClick={() => setExactMatchesOnly(!exactMatchesOnly)}
+            >
+              Exact Matches Only
+            </MenuItem>
+          </MenuGroup>
+          <MenuDivider />
+          <MenuGroup label="Bulk Edit Tags">
+            <MenuItem
+              icon={<IconTagPlus />}
+              onClick={() => setIsAddTagsModalOpen(true)}
+            >
+              Add tags...
+            </MenuItem>
+            <MenuItem
+              icon={<IconTagMinus />}
+              onClick={() => setIsRemoveTagsModalOpen(true)}
+            >
+              Remove tags...
+            </MenuItem>
+          </MenuGroup>
         </Menu>
       </div>
       {isLoading ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 'calc(100vh - 250px)',
-            gap: 16,
-          }}
-        >
-          <Loader size="lg" />
+        <div className="TranslationsTable__loading TranslationsTable__viewport flex flex-col items-center justify-center gap-4">
+          <Spinner size="lg" />
         </div>
       ) : (
-        <div
-          className="ag-theme-alpine"
-          style={{
-            height: 'calc(100vh - 250px)',
-            width: '100%',
-            fontSize: '13px',
-          }}
-        >
+        <div className="TranslationsTable__grid TranslationsTable__viewport ag-theme-alpine w-full">
           {/* @ts-expect-error - AgGridReact not compatible with Preact types. */}
           <AgGridReact
             rowData={rowData}
@@ -603,76 +565,83 @@ export function TranslationsTable() {
           />
         </div>
       )}
-      <Modal
-        opened={isAddTagsModalOpen}
-        onClose={() => setIsAddTagsModalOpen(false)}
-        title="Bulk Add Tags"
-      >
-        <Text size="sm" mb="md">
-          The following tags will be added to the {rowData.length} strings
-          currently visible in the table.
-        </Text>
-        <MultiSelect
-          data={availableTags}
-          value={tagsToBulkAdd}
-          onChange={setTagsToBulkAdd}
-          placeholder="Select or create tags"
-          searchable
-          creatable
-          getCreateLabel={(query: string) => `+ Create ${query}`}
-          onCreate={(query: string) => {
-            const item = {value: query, label: query, group: 'Other'};
-            setTagsToBulkAdd((current) => [...current, query]);
-            return item;
-          }}
-          mb="md"
-        />
-        <Group position="right">
-          <Button
-            variant="default"
-            onClick={() => setIsAddTagsModalOpen(false)}
-          >
-            Cancel
-          </Button>
-          <Button loading={isBulkUpdating} onClick={handleBulkAddTags}>
-            Add Tags
-          </Button>
-        </Group>
-      </Modal>
+      {/* Mounted only while open, so closed dialogs leave no content behind. */}
+      {isAddTagsModalOpen && (
+        <Dialog
+          className="TranslationsTable__addTagsDialog"
+          open
+          onClose={() => setIsAddTagsModalOpen(false)}
+          title="Bulk Add Tags"
+          footer={
+            <>
+              <Button onClick={() => setIsAddTagsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                loading={isBulkUpdating}
+                onClick={handleBulkAddTags}
+              >
+                Add Tags
+              </Button>
+            </>
+          }
+        >
+          <p className="m-0 mb-4 text-sm">
+            The following tags will be added to the {rowData.length} strings
+            currently visible in the table.
+          </p>
+          <MultiSelect
+            aria-label="Tags to add"
+            data={availableTags}
+            value={tagsToBulkAdd}
+            onValueChange={setTagsToBulkAdd}
+            placeholder="Select or create tags"
+            creatable
+            getCreateLabel={(query: string) => `+ Create ${query}`}
+            onCreate={(query: string) => ({
+              value: query,
+              label: query,
+              group: 'Other',
+            })}
+          />
+        </Dialog>
+      )}
 
-      <Modal
-        opened={isRemoveTagsModalOpen}
-        onClose={() => setIsRemoveTagsModalOpen(false)}
-        title="Bulk Remove Tags"
-      >
-        <Text size="sm" mb="md">
-          The following tags will be removed from the {rowData.length} strings
-          currently visible in the table.
-        </Text>
-        <MultiSelect
-          data={availableTags}
-          value={tagsToBulkRemove}
-          onChange={setTagsToBulkRemove}
-          placeholder="Select tags to remove"
-          searchable
-          mb="md"
-        />
-        <Group position="right">
-          <Button
-            variant="default"
-            onClick={() => setIsRemoveTagsModalOpen(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            color="red"
-            loading={isBulkUpdating}
-            onClick={handleBulkRemoveTags}
-          >
-            Remove Tags
-          </Button>
-        </Group>
-      </Modal>
+      {isRemoveTagsModalOpen && (
+        <Dialog
+          className="TranslationsTable__removeTagsDialog"
+          open
+          onClose={() => setIsRemoveTagsModalOpen(false)}
+          title="Bulk Remove Tags"
+          footer={
+            <>
+              <Button onClick={() => setIsRemoveTagsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                loading={isBulkUpdating}
+                onClick={handleBulkRemoveTags}
+              >
+                Remove Tags
+              </Button>
+            </>
+          }
+        >
+          <p className="m-0 mb-4 text-sm">
+            The following tags will be removed from the {rowData.length} strings
+            currently visible in the table.
+          </p>
+          <MultiSelect
+            aria-label="Tags to remove"
+            data={availableTags}
+            value={tagsToBulkRemove}
+            onValueChange={setTagsToBulkRemove}
+            placeholder="Select tags to remove"
+          />
+        </Dialog>
+      )}
     </div>
   );
 }

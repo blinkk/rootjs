@@ -24,36 +24,6 @@ vi.mock('../PortTranslationsModal/PortTranslationsModal.js', () => ({
   usePortTranslationsModal: () => ({open: vi.fn()}),
 }));
 
-vi.mock('@mantine/core', async () => {
-  const actual: any = await vi.importActual('@mantine/core');
-  return {
-    ...actual,
-    ActionIcon: ({children, onClick, className}: any) => (
-      <button className={className} onClick={onClick}>
-        {children}
-      </button>
-    ),
-    Button: ({children, onClick, ...props}: any) => (
-      <button onClick={onClick} {...props}>
-        {children}
-      </button>
-    ),
-    Checkbox: ({label, checked, onChange}: any) => (
-      <input
-        type="checkbox"
-        aria-label={label}
-        checked={checked}
-        onChange={onChange}
-      />
-    ),
-    Textarea: ({value, onChange, placeholder}: any) => (
-      <textarea value={value} onChange={onChange} placeholder={placeholder} />
-    ),
-    Tooltip: ({children}: any) => <div>{children}</div>,
-    Loader: () => <div>Loading...</div>,
-  };
-});
-
 vi.mock('../../../../primitives/Toast/toastStore.js', () => ({
   showNotification: vi.fn(),
   updateNotification: vi.fn(),
@@ -103,10 +73,13 @@ describe('EditTranslationsModal', () => {
 
     render(<EditTranslationsModal {...defaultProps} />);
 
-    await vi.waitFor(() => {
-      const sourceHeader = screen.queryByText('SOURCE');
-      expect(sourceHeader).toBeFalsy();
-    });
+    // Wait for the translations to load, then check the table is hidden.
+    await vi.waitFor(() => screen.getByLabelText('Do not translate'));
+    expect(
+      (screen.getByLabelText('Do not translate') as HTMLInputElement).checked
+    ).toBe(true);
+    expect(screen.queryByText('SOURCE')).toBeFalsy();
+    expect(screen.queryByText('Hello World')).toBeFalsy();
   });
 
   it('should save metadata when save is clicked', async () => {
@@ -124,9 +97,9 @@ describe('EditTranslationsModal', () => {
     const textarea = screen.getByPlaceholderText(
       'Add context or notes for translators...'
     ) as HTMLTextAreaElement;
-    fireEvent.change(textarea, {target: {value: 'Important context'}});
+    fireEvent.input(textarea, {target: {value: 'Important context'}});
 
-    const saveButton = screen.getByText('Save') as HTMLButtonElement;
+    const saveButton = screen.getByRole('button', {name: 'Save'});
     fireEvent.click(saveButton);
 
     await vi.waitFor(() => {
@@ -153,7 +126,7 @@ describe('EditTranslationsModal', () => {
     ) as HTMLInputElement;
     fireEvent.click(checkbox);
 
-    const saveButton = screen.getByText('Save') as HTMLButtonElement;
+    const saveButton = screen.getByRole('button', {name: 'Save'});
     fireEvent.click(saveButton);
 
     await vi.waitFor(() => {
@@ -180,6 +153,6 @@ describe('EditTranslationsModal', () => {
     });
 
     // Should render but not crash
-    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Save'})).toBeTruthy();
   });
 });

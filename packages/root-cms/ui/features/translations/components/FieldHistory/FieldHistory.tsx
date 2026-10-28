@@ -1,6 +1,5 @@
 /** @fileoverview Displays the version history of a single field. */
 
-import {ActionIcon, Loader, Tooltip} from '@mantine/core';
 import {IconLanguage} from '@tabler/icons-preact';
 import {diffWordsWithSpace} from 'diff';
 import {useEffect, useState} from 'preact/hooks';
@@ -9,13 +8,14 @@ import {
   RichTextData,
   testSameRichTextContent,
 } from '../../../../../shared/richtext.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {richTextToPlainText} from '../../../documents/doc-changes.js';
 import {cmsListVersions, cmsReadDocVersion} from '../../../documents/doc.js';
 import {sourceHash} from '../../l10n.js';
-import './FieldHistory.css';
 
 /**
  * Below this ratio of unchanged text, a word diff is harder to read than the
@@ -121,32 +121,41 @@ export function FieldHistory(props: FieldHistoryProps) {
 
   if (loading) {
     return (
-      <div className="FieldHistory__loading">
-        <Loader size="sm" />
+      <div className="FieldHistory__loading flex justify-center py-10">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (fieldVersions.length === 0) {
-    return <div className="FieldHistory__empty">No history available.</div>;
+    return (
+      <div className="FieldHistory__empty py-10 text-center text-base">
+        No history available.
+      </div>
+    );
   }
 
   return (
-    <div className="FieldHistory">
+    <div className="FieldHistory flex flex-col">
       {fieldVersions.map((entry, i) => (
-        <div className="FieldHistory__entry" key={entry.versionId}>
-          <div className="FieldHistory__entry__header">
-            <span className="FieldHistory__entry__author">
+        <div
+          className="FieldHistory__entry border-0 border-b border-solid border-border py-4 last:border-b-0"
+          key={entry.versionId}
+        >
+          <div className="FieldHistory__header mb-2 flex flex-wrap items-center gap-2.5">
+            <span className="FieldHistory__author text-sm font-semibold">
               {entry.modifiedBy}
             </span>
-            <span className="FieldHistory__entry__date">
+            <span className="FieldHistory__date text-sm">
               {dateFormat.format(entry.modifiedAt)}
             </span>
             {i === 0 && (
-              <span className="FieldHistory__entry__badge">Current</span>
+              <span className="FieldHistory__badge rounded-full bg-info-soft px-2 py-0.5 text-xs font-semibold text-info">
+                Current
+              </span>
             )}
             {translatable && typeof entry.value === 'string' && entry.value && (
-              <span className="FieldHistory__entry__translationsLink">
+              <span className="FieldHistory__translationsLink ml-auto">
                 <TranslationsLink value={entry.value} />
               </span>
             )}
@@ -166,18 +175,24 @@ function FieldValue(props: {entry: FieldVersion; prevEntry?: FieldVersion}) {
   const {entry, prevEntry} = props;
   if (!entry.text) {
     return (
-      <div className="FieldHistory__entry__value">
-        <span className="FieldHistory__entry__empty">(empty)</span>
+      <div className="FieldHistory__value whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover p-2.5 text-sm leading-normal">
+        <span className="FieldHistory__emptyValue italic text-subtle">
+          (empty)
+        </span>
       </div>
     );
   }
   if (!isRichTextData(entry.value) || !prevEntry?.text) {
-    return <div className="FieldHistory__entry__value">{entry.text}</div>;
+    return (
+      <div className="FieldHistory__value whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover p-2.5 text-sm leading-normal">
+        {entry.text}
+      </div>
+    );
   }
   if (entry.text === prevEntry.text) {
     return (
-      <div className="FieldHistory__entry__value">
-        <div className="FieldHistory__entry__note">
+      <div className="FieldHistory__value whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover p-2.5 text-sm leading-normal">
+        <div className="FieldHistory__note mb-1.5 text-sm italic text-muted">
           Only the formatting or embedded content changed.
         </div>
         {entry.text}
@@ -191,16 +206,34 @@ function FieldValue(props: {entry: FieldVersion; prevEntry?: FieldVersion}) {
   const similarity =
     unchangedLength / Math.max(prevEntry.text.length, entry.text.length, 1);
   if (similarity < MIN_DIFF_SIMILARITY) {
-    return <div className="FieldHistory__entry__value">{entry.text}</div>;
+    return (
+      <div className="FieldHistory__value whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover p-2.5 text-sm leading-normal">
+        {entry.text}
+      </div>
+    );
   }
   return (
-    <div className="FieldHistory__entry__value">
+    <div className="FieldHistory__value whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover p-2.5 text-sm leading-normal">
       {parts.map((part, i) => {
         if (part.added) {
-          return <ins key={i}>{part.value}</ins>;
+          return (
+            <ins
+              key={i}
+              className="FieldHistory__added rounded-sm bg-success-soft text-success no-underline"
+            >
+              {part.value}
+            </ins>
+          );
         }
         if (part.removed) {
-          return <del key={i}>{part.value}</del>;
+          return (
+            <del
+              key={i}
+              className="FieldHistory__removed rounded-sm bg-danger-soft text-danger line-through decoration-danger-line"
+            >
+              {part.value}
+            </del>
+          );
         }
         return <span key={i}>{part.value}</span>;
       })}
@@ -223,17 +256,15 @@ function TranslationsLink(props: {value: string}) {
   }
 
   return (
-    <Tooltip label="Open in Translations Editor" withArrow position="right">
-      <ActionIcon
-        component="a"
-        href={href}
-        target="_blank"
-        variant="transparent"
-        size="sm"
-      >
-        <IconLanguage size={16} />
-      </ActionIcon>
-    </Tooltip>
+    <IconButton
+      href={href}
+      target="_blank"
+      size="xs"
+      label="Open in Translations Editor"
+      tooltipPlacement="right"
+    >
+      <IconLanguage />
+    </IconButton>
   );
 }
 

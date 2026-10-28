@@ -1,15 +1,4 @@
 import {
-  ActionIcon,
-  Badge,
-  Button,
-  Checkbox,
-  Loader,
-  Select,
-  TextInput,
-  Textarea,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowsTransferDown,
@@ -18,7 +7,7 @@ import {
   IconSearch,
   IconTrash,
 } from '@tabler/icons-preact';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useEffect, useId, useMemo, useState} from 'preact/hooks';
 import {
   ReplaceRule,
   applyReplaceRule,
@@ -29,16 +18,32 @@ import {
   rankBySimilarity,
 } from '../../../../../shared/translation-port.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../../primitives/Table/Table.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {logAction} from '../../../logs/actions.js';
 import {getTranslationForLanguage, getTranslationLanguage} from '../../l10n.js';
-import './PortTranslationsModal.css';
 
 const MODAL_ID = 'PortTranslationsModal';
 
@@ -123,6 +128,7 @@ export function PortTranslationsModal(
   /** Prompts that produced the current `aiResults`, for logging. */
   const [aiPrompts, setAiPrompts] = useState<string[]>([]);
   const aiEnabled = testAiEnabled();
+  const portFromLabelId = useId();
   const languages = useMemo(() => {
     const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
     const sourceLang = getTranslationLanguage(i18nConfig.defaultLocale || 'en');
@@ -441,30 +447,35 @@ export function PortTranslationsModal(
   }));
 
   return (
-    <div className="PortTranslationsModal">
+    <div className="PortTranslationsModal flex flex-col gap-4">
       <Text size="body-sm" color="gray">
         Copy the translations of an existing source string to this string, e.g.
         after the source string was edited slightly. Review the ported
         translations below before saving.
       </Text>
 
-      <div className="PortTranslationsModal__section">
-        <div className="PortTranslationsModal__label">Port to</div>
-        <div className="PortTranslationsModal__source">
-          {props.targetSource}
+      <div className="PortTranslationsModal__section flex flex-col gap-2">
+        <div className="PortTranslationsModal__label text-sm font-semibold">
+          Port to
         </div>
+        <div className={SOURCE_CLASSES}>{props.targetSource}</div>
       </div>
 
-      <div className="PortTranslationsModal__section">
-        <div className="PortTranslationsModal__label">Port from</div>
+      <div className="PortTranslationsModal__section flex flex-col gap-2">
+        <div
+          id={portFromLabelId}
+          className="PortTranslationsModal__label text-sm font-semibold"
+        >
+          Port from
+        </div>
         {loading ? (
-          <div className="PortTranslationsModal__loading">
-            <Loader color="gray" size="sm" />
+          <div className="PortTranslationsModal__loading flex items-center py-2 text-muted">
+            <Spinner />
           </div>
         ) : (
           <>
             <Select
-              size="xs"
+              aria-labelledby={portFromLabelId}
               searchable
               clearable
               placeholder={
@@ -473,21 +484,18 @@ export function PortTranslationsModal(
                   : 'No other translated strings found, look one up below'
               }
               nothingFound="No matching strings"
-              withinPortal
               data={selectData}
               value={selectedSource}
-              onChange={(value: string | null) => selectSource(value)}
+              onValueChange={(value) => selectSource(value)}
             />
-            <div className="PortTranslationsModal__lookup">
+            <div className="PortTranslationsModal__lookup flex items-center gap-2">
               <TextInput
-                className="PortTranslationsModal__lookup__input"
-                size="xs"
+                className="PortTranslationsModal__lookupInput min-w-0 flex-1"
+                aria-label="Old source string"
                 placeholder="Or paste the exact old source string to look it up"
                 value={lookupValue}
-                onChange={(e: Event) =>
-                  setLookupValue((e.target as HTMLInputElement).value)
-                }
-                onKeyDown={(e: KeyboardEvent) => {
+                onInput={(e) => setLookupValue(e.currentTarget.value)}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     lookup();
@@ -495,9 +503,7 @@ export function PortTranslationsModal(
                 }}
               />
               <Button
-                variant="default"
-                size="xs"
-                leftIcon={<IconSearch size={14} />}
+                icon={<IconSearch />}
                 loading={lookingUp}
                 disabled={!lookupValue.trim()}
                 onClick={() => lookup()}
@@ -511,8 +517,10 @@ export function PortTranslationsModal(
 
       {selectedCandidate && (
         <>
-          <div className="PortTranslationsModal__section">
-            <div className="PortTranslationsModal__label">Source changes</div>
+          <div className="PortTranslationsModal__section flex flex-col gap-2">
+            <div className="PortTranslationsModal__label text-sm font-semibold">
+              Source changes
+            </div>
             <SourceDiff
               oldSource={selectedCandidate.source}
               newSource={props.targetSource}
@@ -525,76 +533,73 @@ export function PortTranslationsModal(
             )}
           </div>
 
-          <div className="PortTranslationsModal__section">
-            <div className="PortTranslationsModal__label">Find and replace</div>
+          <div className="PortTranslationsModal__section flex flex-col gap-2">
+            <div className="PortTranslationsModal__label text-sm font-semibold">
+              Find and replace
+            </div>
             <Text size="body-sm" color="gray">
               Optionally update the ported translations, e.g. to replace a year
               or product name that changed in the source string.
             </Text>
-            <div className="PortTranslationsModal__rules">
+            <div className="PortTranslationsModal__rules flex flex-col gap-2">
               {rules.map((rule, i) => (
-                <div key={i} className="PortTranslationsModal__rule">
+                <div
+                  key={i}
+                  className="PortTranslationsModal__rule flex flex-wrap items-start gap-2"
+                >
                   <TextInput
-                    size="xs"
+                    className="PortTranslationsModal__ruleFind min-w-40 flex-1"
+                    aria-label="Find"
                     placeholder={rule.regex ? 'Find (regex)' : 'Find'}
                     value={rule.find}
                     error={ruleErrors[i]}
-                    onChange={(e: Event) =>
-                      updateRule(i, {
-                        find: (e.target as HTMLInputElement).value,
-                      })
+                    onInput={(e) =>
+                      updateRule(i, {find: e.currentTarget.value})
                     }
                   />
                   <TextInput
-                    size="xs"
+                    className="PortTranslationsModal__ruleReplace min-w-40 flex-1"
+                    aria-label="Replace"
                     placeholder={
                       rule.regex ? 'Replace ($1 for groups)' : 'Replace'
                     }
                     value={rule.replace}
-                    onChange={(e: Event) =>
-                      updateRule(i, {
-                        replace: (e.target as HTMLInputElement).value,
-                      })
+                    onInput={(e) =>
+                      updateRule(i, {replace: e.currentTarget.value})
                     }
                   />
-                  <Checkbox
-                    size="xs"
-                    label="Regex"
-                    checked={Boolean(rule.regex)}
-                    onChange={(e: Event) =>
-                      updateRule(i, {
-                        regex: (e.target as HTMLInputElement).checked,
-                      })
-                    }
-                  />
-                  <Checkbox
-                    size="xs"
-                    label="Match case"
-                    checked={Boolean(rule.caseSensitive)}
-                    onChange={(e: Event) =>
-                      updateRule(i, {
-                        caseSensitive: (e.target as HTMLInputElement).checked,
-                      })
-                    }
-                  />
-                  <Tooltip label="Remove rule" position="top" withArrow>
-                    <ActionIcon
+                  <div className="PortTranslationsModal__ruleOptions flex h-control-sm items-center gap-3">
+                    <Checkbox
+                      label="Regex"
+                      checked={Boolean(rule.regex)}
+                      onChange={(e) =>
+                        updateRule(i, {regex: e.currentTarget.checked})
+                      }
+                    />
+                    <Checkbox
+                      label="Match case"
+                      checked={Boolean(rule.caseSensitive)}
+                      onChange={(e) =>
+                        updateRule(i, {caseSensitive: e.currentTarget.checked})
+                      }
+                    />
+                    <IconButton
+                      className="PortTranslationsModal__ruleRemove"
+                      label="Remove rule"
                       variant="default"
-                      size="sm"
+                      size="xs"
                       onClick={() =>
                         setRules((current) => current.filter((_, j) => j !== i))
                       }
                     >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Tooltip>
+                      <IconTrash />
+                    </IconButton>
+                  </div>
                 </div>
               ))}
               <div>
                 <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconPlus size={14} />}
+                  icon={<IconPlus />}
                   onClick={() =>
                     setRules((current) => [...current, {find: '', replace: ''}])
                   }
@@ -606,8 +611,8 @@ export function PortTranslationsModal(
           </div>
 
           {aiEnabled && (
-            <div className="PortTranslationsModal__section">
-              <div className="PortTranslationsModal__label">
+            <div className="PortTranslationsModal__section flex flex-col gap-2">
+              <div className="PortTranslationsModal__label text-sm font-semibold">
                 Transform with AI
               </div>
               <Text size="body-sm" color="gray">
@@ -615,20 +620,18 @@ export function PortTranslationsModal(
                 translations, e.g. "Change the year to 2026" or "Use the
                 informal tone".
               </Text>
-              <div className="PortTranslationsModal__ai">
+              <div className="PortTranslationsModal__ai flex flex-wrap items-start gap-2">
                 <Textarea
-                  className="PortTranslationsModal__ai__input"
-                  size="xs"
+                  className="PortTranslationsModal__aiInput min-w-48 flex-1"
+                  aria-label="AI transformation"
                   autosize
                   minRows={1}
                   maxRows={6}
                   placeholder="Describe the transformation"
                   value={aiPrompt}
                   disabled={aiTransforming}
-                  onChange={(e: Event) =>
-                    setAiPrompt((e.target as HTMLTextAreaElement).value)
-                  }
-                  onKeyDown={(e: KeyboardEvent) => {
+                  onInput={(e) => setAiPrompt(e.currentTarget.value)}
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
                       aiTransform();
@@ -636,9 +639,7 @@ export function PortTranslationsModal(
                   }}
                 />
                 <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconRobot size={14} />}
+                  icon={<IconRobot />}
                   loading={aiTransforming}
                   disabled={!aiPrompt.trim()}
                   onClick={() => aiTransform()}
@@ -646,189 +647,119 @@ export function PortTranslationsModal(
                   Transform
                 </Button>
                 {Object.keys(aiResults).length > 0 && (
-                  <Tooltip label="Discard AI changes" position="top" withArrow>
-                    <ActionIcon
-                      variant="default"
-                      size="md"
-                      disabled={aiTransforming}
-                      onClick={() => {
-                        setAiResults({});
-                        setAiPrompts([]);
-                      }}
-                    >
-                      <IconArrowBackUp size={14} />
-                    </ActionIcon>
-                  </Tooltip>
+                  <IconButton
+                    label="Discard AI changes"
+                    variant="default"
+                    disabled={aiTransforming}
+                    onClick={() => {
+                      setAiResults({});
+                      setAiPrompts([]);
+                    }}
+                  >
+                    <IconArrowBackUp />
+                  </IconButton>
                 )}
               </div>
             </div>
           )}
 
-          <div className="PortTranslationsModal__section">
-            <div className="PortTranslationsModal__label">Translations</div>
-            <table className="PortTranslationsModal__table">
-              <thead>
-                <tr>
-                  <th />
-                  <th>lang</th>
-                  <th>from</th>
-                  <th>ported</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="PortTranslationsModal__section flex flex-col gap-2">
+            <div className="PortTranslationsModal__label text-sm font-semibold">
+              Translations
+            </div>
+            <Table
+              dense
+              label="Translations"
+              tableClassName="PortTranslationsModal__table min-w-120"
+            >
+              <TableHead>
+                <TableRow className="bg-surface-hover">
+                  <TableHeaderCell className="w-px">
+                    <span className="sr-only">Port</span>
+                  </TableHeaderCell>
+                  <TableHeaderCell className="w-px">lang</TableHeaderCell>
+                  <TableHeaderCell>from</TableHeaderCell>
+                  <TableHeaderCell>ported</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {rows.map((row) => (
-                  <tr
+                  <TableRow
                     key={row.lang}
-                    className={joinClassNames(
-                      !row.from && 'PortTranslationsModal__table__row--empty'
+                    className={cn(
+                      !row.from &&
+                        'PortTranslationsModal__tableRow--empty text-subtle'
                     )}
                   >
-                    <td className="PortTranslationsModal__table__checkbox">
+                    <TableCell className="PortTranslationsModal__tableCheckbox w-px align-top">
                       <Checkbox
-                        size="xs"
                         aria-label={`Port ${row.lang}`}
                         disabled={!row.from}
                         checked={selectedLangs.has(row.lang)}
-                        onChange={(e: Event) =>
-                          toggleLang(
-                            row.lang,
-                            (e.target as HTMLInputElement).checked
-                          )
+                        onChange={(e) =>
+                          toggleLang(row.lang, e.currentTarget.checked)
                         }
                       />
-                    </td>
-                    <td className="PortTranslationsModal__table__lang">
+                    </TableCell>
+                    <TableCell className="PortTranslationsModal__tableLang w-px whitespace-nowrap align-top font-medium">
                       {row.lang}
-                    </td>
-                    <td className="PortTranslationsModal__table__from">
+                    </TableCell>
+                    <TableCell className="PortTranslationsModal__tableFrom w-2/5 whitespace-pre-wrap break-words align-top">
                       {row.from || (
-                        <span className="PortTranslationsModal__table__none">
+                        <span className="PortTranslationsModal__tableNone italic">
                           no translation
                         </span>
                       )}
-                    </td>
-                    <td className="PortTranslationsModal__table__value">
+                    </TableCell>
+                    <TableCell className="PortTranslationsModal__tableValue align-top">
                       {row.from && (
                         <>
                           <Textarea
-                            size="xs"
+                            aria-label={`Ported ${row.lang} translation`}
                             autosize
                             minRows={1}
                             value={row.value}
-                            onChange={(e: Event) => {
-                              const value = (e.target as HTMLTextAreaElement)
-                                .value;
+                            onInput={(e) => {
+                              const value = e.currentTarget.value;
                               setOverrides((current) => ({
                                 ...current,
                                 [row.lang]: value,
                               }));
                             }}
                           />
-                          <div className="PortTranslationsModal__table__badges">
-                            {row.modified && (
-                              <Badge size="xs" color="blue" variant="outline">
-                                modified
-                              </Badge>
-                            )}
-                            {row.aiTransformed && (
-                              <Badge size="xs" color="violet" variant="outline">
-                                AI
-                              </Badge>
-                            )}
-                            {row.existing && (
-                              <Tooltip
-                                label={`Current: ${row.existing}`}
-                                position="top"
-                                withArrow
-                                wrapLines
-                                width={300}
-                              >
-                                <Badge
-                                  size="xs"
-                                  color="orange"
-                                  variant="outline"
-                                >
-                                  replaces existing
-                                </Badge>
-                              </Tooltip>
-                            )}
-                            {(row.placeholders.missing.length > 0 ||
-                              row.placeholders.extra.length > 0) && (
-                              <Tooltip
-                                label={formatPlaceholderWarning(
-                                  row.placeholders
-                                )}
-                                position="top"
-                                withArrow
-                                wrapLines
-                                width={300}
-                              >
-                                <Badge
-                                  size="xs"
-                                  color="red"
-                                  variant="outline"
-                                  leftSection={<IconAlertTriangle size={10} />}
-                                >
-                                  placeholders
-                                </Badge>
-                              </Tooltip>
-                            )}
-                            {(row.overridden || row.aiTransformed) && (
-                              <Tooltip
-                                label={
-                                  row.overridden
-                                    ? 'Discard manual edits'
-                                    : 'Discard AI changes'
-                                }
-                                position="top"
-                                withArrow
-                              >
-                                <ActionIcon
-                                  size="xs"
-                                  onClick={() => {
-                                    const discard = (
-                                      current: Record<string, string>
-                                    ) => {
-                                      const next = {...current};
-                                      delete next[row.lang];
-                                      return next;
-                                    };
-                                    if (row.overridden) {
-                                      setOverrides(discard);
-                                    } else {
-                                      setAiResults(discard);
-                                    }
-                                  }}
-                                >
-                                  <IconArrowBackUp size={12} />
-                                </ActionIcon>
-                              </Tooltip>
-                            )}
-                          </div>
+                          <RowBadges
+                            row={row}
+                            onDiscard={() => {
+                              const discard = (
+                                current: Record<string, string>
+                              ) => {
+                                const next = {...current};
+                                delete next[row.lang];
+                                return next;
+                              };
+                              if (row.overridden) {
+                                setOverrides(discard);
+                              } else {
+                                setAiResults(discard);
+                              }
+                            }}
+                          />
                         </>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </>
       )}
 
-      <div className="PortTranslationsModal__actions">
+      <div className="PortTranslationsModal__actions sticky -bottom-5 z-10 -mb-5 flex justify-end gap-2 border-0 border-t border-solid border-border bg-surface pt-3 pb-5">
+        <Button onClick={() => context.closeModal(id)}>Cancel</Button>
         <Button
-          variant="default"
-          size="xs"
-          onClick={() => context.closeModal(id)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="filled"
-          size="xs"
-          color="dark"
-          leftIcon={<IconArrowsTransferDown size={14} />}
+          variant="primary"
+          icon={<IconArrowsTransferDown />}
           loading={saving}
           disabled={rowsToSave.length === 0}
           onClick={() => onSave()}
@@ -843,6 +774,78 @@ export function PortTranslationsModal(
 
 PortTranslationsModal.id = MODAL_ID;
 
+/** Classes for the boxes that show a source string. */
+const SOURCE_CLASSES =
+  'PortTranslationsModal__source whitespace-pre-wrap break-words rounded-sm border border-solid border-border bg-surface-hover px-3 py-2 text-base leading-normal';
+
+/** The status badges (and discard button) under a ported translation. */
+function RowBadges(props: {
+  row: {
+    existing: string;
+    modified: boolean;
+    overridden: boolean;
+    aiTransformed: boolean;
+    placeholders: {missing: string[]; extra: string[]};
+  };
+  onDiscard: () => void;
+}) {
+  const {row} = props;
+  const hasPlaceholderWarning =
+    row.placeholders.missing.length > 0 || row.placeholders.extra.length > 0;
+  if (
+    !row.modified &&
+    !row.aiTransformed &&
+    !row.existing &&
+    !hasPlaceholderWarning &&
+    !row.overridden
+  ) {
+    return null;
+  }
+  return (
+    <div className="PortTranslationsModal__tableBadges mt-1 flex flex-wrap items-center gap-1">
+      {row.modified && (
+        <Badge size="xs" tone="info" variant="outline">
+          modified
+        </Badge>
+      )}
+      {row.aiTransformed && (
+        <Badge size="xs" variant="outline" icon={<IconRobot />}>
+          AI
+        </Badge>
+      )}
+      {row.existing && (
+        <Tooltip label={`Current: ${row.existing}`}>
+          <Badge size="xs" tone="warning" variant="outline" tabIndex={0}>
+            replaces existing
+          </Badge>
+        </Tooltip>
+      )}
+      {hasPlaceholderWarning && (
+        <Tooltip label={formatPlaceholderWarning(row.placeholders)}>
+          <Badge
+            size="xs"
+            tone="danger"
+            variant="outline"
+            icon={<IconAlertTriangle />}
+            tabIndex={0}
+          >
+            placeholders
+          </Badge>
+        </Tooltip>
+      )}
+      {(row.overridden || row.aiTransformed) && (
+        <IconButton
+          size="xs"
+          label={row.overridden ? 'Discard manual edits' : 'Discard AI changes'}
+          onClick={props.onDiscard}
+        >
+          <IconArrowBackUp />
+        </IconButton>
+      )}
+    </div>
+  );
+}
+
 /** Renders a word-level diff between two source strings. */
 function SourceDiff(props: {oldSource: string; newSource: string}) {
   const ops = useMemo(
@@ -850,13 +853,21 @@ function SourceDiff(props: {oldSource: string; newSource: string}) {
     [props.oldSource, props.newSource]
   );
   return (
-    <div className="PortTranslationsModal__source PortTranslationsModal__diff">
+    <div className={cn(SOURCE_CLASSES, 'PortTranslationsModal__diff')}>
       {ops.map((op, i) => {
         if (op.type === 'delete') {
-          return <del key={i}>{op.text}</del>;
+          return (
+            <del key={i} className="bg-danger-soft text-danger">
+              {op.text}
+            </del>
+          );
         }
         if (op.type === 'insert') {
-          return <ins key={i}>{op.text}</ins>;
+          return (
+            <ins key={i} className="bg-success-soft text-success no-underline">
+              {op.text}
+            </ins>
+          );
         }
         return <span key={i}>{op.text}</span>;
       })}

@@ -1,9 +1,7 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
-import './PortTranslationsModal.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render} from '@testing-library/preact';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {page} from 'vitest/browser';
@@ -37,7 +35,7 @@ function getPortedValues(): Record<string, string> {
   document
     .querySelectorAll('.PortTranslationsModal__table tbody tr')
     .forEach((row) => {
-      const lang = row.querySelector('.PortTranslationsModal__table__lang');
+      const lang = row.querySelector('.PortTranslationsModal__tableLang');
       const textarea = row.querySelector('textarea');
       if (lang && textarea) {
         values[lang.textContent || ''] = textarea.value;
@@ -75,16 +73,15 @@ function renderModal(overrides?: Partial<PortTranslationsModalProps>) {
     },
   };
   render(
-    <MantineProvider>
-      <ModalsProvider>
-        <div
-          data-testid="wrapper"
-          style={{width: 960, padding: 20, background: '#fff'}}
-        >
-          <PortTranslationsModal {...props} />
-        </div>
-      </ModalsProvider>
-    </MantineProvider>
+    <ModalsProvider>
+      <div
+        data-testid="wrapper"
+        className="bg-surface p-5"
+        style={{width: 960}}
+      >
+        <PortTranslationsModal {...props} />
+      </div>
+    </ModalsProvider>
   );
   return {onSave, closeModal};
 }

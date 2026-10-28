@@ -1,9 +1,7 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
-import './FieldHistory.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render, cleanup} from '@testing-library/preact';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {page} from 'vitest/browser';
@@ -123,11 +121,7 @@ vi.mock('../../../documents/doc.js', () => ({
 }));
 
 function TestWrapper({children}: {children: any}) {
-  return (
-    <MantineProvider>
-      <div data-testid="wrapper">{children}</div>
-    </MantineProvider>
-  );
+  return <div data-testid="wrapper">{children}</div>;
 }
 
 beforeEach(async () => {

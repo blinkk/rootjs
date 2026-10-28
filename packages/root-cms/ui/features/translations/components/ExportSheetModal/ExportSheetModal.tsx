@@ -1,8 +1,5 @@
-import {Button, Checkbox, Select, TextInput, Tooltip} from '@mantine/core';
 import {IconExternalLink} from '@tabler/icons-preact';
-import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
-import {Text} from '../../../../components/Text/Text.js';
 import {useSiteSettings} from '../../../../hooks/useSiteSettings.js';
 import {
   GSheet,
@@ -12,17 +9,21 @@ import {
   parseSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {cmsLinkGoogleSheetL10n} from '../../../documents/doc.js';
-import './ExportSheetModal.css';
 
 const MODAL_ID = 'ExportSheetModal';
 
@@ -58,7 +59,7 @@ export function ExportSheetModal(
   const [done, setDone] = useState(false);
   const gapiClient = useGapiClient();
   const siteSettings = useSiteSettings();
-  const shareCheckboxRef = useRef<HTMLInputElement>();
+  const shareCheckboxRef = useRef<HTMLInputElement>(null);
 
   const googleDriveFolder = parseGoogleDriveFolder(
     siteSettings.settings.googleDriveFolder
@@ -68,17 +69,19 @@ export function ExportSheetModal(
     {
       value: 'new-sheet',
       label: 'Create Google Sheet',
-      help: 'Creates a new Google Sheet and exports strings to the sheet.',
+      description:
+        'Creates a new Google Sheet and exports strings to the sheet.',
     },
     {
       value: 'add-tab',
       label: 'Add tab in Google Sheet',
-      help: 'Adds a new tab in an existing Google Sheet and exports strings to the sheet.',
+      description:
+        'Adds a new tab in an existing Google Sheet and exports strings to the sheet.',
     },
     {
       value: 'link-sheet',
       label: 'Link Google Sheet',
-      help: 'Links an existing Google Sheet without exporting strings.',
+      description: 'Links an existing Google Sheet without exporting strings.',
     },
   ];
 
@@ -384,34 +387,30 @@ export function ExportSheetModal(
   return (
     <div className="ExportSheetModal">
       <div className="ExportSheetModal__content">
-        <div className="ExportSheetModal__content__body">
+        <div className="ExportSheetModal__body text-base">
           Export strings to Google Sheet or link an existing Google Sheet for
           managing translations.
         </div>
         <form className="ExportSheetModal__form">
-          <div className="ExportSheetModal__form__section">
-            <div className="ExportSheetModal__form__description">
-              Export options:
-            </div>
+          <div className="ExportSheetModal__section mt-5">
             <Select
+              label="Export options:"
               disabled={done || loading}
-              itemComponent={ExportSheetModal.SelectItem}
               data={selectItems}
-              onChange={(e) => {
-                setAction(e);
-                if (e === 'new-sheet') {
+              onValueChange={(value) => {
+                const next = value as Action;
+                setAction(next);
+                if (next === 'new-sheet') {
                   setSheetUrl('');
                 }
               }}
               value={action}
             />
           </div>
-          <div className="ExportSheetModal__form__section">
-            <div className="ExportSheetModal__form__description">
-              Google Sheet URL:
-            </div>
+          <div className="ExportSheetModal__section mt-5">
             {action === 'new-sheet' ? (
               <TextInput
+                label="Google Sheet URL:"
                 disabled={true}
                 placeholder={
                   siteSettings.settings.googleDriveFolder
@@ -421,23 +420,20 @@ export function ExportSheetModal(
               />
             ) : (
               <TextInput
+                label="Google Sheet URL:"
                 placeholder="https://docs.google.com/spreadsheets/d/..."
                 value={sheetUrl}
                 disabled={done || loading}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setSheetUrl(e.currentTarget.value)
-                }
+                onInput={(e) => setSheetUrl(e.currentTarget.value)}
               />
             )}
           </div>
           {action === 'new-sheet' && (
-            <div className="ExportSheetModal__form__section">
+            <div className="ExportSheetModal__section mt-5">
               <Tooltip
                 label="Whether to share the Google Sheet with Admins and Editors upon creation. If your site has a Google Drive folder configured, the sheet will be created within it and inherit its permissions."
-                wrapLines
-                width={320}
-                withArrow
-                position="bottom"
+                contentClassName="max-w-80"
+                placement="bottom"
               >
                 <Checkbox
                   disabled={done || loading}
@@ -450,46 +446,29 @@ export function ExportSheetModal(
               </Tooltip>
             </div>
           )}
-          <div className="ExportSheetModal__form__buttons">
+          <div className="ExportSheetModal__buttons mt-10 flex flex-wrap justify-end gap-3">
             {done ? (
               <>
                 <Button
-                  component="a"
                   target="_blank"
                   rel="noopener noreferrer"
                   href={sheetUrl}
-                  variant="default"
-                  size="xs"
-                  color="dark"
-                  rightIcon={<IconExternalLink size={16} />}
+                  iconRight={<IconExternalLink />}
                 >
                   Open Google Sheet
                 </Button>
                 <Button
-                  variant="filled"
+                  variant="primary"
                   onClick={() => context.closeModal(id)}
-                  type="button"
-                  size="xs"
-                  color="primary"
                 >
                   Done
                 </Button>
               </>
             ) : (
               <>
+                <Button onClick={() => context.closeModal(id)}>Cancel</Button>
                 <Button
-                  variant="outline"
-                  onClick={() => context.closeModal(id)}
-                  type="button"
-                  size="xs"
-                  color="dark"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="filled"
-                  size="xs"
-                  color="primary"
+                  variant="primary"
                   loading={loading}
                   disabled={buttonDisabled}
                   onClick={() => onSubmit()}
@@ -506,21 +485,5 @@ export function ExportSheetModal(
     </div>
   );
 }
-
-ExportSheetModal.SelectItem = forwardRef(
-  (props: {label: string; help: string; ref: any}) => {
-    const {label, help, ...selectProps} = props;
-    return (
-      <div className="ExportSheetModal__SelectItem" {...selectProps}>
-        <Text className="ExportSheetModal__SelectItem__label" size="body">
-          {label}
-        </Text>
-        <Text className="ExportSheetModal__SelectItem__help" size="body-sm">
-          {help}
-        </Text>
-      </div>
-    );
-  }
-);
 
 ExportSheetModal.id = MODAL_ID;

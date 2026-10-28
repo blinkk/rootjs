@@ -1,14 +1,14 @@
-import {Button, Loader} from '@mantine/core';
 import {IconScissors} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {batchUpdateTags, loadTranslations, sourceHash} from '../../l10n.js';
-import './PruneTranslationsModal.css';
 
 const MODAL_ID = 'PruneTranslationsModal';
 
@@ -114,7 +114,7 @@ export function PruneTranslationsModal(
   }
 
   return (
-    <div className="PruneTranslationsModal">
+    <div className="PruneTranslationsModal flex flex-col gap-4">
       <div className="PruneTranslationsModal__description">
         <Text size="body">
           Pruning removes the <strong>{props.docId}</strong> tag from
@@ -125,8 +125,8 @@ export function PruneTranslationsModal(
       </div>
 
       {loading && (
-        <div className="PruneTranslationsModal__loading">
-          <Loader color="gray" size="sm" />
+        <div className="PruneTranslationsModal__loading flex items-center gap-2 py-4 text-muted">
+          <Spinner label={null} />
           <Text size="body" color="gray">
             Scanning for unused strings…
           </Text>
@@ -134,7 +134,7 @@ export function PruneTranslationsModal(
       )}
 
       {!loading && unusedEntries.length === 0 && (
-        <div className="PruneTranslationsModal__empty">
+        <div className="PruneTranslationsModal__empty py-4">
           <Text size="body" color="gray">
             All translations tagged with "{props.docId}" are still in use.
             Nothing to prune.
@@ -148,11 +148,11 @@ export function PruneTranslationsModal(
             {unusedEntries.length} unused string
             {unusedEntries.length !== 1 ? 's' : ''} will be untagged:
           </Text>
-          <div className="PruneTranslationsModal__list">
+          <div className="PruneTranslationsModal__list max-h-60 overflow-y-auto rounded-sm border border-solid border-border">
             {unusedEntries.map((entry) => (
               <div
                 key={entry.hash}
-                className="PruneTranslationsModal__list__item"
+                className="PruneTranslationsModal__listItem break-words border-0 border-b border-solid border-border px-2.5 py-1.5 font-mono text-sm last:border-b-0"
               >
                 <Text size="body-sm">{entry.source}</Text>
               </div>
@@ -161,19 +161,13 @@ export function PruneTranslationsModal(
         </>
       )}
 
-      <div className="PruneTranslationsModal__actions">
-        <Button
-          variant="default"
-          size="xs"
-          onClick={() => context.closeModal(id)}
-        >
+      <div className="PruneTranslationsModal__actions flex justify-end gap-2 pt-2">
+        <Button variant="default" onClick={() => context.closeModal(id)}>
           Cancel
         </Button>
         <Button
-          variant="filled"
-          size="xs"
-          color="red"
-          leftIcon={<IconScissors size={14} />}
+          variant="danger"
+          icon={<IconScissors />}
           loading={pruning}
           disabled={loading || unusedEntries.length === 0}
           onClick={onConfirm}

@@ -1,36 +1,36 @@
-import './EditTranslationsModal.css';
-
-import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Loader,
-  Textarea,
-  Tooltip,
-} from '@mantine/core';
 import {
   IconArrowsTransferDown,
   IconExternalLink,
   IconInfoCircle,
   IconRobot,
-  IconLoader2,
 } from '@tabler/icons-preact';
-import {ChangeEvent} from 'preact/compat';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useId, useState} from 'preact/hooks';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+} from '../../../../primitives/Tabs/Tabs.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testAiEnabled} from '../../../ai/ai.js';
@@ -109,6 +109,7 @@ export function EditTranslationsModal(
     'translations'
   );
   const portModal = usePortTranslationsModal();
+  const descriptionId = useId();
 
   // Use draft from props (passed from DocEditor).
   const draft = props.draft || null;
@@ -343,202 +344,164 @@ export function EditTranslationsModal(
     return false;
   }
 
+  const translationsContent = (
+    <>
+      <div className="EditTranslationsModal__controls mb-8 flex flex-col gap-4 rounded-sm border border-solid border-border bg-surface-hover p-4 md:p-5">
+        <div className="EditTranslationsModal__controlsDoNotTranslate flex items-center gap-1.5">
+          <Checkbox
+            label="Do not translate"
+            checked={doNotTranslate}
+            onChange={(e) => {
+              setDoNotTranslate(e.currentTarget.checked);
+              setHasChanges(true);
+            }}
+          />
+          <InfoTooltip label="Prevent the string from being included for translation" />
+        </div>
+
+        <div className="EditTranslationsModal__controlsDescription text-base">
+          <div className="EditTranslationsModal__controlsDescriptionLabel mb-2 flex items-center gap-1.5 font-semibold">
+            <label htmlFor={descriptionId}>Description</label>
+            <InfoTooltip label="Translator notes may be included when the string is extracted and sent for translation" />
+          </div>
+          <Textarea
+            id={descriptionId}
+            autosize
+            minRows={1}
+            maxRows={6}
+            value={description}
+            placeholder="Add context or notes for translators..."
+            onInput={(e) => {
+              setDescription(e.currentTarget.value);
+              setHasChanges(true);
+            }}
+          />
+        </div>
+      </div>
+
+      {!doNotTranslate && (
+        <table className="EditTranslationsModal__table block w-full border-collapse md:table">
+          <thead className="EditTranslationsModal__tableHead hidden md:table-header-group">
+            <tr>
+              <th className="w-2/5 py-4 pr-2.5 pl-2.5 text-left align-middle">
+                <Heading size="h4" weight="semi-bold">
+                  SOURCE
+                </Heading>
+              </th>
+              <th className="py-4 pr-2.5 pl-10 text-left">
+                {/* Fixed height, so the AI button doesn't shift the layout. */}
+                <div className="flex h-control-md items-center justify-between">
+                  <Heading size="h4" weight="semi-bold">
+                    TRANSLATIONS
+                  </Heading>
+                  {shouldShowAiButton() && (
+                    <IconButton
+                      className="EditTranslationsModal__aiButton"
+                      label="Generate quick translations using AI"
+                      tooltipPlacement="left"
+                      variant="default"
+                      onClick={generateAiTranslations}
+                      loading={aiGenerating}
+                    >
+                      <IconRobot stroke={1.5} />
+                    </IconButton>
+                  )}
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="block md:table-row-group">
+            {strings.map((source) => (
+              <tr
+                key={source}
+                className="EditTranslationsModal__tableRow block border-0 border-t border-solid border-border py-4 md:table-row md:py-0"
+              >
+                <td className="block pb-3 align-top md:table-cell md:w-2/5 md:px-2.5 md:py-5">
+                  <div className="EditTranslationsModal__tableSource group sticky top-0 w-full whitespace-pre-wrap rounded-sm border border-solid border-border bg-surface-hover p-2.5 pr-10 text-sm leading-normal">
+                    {source}
+                    <span className="EditTranslationsModal__tableSourcePort absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
+                      <IconButton
+                        className="EditTranslationsModal__tableSourcePortButton"
+                        size="xs"
+                        variant="default"
+                        label="Port translations from another string"
+                        onClick={() => openPortModal(source)}
+                      >
+                        <IconArrowsTransferDown />
+                      </IconButton>
+                    </span>
+                  </div>
+                </td>
+                <td className="block md:table-cell md:py-5 md:pr-2.5 md:pl-10">
+                  <EditTranslationsModal.StringsEditor
+                    source={source}
+                    locales={i18nLocales}
+                    translations={translationsMap[source] || {}}
+                    onChange={onChange}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {!doNotTranslate && shouldShowAiButton() && (
+        <div className="EditTranslationsModal__aiMobile mb-4 md:hidden">
+          <Button
+            icon={<IconRobot stroke={1.5} />}
+            loading={aiGenerating}
+            onClick={generateAiTranslations}
+          >
+            Generate translations with AI
+          </Button>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="EditTranslationsModal">
       {loading ? (
-        <Loader />
-      ) : (
-        <>
-          {props.field?.deepKey && (
-            <div className="EditTranslationsModal__tabs">
-              <button
-                type="button"
-                className={joinClassNames(
-                  'EditTranslationsModal__tabs__tab',
-                  activeTab === 'translations' && 'active'
-                )}
-                onClick={() => setActiveTab('translations')}
-              >
-                Translations
-              </button>
-              <button
-                type="button"
-                className={joinClassNames(
-                  'EditTranslationsModal__tabs__tab',
-                  activeTab === 'history' && 'active'
-                )}
-                onClick={() => setActiveTab('history')}
-              >
-                History
-              </button>
-            </div>
-          )}
-
-          {activeTab === 'history' && props.field?.deepKey ? (
+        <Spinner />
+      ) : props.field?.deepKey ? (
+        <Tabs
+          className="EditTranslationsModal__tabs"
+          value={activeTab}
+          onChange={(value) =>
+            setActiveTab(value as 'translations' | 'history')
+          }
+        >
+          <TabList className="mb-2" aria-label="Translation views">
+            <Tab value="translations">Translations</Tab>
+            <Tab value="history">History</Tab>
+          </TabList>
+          <TabPanel value="translations">{translationsContent}</TabPanel>
+          <TabPanel value="history">
             <FieldHistory
               docId={props.docId}
               deepKey={props.field.deepKey}
               translatable={true}
             />
-          ) : (
-            <>
-              <div className="EditTranslationsModal__controls">
-                <div className="EditTranslationsModal__controls__doNotTranslate">
-                  <Checkbox
-                    label="Do not translate"
-                    checked={doNotTranslate}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setDoNotTranslate(e.currentTarget.checked);
-                      setHasChanges(true);
-                    }}
-                    size="sm"
-                  />
-                  <Tooltip
-                    label="Prevent the string from being included for translation"
-                    withArrow
-                    position="right"
-                  >
-                    <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
-                  </Tooltip>
-                </div>
-
-                <div className="EditTranslationsModal__controls__description">
-                  <div className="EditTranslationsModal__controls__description__label">
-                    <span>Description</span>
-                    <Tooltip
-                      label="Translator notes may be included when the string is extracted and sent for translation"
-                      withArrow
-                      position="right"
-                    >
-                      <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
-                    </Tooltip>
-                  </div>
-                  <Textarea
-                    size="sm"
-                    autosize
-                    minRows={1}
-                    maxRows={6}
-                    value={description}
-                    placeholder="Add context or notes for translators..."
-                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                      setDescription(e.currentTarget.value);
-                      setHasChanges(true);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <table className="EditTranslationsModal__table">
-                <thead
-                  style={{
-                    display: doNotTranslate ? 'none' : 'table-header-group',
-                  }}
-                >
-                  <tr>
-                    <th>
-                      <Heading size="h4" weight="semi-bold">
-                        SOURCE
-                      </Heading>
-                    </th>
-                    <th>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <Heading size="h4" weight="semi-bold">
-                          TRANSLATIONS
-                        </Heading>
-                        {shouldShowAiButton() && (
-                          <Tooltip
-                            label="Generate quick translations using AI"
-                            withArrow
-                            position="left"
-                          >
-                            <ActionIcon
-                              variant="outline"
-                              onClick={generateAiTranslations}
-                              loading={aiGenerating}
-                              disabled={aiGenerating}
-                              sx={{
-                                height: 30,
-                                width: 30,
-                                borderColor: '#ced4da',
-                              }}
-                            >
-                              {aiGenerating ? (
-                                <IconLoader2 size={16} />
-                              ) : (
-                                <IconRobot size={16} stroke={1.5} />
-                              )}
-                            </ActionIcon>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {strings.map((source) => (
-                    <tr
-                      style={{display: doNotTranslate ? 'none' : 'table-row'}}
-                    >
-                      <td>
-                        <div className="EditTranslationsModal__table__source">
-                          {source}
-                          <Tooltip
-                            className="EditTranslationsModal__table__source__port"
-                            label="Port translations from another string"
-                            position="top"
-                            withArrow
-                          >
-                            <ActionIcon
-                              className="EditTranslationsModal__table__source__portButton"
-                              size="sm"
-                              variant="subtle"
-                              aria-label="Port translations from another string"
-                              onClick={() => openPortModal(source)}
-                            >
-                              <IconArrowsTransferDown size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        </div>
-                      </td>
-                      <td>
-                        <EditTranslationsModal.StringsEditor
-                          source={source}
-                          locales={i18nLocales}
-                          translations={translationsMap[source] || {}}
-                          onChange={onChange}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
-        </>
+          </TabPanel>
+        </Tabs>
+      ) : (
+        translationsContent
       )}
 
-      <div className="EditTranslationsModal__footer">
-        <div className="EditTranslationsModal__footer__left">
+      <div className="EditTranslationsModal__footer sticky -bottom-5 z-10 -mb-5 mt-5 pb-5 flex flex-col gap-4 border-0 border-t border-solid border-border bg-surface px-2.5 pt-5 md:flex-row md:items-start md:justify-between md:gap-5">
+        <div className="EditTranslationsModal__footerLeft flex flex-col items-start gap-3">
           <Button
-            component="a"
             href={`/cms/translations/${props.docId}`}
             target="_blank"
-            variant="default"
-            size="xs"
-            rightIcon={<IconExternalLink size={14} />}
+            iconRight={<IconExternalLink />}
           >
             Open Translations Editor
           </Button>
           {props.l10nSheet && (
-            <div className="EditTranslationsModal__footer__gsheet">
+            <div className="EditTranslationsModal__footerGsheet text-base leading-normal">
               <strong>NOTE:</strong> Translations for this doc are managed in{' '}
               <a
+                className="text-link"
                 href={getSpreadsheetUrl(props.l10nSheet)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -548,20 +511,12 @@ export function EditTranslationsModal(
             </div>
           )}
         </div>
-        <div className="EditTranslationsModal__footer__buttons">
-          <Button
-            variant="default"
-            size="xs"
-            color="dark"
-            type="button"
-            onClick={() => context.closeModal(id)}
-          >
+        <div className="EditTranslationsModal__footerButtons flex shrink-0 justify-end gap-3">
+          <Button type="button" onClick={() => context.closeModal(id)}>
             Cancel
           </Button>
           <Button
-            variant="filled"
-            size="xs"
-            color="dark"
+            variant="primary"
             onClick={() => onSave()}
             disabled={!hasChanges}
             loading={saving}
@@ -571,6 +526,22 @@ export function EditTranslationsModal(
         </div>
       </div>
     </div>
+  );
+}
+
+/** An info icon that explains a control in a tooltip. */
+function InfoTooltip(props: {label: string}) {
+  return (
+    <Tooltip label={props.label} placement="right">
+      <span
+        className="EditTranslationsModal__info inline-flex rounded-sm text-muted focus-visible:outline-2 focus-visible:outline-focus"
+        role="img"
+        aria-label={props.label}
+        tabIndex={0}
+      >
+        <IconInfoCircle size={14} />
+      </span>
+    </Tooltip>
   );
 }
 
@@ -585,6 +556,7 @@ EditTranslationsModal.StringsEditor = (props: {
     props.translations || {}
   );
   const [hasChanges, setHasChanges] = useState(false);
+  const baseId = useId();
 
   // Update local state when props.translations changes (e.g., from AI)
   useEffect(() => {
@@ -610,26 +582,34 @@ EditTranslationsModal.StringsEditor = (props: {
   }, [hasChanges, translations]);
 
   return (
-    <div className="EditTranslationsModal__StringsEditor">
+    <div className="EditTranslationsModal__stringsEditor flex flex-col gap-2.5">
       {locales.map((locale) => (
-        <div className="EditTranslationsModal__StringsEditor__row">
-          <div className="EditTranslationsModal__StringsEditor__row__locale">
+        <div
+          key={locale}
+          className="EditTranslationsModal__stringsEditorRow flex items-start gap-3 md:gap-5"
+        >
+          <label
+            htmlFor={`${baseId}-${locale}`}
+            className="EditTranslationsModal__stringsEditorRowLocale flex min-h-control-sm w-12 shrink-0 items-center justify-end break-all text-right text-sm font-semibold"
+          >
             {locale}
-          </div>
+          </label>
           <div
-            className={joinClassNames(
-              'EditTranslationsModal__StringsEditor__row__translation',
-              translations[locale] ? 'hasValue' : 'empty'
+            className={cn(
+              'EditTranslationsModal__stringsEditorRowTranslation min-w-0 flex-1',
+              translations[locale]
+                ? 'EditTranslationsModal__stringsEditorRowTranslation--hasValue'
+                : 'EditTranslationsModal__stringsEditorRowTranslation--empty'
             )}
           >
             <Textarea
-              size="xs"
-              radius={0}
+              id={`${baseId}-${locale}`}
+              inputClassName={cn(!translations[locale] && 'bg-danger-soft')}
               autosize
               minRows={1}
               maxRows={10}
-              value={translations[locale]}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+              value={translations[locale] || ''}
+              onInput={(e) => {
                 updateTranslation(locale, e.currentTarget.value);
               }}
             />
@@ -639,7 +619,6 @@ EditTranslationsModal.StringsEditor = (props: {
     </div>
   );
 };
-
 EditTranslationsModal.id = MODAL_ID;
 
 function getMetadataKey(key: string) {

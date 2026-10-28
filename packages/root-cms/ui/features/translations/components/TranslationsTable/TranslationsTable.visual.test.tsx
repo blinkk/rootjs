@@ -1,9 +1,9 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render} from '@testing-library/preact';
+import {LocationProvider} from 'preact-iso';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import * as l10n from '../../l10n.js';
@@ -79,11 +79,11 @@ describe('TranslationsTable', () => {
     vi.mocked(l10n.loadTranslations).mockResolvedValue(mockData);
 
     render(
-      <MantineProvider>
+      <LocationProvider>
         <div data-testid="translations-table-functional">
           <TranslationsTable />
         </div>
-      </MantineProvider>
+      </LocationProvider>
     );
 
     const element = page.getByTestId('translations-table-functional');
@@ -133,11 +133,11 @@ describe('TranslationsTable', () => {
     vi.mocked(l10n.loadTranslations).mockResolvedValue(mockData);
 
     render(
-      <MantineProvider>
+      <LocationProvider>
         <div data-testid="translations-table-locale">
           <TranslationsTable />
         </div>
-      </MantineProvider>
+      </LocationProvider>
     );
 
     const element = page.getByTestId('translations-table-locale');
@@ -180,11 +180,11 @@ describe('TranslationsTable', () => {
     vi.mocked(l10n.loadTranslations).mockResolvedValue(mockData);
 
     render(
-      <MantineProvider>
+      <LocationProvider>
         <div data-testid="translations-table-exact">
           <TranslationsTable />
         </div>
-      </MantineProvider>
+      </LocationProvider>
     );
 
     const element = page.getByTestId('translations-table-exact');

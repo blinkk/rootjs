@@ -1,14 +1,3 @@
-import './TranslationsManagerEditPage.css';
-
-import {
-  ActionIcon,
-  Badge,
-  Breadcrumbs,
-  Button,
-  Loader,
-  TextInput,
-  Tooltip,
-} from '@mantine/core';
 import {
   IconCirclePlus,
   IconRocket,
@@ -19,12 +8,18 @@ import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {usePortTranslationsModal} from '../../components/PortTranslationsModal/PortTranslationsModal.js';
 import {extractStringsForDoc} from '../../extract.js';
@@ -71,6 +66,13 @@ function testIsDocBackedId(id: string): boolean {
   const collection = id.slice(0, sepIndex);
   return Boolean(window.__ROOT_CTX.collections[collection]);
 }
+
+/** Classes for an id shown inline in confirm dialogs. */
+const CODE_CLASSES = 'rounded-sm bg-chip px-1 py-px font-mono text-sm';
+
+/** Borders and sizing shared by every header and body cell. */
+const CELL_CLASSES =
+  'min-w-48 border border-solid border-border p-0 align-top md:min-w-60';
 
 function toMillis(ts?: Timestamp) {
   return ts?.toMillis ? ts.toMillis() : 0;
@@ -227,10 +229,10 @@ export function TranslationsManagerEditPage(
     modals.openConfirmModal({
       title: `Publish translations: ${translationsId}`,
       children: (
-        <div className="TranslationsManagerEditPage__confirmText">
+        <div className="TranslationsManagerEditPage__confirmText text-base leading-normal">
           Are you sure you want to publish the translations for{' '}
-          <code>{translationsId}</code>? The translations will go live
-          immediately.
+          <code className={CODE_CLASSES}>{translationsId}</code>? The
+          translations will go live immediately.
         </div>
       ),
       labels: {confirm: 'Publish', cancel: 'Cancel'},
@@ -305,56 +307,60 @@ export function TranslationsManagerEditPage(
 
   return (
     <Layout>
-      <div className="TranslationsManagerEditPage">
-        <div className="TranslationsManagerEditPage__header">
-          <Breadcrumbs className="TranslationsManagerEditPage__header__breadcrumbs">
-            <a href="/cms/translations">translations</a>
-            <div>{translationsId}</div>
-          </Breadcrumbs>
-          <div className="TranslationsManagerEditPage__header__titleWrap">
-            <Heading size="h1">Translations: {translationsId}</Heading>
+      <div className="TranslationsManagerEditPage relative flex flex-col bg-page">
+        <div className="TranslationsManagerEditPage__header px-(--cms-page-padding-mobile) pb-4 pt-(--cms-page-padding-mobile) md:px-(--cms-page-padding) md:pb-5 md:pt-(--cms-page-padding)">
+          <Breadcrumbs
+            className="TranslationsManagerEditPage__headerBreadcrumbs mb-3"
+            items={[
+              {label: 'translations', href: '/cms/translations'},
+              {label: translationsId},
+            ]}
+          />
+          <div className="TranslationsManagerEditPage__headerTitleWrap flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Heading size="h1" className="min-w-0 break-words">
+              Translations: {translationsId}
+            </Heading>
             {status === 'published' && (
-              <Badge
-                size="xs"
-                variant="gradient"
-                gradient={{from: 'teal', to: 'lime'}}
-              >
+              <Badge size="xs" variant="gradient" gradient="green">
                 Published
               </Badge>
             )}
             {status === 'unpublished-changes' && (
-              <Badge
-                size="xs"
-                variant="gradient"
-                gradient={{from: 'orange', to: 'yellow'}}
-              >
+              <Badge size="xs" variant="gradient" gradient="orange">
                 Unpublished changes
               </Badge>
             )}
             {status === 'draft' && (
-              <Badge size="xs" variant="outline" color="gray">
+              <Badge size="xs" variant="outline">
                 Draft
               </Badge>
             )}
           </div>
           {isDocBacked && (
-            <div className="TranslationsManagerEditPage__header__docLink">
+            <div className="TranslationsManagerEditPage__headerDocLink mt-2 text-sm text-muted">
               Source strings are extracted from{' '}
-              <a href={`/cms/content/${translationsId}`}>{translationsId}</a>.
+              <a
+                className="font-medium text-muted underline underline-offset-4"
+                href={`/cms/content/${translationsId}`}
+              >
+                {translationsId}
+              </a>
+              .
             </div>
           )}
         </div>
 
         <div
-          className={joinClassNames(
-            'TranslationsManagerEditPage__content',
-            loading && 'TranslationsManagerEditPage__content--loading'
+          className={cn(
+            'TranslationsManagerEditPage__content min-h-0 flex-1 overflow-auto px-(--cms-page-padding-mobile) md:px-(--cms-page-padding)',
+            loading &&
+              'TranslationsManagerEditPage__content--loading flex items-center justify-center'
           )}
         >
           {loading ? (
-            <Loader color="gray" size="xl" />
+            <Spinner size="lg" className="text-muted" />
           ) : rows.length === 0 ? (
-            <div className="TranslationsManagerEditPage__empty">
+            <div className="TranslationsManagerEditPage__empty flex items-center justify-center px-5 py-15 text-base text-muted">
               No source strings yet.
             </div>
           ) : (
@@ -368,17 +374,16 @@ export function TranslationsManagerEditPage(
           )}
         </div>
 
-        <div className="TranslationsManagerEditPage__footer">
+        <div className="TranslationsManagerEditPage__footer flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-0 border-t border-solid border-border bg-surface px-(--cms-page-padding-mobile) py-4 md:px-(--cms-page-padding)">
           {!isDocBacked && !loading && (
             <TranslationsManagerEditPage.AddStringInput
               onAdd={onAddSourceString}
             />
           )}
-          <div className="TranslationsManagerEditPage__footer__buttons">
+          <div className="TranslationsManagerEditPage__footerButtons ml-auto flex items-center gap-2.5">
             <Button
-              variant="filled"
-              color="dark"
-              size="sm"
+              variant="primary"
+              size="md"
               disabled={!hasChanges}
               loading={saving}
               onClick={() => onSave()}
@@ -386,10 +391,8 @@ export function TranslationsManagerEditPage(
               Save
             </Button>
             <Button
-              variant="default"
-              color="dark"
-              size="sm"
-              leftIcon={<IconRocket size={16} />}
+              size="md"
+              icon={<IconRocket size={16} />}
               disabled={loading || !docData || hasChanges || !status}
               loading={publishing}
               onClick={() => onPublish()}
@@ -411,18 +414,23 @@ TranslationsManagerEditPage.Table = (props: {
   onPort: (row: TranslationsRow) => void;
 }) => {
   return (
-    <div className="TranslationsManagerEditPage__TableWrap">
-      <table className="TranslationsManagerEditPage__Table">
+    <div className="TranslationsManagerEditPage__tableWrap w-fit min-w-full pb-5">
+      <table className="TranslationsManagerEditPage__table w-full border-collapse bg-surface font-sans text-fg">
         <thead>
           <tr>
-            <th className="TranslationsManagerEditPage__Table__sourceCellHeader">
-              <div className="TranslationsManagerEditPage__Table__headerLabel">
+            <th
+              className={cn(
+                'TranslationsManagerEditPage__tableSourceCellHeader',
+                CELL_CLASSES
+              )}
+            >
+              <div className="TranslationsManagerEditPage__tableHeaderLabel px-3 py-2 text-left text-sm font-semibold">
                 source
               </div>
             </th>
             {props.languages.map((lang) => (
-              <th key={lang}>
-                <div className="TranslationsManagerEditPage__Table__headerLabel">
+              <th key={lang} className={CELL_CLASSES}>
+                <div className="TranslationsManagerEditPage__tableHeaderLabel px-3 py-2 text-left text-sm font-semibold">
                   {lang}
                 </div>
               </th>
@@ -431,30 +439,36 @@ TranslationsManagerEditPage.Table = (props: {
         </thead>
         <tbody>
           {props.rows.map((row) => (
-            <tr key={row.source}>
-              <td className="TranslationsManagerEditPage__Table__sourceCellWrap">
-                <div className="TranslationsManagerEditPage__Table__sourceCell">
+            <tr key={row.source} className="group">
+              {/* The 1px cell height lets the textareas fill the row with
+                  `height: 100%`; cells still grow to fit their content. */}
+              <td
+                className={cn(
+                  'TranslationsManagerEditPage__tableSourceCellWrap',
+                  CELL_CLASSES,
+                  'h-px bg-surface-hover'
+                )}
+              >
+                <div className="TranslationsManagerEditPage__tableSourceCell max-w-100 whitespace-pre-wrap break-words px-3 py-2 text-sm leading-normal">
                   {!row.unused && (
-                    <Tooltip
-                      className="TranslationsManagerEditPage__Table__portButton"
-                      label="Port translations from another string"
-                      position="top"
-                      withArrow
-                    >
-                      <ActionIcon
+                    // The IconButton's tooltip wraps it in a span, so the
+                    // float goes on an outer span.
+                    <span className="float-right -mr-1.5 -mt-0.5 ml-2 flex">
+                      <IconButton
+                        className="TranslationsManagerEditPage__tablePortButton opacity-80 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                         variant="default"
-                        size="sm"
-                        aria-label="Port translations from another string"
+                        size="xs"
+                        label="Port translations from another string"
                         onClick={() => props.onPort(row)}
                       >
                         <IconStatusChange size={14} />
-                      </ActionIcon>
-                    </Tooltip>
+                      </IconButton>
+                    </span>
                   )}
                   {row.source}
                   {row.unused && (
-                    <div className="TranslationsManagerEditPage__Table__unusedBadge">
-                      <Badge size="xs" variant="outline" color="gray">
+                    <div className="TranslationsManagerEditPage__tableUnusedBadge mt-1.5">
+                      <Badge size="xs" variant="outline">
                         unused
                       </Badge>
                     </div>
@@ -462,7 +476,7 @@ TranslationsManagerEditPage.Table = (props: {
                 </div>
               </td>
               {props.languages.map((lang) => (
-                <td key={lang}>
+                <td key={lang} className={cn(CELL_CLASSES, 'h-px')}>
                   <TranslationsManagerEditPage.Textarea
                     source={row.source}
                     lang={lang}
@@ -521,10 +535,13 @@ TranslationsManagerEditPage.Textarea = (props: {
   return (
     <textarea
       ref={textInputRef}
-      className={joinClassNames(
-        'TranslationsManagerEditPage__Textarea',
-        hasChanges && 'TranslationsManagerEditPage__Textarea--hasChanges',
-        !value && 'TranslationsManagerEditPage__Textarea--empty'
+      aria-label={`${props.lang} translation`}
+      className={cn(
+        'TranslationsManagerEditPage__textarea',
+        hasChanges && 'TranslationsManagerEditPage__textarea--hasChanges',
+        !value && 'TranslationsManagerEditPage__textarea--empty',
+        'm-0 block h-full w-full resize-none border-0 bg-transparent px-3 py-2 font-sans text-sm leading-normal text-fg focus:outline-2 focus:-outline-offset-2 focus:outline-focus',
+        hasChanges && 'bg-warning-soft'
       )}
       onFocus={() => updateTextareaHeight()}
       rows={1}
@@ -552,11 +569,11 @@ TranslationsManagerEditPage.AddStringInput = (props: {
   }
 
   return (
-    <div className="TranslationsManagerEditPage__addString">
+    <div className="TranslationsManagerEditPage__addString flex w-full items-center gap-2 sm:w-auto">
       <TextInput
-        className="TranslationsManagerEditPage__addString__input"
+        className="TranslationsManagerEditPage__addStringInput min-w-0 flex-1 sm:w-80 sm:flex-none"
+        aria-label="Add source string"
         placeholder="Add source string"
-        size="xs"
         value={value}
         onChange={(e: Event) => {
           setValue((e.target as HTMLInputElement).value);
@@ -568,13 +585,7 @@ TranslationsManagerEditPage.AddStringInput = (props: {
           }
         }}
       />
-      <Button
-        variant="default"
-        color="dark"
-        size="xs"
-        leftIcon={<IconCirclePlus size={16} />}
-        onClick={() => submit()}
-      >
+      <Button icon={<IconCirclePlus size={16} />} onClick={() => submit()}>
         Add
       </Button>
     </div>

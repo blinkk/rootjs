@@ -1,25 +1,43 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render} from '@testing-library/preact';
+import type {ComponentChildren} from 'preact';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import * as l10n from '../../l10n.js';
 import {TranslationsEditPage} from './TranslationsEditPage.js';
 
-// Mock l10n.
-vi.mock('../../l10n.js', () => ({
+// Mock l10n's Firestore calls, keeping its pure helpers.
+vi.mock('../../l10n.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../l10n.js')>()),
   getTranslationByHash: vi.fn(),
   updateTranslationByHash: vi.fn(),
   normalizeString: (str: string) => str,
 }));
 
-// Mock notifications.
-vi.mock('../../../../utils/notifications.js', () => ({
-  showNotification: vi.fn(),
+// Render the page without the app shell, which needs a router and a user.
+vi.mock('../../../../app/layout/Layout.js', () => ({
+  Layout: (props: {children?: ComponentChildren}) => <>{props.children}</>,
 }));
+
+// Mock notifications.
+vi.mock('../../../../utils/notifications.js', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../../../utils/notifications.js')
+  >()),
+  notifyErrors: vi.fn((fn) => fn()),
+}));
+vi.mock(
+  '../../../../primitives/Toast/toastStore.js',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../primitives/Toast/toastStore.js')
+    >()),
+    showNotification: vi.fn(),
+  })
+);
 
 // Mock window.__ROOT_CTX.
 window.__ROOT_CTX = {
@@ -28,6 +46,7 @@ window.__ROOT_CTX = {
       locales: ['en', 'es', 'fr', 'de'],
     },
   },
+  collections: {},
 } as any;
 
 // Mock window.firebase.
@@ -55,34 +74,28 @@ describe('TranslationsEditPage', () => {
     vi.mocked(l10n.getTranslationByHash).mockResolvedValue(mockTranslation);
 
     render(
-      <MantineProvider>
-        <div data-testid="translations-edit-page">
-          <TranslationsEditPage hash={hash} />
-        </div>
-      </MantineProvider>
+      <div data-testid="translations-edit-page">
+        <TranslationsEditPage hash={hash} />
+      </div>
     );
 
     const element = page.getByTestId('translations-edit-page');
 
     // Wait for load.
     await expect
-      .element(element.locator('textarea[name="source"]'))
+      .element(element.getByRole('textbox', {name: 'source', exact: true}))
       .toHaveValue('Test Source');
 
     // 1. Edit Tags.
-    const multiSelect = element.locator(
-      '.TranslationsEditPage__TagsForm [class*="MultiSelect-input"]'
-    );
-    await multiSelect.click();
-
-    const tagInput = element.locator(
-      '.TranslationsEditPage__TagsForm input[type="search"]'
-    );
+    const tagInput = element.getByRole('combobox', {name: 'Tags'});
+    await tagInput.click();
     await tagInput.fill('new-tag');
     await userEvent.keyboard('{Enter}');
 
     // Wait for the tag to be added.
-    await expect.element(element.getByText('new-tag')).toBeVisible();
+    await expect
+      .element(element.getByText('new-tag', {exact: true}))
+      .toBeVisible();
 
     // Click "Save tags".
     const saveTagsButton = element.getByRole('button', {name: 'Save tags'});
@@ -95,7 +108,7 @@ describe('TranslationsEditPage', () => {
     });
 
     // 2. Edit Translations.
-    const enInput = element.locator('textarea[name="en"]');
+    const enInput = element.getByRole('textbox', {name: 'en', exact: true});
     await enInput.fill('Test EN Updated');
 
     // Click "Save".
@@ -109,5 +122,7 @@ describe('TranslationsEditPage', () => {
         en: 'Test EN Updated',
       })
     );
+
+    await expect(element).toMatchScreenshot();
   });
 });

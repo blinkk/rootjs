@@ -1,15 +1,13 @@
-import {
-  Breadcrumbs,
-  Button,
-  Loader,
-  MultiSelect,
-  TextInput,
-  Textarea,
-} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {MultiSelect} from '../../../../primitives/MultiSelect/MultiSelect.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
@@ -21,8 +19,6 @@ import {
   toTranslationLanguages,
   updateTranslationByHash,
 } from '../../l10n.js';
-
-import './TranslationsEditPage.css';
 
 interface TranslationsEditPageProps {
   hash: string;
@@ -74,18 +70,23 @@ export function TranslationsEditPage(props: TranslationsEditPageProps) {
 
   return (
     <Layout>
-      <div className="TranslationsEditPage">
-        <div className="TranslationsEditPage__header">
-          <Breadcrumbs className="TranslationsEditPage__header__breadcrumbs">
-            <a href="/cms/translations">Translations</a>
-            <div>{props.hash}</div>
-          </Breadcrumbs>
+      <div className="TranslationsEditPage px-4 pb-4 pt-6 md:p-15 md:pt-12">
+        <div className="TranslationsEditPage__header mb-8">
+          <Breadcrumbs
+            className="TranslationsEditPage__headerBreadcrumbs mb-3"
+            items={[
+              {label: 'Translations', href: '/cms/translations'},
+              {label: props.hash},
+            ]}
+          />
           <Heading size="h1">Edit Translations</Heading>
         </div>
         {loading ? (
-          <Loader color="gray" size="xl" />
+          <Spinner size="lg" className="text-muted" />
         ) : notFound ? (
-          <div className="TranslationsEditPage__notFound">Not Found</div>
+          <div className="TranslationsEditPage__notFound text-base font-medium">
+            Not Found
+          </div>
         ) : (
           <TranslationsEditPage.Form
             hash={props.hash}
@@ -120,9 +121,9 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
   }, [translations.tags]);
 
   return (
-    <div className="TranslationsEditPage__FormContainer">
+    <div className="TranslationsEditPage__formContainer">
       <form
-        className="TranslationsEditPage__Form"
+        className="TranslationsEditPage__form max-w-162"
         onSubmit={async (e) => {
           e.preventDefault();
           const target = e.currentTarget;
@@ -142,51 +143,45 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
         }}
       >
         <TextInput
-          className="TranslationsEditPage__Form__input"
-          size="xs"
-          radius={0}
+          className="TranslationsEditPage__formInput mt-4"
           name="hash"
           label="hash"
           value={props.hash}
           disabled
         />
         <Textarea
-          className="TranslationsEditPage__Form__input"
-          size="xs"
-          radius={0}
+          className="TranslationsEditPage__formInput mt-4"
           name="source"
           label="source"
           value={translations.source}
           autosize
+          minRows={1}
           disabled
         />
         <Textarea
-          className="TranslationsEditPage__Form__input"
-          size="xs"
-          radius={0}
+          className="TranslationsEditPage__formInput mt-4"
           name="en"
           label="en"
-          value={translations.en}
+          value={translations.en as string | undefined}
           autosize
+          minRows={1}
           disabled={!!saving}
         />
         {nonEnLocales.map((locale) => (
           <Textarea
             key={locale}
-            className="TranslationsEditPage__Form__input"
-            size="xs"
-            radius={0}
+            className="TranslationsEditPage__formInput mt-4"
             name={locale}
             label={locale}
             value={getTranslationForLanguage(translations, locale)}
             autosize
+            minRows={1}
             disabled={!!saving}
           />
         ))}
         <Button
-          className="TranslationsEditPage__Form__input__submit"
-          color="blue"
-          size="xs"
+          className="TranslationsEditPage__formInputSubmit mt-6"
+          variant="primary"
           type="submit"
           disabled={!!saving}
           loading={saving === 'translations'}
@@ -195,24 +190,28 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
         </Button>
       </form>
 
-      <div className="TranslationsEditPage__TagsForm">
-        <Heading size="h3" className="TranslationsEditPage__TagsForm__heading">
+      <div className="TranslationsEditPage__tagsForm mt-12 max-w-162">
+        <Heading
+          size="h3"
+          id="TranslationsEditPage__tagsFormHeading"
+          className="TranslationsEditPage__tagsFormHeading mb-4"
+        >
           Tags
         </Heading>
         <MultiSelect
+          className="TranslationsEditPage__tagsFormInput"
+          aria-labelledby="TranslationsEditPage__tagsFormHeading"
           data={tags}
           value={tags}
-          onChange={setTags}
+          onValueChange={setTags}
           placeholder="Add tags"
-          searchable
           creatable
           disabled={!!saving}
           getCreateLabel={(query: string) => `+ Add tag ${query}`}
         />
         <Button
-          className="TranslationsEditPage__TagsForm__submit"
-          color="blue"
-          size="xs"
+          className="TranslationsEditPage__tagsFormSubmit mt-4"
+          variant="primary"
           disabled={!!saving}
           loading={saving === 'tags'}
           onClick={async () => {

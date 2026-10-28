@@ -1,12 +1,4 @@
 import {
-  ActionIcon,
-  Breadcrumbs,
-  Button,
-  Loader,
-  Menu,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconFileDownload,
   IconFileUpload,
   IconMoodLookDown,
@@ -23,11 +15,17 @@ import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {
@@ -46,7 +44,19 @@ import {
   sourceHash,
   toTranslationLanguages,
 } from '../../l10n.js';
-import './DocTranslationsPage.css';
+
+/**
+ * Returns true if a cell's edited value differs from its saved value.
+ */
+function testCellHasChanges(
+  changesMap: Record<string, Translation>,
+  source: string,
+  locale: string,
+  savedValue: string
+) {
+  const changes = changesMap[source] || {};
+  return locale in changes && changes[locale] !== savedValue;
+}
 
 interface DocTranslationsPageProps {
   collection: string;
@@ -170,43 +180,40 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   return (
     <Layout>
-      <div className="DocTranslationsPage">
-        <div className="DocTranslationsPage__header">
-          <Breadcrumbs className="DocTranslationsPage__header__breadcrumbs">
-            <a href={`/cms/content/${collection}`}>{collection}</a>
-            <a href={`/cms/content/${collection}/${slug}`}>{slug}</a>
-            <div>translations</div>
-          </Breadcrumbs>
-          <div className="DocTranslationsPage__header__titleWrap">
-            <Heading size="h1">Translations: {docId}</Heading>
+      <div className="DocTranslationsPage relative flex flex-col">
+        <div className="DocTranslationsPage__header px-4 pb-4 pt-6 md:px-15 md:pb-8 md:pt-12">
+          <Breadcrumbs
+            className="DocTranslationsPage__headerBreadcrumbs mb-3"
+            items={[
+              {label: collection, href: `/cms/content/${collection}`},
+              {label: slug, href: `/cms/content/${collection}/${slug}`},
+              {label: 'translations'},
+            ]}
+          />
+          <div className="DocTranslationsPage__headerTitleWrap flex min-w-0 items-center gap-3">
+            <Heading size="h1" className="min-w-0 break-words">
+              Translations: {docId}
+            </Heading>
           </div>
-          <div className="DocTranslationsPage__header__controls">
+          <div className="DocTranslationsPage__headerControls mt-2.5 flex flex-wrap items-center justify-end gap-2.5">
             {linkedSheet && (
-              <div className="DocTranslationsPage__header__linkedSheet">
-                <div className="DocTranslationsPage__header__linkedSheet__controls">
-                  <Tooltip label="Open Google Sheet">
-                    <ActionIcon<'a'>
-                      component="a"
-                      href={getSpreadsheetUrl(linkedSheet)}
-                      target="_blank"
-                      variant="filled"
-                      color="green"
-                      size="sm"
-                    >
-                      <IconTable size={16} strokeWidth={2.25} />
-                    </ActionIcon>
-                  </Tooltip>
+              <div className="DocTranslationsPage__headerLinkedSheet flex items-center justify-between">
+                <div className="DocTranslationsPage__headerLinkedSheetControls flex flex-wrap items-center gap-2">
+                  <IconButton
+                    label="Open Google Sheet"
+                    href={getSpreadsheetUrl(linkedSheet)}
+                    target="_blank"
+                    className="border-transparent bg-success text-inverse hover:bg-success hover:brightness-90"
+                  >
+                    <IconTable size={16} strokeWidth={2.25} />
+                  </IconButton>
                   <Button
-                    variant="default"
-                    size="xs"
-                    leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
+                    icon={<IconFileUpload size={16} strokeWidth={1.75} />}
                   >
                     Import from Sheet
                   </Button>
                   <Button
-                    variant="default"
-                    size="xs"
-                    leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+                    icon={<IconFileDownload size={16} strokeWidth={1.75} />}
                   >
                     Export to Sheet
                   </Button>
@@ -215,17 +222,16 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
             )}
             <Menu
               className="DocTranslationsPage__toolsMenu"
-              control={
-                <Tooltip label="Tools">
-                  <ActionIcon variant="default">
-                    <IconTool size={16} />
-                  </ActionIcon>
-                </Tooltip>
+              placement="bottom-end"
+              width={220}
+              trigger={
+                <IconButton label="Tools" variant="default">
+                  <IconTool size={16} />
+                </IconButton>
               }
-              size={220}
             >
-              <Menu.Item
-                className="DocTranslationsPage__toolsMenu__item"
+              <MenuItem
+                className="DocTranslationsPage__toolsMenuItem"
                 icon={<IconScissors size={16} />}
                 onClick={() =>
                   pruneModal.open({
@@ -242,19 +248,19 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
                 }
               >
                 Prune unused strings
-              </Menu.Item>
+              </MenuItem>
             </Menu>
           </div>
         </div>
 
         <div
-          className={joinClassNames(
-            'DocTranslationsPage__content',
-            loading && 'DocTranslationsPage__content--loading'
+          className={cn(
+            'DocTranslationsPage__content min-h-0 flex-1 overflow-auto',
+            loading && 'DocTranslationsPage__content--loading px-4 md:px-15'
           )}
         >
           {loading ? (
-            <Loader color="gray" size="xl" />
+            <Spinner size="lg" className="text-muted" />
           ) : (
             <DocTranslationsPage.Table
               locales={i18nLocales}
@@ -267,11 +273,11 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
           )}
         </div>
 
-        <div className="DocTranslationsPage__footer">
-          <div className="DocTranslationsPage__footer__buttons">
+        <div className="DocTranslationsPage__footer flex h-15 shrink-0 items-center justify-end border-0 border-t border-solid border-border bg-surface px-4 md:px-8">
+          <div className="DocTranslationsPage__footerButtons flex items-center gap-2.5">
             <Button
-              variant="filled"
-              color="dark"
+              variant="primary"
+              size="md"
               disabled={!hasChanges}
               loading={saving}
               onClick={() => onSave()}
@@ -289,11 +295,11 @@ DocTranslationsPage.NotFound = (props: {docId: string}) => {
   return (
     <Layout>
       <div className="DocTranslationsPage DocTranslationsPage--error">
-        <div className="DocTranslationsPage__error">
-          <div className="DocTranslationsPage__error__icon">
+        <div className="DocTranslationsPage__error flex size-full flex-col items-center justify-center gap-3 p-4 text-center">
+          <div className="DocTranslationsPage__errorIcon text-muted">
             <IconMoodLookDown size={60} />
           </div>
-          <div className="DocTranslationsPage__error__title">
+          <div className="DocTranslationsPage__errorTitle break-words text-lg font-semibold">
             Not found: {props.docId}
           </div>
         </div>
@@ -310,6 +316,13 @@ interface DocTranslationsPageTableProps {
   onSelectLocale: (locale: string) => void;
   changesMap: Record<string, Translation>;
 }
+
+/** Fixed column width: narrower on phones so a column fits on screen. */
+const CELL_WIDTH_CLASSES =
+  'w-64 min-w-64 max-w-64 md:w-112 md:min-w-112 md:max-w-112';
+
+/** Borders shared by every header and body cell. */
+const CELL_BORDER_CLASSES = 'border border-solid border-border';
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
@@ -338,34 +351,46 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
   }
 
   return (
-    <div className="DocTranslationsPage__TableWrap">
-      <table className="DocTranslationsPage__Table">
-        <thead>
+    <div className="DocTranslationsPage__tableWrap">
+      <table className="DocTranslationsPage__table table-fixed border-collapse border-spacing-0 font-sans text-sm text-fg">
+        <thead className="sticky top-0 z-(--cms-z-sticky)">
           <tr>
-            <th className="DocTranslationsPage__Table__sourceCellHeader">
-              <div className="DocTranslationsPage__Table__headerLabel">
+            <th
+              className={cn(
+                'DocTranslationsPage__tableSourceCellHeader',
+                CELL_BORDER_CLASSES,
+                'bg-surface-hover p-0 text-left font-bold md:sticky md:left-0 md:z-(--cms-z-sticky)'
+              )}
+            >
+              <div className="DocTranslationsPage__tableHeaderLabel block w-full px-2.5 py-1">
                 source
               </div>
             </th>
             {props.locales.map((locale) => (
               <th
                 key={locale}
-                onClick={() => props.onSelectLocale(locale)}
-                className="DocTranslationsPage__Table__localeHeader"
+                className={cn(
+                  'DocTranslationsPage__tableLocaleHeader',
+                  CELL_BORDER_CLASSES,
+                  'relative bg-surface-hover p-0 text-left'
+                )}
               >
                 <Tooltip
-                  className="DocTranslationsPage__Table__headerTooltip"
-                  placement="start"
-                  withArrow
+                  className="DocTranslationsPage__tableHeaderTooltip w-full"
+                  placement="top-start"
                   label={
                     props.locales.length === allLocales.length
                       ? `Show only ${locale}`
                       : 'Show all locales'
                   }
                 >
-                  <div className="DocTranslationsPage__Table__headerLabel">
+                  <button
+                    type="button"
+                    className="DocTranslationsPage__tableHeaderLabel m-0 block w-full cursor-pointer appearance-none border-0 bg-transparent px-2.5 py-1 text-left font-sans text-sm font-bold text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+                    onClick={() => props.onSelectLocale(locale)}
+                  >
                     {locale}
-                  </div>
+                  </button>
                 </Tooltip>
               </th>
             ))}
@@ -373,16 +398,39 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
         </thead>
         <tbody>
           {props.sourceStrings.map((source) => (
-            <tr key={source}>
-              <td className="DocTranslationsPage__Table__sourceCellWrap">
-                <div className="DocTranslationsPage__Table__sourceCell">
+            // The 1px row height lets cell contents fill the row with
+            // `height: 100%`.
+            <tr key={source} className="h-px">
+              <td
+                className={cn(
+                  'DocTranslationsPage__tableSourceCellWrap',
+                  CELL_BORDER_CLASSES,
+                  CELL_WIDTH_CLASSES,
+                  'm-0 h-px break-words bg-surface-hover p-0 md:sticky md:left-0'
+                )}
+              >
+                <div className="DocTranslationsPage__tableSourceCell h-full whitespace-pre-wrap break-words px-2.5 py-1.5">
                   {source}
                 </div>
               </td>
               {props.locales.map((locale) => {
                 const data = getTranslation(source, locale);
+                const hasChanges = testCellHasChanges(
+                  props.changesMap,
+                  source,
+                  locale,
+                  data.translation
+                );
                 return (
-                  <td key={locale}>
+                  <td
+                    key={locale}
+                    className={cn(
+                      CELL_BORDER_CLASSES,
+                      CELL_WIDTH_CLASSES,
+                      'm-0 h-px break-words p-0',
+                      hasChanges && 'bg-warning-soft'
+                    )}
+                  >
                     <DocTranslationsPage.Textarea
                       source={source}
                       locale={locale}
@@ -410,18 +458,17 @@ DocTranslationsPage.Textarea = (props: {
 }) => {
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(props.value);
-  let changedValue = null;
-  if (props.locale in (props.changesMap[props.source] || {})) {
-    changedValue = props.changesMap[props.source][props.locale];
-  }
-  const hasChanges = changedValue !== null && changedValue !== props.value;
+  const hasChanges = testCellHasChanges(
+    props.changesMap,
+    props.source,
+    props.locale,
+    props.value
+  );
 
   function updateTextareaHeight() {
     window.requestAnimationFrame(() => {
       const textarea = textInputRef.current!;
       textarea.style.minHeight = 'auto';
-      // const parent = textarea.parentElement!;
-      // const height = Math.max(textarea.scrollHeight, parent.offsetHeight);
       const height = textarea.scrollHeight;
       textarea.style.minHeight = `${height}px`;
     });
@@ -434,10 +481,13 @@ DocTranslationsPage.Textarea = (props: {
   return (
     <textarea
       ref={textInputRef}
-      className={joinClassNames(
-        'DocTranslationsPage__Textarea',
-        hasChanges && 'DocTranslationsPage__Textarea--hasChanges',
-        !value && 'DocTranslationsPage__Textarea--empty'
+      aria-label={`${props.locale} translation`}
+      className={cn(
+        'DocTranslationsPage__textarea',
+        hasChanges && 'DocTranslationsPage__textarea--hasChanges',
+        !value && 'DocTranslationsPage__textarea--empty',
+        'm-0 block h-full min-h-full w-full resize-none rounded-none border border-solid border-transparent bg-transparent px-2.5 py-1.5 font-sans text-sm text-fg focus:border-focus focus:outline-none',
+        !value && 'bg-danger-soft'
       )}
       onFocus={() => updateTextareaHeight()}
       rows={1}

@@ -1,31 +1,24 @@
-import './TranslationsPage.css';
-
-import {Button} from '@mantine/core';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {TranslationsTable} from '../../components/TranslationsTable/TranslationsTable.js';
 
 export function TranslationsPage() {
   usePageTitle('Translations');
   return (
     <Layout>
-      <div className="TranslationsPage">
-        <div className="TranslationsPage__header">
+      <div className="TranslationsPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding) md:pb-5">
+        <div className="TranslationsPage__header mb-6 flex flex-wrap items-center justify-between gap-4 md:mb-10">
           <Heading size="h1">Translations</Heading>
-          <div className="TranslationsPage__header__buttons">
-            <Button
-              component="a"
-              color="blue"
-              size="xs"
-              href="/cms/translations/arb"
-            >
+          <div className="TranslationsPage__headerButtons flex items-center gap-2">
+            <Button variant="primary" href="/cms/translations/arb">
               Download ARB
             </Button>
           </div>
         </div>
-        <Surface className="TranslationsPage__content">
+        <Surface className="TranslationsPage__content p-4">
           <TranslationsTable />
         </Surface>
       </div>

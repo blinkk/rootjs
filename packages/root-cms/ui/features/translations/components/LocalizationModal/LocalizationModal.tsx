@@ -1,17 +1,4 @@
 import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Divider,
-  Group,
-  Menu,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowUpRight,
@@ -23,13 +10,12 @@ import {
   IconFileUpload,
   IconFilter,
   IconLanguage,
-  IconLoader2,
   IconMapPin,
+  IconPlayerStop,
+  IconRobot,
+  IconScissors,
   IconTable,
   IconTool,
-  IconPlayerStop,
-  IconScissors,
-  IconRobot,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -49,15 +35,29 @@ import {
   GapiClient,
   useGapiClient,
 } from '../../../../integrations/useGapiClient.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {
+  Menu,
+  MenuDivider,
+  MenuGroup,
+  MenuItem,
+} from '../../../../primitives/Menu/Menu.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {
   hideNotification,
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {
   CsvTranslation,
@@ -154,7 +154,9 @@ export function LocalizationModal(
   const props = modalProps.innerProps;
   return (
     <div className="LocalizationModal">
-      <div className="LocalizationModal__layout">
+      {/* The negative bottom margin cancels the dialog body's padding, so the
+          sticky save bar sits flush with the bottom of the dialog. */}
+      <div className="LocalizationModal__layout -mb-5 flex flex-col gap-6 md:flex-row md:gap-0">
         <LocalizationModal.ConfigLocales {...props} />
         {testV2TranslationsEnabled() ? (
           <LocalizationModal.TranslationsManagerLink
@@ -214,11 +216,11 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
   }
 
   return (
-    <div className="LocalizationModal__locales">
-      <Stack spacing={30}>
-        <Group>
+    <div className="LocalizationModal__locales pt-8 md:min-h-100 md:w-50 md:shrink-0 md:overflow-auto md:pb-8 md:pr-8 lg:w-auto lg:max-w-100">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-wrap items-center gap-4">
           <Heading
-            className="LocalizationModal__iconTitle LocalizationModal__locales__title"
+            className="LocalizationModal__iconTitle LocalizationModal__localesTitle flex items-center gap-2 whitespace-nowrap"
             size="h2"
           >
             <IconMapPin strokeWidth={1.5} />
@@ -228,8 +230,8 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
             onAllClicked={() => updateEnabledLocales(i18nLocales)}
             onNoneClicked={() => updateEnabledLocales([])}
           />
-        </Group>
-        <Stack spacing={40}>
+        </div>
+        <div className="flex flex-col gap-10">
           {Object.keys(localeGroups).map((groupId: string) => {
             const group = localeGroups[groupId];
             const groupEnabledLocales = enabledLocalesFor(groupId);
@@ -242,8 +244,8 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
               />
             );
           })}
-        </Stack>
-      </Stack>
+        </div>
+      </div>
     </div>
   );
 };
@@ -284,9 +286,9 @@ LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
   }
 
   return (
-    <Stack spacing={16}>
+    <div className="LocalizationModal__localeGroup flex flex-col gap-4">
       {props.group.label && (
-        <Group position="apart">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <Heading size="h4" weight="semi-bold">
             {props.group.label}
           </Heading>
@@ -294,9 +296,9 @@ LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
             onAllClicked={() => setEnabledLocales(groupLocales)}
             onNoneClicked={() => setEnabledLocales([])}
           />
-        </Group>
+        </div>
       )}
-      <Group>
+      <div className="flex flex-wrap items-center gap-4">
         {groupLocales.map((locale) => {
           const checked = enabledLocales.includes(locale);
           const disabled = allEnabledLocales.length <= 1 && checked;
@@ -307,12 +309,11 @@ LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
               disabled={disabled}
               label={getLocaleLabel(locale)}
               onChange={() => toggleLocale(locale)}
-              size="xs"
             />
           );
         })}
-      </Group>
-    </Stack>
+      </div>
+    </div>
   );
 };
 
@@ -323,27 +324,25 @@ interface AllNoneButtonsProps {
 
 LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
   return (
-    <Group spacing="8px">
+    <div className="LocalizationModal__allNone flex items-center gap-2">
       <Button
-        className="LocalizationModal__allNoneBtn"
+        className="LocalizationModal__allNoneBtn text-link"
         variant="subtle"
         size="xs"
-        compact
         onClick={props.onAllClicked}
       >
         All
       </Button>
       /
       <Button
-        className="LocalizationModal__allNoneBtn"
+        className="LocalizationModal__allNoneBtn text-link"
         variant="subtle"
         size="xs"
-        compact
         onClick={props.onNoneClicked}
       >
         None
       </Button>
-    </Group>
+    </div>
   );
 };
 
@@ -361,23 +360,20 @@ LocalizationModal.TranslationsManagerLink = (
 ) => {
   const {route} = useLocation();
   return (
-    <div className="LocalizationModal__translations">
-      <Stack spacing={16} pt={30}>
+    <div className={TRANSLATIONS_PANEL_CLASSES}>
+      <div className="flex flex-col gap-4 pt-8">
         <Heading
-          className="LocalizationModal__translations__title LocalizationModal__iconTitle"
+          className="LocalizationModal__translationsTitle LocalizationModal__iconTitle flex items-center gap-2 whitespace-nowrap"
           size="h2"
         >
           <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
         </Heading>
-        <Text size="sm" color="dimmed">
+        <p className="m-0 text-base text-muted">
           Translations for this doc are managed in the translations manager.
-        </Text>
+        </p>
         <div>
           <Button
-            variant="default"
-            color="dark"
-            size="xs"
-            leftIcon={<IconArrowUpRight size={16} />}
+            icon={<IconArrowUpRight />}
             onClick={() => {
               props.onNavigate();
               route(`/cms/translations/${props.docId}`);
@@ -386,10 +382,17 @@ LocalizationModal.TranslationsManagerLink = (
             Edit translations
           </Button>
         </div>
-      </Stack>
+      </div>
     </div>
   );
 };
+
+/**
+ * The translations panel: stacked under the locales on mobile, and a
+ * scrolling column beside them (with a divider) from `md` up.
+ */
+const TRANSLATIONS_PANEL_CLASSES =
+  'LocalizationModal__translations flex min-w-0 flex-1 flex-col justify-between border-0 border-t border-solid border-border md:min-h-100 md:-mr-5 md:overflow-auto md:border-l md:border-t-0 md:pl-8 md:pr-5';
 
 interface TranslationsProps {
   collection: schema.Collection;
@@ -1277,14 +1280,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 <div>
                   <div>{importMessage}</div>
                   <Button
-                    component="a"
                     href={importLink.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    size="xs"
-                    variant="default"
-                    rightIcon={<IconArrowUpRight size={14} />}
-                    style={{marginTop: '8px'}}
+                    className="mt-2"
+                    iconRight={<IconArrowUpRight />}
                   >
                     {importLink.label || 'Open'}
                   </Button>
@@ -1315,14 +1315,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               <div>
                 <div>{exportMessage}</div>
                 <Button
-                  component="a"
                   href={exportLink.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  size="xs"
-                  variant="default"
-                  rightIcon={<IconArrowUpRight size={14} />}
-                  style={{marginTop: '8px'}}
+                  className="mt-2"
+                  iconRight={<IconArrowUpRight />}
                 >
                   {exportLink.label || 'Open'}
                 </Button>
@@ -1342,40 +1339,35 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   return (
-    <div className="LocalizationModal__translations">
-      <div className="LocalizationModal__translations__topWrapper">
-        <div className="LocalizationModal__translations__header">
-          <div className="LocalizationModal__translations__titleWrap">
+    <div className={TRANSLATIONS_PANEL_CLASSES}>
+      <div className="LocalizationModal__translationsTopWrapper">
+        <div className="LocalizationModal__translationsHeader flex flex-wrap items-start justify-between gap-3 bg-surface pb-2.5 pt-2 md:sticky md:top-0 md:z-(--cms-z-sticky) md:flex-nowrap">
+          <div className="LocalizationModal__translationsTitleWrap flex min-w-0 flex-wrap items-center gap-3">
             <Heading
-              className="LocalizationModal__translations__title LocalizationModal__iconTitle"
+              className="LocalizationModal__translationsTitle LocalizationModal__iconTitle flex items-center gap-2 whitespace-nowrap"
               size="h2"
             >
               <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
             </Heading>
           </div>
-          <div className="LocalizationModal__translations__header__buttons">
+          <div className="LocalizationModal__translationsHeaderButtons flex flex-wrap items-center gap-2 md:justify-end">
             {gapiClient.enabled && linkedSheet?.spreadsheetId && (
-              <Tooltip label="Open Google Sheet">
-                <ActionIcon<'a'>
-                  component="a"
-                  href={getSpreadsheetUrl(linkedSheet)}
-                  target="_blank"
-                  variant="filled"
-                  color="green"
-                  size="sm"
-                >
-                  <IconTable size={16} strokeWidth={2.25} />
-                </ActionIcon>
-              </Tooltip>
+              <IconButton
+                label="Open Google Sheet"
+                href={getSpreadsheetUrl(linkedSheet)}
+                target="_blank"
+                variant="primary"
+                size="xs"
+                className="bg-success hover:bg-success hover:brightness-90"
+              >
+                <IconTable strokeWidth={2.25} />
+              </IconButton>
             )}
 
             <Button
-              component="a"
               href={`/cms/translations/${props.docId}`}
               target="_blank"
-              variant="default"
-              size="xs"
-              rightIcon={<IconArrowUpRight size={14} strokeWidth={1.75} />}
+              iconRight={<IconArrowUpRight strokeWidth={1.75} />}
             >
               Open Editor
             </Button>
@@ -1392,22 +1384,22 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               linkedSheet={linkedSheet}
             />
             <Menu
-              className="LocalizationModal__translations__menu"
-              control={
-                <Tooltip label="Tools">
-                  <ActionIcon
-                    className="LocalizationModal__translations__menu__dots"
-                    variant="default"
-                  >
-                    <IconTool size={16} />
-                  </ActionIcon>
-                </Tooltip>
+              className="LocalizationModal__translationsMenu"
+              placement="bottom-end"
+              width={220}
+              trigger={
+                <IconButton
+                  className="LocalizationModal__translationsMenuDots"
+                  label="Tools"
+                  variant="default"
+                >
+                  <IconTool />
+                </IconButton>
               }
-              size={220}
             >
-              <Menu.Item
-                className="LocalizationModal__translations__menu__item"
-                icon={<IconScissors size={16} />}
+              <MenuItem
+                className="LocalizationModal__translationsMenuItem"
+                icon={<IconScissors />}
                 onClick={() =>
                   pruneModal.open({
                     docId: props.docId,
@@ -1423,7 +1415,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 }
               >
                 Prune unused strings
-              </Menu.Item>
+              </MenuItem>
             </Menu>
           </div>
         </div>
@@ -1439,65 +1431,71 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           />
         )}
         {!loading && missingTagsCount > 0 && (
-          <div className="LocalizationModal__missingTags">
-            <div className="LocalizationModal__missingTags__message">
-              <IconAlertTriangle />
+          <div className="LocalizationModal__missingTags mb-4 flex flex-wrap items-center justify-between gap-2 rounded-sm border border-solid border-warning-line bg-warning-soft p-2 text-fg">
+            <div className="LocalizationModal__missingTagsMessage flex items-center gap-4">
+              <IconAlertTriangle className="shrink-0 text-warning" />
               {missingTagsCount > 1 ? (
-                <Text size="sm">
+                <p className="m-0 text-base">
                   <b>{missingTagsCount} strings</b> are missing the "
                   {props.docId}" tag.
-                </Text>
+                </p>
               ) : (
-                <Text size="sm">
+                <p className="m-0 text-base">
                   <b>{missingTagsCount} string</b> is missing the "{props.docId}
                   " tag.
-                </Text>
+                </p>
               )}
             </div>
             <Button
-              variant="filled"
-              size="xs"
+              variant="primary"
               onClick={() => notifyErrors(applyDocTag)}
               loading={loading}
-              leftIcon={<IconTool size={16} />}
+              icon={<IconTool />}
             >
               Fix missing tags
             </Button>
           </div>
         )}
         {!loading && (
-          <table className="LocalizationModal__translations__table">
-            <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
-              <th className="LocalizationModal__translations__table__header">
+          <table className="LocalizationModal__translationsTable mb-3 flex w-full flex-col">
+            <tr className="LocalizationModal__translationsTableRow LocalizationModal__translationsTableRow--header mb-2.5 grid min-w-0 grid-cols-1 items-center border-0 border-b border-solid border-border bg-surface pb-2 md:sticky md:top-12 md:z-(--cms-z-sticky) md:grid-cols-2">
+              <th
+                className={cn(
+                  TABLE_CELL_CLASSES,
+                  'LocalizationModal__translationsTableHeader hidden md:block'
+                )}
+              >
                 <Heading size="h4" weight="semi-bold">
                   SOURCE STRING
                 </Heading>
               </th>
-              <th className="LocalizationModal__translations__table__header">
-                <div className="LocalizationModal__translations__localeHeader">
+              <th
+                className={cn(
+                  TABLE_CELL_CLASSES,
+                  'LocalizationModal__translationsTableHeader'
+                )}
+              >
+                <div className="LocalizationModal__translationsLocaleHeader flex flex-wrap items-center justify-between gap-2">
                   <Heading
-                    className="LocalizationModal__translations__localeSelect"
+                    className="LocalizationModal__translationsLocaleSelect flex items-center gap-2 whitespace-nowrap"
                     size="h4"
                     weight="semi-bold"
                   >
                     <span>LOCALE: </span>{' '}
                     <Select
+                      className="w-44"
+                      aria-label="Locale"
                       data={localeOptions}
                       size="xs"
                       placeholder="select locale"
                       allowDeselect
                       value={selectedLocale}
-                      onChange={(value: string) => setSelectedLocale(value)}
+                      onValueChange={(value) =>
+                        setSelectedLocale(value as string)
+                      }
                     />
                   </Heading>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      flexShrink: 0,
-                    }}
-                  >
+                  <div className="flex shrink-0 items-center gap-2">
                     {selectedLocale && missingTranslationsCount > 0 && (
                       <Tooltip
                         key={filterMissing ? 'active' : 'inactive'}
@@ -1506,15 +1504,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                             ? 'Show all translations'
                             : 'Show only missing translations'
                         }
-                        position="top"
-                        withArrow
                       >
                         <button
-                          className={`LocalizationModal__translations__missingToggle${
-                            filterMissing
-                              ? ' LocalizationModal__translations__missingToggle--active'
-                              : ''
-                          }`}
+                          type="button"
+                          aria-pressed={filterMissing}
+                          className="LocalizationModal__translationsMissingToggle m-0 flex shrink-0 cursor-pointer appearance-none items-center gap-1 whitespace-nowrap rounded-sm border border-solid border-transparent bg-transparent px-2 py-0.5 font-sans text-sm font-bold text-strong hover:bg-surface-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus aria-pressed:border-info-line aria-pressed:bg-info-soft aria-pressed:text-info"
                           onClick={() => setFilterMissing((v) => !v)}
                         >
                           <IconFilter size={14} />
@@ -1526,41 +1520,38 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       sourceStrings.length > 0 &&
                       missingTranslationsCount === 0 &&
                       pendingEditsCount === 0 && (
-                        <div className="LocalizationModal__translations__fullyTranslated">
-                          <IconCheck size={14} />
+                        <div className="LocalizationModal__translationsFullyTranslated flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-bold text-success">
+                          <IconCheck
+                            size={14}
+                            className="rounded-full bg-success p-0.5 text-inverse"
+                          />
                           <span>Translated</span>
                         </div>
                       )}
                     {shouldShowAiButton() && !aiGenerating && (
-                      <Tooltip
+                      <IconButton
                         label="Generate translations using AI"
-                        withArrow
-                        position="top"
+                        variant="default"
+                        size="xs"
+                        onClick={generateAiTranslations}
                       >
-                        <ActionIcon
-                          variant="default"
-                          size="sm"
-                          onClick={generateAiTranslations}
-                        >
-                          <IconRobot size={14} />
-                        </ActionIcon>
-                      </Tooltip>
+                        <IconRobot />
+                      </IconButton>
                     )}
                     {aiGenerating && (
-                      <Tooltip label="Stop generating" withArrow position="top">
-                        <ActionIcon
-                          variant="default"
-                          size="sm"
-                          onClick={stopAiTranslations}
-                        >
-                          <IconPlayerStop size={14} fill="black" />
-                        </ActionIcon>
-                      </Tooltip>
+                      <IconButton
+                        label="Stop generating"
+                        variant="default"
+                        size="xs"
+                        onClick={stopAiTranslations}
+                      >
+                        <IconPlayerStop fill="currentColor" />
+                      </IconButton>
                     )}
                     {aiGenerating && (
-                      <IconLoader2
-                        size={18}
-                        className="LocalizationModal__spinner"
+                      <Spinner
+                        label="Generating translations"
+                        className="LocalizationModal__spinner text-muted"
                       />
                     )}
                   </div>
@@ -1574,35 +1565,46 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               })
               .map((source, i) => (
                 <tr
-                  className="LocalizationModal__translations__table__row"
+                  className={cn(
+                    'LocalizationModal__translationsTableRow grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 md:gap-0',
+                    i > 0 &&
+                      'mt-3 border-0 border-t border-solid border-border pt-3'
+                  )}
                   key={i}
                 >
-                  <td className="LocalizationModal__translations__table__col">
-                    <div className="LocalizationModal__sourceCell">
-                      <span className="LocalizationModal__sourceCell__text">
+                  <td
+                    className={cn(
+                      TABLE_CELL_CLASSES,
+                      'LocalizationModal__translationsTableCol'
+                    )}
+                  >
+                    <div className="LocalizationModal__sourceCell group relative h-full rounded-sm border border-solid border-border bg-surface-hover px-5 py-2.5 pr-20 leading-snug md:pr-5">
+                      <span className="LocalizationModal__sourceCellText whitespace-pre-wrap text-sm">
                         {source}
                       </span>
-                      <div className="LocalizationModal__sourceCell__icons">
-                        <Tooltip
+                      <div className="LocalizationModal__sourceCellIcons absolute right-1 top-1 flex shrink-0 items-center gap-1">
+                        <IconButton
+                          className={cn(
+                            SOURCE_CELL_ACTION_CLASSES,
+                            'LocalizationModal__sourceCellPort'
+                          )}
                           label="Port translations from another string"
-                          position="top"
-                          withArrow
+                          variant="default"
+                          size="xs"
+                          onClick={() => openPortModal(source)}
                         >
-                          <ActionIcon
-                            className="LocalizationModal__sourceCell__port"
-                            size="sm"
-                            variant="subtle"
-                            aria-label="Port translations from another string"
-                            onClick={() => openPortModal(source)}
-                          >
-                            <IconArrowsTransferDown size={16} />
-                          </ActionIcon>
-                        </Tooltip>
+                          <IconArrowsTransferDown />
+                        </IconButton>
                         {sourceToTranslationsMap[source] && (
-                          <ActionIcon
-                            className="LocalizationModal__sourceCell__link"
-                            size="sm"
-                            variant="subtle"
+                          <IconButton
+                            className={cn(
+                              SOURCE_CELL_ACTION_CLASSES,
+                              'LocalizationModal__sourceCellLink'
+                            )}
+                            label="Open translation"
+                            tooltip={false}
+                            variant="default"
+                            size="xs"
                             onClick={async () => {
                               const hash = await sourceHash(source);
                               window.open(
@@ -1611,28 +1613,29 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                               );
                             }}
                           >
-                            <IconExternalLink size={16} />
-                          </ActionIcon>
+                            <IconExternalLink />
+                          </IconButton>
                         )}
                         {missingTagSources.has(source) && (
-                          <Tooltip
-                            label={`Missing "${props.docId}" tag`}
-                            position="top"
-                            withArrow
-                          >
-                            <ActionIcon
-                              className="LocalizationModal__sourceCell__missingTag"
-                              size="sm"
-                              variant="subtle"
+                          <Tooltip label={`Missing "${props.docId}" tag`}>
+                            <span
+                              className="LocalizationModal__sourceCellMissingTag flex size-control-xs items-center justify-center rounded-sm border border-solid border-border-strong bg-surface text-warning"
+                              role="img"
+                              aria-label={`Missing "${props.docId}" tag`}
                             >
                               <IconAlertTriangle size={14} />
-                            </ActionIcon>
+                            </span>
                           </Tooltip>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="LocalizationModal__translations__table__col">
+                  <td
+                    className={cn(
+                      TABLE_CELL_CLASSES,
+                      'LocalizationModal__translationsTableCol'
+                    )}
+                  >
                     <TranslationCell
                       source={source}
                       locale={selectedLocale}
@@ -1650,8 +1653,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           </table>
         )}
       </div>
-      <div className="LocalizationModal__translations__saveBar">
-        <span className="LocalizationModal__translations__saveBar__status">
+      <div className="LocalizationModal__translationsSaveBar sticky -bottom-5 z-(--cms-z-sticky) flex items-center justify-end gap-2 border-0 border-t border-solid border-border bg-surface pt-2 pb-7 md:bottom-0 md:pb-2">
+        <span className="LocalizationModal__translationsSaveBarStatus text-sm text-strong">
           {pendingEditsCount > 0
             ? `${pendingEditsCount} unsaved change${
                 pendingEditsCount !== 1 ? 's' : ''
@@ -1660,19 +1663,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         </span>
         {pendingEditsCount > 0 && (
           <Button
-            variant="default"
-            size="xs"
-            leftIcon={<IconArrowBackUp size={14} />}
+            icon={<IconArrowBackUp />}
             onClick={() => setPendingEdits({})}
           >
             Discard changes
           </Button>
         )}
         <Button
-          variant="filled"
-          size="xs"
-          color="dark"
-          leftIcon={<IconCheck size={14} />}
+          variant="primary"
+          icon={<IconCheck />}
           onClick={saveEdits}
           loading={saving}
           disabled={pendingEditsCount === 0}
@@ -1683,6 +1682,17 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     </div>
   );
 };
+
+/** Classes shared by the translations table's header and body cells. */
+const TABLE_CELL_CLASSES =
+  'min-w-0 break-words p-0 text-left font-normal md:px-2';
+
+/**
+ * The source cell's port and link buttons: always visible on mobile, and
+ * revealed on hover or focus from `md` up.
+ */
+const SOURCE_CELL_ACTION_CLASSES =
+  'md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100';
 
 interface TranslationCellProps {
   source: string;
@@ -1699,17 +1709,6 @@ function TranslationCell(props: TranslationCellProps) {
     props.pendingValue !== undefined ? props.pendingValue : props.savedValue;
   const isEdited = props.pendingValue !== undefined;
 
-  const classNames =
-    [
-      isEdited ? 'LocalizationModal__translations__cell--edited' : '',
-      props.isAiGenerating
-        ? 'LocalizationModal__translations__cell--ai-generating'
-        : '',
-      !value ? 'LocalizationModal__translations__cell--empty' : '',
-    ]
-      .filter(Boolean)
-      .join(' ') || undefined;
-
   return (
     <Textarea
       size="xs"
@@ -1717,21 +1716,19 @@ function TranslationCell(props: TranslationCellProps) {
       minRows={1}
       value={value}
       placeholder=""
+      aria-label={`Translation for "${props.source}"`}
       readOnly={props.readOnly}
-      onChange={(e: any) => props.onEdit(e.currentTarget.value)}
-      className={classNames}
-      styles={{
-        root: {
-          height: '100%',
-        },
-        wrapper: {
-          height: '100%',
-        },
-        input: {
-          fontSize: '12px',
-          minHeight: '100%',
-        },
-      }}
+      onInput={(e) => props.onEdit(e.currentTarget.value)}
+      className={cn(
+        'LocalizationModal__translationsCell min-h-full',
+        isEdited && 'LocalizationModal__translationsCell--edited',
+        props.isAiGenerating &&
+          'LocalizationModal__translationsCell--aiGenerating',
+        !value && 'LocalizationModal__translationsCell--empty',
+        !value && 'bg-danger-soft',
+        isEdited && 'border-focus bg-info-soft',
+        props.isAiGenerating && 'border-accent bg-surface-hover'
+      )}
     />
   );
 }
@@ -1757,16 +1754,12 @@ function ImportMenuButton(props: MenuButtonProps) {
 
   return (
     <Menu
-      className="LocalizationModal__translations__menu"
-      position="bottom"
-      placement="end"
-      control={
+      className="LocalizationModal__translationsMenu"
+      placement="bottom-end"
+      trigger={
         <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
-          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
+          icon={<IconFileUpload strokeWidth={1.75} />}
+          iconRight={<IconChevronDown strokeWidth={1.75} />}
         >
           Import
         </Button>
@@ -1774,46 +1767,49 @@ function ImportMenuButton(props: MenuButtonProps) {
     >
       {props.gapiClient.enabled && (
         <>
-          <Menu.Label>Google Sheets</Menu.Label>
-          <Menu.Item
-            className="LocalizationModal__translations__menu__item"
-            disabled={!linkedSheet?.spreadsheetId}
-            onClick={() => dispatch(MenuAction.IMPORT_GOOGLE_SHEET_LINKED)}
-          >
-            Import Google Sheet
-          </Menu.Item>
-          <Divider />
+          <MenuGroup label="Google Sheets">
+            <MenuItem
+              className="LocalizationModal__translationsMenuItem"
+              disabled={!linkedSheet?.spreadsheetId}
+              onClick={() => dispatch(MenuAction.IMPORT_GOOGLE_SHEET_LINKED)}
+            >
+              Import Google Sheet
+            </MenuItem>
+          </MenuGroup>
+          <MenuDivider />
         </>
       )}
-      <Menu.Label>File</Menu.Label>
-      <Menu.Item
-        className="LocalizationModal__translations__menu__item"
-        onClick={() => dispatch(MenuAction.IMPORT_CSV)}
-      >
-        Import .csv
-      </Menu.Item>
+      <MenuGroup label="File">
+        <MenuItem
+          className="LocalizationModal__translationsMenuItem"
+          onClick={() => dispatch(MenuAction.IMPORT_CSV)}
+        >
+          Import .csv
+        </MenuItem>
+      </MenuGroup>
       {translationServices.length > 0 && (
         <>
-          <Divider />
-          <Menu.Label>Services</Menu.Label>
-          {translationServices.map((service) => (
-            <Menu.Item
-              key={service.id}
-              className="LocalizationModal__translations__menu__item"
-              icon={
-                service.icon ? (
-                  <img
-                    src={service.icon}
-                    alt={service.label}
-                    style={{width: 16, height: 16}}
-                  />
-                ) : undefined
-              }
-              onClick={() => props.onServiceAction?.(service.id, 'import')}
-            >
-              Import from {service.label}
-            </Menu.Item>
-          ))}
+          <MenuDivider />
+          <MenuGroup label="Services">
+            {translationServices.map((service) => (
+              <MenuItem
+                key={service.id}
+                className="LocalizationModal__translationsMenuItem"
+                icon={
+                  service.icon ? (
+                    <img
+                      className="size-4"
+                      src={service.icon}
+                      alt={service.label}
+                    />
+                  ) : undefined
+                }
+                onClick={() => props.onServiceAction?.(service.id, 'import')}
+              >
+                Import from {service.label}
+              </MenuItem>
+            ))}
+          </MenuGroup>
         </>
       )}
     </Menu>
@@ -1835,16 +1831,12 @@ function ExportMenuButton(props: MenuButtonProps) {
 
   return (
     <Menu
-      className="LocalizationModal__translations__menu"
-      position="bottom"
-      placement="start"
-      control={
+      className="LocalizationModal__translationsMenu"
+      placement="bottom-start"
+      trigger={
         <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
-          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
+          icon={<IconFileDownload strokeWidth={1.75} />}
+          iconRight={<IconChevronDown strokeWidth={1.75} />}
         >
           Export
         </Button>
@@ -1852,73 +1844,73 @@ function ExportMenuButton(props: MenuButtonProps) {
     >
       {props.gapiClient.enabled && (
         <>
-          <Menu.Label>Google Sheets</Menu.Label>
-          {hasLinkedSheet ? (
-            <>
-              <Menu.Item
-                className="LocalizationModal__translations__menu__item"
+          <MenuGroup label="Google Sheets">
+            {hasLinkedSheet ? (
+              <MenuItem
+                className="LocalizationModal__translationsMenuItem"
                 onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_LINKED)}
               >
                 Export to Google Sheet
-              </Menu.Item>
-            </>
-          ) : (
-            <>
-              <Menu.Item
-                className="LocalizationModal__translations__menu__item"
+              </MenuItem>
+            ) : (
+              <MenuItem
+                className="LocalizationModal__translationsMenuItem"
                 onClick={() =>
                   dispatch(MenuAction.EXPORT_GOOGLE_SHEET_SHOW_OPTIONS)
                 }
               >
                 Export to Google Sheet
-              </Menu.Item>
-            </>
-          )}
-          <Divider />
+              </MenuItem>
+            )}
+          </MenuGroup>
+          <MenuDivider />
         </>
       )}
-      <Menu.Label>File</Menu.Label>
-      <Menu.Item
-        className="LocalizationModal__translations__menu__item"
-        onClick={() => dispatch(MenuAction.EXPORT_DOWNLOAD_CSV)}
-      >
-        Download .csv
-      </Menu.Item>
+      <MenuGroup label="File">
+        <MenuItem
+          className="LocalizationModal__translationsMenuItem"
+          onClick={() => dispatch(MenuAction.EXPORT_DOWNLOAD_CSV)}
+        >
+          Download .csv
+        </MenuItem>
+      </MenuGroup>
       {translationServices.length > 0 && (
         <>
-          <Divider />
-          <Menu.Label>Services</Menu.Label>
-          {translationServices.map((service) => (
-            <Menu.Item
-              key={service.id}
-              className="LocalizationModal__translations__menu__item"
-              icon={
-                service.icon ? (
-                  <img
-                    src={service.icon}
-                    alt={service.label}
-                    style={{width: 16, height: 16}}
-                  />
-                ) : undefined
-              }
-              onClick={() => props.onServiceAction?.(service.id, 'export')}
-            >
-              Export to {service.label}
-            </Menu.Item>
-          ))}
+          <MenuDivider />
+          <MenuGroup label="Services">
+            {translationServices.map((service) => (
+              <MenuItem
+                key={service.id}
+                className="LocalizationModal__translationsMenuItem"
+                icon={
+                  service.icon ? (
+                    <img
+                      className="size-4"
+                      src={service.icon}
+                      alt={service.label}
+                    />
+                  ) : undefined
+                }
+                onClick={() => props.onServiceAction?.(service.id, 'export')}
+              >
+                Export to {service.label}
+              </MenuItem>
+            ))}
+          </MenuGroup>
         </>
       )}
       {hasLinkedSheet && (
         <>
-          <Divider />
-          <Menu.Label>Danger zone</Menu.Label>
-          <Menu.Item
-            className="LocalizationModal__translations__menu__item"
-            onClick={() => dispatch(MenuAction.UNLINK_GOOGLE_SHEET)}
-            color="red"
-          >
-            Unlink Google Sheet
-          </Menu.Item>
+          <MenuDivider />
+          <MenuGroup label="Danger zone">
+            <MenuItem
+              className="LocalizationModal__translationsMenuItem"
+              onClick={() => dispatch(MenuAction.UNLINK_GOOGLE_SHEET)}
+              danger
+            >
+              Unlink Google Sheet
+            </MenuItem>
+          </MenuGroup>
         </>
       )}
     </Menu>

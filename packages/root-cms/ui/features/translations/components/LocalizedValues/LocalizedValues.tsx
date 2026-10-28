@@ -1,14 +1,17 @@
 import './LocalizedValues.css';
 
-import {ActionIcon, Popover, TextInput, Tooltip} from '@mantine/core';
 import {IconPlus, IconWorld, IconX} from '@tabler/icons-preact';
-import {ComponentChildren, Fragment} from 'preact';
+import {ComponentChildren, Fragment, VNode} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
 import {
   getLocalizedValueLocales,
   testFieldLocalizable,
 } from '../../../../../shared/localized-values.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Popover} from '../../../../primitives/Popover/Popover.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {testFieldEmpty} from '../../../documents/test-field-empty.js';
@@ -157,29 +160,29 @@ export function LocalizedValuesButton(props: LocalizedValuesFieldProps) {
     <LocalePicker
       locales={availableLocales}
       onSelect={addLocale}
-      renderTarget={(opened, toggle) => (
-        <Tooltip label={label} withArrow disabled={opened}>
+      renderTarget={(opened) => (
+        <Tooltip label={label} disabled={opened}>
           <button
             type="button"
             className={joinClassNames(
               'LocalizedValuesButton',
               rowLocales.length > 0 && 'LocalizedValuesButton--hasValues',
-              opened && 'LocalizedValuesButton--active'
+              'm-0 inline-flex h-4.5 min-w-4.5 cursor-pointer appearance-none items-center justify-center gap-0.5 rounded-sm border-0 bg-transparent px-0.5',
+              'hover:bg-surface-hover hover:text-fg aria-expanded:bg-surface-hover aria-expanded:text-fg',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+              'text-muted'
             )}
             aria-label={label}
-            aria-haspopup="dialog"
-            aria-expanded={opened}
             onClick={(e: MouseEvent) => {
               // The header may live inside a <summary>; keep the click from
               // toggling the drawer.
               e.preventDefault();
               e.stopPropagation();
-              toggle();
             }}
           >
             <IconWorld size={14} strokeWidth="1.8" />
             {rowLocales.length > 0 && (
-              <span className="LocalizedValuesButton__count">
+              <span className="LocalizedValuesButton__count text-2xs font-semibold leading-none">
                 {rowLocales.length}
               </span>
             )}
@@ -196,6 +199,10 @@ export interface LocalizedValuesProps extends LocalizedValuesFieldProps {
   /** Renders the field's editor for a localized value's deep key. */
   renderField: (deepKey: string) => ComponentChildren;
 }
+
+/** Classes shared by the locale chips in the first column. */
+const LOCALE_CLASSES =
+  'flex h-control-sm min-w-14 items-center justify-center rounded-sm px-2 text-sm';
 
 /**
  * Renders a field's default value editor followed by an editor for each of
@@ -218,55 +225,62 @@ export function LocalizedValues(props: LocalizedValuesProps) {
   }
 
   return (
-    <div className="LocalizedValues">
+    <div className="LocalizedValues grid items-start gap-1.5">
       <div
-        className="LocalizedValues__locale LocalizedValues__locale--default"
+        className={joinClassNames(
+          'LocalizedValues__locale LocalizedValues__locale--default',
+          LOCALE_CLASSES,
+          'border border-dashed border-border font-sans font-medium text-muted'
+        )}
         title="Used for locales without a localized value"
       >
         All
       </div>
-      <div className="LocalizedValues__field">{props.children}</div>
+      <div className="LocalizedValues__field min-w-0">{props.children}</div>
       <div />
       {rowLocales.map((locale) => (
         <Fragment key={locale}>
-          <div className="LocalizedValues__locale">{locale}</div>
-          <div className="LocalizedValues__field">
+          <div
+            className={joinClassNames(
+              'LocalizedValues__locale',
+              LOCALE_CLASSES,
+              'bg-chip font-mono font-semibold text-fg'
+            )}
+          >
+            {locale}
+          </div>
+          <div className="LocalizedValues__field min-w-0">
             {props.renderField(`${key}.${locale}`)}
             {!docLocales.includes(locale) && (
-              <div className="LocalizedValues__warning">
+              <div className="LocalizedValues__warning mt-1 text-sm text-warning">
                 Locale is not enabled for this doc
               </div>
             )}
             {localizedValues[locale] === null && (
-              <div className="LocalizedValues__warning">
+              <div className="LocalizedValues__warning mt-1 text-sm text-warning">
                 Hidden for this locale
               </div>
             )}
           </div>
-          <Tooltip label={`Remove the ${locale} value`} withArrow>
-            <ActionIcon
-              className="LocalizedValues__remove"
-              size="sm"
-              aria-label={`Remove the ${locale} value`}
-              onClick={() => removeLocale(locale)}
-            >
-              <IconX size={14} />
-            </ActionIcon>
-          </Tooltip>
+          <IconButton
+            className="LocalizedValues__remove mt-0.5"
+            size="xs"
+            label={`Remove the ${locale} value`}
+            onClick={() => removeLocale(locale)}
+          >
+            <IconX />
+          </IconButton>
         </Fragment>
       ))}
       {availableLocales.length > 0 && (
-        <div className="LocalizedValues__add">
+        <div className="LocalizedValues__add col-start-2">
           <LocalePicker
             locales={availableLocales}
             onSelect={addLocale}
-            renderTarget={(opened, toggle) => (
+            renderTarget={() => (
               <button
                 type="button"
-                className="LocalizedValues__add__button"
-                aria-haspopup="dialog"
-                aria-expanded={opened}
-                onClick={() => toggle()}
+                className="LocalizedValues__addButton m-0 inline-flex cursor-pointer appearance-none items-center gap-1 rounded-sm border-0 bg-transparent p-0 font-sans text-sm font-medium text-link underline-offset-3 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <IconPlus size={12} strokeWidth="2.2" />
                 Add locale value
@@ -282,7 +296,11 @@ export function LocalizedValues(props: LocalizedValuesProps) {
 interface LocalePickerProps {
   locales: string[];
   onSelect: (locale: string) => void;
-  renderTarget: (opened: boolean, toggle: () => void) => ComponentChildren;
+  /**
+   * Renders the trigger button. The picker adds the click handler and the
+   * `aria-expanded` state to it.
+   */
+  renderTarget: (opened: boolean) => VNode<any>;
 }
 
 /**
@@ -293,12 +311,14 @@ function LocalePicker(props: LocalePickerProps) {
   const [opened, setOpened] = useState(false);
   const [query, setQuery] = useState('');
 
-  const close = () => {
-    setOpened(false);
-    setQuery('');
+  const setOpen = (open: boolean) => {
+    setOpened(open);
+    if (!open) {
+      setQuery('');
+    }
   };
   const select = (locale: string) => {
-    close();
+    setOpen(false);
     props.onSelect(locale);
   };
 
@@ -314,37 +334,27 @@ function LocalePicker(props: LocalePickerProps) {
 
   return (
     <Popover
-      opened={opened}
-      onClose={close}
-      position="bottom"
-      placement="end"
+      open={opened}
+      onOpenChange={setOpen}
+      placement="bottom-end"
       width={240}
-      spacing={6}
-      shadow="md"
-      withinPortal
-      zIndex={200}
-      target={props.renderTarget(opened, () =>
-        opened ? close() : setOpened(true)
-      )}
+      className="LocalePicker__dropdown p-2"
+      trigger={props.renderTarget(opened)}
     >
       {props.locales.length === 0 ? (
-        <div className="LocalePicker__empty">
+        <div className="LocalePicker__empty px-2 py-1.5 text-sm">
           All of the doc's locales have a localized value.
         </div>
       ) : (
-        <div className="LocalePicker">
-          <div className="LocalePicker__help">
+        <div className="LocalePicker flex flex-col gap-1.5">
+          <div className="LocalePicker__help px-0.5 pt-0.5 text-sm">
             Override the value for a locale.
           </div>
           <TextInput
-            size="xs"
             placeholder="Search locales"
             aria-label="Search locales"
             value={query}
-            autoFocus
-            onChange={(e: Event) =>
-              setQuery((e.currentTarget as HTMLInputElement).value)
-            }
+            onInput={(e) => setQuery(e.currentTarget.value)}
             onKeyDown={(e: KeyboardEvent) => {
               if (e.key === 'Enter' && options.length > 0) {
                 e.preventDefault();
@@ -352,26 +362,28 @@ function LocalePicker(props: LocalePickerProps) {
               }
             }}
           />
-          <div className="LocalePicker__options">
+          <div className="LocalePicker__options flex max-h-60 flex-col overflow-y-auto">
             {options.map((option) => (
               <button
                 key={option.locale}
                 type="button"
-                className="LocalePicker__option"
+                className="LocalePicker__option m-0 flex cursor-pointer appearance-none items-baseline gap-2 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans text-sm text-fg hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
                 onClick={() => select(option.locale)}
               >
-                <span className="LocalePicker__option__locale">
+                <span className="LocalePicker__optionLocale font-mono font-semibold">
                   {option.locale}
                 </span>
                 {option.name && (
-                  <span className="LocalePicker__option__name">
+                  <span className="LocalePicker__optionName">
                     {option.name}
                   </span>
                 )}
               </button>
             ))}
             {options.length === 0 && (
-              <div className="LocalePicker__empty">No matching locales</div>
+              <div className="LocalePicker__empty px-2 py-1.5 text-sm">
+                No matching locales
+              </div>
             )}
           </div>
         </div>
