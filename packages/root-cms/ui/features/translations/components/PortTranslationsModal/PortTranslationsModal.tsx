@@ -669,7 +669,7 @@ export function PortTranslationsModal(
               dense
               withColumnBorders
               label="Translations"
-              tableClassName="PortTranslationsModal__table min-w-120"
+              classNames={{table: 'PortTranslationsModal__table min-w-120'}}
             >
               <TableHead>
                 <TableRow className="bg-surface-hover">

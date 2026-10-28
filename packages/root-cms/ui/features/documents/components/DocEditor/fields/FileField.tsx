@@ -1135,7 +1135,7 @@ FileField.Preview = () => {
             />
             <Table
               className="FileField__Canvas__Info__Table"
-              tableClassName="table-fixed"
+              classNames={{table: 'table-fixed'}}
               withColumnBorders
             >
               <TableBody>
@@ -1180,7 +1180,7 @@ FileField.Preview = () => {
                     readOnly
                     value={ctx.value?.src}
                     size="xs"
-                    inputClassName="rounded-none"
+                    classNames={{input: 'rounded-none'}}
                     autosize
                     minRows={1}
                     maxRows={10}
@@ -1261,7 +1261,7 @@ FileField.Preview = () => {
           <div className="DocEditor__ImageField__imagePreview__Image__Alt flex items-center gap-2 border-0 border-t border-solid border-input-border p-2">
             <Textarea
               className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea pointer-events-auto min-w-0 flex-1"
-              inputClassName="rounded-none"
+              classNames={{input: 'rounded-none'}}
               aria-label="Alt text"
               value={ctx.altText}
               placeholder="Alt text"

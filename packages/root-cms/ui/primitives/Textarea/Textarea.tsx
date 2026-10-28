@@ -2,7 +2,7 @@ import type {JSX} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {useCallback, useLayoutEffect, useRef} from 'preact/hooks';
 import {useMergedRef} from '../../hooks/useMergedRef.js';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {
   Field,
   type FieldLabelProps,
@@ -36,8 +36,8 @@ interface TextareaOwnProps extends FieldLabelProps {
   maxRows?: number;
   /** Classes for the root (the `Field`, or the textarea when bare). */
   className?: string;
-  /** Classes for the native `<textarea>`. */
-  inputClassName?: string;
+  /** Classes for inner elements: `input` (the native `<textarea>`). */
+  classNames?: ClassNames<'input'>;
 }
 
 export type TextareaProps = TextareaOwnProps &
@@ -71,7 +71,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       minRows = 2,
       maxRows,
       className,
-      inputClassName,
+      classNames,
       id: idProp,
       onInput,
       ...textareaProps
@@ -125,7 +125,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           TEXTAREA_SIZE_CLASSES[size],
           autosize ? 'resize-none' : 'resize-y',
           !field && className,
-          inputClassName
+          classNames?.input
         )}
       />
     );

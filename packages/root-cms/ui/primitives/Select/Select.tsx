@@ -2,7 +2,7 @@ import {IconSelector, IconX} from '@tabler/icons-preact';
 import type {ComponentChildren, JSX, Ref, VNode} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {useLayoutEffect, useMemo, useState} from 'preact/hooks';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {
   Field,
   fieldControlProps,
@@ -47,7 +47,7 @@ export const SELECT_CLEAR_CLASSES =
 /** Props shared by `Select` and `MultiSelect`. */
 export interface ComboboxSharedProps<
   T extends SelectOption = SelectOption,
-> extends Omit<InputChromeProps, 'inputClassName'> {
+> extends Omit<InputChromeProps, 'classNames'> {
   /** The options: strings, or `SelectOption` objects (with `group` to group them). */
   data: SelectData<T>;
   /** Shown when nothing is selected. */
@@ -101,10 +101,11 @@ export interface ComboboxSharedProps<
   maxDropdownHeight?: number;
   /** Opens the dropdown on mount. */
   defaultOpen?: boolean;
-  /** Classes for the control (the input, or the trigger button). */
-  inputClassName?: string;
-  /** Classes for the dropdown panel. */
-  dropdownClassName?: string;
+  /**
+   * Classes for inner elements: `input` (the control: the input, or the
+   * trigger button) and `dropdown` (the dropdown panel).
+   */
+  classNames?: ClassNames<'input' | 'dropdown'>;
 }
 
 interface SelectOwnProps<
@@ -214,8 +215,7 @@ export const Select = forwardRef<HTMLElement, SelectProps>((props, ref) => {
     leftSection,
     rightSection,
     className,
-    inputClassName,
-    dropdownClassName,
+    classNames,
     id: idProp,
     onKeyDown,
     onKeyUp,
@@ -398,7 +398,7 @@ export const Select = forwardRef<HTMLElement, SelectProps>((props, ref) => {
     'aria-expanded:border-focus',
     Boolean(leftSection) && INPUT_LEFT_PADDING_CLASSES[size],
     INPUT_RIGHT_PADDING_CLASSES[size],
-    inputClassName
+    classNames?.input
   );
 
   const showClear = clearable && hasValue && !disabled;
@@ -524,7 +524,7 @@ export const Select = forwardRef<HTMLElement, SelectProps>((props, ref) => {
       maxDropdownHeight={maxDropdownHeight}
       getCreateLabel={getCreateLabel}
       renderOption={renderOption}
-      className={dropdownClassName}
+      className={classNames?.dropdown}
     />
   );
 

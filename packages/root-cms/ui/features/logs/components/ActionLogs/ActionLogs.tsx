@@ -281,7 +281,7 @@ export function ActionLogs(props: ActionLogsProps) {
 
       <Table
         className="ActionsLog__tableSurface rounded-lg"
-        tableClassName="ActionsLog__table font-mono"
+        classNames={{table: 'ActionsLog__table font-mono'}}
         label="Action logs"
         hover
       >
@@ -679,7 +679,7 @@ function ActionLogsCompact(props: ActionLogsProps) {
         {actions.map((action, i) => (
           <AccordionItem
             className="ActionLogsCompact__item last:border-b-0"
-            controlClassName="pl-3"
+            classNames={{control: 'pl-3'}}
             value={String(i)}
             label={<ActionLogsCompactItemPreview action={action} />}
             key={i}

@@ -32,7 +32,7 @@ export function DateField(props: FieldProps) {
     <div className="DocEditor__DateField">
       <TextInput
         type="date"
-        inputClassName="rounded-none"
+        classNames={{input: 'rounded-none'}}
         aria-label={props.field.label || props.field.id}
         value={value || ''}
         error={error}

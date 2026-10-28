@@ -115,7 +115,7 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
       </div>
       <Select
         className="DocumentPagePreviewBar__locales max-w-44 shrink-0"
-        inputClassName="rounded-full border-border"
+        classNames={{input: 'rounded-full border-border'}}
         aria-label="Locale"
         data={localeOptions}
         placeholder="Locale"

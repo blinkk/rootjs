@@ -437,7 +437,7 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
           autoFocus
           aria-label="Task title"
           className="TaskPage__header__titleInput min-w-0 basis-full sm:flex-1 sm:basis-56"
-          inputClassName="text-xl font-bold"
+          classNames={{input: 'text-xl font-bold'}}
           size="md"
           disabled={saving}
           value={draft}

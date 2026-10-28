@@ -2,7 +2,7 @@ import type {ComponentChildren, ComponentType} from 'preact';
 import {createContext} from 'preact';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import {Button, type ButtonSize, type ButtonVariant} from '../Button/Button.js';
-import {Dialog, type DialogSize} from '../Dialog/Dialog.js';
+import {Dialog, type DialogProps, type DialogSize} from '../Dialog/Dialog.js';
 
 /**
  * Options for any modal, mirroring the `@mantine/modals` 4.2.12 options the
@@ -26,10 +26,11 @@ export interface ModalSettings {
   withCloseButton?: boolean;
   /** Classes for the root `<dialog>`; parts have `Dialog__*` BEM hooks. */
   className?: string;
-  /** Classes for the visible panel (`Dialog__panel`). */
-  panelClassName?: string;
-  /** Classes for the scrolling body (`Dialog__body`), e.g. `pb-0`. */
-  bodyClassName?: string;
+  /**
+   * Classes for the dialog's inner elements: `panel` (`Dialog__panel`) and
+   * `body` (the scrolling `Dialog__body`), e.g. `{body: 'pb-0'}`.
+   */
+  classNames?: DialogProps['classNames'];
   /**
    * Actions pinned below the body; see `Dialog`'s `footer`. Ignored by
    * confirm modals, whose footer is their buttons. A context modal whose
@@ -314,8 +315,7 @@ function ModalDialog(props: {
       closeOnClickOutside={settings.closeOnClickOutside}
       withCloseButton={settings.withCloseButton}
       className={settings.className}
-      panelClassName={settings.panelClassName}
-      bodyClassName={settings.bodyClassName}
+      classNames={settings.classNames}
       footer={footer}
       data-modal-id={modal.id}
     >

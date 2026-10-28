@@ -588,7 +588,7 @@ ReleasePage.Actions = (props: {
             <Tooltip
               label="Restore the items in the release to their state before the release was published"
               placement="bottom"
-              contentClassName="max-w-55"
+              classNames={{tooltip: 'max-w-55'}}
               disabled={!canPublish}
             >
               <Button
@@ -628,7 +628,7 @@ ReleasePage.Actions = (props: {
               <Tooltip
                 label="Schedule the release to be published at a future date"
                 placement="bottom"
-                contentClassName="max-w-45"
+                classNames={{tooltip: 'max-w-45'}}
                 disabled={!canPublish}
               >
                 <Button

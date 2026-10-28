@@ -526,8 +526,10 @@ function GlobalSearchInner(props: {
         size={640}
         withCloseButton={false}
         className="GlobalSearch max-md:pt-0"
-        panelClassName="GlobalSearch__panel max-md:h-full max-md:rounded-none"
-        bodyClassName="GlobalSearch__body flex flex-col overflow-hidden p-0"
+        classNames={{
+          panel: 'GlobalSearch__panel max-md:h-full max-md:rounded-none',
+          body: 'GlobalSearch__body flex flex-col overflow-hidden p-0',
+        }}
       >
         <div className="GlobalSearch__header flex shrink-0 items-center gap-2 pl-4 pr-2 md:pr-4">
           <IconSearch

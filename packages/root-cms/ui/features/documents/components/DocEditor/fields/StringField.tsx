@@ -134,7 +134,7 @@ export function StringField(props: FieldProps) {
       <div className="StringField__container relative">
         <Textarea
           className="StringField__input StringField__input--json"
-          inputClassName="resize-none rounded-none py-2.5 font-mono"
+          classNames={{input: 'resize-none rounded-none py-2.5 font-mono'}}
           aria-label={label}
           error={jsonError ? `Invalid JSON: ${jsonError}` : undefined}
           autosize={field.autosize}
@@ -160,10 +160,12 @@ export function StringField(props: FieldProps) {
         />
         <Textarea
           className="StringField__input"
-          inputClassName={cn(
-            'resize-none rounded-none py-2.5',
-            HIGHLIGHTED_INPUT_CLASSES
-          )}
+          classNames={{
+            input: cn(
+              'resize-none rounded-none py-2.5',
+              HIGHLIGHTED_INPUT_CLASSES
+            ),
+          }}
           aria-label={label}
           autosize={field.autosize}
           minRows={4}
@@ -186,7 +188,7 @@ export function StringField(props: FieldProps) {
       />
       <TextInput
         className="StringField__input"
-        inputClassName={cn('rounded-none', HIGHLIGHTED_INPUT_CLASSES)}
+        classNames={{input: cn('rounded-none', HIGHLIGHTED_INPUT_CLASSES)}}
         aria-label={label}
         value={value}
         onInput={onInput}

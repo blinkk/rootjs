@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {IconButton} from '../IconButton/IconButton.js';
 import {pushDialog, removeDialog} from './dialogStack.js';
 
@@ -98,10 +98,11 @@ interface DialogOwnProps {
   closeLabel?: string;
   /** Classes for the root `<dialog>` (which fills the viewport). */
   className?: string;
-  /** Classes for the visible panel (`Dialog__panel`). */
-  panelClassName?: string;
-  /** Classes for the scrolling body (`Dialog__body`). */
-  bodyClassName?: string;
+  /**
+   * Classes for inner elements: `panel` (the visible panel,
+   * `Dialog__panel`) and `body` (the scrolling body, `Dialog__body`).
+   */
+  classNames?: ClassNames<'panel' | 'body'>;
 }
 
 export type DialogProps = DialogOwnProps &
@@ -156,8 +157,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
       withCloseButton = true,
       closeLabel = 'Close',
       className,
-      panelClassName,
-      bodyClassName,
+      classNames,
       ...rest
     } = props;
     const ref = useRef<HTMLDialogElement | null>(null);
@@ -334,7 +334,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
                 isDrawer
                   ? 'border-r border-border'
                   : 'rounded-t-xl md:rounded-lg md:border md:border-border',
-                panelClassName
+                classNames?.panel
               )}
               style={{'--Dialog-width': dialogWidth(size)}}
             >
@@ -378,7 +378,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
                 className={cn(
                   'Dialog__body min-h-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus flex-1 overflow-y-auto break-words px-5 pb-5 text-base',
                   !hasHeader && 'pt-5',
-                  bodyClassName
+                  classNames?.body
                 )}
               >
                 {children}

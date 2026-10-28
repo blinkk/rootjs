@@ -1,7 +1,7 @@
 import type {ComponentChildren, JSX} from 'preact';
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 
 interface TableOptions {
   dense: boolean;
@@ -46,8 +46,8 @@ export interface TableProps extends JSX.HTMLAttributes<HTMLTableElement> {
   label?: string;
   /** Classes for the bordered, scrolling wrapper (the root element). */
   className?: string;
-  /** Classes for the `<table>` itself. */
-  tableClassName?: string;
+  /** Classes for inner elements: `table` (the `<table>` itself). */
+  classNames?: ClassNames<'table'>;
   children?: ComponentChildren;
 }
 
@@ -84,7 +84,7 @@ export function Table(props: TableProps) {
     withColumnBorders = false,
     label,
     className,
-    tableClassName,
+    classNames,
     children,
     ...rest
   } = props;
@@ -115,7 +115,7 @@ export function Table(props: TableProps) {
           className={cn(
             'Table__table',
             'w-full border-separate border-spacing-0 font-sans text-sm text-fg',
-            tableClassName
+            classNames?.table
           )}
         >
           {children}

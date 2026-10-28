@@ -73,7 +73,7 @@ export function InlineComponentModal(props: InlineComponentModalProps) {
       onClose={props.onClose}
       title={props.schema.label || props.schema.name}
       size="lg"
-      bodyClassName="flex flex-col gap-4"
+      classNames={{body: 'flex flex-col gap-4'}}
       footer={
         <>
           <Button onClick={props.onClose}>Cancel</Button>

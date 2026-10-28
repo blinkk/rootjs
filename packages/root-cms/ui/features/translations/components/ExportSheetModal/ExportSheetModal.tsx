@@ -432,7 +432,7 @@ export function ExportSheetModal(
             <div className="ExportSheetModal__section mt-5">
               <Tooltip
                 label="Whether to share the Google Sheet with Admins and Editors upon creation. If your site has a Google Drive folder configured, the sheet will be created within it and inherit its permissions."
-                contentClassName="max-w-80"
+                classNames={{tooltip: 'max-w-80'}}
                 placement="bottom"
               >
                 <Checkbox

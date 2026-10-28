@@ -9,7 +9,7 @@ import {
   useState,
 } from 'preact/hooks';
 import {useMergedRef} from '../../hooks/useMergedRef.js';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {isFocusVisible} from '../floating/focus.js';
 import {Portal} from '../floating/Portal.js';
 import {cloneTrigger, getElementRef} from '../floating/trigger.js';
@@ -66,8 +66,8 @@ export interface TooltipProps {
    * trigger has to be wrapped).
    */
   className?: string;
-  /** Classes for the tooltip bubble. */
-  contentClassName?: string;
+  /** Classes for inner elements: `tooltip` (the bubble). */
+  classNames?: ClassNames<'tooltip'>;
   /**
    * Any other props (and the ref) are passed to the trigger, so a Tooltip
    * can itself be the trigger of a `Menu` or `Popover`.
@@ -126,7 +126,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     defaultOpen = false,
     onOpenChange,
     className,
-    contentClassName,
+    classNames,
     ...triggerProps
   } = props;
   const id = useId();
@@ -367,7 +367,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
           role="tooltip"
           className={cn(
             'Tooltip__content relative z-10 max-w-64 rounded-sm bg-strong px-2.5 py-1.25 font-sans text-sm font-semibold leading-normal text-inverse shadow-md',
-            contentClassName
+            classNames?.tooltip
           )}
         >
           {label}

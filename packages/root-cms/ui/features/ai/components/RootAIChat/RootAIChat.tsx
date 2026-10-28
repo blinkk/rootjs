@@ -640,7 +640,7 @@ function MobileHeader(props: ChatHistoryProps) {
       </IconButton>
       <Dialog
         className="RootAIChat__historyDrawer"
-        bodyClassName="flex flex-col px-0 pb-0"
+        classNames={{body: 'flex flex-col px-0 pb-0'}}
         open={open}
         onClose={() => setOpen(false)}
         position="left"

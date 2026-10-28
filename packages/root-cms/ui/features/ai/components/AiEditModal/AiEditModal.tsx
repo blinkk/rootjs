@@ -139,7 +139,9 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
                 onValueChange={(newValue: string) => setValue(newValue)}
                 formatOnBlur
                 className="AiEditModal__JsonInput h-full w-full"
-                inputClassName="h-full w-full resize-none text-sm leading-normal"
+                classNames={{
+                  input: 'h-full w-full resize-none text-sm leading-normal',
+                }}
               />
             </TabPanel>
             <TabPanel value="diff" className="min-h-0 w-full flex-1">

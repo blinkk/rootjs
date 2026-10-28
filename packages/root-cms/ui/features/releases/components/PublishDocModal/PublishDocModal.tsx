@@ -465,7 +465,7 @@ export function PublishDocModal(
             <div className="PublishDocModal__message relative">
               <Textarea
                 className="PublishDocModal__input"
-                inputClassName={cn('resize-y', aiAvailable && 'pr-10')}
+                classNames={{input: cn('resize-y', aiAvailable && 'pr-10')}}
                 placeholder="What changed?"
                 aria-label="Publish message"
                 value={publishMessage}
@@ -1086,7 +1086,7 @@ function ReleaseFields(props: ReleaseFieldsProps) {
               />
               <Textarea
                 className="PublishDocModal__newReleaseDescription"
-                inputClassName="resize-y"
+                classNames={{input: 'resize-y'}}
                 label="Description (optional)"
                 minRows={2}
                 placeholder="Describe this release"

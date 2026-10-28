@@ -154,7 +154,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
               <Tooltip
                 key={index}
                 label={version.prompt || 'Original'}
-                contentClassName="max-w-55"
+                classNames={{tooltip: 'max-w-55'}}
               >
                 <button
                   type="button"

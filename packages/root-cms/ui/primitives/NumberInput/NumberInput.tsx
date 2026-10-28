@@ -46,7 +46,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       hideControls = false,
       size = 'sm',
       className,
-      inputClassName,
+      classNames,
       onInput,
       disabled,
       readOnly,
@@ -114,7 +114,10 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         }}
         rightSection={controls || undefined}
         className={cn('NumberInput', className)}
-        inputClassName={cn('NumberInput__input', inputClassName)}
+        classNames={{
+          ...classNames,
+          input: cn('NumberInput__input', classNames?.input),
+        }}
       />
     );
   }

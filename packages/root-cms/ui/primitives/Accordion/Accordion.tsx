@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 
 interface AccordionContextValue {
   isOpen: (value: string) => boolean;
@@ -132,12 +132,11 @@ export interface AccordionItemProps extends Omit<
   disabled?: boolean;
   className?: string;
   /**
-   * Classes for the header button (without `href`), e.g. `px-0` to line its
-   * label up with flush content.
+   * Classes for inner elements: `control` (the header button, without
+   * `href`) and `content` (the padded wrapper around the children), e.g.
+   * `{control: 'px-0', content: 'px-0'}` for edge-to-edge content.
    */
-  controlClassName?: string;
-  /** Classes for the content wrapper, e.g. `px-0` for edge-to-edge content. */
-  contentClassName?: string;
+  classNames?: ClassNames<'control' | 'content'>;
   children?: ComponentChildren;
 }
 
@@ -160,8 +159,7 @@ export function AccordionItem(props: AccordionItemProps) {
     keepMounted = false,
     disabled = false,
     className,
-    controlClassName,
-    contentClassName,
+    classNames,
     children,
     ...rest
   } = props;
@@ -230,7 +228,7 @@ export function AccordionItem(props: AccordionItemProps) {
             'hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
             'disabled:cursor-not-allowed disabled:opacity-50',
             chevronLeft && 'flex-row-reverse',
-            controlClassName
+            classNames?.control
           )}
         >
           <span className="Accordion__label min-w-0 flex-1 truncate">
@@ -271,7 +269,7 @@ export function AccordionItem(props: AccordionItemProps) {
         <div
           className={cn(
             'Accordion__content px-2 pb-3 text-sm',
-            contentClassName
+            classNames?.content
           )}
         >
           {(visible || keepMounted) && children}

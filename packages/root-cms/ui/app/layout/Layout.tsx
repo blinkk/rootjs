@@ -252,7 +252,7 @@ Layout.Drawer = (props: {open: boolean; onClose: () => void}) => {
   return (
     <Dialog
       className="Layout__drawer md:hidden"
-      bodyClassName="px-0 pb-0 flex flex-col"
+      classNames={{body: 'px-0 pb-0 flex flex-col'}}
       open={props.open}
       onClose={props.onClose}
       position="left"

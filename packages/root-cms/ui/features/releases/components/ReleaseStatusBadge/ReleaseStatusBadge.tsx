@@ -68,7 +68,7 @@ function StatusTooltip(props: {label: string; children: ComponentChildren}) {
     <Tooltip
       label={props.label}
       className="ReleaseStatusBadge"
-      contentClassName="max-w-60"
+      classNames={{tooltip: 'max-w-60'}}
     >
       {props.children}
     </Tooltip>

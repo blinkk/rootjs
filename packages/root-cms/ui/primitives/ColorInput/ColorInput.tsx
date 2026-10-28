@@ -43,6 +43,7 @@ export const ColorInput = forwardRef<HTMLInputElement, ColorInputProps>(
       onValueChange,
       swatches,
       className,
+      classNames,
       size = 'sm',
       disabled,
       readOnly,
@@ -94,7 +95,10 @@ export const ColorInput = forwardRef<HTMLInputElement, ColorInputProps>(
         spellcheck={false}
         autoComplete="off"
         className={swatches ? undefined : cn('ColorInput', className)}
-        inputClassName="ColorInput__input font-mono"
+        classNames={{
+          ...classNames,
+          input: cn('ColorInput__input font-mono', classNames?.input),
+        }}
         onInput={(e) => {
           update(e.currentTarget.value);
           onInput?.(e);

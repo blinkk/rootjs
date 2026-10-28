@@ -54,7 +54,7 @@ export const JsonInput = forwardRef<HTMLTextAreaElement, JsonInputProps>(
       validationError = 'Invalid JSON.',
       error,
       className,
-      inputClassName,
+      classNames,
       onInput,
       onBlur,
       onFocus,
@@ -80,7 +80,10 @@ export const JsonInput = forwardRef<HTMLTextAreaElement, JsonInputProps>(
         autoComplete="off"
         error={error ?? (invalid ? validationError : undefined)}
         className={cn('JsonInput', className)}
-        inputClassName={cn('JsonInput__input font-mono', inputClassName)}
+        classNames={{
+          ...classNames,
+          input: cn('JsonInput__input font-mono', classNames?.input),
+        }}
         onInput={(e) => {
           update(e.currentTarget.value);
           onInput?.(e);

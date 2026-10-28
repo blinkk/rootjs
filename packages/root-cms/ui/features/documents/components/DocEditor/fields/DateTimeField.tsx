@@ -91,7 +91,7 @@ export function DateTimeField(props: FieldProps) {
             onDateChange(target.value, target.validity);
           }}
           className="DocEditor__DateTimeField__input min-w-50 flex-1"
-          inputClassName="rounded-none"
+          classNames={{input: 'rounded-none'}}
         />
         {field.timezone ? (
           <div className="DocEditor__DateTimeField__timezone text-right text-xs font-normal">

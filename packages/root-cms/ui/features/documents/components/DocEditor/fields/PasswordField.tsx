@@ -104,7 +104,7 @@ export function PasswordField(props: FieldProps) {
     <div className="PasswordField flex flex-col gap-2">
       <PasswordInput
         className="PasswordField__input"
-        inputClassName="rounded-none"
+        classNames={{input: 'rounded-none'}}
         aria-label={field.label || field.id}
         autoComplete="new-password"
         placeholder={field.placeholder || 'Enter a new password'}

@@ -321,7 +321,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
 
         <Table
           className="AssetBrowser__details__table rounded-none border-0"
-          tableClassName="table-fixed"
+          classNames={{table: 'table-fixed'}}
           dense
         >
           <TableBody>

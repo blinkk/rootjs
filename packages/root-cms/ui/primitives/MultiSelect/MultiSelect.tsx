@@ -181,8 +181,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
       leftSection,
       rightSection,
       className,
-      inputClassName,
-      dropdownClassName,
+      classNames,
       id: idProp,
       onKeyDown,
       onBlur,
@@ -416,7 +415,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
               'MultiSelect__input m-0 min-w-12 flex-1 basis-12 appearance-none border-0 bg-transparent p-0 px-1 font-sans text-input-fg shadow-none outline-none placeholder:text-input-placeholder disabled:cursor-not-allowed disabled:opacity-60',
               ROW_SIZE_CLASSES[size],
               INPUT_TEXT_CLASSES[size],
-              inputClassName
+              classNames?.input
             )}
             onInput={(e) => {
               setQuery(e.currentTarget.value);
@@ -476,7 +475,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         maxDropdownHeight={maxDropdownHeight}
         getCreateLabel={getCreateLabel}
         renderOption={renderOption}
-        className={dropdownClassName}
+        className={classNames?.dropdown}
       />
     );
 

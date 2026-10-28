@@ -10,7 +10,7 @@ export function NumberField(props: FieldProps) {
   return (
     <NumberInput
       className="DocEditor__NumberField"
-      inputClassName="rounded-none"
+      classNames={{input: 'rounded-none'}}
       aria-label={props.field.label || props.field.id}
       value={value}
       onValueChange={(value) => setValue(value)}

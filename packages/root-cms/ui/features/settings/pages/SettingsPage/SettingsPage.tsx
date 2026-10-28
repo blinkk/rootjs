@@ -654,7 +654,7 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
         maxRows={16}
         placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
         className="SettingsPage__customCss"
-        inputClassName="font-mono text-sm"
+        classNames={{input: 'font-mono text-sm'}}
         aria-label={props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
         value={value}
         onFocus={() => {

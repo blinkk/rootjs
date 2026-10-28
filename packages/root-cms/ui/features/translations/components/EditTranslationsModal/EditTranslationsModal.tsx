@@ -607,7 +607,9 @@ EditTranslationsModal.StringsEditor = (props: {
           >
             <Textarea
               id={`${baseId}-${locale}`}
-              inputClassName={cn(!translations[locale] && 'bg-danger-soft')}
+              classNames={{
+                input: cn(!translations[locale] && 'bg-danger-soft'),
+              }}
               autosize
               minRows={1}
               maxRows={10}

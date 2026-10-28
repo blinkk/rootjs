@@ -23,3 +23,10 @@ export function joinClassNames(...classNames: MaybeString[]) {
 export function cn(...classNames: MaybeString[]) {
   return twMerge(classNames) || undefined;
 }
+
+/**
+ * Classes for a component's inner elements, keyed by part name (as in
+ * Mantine), e.g. `classNames={{input: 'font-mono'}}`. Each component lists
+ * its parts in its `classNames` prop; `className` stays on the root.
+ */
+export type ClassNames<Part extends string> = Partial<Record<Part, string>>;

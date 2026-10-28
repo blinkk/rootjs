@@ -1,7 +1,7 @@
 import './TextInput.css';
 import type {ComponentChildren, JSX} from 'preact';
 import {forwardRef} from 'preact/compat';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {
   Field,
   type FieldLabelProps,
@@ -89,8 +89,8 @@ export interface InputChromeProps extends FieldLabelProps {
   rightSection?: ComponentChildren;
   /** Classes for the root (the `Field`, or the input box when bare). */
   className?: string;
-  /** Classes for the native `<input>`. */
-  inputClassName?: string;
+  /** Classes for inner elements: `input` (the native `<input>`). */
+  classNames?: ClassNames<'input'>;
 }
 
 export type TextInputProps = InputChromeProps &
@@ -124,7 +124,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       leftSection,
       rightSection,
       className,
-      inputClassName,
+      classNames,
       id: idProp,
       type = 'text',
       ...inputProps
@@ -164,7 +164,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
             INPUT_SIZE_CLASSES[size],
             Boolean(leftSection) && INPUT_LEFT_PADDING_CLASSES[size],
             Boolean(rightSection) && INPUT_RIGHT_PADDING_CLASSES[size],
-            inputClassName
+            classNames?.input
           )}
         />
         {rightSection && (

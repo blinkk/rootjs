@@ -143,12 +143,12 @@ describe('ModalsProvider', () => {
     expect(document.querySelector('dialog')).toBeNull();
   });
 
-  it("renders a context modal's DialogFooter and bodyClassName", async () => {
+  it("renders a context modal's DialogFooter and body classNames", async () => {
     const modals = setup();
     act(() => {
       modals().openContextModal('WithFooter', {
         innerProps: {label: 'Save'},
-        bodyClassName: 'pb-0',
+        classNames: {body: 'pb-0'},
       });
     });
     // The footer element mounts first, then `DialogFooter` portals into it.

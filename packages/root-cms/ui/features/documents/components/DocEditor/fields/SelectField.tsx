@@ -75,7 +75,7 @@ export function SelectField(props: FieldProps) {
   const select = (
     <Select
       className="min-w-0 flex-1"
-      inputClassName="rounded-none"
+      classNames={{input: 'rounded-none'}}
       aria-label={field.label || field.id}
       data={data}
       placeholder={field.placeholder}

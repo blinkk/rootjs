@@ -269,7 +269,7 @@ DataSourcePage.DataTable = (props: {headers?: string[]; rows?: string[][]}) => {
     <div className="DataSourcePage__DataTable">
       <Table
         className="rounded-none border-0"
-        tableClassName="DataSourcePage__DataTable__table"
+        classNames={{table: 'DataSourcePage__DataTable__table'}}
         dense
         striped
         hover

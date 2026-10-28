@@ -3046,7 +3046,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
         </div>
         <Select
           className="w-48 min-w-0"
-          inputClassName="rounded-none"
+          classNames={{input: 'rounded-none'}}
           aria-label="Type"
           data={dropdownValues}
           value={type}

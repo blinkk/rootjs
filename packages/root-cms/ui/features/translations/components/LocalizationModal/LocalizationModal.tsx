@@ -134,7 +134,7 @@ export function useLocalizationModal() {
         size: 'clamp(80%, 1024px, 1280px)',
         // The panes run to the bottom of the body, and from `md` up each
         // scrolls on its own.
-        bodyClassName: 'pb-0',
+        classNames: {body: 'pb-0'},
         onClose: () => {
           // Flush any pending draft changes (e.g. locale toggles) without
           // triggering the iframe reload that normally follows a flush.
