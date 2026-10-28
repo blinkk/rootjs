@@ -14,14 +14,6 @@ export const SwitchGallery = defineGallery({
         <Switch label="Disabled, on" disabled defaultChecked />
       </div>
     ),
-    Colors: () => (
-      <div className="flex flex-col gap-3">
-        <Switch label="Default, off" />
-        <Switch label="Default, on" defaultChecked />
-        <Switch color="gray" label="Gray, off" />
-        <Switch color="gray" label="Gray, on" defaultChecked />
-      </div>
-    ),
     Sizes: () => (
       <div className="flex flex-col gap-3">
         <Switch size="sm" label="Small" defaultChecked />
