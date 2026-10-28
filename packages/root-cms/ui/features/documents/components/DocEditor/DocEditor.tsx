@@ -66,6 +66,7 @@ import {
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
@@ -1216,6 +1217,7 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const collection = useDocCollectionSchema();
   const pinnedThreads = usePinnedCommentThreads();
   const [opened, setOpened] = useState(false);
+  const isDesktop = useMediaQuery('(width >= 48rem)');
   const popoverRef = useRef<HTMLDivElement>(null);
   const count = thread ? countThreadComments(thread) : 0;
   const pinned = Boolean(
@@ -1275,7 +1277,9 @@ DocEditor.FieldHeaderCommentActionIconInner = (
         }
         setOpened(open);
       }}
-      placement="left-start"
+      // Beside the field on desktop; below it on phones, where there's no
+      // room to the side.
+      placement={isDesktop ? 'left-start' : 'bottom-end'}
       width={420}
       withArrow
       trapFocus={false}
