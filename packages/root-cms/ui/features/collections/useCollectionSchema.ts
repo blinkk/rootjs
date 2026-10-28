@@ -1,7 +1,7 @@
-import {showNotification} from '@mantine/notifications';
 import {useCallback, useEffect, useState} from 'preact/hooks';
 import {Collection} from '../../../core/schema.js';
 import {SSEEvent, SSESchemaChangedEvent, useSSE} from '../../hooks/useSSE.js';
+import {showNotification} from '../../primitives/Toast/toastStore.js';
 import {fetchCollectionSchema} from './collection.js';
 
 export function useCollectionSchema(collectionId: string) {

@@ -1,6 +1,4 @@
 import {ActionIcon, Menu} from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconAlarmOff,
   IconArchive,
@@ -19,7 +17,11 @@ import {
   IconTrash,
 } from '@tabler/icons-preact';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {useCopyDocModal} from '../../../collections/components/CopyDocModal/CopyDocModal.js';
 import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/AddToReleaseModal.js';
@@ -98,7 +100,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       }
     },
   });
-  const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
   const lockPublishingModal = useLockPublishingModal({docId});
   const addToReleaseModal = useAddToReleaseModal({docIds: [docId]});
@@ -116,7 +117,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Discard draft edits for ${docId}`,
       children: (
         <>
@@ -166,7 +166,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const onUnpublishDoc = () => {
     const notificationId = `unpublish-doc-${docId}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Unpublish ${docId}`,
       children: (
         <>
@@ -235,7 +234,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const onUnscheduleDoc = () => {
     const notificationId = `unschedule-doc-${docId}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Unschedule ${docId}`,
       children: (
         <>
@@ -283,7 +281,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const onArchiveDoc = () => {
     const notificationId = `archive-doc-${docId}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Archive ${docId}`,
       children: (
         <>
@@ -353,7 +350,6 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const onDeleteDoc = () => {
     const notificationId = `delete-doc-${docId}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Delete doc',
       children: (
         <>

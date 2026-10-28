@@ -1,7 +1,9 @@
 import './AssetPickerModal.css';
 
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {AssetFile, setAssetPickerLastFolder} from '../../assets.js';
 import {AssetBrowser} from '../AssetBrowser/AssetBrowser.js';
 
@@ -30,7 +32,6 @@ export function useAssetPickerModal() {
   } catch {
     modals = null;
   }
-  const modalTheme = useModalTheme();
   return {
     enabled: modals !== null,
     open: (props: AssetPickerModalProps) => {
@@ -41,7 +42,6 @@ export function useAssetPickerModal() {
         return;
       }
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: 'Select from asset library',
         innerProps: props,
         size: '800px',

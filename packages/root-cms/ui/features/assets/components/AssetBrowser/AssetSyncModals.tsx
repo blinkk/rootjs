@@ -1,5 +1,4 @@
 import {Button, Modal, TextInput} from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconBrandFigma,
@@ -15,6 +14,7 @@ import {
 import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {syncFolder} from '../../asset-sync/engine.js';
 import {

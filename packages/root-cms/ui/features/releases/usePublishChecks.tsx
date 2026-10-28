@@ -1,10 +1,9 @@
-import {useModals} from '@mantine/modals';
 import {useCallback} from 'preact/hooks';
 import {
   summarizePublishChecks,
   type PublishCheckResult,
 } from '../../../shared/publish-checks.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useModals} from '../../primitives/modals/ModalsProvider.js';
 import {testIsAdmin} from '../users/permissions.js';
 import {useProjectRoles} from '../users/useProjectRoles.js';
 import {PublishChecksModal} from './components/PublishChecksModal/PublishChecksModal.js';
@@ -70,7 +69,6 @@ export interface RunPublishChecksOptions {
  */
 export function usePublishChecks() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const {roles, loading: rolesLoading} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   // Treat an unresolved roles fetch as "not an admin" so checks can't be
@@ -117,7 +115,6 @@ export function usePublishChecks() {
       return await new Promise<PublishChecksDecision>((resolve) => {
         let bypassed = false;
         modals.openContextModal(PublishChecksModal.id, {
-          ...modalTheme,
           title: `${options.actionLabel} blocked by checks`,
           size: '700px',
           innerProps: {
@@ -144,7 +141,7 @@ export function usePublishChecks() {
         });
       });
     },
-    [modals, modalTheme, isAdmin]
+    [modals, isAdmin]
   );
 
   const showWarnings = useCallback(
@@ -154,7 +151,6 @@ export function usePublishChecks() {
         return;
       }
       modals.openContextModal(PublishChecksModal.id, {
-        ...modalTheme,
         title: 'Published with warnings',
         size: '700px',
         innerProps: {
@@ -164,7 +160,7 @@ export function usePublishChecks() {
         },
       });
     },
-    [modals, modalTheme]
+    [modals]
   );
 
   return {

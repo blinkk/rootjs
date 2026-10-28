@@ -1,12 +1,14 @@
 import {Button, JsonInput} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {
   IconArrowBackUp,
   IconClipboard,
   IconDeviceFloppy,
 } from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import './EditJsonModal.css';
 import {deserializeDocJson} from '../../doc.js';
 
@@ -21,11 +23,9 @@ export interface EditJsonModalProps {
 
 export function useEditJsonModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: EditJsonModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: props.title || 'Edit JSON',
         innerProps: props,
         size: '680px',

@@ -1,10 +1,12 @@
 import {Button, Loader} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {IconScissors} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {batchUpdateTags, loadTranslations, sourceHash} from '../../l10n.js';
 import './PruneTranslationsModal.css';
 
@@ -21,11 +23,9 @@ export interface PruneTranslationsModalProps {
 /** Hook that returns an `open()` function for launching the prune modal. */
 export function usePruneTranslationsModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (innerProps: PruneTranslationsModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: `Prune unused strings from ${innerProps.docId}`,
         innerProps,
         size: 600,

@@ -9,8 +9,6 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -31,7 +29,11 @@ import {
   rankBySimilarity,
 } from '../../../../../shared/translation-port.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {logAction} from '../../../logs/actions.js';
@@ -82,11 +84,9 @@ export interface PortTranslationsModalProps {
 /** Hook that returns an `open()` function for launching the port modal. */
 export function usePortTranslationsModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (innerProps: PortTranslationsModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: 'Port translations',
         innerProps,
         size: 'clamp(70%, 880px, 1040px)',

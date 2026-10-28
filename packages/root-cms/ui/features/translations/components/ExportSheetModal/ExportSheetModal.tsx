@@ -1,11 +1,8 @@
 import {Button, Checkbox, Select, TextInput, Tooltip} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconExternalLink} from '@tabler/icons-preact';
 import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {useSiteSettings} from '../../../../hooks/useSiteSettings.js';
 import {
   GSheet,
@@ -15,6 +12,14 @@ import {
   parseSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {cmsLinkGoogleSheetL10n} from '../../../documents/doc.js';
 import './ExportSheetModal.css';
@@ -32,11 +37,9 @@ export interface ExportSheetModalProps {
 
 export function useExportSheetModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: ExportSheetModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: 'Export to Google Sheet',
         innerProps: props,
         size: '650px',

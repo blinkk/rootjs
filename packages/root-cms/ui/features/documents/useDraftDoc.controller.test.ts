@@ -46,7 +46,7 @@ const {showNotificationMock} = vi.hoisted(() => ({
   showNotificationMock: vi.fn(),
 }));
 
-vi.mock('@mantine/notifications', () => ({
+vi.mock('../../primitives/Toast/toastStore.js', () => ({
   showNotification: showNotificationMock,
 }));
 

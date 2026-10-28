@@ -1,7 +1,6 @@
 import './CommentThread.css';
 
 import {ActionIcon, Button, Loader, Tooltip} from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {
   IconArrowBackUp,
   IconCheck,
@@ -19,6 +18,7 @@ import {
   isOpenThread,
 } from '../../../../shared/comments.js';
 import {RichTextData} from '../../../../shared/richtext.js';
+import {showNotification} from '../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {errorMessage} from '../../../utils/notifications.js';
 import {formatDateTime, getTimeAgo} from '../../../utils/time.js';

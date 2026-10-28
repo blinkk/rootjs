@@ -8,8 +8,6 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {
   IconDotsVertical,
   IconFolder,
@@ -25,8 +23,9 @@ import {useLocation} from 'preact-iso';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
@@ -226,12 +225,10 @@ TranslationsManagerPage.DocRow = (props: {
   const doc = props.doc;
   const {route} = useLocation();
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const editUrl = `/cms/translations/${doc.id}`;
 
   function onPublish() {
     modals.openConfirmModal({
-      ...modalTheme,
       title: `Publish translations: ${doc.id}`,
       children: (
         <div className="TranslationsManagerPage__confirmText">
@@ -258,7 +255,6 @@ TranslationsManagerPage.DocRow = (props: {
 
   function onDelete() {
     modals.openConfirmModal({
-      ...modalTheme,
       title: `Delete translations: ${doc.id}`,
       children: (
         <div className="TranslationsManagerPage__confirmText">

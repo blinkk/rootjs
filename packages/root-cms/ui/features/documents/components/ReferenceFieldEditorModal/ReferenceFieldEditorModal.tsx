@@ -1,9 +1,11 @@
 import './ReferenceFieldEditorModal.css';
 
 import {Button} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconArrowUpRight} from '@tabler/icons-preact';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {DraftDocProvider, useDraftDoc} from '../../useDraftDoc.js';
 import {DocEditor} from '../DocEditor/DocEditor.js';
 
@@ -16,11 +18,9 @@ export interface ReferenceFieldEditorModalProps {
 
 export function useReferenceFieldEditorModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: ReferenceFieldEditorModalProps) => {
       modals.openContextModal<ReferenceFieldEditorModalProps>(MODAL_ID, {
-        ...modalTheme,
         className: 'ReferenceFieldEditorModalWrap',
         innerProps: props,
         title: `Edit ${props.docId}`,

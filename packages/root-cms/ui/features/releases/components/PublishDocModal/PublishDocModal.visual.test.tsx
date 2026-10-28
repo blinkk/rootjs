@@ -4,7 +4,6 @@ import '../../../../styles/theme.css';
 import './PublishDocModal.css';
 
 import {MantineProvider} from '@mantine/core';
-import {ModalsProvider, ContextModalProps} from '@mantine/modals';
 import {cleanup, render} from '@testing-library/preact';
 import {
   afterEach,
@@ -16,6 +15,10 @@ import {
   vi,
 } from 'vitest';
 import {page} from 'vitest/browser';
+import {
+  ModalsProvider,
+  type ContextModalProps,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {cmsGetDocDiffSummary} from '../../../documents/doc.js';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 

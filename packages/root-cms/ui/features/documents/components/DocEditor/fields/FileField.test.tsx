@@ -45,7 +45,7 @@ vi.mock('./GenerateImageForm.js', () => ({
   GenerateImageForm: () => null,
 }));
 
-vi.mock('@mantine/notifications', () => ({
+vi.mock('../../../../../primitives/Toast/toastStore.js', () => ({
   showNotification: vi.fn(),
   hideNotification: vi.fn(),
 }));

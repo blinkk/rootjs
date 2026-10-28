@@ -8,8 +8,6 @@ import {
   Modal,
   Tooltip,
 } from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconCalendarEvent,
@@ -27,7 +25,11 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
@@ -70,11 +72,9 @@ export interface PublishDocModalProps {
 
 export function usePublishDocModal(props: PublishDocModalProps) {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: () => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: (
           <span className="PublishDocModal__title">
             <IconRocket size={18} stroke={1.75} />
@@ -107,7 +107,6 @@ export function PublishDocModal(
   );
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const aiAvailable = testAiEnabled();
   const isRelease = publishType === 'release';
   const [releaseChoice, setReleaseChoice] = useState('');
@@ -322,7 +321,6 @@ export function PublishDocModal(
 
   function openConfirmModal(decision: PublishChecksDecision) {
     modals.openConfirmModal({
-      ...modalTheme,
       title: `${buttonLabel} ${props.docId}`,
       children: (
         <>
@@ -652,7 +650,6 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
   const docId = props.docId;
   const [diffOpen, setDiffOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const modalTheme = useModalTheme();
   // Kept here rather than in the summary modal so that closing and reopening
   // the modal shows the same summary instead of running Root AI again.
   const aiSummary = useAiSummary({
@@ -716,7 +713,6 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
       )}
 
       <Modal
-        {...modalTheme}
         opened={diffOpen}
         onClose={() => setDiffOpen(false)}
         title={
@@ -740,7 +736,6 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
       </Modal>
 
       <Modal
-        {...modalTheme}
         opened={summaryOpen}
         onClose={() => setSummaryOpen(false)}
         title={

@@ -1,5 +1,4 @@
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
-import {showNotification} from '@mantine/notifications';
 import {
   $createParagraphNode,
   $getNodeByKey,
@@ -11,6 +10,7 @@ import {
 } from 'lexical';
 import {useEffect} from 'preact/hooks';
 import {uploadFileToGCS} from '../../../../../../integrations/gcs.js';
+import {showNotification} from '../../../../../../primitives/Toast/toastStore.js';
 import {
   $createBlockComponentNode,
   $isBlockComponentNode,
@@ -85,7 +85,7 @@ export function ImagePastePlugin() {
     } catch (err) {
       console.error('Failed to upload image', err);
       showNotification({
-        type: 'error',
+        color: 'red',
         message: 'Failed to upload image',
       });
     }

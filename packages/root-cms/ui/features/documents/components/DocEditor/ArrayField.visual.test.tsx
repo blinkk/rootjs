@@ -3,10 +3,10 @@ import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 
 import {MantineProvider} from '@mantine/core';
-import {ModalsProvider} from '@mantine/modals';
 import {cleanup, fireEvent, render} from '@testing-library/preact';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import * as schema from '../../../../../core/schema.js';
+import {ModalsProvider} from '../../../../primitives/modals/ModalsProvider.js';
 import {DeeplinkProvider} from '../../useDeeplink.js';
 import {DraftDocContext, DraftDocContextProvider} from '../../useDraftDoc.js';
 import {ComponentPickerModal} from '../ComponentPickerModal/ComponentPickerModal.js';

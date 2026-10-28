@@ -2,7 +2,6 @@ import './DocumentPage.css';
 
 import {ActionIcon, Button, Checkbox, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
-import {useModals} from '@mantine/modals';
 import {
   IconArrowLeft,
   IconArrowUpRight,
@@ -19,9 +18,9 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {SplitPanel} from '../../../../components/SplitPanel/SplitPanel.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {RootAIChat} from '../../../ai/components/RootAIChat/RootAIChat.js';
@@ -880,7 +879,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const syncedUrlKey = useRef<string | null>(null);
   const {route} = useLocation();
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const previewFrameRef = useRef<HTMLDivElement>(null);
   // Remembers the viewport selection from before 2-up was enabled so it can be
   // restored when 2-up is turned back off.
@@ -1024,7 +1022,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
     // correct at the moment the user accepts, so there's nothing to re-render.
     let dontAskAgain = false;
     modals.openConfirmModal({
-      ...modalTheme,
       title: 'The preview has changed',
       children: (
         <>

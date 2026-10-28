@@ -9,10 +9,10 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {IconRobot} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {UploadedFile} from '../../../../../integrations/gcs.js';
+import {showNotification} from '../../../../../primitives/Toast/toastStore.js';
 import {testAiImageGenerationEnabled} from '../../../../ai/ai.js';
 
 interface GenerateImageFormProps {

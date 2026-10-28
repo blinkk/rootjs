@@ -1,13 +1,15 @@
 import './DocPickerModal.css';
 
 import {Button, Loader, Select, TextInput} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconSearch} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {DocStatusBadges} from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
@@ -45,11 +47,9 @@ export interface DocPickerModalProps {
 
 export function useDocPickerModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: DocPickerModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: props,
         size: '700px',
         overflow: 'inside',

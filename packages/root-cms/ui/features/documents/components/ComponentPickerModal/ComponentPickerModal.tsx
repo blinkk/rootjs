@@ -1,7 +1,6 @@
 import './ComponentPickerModal.css';
 
 import {Button, Image, SegmentedControl, TextInput} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {
   IconLayoutGrid,
   IconLayoutList,
@@ -12,7 +11,10 @@ import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import * as schema from '../../../../../core/schema.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 
 const MODAL_ID = 'ComponentPickerModal';
 const LAYOUT_STORAGE_KEY = 'root::ComponentPickerModal:layout';
@@ -49,11 +51,9 @@ export interface ComponentPickerModalProps {
 
 export function useComponentPickerModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: ComponentPickerModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: props,
         size: '720px',
         overflow: 'inside',

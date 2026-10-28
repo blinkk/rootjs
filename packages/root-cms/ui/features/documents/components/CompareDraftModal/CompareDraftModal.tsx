@@ -1,7 +1,9 @@
 import './CompareDraftModal.css';
 
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 
 const MODAL_ID = 'CompareDraftModal';
@@ -20,7 +22,6 @@ export function useCompareDraftModal(props: CompareDraftModalProps) {
   } catch {
     modals = null;
   }
-  const modalTheme = useModalTheme();
   return {
     enabled: modals !== null,
     open: () => {
@@ -31,7 +32,6 @@ export function useCompareDraftModal(props: CompareDraftModalProps) {
         return;
       }
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: `Unpublished changes: ${props.docId}`,
         innerProps: props,
         overflow: 'inside',

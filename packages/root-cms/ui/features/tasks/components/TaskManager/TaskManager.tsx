@@ -8,7 +8,6 @@ import {
   Popover,
   SegmentedControl,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {
   IconArrowsSort,
   IconCalendar,
@@ -23,6 +22,7 @@ import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';

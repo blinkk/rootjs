@@ -9,8 +9,6 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconCirclePlus,
   IconRocket,
@@ -20,8 +18,12 @@ import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {usePortTranslationsModal} from '../../components/PortTranslationsModal/PortTranslationsModal.js';
@@ -89,7 +91,6 @@ export function TranslationsManagerEditPage(
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const portModal = usePortTranslationsModal();
 
   const isDocBacked = testIsDocBackedId(translationsId);
@@ -224,7 +225,6 @@ export function TranslationsManagerEditPage(
 
   function onPublish() {
     modals.openConfirmModal({
-      ...modalTheme,
       title: `Publish translations: ${translationsId}`,
       children: (
         <div className="TranslationsManagerEditPage__confirmText">

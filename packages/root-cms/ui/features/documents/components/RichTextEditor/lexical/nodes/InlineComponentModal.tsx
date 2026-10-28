@@ -1,7 +1,6 @@
 import {Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../../../core/schema.js';
-import {useModalTheme} from '../../../../../../hooks/useModalTheme.js';
 import {cloneData} from '../../../../../../utils/objects.js';
 import {
   DraftDocContext,
@@ -65,11 +64,8 @@ export function InlineComponentModal(props: InlineComponentModalProps) {
     props.onSubmit({componentId: componentId.trim(), data: clonedValue});
   };
 
-  const modalTheme = useModalTheme();
-
   return (
     <Modal
-      {...modalTheme}
       opened={props.opened}
       onClose={props.onClose}
       title={props.schema.label || props.schema.name}

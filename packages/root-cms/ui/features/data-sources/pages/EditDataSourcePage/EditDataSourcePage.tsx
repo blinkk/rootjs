@@ -1,6 +1,4 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconArchive,
   IconCloudOff,
@@ -14,8 +12,12 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
@@ -34,7 +36,6 @@ export function EditDataSourcePage(props: {id: string}) {
   const {route} = useLocation();
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -48,7 +49,6 @@ export function EditDataSourcePage(props: {id: string}) {
   function onDeleteClicked() {
     const notificationId = `delete-data-source-${props.id}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Delete data source',
       children: (
         <Text size="body-sm" weight="semi-bold">
@@ -87,7 +87,6 @@ export function EditDataSourcePage(props: {id: string}) {
     const notificationId = `archive-data-source-${props.id}`;
     const isPublished = Boolean(dataSource?.publishedAt);
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Archive data source',
       children: (
         <Text size="body-sm" weight="semi-bold">
@@ -134,7 +133,6 @@ export function EditDataSourcePage(props: {id: string}) {
   function onUnarchiveClicked() {
     const notificationId = `unarchive-data-source-${props.id}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Unarchive data source',
       children: (
         <Text size="body-sm" weight="semi-bold">
@@ -174,7 +172,6 @@ export function EditDataSourcePage(props: {id: string}) {
   function onUnpublishClicked() {
     const notificationId = `unpublish-data-source-${props.id}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Unpublish data source',
       children: (
         <Text size="body-sm" weight="semi-bold">

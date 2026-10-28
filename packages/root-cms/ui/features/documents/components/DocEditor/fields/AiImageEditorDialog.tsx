@@ -10,9 +10,9 @@ import {
   Tooltip,
   useMantineTheme,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {IconCheck, IconRobot} from '@tabler/icons-preact';
 import {useMemo, useState} from 'preact/hooks';
+import {showNotification} from '../../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../../utils/classes.js';
 import {getAiImageEditingModels} from '../../../../ai/ai.js';
 import './AiImageEditorDialog.css';

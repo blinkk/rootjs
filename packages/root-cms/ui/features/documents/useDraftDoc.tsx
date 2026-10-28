@@ -1,4 +1,3 @@
-import {showNotification} from '@mantine/notifications';
 import {
   doc,
   DocumentReference,
@@ -17,6 +16,7 @@ import {
   formatNestingDepthMessage,
   NestingDepthIssue,
 } from '../../../shared/nesting.js';
+import {showNotification} from '../../primitives/Toast/toastStore.js';
 import {debounce} from '../../utils/debounce.js';
 import {EventListener} from '../../utils/events.js';
 import {errorMessage} from '../../utils/notifications.js';

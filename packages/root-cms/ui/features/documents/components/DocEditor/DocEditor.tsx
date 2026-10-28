@@ -16,8 +16,6 @@ import {
   Select,
   Tooltip,
 } from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {hideNotification, showNotification} from '@mantine/notifications';
 import {
   IconAlarm,
   IconAlertTriangle,
@@ -77,7 +75,11 @@ import {
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  hideNotification,
+  showNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {debounce} from '../../../../utils/debounce.js';
 import {
@@ -1554,7 +1556,6 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const virtualClipboard = useVirtualClipboard();
   const editJsonModal = useEditJsonModal();
   const modals = useModals();
-  const modalTheme = useModalTheme();
 
   const deeplink = useDeeplink();
   const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
@@ -1602,7 +1603,6 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const confirmClear = () => {
     const label = field.label || field.id || 'drawer';
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Clear ${label}?`,
       children: (
         <Text

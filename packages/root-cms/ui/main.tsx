@@ -4,8 +4,6 @@ import './styles/mantine.css';
 import './styles/theme.css';
 
 import {MantineProvider} from '@mantine/core';
-import {ModalsProvider} from '@mantine/modals';
-import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
 import {
@@ -16,7 +14,8 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
-import {render} from 'preact';
+import {ComponentChildren, render} from 'preact';
+import {useEffect, useMemo} from 'preact/hooks';
 import {LocationProvider, Router, Route} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
@@ -54,6 +53,9 @@ import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {ThemeLoader} from './hooks/useTheme.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
+import {useOverlayRoot} from './primitives/Dialog/dialogStack.js';
+import {ModalsProvider} from './primitives/modals/ModalsProvider.js';
+import {Toaster} from './primitives/Toast/Toast.js';
 
 const AIPage = lazyRoute(() =>
   import('./features/ai/pages/AIPage/AIPage.js').then((m) => m.AIPage)
@@ -377,154 +379,185 @@ function App() {
         />,
       ];
   return (
-    <MantineProvider
-      theme={{
-        fontFamily: 'Inter, sans-serif',
-        fontSizes: {xs: 12, sm: 14, md: 16, lg: 18, xl: 20},
-      }}
-    >
-      <NotificationsProvider>
-        <FirebaseContext.Provider value={window.firebase}>
-          <SSEProvider>
-            <SiteSettingsProvider>
-              <PendingReleasesProvider>
-                <UserPreferencesProvider>
-                  <ThemeLoader />
-                  {/*
+    <MantineCompatProvider>
+      <FirebaseContext.Provider value={window.firebase}>
+        <SSEProvider>
+          <SiteSettingsProvider>
+            <PendingReleasesProvider>
+              <UserPreferencesProvider>
+                <ThemeLoader />
+                {/*
                     NOTE: <LocationProvider> must wrap <ModalsProvider>. The
                     modals provider renders the currently open modal as a
                     sibling of its children, so any modal that uses the router
                     (e.g. `useLocation().route`) only sees the location context
                     if the location provider is the outer one.
                   */}
-                  <LocationProvider>
-                    <PinnedCommentThreadsProvider>
-                      <ModalsProvider
-                        modals={{
-                          [AddToReleaseModal.id]: AddToReleaseModal,
-                          [AiEditModal.id]: AiEditModal,
-                          [AssetPickerModal.id]: AssetPickerModal,
-                          [CompareDraftModal.id]: CompareDraftModal,
-                          [ComponentPickerModal.id]: ComponentPickerModal,
-                          [CopyDocModal.id]: CopyDocModal,
-                          [DocPickerModal.id]: DocPickerModal,
-                          [DataSourceSelectModal.id]: DataSourceSelectModal,
-                          [EditJsonModal.id]: EditJsonModal,
-                          [EditTranslationsModal.id]: EditTranslationsModal,
-                          [ExportSheetModal.id]: ExportSheetModal,
-                          [LocalizationModal.id]: LocalizationModal,
-                          [LockPublishingModal.id]: LockPublishingModal,
-                          [PortTranslationsModal.id]: PortTranslationsModal,
-                          [PruneTranslationsModal.id]: PruneTranslationsModal,
-                          [PublishChecksModal.id]: PublishChecksModal,
-                          [PublishDocModal.id]: PublishDocModal,
-                          [ReferenceFieldEditorModal.id]:
-                            ReferenceFieldEditorModal,
-                          [ScheduleReleaseModal.id]: ScheduleReleaseModal,
-                          [VersionHistoryModal.id]: VersionHistoryModal,
-                        }}
-                      >
-                        <GlobalSearch>
-                          <AppErrorBoundary>
-                            <Router>
-                              <Route path="/cms" component={ProjectPage} />
-                              <Route path="/cms/ai" component={AIPage} />
-                              <Route
-                                path="/cms/ai/chat/:chatId"
-                                component={AIPage}
-                              />
-                              <Route
-                                path="/cms/assets"
-                                component={AssetsPage}
-                              />
-                              <Route
-                                path="/cms/compare"
-                                component={ComparePage}
-                              />
-                              <Route
-                                path="/cms/content/:collection?"
-                                component={CollectionPage}
-                              />
-                              <Route
-                                path="/cms/content/:collection/:slug"
-                                component={DocumentPage}
-                              />
-                              <Route
-                                path="/cms/embed/content/:collection/:slug"
-                                component={EmbeddedDocumentPage}
-                              />
-                              <Route
-                                path="/cms/embed/ai"
-                                component={EmbeddedAIPage}
-                              />
-                              <Route path="/cms/data" component={DataPage} />
-                              <Route
-                                path="/cms/data/new"
-                                component={NewDataSourcePage}
-                              />
-                              <Route
-                                path="/cms/data/:id"
-                                component={DataSourcePage}
-                              />
-                              <Route
-                                path="/cms/data/:id/edit"
-                                component={EditDataSourcePage}
-                              />
-                              <Route path="/cms/logs" component={LogsPage} />
-                              <Route
-                                path="/cms/logs/errors"
-                                component={ErrorLogsPage}
-                              />
-                              <Route
-                                path="/cms/releases"
-                                component={ReleasesPage}
-                              />
-                              <Route
-                                path="/cms/releases/new"
-                                component={NewReleasePage}
-                              />
-                              <Route
-                                path="/cms/releases/:id"
-                                component={ReleasePage}
-                              />
-                              <Route
-                                path="/cms/releases/:id/edit"
-                                component={EditReleasePage}
-                              />
-                              <Route
-                                path="/cms/settings"
-                                component={SettingsPage}
-                              />
-                              <Route path="/cms/tasks" component={TasksPage} />
-                              <Route
-                                path="/cms/tasks/:id"
-                                component={TaskPage}
-                              />
-                              <Route
-                                path="/cms/tools/:id/:rest*"
-                                component={SidebarToolsPage}
-                              />
-                              {translationsRoutes}
-                              <Route
-                                path="/cms/_ui/:entryId?"
-                                component={
-                                  IS_DEV_SERVER ? GalleryPage : NotFoundPage
-                                }
-                              />
-                              <Route default component={NotFoundPage} />
-                            </Router>
-                          </AppErrorBoundary>
-                          <PinnedCommentThreads />
-                        </GlobalSearch>
-                      </ModalsProvider>
-                    </PinnedCommentThreadsProvider>
-                  </LocationProvider>
-                </UserPreferencesProvider>
-              </PendingReleasesProvider>
-            </SiteSettingsProvider>
-          </SSEProvider>
-        </FirebaseContext.Provider>
-      </NotificationsProvider>
+                <LocationProvider>
+                  <PinnedCommentThreadsProvider>
+                    <ModalsProvider
+                      modals={{
+                        [AddToReleaseModal.id]: AddToReleaseModal,
+                        [AiEditModal.id]: AiEditModal,
+                        [AssetPickerModal.id]: AssetPickerModal,
+                        [CompareDraftModal.id]: CompareDraftModal,
+                        [ComponentPickerModal.id]: ComponentPickerModal,
+                        [CopyDocModal.id]: CopyDocModal,
+                        [DocPickerModal.id]: DocPickerModal,
+                        [DataSourceSelectModal.id]: DataSourceSelectModal,
+                        [EditJsonModal.id]: EditJsonModal,
+                        [EditTranslationsModal.id]: EditTranslationsModal,
+                        [ExportSheetModal.id]: ExportSheetModal,
+                        [LocalizationModal.id]: LocalizationModal,
+                        [LockPublishingModal.id]: LockPublishingModal,
+                        [PortTranslationsModal.id]: PortTranslationsModal,
+                        [PruneTranslationsModal.id]: PruneTranslationsModal,
+                        [PublishChecksModal.id]: PublishChecksModal,
+                        [PublishDocModal.id]: PublishDocModal,
+                        [ReferenceFieldEditorModal.id]:
+                          ReferenceFieldEditorModal,
+                        [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                        [VersionHistoryModal.id]: VersionHistoryModal,
+                      }}
+                    >
+                      <GlobalSearch>
+                        <AppErrorBoundary>
+                          <Router>
+                            <Route path="/cms" component={ProjectPage} />
+                            <Route path="/cms/ai" component={AIPage} />
+                            <Route
+                              path="/cms/ai/chat/:chatId"
+                              component={AIPage}
+                            />
+                            <Route path="/cms/assets" component={AssetsPage} />
+                            <Route
+                              path="/cms/compare"
+                              component={ComparePage}
+                            />
+                            <Route
+                              path="/cms/content/:collection?"
+                              component={CollectionPage}
+                            />
+                            <Route
+                              path="/cms/content/:collection/:slug"
+                              component={DocumentPage}
+                            />
+                            <Route
+                              path="/cms/embed/content/:collection/:slug"
+                              component={EmbeddedDocumentPage}
+                            />
+                            <Route
+                              path="/cms/embed/ai"
+                              component={EmbeddedAIPage}
+                            />
+                            <Route path="/cms/data" component={DataPage} />
+                            <Route
+                              path="/cms/data/new"
+                              component={NewDataSourcePage}
+                            />
+                            <Route
+                              path="/cms/data/:id"
+                              component={DataSourcePage}
+                            />
+                            <Route
+                              path="/cms/data/:id/edit"
+                              component={EditDataSourcePage}
+                            />
+                            <Route path="/cms/logs" component={LogsPage} />
+                            <Route
+                              path="/cms/logs/errors"
+                              component={ErrorLogsPage}
+                            />
+                            <Route
+                              path="/cms/releases"
+                              component={ReleasesPage}
+                            />
+                            <Route
+                              path="/cms/releases/new"
+                              component={NewReleasePage}
+                            />
+                            <Route
+                              path="/cms/releases/:id"
+                              component={ReleasePage}
+                            />
+                            <Route
+                              path="/cms/releases/:id/edit"
+                              component={EditReleasePage}
+                            />
+                            <Route
+                              path="/cms/settings"
+                              component={SettingsPage}
+                            />
+                            <Route path="/cms/tasks" component={TasksPage} />
+                            <Route path="/cms/tasks/:id" component={TaskPage} />
+                            <Route
+                              path="/cms/tools/:id/:rest*"
+                              component={SidebarToolsPage}
+                            />
+                            {translationsRoutes}
+                            <Route
+                              path="/cms/_ui/:entryId?"
+                              component={
+                                IS_DEV_SERVER ? GalleryPage : NotFoundPage
+                              }
+                            />
+                            <Route default component={NotFoundPage} />
+                          </Router>
+                        </AppErrorBoundary>
+                        <PinnedCommentThreads />
+                      </GlobalSearch>
+                    </ModalsProvider>
+                  </PinnedCommentThreadsProvider>
+                </LocationProvider>
+              </UserPreferencesProvider>
+            </PendingReleasesProvider>
+          </SiteSettingsProvider>
+        </SSEProvider>
+      </FirebaseContext.Provider>
+      <Toaster />
+    </MantineCompatProvider>
+  );
+}
+
+/**
+ * `MantineProvider` for the Mantine components that haven't been migrated
+ * yet. Modals are native `<dialog>`s, which make the rest of the page inert
+ * and sit above every z-index, so Mantine's portals (selects, menus,
+ * popovers, tooltips, nested Mantine modals) render into the topmost open
+ * dialog instead of into `document.body`. Removed with Mantine in Phase 5.
+ */
+function MantineCompatProvider(props: {children: ComponentChildren}) {
+  const overlayRoot = useOverlayRoot();
+  const target = overlayRoot === document.body ? undefined : overlayRoot;
+  const defaultProps = useMemo(() => ({Portal: {target}}), [target]);
+
+  useEffect(() => {
+    // Escape inside a Mantine modal or an open Mantine dropdown that sits in
+    // a dialog closes only that, not the dialog too.
+    function onKeyDown(e: KeyboardEvent) {
+      const el = e.target instanceof Element ? e.target : null;
+      if (
+        e.key === 'Escape' &&
+        el?.closest('dialog[open]') &&
+        (el.closest('.mantine-Modal-root') ||
+          el.getAttribute('data-mantine-stop-propagation') === 'true')
+      ) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, []);
+
+  return (
+    <MantineProvider
+      theme={{
+        fontFamily: 'Inter, sans-serif',
+        fontSizes: {xs: 12, sm: 14, md: 16, lg: 18, xl: 20},
+      }}
+      defaultProps={defaultProps}
+    >
+      {props.children}
     </MantineProvider>
   );
 }

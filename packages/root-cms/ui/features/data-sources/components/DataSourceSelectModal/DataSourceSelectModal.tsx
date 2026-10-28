@@ -1,7 +1,9 @@
 import {Button, Loader} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {useEffect, useState} from 'preact/hooks';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {DataSource, listDataSources} from '../../data-source.js';
@@ -18,11 +20,9 @@ export interface DataSourceSelectModalProps {
 
 export function useDataSourceSelectModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: DataSourceSelectModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: props,
         size: '600px',
         overflow: 'inside',

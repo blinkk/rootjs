@@ -15,7 +15,6 @@ import {
   Switch,
   Tooltip,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {
   IconBaselineDensityMedium,
   IconBaselineDensitySmall,
@@ -39,6 +38,7 @@ import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';

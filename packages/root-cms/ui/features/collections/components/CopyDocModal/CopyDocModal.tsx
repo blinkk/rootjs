@@ -1,11 +1,13 @@
 import {Button} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {useState, useEffect} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {getSlugError, normalizeSlug} from '../../../../../shared/slug.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../../documents/doc.js';
 import {batchUpdateTags, loadTranslations} from '../../../translations/l10n.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
@@ -23,11 +25,9 @@ export interface CopyDocModalProps {
 
 export function useCopyDocModal(props: CopyDocModalProps) {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (overrideProps?: Partial<CopyDocModalProps>) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: {...props, ...overrideProps},
       });
     },

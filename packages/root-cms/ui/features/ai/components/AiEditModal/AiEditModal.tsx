@@ -1,7 +1,6 @@
 import './AiEditModal.css';
 
 import {Button, JsonInput, Tabs} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {
   IconArrowBackUp,
   IconCheck,
@@ -11,7 +10,10 @@ import {
 import {useRef, useState} from 'preact/hooks';
 import {useMemo, useCallback} from 'preact/hooks';
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {deserializeDocJson} from '../../../documents/doc.js';
 import {AiResponse, ChatPanel} from './ChatPanel.js';
 
@@ -26,11 +28,9 @@ export interface AiEditModalProps {
 
 export function useAiEditModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: AiEditModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: props.title || 'Edit with AI (Experimental)',
         innerProps: props,
         size: 'calc(min(1920px, calc(100% - 96px)))',

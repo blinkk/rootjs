@@ -10,8 +10,6 @@ import {
   Table,
   Tooltip,
 } from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconDatabase,
   IconFile,
@@ -29,9 +27,13 @@ import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../utils/objects.js';
@@ -354,7 +356,6 @@ ReleasePage.Actions = (props: {
   const [skipChecks, setSkipChecks] = useState(false);
 
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const publishChecks = usePublishChecks();
   const releaseHasChecks = testHasPublishChecks(release.docIds || []);
   const scheduleReleaseModal = useScheduleReleaseModal({
@@ -410,7 +411,6 @@ ReleasePage.Actions = (props: {
     }
 
     modals.openConfirmModal({
-      ...modalTheme,
       title: `Publish release: ${release.id}`,
       children: (
         <>
@@ -507,7 +507,6 @@ ReleasePage.Actions = (props: {
       (item) => item.snapshot.type !== 'translations'
     ).length;
     modals.openConfirmModal({
-      ...modalTheme,
       title: `Rollback release: ${release.id}`,
       children: (
         <>

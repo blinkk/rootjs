@@ -42,7 +42,7 @@ vi.mock('firebase/firestore', () => {
   };
 });
 
-vi.mock('@mantine/notifications', () => ({
+vi.mock('../../primitives/Toast/toastStore.js', () => ({
   showNotification: vi.fn(),
 }));
 

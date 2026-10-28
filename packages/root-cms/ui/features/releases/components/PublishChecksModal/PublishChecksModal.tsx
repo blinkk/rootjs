@@ -1,13 +1,13 @@
 import './PublishChecksModal.css';
 
 import {Button} from '@mantine/core';
-import {ContextModalProps} from '@mantine/modals';
 import {IconAlertTriangle, IconCircleX} from '@tabler/icons-preact';
 import {
   summarizePublishChecks,
   type PublishCheckResult,
 } from '../../../../../shared/publish-checks.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {type ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {PublishChecksResults} from '../PublishChecksResults/PublishChecksResults.js';
 
 const MODAL_ID = 'PublishChecksModal';

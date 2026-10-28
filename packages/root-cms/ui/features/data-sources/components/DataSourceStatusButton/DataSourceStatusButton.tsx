@@ -1,10 +1,13 @@
 import {Button, Tooltip} from '@mantine/core';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {TimeSinceActionTooltip} from '../../../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {

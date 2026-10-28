@@ -54,7 +54,7 @@ vi.mock('@mantine/core', async () => {
   };
 });
 
-vi.mock('@mantine/notifications', () => ({
+vi.mock('../../../../primitives/Toast/toastStore.js', () => ({
   showNotification: vi.fn(),
   updateNotification: vi.fn(),
 }));

@@ -1,11 +1,13 @@
 import {Button, InputWrapper, TextInput} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {IconLock, IconLockOpen} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
 import {DocIdBadge} from '../../../documents/components/DocIdBadge/DocIdBadge.js';
@@ -38,7 +40,6 @@ export interface LockPublishingModalProps {
 
 export function useLockPublishingModal(props: LockPublishingModalProps) {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (options?: Partial<LockPublishingModalProps>) => {
       const modalProps = {...props, ...options};
@@ -51,7 +52,6 @@ export function useLockPublishingModal(props: LockPublishingModalProps) {
         title = `Lock publishing for ${props.docId}`;
       }
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title,
         innerProps: {...props, ...options},
         size: '600px',

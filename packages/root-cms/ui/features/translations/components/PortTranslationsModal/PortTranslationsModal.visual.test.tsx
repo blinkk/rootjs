@@ -4,10 +4,13 @@ import '../../../../styles/theme.css';
 import './PortTranslationsModal.css';
 
 import {MantineProvider} from '@mantine/core';
-import {ContextModalProps, ModalsProvider} from '@mantine/modals';
 import {cleanup, render} from '@testing-library/preact';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {page} from 'vitest/browser';
+import {
+  type ContextModalProps,
+  ModalsProvider,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   PortTranslationsModal,
   PortTranslationsModalProps,

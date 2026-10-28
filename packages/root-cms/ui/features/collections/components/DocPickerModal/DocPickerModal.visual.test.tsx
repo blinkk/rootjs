@@ -5,11 +5,11 @@ import '../../pages/CollectionPage/CollectionPage.css';
 import './DocPickerModal.css';
 
 import {MantineProvider} from '@mantine/core';
-import {ContextModalProps} from '@mantine/modals';
 import {render, cleanup} from '@testing-library/preact';
 import {Timestamp} from 'firebase/firestore';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {page} from 'vitest/browser';
+import {type ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {CMSDoc} from '../../../documents/doc.js';
 import {DocPickerModal, DocPickerModalProps} from './DocPickerModal.js';
 

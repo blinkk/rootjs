@@ -407,8 +407,17 @@ for each primitive. Done; answers are rows 7–13 of the decisions log.
 
 ### Phase 2: App shell (serial, one agent)
 
-- [ ] 2.1 Swap providers in `ui.tsx` and the embedded pages (modals, toasts),
-      and delete `useModalTheme`.
+- [x] 2.1 Swap providers in `ui.tsx` and the embedded pages (modals, toasts),
+      and delete `useModalTheme`. Embedded pages are routes under the same
+      providers, so `main.tsx` was the only place. Instead of setting
+      `withinPortal={false}` per component, `main.tsx`'s
+      `MantineCompatProvider` points Mantine's `Portal` default `target` at
+      the topmost open `<dialog>` (via `useOverlayRoot()`), which fixes every
+      Mantine select, menu, popover, tooltip and nested Mantine `Modal`
+      inside a dialog at once (the doc editor in `ReferenceFieldEditorModal`
+      has dozens). Escape inside a nested Mantine modal or open Mantine
+      dropdown no longer also closes the dialog. Splitting `main.tsx` into
+      `app/App.tsx` + `providers.tsx` is still to do.
 - [ ] 2.2 `Layout`: responsive header + drawer sidebar, safe-area insets,
       `SplitPanel` mobile fallback.
 - [ ] 2.3 Shared bits: `Heading`, `Text`, `Surface`, `RouteLoading`,

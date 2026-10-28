@@ -7,13 +7,13 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isValidCronExpression} from '../../../../../core/cron-schedule.js';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {parseSpreadsheetUrl} from '../../../../integrations/gsheets.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {
   CronScheduleType,

@@ -46,7 +46,9 @@ vi.mock('@mantine/core', () => ({
   useMantineTheme: () => ({colorScheme: 'light', colors: {dark: [], gray: []}}),
 }));
 
-vi.mock('@mantine/notifications', () => ({showNotification: vi.fn()}));
+vi.mock('../../../../../primitives/Toast/toastStore.js', () => ({
+  showNotification: vi.fn(),
+}));
 
 vi.mock('../../../../ai/ai.js', () => ({
   getAiImageEditingModels: () => [{id: 'nano-banana', label: 'Nano Banana'}],

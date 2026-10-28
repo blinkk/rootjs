@@ -9,7 +9,6 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {
   IconCopy,
   IconCrop,
@@ -28,6 +27,7 @@ import {
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../../../integrations/gcs.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {formatDateTime} from '../../../../utils/time.js';
 import {CMSDoc} from '../../../documents/doc.js';

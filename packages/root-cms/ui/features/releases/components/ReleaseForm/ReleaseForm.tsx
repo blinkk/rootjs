@@ -7,12 +7,12 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {useDocPickerModal} from '../../../collections/components/DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../../collections/components/DocPreviewCard/DocPreviewCard.js';

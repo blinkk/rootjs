@@ -1,11 +1,13 @@
 import './AddToReleaseModal.css';
 
 import {Button, Loader} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {useEffect, useState} from 'preact/hooks';
 import {isSlugValid} from '../../../../../shared/slug.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {DocPreviewCard} from '../../../collections/components/DocPreviewCard/DocPreviewCard.js';
 import {
@@ -29,11 +31,9 @@ export interface AddToReleaseModalProps {
 
 export function useAddToReleaseModal(props: AddToReleaseModalProps) {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: () => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: 'Add docs to a release',
         innerProps: props,
         size: '600px',

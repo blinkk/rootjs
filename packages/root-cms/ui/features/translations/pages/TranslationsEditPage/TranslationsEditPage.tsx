@@ -6,11 +6,11 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {useEffect, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {

@@ -11,12 +11,6 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {
-  hideNotification,
-  showNotification,
-  updateNotification,
-} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -45,7 +39,6 @@ import {
   MAX_CSV_IMPORT_LABEL,
 } from '../../../../../shared/csv.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {
   GSheet,
   GSpreadsheet,
@@ -56,6 +49,15 @@ import {
   GapiClient,
   useGapiClient,
 } from '../../../../integrations/useGapiClient.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  hideNotification,
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {
   CsvTranslation,
@@ -115,7 +117,6 @@ export interface LocalizationModalProps {
 
 export function useLocalizationModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (innerProps: LocalizationModalProps) => {
       // Add modal param to URL.
@@ -128,7 +129,6 @@ export function useLocalizationModal() {
       );
 
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
         onClose: () => {

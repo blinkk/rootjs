@@ -19,7 +19,6 @@ import {
   Tooltip,
   useMantineTheme,
 } from '@mantine/core';
-import {hideNotification, showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconCopy,
@@ -68,6 +67,10 @@ import {
   parseGoogleDriveId,
 } from '../../../../../integrations/gdrive.js';
 import {useGapiClient} from '../../../../../integrations/useGapiClient.js';
+import {
+  hideNotification,
+  showNotification,
+} from '../../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../../utils/classes.js';
 import {testAiEnabled, testAiImageEditingEnabled} from '../../../../ai/ai.js';
 import {

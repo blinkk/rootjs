@@ -6,7 +6,6 @@ import {
   Menu,
   Tooltip,
 } from '@mantine/core';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconFileDownload,
   IconFileUpload,
@@ -24,6 +23,10 @@ import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';

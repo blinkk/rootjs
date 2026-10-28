@@ -1,5 +1,4 @@
 import {TextInput} from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
 import {IconFileUpload} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
@@ -8,6 +7,7 @@ import {
   uploadFileToGCS,
   testIsImageFile,
 } from '../../../../integrations/gcs.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import './AssetUploader.css';
 

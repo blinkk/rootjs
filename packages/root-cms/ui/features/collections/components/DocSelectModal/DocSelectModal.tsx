@@ -1,10 +1,12 @@
 import './DocSelectModal.css';
 
 import {Button, Loader, Select} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
 import {useState} from 'preact/hooks';
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {getDocServingUrl} from '../../../documents/doc-urls.js';
 import {useDocsList} from '../../useDocsList.js';
@@ -21,11 +23,9 @@ export interface DocSelectModalProps {
 
 export function useDocSelectModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: DocSelectModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: props,
         size: '700px',
         overflow: 'inside',

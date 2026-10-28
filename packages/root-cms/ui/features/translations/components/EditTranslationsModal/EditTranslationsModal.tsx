@@ -8,8 +8,6 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconArrowsTransferDown,
   IconExternalLink,
@@ -20,11 +18,18 @@ import {
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../../../components/Heading/Heading.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../../../integrations/gsheets.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
@@ -65,11 +70,9 @@ export interface EditTranslationsModalProps {
 
 export function useEditTranslationsModal() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: (props: EditTranslationsModalProps) => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         innerProps: props,
         size: '900px',
         title: 'Edit translations',

@@ -1,4 +1,4 @@
-import {showNotification} from '@mantine/notifications';
+import {showNotification} from '../primitives/Toast/toastStore.js';
 
 /**
  * Extracts a human-readable error message from an unknown error value.

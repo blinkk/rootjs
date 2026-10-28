@@ -1,9 +1,11 @@
 import {Button} from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useState, useRef} from 'preact/hooks';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
 import {scheduleRelease} from '../../release.js';
@@ -30,11 +32,9 @@ export interface ScheduleReleaseModalProps {
 
 export function useScheduleReleaseModal(props: ScheduleReleaseModalProps) {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   return {
     open: () => {
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: `Schedule release: ${props.releaseId}`,
         innerProps: props,
       });

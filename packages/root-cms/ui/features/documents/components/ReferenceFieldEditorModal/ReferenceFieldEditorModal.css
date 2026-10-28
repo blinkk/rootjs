@@ -1,15 +1,9 @@
-.ReferenceFieldEditorModalWrap .mantine-Modal-modal {
-  padding: 0;
-}
-
-.ReferenceFieldEditorModalWrap .mantine-Modal-header {
-  padding: 12px 20px;
-  margin-bottom: 0;
-}
-
-.mantine-Modal-body {
+/* The doc editor scrolls on its own, above a pinned footer. */
+.ReferenceFieldEditorModalWrap .Dialog__body {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  padding: 0;
 }
 
 .ReferenceFieldEditorModal {

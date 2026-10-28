@@ -11,11 +11,6 @@ import {
   TextInput,
 } from '@mantine/core';
 import {
-  hideNotification,
-  showNotification,
-  updateNotification,
-} from '@mantine/notifications';
-import {
   IconAlertTriangle,
   IconChevronDown,
   IconChevronRight,
@@ -54,6 +49,11 @@ import {
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../../../integrations/gcs.js';
+import {
+  hideNotification,
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getTimeAgo} from '../../../../utils/time.js';

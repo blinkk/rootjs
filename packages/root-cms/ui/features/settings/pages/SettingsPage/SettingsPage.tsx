@@ -1,7 +1,5 @@
 import './SettingsPage.css';
 import {Button, LoadingOverlay, Select, Textarea} from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {IconCheck} from '@tabler/icons-preact';
 import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -10,7 +8,6 @@ import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {
   SITE_SETTINGS,
@@ -24,6 +21,8 @@ import {
 } from '../../../../hooks/useTheme.js';
 import {useUnsavedChangesWarning} from '../../../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../../../hooks/useUserPreferences.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {logAction} from '../../../logs/actions.js';
@@ -81,7 +80,6 @@ function isCurrentUserAdmin(roles: Record<string, string>): boolean {
  */
 function ResetSignInSetting() {
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const emails = useMemo(() => (email ? [email] : []), [email]);
@@ -115,7 +113,6 @@ function ResetSignInSetting() {
       return;
     }
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Reset sign-in',
       children: (
         <Text size="body-sm" weight="semi-bold">

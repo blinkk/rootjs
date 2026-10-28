@@ -1,6 +1,4 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconArchive, IconRestore} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -9,8 +7,12 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
@@ -27,7 +29,6 @@ export function EditReleasePage(props: {id: string}) {
   const {route} = useLocation();
   const [release, setRelease] = useState<Release | null>(null);
   const modals = useModals();
-  const modalTheme = useModalTheme();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -41,7 +42,6 @@ export function EditReleasePage(props: {id: string}) {
   function onArchiveClicked() {
     const notificationId = `archive-release-${props.id}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Archive release',
       children: (
         <Text size="body-sm" weight="semi-bold">
@@ -80,7 +80,6 @@ export function EditReleasePage(props: {id: string}) {
   function onUnarchiveClicked() {
     const notificationId = `unarchive-release-${props.id}`;
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: 'Unarchive release',
       children: (
         <Text size="body-sm" weight="semi-bold">

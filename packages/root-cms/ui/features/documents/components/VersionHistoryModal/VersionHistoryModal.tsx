@@ -6,8 +6,6 @@ import {
   Popover,
   Table,
 } from '@mantine/core';
-import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {
   IconArrowUpRight,
   IconCopy,
@@ -17,7 +15,11 @@ import {
 import {QueryDocumentSnapshot} from 'firebase/firestore';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
+import {
+  type ContextModalProps,
+  useModals,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {useCopyDocModal} from '../../../collections/components/CopyDocModal/CopyDocModal.js';
@@ -58,7 +60,6 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
   } catch {
     modals = null;
   }
-  const modalTheme = useModalTheme();
   return {
     enabled: modals !== null,
     open: () => {
@@ -69,7 +70,6 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
         return;
       }
       modals.openContextModal(MODAL_ID, {
-        ...modalTheme,
         title: `Version history: ${props.docId}`,
         innerProps: props,
         overflow: 'inside',

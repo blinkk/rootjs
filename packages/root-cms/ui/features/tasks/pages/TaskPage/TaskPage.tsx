@@ -12,8 +12,6 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import {useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
 import {
   IconCalendar,
   IconCheck,
@@ -44,9 +42,10 @@ import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {uploadFileToGCS} from '../../../../integrations/gcs.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {
@@ -431,7 +430,6 @@ function TaskActionsMenu(props: {task: Task}) {
   const {task} = props;
   const {route} = useLocation();
   const modals = useModals();
-  const modalTheme = useModalTheme();
 
   async function copyLink() {
     const url = `${window.location.origin}/cms/tasks/${task.id}`;
@@ -449,7 +447,6 @@ function TaskActionsMenu(props: {task: Task}) {
 
   function onDeleteTask() {
     const modalId = modals.openConfirmModal({
-      ...modalTheme,
       title: `Delete task #${task.id}`,
       children: (
         <Text size="body-sm" weight="semi-bold">

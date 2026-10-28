@@ -1,4 +1,3 @@
-import {showNotification} from '@mantine/notifications';
 import {IconFile} from '@tabler/icons-preact';
 import {
   GCI_URL_PREFIX,
@@ -9,6 +8,7 @@ import {
   testIsImageFile,
   testIsVideoFile,
 } from '../../../../integrations/gcs.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 
 /** Renders a small thumbnail preview for an asset file. */
 export function AssetThumbnail(props: {file: UploadedFile; size: number}) {
