@@ -14,11 +14,13 @@ import {KbdGallery} from '../../primitives/Kbd/Kbd.gallery.js';
 import {LoadingOverlayGallery} from '../../primitives/LoadingOverlay/LoadingOverlay.gallery.js';
 import {MenuGallery} from '../../primitives/Menu/Menu.gallery.js';
 import {ModalsGallery} from '../../primitives/modals/ModalsProvider.gallery.js';
+import {MultiSelectGallery} from '../../primitives/MultiSelect/MultiSelect.gallery.js';
 import {NumberInputGallery} from '../../primitives/NumberInput/NumberInput.gallery.js';
 import {PaginationGallery} from '../../primitives/Pagination/Pagination.gallery.js';
 import {PasswordInputGallery} from '../../primitives/PasswordInput/PasswordInput.gallery.js';
 import {PopoverGallery} from '../../primitives/Popover/Popover.gallery.js';
 import {SegmentedControlGallery} from '../../primitives/SegmentedControl/SegmentedControl.gallery.js';
+import {SelectGallery} from '../../primitives/Select/Select.gallery.js';
 import {SkeletonGallery} from '../../primitives/Skeleton/Skeleton.gallery.js';
 import {SpinnerGallery} from '../../primitives/Spinner/Spinner.gallery.js';
 import {SwitchGallery} from '../../primitives/Switch/Switch.gallery.js';
@@ -53,11 +55,13 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   LoadingOverlayGallery,
   MenuGallery,
   ModalsGallery,
+  MultiSelectGallery,
   NumberInputGallery,
   PaginationGallery,
   PasswordInputGallery,
   PopoverGallery,
   SegmentedControlGallery,
+  SelectGallery,
   SkeletonGallery,
   SpinnerGallery,
   SwitchGallery,

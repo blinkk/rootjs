@@ -37,14 +37,14 @@ export const INPUT_SIZE_CLASSES: Record<InputSize, string> = {
 };
 
 /** Left padding that makes room for a left section, per size. */
-const LEFT_PADDING_CLASSES: Record<InputSize, string> = {
+export const INPUT_LEFT_PADDING_CLASSES: Record<InputSize, string> = {
   xs: 'pl-6 pointer-coarse:pl-8',
   sm: 'pl-7 pointer-coarse:pl-9',
   md: 'pl-9',
 };
 
 /** Right padding that makes room for a right section, per size. */
-const RIGHT_PADDING_CLASSES: Record<InputSize, string> = {
+export const INPUT_RIGHT_PADDING_CLASSES: Record<InputSize, string> = {
   xs: 'pr-6 pointer-coarse:pr-10',
   sm: 'pr-7 pointer-coarse:pr-10',
   md: 'pr-9 pointer-coarse:pr-10',
@@ -57,7 +57,8 @@ export const INPUT_SECTION_CLASSES: Record<InputSize, string> = {
   md: 'w-9 *:size-4',
 };
 
-const RIGHT_SECTION_CLASSES: Record<InputSize, string> = {
+/** Right sections are wider on coarse pointers, for a clickable target. */
+export const INPUT_RIGHT_SECTION_CLASSES: Record<InputSize, string> = {
   xs: 'w-6 pointer-coarse:w-10',
   sm: 'w-7 pointer-coarse:w-10',
   md: 'w-9 pointer-coarse:w-10',
@@ -150,8 +151,8 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
             'TextInput__input',
             INPUT_BASE_CLASSES,
             INPUT_SIZE_CLASSES[size],
-            Boolean(leftSection) && LEFT_PADDING_CLASSES[size],
-            Boolean(rightSection) && RIGHT_PADDING_CLASSES[size],
+            Boolean(leftSection) && INPUT_LEFT_PADDING_CLASSES[size],
+            Boolean(rightSection) && INPUT_RIGHT_PADDING_CLASSES[size],
             inputClassName
           )}
         />
@@ -159,7 +160,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
           <span
             className={cn(
               'TextInput__rightSection absolute inset-y-0 right-0 flex items-center justify-center text-muted',
-              RIGHT_SECTION_CLASSES[size]
+              INPUT_RIGHT_SECTION_CLASSES[size]
             )}
           >
             {rightSection}

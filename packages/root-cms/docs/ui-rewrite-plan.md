@@ -387,7 +387,7 @@ test. Primitives are **not** wired into feature code yet.
       and the toast store + `Toaster`.
 - [x] 1E **Navigation & data**: `Tabs`, `Accordion`, `Breadcrumbs`,
       `Pagination`, `Table` (responsive variant).
-- [ ] 1F **Combobox** (starts when 1C lands): `Select` (searchable),
+- [x] 1F **Combobox** (starts when 1C lands): `Select` (searchable),
       `MultiSelect` (creatable if used). Audit the current props in use first.
 
 Overlays (tooltips, menus, toasts, dropdowns) portal through
