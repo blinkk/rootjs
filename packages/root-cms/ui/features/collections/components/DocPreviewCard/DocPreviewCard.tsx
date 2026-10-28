@@ -22,7 +22,12 @@ function docIdClasses(compact: boolean) {
 }
 
 export interface DocPreviewCardProps {
+  /** Classes for the root, e.g. `px-3` to pad it inside a list. */
   className?: string;
+  /**
+   * `default`: a 24px title, for a doc shown on its own. `compact`: a 14px
+   * title and a smaller id, for lists of docs in dialogs and forms.
+   */
   variant?: 'default' | 'compact';
   docId: string;
   doc?: any;
@@ -147,7 +152,12 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
         <div className={HEADER_CLASSES}>
           <div className={docIdClasses(compact)}>{doc.id}</div>
         </div>
-        <div className="DocPreviewCard__content__title line-clamp-1 text-2xl font-semibold leading-9">
+        <div
+          className={cn(
+            'DocPreviewCard__content__title line-clamp-1 font-semibold',
+            compact ? 'text-base leading-normal' : 'text-2xl leading-9'
+          )}
+        >
           {previewTitle || '[UNTITLED]'}
         </div>
         {props.statusBadges && doc && (

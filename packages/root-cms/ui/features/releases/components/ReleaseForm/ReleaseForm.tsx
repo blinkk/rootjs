@@ -309,6 +309,7 @@ ReleaseForm.DocPreviewCards = (props: {
           <DocPreviewCard
             className="ReleaseForm__docPreview min-w-0 flex-1"
             docId={docId}
+            variant="compact"
           />
           <div className="ReleaseForm__docControls flex shrink-0 gap-0.5 pt-2">
             {props.canEdit && (

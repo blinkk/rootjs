@@ -26,6 +26,17 @@ export interface ModalSettings {
   withCloseButton?: boolean;
   /** Classes for the root `<dialog>`; parts have `Dialog__*` BEM hooks. */
   className?: string;
+  /** Classes for the visible panel (`Dialog__panel`). */
+  panelClassName?: string;
+  /** Classes for the scrolling body (`Dialog__body`), e.g. `pb-0`. */
+  bodyClassName?: string;
+  /**
+   * Actions pinned below the body; see `Dialog`'s `footer`. Ignored by
+   * confirm modals, whose footer is their buttons. A context modal whose
+   * actions depend on its own state renders them with `<DialogFooter>`
+   * instead.
+   */
+  footer?: ComponentChildren;
   /** Called whenever the modal closes, however it was closed. */
   onClose?: () => void;
   /** Ignored: the body always scrolls inside the dialog. */
@@ -268,7 +279,7 @@ function ModalDialog(props: {
   const {modal, context} = props;
   const settings = modal.props;
   let content: ComponentChildren;
-  let footer: ComponentChildren = null;
+  let footer: ComponentChildren = settings.footer;
 
   if (modal.type === 'context') {
     const Component = props.registry?.[modal.ctx];
@@ -303,6 +314,8 @@ function ModalDialog(props: {
       closeOnClickOutside={settings.closeOnClickOutside}
       withCloseButton={settings.withCloseButton}
       className={settings.className}
+      panelClassName={settings.panelClassName}
+      bodyClassName={settings.bodyClassName}
       footer={footer}
       data-modal-id={modal.id}
     >

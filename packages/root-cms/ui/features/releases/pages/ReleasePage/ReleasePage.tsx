@@ -173,11 +173,8 @@ export function ReleasePage(props: {id: string}) {
 
   return (
     <Layout>
-      {/*
-       * `overflow-hidden!` beats the layout's own (unlayered) `overflow: auto`
-       * on its first child, so only the page and the AI panel scroll.
-       */}
-      <div className="ReleasePage__layout relative flex overflow-hidden!">
+      {/* Only the page and the AI panel scroll, not the layout around them. */}
+      <div className="ReleasePage__layout relative flex overflow-hidden">
         <div className="ReleasePage min-w-0 flex-1 overflow-auto bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
           <div className="ReleasePage__header mb-5">
             <Breadcrumbs

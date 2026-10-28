@@ -2,17 +2,26 @@
   /*
    * From `md` up, the locales and translations sit side by side and each
    * scrolls on its own, up to 80% of the viewport's height. The height is
-   * also capped to what the dialog leaves (its `md:py-16` margins plus the
-   * 56px header, plus a little slack: 12rem in all), so the dialog's body
-   * doesn't scroll too. Below `md` they stack, and the dialog's body scrolls instead.
+   * also capped to what the dialog leaves, so its body doesn't scroll too:
+   * its `md:py-16` margins and 56px header, plus a little slack (12rem in
+   * all), and the 61px footer when there is one. Below `md` they stack, and
+   * the dialog's body scrolls instead.
    */
+  .LocalizationModal {
+    --LocalizationModal-pane-height: min(80vh, calc(100dvh - 12rem));
+  }
+
+  .LocalizationModal--withFooter {
+    --LocalizationModal-pane-height: min(80vh, calc(100dvh - 16rem));
+  }
+
   @media (width >= 48rem) {
     .LocalizationModal__locales {
-      max-height: min(80vh, calc(100dvh - 12rem));
+      max-height: var(--LocalizationModal-pane-height);
     }
 
     .LocalizationModal__translations {
-      height: min(80vh, calc(100dvh - 12rem));
+      height: var(--LocalizationModal-pane-height);
     }
   }
 

@@ -1,5 +1,3 @@
-import './AddToReleaseModal.css';
-
 import {useEffect, useState} from 'preact/hooks';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {Button} from '../../../../primitives/Button/Button.js';
@@ -228,6 +226,7 @@ export function AddToReleaseModal(
           {props.docIds.map((docId) => (
             <DocPreviewCard
               key={docId}
+              className="px-3"
               docId={docId}
               variant="compact"
               statusBadges

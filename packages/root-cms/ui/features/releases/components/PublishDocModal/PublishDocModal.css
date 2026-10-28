@@ -15,26 +15,3 @@
     padding-left: 16px;
   }
 }
-
-/*
- * Overrides of other components' rules. Unlayered, since the rules they
- * override are still unlayered.
- */
-
-/* Pads the doc cards (`DocPreviewCard` sets its own padding). */
-.PublishDocModal__docs > * {
-  padding: 8px 12px;
-}
-
-.PublishDocModal__docs--indent > * {
-  padding-left: 36px;
-}
-
-/* The diff modal sizes to its content instead of reserving space. */
-.PublishDocModal__diff .DocDiffViewer__diff {
-  min-height: 0;
-}
-
-.PublishDocModal__summaryBody .AiSummaryResult {
-  padding-top: 0;
-}

@@ -2,7 +2,7 @@ import type {ComponentChildren} from 'preact';
 import {useState} from 'preact/hooks';
 import {defineGallery} from '../../dev/gallery/types.js';
 import {Button} from '../Button/Button.js';
-import {Dialog, type DialogProps} from './Dialog.js';
+import {Dialog, DialogFooter, type DialogProps} from './Dialog.js';
 
 type DemoProps = Omit<DialogProps, 'open' | 'onClose' | 'footer'> & {
   /** Label of the button that reopens the dialog. */
@@ -46,6 +46,51 @@ const PARAGRAPHS = [
   'Versions are saved automatically every few minutes while you edit, and each time the doc is published, scheduled or restored.',
   'Translations and comments are not part of a version, so restoring one keeps them as they are now.',
 ];
+
+/**
+ * Body content that renders its own actions with `DialogFooter`, as a
+ * context modal does.
+ */
+function PublishForm(props: {onClose: () => void}) {
+  const [count, setCount] = useState(0);
+  return (
+    <div className="flex flex-col gap-4">
+      {Array.from({length: 8}, (_, i) => (
+        <p key={i} className="m-0">
+          {PARAGRAPHS[i % PARAGRAPHS.length]}
+        </p>
+      ))}
+      <Button className="self-start" onClick={() => setCount(count + 1)}>
+        Select a doc
+      </Button>
+      <DialogFooter>
+        <span className="mr-auto text-sm text-muted">
+          {count} {count === 1 ? 'doc' : 'docs'} selected
+        </span>
+        <Button onClick={props.onClose}>Cancel</Button>
+        <Button
+          variant="primary"
+          disabled={count === 0}
+          onClick={props.onClose}
+        >
+          Publish
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+function DialogFooterDemo() {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Publish docs</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Publish docs">
+        <PublishForm onClose={() => setOpen(false)} />
+      </Dialog>
+    </>
+  );
+}
 
 export const DialogGallery = defineGallery({
   id: 'dialog',
@@ -98,6 +143,7 @@ export const DialogGallery = defineGallery({
         </p>
       </DialogDemo>
     ),
+    'Footer from the body (DialogFooter)': () => <DialogFooterDemo />,
     'Drawer (position left)': () => (
       <DialogDemo trigger="Menu" title="Root.js" position="left" size={280}>
         <nav aria-label="Main">

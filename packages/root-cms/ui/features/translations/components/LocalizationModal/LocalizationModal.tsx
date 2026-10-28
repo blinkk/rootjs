@@ -37,6 +37,7 @@ import {
 } from '../../../../integrations/useGapiClient.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   Menu,
@@ -131,6 +132,9 @@ export function useLocalizationModal() {
       modals.openContextModal(MODAL_ID, {
         innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
+        // The panes run to the bottom of the body, and from `md` up each
+        // scrolls on its own.
+        bodyClassName: 'pb-0',
         onClose: () => {
           // Flush any pending draft changes (e.g. locale toggles) without
           // triggering the iframe reload that normally follows a flush.
@@ -152,13 +156,18 @@ export function LocalizationModal(
   modalProps: ContextModalProps<LocalizationModalProps>
 ) {
   const props = modalProps.innerProps;
+  const v2 = testV2TranslationsEnabled();
   return (
-    <div className="LocalizationModal">
-      {/* The negative bottom margin cancels the dialog body's padding, so the
-          sticky save bar sits flush with the bottom of the dialog. */}
-      <div className="LocalizationModal__layout -mb-5 flex flex-col gap-6 md:flex-row md:gap-0">
+    <div
+      className={cn(
+        'LocalizationModal',
+        // The translations editor's save bar is in the dialog's footer.
+        !v2 && 'LocalizationModal--withFooter'
+      )}
+    >
+      <div className="LocalizationModal__layout flex flex-col gap-6 md:flex-row md:gap-0">
         <LocalizationModal.ConfigLocales {...props} />
-        {testV2TranslationsEnabled() ? (
+        {v2 ? (
           <LocalizationModal.TranslationsManagerLink
             docId={props.docId}
             onNavigate={() => modalProps.context.closeModal(modalProps.id)}
@@ -392,7 +401,7 @@ LocalizationModal.TranslationsManagerLink = (
  * scrolling column beside them (with a divider) from `md` up.
  */
 const TRANSLATIONS_PANEL_CLASSES =
-  'LocalizationModal__translations flex min-w-0 flex-1 flex-col justify-between border-0 border-t border-solid border-border md:min-h-100 md:-mr-5 md:overflow-auto md:border-l md:border-t-0 md:pl-8 md:pr-5';
+  'LocalizationModal__translations flex min-w-0 flex-1 flex-col border-0 pb-5 border-t border-solid border-border md:min-h-100 md:-mr-5 md:overflow-auto md:border-l md:border-t-0 md:pl-8 md:pr-5';
 
 interface TranslationsProps {
   collection: schema.Collection;
@@ -1652,7 +1661,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           </table>
         )}
       </div>
-      <div className="LocalizationModal__translationsSaveBar sticky -bottom-5 z-(--cms-z-sticky) flex items-center justify-end gap-2 border-0 border-t border-solid border-border bg-surface pt-2 pb-7 md:bottom-0 md:pb-2">
+      <DialogFooter>
         <span className="LocalizationModal__translationsSaveBarStatus text-sm text-strong">
           {pendingEditsCount > 0
             ? `${pendingEditsCount} unsaved change${
@@ -1677,7 +1686,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         >
           Save
         </Button>
-      </div>
+      </DialogFooter>
     </div>
   );
 };

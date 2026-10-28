@@ -1,7 +1,0 @@
-/*
- * Pads the doc cards. Unlayered, since `DocPreviewCard` sets its own padding
- * in unlayered CSS.
- */
-.AddToReleaseModal__docsList > * {
-  padding: 8px 12px;
-}

@@ -98,24 +98,25 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
-}
 
-/*
- * The page fills the space beside the rail and below the header, and scrolls
- * on its own. Unlayered on purpose: page CSS is still unlayered, and this has
- * to keep winning over it as it did before the rewrite.
- */
-.Layout__main > *:first-child {
-  width: calc(100vw - var(--sidebar-width, 48px));
-  height: calc(100vh - var(--cms-header-height));
-  overflow: auto;
-}
-
-@media (width < 48rem) {
+  /*
+   * The page fills the space beside the rail and below the header, and
+   * scrolls on its own. A page can override it with utilities, e.g.
+   * `overflow-hidden` when it scrolls in panes of its own. Unlayered page CSS
+   * also beats it, so pages mustn't size their root there.
+   */
   .Layout__main > *:first-child {
-    width: 100%;
-    height: calc(
-      100dvh - var(--cms-header-height) - env(safe-area-inset-top)
-    );
+    width: calc(100vw - var(--sidebar-width, 48px));
+    height: calc(100vh - var(--cms-header-height));
+    overflow: auto;
+  }
+
+  @media (width < 48rem) {
+    .Layout__main > *:first-child {
+      width: 100%;
+      height: calc(
+        100dvh - var(--cms-header-height) - env(safe-area-inset-top)
+      );
+    }
   }
 }

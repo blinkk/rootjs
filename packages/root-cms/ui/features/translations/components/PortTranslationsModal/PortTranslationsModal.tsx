@@ -21,6 +21,7 @@ import {Text} from '../../../../components/Text/Text.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   type ContextModalProps,
@@ -95,9 +96,6 @@ export function usePortTranslationsModal() {
         title: 'Port translations',
         innerProps,
         size: 'clamp(70%, 880px, 1040px)',
-        // Scroll the body within the modal so the sticky actions bar stays
-        // visible for long lists of locales.
-        overflow: 'inside',
       });
     },
   };
@@ -755,7 +753,7 @@ export function PortTranslationsModal(
         </>
       )}
 
-      <div className="PortTranslationsModal__actions sticky -bottom-5 z-10 -mb-5 flex justify-end gap-2 border-0 border-t border-solid border-border bg-surface pt-3 pb-5">
+      <DialogFooter>
         <Button onClick={() => context.closeModal(id)}>Cancel</Button>
         <Button
           variant="primary"
@@ -767,7 +765,7 @@ export function PortTranslationsModal(
           Port {rowsToSave.length > 0 ? rowsToSave.length : ''} translation
           {rowsToSave.length !== 1 ? 's' : ''}
         </Button>
-      </div>
+      </DialogFooter>
     </div>
   );
 }

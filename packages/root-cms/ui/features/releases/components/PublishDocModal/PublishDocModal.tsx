@@ -767,15 +767,14 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
         }
         size="min(calc(100% - 32px), 900px)"
       >
-        {diffOpen && (
-          <DocDiffViewer
-            className="PublishDocModal__diff"
-            left={{docId, versionId: 'published'}}
-            right={{docId, versionId: 'draft'}}
-            showExpandButton={true}
-            showAiSummary={false}
-          />
-        )}
+        <DocDiffViewer
+          className="PublishDocModal__diff"
+          diffClassName="min-h-0"
+          left={{docId, versionId: 'published'}}
+          right={{docId, versionId: 'draft'}}
+          showExpandButton={true}
+          showAiSummary={false}
+        />
       </Dialog>
 
       <Dialog
@@ -809,6 +808,7 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
           </Text>
           <div className="PublishDocModal__summaryBody min-h-16 rounded-lg border border-solid border-border px-4 py-3">
             <AiSummaryResult
+              className="pt-0"
               status={aiSummary.status}
               summary={aiSummary.summary}
               error={aiSummary.error}
@@ -998,6 +998,7 @@ function DocList(props: {docIds: string[]; indent?: boolean}) {
       {props.docIds.map((docId) => (
         <DocPreviewCard
           key={docId}
+          className={props.indent ? 'pl-9 pr-3' : 'px-3'}
           docId={docId}
           variant="compact"
           statusBadges

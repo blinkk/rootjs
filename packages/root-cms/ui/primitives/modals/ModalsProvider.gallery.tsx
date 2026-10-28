@@ -1,6 +1,7 @@
 import {useEffect} from 'preact/hooks';
 import {defineGallery} from '../../dev/gallery/types.js';
 import {Button} from '../Button/Button.js';
+import {DialogFooter} from '../Dialog/Dialog.js';
 import {
   type ContextModalProps,
   ModalsProvider,
@@ -11,17 +12,20 @@ interface RenameModalProps {
   docId: string;
 }
 
-/** An example context modal, as feature code registers them. */
+/**
+ * An example context modal, as feature code registers them. Its actions go
+ * in the dialog's footer through `DialogFooter`.
+ */
 function RenameModal(props: ContextModalProps<RenameModalProps>) {
   const {context, id, innerProps} = props;
   const modals = useModals();
   return (
-    <div className="flex flex-col gap-4">
+    <>
       <p className="m-0">
         Rename <code>{innerProps.docId}</code>. Links to the old slug redirect
         to the new one.
       </p>
-      <div className="flex flex-wrap justify-end gap-2">
+      <DialogFooter>
         <Button onClick={() => context.closeModal(id)}>Cancel</Button>
         <Button
           variant="danger"
@@ -41,8 +45,8 @@ function RenameModal(props: ContextModalProps<RenameModalProps>) {
         <Button variant="primary" onClick={() => context.closeModal(id)}>
           Rename
         </Button>
-      </div>
-    </div>
+      </DialogFooter>
+    </>
   );
 }
 

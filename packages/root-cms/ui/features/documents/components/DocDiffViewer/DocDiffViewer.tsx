@@ -38,6 +38,11 @@ export interface DocVersionId {
 
 export interface DocDiffViewerProps {
   className?: string;
+  /**
+   * Classes for the diff area (`DocDiffViewer__diff`), which reserves 280px
+   * by default; e.g. `min-h-0` to size it to its content.
+   */
+  diffClassName?: string;
   left: DocVersionId;
   right: DocVersionId;
   /** Whether to show the "expand" button which opens diff in a new tab. */
@@ -201,7 +206,9 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
             </div>
           </div>
         </div>
-        <div className="DocDiffViewer__diff min-h-70">
+        <div
+          className={cn('DocDiffViewer__diff min-h-70', props.diffClassName)}
+        >
           {isIdentical ? (
             <div className="DocDiffViewer__identical flex items-center justify-center gap-2 px-5 py-10 font-sans text-sm text-muted">
               <IconCircleCheckFilled size={20} />

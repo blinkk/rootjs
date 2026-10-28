@@ -24,8 +24,8 @@ export function RouteLoading(props: RouteLoadingProps) {
   const loader = (
     <div
       className={cn(
-        'RouteLoading flex h-screen w-full items-center justify-center text-muted',
-        frame && 'RouteLoading--framed bg-page'
+        'RouteLoading flex items-center justify-center text-muted',
+        frame ? 'RouteLoading--framed bg-page' : 'h-screen w-full'
       )}
     >
       <Spinner size="lg" className="size-12" />

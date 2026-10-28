@@ -323,7 +323,9 @@ export function RootAIChat(props: RootAIChatProps) {
         className={cn(
           'RootAIChat',
           `RootAIChat--${props.variant}`,
-          'relative flex size-full min-h-0 flex-col overflow-hidden bg-page'
+          'relative flex min-h-0 flex-col bg-page',
+          // On the AI page, `.Layout__main > *:first-child` sizes it.
+          props.variant === 'panel' && 'size-full overflow-hidden'
         )}
       >
         {!config && !configError ? (

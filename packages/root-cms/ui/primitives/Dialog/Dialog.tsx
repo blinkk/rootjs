@@ -2,8 +2,15 @@ import './Dialog.css';
 
 import {IconX} from '@tabler/icons-preact';
 import type {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
-import {forwardRef} from 'preact/compat';
-import {useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
+import {createContext} from 'preact';
+import {createPortal, forwardRef} from 'preact/compat';
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {cn} from '../../utils/classes.js';
 import {IconButton} from '../IconButton/IconButton.js';
 import {pushDialog, removeDialog} from './dialogStack.js';
@@ -36,6 +43,12 @@ export function dialogWidth(size: DialogSize): string {
   return NAMED_SIZES[size] ?? size;
 }
 
+/**
+ * The open dialog's footer element, for `DialogFooter` to portal into: null
+ * until it mounts, and undefined outside a dialog.
+ */
+const DialogContext = createContext<HTMLElement | null | undefined>(undefined);
+
 interface DialogOwnProps {
   /** Whether the dialog is shown. The dialog is controlled. */
   open: boolean;
@@ -49,12 +62,19 @@ interface DialogOwnProps {
   title?: ComponentChildren;
   /** A line of supporting text under the title. */
   description?: ComponentChildren;
-  /** The body. Scrolls when it's taller than the screen. */
+  /**
+   * The body. Scrolls when it's taller than the screen. Like the title and
+   * footer, it's only rendered while the dialog is open, so content that
+   * loads data on mount loads nothing until the dialog opens, and its state
+   * resets each time it reopens.
+   */
   children?: ComponentChildren;
   /**
-   * Actions, right-aligned below the body (and pinned to the bottom of the
-   * sheet on mobile), e.g. `<Button>Cancel</Button><Button
-   * variant="primary">Save</Button>`.
+   * Actions, right-aligned below the body and pinned to the bottom of the
+   * dialog (the body scrolls above them), e.g. `<Button>Cancel</Button><Button
+   * variant="primary">Save</Button>`. Content that owns the actions' state
+   * can render them with `<DialogFooter>` instead. Don't pin actions with
+   * `sticky bottom-0` inside the body.
    */
   footer?: ComponentChildren;
   /** Width from `md` up; see `DialogSize`. Default `md` (440px). */
@@ -115,6 +135,9 @@ export type DialogProps = DialogOwnProps &
  *
  * Elements with `data-autofocus` (or `autofocus`) get focus on open;
  * otherwise the browser focuses the first focusable element.
+ *
+ * While closed, the `<dialog>` element stays in the DOM but nothing inside
+ * it renders, so there's no need to mount a dialog conditionally.
  */
 export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
   (props, forwardedRef) => {
@@ -150,6 +173,8 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
     const hasHeader = Boolean(title || description || withCloseButton);
     const bodyRef = useRef<HTMLDivElement>(null);
     const [scrollable, setScrollable] = useState(false);
+    // The footer element, which `DialogFooter` portals into.
+    const [footerEl, setFooterEl] = useState<HTMLDivElement | null>(null);
 
     // Keep the latest props for the native event handlers.
     const latest = useRef({onClose, closeOnEscape});
@@ -301,68 +326,126 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
           className
         )}
       >
-        <div
-          className={cn(
-            'Dialog__panel flex max-h-full max-w-full flex-col bg-surface shadow-lg',
-            isDrawer
-              ? 'border-r border-border'
-              : 'rounded-t-xl md:rounded-lg md:border md:border-border',
-            panelClassName
-          )}
-          style={{'--Dialog-width': dialogWidth(size)}}
-        >
-          {hasHeader && (
-            <div className="Dialog__header flex shrink-0 items-start gap-3 px-5 pb-3 pt-4">
-              <div className="Dialog__heading flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
-                {title && (
-                  <h2
-                    id={titleId}
-                    className="Dialog__title m-0 break-words text-lg font-semibold leading-snug text-strong"
-                  >
-                    {title}
-                  </h2>
-                )}
-                {description && (
-                  <p
-                    id={descriptionId}
-                    className="Dialog__description m-0 text-base text-muted"
-                  >
-                    {description}
-                  </p>
-                )}
-              </div>
-              {withCloseButton && (
-                <IconButton
-                  label={closeLabel}
-                  className="Dialog__close -mr-1.5"
-                  // The browser focuses it on open; a tooltip would pop up
-                  // every time.
-                  tooltip={false}
-                  onClick={() => onClose()}
-                >
-                  <IconX />
-                </IconButton>
+        {open && (
+          <DialogContext.Provider value={footerEl}>
+            <div
+              className={cn(
+                'Dialog__panel flex max-h-full max-w-full flex-col bg-surface shadow-lg',
+                isDrawer
+                  ? 'border-r border-border'
+                  : 'rounded-t-xl md:rounded-lg md:border md:border-border',
+                panelClassName
               )}
+              style={{'--Dialog-width': dialogWidth(size)}}
+            >
+              {hasHeader && (
+                <div className="Dialog__header flex shrink-0 items-start gap-3 px-5 pb-3 pt-4">
+                  <div className="Dialog__heading flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
+                    {title && (
+                      <h2
+                        id={titleId}
+                        className="Dialog__title m-0 break-words text-lg font-semibold leading-snug text-strong"
+                      >
+                        {title}
+                      </h2>
+                    )}
+                    {description && (
+                      <p
+                        id={descriptionId}
+                        className="Dialog__description m-0 text-base text-muted"
+                      >
+                        {description}
+                      </p>
+                    )}
+                  </div>
+                  {withCloseButton && (
+                    <IconButton
+                      label={closeLabel}
+                      className="Dialog__close -mr-1.5"
+                      // The browser focuses it on open; a tooltip would pop up
+                      // every time.
+                      tooltip={false}
+                      onClick={() => onClose()}
+                    >
+                      <IconX />
+                    </IconButton>
+                  )}
+                </div>
+              )}
+              <div
+                ref={bodyRef}
+                tabIndex={scrollable ? 0 : undefined}
+                className={cn(
+                  'Dialog__body min-h-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus flex-1 overflow-y-auto break-words px-5 pb-5 text-base',
+                  !hasHeader && 'pt-5',
+                  bodyClassName
+                )}
+              >
+                {children}
+              </div>
+              {/* Hidden while empty: neither `footer` nor a `DialogFooter`. */}
+              <div
+                ref={setFooterEl}
+                className="Dialog__footer flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3 empty:hidden"
+              >
+                {footer}
+              </div>
             </div>
-          )}
-          <div
-            ref={bodyRef}
-            tabIndex={scrollable ? 0 : undefined}
-            className={cn(
-              'Dialog__body min-h-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus flex-1 overflow-y-auto break-words px-5 pb-5 text-base',
-              !hasHeader && 'pt-5',
-              bodyClassName
-            )}
-          >
-            {children}
-          </div>
-          {footer && (
-            <div className="Dialog__footer flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3">
-              {footer}
-            </div>
-          )}
-        </div>
+          </DialogContext.Provider>
+        )}
       </dialog>
     );
   }
 ) as unknown as FunctionComponent<DialogProps & {ref?: Ref<HTMLDialogElement>}>;
+
+/** Props for `DialogFooter`. */
+export interface DialogFooterProps {
+  /** The footer's content, e.g. Cancel and Save buttons. */
+  children?: ComponentChildren;
+}
+
+/**
+ * Renders its children in the footer of the `Dialog` it's inside, pinned
+ * below the scrolling body like `Dialog`'s `footer` prop. For content that
+ * owns the state its actions need, e.g. a context modal opened with
+ * `useModals().openContextModal()`, which can't pass `footer` itself.
+ *
+ * ```tsx
+ * function RenameModal(props: ContextModalProps<{docId: string}>) {
+ *   const [saving, setSaving] = useState(false);
+ *   return (
+ *     <>
+ *       <TextInput label="Slug" />
+ *       <DialogFooter>
+ *         <Button onClick={() => props.context.closeModal(props.id)}>
+ *           Cancel
+ *         </Button>
+ *         <Button variant="primary" loading={saving} onClick={save}>
+ *           Rename
+ *         </Button>
+ *       </DialogFooter>
+ *     </>
+ *   );
+ * }
+ * ```
+ *
+ * The footer lays its children out in a right-aligned, wrapping row; wrap
+ * them in one `w-full` element for another layout. Outside a `Dialog`
+ * (e.g. in a test that renders a context modal on its own), renders the
+ * same row in place.
+ */
+export function DialogFooter(props: DialogFooterProps) {
+  const footer = useContext(DialogContext);
+  if (footer === undefined) {
+    return (
+      <div className="DialogFooter mt-4 flex flex-wrap items-center justify-end gap-2">
+        {props.children}
+      </div>
+    );
+  }
+  if (!footer) {
+    // The footer element mounts with the dialog's first render.
+    return null;
+  }
+  return createPortal(<>{props.children}</>, footer);
+}

@@ -519,121 +519,119 @@ function GlobalSearchInner(props: {
 
   return (
     <>
-      {opened && (
-        <Dialog
-          open
-          onClose={props.onClose}
-          aria-label="Search"
-          size={640}
-          withCloseButton={false}
-          className="GlobalSearch max-md:pt-0"
-          panelClassName="GlobalSearch__panel max-md:h-full max-md:rounded-none"
-          bodyClassName="GlobalSearch__body flex flex-col overflow-hidden p-0"
-        >
-          <div className="GlobalSearch__header flex shrink-0 items-center gap-2 pl-4 pr-2 md:pr-4">
-            <IconSearch
-              className="GlobalSearch__icon shrink-0 text-muted"
-              size={18}
-            />
-            <input
-              className="GlobalSearch__input h-13 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-sans text-base text-fg outline-none placeholder:text-muted"
-              type="text"
-              role="combobox"
-              aria-label="Search"
-              aria-expanded={showList}
-              aria-controls={listboxId}
-              aria-autocomplete="list"
-              aria-activedescendant={
-                actions[activeIndex] ? optionId(activeIndex) : undefined
-              }
-              autoComplete="off"
-              spellcheck={false}
-              data-autofocus
-              placeholder="Search docs, collections, releases…"
-              value={query}
-              onInput={(e) => onQueryChange(e.currentTarget.value)}
-              onKeyDown={onKeyDown}
-            />
-            <Kbd
-              className="GlobalSearch__esc hidden text-muted md:inline-flex"
-              aria-hidden="true"
-            >
-              esc
-            </Kbd>
-            <IconButton
-              className="GlobalSearch__close md:hidden"
-              label="Close search"
-              size="md"
-              tooltip={false}
-              onClick={props.onClose}
-            >
-              <IconX />
-            </IconButton>
+      <Dialog
+        open={opened}
+        onClose={props.onClose}
+        aria-label="Search"
+        size={640}
+        withCloseButton={false}
+        className="GlobalSearch max-md:pt-0"
+        panelClassName="GlobalSearch__panel max-md:h-full max-md:rounded-none"
+        bodyClassName="GlobalSearch__body flex flex-col overflow-hidden p-0"
+      >
+        <div className="GlobalSearch__header flex shrink-0 items-center gap-2 pl-4 pr-2 md:pr-4">
+          <IconSearch
+            className="GlobalSearch__icon shrink-0 text-muted"
+            size={18}
+          />
+          <input
+            className="GlobalSearch__input h-13 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-sans text-base text-fg outline-none placeholder:text-muted"
+            type="text"
+            role="combobox"
+            aria-label="Search"
+            aria-expanded={showList}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              actions[activeIndex] ? optionId(activeIndex) : undefined
+            }
+            autoComplete="off"
+            spellcheck={false}
+            data-autofocus
+            placeholder="Search docs, collections, releases…"
+            value={query}
+            onInput={(e) => onQueryChange(e.currentTarget.value)}
+            onKeyDown={onKeyDown}
+          />
+          <Kbd
+            className="GlobalSearch__esc hidden text-muted md:inline-flex"
+            aria-hidden="true"
+          >
+            esc
+          </Kbd>
+          <IconButton
+            className="GlobalSearch__close md:hidden"
+            label="Close search"
+            size="md"
+            tooltip={false}
+            onClick={props.onClose}
+          >
+            <IconX />
+          </IconButton>
+        </div>
+        {trimmedQuery && (
+          <GlobalSearchFilters
+            value={filter}
+            onChange={onFilterChange}
+            counts={counts}
+            onCopyLink={onCopyLink}
+          />
+        )}
+        {showList && (
+          <div
+            className="GlobalSearch__results min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            id={listboxId}
+            role="listbox"
+            aria-label="Results"
+          >
+            {actions.length > 0 ? (
+              <div className="GlobalSearch__actions pb-1.5 pt-1">
+                {actions.map((item, i) => (
+                  <div key={item.id} role="presentation">
+                    {item.group !== actions[i - 1]?.group && (
+                      <div
+                        className="GlobalSearch__group px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
+                        role="presentation"
+                      >
+                        {item.group}
+                      </div>
+                    )}
+                    <GlobalSearchAction
+                      item={item}
+                      id={optionId(i)}
+                      active={i === activeIndex}
+                      onTrigger={() => trigger(item)}
+                      onHover={() => setActiveIndex(i)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="GlobalSearch__nothingFound px-4 py-5 text-sm text-muted">
+                {nothingFoundMessage}
+              </div>
+            )}
           </div>
-          {trimmedQuery && (
-            <GlobalSearchFilters
-              value={filter}
-              onChange={onFilterChange}
-              counts={counts}
-              onCopyLink={onCopyLink}
-            />
-          )}
-          {showList && (
-            <div
-              className="GlobalSearch__results min-h-0 flex-1 overflow-y-auto overscroll-contain"
-              id={listboxId}
-              role="listbox"
-              aria-label="Results"
-            >
-              {actions.length > 0 ? (
-                <div className="GlobalSearch__actions pb-1.5 pt-1">
-                  {actions.map((item, i) => (
-                    <div key={item.id} role="presentation">
-                      {item.group !== actions[i - 1]?.group && (
-                        <div
-                          className="GlobalSearch__group px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
-                          role="presentation"
-                        >
-                          {item.group}
-                        </div>
-                      )}
-                      <GlobalSearchAction
-                        item={item}
-                        id={optionId(i)}
-                        active={i === activeIndex}
-                        onTrigger={() => trigger(item)}
-                        onHover={() => setActiveIndex(i)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="GlobalSearch__nothingFound px-4 py-5 text-sm text-muted">
-                  {nothingFoundMessage}
-                </div>
-              )}
-            </div>
-          )}
-          {footerVisible && (
-            <div className="GlobalSearch__footer hidden min-h-8 shrink-0 items-center gap-3.5 overflow-hidden whitespace-nowrap border-0 border-t border-solid border-border bg-page px-4 py-1.5 text-xs text-muted md:flex">
-              {FOOTER_HINTS.map(([key, label]) => (
-                <span
-                  key={key}
-                  className="GlobalSearch__hint inline-flex items-center gap-1"
-                >
-                  <Kbd className="GlobalSearch__kbd">{key}</Kbd>
-                  {label}
-                </span>
-              ))}
-              {showLastIndexed && (
-                <span className="GlobalSearch__indexed ml-auto text-subtle">
-                  Indexed {showLastIndexed}
-                </span>
-              )}
-            </div>
-          )}
-        </Dialog>
-      )}
+        )}
+        {footerVisible && (
+          <div className="GlobalSearch__footer hidden min-h-8 shrink-0 items-center gap-3.5 overflow-hidden whitespace-nowrap border-0 border-t border-solid border-border bg-page px-4 py-1.5 text-xs text-muted md:flex">
+            {FOOTER_HINTS.map(([key, label]) => (
+              <span
+                key={key}
+                className="GlobalSearch__hint inline-flex items-center gap-1"
+              >
+                <Kbd className="GlobalSearch__kbd">{key}</Kbd>
+                {label}
+              </span>
+            ))}
+            {showLastIndexed && (
+              <span className="GlobalSearch__indexed ml-auto text-subtle">
+                Indexed {showLastIndexed}
+              </span>
+            )}
+          </div>
+        )}
+      </Dialog>
       {props.children}
     </>
   );

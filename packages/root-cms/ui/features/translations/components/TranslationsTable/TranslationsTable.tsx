@@ -565,83 +565,76 @@ export function TranslationsTable() {
           />
         </div>
       )}
-      {/* Mounted only while open, so closed dialogs leave no content behind. */}
-      {isAddTagsModalOpen && (
-        <Dialog
-          className="TranslationsTable__addTagsDialog"
-          open
-          onClose={() => setIsAddTagsModalOpen(false)}
-          title="Bulk Add Tags"
-          footer={
-            <>
-              <Button onClick={() => setIsAddTagsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="blue"
-                loading={isBulkUpdating}
-                onClick={handleBulkAddTags}
-              >
-                Add Tags
-              </Button>
-            </>
-          }
-        >
-          <p className="m-0 mb-4 text-sm">
-            The following tags will be added to the {rowData.length} strings
-            currently visible in the table.
-          </p>
-          <MultiSelect
-            aria-label="Tags to add"
-            data={availableTags}
-            value={tagsToBulkAdd}
-            onValueChange={setTagsToBulkAdd}
-            placeholder="Select or create tags"
-            creatable
-            getCreateLabel={(query: string) => `+ Create ${query}`}
-            onCreate={(query: string) => ({
-              value: query,
-              label: query,
-              group: 'Other',
-            })}
-          />
-        </Dialog>
-      )}
+      <Dialog
+        className="TranslationsTable__addTagsDialog"
+        open={isAddTagsModalOpen}
+        onClose={() => setIsAddTagsModalOpen(false)}
+        title="Bulk Add Tags"
+        footer={
+          <>
+            <Button onClick={() => setIsAddTagsModalOpen(false)}>Cancel</Button>
+            <Button
+              variant="blue"
+              loading={isBulkUpdating}
+              onClick={handleBulkAddTags}
+            >
+              Add Tags
+            </Button>
+          </>
+        }
+      >
+        <p className="m-0 mb-4 text-sm">
+          The following tags will be added to the {rowData.length} strings
+          currently visible in the table.
+        </p>
+        <MultiSelect
+          aria-label="Tags to add"
+          data={availableTags}
+          value={tagsToBulkAdd}
+          onValueChange={setTagsToBulkAdd}
+          placeholder="Select or create tags"
+          creatable
+          getCreateLabel={(query: string) => `+ Create ${query}`}
+          onCreate={(query: string) => ({
+            value: query,
+            label: query,
+            group: 'Other',
+          })}
+        />
+      </Dialog>
 
-      {isRemoveTagsModalOpen && (
-        <Dialog
-          className="TranslationsTable__removeTagsDialog"
-          open
-          onClose={() => setIsRemoveTagsModalOpen(false)}
-          title="Bulk Remove Tags"
-          footer={
-            <>
-              <Button onClick={() => setIsRemoveTagsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                loading={isBulkUpdating}
-                onClick={handleBulkRemoveTags}
-              >
-                Remove Tags
-              </Button>
-            </>
-          }
-        >
-          <p className="m-0 mb-4 text-sm">
-            The following tags will be removed from the {rowData.length} strings
-            currently visible in the table.
-          </p>
-          <MultiSelect
-            aria-label="Tags to remove"
-            data={availableTags}
-            value={tagsToBulkRemove}
-            onValueChange={setTagsToBulkRemove}
-            placeholder="Select tags to remove"
-          />
-        </Dialog>
-      )}
+      <Dialog
+        className="TranslationsTable__removeTagsDialog"
+        open={isRemoveTagsModalOpen}
+        onClose={() => setIsRemoveTagsModalOpen(false)}
+        title="Bulk Remove Tags"
+        footer={
+          <>
+            <Button onClick={() => setIsRemoveTagsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              loading={isBulkUpdating}
+              onClick={handleBulkRemoveTags}
+            >
+              Remove Tags
+            </Button>
+          </>
+        }
+      >
+        <p className="m-0 mb-4 text-sm">
+          The following tags will be removed from the {rowData.length} strings
+          currently visible in the table.
+        </p>
+        <MultiSelect
+          aria-label="Tags to remove"
+          data={availableTags}
+          value={tagsToBulkRemove}
+          onValueChange={setTagsToBulkRemove}
+          placeholder="Select tags to remove"
+        />
+      </Dialog>
     </div>
   );
 }

@@ -61,6 +61,12 @@ whatever its specificity. When you convert an element to utilities, delete
 the legacy rules that target it. Don't style one element half with utilities
 and half with legacy CSS.
 
+**Page roots:** `Layout` sizes a page's root element (the first child of
+`Layout__main`) to the space beside the rail and below the header, and makes
+it scroll, in `@layer components`. Don't set the root's width or height in
+page CSS; override the layout with utilities instead, e.g. `overflow-hidden`
+for a page that scrolls in panes of its own.
+
 ### Class names: utilities for styling, BEM for hooks
 
 Every component root has a **block** class named after the component, and
@@ -129,6 +135,13 @@ re-implement them.
   tests skip axe's `color-contrast` rule for them only.
 - Notifications go through `utils/notifications.ts` and modals through
   `useModals()`. Keep using those entry points; their internals are swapped.
+- `Dialog` renders nothing inside its `<dialog>` while closed, so pass
+  `open={open}` instead of mounting it conditionally; its content mounts (and
+  loads its data) when it opens. Put actions in the pinned footer: the
+  `footer` prop, or `<DialogFooter>` from content that owns their state (e.g.
+  a context modal). Don't pin them with `sticky bottom-0` in the body.
+  `useModals()` options also take `footer`, `bodyClassName` and
+  `panelClassName`.
 - Icons come from `@tabler/icons-preact`, at size 16 by default (14 in dense
   controls).
 - Each primitive needs a gallery entry (`/cms/_ui`) and a visual + axe test.

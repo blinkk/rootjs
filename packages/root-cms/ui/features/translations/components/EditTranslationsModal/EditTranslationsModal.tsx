@@ -12,6 +12,7 @@ import {
 } from '../../../../integrations/gsheets.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   type ContextModalProps,
@@ -488,43 +489,45 @@ export function EditTranslationsModal(
         translationsContent
       )}
 
-      <div className="EditTranslationsModal__footer sticky -bottom-5 z-10 -mb-5 mt-5 pb-5 flex flex-col gap-4 border-0 border-t border-solid border-border bg-surface px-2.5 pt-5 md:flex-row md:items-start md:justify-between md:gap-5">
-        <div className="EditTranslationsModal__footerLeft flex flex-col items-start gap-3">
-          <Button
-            href={`/cms/translations/${props.docId}`}
-            target="_blank"
-            iconRight={<IconExternalLink />}
-          >
-            Open Translations Editor
-          </Button>
-          {props.l10nSheet && (
-            <div className="EditTranslationsModal__footerGsheet text-base leading-normal">
-              <strong>NOTE:</strong> Translations for this doc are managed in{' '}
-              <a
-                className="text-link"
-                href={getSpreadsheetUrl(props.l10nSheet)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Sheets
-              </a>
-            </div>
-          )}
+      <DialogFooter>
+        <div className="EditTranslationsModal__footer flex w-full flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-5">
+          <div className="EditTranslationsModal__footerLeft flex flex-col items-start gap-3">
+            <Button
+              href={`/cms/translations/${props.docId}`}
+              target="_blank"
+              iconRight={<IconExternalLink />}
+            >
+              Open Translations Editor
+            </Button>
+            {props.l10nSheet && (
+              <div className="EditTranslationsModal__footerGsheet text-base leading-normal">
+                <strong>NOTE:</strong> Translations for this doc are managed in{' '}
+                <a
+                  className="text-link"
+                  href={getSpreadsheetUrl(props.l10nSheet)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google Sheets
+                </a>
+              </div>
+            )}
+          </div>
+          <div className="EditTranslationsModal__footerButtons flex shrink-0 justify-end gap-3">
+            <Button type="button" onClick={() => context.closeModal(id)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => onSave()}
+              disabled={!hasChanges}
+              loading={saving}
+            >
+              Save
+            </Button>
+          </div>
         </div>
-        <div className="EditTranslationsModal__footerButtons flex shrink-0 justify-end gap-3">
-          <Button type="button" onClick={() => context.closeModal(id)}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => onSave()}
-            disabled={!hasChanges}
-            loading={saving}
-          >
-            Save
-          </Button>
-        </div>
-      </div>
+      </DialogFooter>
     </div>
   );
 }

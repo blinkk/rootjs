@@ -1,5 +1,7 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
+import {useEffect} from 'preact/hooks';
 import {afterEach, describe, expect, it, vi} from 'vitest';
+import {Dialog, DialogFooter} from '../Dialog/Dialog.js';
 import {
   type ContextModalProps,
   type ModalsContextProps,
@@ -15,6 +17,18 @@ function Greeting(props: ContextModalProps<{name: string}>) {
   );
 }
 
+/** A context modal that renders its actions through `DialogFooter`. */
+function WithFooter(props: ContextModalProps<{label: string}>) {
+  return (
+    <>
+      <p>Body</p>
+      <DialogFooter>
+        <button>{props.innerProps.label}</button>
+      </DialogFooter>
+    </>
+  );
+}
+
 /** Renders a provider and returns its `useModals()` value. */
 function setup() {
   let modals!: ModalsContextProps;
@@ -23,7 +37,7 @@ function setup() {
     return null;
   }
   render(
-    <ModalsProvider modals={{Greeting}}>
+    <ModalsProvider modals={{Greeting, WithFooter}}>
       <Capture />
     </ModalsProvider>
   );
@@ -127,5 +141,50 @@ describe('ModalsProvider', () => {
     expect(modals().modals).toEqual([]);
     expect(onClose).toHaveBeenCalledTimes(2);
     expect(document.querySelector('dialog')).toBeNull();
+  });
+
+  it("renders a context modal's DialogFooter and bodyClassName", async () => {
+    const modals = setup();
+    act(() => {
+      modals().openContextModal('WithFooter', {
+        innerProps: {label: 'Save'},
+        bodyClassName: 'pb-0',
+      });
+    });
+    // The footer element mounts first, then `DialogFooter` portals into it.
+    await act(async () => {});
+    const save = screen.getByText('Save');
+    expect(save.parentElement?.classList.contains('Dialog__footer')).toBe(true);
+    const body = screen.getByText('Body').parentElement!;
+    expect(body.classList.contains('Dialog__body')).toBe(true);
+    expect(body.classList.contains('pb-0')).toBe(true);
+  });
+});
+
+describe('Dialog', () => {
+  it('renders its content only while open', () => {
+    const onMount = vi.fn();
+    function Content() {
+      useEffect(() => onMount(), []);
+      return <p>Content</p>;
+    }
+    function Demo(props: {open: boolean}) {
+      return (
+        <Dialog open={props.open} onClose={() => {}} title="Title">
+          <Content />
+        </Dialog>
+      );
+    }
+    const {rerender} = render(<Demo open={false} />);
+    expect(document.querySelector('dialog')).toBeTruthy();
+    expect(screen.queryByText('Title')).toBeNull();
+    expect(onMount).not.toHaveBeenCalled();
+
+    rerender(<Demo open />);
+    expect(screen.getByText('Content')).toBeTruthy();
+    expect(onMount).toHaveBeenCalledTimes(1);
+
+    rerender(<Demo open={false} />);
+    expect(screen.queryByText('Content')).toBeNull();
   });
 });
