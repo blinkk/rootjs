@@ -83,7 +83,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>((props, ref) => {
         'Avatar',
         `Avatar--size-${size}`,
         square && 'Avatar--square',
-        'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden bg-chip align-middle font-sans font-semibold uppercase leading-none text-muted',
+        'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden bg-chip align-middle font-sans font-bold uppercase leading-none text-muted',
         square ? 'rounded-md' : 'rounded-full',
         SIZE_CLASSES[size],
         className

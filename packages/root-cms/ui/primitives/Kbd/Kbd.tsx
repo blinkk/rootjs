@@ -21,7 +21,7 @@ export function Kbd(props: KbdProps) {
       {...rest}
       className={cn(
         'Kbd',
-        'inline-flex h-5 shrink-0 items-center justify-center whitespace-nowrap rounded-sm bg-chip px-1.5 align-middle font-mono text-xs font-semibold leading-none text-fg',
+        'inline-flex h-5 shrink-0 items-center justify-center whitespace-nowrap rounded-sm bg-chip px-1.5 align-middle font-mono text-xs font-bold leading-none text-fg',
         className
       )}
     >

@@ -366,7 +366,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
           id={id}
           role="tooltip"
           className={cn(
-            'Tooltip__content relative z-10 max-w-64 rounded-sm bg-strong px-2 py-1 font-sans text-sm leading-snug text-inverse shadow-md',
+            'Tooltip__content relative z-10 max-w-64 rounded-sm bg-strong px-2.5 py-1.25 font-sans text-sm font-semibold leading-normal text-inverse shadow-md',
             contentClassName
           )}
         >
