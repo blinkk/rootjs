@@ -1,5 +1,3 @@
-import './DocStatusBadges.css';
-
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
 import {forwardRef} from 'preact/compat';

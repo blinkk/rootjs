@@ -4,7 +4,6 @@ import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {getTimeAgo} from '../../../../utils/time.js';
 import {StatusBadge} from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
 import {Release} from '../../release.js';
-import '../../../documents/components/DocStatusBadges/DocStatusBadges.css';
 
 export interface ReleaseStatusBadgeProps {
   release: Release;
