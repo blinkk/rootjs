@@ -20,6 +20,8 @@ Edit freely; subagents get pointed at this file.
 | 11 | IconButton tooltips | On by default, showing `label`; `tooltip={false}` opts out. |
 | 12 | Tab scroll fade | Not needed. |
 | 13 | Select with no matches | Stays closed unless `nothingFound` is set (as in Mantine). |
+| 15 | Doc editor on mobile | Editor only, with an "open preview in new tab" button; no split or tabs. |
+| 16 | Command palette | Stays in `features/search` for now (not a primitive). |
 | 14 | Input look | Closer to Mantine: cool `--cms-input-*` greys, pill chips, no 16px mobile text. Tabs underline in black. |
 
 ## Goals

@@ -18,6 +18,7 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {SplitPanel} from '../../../../components/SplitPanel/SplitPanel.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
+import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
@@ -157,6 +158,10 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     `root::DocumentPage::previewVisible::${collectionId}`,
     hasCollectionUrl
   );
+  // Below `md` there's no room for a side-by-side preview: the page shows
+  // just the editor, with a button that opens the preview in a new tab.
+  const isDesktop = useMediaQuery('(width >= 48rem)');
+  const showPreview = hasCollectionUrl && isPreviewVisible && isDesktop;
   const hasChecks = useMemo(() => {
     const allChecks = window.__ROOT_CTX.checks || [];
     return allChecks.some(
@@ -409,20 +414,11 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
         )}
         ref={layoutRef}
       >
-        <SplitPanel
-          className="DocumentPage"
-          localStorageId="DocumentPage"
-          mobileTabs={
-            hasCollectionUrl && isPreviewVisible
-              ? ['Edit', 'Preview']
-              : undefined
-          }
-        >
+        <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
           <SplitPanel.Item
             className={joinClassNames(
               'DocumentPage__side',
-              (!hasCollectionUrl || !isPreviewVisible) &&
-                'DocumentPage__side--expanded'
+              !showPreview && 'DocumentPage__side--expanded'
             )}
           >
             <div className="DocumentPage__side__header">
@@ -469,21 +465,25 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                 </ConditionalTooltip>
                 {hasCollectionUrl && (
                   <>
-                    <Tooltip
-                      label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-                    >
-                      <ActionIcon
-                        className="DocumentPage__side__header__previewToggle"
-                        onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                    {isDesktop && (
+                      <Tooltip
+                        label={
+                          isPreviewVisible ? 'Hide preview' : 'Show preview'
+                        }
                       >
-                        {isPreviewVisible ? (
-                          <IconLayoutSidebarRightCollapse size={16} />
-                        ) : (
-                          <IconLayoutSidebarRightExpand size={16} />
-                        )}
-                      </ActionIcon>
-                    </Tooltip>
-                    {!isPreviewVisible && (
+                        <ActionIcon
+                          className="DocumentPage__side__header__previewToggle"
+                          onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                        >
+                          {isPreviewVisible ? (
+                            <IconLayoutSidebarRightCollapse size={16} />
+                          ) : (
+                            <IconLayoutSidebarRightExpand size={16} />
+                          )}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {!showPreview && (
                       <Tooltip label="Open preview in new tab">
                         <ActionIcon
                           className="DocumentPage__side__header__openNewTab"
@@ -500,7 +500,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
             <div
               className={joinClassNames(
                 'DocumentPage__side__editor',
-                (!hasCollectionUrl || !isPreviewVisible) &&
+                !showPreview &&
                   !isChecksVisible &&
                   !isSearchVisible &&
                   !isAiVisible &&
@@ -513,14 +513,11 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
           <SplitPanel.Item
             className={joinClassNames(
               'DocumentPage__main',
-              (!hasCollectionUrl || !isPreviewVisible) &&
-                'DocumentPage__main--hidden'
+              !showPreview && 'DocumentPage__main--hidden'
             )}
             fluid
           >
-            {hasCollectionUrl && isPreviewVisible && (
-              <DocumentPage.Preview key={docId} docId={docId} />
-            )}
+            {showPreview && <DocumentPage.Preview key={docId} docId={docId} />}
           </SplitPanel.Item>
         </SplitPanel>
         {hasChecks && isChecksVisible && (

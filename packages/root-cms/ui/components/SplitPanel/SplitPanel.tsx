@@ -3,7 +3,6 @@ import {CSSProperties} from 'preact/compat';
 import {useContext, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
-import {Tab, TabList, Tabs} from '../../primitives/Tabs/Tabs.js';
 import {joinClassNames} from '../../utils/classes.js';
 import './SplitPanel.css';
 
@@ -12,14 +11,6 @@ interface SplitPanelContextValue {
 }
 
 const SplitPanelContext = createContext<SplitPanelContextValue | null>(null);
-
-/**
- * Which panel an item is (0 or 1), and whether it's hidden below `md`
- * because the other panel's tab is selected.
- */
-const SplitPanelItemContext = createContext<{mobileHidden: boolean}>({
-  mobileHidden: false,
-});
 
 export function useSplitPanel() {
   const context = useContext(SplitPanelContext);
@@ -32,18 +23,11 @@ export function useSplitPanel() {
 export interface SplitPanelProps {
   className?: string;
   localStorageId?: string;
-  /**
-   * Labels for the two panels, e.g. `['Edit', 'Preview']`. Below `md` the
-   * panels become tabs with these labels, one panel at a time. Without
-   * them, the panels stack and scroll together below `md`.
-   */
-  mobileTabs?: [string, string];
   children?: [ComponentChild, ComponentChild];
 }
 
 export function SplitPanel(props: SplitPanelProps) {
-  const {className, localStorageId, mobileTabs, children} = props;
-  const [mobileTab, setMobileTab] = useState('0');
+  const {className, localStorageId, children} = props;
   const [panelSize, setPanelSize] = useLocalStorage<number>(
     `root::SplitPanel:${localStorageId}`,
     350
@@ -95,50 +79,26 @@ export function SplitPanel(props: SplitPanelProps) {
   const style: CSSProperties = {
     '--panel-size': `${panelSize}px`,
   };
-  const panel = (index: 0 | 1) => (
-    <SplitPanelItemContext.Provider
-      value={{mobileHidden: !!mobileTabs && mobileTab !== String(index)}}
-    >
-      {children[index]}
-    </SplitPanelItemContext.Provider>
-  );
-  // The tree is the same with or without tabs, so toggling them (e.g. when
-  // a page hides its preview) doesn't remount the panels.
+  // Below `md` the panels stack and scroll together (see SplitPanel.css).
   return (
     <SplitPanelContext.Provider value={contextValue}>
-      <Tabs
-        className="SplitPanel__tabsRoot contents"
-        value={mobileTab}
-        onChange={setMobileTab}
-        grow
+      <div
+        className={joinClassNames(
+          className,
+          'SplitPanel',
+          isDragging && 'dragging'
+        )}
+        ref={containerRef}
+        style={style}
       >
+        {children[0]}
         <div
-          className={joinClassNames(
-            className,
-            'SplitPanel',
-            mobileTabs
-              ? 'SplitPanel--mobile-tabs'
-              : 'SplitPanel--mobile-stacked',
-            isDragging && 'dragging'
-          )}
-          ref={containerRef}
-          style={style}
-        >
-          {mobileTabs && (
-            <TabList className="SplitPanel__tabs px-2" aria-label="Panels">
-              <Tab value="0">{mobileTabs[0]}</Tab>
-              <Tab value="1">{mobileTabs[1]}</Tab>
-            </TabList>
-          )}
-          {panel(0)}
-          <div
-            className="SplitPanel__divider"
-            ref={dividerRef}
-            onMouseDown={() => setIsDragging(true)}
-          ></div>
-          {panel(1)}
-        </div>
-      </Tabs>
+          className="SplitPanel__divider"
+          ref={dividerRef}
+          onMouseDown={() => setIsDragging(true)}
+        ></div>
+        {children[1]}
+      </div>
     </SplitPanelContext.Provider>
   );
 }
@@ -150,14 +110,12 @@ export interface SplitPanelItemProps {
 }
 
 SplitPanel.Item = (props: SplitPanelItemProps) => {
-  const {mobileHidden} = useContext(SplitPanelItemContext);
   return (
     <div
       className={joinClassNames(
         'SplitPanel__item',
         props.className,
-        props.fluid ? 'fluid' : 'static',
-        mobileHidden && 'SplitPanel__item--mobile-hidden'
+        props.fluid ? 'fluid' : 'static'
       )}
     >
       {props.children}
