@@ -1,22 +1,24 @@
-import {ActionIcon, Text, Tooltip} from '@mantine/core';
 import {IconExternalLink} from '@tabler/icons-preact';
 import {forwardRef} from 'preact/compat';
 import * as schema from '../../../../../../core/schema.js';
+import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
 
 /**
  * Dropdown item for a document-sourced select/multiselect: shows the option
  * label with optional smaller, dimmed help text beneath it (from `helpKey`).
+ * The `Select` primitive shows an option's `description` on its own; this is
+ * kept for dropdowns that take an item component.
  */
 export const FieldSourceItem = forwardRef(
   (props: {label: string; description?: string; ref: any}) => {
     const {label, description, ...selectProps} = props;
     return (
       <div {...selectProps}>
-        <Text size="sm">{label}</Text>
+        <div className="FieldSourceItem__label text-base">{label}</div>
         {description && (
-          <Text size="xs" color="dimmed">
+          <div className="FieldSourceItem__description text-sm text-muted">
             {description}
-          </Text>
+          </div>
         )}
       </div>
     );
@@ -45,16 +47,14 @@ export function SourceDocButton(props: SourceDocButtonProps) {
     href += `?deeplink=${encodeURIComponent(deepKey)}`;
   }
   return (
-    <Tooltip label={label} position="top" withArrow>
-      <ActionIcon
-        component="a"
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={label}
-      >
-        <IconExternalLink size={16} />
-      </ActionIcon>
-    </Tooltip>
+    <IconButton
+      className="SourceDocButton"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      label={label}
+    >
+      <IconExternalLink />
+    </IconButton>
   );
 }

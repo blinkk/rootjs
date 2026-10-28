@@ -10,27 +10,6 @@ import * as schema from '../../../../../../core/schema.js';
 import {FieldErrorBoundary} from '../../FieldErrorBoundary/FieldErrorBoundary.js';
 import {FieldProps} from './FieldProps.js';
 
-// Mock Mantine inputs. The real components require a MantineProvider context
-// that isn't available under @preact/compat in jsdom.
-vi.mock('@mantine/core', () => ({
-  PasswordInput: ({value, onChange, error, placeholder}: any) => (
-    <div>
-      <input
-        type="password"
-        placeholder={placeholder}
-        value={value}
-        onInput={onChange}
-      />
-      {error && <div>{error}</div>}
-    </div>
-  ),
-  Button: ({children, onClick, disabled}: any) => (
-    <button onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
-}));
-
 // Mock the draft doc so the field renders without the full controller.
 let mockValue: any = null;
 const setValueMock = vi.fn();

@@ -1,6 +1,3 @@
-import './PasswordField.css';
-
-import {Button, PasswordInput} from '@mantine/core';
 import {IconLock, IconLockOpen} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
@@ -8,7 +5,9 @@ import {
   hashPassword,
   isPasswordHash,
 } from '../../../../../../shared/password.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {PasswordInput} from '../../../../../primitives/PasswordInput/PasswordInput.js';
+import {cn} from '../../../../../utils/classes.js';
 import {errorMessage} from '../../../../../utils/notifications.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
@@ -81,24 +80,19 @@ export function PasswordField(props: FieldProps) {
 
   if (hasPassword && !editing) {
     return (
-      <div className="PasswordField">
-        <div className="PasswordField__status">
+      <div className="PasswordField flex flex-col gap-2">
+        <div className="PasswordField__status flex items-center gap-1.5 text-sm">
           <IconLock size={16} />
-          <span className="PasswordField__status__label">Password set</span>
-          <span className="PasswordField__status__meta">
+          <span className="PasswordField__status__label font-semibold">
+            Password set
+          </span>
+          <span className="PasswordField__status__meta font-mono text-xs text-muted">
             {value!.algorithm}
           </span>
         </div>
-        <div className="PasswordField__actions">
-          <Button
-            color="dark"
-            size="xs"
-            variant="default"
-            onClick={() => setEditing(true)}
-          >
-            Change password
-          </Button>
-          <Button color="red" size="xs" variant="subtle" onClick={remove}>
+        <div className="PasswordField__actions flex items-center gap-2">
+          <Button onClick={() => setEditing(true)}>Change password</Button>
+          <Button variant="danger-subtle" onClick={remove}>
             Remove
           </Button>
         </div>
@@ -107,17 +101,17 @@ export function PasswordField(props: FieldProps) {
   }
 
   return (
-    <div className="PasswordField">
+    <div className="PasswordField flex flex-col gap-2">
       <PasswordInput
         className="PasswordField__input"
-        size="xs"
-        radius={0}
+        inputClassName="rounded-none"
+        aria-label={field.label || field.id}
         autoComplete="new-password"
         placeholder={field.placeholder || 'Enter a new password'}
         value={draft}
-        error={error}
+        error={error || undefined}
         disabled={saving}
-        onChange={(e: any) => {
+        onInput={(e) => {
           setDraft(e.currentTarget.value);
           setError(null);
         }}
@@ -130,15 +124,14 @@ export function PasswordField(props: FieldProps) {
         onFocus={props.onFocus}
         onBlur={props.onBlur}
       />
-      <div className="PasswordField__actions">
+      <div className="PasswordField__actions flex items-center gap-2">
         <Button
-          className={joinClassNames(
+          className={cn(
             'PasswordField__save',
             saving && 'PasswordField__save--saving'
           )}
-          color="dark"
-          size="xs"
-          leftIcon={<IconLockOpen size={14} />}
+          variant="primary"
+          icon={<IconLockOpen />}
           loading={saving}
           disabled={!canSave}
           onClick={save}
@@ -146,12 +139,12 @@ export function PasswordField(props: FieldProps) {
           {hasPassword ? 'Update password' : 'Set password'}
         </Button>
         {hasPassword && (
-          <Button size="xs" variant="subtle" color="gray" onClick={reset}>
+          <Button variant="subtle" onClick={reset}>
             Cancel
           </Button>
         )}
       </div>
-      <div className="PasswordField__help">
+      <div className="PasswordField__help text-xs text-muted">
         The password is hashed before saving and cannot be viewed again.
       </div>
     </div>

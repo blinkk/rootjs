@@ -1,15 +1,21 @@
-import {NumberInput} from '@mantine/core';
+import {NumberInput} from '../../../../../primitives/NumberInput/NumberInput.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function NumberField(props: FieldProps) {
-  const [value, setValue] = useDraftDocValue(props.deepKey, 0);
+  const [value, setValue] = useDraftDocValue<number | undefined>(
+    props.deepKey,
+    0
+  );
   return (
     <NumberInput
-      size="xs"
-      radius={0}
+      className="DocEditor__NumberField"
+      inputClassName="rounded-none"
+      aria-label={props.field.label || props.field.id}
       value={value}
-      onChange={(value: number) => setValue(value)}
+      onValueChange={(value) => setValue(value)}
+      onFocus={props.onFocus}
+      onBlur={props.onBlur}
       hideControls
     />
   );

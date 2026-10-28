@@ -1,10 +1,11 @@
-import {Loader, Select} from '@mantine/core';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
+import {Select} from '../../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../../primitives/Spinner/Spinner.js';
 import {FieldOption, resolveFieldSource} from '../../../field-source.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
-import {FieldSourceItem, SourceDocButton} from './SourceField.js';
+import {SourceDocButton} from './SourceField.js';
 
 export function SelectField(props: FieldProps) {
   const field = props.field as schema.SelectField;
@@ -41,7 +42,7 @@ export function SelectField(props: FieldProps) {
 
   const staticOptions = useMemo<FieldOption[]>(() => {
     return (field.options || []).map((option) => {
-      // Mantine requires both label and value to be set.
+      // Both a label and a value are needed to show and pick the option.
       if (typeof option === 'string') {
         return {label: option, value: option};
       }
@@ -73,14 +74,17 @@ export function SelectField(props: FieldProps) {
 
   const select = (
     <Select
+      className="min-w-0 flex-1"
+      inputClassName="rounded-none"
+      aria-label={field.label || field.id}
       data={data}
       placeholder={field.placeholder}
       value={value || null}
-      onChange={(e: string) => setValue(e || '')}
-      size="xs"
-      radius={0}
+      onValueChange={(newValue) => setValue(newValue || '')}
+      onFocus={props.onFocus}
+      onBlur={props.onBlur}
       searchable={field.searchable ?? true}
-      clearable={true}
+      clearable
       creatable={field.creatable || false}
       getCreateLabel={(query: string) => `+ Add "${query}"`}
       onCreate={(query: string) => {
@@ -88,24 +92,15 @@ export function SelectField(props: FieldProps) {
         setCreated((current) => [...current, item]);
         return item;
       }}
-      itemComponent={field.source?.helpKey ? FieldSourceItem : undefined}
       nothingFound={loading ? 'Loading…' : undefined}
-      rightSection={loading ? <Loader size="xs" /> : undefined}
-      // Due to issues with preact/compat, use a div for the dropdown el.
-      dropdownComponent="div"
+      rightSection={loading ? <Spinner size="sm" label={null} /> : undefined}
     />
   );
 
-  if (field.source?.doc) {
-    return (
-      <div
-        className="DocEditor__SelectField"
-        style={{display: 'flex', alignItems: 'center', gap: 8}}
-      >
-        <div style={{flex: 1, minWidth: 0}}>{select}</div>
-        <SourceDocButton source={field.source} />
-      </div>
-    );
-  }
-  return <div className="DocEditor__SelectField">{select}</div>;
+  return (
+    <div className="DocEditor__SelectField flex items-center gap-2">
+      {select}
+      <SourceDocButton source={field.source} />
+    </div>
+  );
 }

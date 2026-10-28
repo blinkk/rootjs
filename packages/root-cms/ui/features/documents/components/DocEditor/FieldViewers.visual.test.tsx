@@ -1,8 +1,7 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, fireEvent, render} from '@testing-library/preact';
 import {useRef} from 'preact/hooks';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -96,15 +95,13 @@ function renderEditor(props: {onViewerClick?: () => void} = {}) {
     controller: controller as unknown as DraftDocContext['controller'],
   } as DraftDocContext;
   render(
-    <MantineProvider>
-      <ViewersProvider id="doc/Pages/foo">
-        <DeeplinkProvider>
-          <DraftDocContextProvider value={draftContext}>
-            <TestEditor {...props} />
-          </DraftDocContextProvider>
-        </DeeplinkProvider>
-      </ViewersProvider>
-    </MantineProvider>
+    <ViewersProvider id="doc/Pages/foo">
+      <DeeplinkProvider>
+        <DraftDocContextProvider value={draftContext}>
+          <TestEditor {...props} />
+        </DraftDocContextProvider>
+      </DeeplinkProvider>
+    </ViewersProvider>
   );
 }
 

@@ -1,4 +1,5 @@
 import {useState} from 'preact/hooks';
+import {TextInput} from '../../../../../primitives/TextInput/TextInput.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -29,19 +30,17 @@ export function DateField(props: FieldProps) {
 
   return (
     <div className="DocEditor__DateField">
-      <input
+      <TextInput
         type="date"
+        inputClassName="rounded-none"
+        aria-label={props.field.label || props.field.id}
         value={value || ''}
-        onChange={(e: Event) => {
-          const target = e.currentTarget as HTMLInputElement;
+        error={error}
+        onChange={(e) => {
+          const target = e.currentTarget;
           onDateChange(target.value, target.validity);
         }}
       />
-      {error && (
-        <div style={{color: 'red', fontSize: '12px', marginTop: '4px'}}>
-          {error}
-        </div>
-      )}
     </div>
   );
 }

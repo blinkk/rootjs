@@ -1,10 +1,8 @@
-import './StringField.css';
-
-import {TextInput, Textarea} from '@mantine/core';
-import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {Textarea} from '../../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../../utils/classes.js';
 import {requestHighlightNode} from '../../../iframe-preview.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
@@ -22,13 +20,24 @@ function Highlighter(props: HighlighterProps) {
   return (
     <div
       ref={scrollRef}
-      className={`StringField__highlighter StringField__highlighter--${variant}`}
+      className={cn(
+        'StringField__highlighter',
+        `StringField__highlighter--${variant}`,
+        'pointer-events-none absolute inset-0 z-0 overflow-hidden whitespace-pre-wrap border border-transparent px-2.5 font-sans text-sm text-transparent',
+        // Matches the input's text box, line for line.
+        variant === 'input'
+          ? 'leading-6.5 pointer-coarse:leading-9.5'
+          : 'py-2.5 leading-normal'
+      )}
       aria-hidden="true"
     >
       {parts.map((part, i) => {
         if (part === '\u00A0' || part === '\u2011') {
           return (
-            <span key={i} className="StringField__highlight">
+            <span
+              key={i}
+              className="StringField__highlight rounded-sm bg-warning-line/40 outline-1 outline-warning/40"
+            >
               {part}
             </span>
           );
@@ -40,9 +49,16 @@ function Highlighter(props: HighlighterProps) {
   );
 }
 
+/**
+ * The input sits above the highlighter (which marks non-breaking spaces and
+ * hyphens), so it's transparent.
+ */
+const HIGHLIGHTED_INPUT_CLASSES = 'relative z-1 bg-transparent';
+
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
   const [value, setValue] = useDraftDocValue(props.deepKey, '');
+  const label = field.label || field.id;
   const highlighterRef = useRef<HTMLDivElement>(null);
   const inputHighlighterRef = useRef<HTMLDivElement>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -57,8 +73,8 @@ export function StringField(props: FieldProps) {
     );
   }
 
-  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setValue(e.currentTarget.value);
+  const onInput = (e: Event) => {
+    setValue((e.currentTarget as HTMLInputElement | HTMLTextAreaElement).value);
   };
 
   const onFocus = (e: FocusEvent) => {
@@ -115,36 +131,28 @@ export function StringField(props: FieldProps) {
 
   if (field.variant === 'json') {
     return (
-      <div className="StringField__container">
+      <div className="StringField__container relative">
         <Textarea
-          className={joinClassNames(
-            'StringField__input',
-            'StringField__input--json',
-            jsonError && 'StringField__input--error'
-          )}
-          size="xs"
-          radius={0}
+          className="StringField__input StringField__input--json"
+          inputClassName="resize-none rounded-none py-2.5 font-mono"
+          aria-label={label}
+          error={jsonError ? `Invalid JSON: ${jsonError}` : undefined}
           autosize={field.autosize}
           minRows={4}
           maxRows={field.maxRows || 20}
           value={value}
-          onChange={onChange}
+          onInput={onInput}
           onFocus={onFocus}
           onBlur={onJsonBlur}
           onScroll={onScroll}
         />
-        {jsonError && (
-          <div className="StringField__jsonError">
-            Invalid JSON: {jsonError}
-          </div>
-        )}
       </div>
     );
   }
 
   if (field.variant === 'textarea') {
     return (
-      <div className="StringField__container">
+      <div className="StringField__container relative bg-surface">
         <Highlighter
           value={value || ''}
           variant="textarea"
@@ -152,13 +160,16 @@ export function StringField(props: FieldProps) {
         />
         <Textarea
           className="StringField__input"
-          size="xs"
-          radius={0}
+          inputClassName={cn(
+            'resize-none rounded-none py-2.5',
+            HIGHLIGHTED_INPUT_CLASSES
+          )}
+          aria-label={label}
           autosize={field.autosize}
           minRows={4}
           maxRows={field.maxRows || 12}
           value={value}
-          onChange={onChange}
+          onInput={onInput}
           onFocus={onFocus}
           onBlur={onBlur}
           onScroll={onScroll}
@@ -167,7 +178,7 @@ export function StringField(props: FieldProps) {
     );
   }
   return (
-    <div className="StringField__container">
+    <div className="StringField__container relative bg-surface">
       <Highlighter
         value={value || ''}
         variant="input"
@@ -175,10 +186,10 @@ export function StringField(props: FieldProps) {
       />
       <TextInput
         className="StringField__input"
-        size="xs"
-        radius={0}
+        inputClassName={cn('rounded-none', HIGHLIGHTED_INPUT_CLASSES)}
+        aria-label={label}
         value={value}
-        onChange={onChange}
+        onInput={onInput}
         onFocus={onFocus}
         onBlur={onBlur}
         onScroll={onInputScroll}

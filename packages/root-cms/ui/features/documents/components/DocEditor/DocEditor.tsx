@@ -8,15 +8,6 @@ import {
   DropResult,
 } from '@hello-pangea/dnd';
 import {
-  ActionIcon,
-  Button,
-  LoadingOverlay,
-  Menu,
-  Popover,
-  Select,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconAlarm,
   IconAlertTriangle,
   IconArrowBackUp,
@@ -75,12 +66,19 @@ import {
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {Menu, MenuGroup, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Popover} from '../../../../primitives/Popover/Popover.js';
+import {Select} from '../../../../primitives/Select/Select.js';
 import {
   hideNotification,
   showNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {debounce} from '../../../../utils/debounce.js';
 import {
   isEditableTarget,
@@ -201,12 +199,10 @@ function showUndoNotification(draft: DraftDocController, message: string) {
   showNotification({
     id: notificationId,
     message: (
-      <div className="DocEditor__undoNotification">
+      <div className="DocEditor__undoNotification flex items-center justify-between gap-3">
         <Text size="body-sm">{message}</Text>
         <Button
-          variant="default"
           size="xs"
-          compact
           onClick={() => {
             hideNotification(notificationId);
             const result = draft.undo({onlyEntryId: entry.id});
@@ -262,7 +258,7 @@ export function DocEditor(props: DocEditorProps) {
 
   if (draft.error) {
     return (
-      <div className={joinClassNames(props.className, 'DocEditor')}>
+      <div className={cn('DocEditor relative', props.className)}>
         <DataLoadError title="Failed to load document" error={draft.error} />
       </div>
     );
@@ -275,13 +271,10 @@ export function DocEditor(props: DocEditorProps) {
       >
         <DeeplinkProvider>
           <div
-            className={joinClassNames(props.className, 'DocEditor')}
+            className={cn('DocEditor relative', props.className)}
             ref={rootRef}
           >
-            <LoadingOverlay
-              visible={loading}
-              loaderProps={{color: 'gray', size: 'xl'}}
-            />
+            <LoadingOverlay visible={loading} label="Loading document" />
             <DocEditor.HistoryDeeplink rootRef={rootRef} />
             <DocEditor.FocusTracker rootRef={rootRef} />
             {!loading && !props.hideStatusBar && (
@@ -513,7 +506,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       </div>
       <DocEditor.SaveState />
       {data?.sys && (
-        <div className="DocEditor__statusBar__statusBadges">
+        <div className="DocEditor__statusBar__statusBadges mr-4">
           <DocStatusBadges
             doc={data as CMSDoc}
             docId={props.docId}
@@ -521,20 +514,13 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           />
         </div>
       )}
-      <div className="DocEditor__statusBar__buttonGroup">
-        <div className="DocEditor__statusBar__search">
-          <Tooltip label="⌘ + Shift + f" transition="pop" withArrow>
+      <div className="DocEditor__statusBar__buttonGroup mr-2 flex">
+        <div className="DocEditor__statusBar__search group/segment">
+          <Tooltip label="⌘ + Shift + f">
             <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                searchActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconSearch size={16} />}
+              className={STATUS_BAR_GROUP_BUTTON_CLASSES}
+              aria-pressed={searchActive}
+              icon={<IconSearch />}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('root:toggle-search'));
               }}
@@ -544,46 +530,30 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </Tooltip>
         </div>
         {fieldComments && (
-          <div className="DocEditor__statusBar__comments">
+          <div className="DocEditor__statusBar__comments group/segment">
             <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                commentsActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconMessageCircle size={16} />}
-              rightIcon={
-                fieldComments.openCount > 0 ? (
-                  <span className="DocEditor__statusBar__comments__count">
-                    {fieldComments.openCount}
-                  </span>
-                ) : undefined
-              }
+              className={STATUS_BAR_GROUP_BUTTON_CLASSES}
+              aria-pressed={commentsActive}
+              icon={<IconMessageCircle />}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent(TOGGLE_COMMENTS_EVENT));
               }}
             >
               Comments
+              {fieldComments.openCount > 0 && (
+                <span className="DocEditor__statusBar__comments__count ml-2.5 inline-block min-w-4.5 rounded-full bg-button-blue-hover px-1 py-1 text-center text-2xs font-semibold leading-none text-inverse">
+                  {fieldComments.openCount}
+                </span>
+              )}
             </Button>
           </div>
         )}
         {(window.__ROOT_CTX.checks || []).length > 0 && (
-          <div className="DocEditor__statusBar__checks">
+          <div className="DocEditor__statusBar__checks group/segment">
             <Button
-              className={joinClassNames(
-                'DocEditor__statusBar__buttonGroup__button',
-                checksActive
-                  ? 'DocEditor__statusBar__buttonGroup__button--active'
-                  : ''
-              )}
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconListCheck size={16} />}
+              className={STATUS_BAR_GROUP_BUTTON_CLASSES}
+              aria-pressed={checksActive}
+              icon={<IconListCheck />}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('root:toggle-checks'));
               }}
@@ -593,19 +563,12 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </div>
         )}
         {aiAvailable && (
-          <div className="DocEditor__statusBar__ai">
-            <Tooltip label="⌘ + i" transition="pop" withArrow>
+          <div className="DocEditor__statusBar__ai group/segment">
+            <Tooltip label="⌘ + i">
               <Button
-                className={joinClassNames(
-                  'DocEditor__statusBar__buttonGroup__button',
-                  aiActive
-                    ? 'DocEditor__statusBar__buttonGroup__button--active'
-                    : ''
-                )}
-                variant="default"
-                color="dark"
-                size="xs"
-                leftIcon={<IconRobot size={16} />}
+                className={STATUS_BAR_GROUP_BUTTON_CLASSES}
+                aria-pressed={aiActive}
+                icon={<IconRobot />}
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('root:toggle-ai'));
                 }}
@@ -616,12 +579,9 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </div>
         )}
       </div>
-      <div className="DocEditor__statusBar__i18n">
+      <div className="DocEditor__statusBar__i18n mr-2">
         <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconPlanet size={16} />}
+          icon={<IconPlanet />}
           onClick={() => {
             localizationModal.open({
               docId: props.docId,
@@ -637,8 +597,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <div className="DocEditor__statusBar__publishButton">
         {loading ? (
           <Button
-            color="dark"
-            size="xs"
+            variant="primary"
             onClick={() => publishDocModal.open()}
             loading
             disabled
@@ -650,28 +609,14 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             label={`Scheduled ${formatDateTime(data.sys!.scheduledAt!)} by ${
               data.sys!.scheduledBy
             }`}
-            transition="pop"
           >
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconRocket size={16} />}
-              disabled
-            >
+            <Button variant="primary" icon={<IconRocket />} disabled>
               Publish
             </Button>
           </Tooltip>
         ) : testPublishingLocked(data as CMSDoc) ? (
-          <Tooltip
-            label={getPublishingLockedLabel(data as CMSDoc)}
-            transition="pop"
-          >
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconLock size={16} />}
-              disabled
-            >
+          <Tooltip label={getPublishingLockedLabel(data as CMSDoc)}>
+            <Button variant="primary" icon={<IconLock />} disabled>
               Publish
             </Button>
           </Tooltip>
@@ -681,9 +626,8 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             condition={!canPublish}
           >
             <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconRocket size={16} />}
+              variant="primary"
+              icon={<IconRocket />}
               onClick={() => publishDocModal.open()}
               disabled={!canPublish}
             >
@@ -692,7 +636,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </ConditionalTooltip>
         )}
       </div>
-      <div className="DocEditor__statusBar__actionsMenu">
+      <div className="DocEditor__statusBar__actionsMenu ml-1">
         <DocActionsMenu
           docId={props.docId}
           data={data as CMSDoc}
@@ -702,6 +646,15 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
     </div>
   );
 };
+
+/**
+ * Joins the status bar's toggle buttons into one segmented group (square
+ * inner corners, shared borders), with Mantine's blue "light" look for the
+ * pressed (active) panel.
+ */
+const STATUS_BAR_GROUP_BUTTON_CLASSES =
+  'DocEditor__statusBar__buttonGroup__button z-0 -ml-px rounded-none group-first/segment:ml-0 group-first/segment:rounded-l-sm group-last/segment:rounded-r-sm ' +
+  'aria-pressed:z-10 aria-pressed:border-info-line aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-hover aria-pressed:hover:bg-button-blue-soft';
 
 /**
  * Lets editors know that a scheduled publish uses the doc's content from when
@@ -716,8 +669,11 @@ DocEditor.ScheduledNotice = (props: {draft: DraftDocContext}) => {
     return null;
   }
   return (
-    <div className="DocEditor__scheduledNotice">
-      <IconAlarm size={16} className="DocEditor__scheduledNotice__icon" />
+    <div className="DocEditor__scheduledNotice flex items-start gap-2 text-pretty rounded-md border border-warning-line bg-warning-soft px-3 py-2.5">
+      <IconAlarm
+        size={16}
+        className="DocEditor__scheduledNotice__icon mt-0.5 shrink-0"
+      />
       <Text size="body-sm">
         Scheduled to publish {formatDateTime(sys.scheduledAt!)} by{' '}
         {sys.scheduledBy}. Edits made after scheduling won't be included in the
@@ -734,7 +690,7 @@ DocEditor.SaveState = () => {
     setSaveState(saveState);
   });
   return (
-    <div className="DocEditor__statusBar__saveState">
+    <div className="DocEditor__statusBar__saveState mr-4 font-medium italic">
       {saveState === SaveState.SAVED && 'saved!'}
       {saveState === SaveState.SAVING && 'saving...'}
       {saveState === SaveState.UPDATES_PENDING && 'saving...'}
@@ -796,27 +752,25 @@ DocEditor.UndoRedoButtons = () => {
     : 'Redo (⌘ ⇧ Z)';
 
   return (
-    <div className="DocEditor__undoRedo">
-      <Tooltip label={undoLabel} disabled={!history.canUndo}>
-        <ActionIcon
-          className="DocEditor__undoRedo__button"
-          disabled={!history.canUndo}
-          onClick={() => history.undo()}
-          aria-label="Undo"
-        >
-          <IconArrowBackUp size={16} />
-        </ActionIcon>
-      </Tooltip>
-      <Tooltip label={redoLabel} disabled={!history.canRedo}>
-        <ActionIcon
-          className="DocEditor__undoRedo__button"
-          disabled={!history.canRedo}
-          onClick={() => history.redo()}
-          aria-label="Redo"
-        >
-          <IconArrowForwardUp size={16} />
-        </ActionIcon>
-      </Tooltip>
+    <div className="DocEditor__undoRedo mr-1 flex items-center">
+      <IconButton
+        className="DocEditor__undoRedo__button"
+        label="Undo"
+        tooltip={history.canUndo ? undoLabel : false}
+        disabled={!history.canUndo}
+        onClick={() => history.undo()}
+      >
+        <IconArrowBackUp />
+      </IconButton>
+      <IconButton
+        className="DocEditor__undoRedo__button"
+        label="Redo"
+        tooltip={history.canRedo ? redoLabel : false}
+        disabled={!history.canRedo}
+        onClick={() => history.redo()}
+      >
+        <IconArrowForwardUp />
+      </IconButton>
     </div>
   );
 };
@@ -1080,10 +1034,11 @@ DocEditor.FieldBody = (props: FieldProps) => {
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'DocEditor__field',
-        field.deprecated && 'DocEditor__field--deprecated',
-        targeted && 'deeplink-target'
+        field.deprecated && 'DocEditor__field--deprecated opacity-50',
+        targeted &&
+          'DocEditor__field--deeplinked rounded-sm border border-warning-line bg-warning-soft p-4'
       )}
       data-type={field.type}
       data-level={level}
@@ -1091,7 +1046,17 @@ DocEditor.FieldBody = (props: FieldProps) => {
       ref={ref}
     >
       {showFieldHeader && (
-        <DocEditor.FieldHeader {...props} localizedValues={localizedValues} />
+        <DocEditor.FieldHeader
+          {...props}
+          className={
+            // Inline objects at the top level read as a band across the
+            // field column.
+            field.type === 'object' && level === 0
+              ? '-mx-3 mt-3 border-0 border-y border-solid border-border px-3 py-1'
+              : undefined
+          }
+          localizedValues={localizedValues}
+        />
       )}
       <div className="DocEditor__field__input">
         <FieldErrorBoundary deepKey={props.deepKey}>
@@ -1150,22 +1115,32 @@ DocEditor.FieldHeader = (props: FieldHeaderProps) => {
 
   return (
     <div
-      className={joinClassNames(
-        props.className,
-        'DocEditor__FieldHeader',
+      className={cn(
+        'DocEditor__FieldHeader group/header relative mb-2',
         fieldViewers.length > 0 && 'DocEditor__FieldHeader--hasViewers',
-        props.localizedValues && 'DocEditor__FieldHeader--localizable'
+        props.localizedValues && 'DocEditor__FieldHeader--localizable',
+        // Leaves room for the absolutely positioned actions.
+        fieldViewers.length > 0
+          ? props.localizedValues
+            ? 'pr-34.5'
+            : 'pr-29'
+          : props.localizedValues
+            ? 'pr-19.5'
+            : 'pr-14',
+        props.className
       )}
       data-field-header-for={props.deepKey}
     >
       {field.deprecated ? (
-        <div className="DocEditor__FieldHeader__label">DEPRECATED: {label}</div>
+        <div className="DocEditor__FieldHeader__label flex gap-2 font-semibold">
+          DEPRECATED: {label}
+        </div>
       ) : (
-        <div className="DocEditor__FieldHeader__label">
+        <div className="DocEditor__FieldHeader__label group/label flex gap-2 font-semibold">
           <span>{label}</span>
           {props.deepKey && (
             <a
-              className="DocEditor__FieldHeader__label__deeplink"
+              className="DocEditor__FieldHeader__label__deeplink text-border-strong no-underline underline-offset-2 opacity-0 transition-opacity duration-300 hover:underline group-hover/label:opacity-100 group-focus-within/label:opacity-100"
               href={deeplinkUrl}
               tabIndex={-1}
               title="Link to field"
@@ -1180,12 +1155,14 @@ DocEditor.FieldHeader = (props: FieldHeaderProps) => {
         </div>
       )}
       {field.help && (
-        <div className="DocEditor__FieldHeader__help">{field.help}</div>
+        <div className="DocEditor__FieldHeader__help mt-0.5 font-normal">
+          {field.help}
+        </div>
       )}
-      <div className="DocEditor__FieldHeader__actions">
+      <div className="DocEditor__FieldHeader__actions absolute right-0 top-0 flex items-center gap-1">
         {fieldViewers.length > 0 && (
           <UserAvatarGroup
-            className="DocEditor__FieldHeader__viewers"
+            className="DocEditor__FieldHeader__viewers mr-0.5 *:-ml-1.5 *:first:ml-0"
             emails={fieldViewers.map((viewer) => viewer.email)}
             size={20}
             max={3}
@@ -1289,48 +1266,48 @@ DocEditor.FieldHeaderCommentActionIconInner = (
 
   return (
     <Popover
-      opened={opened}
-      onClose={() => setOpened(false)}
-      position="left"
-      placement="start"
+      open={opened}
+      onOpenChange={(open) => {
+        // A pinned thread already has a window; bring it forward instead.
+        if (open && pinned) {
+          pinnedThreads!.focus(comments.docId, props.deepKey);
+          return;
+        }
+        setOpened(open);
+      }}
+      placement="left-start"
       width={420}
-      spacing={12}
-      shadow="md"
       withArrow
-      withinPortal
       trapFocus={false}
-      closeOnClickOutside={false}
-      closeOnEscape
-      zIndex={200}
+      closeOnOutsideClick={false}
+      label={`Comments on ${fieldLabel}`}
       className="DocEditor__FieldHeader__comments"
-      target={
-        <Tooltip label={label} withArrow>
+      trigger={
+        <Tooltip label={label}>
           <button
             type="button"
-            className={joinClassNames(
+            className={cn(
               'DocEditor__FieldHeader__comments__button',
               thread && 'DocEditor__FieldHeader__comments__button--hasThread',
               thread && 'DocEditor__FieldHeader__comments__button--open',
               (opened || pinned) &&
-                'DocEditor__FieldHeader__comments__button--active'
+                'DocEditor__FieldHeader__comments__button--active',
+              'm-0 inline-flex h-4.5 min-w-4.5 cursor-pointer appearance-none items-center justify-center gap-0.5 rounded-sm border-0 bg-transparent px-0.5 text-muted opacity-35 transition duration-200',
+              'hover:bg-surface-hover hover:text-fg focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-focus group-hover/header:opacity-100 group-focus-within/header:opacity-100',
+              thread && 'opacity-100',
+              (opened || pinned) && 'bg-surface-hover text-fg opacity-100'
             )}
             aria-label={label}
-            aria-expanded={opened}
             onClick={(e: MouseEvent) => {
               // The header may live inside a <summary>; keep the click from
-              // toggling the drawer.
+              // toggling the drawer. The popover toggles itself.
               e.preventDefault();
               e.stopPropagation();
-              if (pinned) {
-                pinnedThreads!.focus(comments.docId, props.deepKey);
-                return;
-              }
-              setOpened((value) => !value);
             }}
           >
             <IconMessageCircle size={14} strokeWidth="1.8" />
             {thread && count > 0 && (
-              <span className="DocEditor__FieldHeader__comments__count">
+              <span className="DocEditor__FieldHeader__comments__count text-2xs font-semibold leading-none">
                 {count}
               </span>
             )}
@@ -1353,40 +1330,30 @@ DocEditor.FieldHeaderCommentActionIconInner = (
           headerActions={
             <>
               {pinnedThreads && (
-                <Tooltip label="Pin to screen" withArrow>
-                  <ActionIcon
-                    size="sm"
-                    aria-label="Pin to screen"
-                    onClick={pinThread}
-                  >
-                    <IconPin size={16} strokeWidth="1.8" />
-                  </ActionIcon>
-                </Tooltip>
+                <IconButton size="xs" label="Pin to screen" onClick={pinThread}>
+                  <IconPin strokeWidth="1.8" />
+                </IconButton>
               )}
-              <Tooltip label="Open in comments panel" withArrow>
-                <ActionIcon
-                  size="sm"
-                  aria-label="Open in comments panel"
-                  onClick={() => {
-                    setOpened(false);
-                    openFieldCommentsPanel({
-                      fieldKey: props.deepKey,
-                      fieldLabel,
-                    });
-                  }}
-                >
-                  <IconLayoutSidebarRight size={16} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Close" withArrow>
-                <ActionIcon
-                  size="sm"
-                  aria-label="Close"
-                  onClick={() => setOpened(false)}
-                >
-                  <IconX size={16} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
+              <IconButton
+                size="xs"
+                label="Open in comments panel"
+                onClick={() => {
+                  setOpened(false);
+                  openFieldCommentsPanel({
+                    fieldKey: props.deepKey,
+                    fieldLabel,
+                  });
+                }}
+              >
+                <IconLayoutSidebarRight strokeWidth="1.8" />
+              </IconButton>
+              <IconButton
+                size="xs"
+                label="Close"
+                onClick={() => setOpened(false)}
+              >
+                <IconX strokeWidth="1.8" />
+              </IconButton>
             </>
           }
         />
@@ -1453,65 +1420,40 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
     return unsubscribe;
   }, [props.deepKey, draft.controller]);
 
+  const openTranslations = () => {
+    const docData = draft.controller.getData();
+    if (!docData) {
+      return;
+    }
+    const strings = new Set<string>();
+    extractField(strings, field, value, types);
+    editTranslationsModal.open({
+      docId: draft.controller.docId,
+      strings: Array.from(strings),
+      l10nSheet: docData?.sys?.l10nSheet,
+      field: {
+        id: field.id || props.deepKey,
+        deepKey: props.deepKey,
+      },
+      draft: draft,
+    });
+  };
+
   return (
-    <div className="DocEditor__FieldHeader__translate">
-      {doNotTranslate ? (
-        <Tooltip label="Translations are disabled">
-          <ActionIcon
-            size="xs"
-            onClick={() => {
-              const docData = draft.controller.getData();
-              if (!docData) {
-                return;
-              }
-              const strings = new Set<string>();
-              extractField(strings, field, value, types);
-              const translateStrings = Array.from(strings);
-              editTranslationsModal.open({
-                docId: draft.controller.docId,
-                strings: translateStrings,
-                l10nSheet: docData?.sys?.l10nSheet,
-                field: {
-                  id: field.id || props.deepKey,
-                  deepKey: props.deepKey,
-                },
-                draft: draft,
-              });
-            }}
-          >
-            <IconLanguageOff size={16} />
-          </ActionIcon>
-        </Tooltip>
-      ) : !actionIconDisabled ? (
-        <Tooltip label="Show translations">
-          <ActionIcon
-            size="xs"
-            onClick={() => {
-              const docData = draft.controller.getData();
-              if (!docData) {
-                return;
-              }
-              const strings = new Set<string>();
-              extractField(strings, field, value, types);
-              const translateStrings = Array.from(strings);
-              editTranslationsModal.open({
-                docId: draft.controller.docId,
-                strings: translateStrings,
-                l10nSheet: docData?.sys?.l10nSheet,
-                field: {
-                  id: field.id || props.deepKey,
-                  deepKey: props.deepKey,
-                },
-                draft: draft,
-              });
-            }}
-          >
-            <IconLanguage size={16} />
-          </ActionIcon>
-        </Tooltip>
+    <div className="DocEditor__FieldHeader__translate flex">
+      {doNotTranslate || !actionIconDisabled ? (
+        <IconButton
+          size="xs"
+          label={
+            doNotTranslate ? 'Translations are disabled' : 'Show translations'
+          }
+          onClick={openTranslations}
+        >
+          {doNotTranslate ? <IconLanguageOff /> : <IconLanguage />}
+        </IconButton>
       ) : (
-        <div className="DocEditor__FieldHeader__translate__iconDisabled">
-          <IconLanguage size={16} />
+        <div className="DocEditor__FieldHeader__translate__iconDisabled pointer-events-none inline-flex size-control-xs items-center justify-center opacity-20">
+          <IconLanguage size={14} />
         </div>
       )}
     </div>
@@ -1535,7 +1477,14 @@ DocEditor.ObjectField = (props: FieldProps) => {
   // Inline variant, used by the ArrayField.
   return (
     <div className="DocEditor__ObjectField">
-      <div className="DocEditor__ObjectField__fields">
+      <div
+        className={cn(
+          'DocEditor__ObjectField__fields',
+          // Nested inline objects show their nesting with an accent rule.
+          (props.level ?? 0) > 0 &&
+            'border-0 border-l-2 border-solid border-accent pl-3'
+        )}
+      >
         {field.fields.map((field) => (
           <DocEditor.Field
             key={field.id}
@@ -1608,7 +1557,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
         <Text
           size="body-sm"
           weight="semi-bold"
-          className="DocEditor__ObjectFieldDrawer__confirmText"
+          className="DocEditor__ObjectFieldDrawer__confirmText text-pretty"
         >
           This will clear all values in this section. You can undo this with ⌘Z.
         </Text>
@@ -1634,7 +1583,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'DocEditor__ObjectFieldDrawer',
         inline && 'DocEditor__ObjectFieldDrawer--inline'
       )}
@@ -1643,65 +1592,81 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
         className="DocEditor__ObjectFieldDrawer__drawer"
         open={initialOpen}
       >
-        <summary className="DocEditor__ObjectFieldDrawer__drawer__toggle">
-          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
+        <summary
+          className={cn(
+            'DocEditor__ObjectFieldDrawer__drawer__toggle flex cursor-pointer select-none items-center gap-2 px-4 py-2 transition-colors duration-300 hover:bg-surface-hover',
+            inline ? 'border-0' : 'border-0 border-y border-solid border-border'
+          )}
+        >
+          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon flex shrink-0 transition-transform duration-300">
             <IconChevronRight size={16} />
           </div>
           <DocEditor.FieldHeader
-            className="DocEditor__ObjectFieldDrawer__drawer__toggle__header"
+            className="DocEditor__ObjectFieldDrawer__drawer__toggle__header mb-0 min-w-0 flex-1"
             field={field}
             deepKey={props.deepKey}
           />
           <Menu
             className="DocEditor__ObjectFieldDrawer__drawer__menu"
-            position="bottom"
-            transitionDuration={0}
-            control={
-              <ActionIcon
-                className="DocEditor__ObjectFieldDrawer__drawer__menu__dots"
+            placement="bottom"
+            trigger={
+              <IconButton
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__dots mr-1"
+                size="xs"
+                label="More actions"
                 onClick={(e: MouseEvent) => {
+                  // Keep the click from toggling the drawer.
                   e.stopPropagation();
                   e.preventDefault();
                 }}
+                onKeyDown={stopArrowKeys}
               >
-                <IconDotsVertical size={16} />
-              </ActionIcon>
+                <IconDotsVertical />
+              </IconButton>
             }
           >
-            <Menu.Label>CLIPBOARD</Menu.Label>
-            <Menu.Item
-              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-              icon={<IconClipboardCopy size={18} />}
-              onClick={copyToClipboard}
-            >
-              Copy
-            </Menu.Item>
-            <Menu.Item
-              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-              icon={<IconClipboard size={18} />}
-              onClick={pasteFromClipboard}
-            >
-              Paste
-            </Menu.Item>
-            <Menu.Label>CODE</Menu.Label>
-            <Menu.Item
-              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-              icon={<IconBraces size={18} />}
-              onClick={editJson}
-            >
-              Edit JSON
-            </Menu.Item>
-            <Menu.Label>ACTIONS</Menu.Label>
-            <Menu.Item
-              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-              icon={<IconTrash size={18} />}
-              onClick={confirmClear}
-            >
-              Clear
-            </Menu.Item>
+            <MenuGroup label="CLIPBOARD">
+              <MenuItem
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconClipboardCopy />}
+                onClick={copyToClipboard}
+              >
+                Copy
+              </MenuItem>
+              <MenuItem
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconClipboard />}
+                onClick={pasteFromClipboard}
+              >
+                Paste
+              </MenuItem>
+            </MenuGroup>
+            <MenuGroup label="CODE">
+              <MenuItem
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconBraces />}
+                onClick={editJson}
+              >
+                Edit JSON
+              </MenuItem>
+            </MenuGroup>
+            <MenuGroup label="ACTIONS">
+              <MenuItem
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconTrash />}
+                onClick={confirmClear}
+              >
+                Clear
+              </MenuItem>
+            </MenuGroup>
           </Menu>
         </summary>
-        <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
+        <div
+          className={cn(
+            'DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields p-4',
+            inline && 'pl-12'
+          )}
+        >
           {field.fields.map((field) => (
             <DocEditor.Field
               key={field.id}
@@ -1714,6 +1679,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     </div>
   );
 };
+
+/**
+ * Keeps the arrow keys pressed on a menu button inside a `<summary>` from
+ * reaching the summary's own handlers (e.g. moving an array item). The menu
+ * still opens on ArrowUp and ArrowDown.
+ */
+function stopArrowKeys(e: KeyboardEvent) {
+  if (e.key.startsWith('Arrow')) {
+    e.stopPropagation();
+  }
+}
 
 interface ArrayFieldValue {
   [key: string]: any;
@@ -2490,25 +2466,35 @@ DocEditor.ArrayField = (props: FieldProps) => {
     <>
       {nestingWarning && (
         <div
-          className="DocEditor__ArrayField__nestingWarning"
+          className={cn(
+            'DocEditor__ArrayField__nestingWarning mt-4 flex items-start gap-2 rounded-sm border px-2.5 py-2 text-sm leading-snug text-strong',
+            canAddItem
+              ? 'border-warning-line bg-warning-soft'
+              : 'border-danger-line bg-danger-soft'
+          )}
           data-severity={canAddItem ? 'warning' : 'error'}
         >
-          <IconAlertTriangle size={16} />
+          <IconAlertTriangle
+            size={16}
+            className={cn(
+              'mt-px shrink-0',
+              canAddItem ? 'text-warning' : 'text-danger'
+            )}
+          />
           <div className="DocEditor__ArrayField__nestingWarning__message">
             {nestingWarning}
           </div>
         </div>
       )}
-      <div className="DocEditor__ArrayField__add">
+      <div className="DocEditor__ArrayField__add mt-4 flex items-center gap-1">
         <ConditionalTooltip
           label={addDisabledReason}
           condition={!!addDisabledReason}
         >
           <Button
             className="DocEditor__ArrayField__add__button"
-            color="dark"
-            size="xs"
-            leftIcon={<IconCirclePlus size={16} />}
+            variant="primary"
+            icon={<IconCirclePlus />}
             onClick={() => add()}
             disabled={!!addDisabledReason}
           >
@@ -2517,21 +2503,25 @@ DocEditor.ArrayField = (props: FieldProps) => {
         </ConditionalTooltip>
         <Menu
           className="DocEditor__ArrayField__add__menu"
-          control={
-            <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-              <IconDotsVertical size={16} />
-            </ActionIcon>
+          trigger={
+            <IconButton
+              className="DocEditor__ArrayField__item__header__controls__dots text-strong"
+              label="More actions"
+            >
+              <IconDotsVertical />
+            </IconButton>
           }
         >
-          <Menu.Label>CLIPBOARD</Menu.Label>
-          <Menu.Item
-            className="DocEditor__ArrayField__menu__item"
-            icon={<IconRowInsertBottom size={18} />}
-            onClick={() => pasteFromVirtualClipboard(order.length - 1)}
-            disabled={!canAddItem || (maxItemsReached && cutIndex === null)}
-          >
-            Paste item to end
-          </Menu.Item>
+          <MenuGroup label="CLIPBOARD">
+            <MenuItem
+              className="DocEditor__ArrayField__menu__item"
+              icon={<IconRowInsertBottom />}
+              onClick={() => pasteFromVirtualClipboard(order.length - 1)}
+              disabled={!canAddItem || (maxItemsReached && cutIndex === null)}
+            >
+              Paste item to end
+            </MenuItem>
+          </MenuGroup>
         </Menu>
       </div>
     </>
@@ -2541,7 +2531,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
     return (
       <div className="DocEditor__ArrayField">
         <div className="DocEditor__ArrayField__items">
-          <div className="DocEditor__ArrayField__items__empty">No items</div>
+          <div className="DocEditor__ArrayField__items__empty font-mono">
+            No items
+          </div>
         </div>
         {addButtonRow}
       </div>
@@ -2656,15 +2648,16 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
         <div
           ref={provided.innerRef}
           {...(provided.draggableProps as any)}
-          className={joinClassNames(
-            'DocEditor__ArrayField__item__wrapper',
+          className={cn(
+            'DocEditor__ArrayField__item__wrapper mb-2 flex w-full flex-row items-center gap-0.5 transition duration-300',
             snapshot.isDragging &&
-              'DocEditor__ArrayField__item__wrapper--dragging',
-            props.isCut && 'DocEditor__ArrayField__item__wrapper--cut'
+              'DocEditor__ArrayField__item__wrapper--dragging overflow-hidden rounded-sm border border-border bg-surface-hover shadow-md',
+            props.isCut &&
+              'DocEditor__ArrayField__item__wrapper--cut rounded-sm opacity-65 outline-1 outline-dashed outline-subtle'
           )}
         >
           <div
-            className="DocEditor__ArrayField__item__handle"
+            className="DocEditor__ArrayField__item__handle flex h-7 shrink-0 items-center justify-center"
             {...(provided.dragHandleProps as any)}
             onClick={() =>
               props.onFocusHeader(props.parentDeepKey, props.index)
@@ -2673,7 +2666,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
             <IconGripVertical size={18} stroke={'1.5'} />
           </div>
           <details
-            className="DocEditor__ArrayField__item"
+            className="DocEditor__ArrayField__item min-w-0 flex-1"
             open={props.initialOpen}
             onToggle={(e) => {
               if ((e.target as HTMLDetailsElement).open) {
@@ -2697,7 +2690,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
               }
               tabIndex={0}
             >
-              <div className="DocEditor__ArrayField__item__header__icon">
+              <div className="DocEditor__ArrayField__item__header__icon flex">
                 <IconTriangleFilled size={6} />
               </div>
               <DocEditor.ArrayFieldPreview
@@ -2705,16 +2698,26 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                 deepKey={itemDeepKey}
                 index={props.index}
               />
-              <div className="DocEditor__ArrayField__item__header__controls">
-                <div className="DocEditor__ArrayField__item__header__controls__arrows">
+              <div className="DocEditor__ArrayField__item__header__controls flex shrink-0 items-center gap-1">
+                <div className="DocEditor__ArrayField__item__header__controls__arrows flex gap-2">
                   <button
-                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
+                    type="button"
+                    className={cn(
+                      'DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up',
+                      ARRAY_ARROW_CLASSES
+                    )}
+                    aria-label="Move up"
                     onClick={() => props.onMoveUp(props.index)}
                   >
                     <IconCircleArrowUp size={20} strokeWidth={1.75} />
                   </button>
                   <button
-                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
+                    type="button"
+                    className={cn(
+                      'DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down',
+                      ARRAY_ARROW_CLASSES
+                    )}
+                    aria-label="Move down"
                     onClick={() => props.onMoveDown(props.index)}
                   >
                     <IconCircleArrowDown size={20} strokeWidth={1.75} />
@@ -2722,92 +2725,104 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                 </div>
                 <Menu
                   className="DocEditor__ArrayField__item__header__controls__menu"
-                  position="bottom"
-                  transitionDuration={0}
-                  control={
-                    <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-                      <IconDotsVertical size={16} />
-                    </ActionIcon>
+                  placement="bottom"
+                  trigger={
+                    <IconButton
+                      className="DocEditor__ArrayField__item__header__controls__dots text-strong"
+                      label="Item actions"
+                      onClick={(e: MouseEvent) => {
+                        // Keep the click from toggling the item.
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onKeyDown={stopArrowKeys}
+                    >
+                      <IconDotsVertical />
+                    </IconButton>
                   }
                 >
-                  <Menu.Label>INSERT</Menu.Label>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconRowInsertTop size={18} />}
-                    onClick={() => props.onInsertBefore(props.index)}
-                    disabled={!props.canAddItem}
-                  >
-                    Add before
-                  </Menu.Item>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconRowInsertBottom size={18} />}
-                    onClick={() => props.onInsertAfter(props.index)}
-                    disabled={!props.canAddItem}
-                  >
-                    Add after
-                  </Menu.Item>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconCopy size={18} />}
-                    onClick={() => props.onDuplicate(props.index)}
-                    disabled={!props.canAddItem}
-                  >
-                    Duplicate
-                  </Menu.Item>
-                  <Menu.Label>CLIPBOARD</Menu.Label>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconClipboardCopy size={18} />}
-                    onClick={() => props.onCopy(props.index)}
-                  >
-                    Copy
-                  </Menu.Item>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconRowInsertTop size={18} />}
-                    onClick={() => props.onPasteBefore(props.index)}
-                    disabled={!props.canAddItem}
-                  >
-                    Paste before
-                  </Menu.Item>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconRowInsertBottom size={18} />}
-                    onClick={() => props.onPasteAfter(props.index)}
-                    disabled={!props.canAddItem}
-                  >
-                    Paste after
-                  </Menu.Item>
-                  <Menu.Label>CODE</Menu.Label>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconBraces size={18} />}
-                    onClick={() => props.onEditJson(props.index)}
-                  >
-                    Edit JSON
-                  </Menu.Item>
-                  {props.aiEnabled && (
-                    <Menu.Item
+                  <MenuGroup label="INSERT">
+                    <MenuItem
                       className="DocEditor__ArrayField__menu__item"
-                      icon={<IconRootAI size={16} />}
-                      onClick={() => props.onAiEdit(props.index)}
+                      icon={<IconRowInsertTop />}
+                      onClick={() => props.onInsertBefore(props.index)}
+                      disabled={!props.canAddItem}
                     >
-                      Edit with Root AI
-                    </Menu.Item>
-                  )}
-                  <Menu.Label>REMOVE</Menu.Label>
-                  <Menu.Item
-                    className="DocEditor__ArrayField__menu__item"
-                    icon={<IconTrash size={18} />}
-                    onClick={() => props.onRemove(props.index)}
-                  >
-                    Remove
-                  </Menu.Item>
+                      Add before
+                    </MenuItem>
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconRowInsertBottom />}
+                      onClick={() => props.onInsertAfter(props.index)}
+                      disabled={!props.canAddItem}
+                    >
+                      Add after
+                    </MenuItem>
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconCopy />}
+                      onClick={() => props.onDuplicate(props.index)}
+                      disabled={!props.canAddItem}
+                    >
+                      Duplicate
+                    </MenuItem>
+                  </MenuGroup>
+                  <MenuGroup label="CLIPBOARD">
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconClipboardCopy />}
+                      onClick={() => props.onCopy(props.index)}
+                    >
+                      Copy
+                    </MenuItem>
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconRowInsertTop />}
+                      onClick={() => props.onPasteBefore(props.index)}
+                      disabled={!props.canAddItem}
+                    >
+                      Paste before
+                    </MenuItem>
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconRowInsertBottom />}
+                      onClick={() => props.onPasteAfter(props.index)}
+                      disabled={!props.canAddItem}
+                    >
+                      Paste after
+                    </MenuItem>
+                  </MenuGroup>
+                  <MenuGroup label="CODE">
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconBraces />}
+                      onClick={() => props.onEditJson(props.index)}
+                    >
+                      Edit JSON
+                    </MenuItem>
+                    {props.aiEnabled && (
+                      <MenuItem
+                        className="DocEditor__ArrayField__menu__item"
+                        icon={<IconRootAI size={16} />}
+                        onClick={() => props.onAiEdit(props.index)}
+                      >
+                        Edit with Root AI
+                      </MenuItem>
+                    )}
+                  </MenuGroup>
+                  <MenuGroup label="REMOVE">
+                    <MenuItem
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconTrash />}
+                      onClick={() => props.onRemove(props.index)}
+                    >
+                      Remove
+                    </MenuItem>
+                  </MenuGroup>
                 </Menu>
               </div>
             </summary>
-            <div className="DocEditor__ArrayField__item__body">
+            <div className="DocEditor__ArrayField__item__body border-2 border-t-0 border-solid border-border p-4 max-md:p-3">
               <DocEditor.Field
                 key={itemDeepKey}
                 field={props.field.of}
@@ -2828,6 +2843,10 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
     </Draggable>
   );
 };
+
+/** The move up and move down buttons in an array item's header. */
+const ARRAY_ARROW_CLASSES =
+  'relative m-0 flex cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 text-strong transition-transform duration-200 active:translate-y-0.5 focus-visible:outline-2 focus-visible:outline-focus pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5';
 
 interface ArrayFieldPreviewProps {
   field: schema.ArrayField;
@@ -2865,19 +2884,19 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
   }, [props.deepKey, draft, updateValue]);
 
   return (
-    <div className="DocEditor__ArrayField__item__header__preview">
+    <div className="DocEditor__ArrayField__item__header__preview flex w-0 flex-1 items-center gap-2.5 overflow-hidden">
       {previewImage && (
-        <div className="DocEditor__ArrayField__item__header__preview__image">
+        <div className="DocEditor__ArrayField__item__header__preview__image flex size-8 shrink-0 items-center justify-center">
           <img
             src={previewImage}
             alt=""
-            className="DocEditor__ArrayField__item__header__preview__image__img"
+            className="DocEditor__ArrayField__item__header__preview__image__img h-auto w-full"
             loading="lazy"
           />
         </div>
       )}
       <div
-        className="DocEditor__ArrayField__item__header__preview__title"
+        className="DocEditor__ArrayField__item__header__preview__title min-w-0 flex-1 truncate pr-2 font-mono text-sm font-medium"
         data-preview={previewText}
       />
     </div>
@@ -2963,7 +2982,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
   }
 
   const fieldsBlock = selectedType && (
-    <div className="DocEditor__OneOfField__fields">
+    <div className="DocEditor__OneOfField__fields mt-4 flex flex-col gap-6">
       {selectedType.fields.map((subField) => (
         <DocEditor.Field
           key={`${type}::${subField.id}`}
@@ -2988,14 +3007,14 @@ DocEditor.OneOfField = (props: FieldProps) => {
       : field.placeholder || 'Select type';
     return (
       <div className="DocEditor__OneOfField DocEditor__OneOfField--picker">
-        <div className="DocEditor__OneOfField__pickerButton">
-          <div className="DocEditor__OneOfField__select__label">Type:</div>
+        <div className="DocEditor__OneOfField__pickerButton flex items-center justify-end gap-2">
+          <div className="DocEditor__OneOfField__select__label font-semibold">
+            Type:
+          </div>
           <Button
-            variant="default"
-            color="dark"
-            size="xs"
+            className="min-w-0 font-medium"
             onClick={openPicker}
-            rightIcon={<IconChevronDown size={16} />}
+            iconRight={<IconChevronDown />}
           >
             {buttonLabel}
           </Button>
@@ -3007,19 +3026,20 @@ DocEditor.OneOfField = (props: FieldProps) => {
 
   return (
     <div className="DocEditor__OneOfField">
-      <div className="DocEditor__OneOfField__select">
-        <div className="DocEditor__OneOfField__select__label">Type:</div>
+      <div className="DocEditor__OneOfField__select flex items-center justify-end gap-2">
+        <div className="DocEditor__OneOfField__select__label shrink-0 font-semibold">
+          Type:
+        </div>
         <Select
+          className="w-48 min-w-0"
+          inputClassName="rounded-none"
+          aria-label="Type"
           data={dropdownValues}
           value={type}
           placeholder={field.placeholder}
-          onChange={(e: string) => onTypeChange(e || '')}
+          onValueChange={(value) => onTypeChange(value || '')}
           onFocus={onDropdownFocus}
-          size="xs"
-          radius={0}
           searchable
-          // Due to issues with preact/compat, use a div for the dropdown el.
-          dropdownComponent="div"
         />
       </div>
       {fieldsBlock}

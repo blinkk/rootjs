@@ -7,10 +7,8 @@ import {FieldErrorBoundary} from './FieldErrorBoundary.js';
  * field whose stored value has an unexpected type (e.g. the `e.split is not a
  * function` crash that takes down the whole doc editor).
  */
-function ThrowingField(props: {message?: string}) {
+function ThrowingField(props: {message?: string}): null {
   throw new Error(props.message || 'field render failed');
-
-  return null;
 }
 
 /** Test fixture: a field that renders normally. */

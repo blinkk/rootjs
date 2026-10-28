@@ -1,8 +1,7 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, fireEvent, render} from '@testing-library/preact';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import * as schema from '../../../../../core/schema.js';
@@ -57,17 +56,13 @@ function renderArrayField(field: schema.ArrayField) {
     controller: controller as unknown as DraftDocContext['controller'],
   } as DraftDocContext;
   render(
-    <MantineProvider>
-      <ModalsProvider
-        modals={{[ComponentPickerModal.id]: ComponentPickerModal}}
-      >
-        <DeeplinkProvider>
-          <DraftDocContextProvider value={draftContext}>
-            <DocEditor.ArrayField field={field} deepKey="modules" />
-          </DraftDocContextProvider>
-        </DeeplinkProvider>
-      </ModalsProvider>
-    </MantineProvider>
+    <ModalsProvider modals={{[ComponentPickerModal.id]: ComponentPickerModal}}>
+      <DeeplinkProvider>
+        <DraftDocContextProvider value={draftContext}>
+          <DocEditor.ArrayField field={field} deepKey="modules" />
+        </DraftDocContextProvider>
+      </DeeplinkProvider>
+    </ModalsProvider>
   );
   return controller;
 }

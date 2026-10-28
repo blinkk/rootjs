@@ -1,5 +1,5 @@
-import {Checkbox} from '@mantine/core';
 import * as schema from '../../../../../../core/schema.js';
+import {Checkbox} from '../../../../../primitives/Checkbox/Checkbox.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -12,12 +12,9 @@ export function BooleanField(props: FieldProps) {
     <div className="DocEditor__BooleanField">
       <Checkbox
         label={label}
-        onChange={(e: Event) => {
-          const target = e.currentTarget as HTMLInputElement;
-          setValue(target.checked);
-        }}
-        checked={value}
-        size="xs"
+        color="blue"
+        onChange={(e) => setValue(e.currentTarget.checked)}
+        checked={!!value}
       />
     </div>
   );

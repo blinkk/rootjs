@@ -20,8 +20,9 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
       `CommentEditor.css` keep unlayered overrides of it, and the
       CommentEditor placeholder stays at 13px to match Lexical's text. Drop the
       overrides once Lexical's CSS is layered.
-- [ ] `.CommentThread__entries` is targeted from `DocEditor.css`; keep the
-      class name or update both together.
+- [x] `.CommentThread__entries` is targeted from `DocEditor.css`; keep the
+      class name or update both together. (Kept, now in `@layer components`
+      with a comment pointing at `CommentThread`.)
 
 ## Phase 5 (polish)
 
