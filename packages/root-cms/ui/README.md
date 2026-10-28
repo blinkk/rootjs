@@ -111,6 +111,14 @@ re-implement them.
   `forwardRef` from `preact/compat`) when it wraps a single DOM element.
 - Positioning (tooltips, popovers, menus, selects) uses `@floating-ui/dom`
   through the shared `useFloating` hook. Modals use native `<dialog>`.
+- Overlays render through `primitives/floating/Portal`, which targets the
+  topmost open `<dialog>` (a modal dialog makes the rest of the page inert).
+  Never portal straight to `document.body`.
+- Callbacks: native inputs keep `onChange`/`onInput`. Controls whose value
+  isn't a plain string, or that change it themselves, take
+  `onValueChange(value)`.
+- Sizes are `xs` 24px, `sm` 28px (default) and `md` 36px. Mantine's `xs`
+  maps to `sm`, and its `sm` to `md`.
 - Notifications go through `utils/notifications.ts` and modals through
   `useModals()`. Keep using those entry points; their internals are swapped.
 - Icons come from `@tabler/icons-preact`, at size 16 by default (14 in dense

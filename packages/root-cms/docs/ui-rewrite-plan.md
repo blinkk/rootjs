@@ -12,7 +12,14 @@ Edit freely; subagents get pointed at this file.
 | 3 | Branching | Long-lived `cms-ui-rewrite` branch. Other work on main is paused, so no conflict churn. |
 | 4 | Gallery | Dev-only route inside the CMS. |
 | 5 | `.mantine-*` selectors in custom CSS/themes | Not used. Break freely, no backport. |
-| 6 | Folder reorg | Proposed in D7, awaiting review. |
+| 6 | Folder reorg | Done (D7, `ce52e51e`). |
+| 7 | Badge gradients | Keep them: `Badge variant="gradient"` with themeable `--cms-gradient-*` tokens. |
+| 8 | Callback naming | Native inputs keep `onChange`; controls whose value isn't a plain string use `onValueChange(value)`. |
+| 9 | Dialogs on mobile | Bottom sheets that grow with their content, not full-screen. |
+| 10 | Dismissing a confirm | Escape, backdrop and X call `onClose` only, not `onCancel` (as in Mantine). |
+| 11 | IconButton tooltips | On by default, showing `label`; `tooltip={false}` opts out. |
+| 12 | Tab scroll fade | Not needed. |
+| 13 | Select with no matches | Stays closed unless `nothingFound` is set (as in Mantine). |
 
 ## Goals
 
@@ -395,7 +402,7 @@ Overlays (tooltips, menus, toasts, dropdowns) portal through
 (`useOverlayRoot()`), because a modal dialog makes the rest of the page inert.
 
 **Checkpoint 1:** you review the gallery at all three widths and the API docs
-for each primitive.
+for each primitive. Done; answers are rows 7–13 of the decisions log.
 
 ### Phase 2: App shell (serial, one agent)
 
