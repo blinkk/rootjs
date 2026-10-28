@@ -43,11 +43,19 @@ export function testGallery(entry: GalleryEntry) {
             </main>
           );
 
-          const results = await axe.run(container);
+          const viewportMode = entry.screenshot === 'viewport';
+          // Let effects run, so overlays that open on mount are in place.
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          const results = await axe.run(
+            viewportMode ? document.body : container
+          );
           expect(formatViolations(results.violations)).toEqual([]);
 
+          const target = viewportMode
+            ? page.elementLocator(document.body)
+            : page.getByTestId('story');
           await expect
-            .element(page.getByTestId('story'))
+            .element(target)
             .toMatchScreenshot(
               `${entry.id}-${slugify(story)}-${viewport.name}.png`
             );

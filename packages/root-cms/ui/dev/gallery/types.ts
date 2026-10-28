@@ -28,6 +28,13 @@ export interface GalleryEntry {
    * or state, and lay itself out sensibly from 375px wide up.
    */
   stories: Record<string, () => ComponentChildren>;
+  /**
+   * What the visual test captures: `story` (default) clips to the story's
+   * container; `viewport` captures the whole page, for overlays that render
+   * outside it (portals, `<dialog>`, toasts). Stories should then render
+   * their overlay open by default.
+   */
+  screenshot?: 'story' | 'viewport';
 }
 
 /** Declares a gallery entry; see `GalleryEntry`. */
