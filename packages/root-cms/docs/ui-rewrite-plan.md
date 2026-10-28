@@ -23,6 +23,8 @@ Edit freely; subagents get pointed at this file.
 | 14 | Input look | Closer to Mantine: cool `--cms-input-*` greys, pill chips, no 16px mobile text. Tabs underline in black. |
 | 15 | Doc editor on mobile | Editor only, with an "open preview in new tab" button; no split or tabs. |
 | 16 | Command palette | Stays in `features/search` for now (not a primitive). |
+| 17 | Colored buttons | Keep Mantine's blue, green and red (`blue`, `blue-light`, `green`, `danger*` variants), even below 4.5:1 contrast; axe skips only `color-contrast` on them. |
+| 18 | Table borders | No column borders by default (`withColumnBorders` opts in), matching Mantine. |
 
 ## Goals
 
