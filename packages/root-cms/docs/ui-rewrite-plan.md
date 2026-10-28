@@ -451,26 +451,26 @@ Each agent migrates its file set off Mantine, applies the D5 mobile patterns,
 converts its CSS to utilities + BEM + tokens, and attaches before/after
 snapshots to its PR.
 
-- [ ] 3A **Releases & publishing**: `ReleasesPage`, `ReleasePage`,
+- [x] 3A **Releases & publishing**: `ReleasesPage`, `ReleasePage`,
       `New`/`EditReleasePage`, `ReleaseForm`, `ReleaseStatusBadge`,
       `ScheduleReleaseModal`, `AddToReleaseModal`, `PublishDocModal`,
       `PublishChecksModal`, `PublishChecksResults`, `ChecksPanel`,
       `CheckStatusBadge`, `LockPublishingModal`.
-- [ ] 3B **Translations**: all `Translations*` pages, `DocTranslationsPage`,
+- [x] 3B **Translations**: all `Translations*` pages, `DocTranslationsPage`,
       `TranslationsTable`, `EditTranslationsModal`, `PortTranslationsModal`,
       `PruneTranslationsModal`, `LocalizationModal`, `LocalizedValues`,
       `ExportSheetModal`.
-- [ ] 3C **Collections & doc listing**: `ProjectPage`, `CollectionPage`,
+- [x] 3C **Collections & doc listing**: `ProjectPage`, `CollectionPage`,
       `CollectionTree`, `DocPreviewCard`, `DocStatusBadges`, `DocPickerModal`,
       `DocSelectModal`, `NewDocModal`, `CopyDocModal`, `SlugInput`,
       `SearchPanel`, `DocActionsMenu`, `VersionHistoryModal`,
       `CompareDraftModal`, `DocDiffViewer`, `ComparePage`.
-- [ ] 3D **Data, assets, settings, logs**: `DataPage`, `DataSourcePage`,
+- [x] 3D **Data, assets, settings, logs**: `DataPage`, `DataSourcePage`,
       `New`/`EditDataSourcePage`, `DataSourceForm`, `DataSource*`, `AssetsPage`,
       `AssetBrowser`, `AssetPickerModal`, `AssetUploader`, `FilePreview`,
       `SettingsPage`, `PermissionGroupsBox`, `ShareBox`, `UserSelect`,
       `ErrorLogsPage`, `LogsPage`, `ActionLogs`.
-- [ ] 3E **Tasks, comments, AI**: `TasksPage`, `TaskPage`, `TaskManager`,
+- [x] 3E **Tasks, comments, AI**: `TasksPage`, `TaskPage`, `TaskManager`,
       `TaskTargetLaunch`, `TaskCommentInput`, `Comment*`,
       `PinnedCommentThreads`, `RootAIChat`, `AIPage`, `AiEditModal`,
       `AiSummary`, `ChatErrorNotice`, `FieldHistory`.
