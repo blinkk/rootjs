@@ -189,9 +189,16 @@ CollectionPage.Collection = (props: CollectionProps) => {
     false
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
+  const {route} = useLocation();
+
+  // Redirect away from collections that aren't in the schema.
+  useEffect(() => {
+    if (!collection) {
+      route('/cms/content', true);
+    }
+  }, [collection]);
 
   if (!collection) {
-    route('/cms/content');
     return <></>;
   }
 
