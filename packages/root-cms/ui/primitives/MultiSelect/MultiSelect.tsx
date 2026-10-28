@@ -36,6 +36,13 @@ const BOX_SIZE_CLASSES: Record<InputSize, string> = {
   md: 'min-h-control-md py-1 pointer-coarse:min-h-10',
 };
 
+/** Gap between wrapped rows of chips, per size: the box's own padding. */
+const ROW_GAP_CLASSES: Record<InputSize, string> = {
+  xs: 'gap-y-px',
+  sm: 'gap-y-0.5',
+  md: 'gap-y-1',
+};
+
 /** Height of the chips and the inline input, per size. */
 const ROW_SIZE_CLASSES: Record<InputSize, string> = {
   xs: 'h-5',
@@ -360,7 +367,8 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         )}
         <div
           className={cn(
-            'MultiSelect__values flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1',
+            'MultiSelect__values flex min-w-0 flex-1 flex-wrap items-center gap-x-2',
+            ROW_GAP_CLASSES[size],
             !leftSection && VALUES_PADDING_CLASSES[size]
           )}
         >

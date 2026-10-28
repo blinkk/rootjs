@@ -112,6 +112,8 @@
   --text-xs--line-height: 1.4;
   --text-sm: var(--cms-text-sm);
   --text-sm--line-height: 1.5;
+  --text-md: var(--cms-text-md);
+  --text-md--line-height: 1.5;
   --text-base: var(--cms-text-base);
   --text-base--line-height: 1.5;
   --text-lg: var(--cms-text-lg);

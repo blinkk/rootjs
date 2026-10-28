@@ -30,6 +30,17 @@ const THUMB_SIZE_CLASSES: Record<SwitchSize, string> = {
   md: 'left-0.75 top-0.75 size-3.5 peer-checked:translate-x-4.5',
 };
 
+/**
+ * Track colors: `default` is the `SegmentedControl` well, with its border;
+ * `gray` is a solid grey track. Both turn `primary` when on.
+ */
+export type SwitchColor = 'default' | 'gray';
+
+const TRACK_COLOR_CLASSES: Record<SwitchColor, string> = {
+  default: 'border border-track-border bg-track peer-checked:border-primary',
+  gray: 'bg-border-strong',
+};
+
 /** Offsets the track so it centers on the label's first line. */
 const CONTROL_OFFSET_CLASSES: Record<SwitchSize, string> = {
   sm: 'mt-0.5',
@@ -39,6 +50,8 @@ const CONTROL_OFFSET_CLASSES: Record<SwitchSize, string> = {
 interface SwitchOwnProps extends FieldLabelProps {
   /** Track and label size: `sm` 30×16px, `md` 38×20px (Mantine `xs`, `sm`). Default `sm`. */
   size?: SwitchSize;
+  /** Track color when off: `default` (the segmented control's well) or `gray`. */
+  color?: SwitchColor;
   /** Puts the label before the switch instead of after it. */
   labelPosition?: 'left' | 'right';
   /** Classes for the root. */
@@ -71,6 +84,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
       error,
       required,
       size = 'sm',
+      color = 'default',
       labelPosition = 'right',
       className,
       classNames,
@@ -85,6 +99,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
         className={cn(
           'Switch',
           `Switch--size-${size}`,
+          `Switch--color-${color}`,
           'flex min-w-0 items-start gap-3',
           labelPosition === 'left' && 'Switch--labelLeft flex-row-reverse',
           labelPosition === 'left' && Boolean(label) && 'justify-end',
@@ -108,7 +123,8 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           />
           <span
             className={cn(
-              'Switch__track pointer-events-none absolute inset-0 rounded-full bg-border-strong transition-colors',
+              'Switch__track pointer-events-none absolute inset-0 rounded-full transition-colors',
+              TRACK_COLOR_CLASSES[color],
               'peer-checked:bg-primary',
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
               'peer-aria-invalid:outline-1 peer-aria-invalid:outline-danger',

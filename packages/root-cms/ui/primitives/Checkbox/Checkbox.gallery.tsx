@@ -31,6 +31,9 @@ export const CheckboxGallery = defineGallery({
         <Checkbox color="blue" label="Blue" defaultChecked />
         <Checkbox color="blue" label="Blue, indeterminate" indeterminate />
         <Checkbox color="blue" label="Blue, disabled" disabled defaultChecked />
+        <Checkbox color="subtle" label="Subtle, unchecked" />
+        <Checkbox color="subtle" label="Subtle" defaultChecked />
+        <Checkbox color="subtle" label="Subtle, indeterminate" indeterminate />
       </div>
     ),
     'Help text and error': () => (

@@ -37,13 +37,24 @@ const BOX_SIZE_CLASSES: Record<CheckboxSize, string> = {
   md: 'size-5',
 };
 
-/** Checked colors. `blue` is Mantine's (the `--cms-button-blue` token). */
-export type CheckboxColor = 'primary' | 'blue';
+/**
+ * Checked colors. `blue` is Mantine's (the `--cms-button-blue` token).
+ * `subtle` fills with the `SegmentedControl` well and a dark check.
+ */
+export type CheckboxColor = 'primary' | 'blue' | 'subtle';
 
 const BOX_COLOR_CLASSES: Record<CheckboxColor, string> = {
   primary:
-    'peer-checked:border-primary peer-checked:bg-primary peer-indeterminate:border-primary peer-indeterminate:bg-primary',
-  blue: 'peer-checked:border-button-blue peer-checked:bg-button-blue peer-indeterminate:border-button-blue peer-indeterminate:bg-button-blue',
+    'border-border-strong peer-hover:border-muted peer-checked:border-primary peer-checked:bg-primary peer-indeterminate:border-primary peer-indeterminate:bg-primary',
+  blue: 'border-border-strong peer-hover:border-muted peer-checked:border-button-blue peer-checked:bg-button-blue peer-indeterminate:border-button-blue peer-indeterminate:bg-button-blue',
+  subtle:
+    'border-track-border peer-hover:border-border-strong peer-checked:bg-track peer-indeterminate:bg-track',
+};
+
+const ICON_COLOR_CLASSES: Record<CheckboxColor, string> = {
+  primary: 'text-on-primary',
+  blue: 'text-on-primary',
+  subtle: 'text-strong',
 };
 
 /** Offsets the control so it centers on the label's first line. */
@@ -55,7 +66,10 @@ const CONTROL_OFFSET_CLASSES: Record<CheckboxSize, string> = {
 interface CheckboxOwnProps extends FieldLabelProps {
   /** Box and label size: `sm` 16px, `md` 20px. Default `sm`. */
   size?: CheckboxSize;
-  /** Fill when checked: `primary` (black, default) or `blue` (Mantine's). */
+  /**
+   * Fill when checked: `primary` (black, default), `blue` (Mantine's) or
+   * `subtle` (the `SegmentedControl` well, with a dark check).
+   */
   color?: CheckboxColor;
   /** Shows a dash instead of a check, for a partly selected group. */
   indeterminate?: boolean;
@@ -133,8 +147,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <span
             className={cn(
-              'Checkbox__box pointer-events-none absolute inset-0 rounded-sm border border-border-strong bg-surface transition-colors',
-              'peer-hover:border-muted',
+              'Checkbox__box pointer-events-none absolute inset-0 rounded-sm border bg-surface transition-colors',
               BOX_COLOR_CLASSES[color],
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
               'peer-aria-invalid:border-danger',
@@ -144,13 +157,19 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           />
           {indeterminate ? (
             <IconMinus
-              className="Checkbox__icon pointer-events-none absolute inset-0 m-auto hidden size-3/4 text-on-primary peer-indeterminate:block"
+              className={cn(
+                'Checkbox__icon pointer-events-none absolute inset-0 m-auto hidden size-3/4 peer-indeterminate:block',
+                ICON_COLOR_CLASSES[color]
+              )}
               stroke={3}
               aria-hidden="true"
             />
           ) : (
             <IconCheck
-              className="Checkbox__icon pointer-events-none absolute inset-0 m-auto hidden size-3/4 text-on-primary peer-checked:block"
+              className={cn(
+                'Checkbox__icon pointer-events-none absolute inset-0 m-auto hidden size-3/4 peer-checked:block',
+                ICON_COLOR_CLASSES[color]
+              )}
               stroke={3}
               aria-hidden="true"
             />

@@ -267,7 +267,7 @@ export function TaskManager(props: TaskManagerProps) {
       )}
     >
       <form
-        className="TaskManager__composer grid items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface py-2 pr-2 pl-4 shadow-sm focus-within:border-border-strong md:gap-y-0"
+        className="TaskManager__composer grid items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface py-2 pr-2 pl-4 shadow-sm focus-within:border-border-strong md:gap-y-0 md:py-1"
         onSubmit={(e) => onSubmit(e)}
       >
         <IconPlus
