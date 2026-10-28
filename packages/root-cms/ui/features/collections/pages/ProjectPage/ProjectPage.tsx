@@ -15,8 +15,9 @@ export function ProjectPage() {
       <div className="ProjectPage bg-page p-page">
         <div className="ProjectPage__main flex max-w-320 flex-col gap-7">
           {/*
-           * The collections column matches the collection list on the
-           * collection page; the action logs take the rest.
+           * The collections column (370px, then a 24px gap) matches the
+           * collection list on the collection page; the action logs take the
+           * rest.
            */}
           <div className="ProjectPage__section flex flex-col gap-6 lg:flex-row">
             <ProjectPage.Collections />
@@ -46,7 +47,7 @@ ProjectPage.Collections = () => {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
 
   return (
-    <div className="ProjectPage__collections min-w-0 lg:w-92 lg:shrink-0">
+    <div className="ProjectPage__collections min-w-0 lg:w-92.5 lg:shrink-0">
       {/* <ProjectPage.SectionTitle>Content</ProjectPage.SectionTitle> */}
       <CollectionTree collections={collections} projectId={projectId} />
     </div>
