@@ -1,5 +1,3 @@
-import './DocumentPagePreviewBar.css';
-import {ActionIcon, Select, Tooltip} from '@mantine/core';
 import {
   IconArrowUpRight,
   IconArrowsVertical,
@@ -10,7 +8,9 @@ import {
   IconReload,
   IconWorld,
 } from '@tabler/icons-preact';
-import {joinClassNames} from '../../../../utils/classes.js';
+import type {ComponentChildren} from 'preact';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Select} from '../../../../primitives/Select/Select.js';
 
 /** A selectable preview viewport. */
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
@@ -37,6 +37,25 @@ export interface DocumentPagePreviewBarProps {
   onLocaleChange: (newValue: string) => void;
 }
 
+/** Toggled toolbar buttons keep Mantine's light grey "active" fill. */
+const TOGGLE_CLASSES =
+  'DocumentPagePreviewBar__device aria-pressed:bg-surface-hover aria-checked:bg-surface-hover';
+
+const DEVICES: Array<{
+  device: DeviceType;
+  label: string;
+  icon: ComponentChildren;
+}> = [
+  {device: 'mobile', label: 'Mobile', icon: <IconDeviceMobile />},
+  {device: 'tablet', label: 'Tablet', icon: <IconDeviceIpad />},
+  {device: 'desktop', label: 'Desktop', icon: <IconDeviceDesktop />},
+];
+
+/**
+ * The toolbar above the doc page's preview: device sizes, compare and
+ * expand toggles, the previewed URL, the locale, reload and open in a new
+ * tab.
+ */
 export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
   const {
     devices,
@@ -56,106 +75,70 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
   const hasDevice = devices.length > 0;
 
   return (
-    <div className="DocumentPagePreviewBar">
-      <div className="DocumentPagePreviewBar__devices">
-        <Tooltip label="Mobile">
-          <ActionIcon
-            className={joinClassNames(
-              'DocumentPagePreviewBar__device',
-              devices.includes('mobile') && 'active'
-            )}
-            aria-pressed={devices.includes('mobile')}
-            onClick={() => onToggleDevice('mobile')}
+    <div className="DocumentPagePreviewBar flex h-9 shrink-0 items-center gap-2 border-0 border-b border-solid border-border px-3">
+      <div className="DocumentPagePreviewBar__devices flex shrink-0 items-center gap-0.5">
+        {DEVICES.map((item) => (
+          <IconButton
+            key={item.device}
+            className={TOGGLE_CLASSES}
+            label={item.label}
+            pressed={devices.includes(item.device)}
+            onClick={() => onToggleDevice(item.device)}
           >
-            <IconDeviceMobile size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <Tooltip label="Tablet">
-          <ActionIcon
-            className={joinClassNames(
-              'DocumentPagePreviewBar__device',
-              devices.includes('tablet') && 'active'
-            )}
-            aria-pressed={devices.includes('tablet')}
-            onClick={() => onToggleDevice('tablet')}
-          >
-            <IconDeviceIpad size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <Tooltip label="Desktop">
-          <ActionIcon
-            className={joinClassNames(
-              'DocumentPagePreviewBar__device',
-              devices.includes('desktop') && 'active'
-            )}
-            aria-pressed={devices.includes('desktop')}
-            onClick={() => onToggleDevice('desktop')}
-          >
-            <IconDeviceDesktop size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <div className="DocumentPagePreviewBar__divider" />
-        <Tooltip label="Compare viewports">
-          <ActionIcon
-            className={joinClassNames(
-              'DocumentPagePreviewBar__device',
-              multiSelect && 'active'
-            )}
-            role="checkbox"
-            aria-checked={multiSelect}
-            onClick={onToggleMultiSelect}
-          >
-            <IconColumns2 size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <Tooltip label="Expand">
-          <ActionIcon
-            className={joinClassNames(
-              'DocumentPagePreviewBar__device',
-              expandVertically && 'active'
-            )}
-            aria-pressed={expandVertically}
-            disabled={!hasDevice}
-            onClick={onToggleExpandVertically}
-          >
-            <IconArrowsVertical size={16} />
-          </ActionIcon>
-        </Tooltip>
+            {item.icon}
+          </IconButton>
+        ))}
+        <div className="DocumentPagePreviewBar__divider mx-1 my-1.5 w-px self-stretch bg-border" />
+        <IconButton
+          className={TOGGLE_CLASSES}
+          label="Compare viewports"
+          role="checkbox"
+          aria-checked={multiSelect}
+          onClick={onToggleMultiSelect}
+        >
+          <IconColumns2 />
+        </IconButton>
+        <IconButton
+          className={TOGGLE_CLASSES}
+          label="Expand"
+          pressed={expandVertically}
+          disabled={!hasDevice}
+          onClick={onToggleExpandVertically}
+        >
+          <IconArrowsVertical />
+        </IconButton>
       </div>
-      <div className="DocumentPagePreviewBar__navbar">
-        <div className="DocumentPagePreviewBar__navbar__url">{iframeUrl}</div>
+      <div className="DocumentPagePreviewBar__navbar flex min-w-0 flex-1 items-center justify-between overflow-hidden rounded-full border border-solid border-border px-6 py-0.5 text-sm font-medium">
+        <div className="DocumentPagePreviewBar__navbar__url truncate">
+          {iframeUrl}
+        </div>
       </div>
-      <div className="DocumentPagePreviewBar__locales">
-        <Select
-          data={localeOptions}
-          placeholder="Locale"
-          radius="xl"
-          size="xs"
-          required
-          icon={<IconWorld size={16} strokeWidth={1.5} />}
-          value={selectedLocale}
-          onChange={(newValue: string) => {
-            onLocaleChange(newValue);
-          }}
-        />
-      </div>
-      <div className="DocumentPagePreviewBar__buttons">
-        <Tooltip label="Reload">
-          <ActionIcon
-            className="DocumentPagePreviewBar__button DocumentPagePreviewBar__button--reload"
-            onClick={onReloadClick}
-          >
-            <IconReload size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <Tooltip label="Open new tab">
-          <ActionIcon
-            className="DocumentPagePreviewBar__button DocumentPagePreviewBar__button--openNewTab"
-            onClick={onOpenNewTab}
-          >
-            <IconArrowUpRight size={16} />
-          </ActionIcon>
-        </Tooltip>
+      <Select
+        className="DocumentPagePreviewBar__locales max-w-44 shrink-0"
+        inputClassName="rounded-full border-border"
+        aria-label="Locale"
+        data={localeOptions}
+        placeholder="Locale"
+        size="xs"
+        leftSection={<IconWorld strokeWidth={1.5} />}
+        value={selectedLocale}
+        onValueChange={(newValue) => onLocaleChange(newValue ?? '')}
+      />
+      <div className="DocumentPagePreviewBar__buttons flex shrink-0 items-center gap-0.5">
+        <IconButton
+          className="DocumentPagePreviewBar__button DocumentPagePreviewBar__button--reload"
+          label="Reload"
+          onClick={onReloadClick}
+        >
+          <IconReload />
+        </IconButton>
+        <IconButton
+          className="DocumentPagePreviewBar__button DocumentPagePreviewBar__button--openNewTab"
+          label="Open new tab"
+          onClick={onOpenNewTab}
+        >
+          <IconArrowUpRight />
+        </IconButton>
       </div>
     </div>
   );

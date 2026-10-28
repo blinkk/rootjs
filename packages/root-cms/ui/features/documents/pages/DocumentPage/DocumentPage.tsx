@@ -1,7 +1,5 @@
 import './DocumentPage.css';
 
-import {ActionIcon, Button, Checkbox, Tooltip} from '@mantine/core';
-import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
   IconArrowUpRight,
@@ -10,6 +8,7 @@ import {
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isNavigateToDocMessage} from '../../../../../shared/embed-protocol.js';
@@ -21,8 +20,11 @@ import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {RootAIChat} from '../../../ai/components/RootAIChat/RootAIChat.js';
 import {CommentsPanel} from '../../../comments/CommentsPanel/CommentsPanel.js';
@@ -128,6 +130,71 @@ function getReloadUrl(iframe: HTMLIFrameElement, fallbackUrl: string) {
   return reloadUrl.toString();
 }
 
+/** A keyboard shortcut and its handler, e.g. `['mod+S', save]`. */
+type Hotkey = [string, (e: KeyboardEvent) => void];
+
+/**
+ * Returns whether a keydown event matches a shortcut like `mod+shift+F`,
+ * where `mod` is Cmd or Ctrl. Modifiers must match exactly.
+ */
+function testHotkey(hotkey: string, e: KeyboardEvent): boolean {
+  const parts = hotkey
+    .toLowerCase()
+    .split('+')
+    .map((part) => part.trim());
+  const mods = ['alt', 'ctrl', 'meta', 'shift', 'mod'];
+  const key = parts.find((part) => !mods.includes(part));
+  if (parts.includes('alt') !== e.altKey) {
+    return false;
+  }
+  if (parts.includes('mod')) {
+    if (!e.ctrlKey && !e.metaKey) {
+      return false;
+    }
+  } else if (
+    parts.includes('ctrl') !== e.ctrlKey ||
+    parts.includes('meta') !== e.metaKey
+  ) {
+    return false;
+  }
+  if (parts.includes('shift') !== e.shiftKey) {
+    return false;
+  }
+  return Boolean(
+    key &&
+    (e.key.toLowerCase() === key ||
+      e.code.replace('Key', '').toLowerCase() === key)
+  );
+}
+
+/**
+ * Runs page-level keyboard shortcuts. Like Mantine's `useHotkeys`, it skips
+ * keys typed into inputs, textareas and selects.
+ */
+function useHotkeys(hotkeys: Hotkey[]) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      ) {
+        return;
+      }
+      hotkeys.forEach(([hotkey, handler]) => {
+        if (testHotkey(hotkey, e)) {
+          e.preventDefault();
+          handler(e);
+        }
+      });
+    };
+    document.documentElement.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.documentElement.removeEventListener('keydown', onKeyDown);
+    };
+  }, [hotkeys]);
+}
+
 export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
@@ -229,14 +296,6 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     );
   }, [isAiVisible]);
 
-  const [savedSearchPanelWidth, setSavedSearchPanelWidth] =
-    useLocalStorage<number>('root::DocumentPage::searchPanelWidth', 360);
-  const [searchPanelWidth, setSearchPanelWidth] = useState(
-    savedSearchPanelWidth
-  );
-  const [isDraggingSearch, setIsDraggingSearch] = useState(false);
-  const layoutRef = useRef<HTMLDivElement>(null);
-
   // Only one right-hand panel (Checks, Search, AI, Comments) is allowed open
   // at a time. Opening any one of them closes the others.
   useEffect(() => {
@@ -321,31 +380,6 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     return () => window.removeEventListener('root:toggle-ai', handler);
   }, []);
 
-  // Handle search panel resize dragging.
-  useEffect(() => {
-    if (!isDraggingSearch) return;
-    const onMouseMove = (e: MouseEvent) => {
-      const container = layoutRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(240, Math.min(rect.right - e.clientX, 800));
-      setSearchPanelWidth(newWidth);
-    };
-    const onMouseUp = () => {
-      setIsDraggingSearch(false);
-      setSearchPanelWidth((w) => {
-        setSavedSearchPanelWidth(() => w);
-        return w;
-      });
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [isDraggingSearch]);
-
   if (!collection) {
     return <div>Could not find collection.</div>;
   }
@@ -405,44 +439,46 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     ['mod+I', toggleAi],
   ]);
 
+  const isEditorCentered =
+    !showPreview && !isChecksVisible && !isSearchVisible && !isAiVisible;
+
   return (
     <Layout>
-      <div
-        className={joinClassNames(
-          'DocumentPage__layout',
-          isDraggingSearch && 'DocumentPage__layout--dragging'
-        )}
-        ref={layoutRef}
-      >
-        <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
+      <div className="DocumentPage__layout relative flex">
+        <SplitPanel
+          className="DocumentPage min-w-0 flex-1 w-auto!"
+          localStorageId="DocumentPage"
+        >
           <SplitPanel.Item
-            className={joinClassNames(
+            className={cn(
               'DocumentPage__side',
-              !showPreview && 'DocumentPage__side--expanded'
+              !showPreview && 'DocumentPage__side--expanded flex-1! max-w-none!'
             )}
           >
-            <div className="DocumentPage__side__header">
-              <div className="DocumentPage__side__header__nav">
-                <a href={`/cms/content/${collectionId}`}>
-                  <ActionIcon className="DocumentPage__side__header__back">
-                    <IconArrowLeft size={16} />
-                  </ActionIcon>
-                </a>
-                <div className="DocumentPage__side__header__docId">{docId}</div>
+            <div className="DocumentPage__side__header sticky top-0 z-(--cms-z-sticky) flex h-9 items-center justify-between gap-6 border-0 border-b border-solid border-border bg-surface px-1 text-sm font-semibold max-md:gap-2">
+              <div className="DocumentPage__side__header__nav flex min-w-0 items-center gap-1">
+                <IconButton
+                  className="DocumentPage__side__header__back text-fg"
+                  href={`/cms/content/${collectionId}`}
+                  label={`Back to ${collectionId}`}
+                >
+                  <IconArrowLeft />
+                </IconButton>
+                <div className="DocumentPage__side__header__docId truncate">
+                  {docId}
+                </div>
               </div>
-              <div className="DocumentPage__side__header__buttons">
+              <div className="DocumentPage__side__header__buttons flex shrink-0 items-center gap-0.5">
                 {canEdit && <DocEditor.UndoRedoButtons />}
                 <ConditionalTooltip
                   label="You don't have access to edit this document"
                   condition={!canEdit}
                 >
                   <Button
-                    className="DocumentPage__side__header__saveButton"
-                    variant="filled"
-                    color="dark"
+                    className="DocumentPage__side__header__saveButton mr-2 min-w-18"
+                    variant="primary"
                     size="xs"
-                    compact
-                    leftIcon={<IconDeviceFloppy size={16} />}
+                    icon={<IconDeviceFloppy />}
                     onClick={() => saveDraft()}
                     disabled={!canEdit}
                   >
@@ -453,67 +489,61 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                   label="You don't have access to edit this document"
                   condition={!canEdit}
                 >
-                  <Tooltip label="Edit JSON" disabled={!canEdit}>
-                    <ActionIcon
-                      className="DocumentPage__side__header__editJson"
-                      onClick={() => editJson()}
-                      disabled={!canEdit}
-                    >
-                      <IconBraces size={14} />
-                    </ActionIcon>
-                  </Tooltip>
+                  <IconButton
+                    className="DocumentPage__side__header__editJson *:size-3.5"
+                    label="Edit JSON"
+                    tooltip={canEdit}
+                    onClick={() => editJson()}
+                    disabled={!canEdit}
+                  >
+                    <IconBraces />
+                  </IconButton>
                 </ConditionalTooltip>
                 {hasCollectionUrl && (
                   <>
                     {isDesktop && (
-                      <Tooltip
+                      <IconButton
+                        className="DocumentPage__side__header__previewToggle"
                         label={
                           isPreviewVisible ? 'Hide preview' : 'Show preview'
                         }
+                        onClick={() => setIsPreviewVisible(!isPreviewVisible)}
                       >
-                        <ActionIcon
-                          className="DocumentPage__side__header__previewToggle"
-                          onClick={() => setIsPreviewVisible(!isPreviewVisible)}
-                        >
-                          {isPreviewVisible ? (
-                            <IconLayoutSidebarRightCollapse size={16} />
-                          ) : (
-                            <IconLayoutSidebarRightExpand size={16} />
-                          )}
-                        </ActionIcon>
-                      </Tooltip>
+                        {isPreviewVisible ? (
+                          <IconLayoutSidebarRightCollapse />
+                        ) : (
+                          <IconLayoutSidebarRightExpand />
+                        )}
+                      </IconButton>
                     )}
                     {!showPreview && (
-                      <Tooltip label="Open preview in new tab">
-                        <ActionIcon
-                          className="DocumentPage__side__header__openNewTab"
-                          onClick={openPreviewInNewTab}
-                        >
-                          <IconArrowUpRight size={16} />
-                        </ActionIcon>
-                      </Tooltip>
+                      <IconButton
+                        className="DocumentPage__side__header__openNewTab"
+                        label="Open preview in new tab"
+                        onClick={openPreviewInNewTab}
+                      >
+                        <IconArrowUpRight />
+                      </IconButton>
                     )}
                   </>
                 )}
               </div>
             </div>
             <div
-              className={joinClassNames(
+              className={cn(
                 'DocumentPage__side__editor',
-                !showPreview &&
-                  !isChecksVisible &&
-                  !isSearchVisible &&
-                  !isAiVisible &&
-                  'DocumentPage__side__editor--centered'
+                isEditorCentered
+                  ? 'DocumentPage__side__editor--centered flex justify-center p-4 *:w-full *:max-w-200'
+                  : 'p-4 pb-100'
               )}
             >
               <DocEditor key={docId} docId={docId} />
             </div>
           </SplitPanel.Item>
           <SplitPanel.Item
-            className={joinClassNames(
-              'DocumentPage__main',
-              !showPreview && 'DocumentPage__main--hidden'
+            className={cn(
+              'DocumentPage__main w-full',
+              !showPreview && 'DocumentPage__main--hidden hidden'
             )}
             fluid
           >
@@ -521,39 +551,138 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
           </SplitPanel.Item>
         </SplitPanel>
         {hasChecks && isChecksVisible && (
-          <DocumentPageChecksPanel docId={docId} />
+          <DocumentPageChecksPanel
+            docId={docId}
+            onClose={() => setIsChecksVisible(() => false)}
+          />
         )}
         {isSearchVisible && (
-          <>
-            <div
-              className="DocumentPage__searchDivider"
-              onMouseDown={() => setIsDraggingSearch(true)}
+          <DocumentPageSidePanel
+            name="search"
+            storageKey="root::DocumentPage::searchPanelWidth"
+            defaultWidth={360}
+            minWidth={240}
+          >
+            <SearchPanel
+              docId={docId}
+              autoFocus
+              onClose={() => setIsSearchVisible(() => false)}
             />
-            <div
-              className="DocumentPage__search"
-              style={{flexBasis: `${searchPanelWidth}px`}}
-            >
-              <SearchPanel
-                docId={docId}
-                autoFocus
-                onClose={() => setIsSearchVisible(() => false)}
-              />
-            </div>
-          </>
+          </DocumentPageSidePanel>
         )}
         {isAiConfigured && isAiVisible && (
           <DocumentPageAiPanel docId={docId} onClose={closeAi} />
         )}
         {isCommentsVisible && (
-          <DocumentPageCommentsPanel
-            docId={docId}
-            focusFieldKey={focusCommentFieldKey}
-            onFocusHandled={() => setFocusCommentFieldKey(null)}
-            onClose={() => setIsCommentsVisible(() => false)}
-          />
+          <DocumentPageSidePanel
+            name="comments"
+            storageKey="root::DocumentPage::commentsPanelWidth"
+            defaultWidth={380}
+            minWidth={280}
+          >
+            <CommentsPanel
+              docId={docId}
+              focusFieldKey={focusCommentFieldKey}
+              onFocusHandled={() => setFocusCommentFieldKey(null)}
+              onClose={() => setIsCommentsVisible(() => false)}
+            />
+          </DocumentPageSidePanel>
         )}
       </div>
     </Layout>
+  );
+}
+
+interface DocumentPageSidePanelProps {
+  /**
+   * The panel's BEM element name: `ai` renders `DocumentPage__ai` and its
+   * resize handle `DocumentPage__aiDivider`.
+   */
+  name: string;
+  /** The localStorage key that remembers the panel's width. */
+  storageKey: string;
+  /** Width in px until the user resizes the panel. */
+  defaultWidth: number;
+  /** The narrowest the panel can be dragged, in px. */
+  minWidth: number;
+  children: ComponentChildren;
+}
+
+/**
+ * A panel on the right of the doc page (Checks, Search, Root AI or
+ * Comments), with a drag handle on its left edge that resizes it. Its width
+ * state lives here so resizing doesn't re-render the page. Below `md` it
+ * covers the editor instead, full-screen, and can't be resized.
+ */
+function DocumentPageSidePanel(props: DocumentPageSidePanelProps) {
+  const {name, minWidth} = props;
+  const [savedWidth, setSavedWidth] = useLocalStorage<number>(
+    props.storageKey,
+    props.defaultWidth
+  );
+  const [width, setWidth] = useState(savedWidth);
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const widthRef = useRef(width);
+  const dragCleanupRef = useRef<() => void>();
+
+  const startDragging = useCallback(() => {
+    const layout = dividerRef.current?.parentElement;
+    if (!layout) return;
+    widthRef.current = width;
+    layout.classList.add('DocumentPage__layout--dragging');
+    const onMouseMove = (e: MouseEvent) => {
+      const container = dividerRef.current?.parentElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(
+        minWidth,
+        Math.min(rect.right - e.clientX, 800)
+      );
+      widthRef.current = newWidth;
+      setWidth(newWidth);
+    };
+    const cleanup = () => {
+      layout.classList.remove('DocumentPage__layout--dragging');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      dragCleanupRef.current = undefined;
+    };
+    const onMouseUp = () => {
+      cleanup();
+      setSavedWidth(() => widthRef.current);
+    };
+    dragCleanupRef.current = cleanup;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [width, minWidth, setSavedWidth]);
+
+  useEffect(() => {
+    return () => dragCleanupRef.current?.();
+  }, []);
+
+  return (
+    <>
+      <div
+        className={cn(
+          `DocumentPage__${name}Divider`,
+          'relative w-0.75 flex-none cursor-col-resize max-md:hidden',
+          'before:absolute before:inset-y-0 before:left-px before:w-px before:bg-border',
+          'after:absolute after:inset-0 after:transition-colors hover:after:bg-accent'
+        )}
+        ref={dividerRef}
+        onMouseDown={startDragging}
+      />
+      <div
+        className={cn(
+          `DocumentPage__${name}`,
+          'max-h-full flex-none overflow-hidden bg-surface',
+          'max-md:absolute max-md:inset-0 max-md:z-(--cms-z-sticky)'
+        )}
+        style={{flexBasis: `${width}px`}}
+      >
+        {props.children}
+      </div>
+    </>
   );
 }
 
@@ -563,19 +692,10 @@ interface DocumentPageAiPanelProps {
 }
 
 /**
- * Renders the Root AI panel with resize state isolated from DocumentPageLayout.
- * Memoizes the chat so drag-resizing the panel does not re-render the
- * conversation tree.
+ * Renders the Root AI panel. Memoizes the chat so drag-resizing the panel
+ * doesn't re-render the conversation tree.
  */
 function DocumentPageAiPanel(props: DocumentPageAiPanelProps) {
-  const [savedAiPanelWidth, setSavedAiPanelWidth] = useLocalStorage<number>(
-    'root::DocumentPage::aiPanelWidth',
-    420
-  );
-  const [aiPanelWidth, setAiPanelWidth] = useState(savedAiPanelWidth);
-  const dividerRef = useRef<HTMLDivElement>(null);
-  const aiPanelWidthRef = useRef(aiPanelWidth);
-  const dragCleanupRef = useRef<() => void>();
   const aiChat = useMemo(
     () => (
       <RootAIChat
@@ -586,193 +706,56 @@ function DocumentPageAiPanel(props: DocumentPageAiPanelProps) {
     ),
     [props.docId, props.onClose]
   );
-
-  const startDragging = useCallback(() => {
-    const layout = dividerRef.current?.parentElement;
-    if (!layout) return;
-    aiPanelWidthRef.current = aiPanelWidth;
-    layout.classList.add('DocumentPage__layout--dragging');
-    const onMouseMove = (e: MouseEvent) => {
-      const container = dividerRef.current?.parentElement;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(280, Math.min(rect.right - e.clientX, 800));
-      aiPanelWidthRef.current = newWidth;
-      setAiPanelWidth(newWidth);
-    };
-    const cleanup = () => {
-      layout.classList.remove('DocumentPage__layout--dragging');
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      dragCleanupRef.current = undefined;
-    };
-    const onMouseUp = () => {
-      cleanup();
-      setSavedAiPanelWidth(() => aiPanelWidthRef.current);
-    };
-    dragCleanupRef.current = cleanup;
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [aiPanelWidth, setSavedAiPanelWidth]);
-
-  useEffect(() => {
-    return () => dragCleanupRef.current?.();
-  }, []);
-
   return (
-    <>
-      <div
-        className="DocumentPage__aiDivider"
-        ref={dividerRef}
-        onMouseDown={startDragging}
-      />
-      <div
-        className="DocumentPage__ai"
-        style={{flexBasis: `${aiPanelWidth}px`}}
-      >
-        {aiChat}
-      </div>
-    </>
-  );
-}
-
-interface DocumentPageCommentsPanelProps {
-  docId: string;
-  focusFieldKey: string | null;
-  onFocusHandled: () => void;
-  onClose: () => void;
-}
-
-/** Renders the comments panel with resize state isolated from the layout. */
-function DocumentPageCommentsPanel(props: DocumentPageCommentsPanelProps) {
-  const [savedPanelWidth, setSavedPanelWidth] = useLocalStorage<number>(
-    'root::DocumentPage::commentsPanelWidth',
-    380
-  );
-  const [panelWidth, setPanelWidth] = useState(savedPanelWidth);
-  const dividerRef = useRef<HTMLDivElement>(null);
-  const panelWidthRef = useRef(panelWidth);
-  const dragCleanupRef = useRef<() => void>();
-
-  const startDragging = useCallback(() => {
-    const layout = dividerRef.current?.parentElement;
-    if (!layout) return;
-    panelWidthRef.current = panelWidth;
-    layout.classList.add('DocumentPage__layout--dragging');
-    const onMouseMove = (e: MouseEvent) => {
-      const container = dividerRef.current?.parentElement;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(280, Math.min(rect.right - e.clientX, 800));
-      panelWidthRef.current = newWidth;
-      setPanelWidth(newWidth);
-    };
-    const cleanup = () => {
-      layout.classList.remove('DocumentPage__layout--dragging');
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      dragCleanupRef.current = undefined;
-    };
-    const onMouseUp = () => {
-      cleanup();
-      setSavedPanelWidth(() => panelWidthRef.current);
-    };
-    dragCleanupRef.current = cleanup;
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [panelWidth, setSavedPanelWidth]);
-
-  useEffect(() => {
-    return () => dragCleanupRef.current?.();
-  }, []);
-
-  return (
-    <>
-      <div
-        className="DocumentPage__commentsDivider"
-        ref={dividerRef}
-        onMouseDown={startDragging}
-      />
-      <div
-        className="DocumentPage__comments"
-        style={{flexBasis: `${panelWidth}px`}}
-      >
-        <CommentsPanel
-          docId={props.docId}
-          focusFieldKey={props.focusFieldKey}
-          onFocusHandled={props.onFocusHandled}
-          onClose={props.onClose}
-        />
-      </div>
-    </>
+    <DocumentPageSidePanel
+      name="ai"
+      storageKey="root::DocumentPage::aiPanelWidth"
+      defaultWidth={420}
+      minWidth={280}
+    >
+      {aiChat}
+    </DocumentPageSidePanel>
   );
 }
 
 interface DocumentPageChecksPanelProps {
   docId: string;
+  onClose: () => void;
 }
 
-/** Renders the checks panel with resize state isolated from DocumentPageLayout. */
+/**
+ * Renders the checks panel. Memoizes it so drag-resizing the panel doesn't
+ * re-render the checks. The checks panel has no close button of its own, so
+ * on mobile, where it covers the editor, a bar above it leads back.
+ */
 function DocumentPageChecksPanel(props: DocumentPageChecksPanelProps) {
-  const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
-    useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
-  const [checksPanelWidth, setChecksPanelWidth] = useState(
-    savedChecksPanelWidth
-  );
-  const dividerRef = useRef<HTMLDivElement>(null);
-  const checksPanelWidthRef = useRef(checksPanelWidth);
-  const dragCleanupRef = useRef<() => void>();
   const checksPanel = useMemo(
     () => <ChecksPanel docId={props.docId} />,
     [props.docId]
   );
-
-  const startDragging = useCallback(() => {
-    const layout = dividerRef.current?.parentElement;
-    if (!layout) return;
-    checksPanelWidthRef.current = checksPanelWidth;
-    layout.classList.add('DocumentPage__layout--dragging');
-    const onMouseMove = (e: MouseEvent) => {
-      const container = dividerRef.current?.parentElement;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(200, Math.min(rect.right - e.clientX, 800));
-      checksPanelWidthRef.current = newWidth;
-      setChecksPanelWidth(newWidth);
-    };
-    const cleanup = () => {
-      layout.classList.remove('DocumentPage__layout--dragging');
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      dragCleanupRef.current = undefined;
-    };
-    const onMouseUp = () => {
-      cleanup();
-      setSavedChecksPanelWidth(() => checksPanelWidthRef.current);
-    };
-    dragCleanupRef.current = cleanup;
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [checksPanelWidth, setSavedChecksPanelWidth]);
-
-  useEffect(() => {
-    return () => dragCleanupRef.current?.();
-  }, []);
-
   return (
-    <>
-      <div
-        className="DocumentPage__checksDivider"
-        ref={dividerRef}
-        onMouseDown={startDragging}
-      />
-      <div
-        className="DocumentPage__checks"
-        style={{flexBasis: `${checksPanelWidth}px`}}
-      >
-        {checksPanel}
+    <DocumentPageSidePanel
+      name="checks"
+      storageKey="root::DocumentPage::checksPanelWidth"
+      defaultWidth={360}
+      minWidth={200}
+    >
+      <div className="DocumentPage__checksInner flex h-full flex-col">
+        <div className="DocumentPage__checksBack shrink-0 border-0 border-b border-solid border-border p-1 md:hidden">
+          <Button
+            variant="subtle"
+            size="xs"
+            icon={<IconArrowLeft />}
+            onClick={props.onClose}
+          >
+            Back to editor
+          </Button>
+        </div>
+        <div className="DocumentPage__checksBody min-h-0 flex-1">
+          {checksPanel}
+        </div>
       </div>
-    </>
+    </DocumentPageSidePanel>
   );
 }
 
@@ -1035,10 +1018,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </Text>
           <DocIdBadge docId={docId} />
           <Checkbox
-            className="DocumentPage__followConfirm__dontAsk"
+            className="DocumentPage__followConfirm__dontAsk mt-4"
             label="Don't ask again this session"
-            size="xs"
-            onChange={(e: Event) => {
+            color="blue"
+            onChange={(e) => {
               dontAskAgain = (e.currentTarget as HTMLInputElement).checked;
             }}
           />
@@ -1364,8 +1347,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
       ? devices.map((device, index) => ({slot: index, device}))
       : [{slot: 0, device: null as DeviceType | null}];
 
+  const isFullPreview = devices.length === 0;
+
   return (
-    <div className="DocumentPage__main__preview">
+    <div className="DocumentPage__main__preview flex h-full flex-col">
       <DocumentPagePreviewBar
         devices={devices}
         multiSelect={multiSelect}
@@ -1381,11 +1366,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
         onLocaleChange={setSelectedLocale}
       />
       <div
-        className="DocumentPage__main__previewFrame"
-        data-device={devices.length > 0 ? 'device' : 'full'}
+        className="DocumentPage__main__previewFrame relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-surface-hover"
+        data-device={isFullPreview ? 'full' : 'device'}
         ref={previewFrameRef}
       >
-        <div className="DocumentPage__main__previewFrame__group">
+        <div
+          className={cn(
+            'DocumentPage__main__previewFrame__group flex max-h-full max-w-full items-center justify-center',
+            isFullPreview ? 'size-full' : 'gap-4'
+          )}
+        >
           {previewPanels.map((panel) => {
             const device = panel.device;
             const panelStyle = device
@@ -1402,7 +1392,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
             return (
               <div
                 key={panel.slot}
-                className="DocumentPage__main__previewFrame__item"
+                className={cn(
+                  'DocumentPage__main__previewFrame__item flex flex-none flex-col items-center gap-2',
+                  isFullPreview && 'size-full'
+                )}
                 style={panelStyle}
               >
                 <div className="DocumentPage__main__previewFrame__iframeWrap">
@@ -1412,7 +1405,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
                   />
                 </div>
                 {device && (
-                  <div className="DocumentPage__main__previewFrame__deviceLabel">
+                  <div className="DocumentPage__main__previewFrame__deviceLabel shrink-0 whitespace-nowrap text-sm leading-none text-muted">
                     {`${device}: ${DeviceResolution[device].join('x')}`}
                   </div>
                 )}

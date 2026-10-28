@@ -12,7 +12,7 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
 
 ## Phase 4 (document editor)
 
-- [ ] `DocumentPage.css` sets `.DocumentPage__ai {flex: 0 0 420px}`, so the
+- [x] `DocumentPage.css` sets `.DocumentPage__ai {flex: 0 0 420px}`, so the
       Root AI panel is clipped at 375px. The doc page header also overflows
       horizontally on mobile.
 - [ ] `ImagePastePlugin.visual.test.tsx` fails (before the rewrite too).

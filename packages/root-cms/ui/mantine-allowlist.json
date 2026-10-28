@@ -23,7 +23,6 @@
   "ui/features/documents/components/DocEditor/fields/SelectField.tsx",
   "ui/features/documents/components/DocEditor/fields/SourceField.tsx",
   "ui/features/documents/components/DocEditor/fields/StringField.tsx",
-  "ui/features/documents/components/DocumentPagePreviewBar/DocumentPagePreviewBar.tsx",
   "ui/features/documents/components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.tsx",
   "ui/features/documents/components/RichTextEditor/lexical/LexicalEditor.visual.test.tsx",
   "ui/features/documents/components/RichTextEditor/lexical/nodes/BlockComponentModal.tsx",
@@ -34,7 +33,5 @@
   "ui/features/documents/components/RichTextEditor/lexical/plugins/FloatingLinkEditorPlugin.visual.test.tsx",
   "ui/features/documents/components/RichTextEditor/lexical/plugins/ImagePastePlugin.visual.test.tsx",
   "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.visual.test.tsx",
-  "ui/features/documents/pages/DocumentPage/DocumentPage.tsx",
-  "ui/features/documents/pages/EmbeddedDocumentPage/EmbeddedDocumentPage.tsx"
+  "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.visual.test.tsx"
 ]
