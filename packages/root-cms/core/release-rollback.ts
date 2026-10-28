@@ -3,6 +3,8 @@ import {
   RELEASE_ROLLBACK_SNAPSHOTS_COLLECTION,
   ReleaseRollbackItemType,
   ReleaseRollbackSnapshot,
+  decodeReleaseRollbackSnapshot,
+  encodeReleaseRollbackSnapshot,
   getReleaseRollbackSnapshotKey,
   resolveReleaseRollbackPrevious,
 } from '../shared/release-rollback.js';
@@ -88,7 +90,7 @@ export class ReleaseRollbackRecorder {
 
     const existing: Record<string, Snapshot> = {};
     existingSnapshot.docs.forEach((doc) => {
-      existing[doc.id] = doc.data() as Snapshot;
+      existing[doc.id] = decodeReleaseRollbackSnapshot(doc.data());
     });
     const current: Record<string, PublishedState> = {};
     docs.forEach((doc, i) => {
@@ -165,14 +167,13 @@ export class ReleaseRollbackRecorder {
       this.existing[key],
       this.current[key] || {data: null}
     );
-    const snapshot: Record<string, unknown> = {type, id, releasedAt, previous};
-    if (locale) {
-      snapshot.locale = locale;
-    }
     const ref = this.cmsClient.db.doc(
       `${this.cmsClient.dbReleasePath(this.releaseId)}/${RELEASE_ROLLBACK_SNAPSHOTS_COLLECTION}/${key}`
     );
-    batch.set(ref, snapshot);
+    batch.set(
+      ref,
+      encodeReleaseRollbackSnapshot({type, id, locale, releasedAt, previous})
+    );
     return 1;
   }
 }

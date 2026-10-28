@@ -24,6 +24,8 @@ import {
   RELEASE_ROLLBACK_SNAPSHOTS_COLLECTION,
   ReleaseRollbackItemType,
   ReleaseRollbackSnapshot,
+  decodeReleaseRollbackSnapshot,
+  encodeReleaseRollbackSnapshot,
   getReleaseRollbackSnapshotKey,
   resolveReleaseRollbackPrevious,
   testTimestampsEqual,
@@ -128,7 +130,7 @@ export async function listReleaseRollbackSnapshots(
   const res = await getDocs(getSnapshotsCollection(releaseId));
   const snapshots: Record<string, Snapshot> = {};
   res.forEach((snapshot) => {
-    snapshots[snapshot.id] = snapshot.data() as Snapshot;
+    snapshots[snapshot.id] = decodeReleaseRollbackSnapshot(snapshot.data());
   });
   return snapshots;
 }
@@ -280,11 +282,10 @@ export class ReleaseRollbackRecorder {
       this.existing[key],
       this.current[key] || {data: null}
     );
-    const snapshot: Record<string, unknown> = {type, id, releasedAt, previous};
-    if (locale) {
-      snapshot.locale = locale;
-    }
-    batch.set(getSnapshotRef(this.releaseId, key), snapshot);
+    batch.set(
+      getSnapshotRef(this.releaseId, key),
+      encodeReleaseRollbackSnapshot({type, id, locale, releasedAt, previous})
+    );
   }
 }
 

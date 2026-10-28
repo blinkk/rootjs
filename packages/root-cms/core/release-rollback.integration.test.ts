@@ -9,7 +9,10 @@
 import {App, deleteApp, initializeApp} from 'firebase-admin/app';
 import {Firestore, Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
-import {testTimestampsEqual} from '../shared/release-rollback.js';
+import {
+  decodeReleaseRollbackSnapshot,
+  testTimestampsEqual,
+} from '../shared/release-rollback.js';
 import {RootCMSClient} from './client.js';
 
 const PROJECT_ID = 'scheduled-release-rollback-test';
@@ -136,7 +139,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       const snapshots: Record<string, any> = {};
       (await releaseRef.collection('RollbackSnapshots').get()).docs.forEach(
         (doc) => {
-          snapshots[doc.id] = doc.data();
+          snapshots[doc.id] = decodeReleaseRollbackSnapshot(doc.data());
         }
       );
       expect(Object.keys(snapshots).sort()).toEqual([
