@@ -155,7 +155,7 @@ export function CommentRichText(props: {
   data: RichTextData;
 }) {
   return (
-    <div className={props.className}>
+    <div className={joinClassNames('Prose', props.className)}>
       {(props.data.blocks || []).map((block, index) => (
         <CommentRichTextBlock key={index} block={block} />
       ))}

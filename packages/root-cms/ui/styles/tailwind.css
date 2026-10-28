@@ -13,13 +13,17 @@
  * Project themes load unlayered, so they win over every utility without
  * needing extra specificity.
  *
- * Preflight isn't imported yet; it's enabled in Phase 5.2 of the rewrite
- * plan, once the legacy CSS that relies on native defaults is reconciled.
+ * Preflight (Tailwind's reset) is in the `base` layer, under global.css's
+ * element defaults: margins are 0, borders are `0 solid` (so `border` alone
+ * draws one), lists and headings are unstyled, and buttons and inputs
+ * inherit their font. Rich text that needs native defaults restores them in
+ * its own CSS.
  */
 
 @layer theme, base, components, utilities;
 
 @import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css' layer(utilities) source(none);
 
 @source '../**/*.{ts,tsx}';
@@ -95,6 +99,9 @@
   --font-*: initial;
   --font-sans: var(--cms-font-sans);
   --font-mono: var(--cms-font-mono);
+  /* Preflight's fonts (the page, and `code`/`pre`/`kbd`). */
+  --default-font-family: var(--cms-font-sans);
+  --default-mono-font-family: var(--cms-font-mono);
 
   --text-*: initial;
   --text-2xs: var(--cms-text-2xs);

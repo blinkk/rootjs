@@ -69,7 +69,7 @@ const TEXT_CLASSES = 'DocChanges__text whitespace-pre-wrap wrap-anywhere';
 
 const VALUE_CLASSES = 'wrap-anywhere px-1.5 py-px';
 
-const ORDER_LIST_CLASSES = 'DocChanges__order__list m-0 pl-5';
+const ORDER_LIST_CLASSES = 'DocChanges__order__list m-0 list-decimal pl-5';
 
 export interface DocChangesProps {
   className?: string;

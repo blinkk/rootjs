@@ -53,12 +53,15 @@ Lowest to highest priority: `theme` → `base` (`global.css`) → `components` �
 `utilities` → **unlayered** (legacy component CSS, project themes,
 custom CSS).
 
-**No CSS reset yet:** Tailwind's preflight is off (it's enabled in Phase 5.2
-of the rewrite plan), so native defaults still apply. Reset them where you use them: `m-0 list-none
-p-0` on lists, `m-0 border-0 p-0` on fieldsets, `appearance-none` and an
-explicit border/background on buttons and inputs. `global.css` also sets
-`img, svg, iframe {height: auto}`, which overrides `height` attributes, so
-size those elements with classes or inline styles.
+**CSS reset:** Tailwind's preflight is on, in the `base` layer. Margins and
+padding are 0, borders are `0 solid` (so `border` or `border-b` alone draws
+one), lists have no markers, headings inherit their size and weight, and
+buttons and inputs inherit their font with no background. Links keep their
+underline (`no-underline` removes it). Content rendered from Markdown or rich
+text gets the browser's list, heading and block defaults back from the
+`Prose` class (`global.css`); add it to the element that wraps such content.
+`global.css` also sets `img, svg, iframe {height: auto}`, which overrides
+`height` attributes, so size those elements with classes or inline styles.
 
 **Gotcha while migrating:** unlayered legacy CSS beats every utility,
 whatever its specificity. When you convert an element to utilities, delete

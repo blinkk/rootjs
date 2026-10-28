@@ -20,7 +20,7 @@
   height: 100%;
   left: 1px;
   width: 1px;
-  background-color: var(--color-border);
+  background-color: var(--cms-color-border);
 }
 
 .SplitPanel__divider::after {

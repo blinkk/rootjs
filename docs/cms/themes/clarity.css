@@ -15,7 +15,7 @@
   --cms-drawer-bleed: 0;
   --cms-drawer-border: 1px solid var(--color-border);
   --cms-drawer-radius: 8px;
-  --cms-drawer-bg: var(--surface-background);
+  --cms-drawer-bg: var(--cms-color-surface);
   --cms-drawer-header-bg: #f4f4f1;
   --cms-drawer-indent: 0;
   --cms-drawer-rule: none;
@@ -27,6 +27,6 @@
   --cms-font-size: 13px;
   --cms-label-size: 13px;
   --cms-help-size: 12px;
-  --cms-help-color: var(--color-text-gray);
+  --cms-help-color: var(--cms-color-text-muted);
   --cms-field-gap: 20px;
 }

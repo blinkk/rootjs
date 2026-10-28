@@ -26,6 +26,6 @@
   --cms-font-size: 11px;
   --cms-label-size: 11px;
   --cms-help-size: 11px;
-  --cms-help-color: var(--color-text-gray);
+  --cms-help-color: var(--cms-color-text-muted);
   --cms-field-gap: 10px;
 }

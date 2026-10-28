@@ -524,7 +524,7 @@ function ShareSection() {
           Share
         </Heading>
         <Text
-          className="SettingsPage__section__body"
+          className="SettingsPage__section__body Prose"
           size="body-sm"
           weight="semi-bold"
           color="gray"

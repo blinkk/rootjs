@@ -1,37 +1,14 @@
 /*
- * Legacy variables, kept as aliases of the theme tokens (theme.css) while
- * components are migrated. Don't use them in new code; they're removed once
- * nothing reads them.
- */
-:root {
-  --font-family-default: var(--cms-font-sans);
-  --font-family-mono: var(--cms-font-mono);
-  --color-text-default: var(--cms-color-text);
-  --color-text-dark: var(--cms-color-text);
-  --color-text-gray: var(--cms-color-text-muted);
-  --color-border: var(--cms-color-border);
-  --button-background-hover: var(--cms-color-surface-hover);
-  --button-background-active: var(--cms-color-surface-active);
-  --page-background: var(--cms-color-page);
-  --page-padding: 30px;
-  --surface-background: var(--cms-color-surface);
-  --surface-background-hover: var(--cms-color-surface-hover);
-  --surface-background-active: var(--cms-color-surface-hover);
-  --surface-border-radius: var(--cms-radius-lg);
-  --chip-background: var(--cms-color-chip);
-  --chip-text-color: var(--cms-color-text-strong);
-  --header-height: var(--cms-header-height);
-  --sidebar-width-collapsed: var(--cms-sidebar-width-collapsed);
-  --sidebar-width-expanded: var(--cms-sidebar-width-expanded);
-  --sidebar-border-width: 1px;
-  --sidebar-width: var(--sidebar-width-collapsed);
-}
-
-/*
- * Element defaults. They sit in the `base` layer so Tailwind utilities
- * (and any unlayered component CSS) override them.
+ * Element defaults, on top of Tailwind's preflight (imported into the same
+ * `base` layer by tailwind.css, before this file). Tailwind utilities, and
+ * any unlayered component CSS, override them.
  */
 @layer base {
+  /*
+   * Box sizing inherits (preflight sets `border-box` on every element), so
+   * an element set to `content-box` (e.g. the header, for its safe-area
+   * padding) passes it to its children, as the CMS was built against.
+   */
   html {
     box-sizing: border-box;
     overflow-x: hidden;
@@ -40,15 +17,19 @@
   }
 
   *,
-  *:before,
-  *:after {
+  *::before,
+  *::after {
     box-sizing: inherit;
+  }
+
+  details > div {
+    box-sizing: border-box;
   }
 
   html,
   body {
-    font-family: var(--font-family-default);
-    color: var(--color-text-default);
+    font-family: var(--cms-font-sans);
+    color: var(--cms-color-text);
     height: 100%;
     margin: 0;
     -webkit-font-smoothing: antialiased;
@@ -69,25 +50,15 @@
     margin: 0;
   }
 
-  details > div {
-    box-sizing: border-box;
-  }
-
+  /* Links keep the browser's underline (preflight removes it); remove it
+   * with `no-underline`. */
   a {
     color: inherit;
+    text-decoration: underline;
   }
 
   select {
     color-scheme: light;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  p {
-    margin: 0;
   }
 
   body.menu\:open {
@@ -98,6 +69,81 @@
     margin: 0 auto;
     min-height: 100vh;
     position: relative;
+  }
+
+  /*
+   * Rendered content (Markdown, comments, the rich text editor, help text
+   * with lists) keeps the browser's list, heading and block defaults that
+   * Tailwind's preflight resets. Each rule has one class's specificity
+   * (`:where()` adds none), enough to beat preflight's element selectors;
+   * component CSS and utilities still override them, being in later
+   * layers. Add `Prose` to the element that wraps such content.
+   */
+  .Prose :where(ul, ol, menu) {
+    margin-block: 1em;
+    padding-inline-start: 40px;
+  }
+
+  .Prose :where(ul, menu) {
+    list-style-type: disc;
+  }
+
+  .Prose :where(ol) {
+    list-style-type: decimal;
+  }
+
+  .Prose :where(ul, ol, menu) :where(ul, menu) {
+    list-style-type: circle;
+  }
+
+  .Prose :where(ul, ol, menu) :where(ul, ol, menu) :where(ul, menu) {
+    list-style-type: square;
+  }
+
+  .Prose :where(ul, ol, menu) :where(ul, ol, menu) {
+    margin-block: 0;
+  }
+
+  .Prose :where(h1, h2, h3, h4, h5, h6) {
+    font-weight: bold;
+  }
+
+  .Prose :where(h1) {
+    font-size: 2em;
+  }
+
+  .Prose :where(h2) {
+    font-size: 1.5em;
+  }
+
+  .Prose :where(h3) {
+    font-size: 1.17em;
+  }
+
+  .Prose :where(h5) {
+    font-size: 0.83em;
+  }
+
+  .Prose :where(h6) {
+    font-size: 0.67em;
+    margin-block: 2.33em;
+  }
+
+  .Prose :where(blockquote) {
+    margin: 1em 40px;
+  }
+
+  .Prose :where(pre) {
+    margin-block: 1em;
+  }
+
+  .Prose :where(hr) {
+    margin-block: 0.5em;
+    border-top-width: 1px;
+  }
+
+  .Prose :where(dd) {
+    margin-inline-start: 40px;
   }
 
   .sr-only {

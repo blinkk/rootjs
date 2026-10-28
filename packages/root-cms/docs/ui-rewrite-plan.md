@@ -508,8 +508,12 @@ overflowing the mobile header, and array item headers sized without
       `mantine-spotlight-internal.d.ts`, and the ratchet allowlist. (Also
       `@emotion/react`, `MantineCompatProvider` and `scripts/ui-progress.ts`;
       the UI typecheck went from 307 errors to 78, most were Mantine's types.)
-- [ ] 5.2 Enable Tailwind preflight, reconcile `global.css`, delete the legacy
-      vars.
+- [x] 5.2 Enable Tailwind preflight, reconcile `global.css`, delete the legacy
+      vars. Box sizing still inherits, and links keep their underline, as the
+      UI was built against; rendered Markdown and rich text get the
+      browser's list/heading defaults back from a `Prose` class. Visible
+      changes: bare `<code>` uses the CMS mono font at the text's size, and
+      second-level bullets are circles everywhere.
 - [ ] 5.3 Finalize `theme.css` + `docs/themes.md`, and generate the BEM hooks
       reference.
 - [ ] 5.4 Update the `docs/screenshots` scenes if they mirror Mantine markup,

@@ -516,7 +516,7 @@ ReleasePage.Actions = (props: {
                 since the release was published. Rolling back will overwrite
                 those changes.
               </Text>
-              <ul className="mb-0 mt-2 max-h-50 overflow-y-auto pl-5">
+              <ul className="mb-0 mt-2 max-h-50 list-disc overflow-y-auto pl-5">
                 {conflicts.map((conflict) => (
                   <li key={rollbackConflictLabel(conflict)}>
                     <Text size="body-sm">

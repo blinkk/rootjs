@@ -627,7 +627,7 @@ function Editor(props: EditorProps) {
             <div className="LexicalEditor__scroller">
               <div className="LexicalEditor__root" ref={onRef}>
                 <ContentEditable
-                  className="LexicalEditor__editor"
+                  className="LexicalEditor__editor Prose"
                   placeholder={<Placeholder placeholder={props.placeholder} />}
                 />
               </div>

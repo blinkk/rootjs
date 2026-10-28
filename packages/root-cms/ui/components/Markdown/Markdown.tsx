@@ -23,7 +23,7 @@ export function Markdown(props: MarkdownProps) {
       : '';
   return (
     <div
-      className={joinClassNames('Markdown', props.className)}
+      className={joinClassNames('Markdown Prose', props.className)}
       dangerouslySetInnerHTML={{__html: html}}
     />
   );

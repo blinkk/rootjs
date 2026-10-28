@@ -7,6 +7,7 @@
     --side-button-icon-size: 22px;
     /* No rail below `md`; pages size themselves with this. */
     --sidebar-width: 0px;
+    --sidebar-border-width: 1px;
     /**
      * Distance from the left edge of the rail to its icons. When collapsed,
      * the icons are centered within the rail's content box, which excludes
@@ -15,7 +16,7 @@
      */
     --side-icon-offset: calc(
       (
-          var(--sidebar-width-collapsed) - var(--sidebar-border-width) -
+          var(--cms-sidebar-width-collapsed) - var(--sidebar-border-width) -
             var(--side-button-icon-size)
         ) /
         2
@@ -29,7 +30,7 @@
 
   @media (width >= 48rem) {
     .Layout {
-      --sidebar-width: var(--sidebar-width-collapsed);
+      --sidebar-width: var(--cms-sidebar-width-collapsed);
       grid-template-areas:
         'top top'
         'side main';
@@ -37,7 +38,7 @@
     }
 
     .Layout--sidebar-expanded {
-      --sidebar-width: var(--sidebar-width-expanded);
+      --sidebar-width: var(--cms-sidebar-width-expanded);
     }
   }
 
