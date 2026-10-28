@@ -3,10 +3,15 @@ import {forwardRef} from 'preact/compat';
 import {cn} from '../../utils/classes.js';
 
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
-export type BadgeVariant = 'soft' | 'filled' | 'outline';
+export type BadgeVariant = 'soft' | 'filled' | 'outline' | 'gradient';
+export type BadgeGradient =
+  'blue' | 'green' | 'pink' | 'orange' | 'yellow' | 'red' | 'violet' | 'gray';
 export type BadgeSize = 'xs' | 'sm';
 
-const TONE_CLASSES: Record<BadgeVariant, Record<BadgeTone, string>> = {
+const TONE_CLASSES: Record<
+  Exclude<BadgeVariant, 'gradient'>,
+  Record<BadgeTone, string>
+> = {
   soft: {
     neutral: 'bg-chip text-fg',
     info: 'bg-info-soft text-info',
@@ -30,6 +35,18 @@ const TONE_CLASSES: Record<BadgeVariant, Record<BadgeTone, string>> = {
   },
 };
 
+/** Backgrounds for `variant="gradient"`, from the `--cms-gradient-*` tokens. */
+const GRADIENT_CLASSES: Record<BadgeGradient, string> = {
+  blue: 'bg-(image:--cms-gradient-blue)',
+  green: 'bg-(image:--cms-gradient-green)',
+  pink: 'bg-(image:--cms-gradient-pink)',
+  orange: 'bg-(image:--cms-gradient-orange)',
+  yellow: 'bg-(image:--cms-gradient-yellow)',
+  red: 'bg-(image:--cms-gradient-red)',
+  violet: 'bg-(image:--cms-gradient-violet)',
+  gray: 'bg-(image:--cms-gradient-gray)',
+};
+
 const SIZE_CLASSES: Record<BadgeSize, string> = {
   xs: 'h-4 gap-1 px-1.5',
   sm: 'h-5 gap-1 px-2',
@@ -44,9 +61,15 @@ interface BadgeOwnProps {
   tone?: BadgeTone;
   /**
    * `soft` (tinted background, the default), `filled` (solid; for the one
-   * badge that must stand out) or `outline` (a quiet tag, e.g. "Required").
+   * badge that must stand out), `outline` (a quiet tag, e.g. "Required") or
+   * `gradient` (status pills; see `gradient`).
    */
   variant?: BadgeVariant;
+  /**
+   * The background for `variant="gradient"`, from the `--cms-gradient-*`
+   * theme tokens. Default `blue`.
+   */
+  gradient?: BadgeGradient;
   /** Height: `xs` 16px, `sm` 20px. Default `sm`. */
   size?: BadgeSize;
   /** Icon before the label, e.g. `<IconCheck />`. Sized by the badge. */
@@ -75,6 +98,7 @@ export type BadgeProps = BadgeAsSpan | BadgeAsLink;
  * ```tsx
  * <Badge tone="success" variant="filled" icon={<IconCheck />}>Success</Badge>
  * <Badge variant="outline" size="xs">Required</Badge>
+ * <Badge variant="gradient" gradient="green">Published</Badge>
  * ```
  */
 // `forwardRef` wraps props in `Omit<P, 'ref'>`, which collapses the
@@ -86,6 +110,7 @@ export const Badge = forwardRef<
   const {
     tone = 'neutral',
     variant = 'soft',
+    gradient = 'blue',
     size = 'sm',
     icon,
     className,
@@ -97,9 +122,12 @@ export const Badge = forwardRef<
     'Badge',
     `Badge--tone-${tone}`,
     `Badge--variant-${variant}`,
+    variant === 'gradient' && `Badge--gradient-${gradient}`,
     `Badge--size-${size}`,
     'inline-flex max-w-full shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent align-middle font-sans text-xs font-bold uppercase leading-none tracking-wide no-underline',
-    TONE_CLASSES[variant][tone],
+    variant === 'gradient'
+      ? cn('text-inverse', GRADIENT_CLASSES[gradient])
+      : TONE_CLASSES[variant][tone],
     SIZE_CLASSES[size],
     rest.href !== undefined &&
       'cursor-pointer hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',

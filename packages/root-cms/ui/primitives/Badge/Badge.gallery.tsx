@@ -6,10 +6,25 @@ import {
   IconX,
 } from '@tabler/icons-preact';
 import {defineGallery} from '../../dev/gallery/types.js';
-import {Badge, type BadgeTone, type BadgeVariant} from './Badge.js';
+import {
+  Badge,
+  type BadgeGradient,
+  type BadgeTone,
+  type BadgeVariant,
+} from './Badge.js';
 
 const TONES: BadgeTone[] = ['neutral', 'info', 'success', 'warning', 'danger'];
 const VARIANTS: BadgeVariant[] = ['soft', 'filled', 'outline'];
+const GRADIENTS: Array<[BadgeGradient, string]> = [
+  ['blue', 'Draft'],
+  ['green', 'Published'],
+  ['pink', 'Scheduled'],
+  ['orange', 'Locked'],
+  ['yellow', 'Pending'],
+  ['red', 'High'],
+  ['violet', 'Release'],
+  ['gray', 'Archived'],
+];
 
 export const BadgeGallery = defineGallery({
   id: 'badge',
@@ -27,6 +42,23 @@ export const BadgeGallery = defineGallery({
             ))}
           </div>
         ))}
+      </div>
+    ),
+    Gradients: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        {GRADIENTS.map(([gradient, label]) => (
+          <Badge key={gradient} variant="gradient" gradient={gradient}>
+            {label}
+          </Badge>
+        ))}
+        <Badge
+          variant="gradient"
+          gradient="green"
+          size="xs"
+          icon={<IconCheck />}
+        >
+          Done
+        </Badge>
       </div>
     ),
     Sizes: () => (
