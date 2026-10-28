@@ -102,3 +102,17 @@ describe('ToolbarPlugin components dropdown', () => {
     expect(screen.getByRole('button', {name: 'Insert block'})).toBeTruthy();
   });
 });
+
+describe('ToolbarPlugin menus', () => {
+  it('gives the editor focus back after an item is chosen', async () => {
+    const user = renderFilterableEditor();
+    await user.click(screen.getByRole('button', {name: 'Normal'}));
+    await user.click(screen.getByRole('menuitem', {name: /Heading 2/}));
+
+    await vi.waitFor(() => {
+      expect(document.activeElement?.getAttribute('contenteditable')).toBe(
+        'true'
+      );
+    });
+  });
+});

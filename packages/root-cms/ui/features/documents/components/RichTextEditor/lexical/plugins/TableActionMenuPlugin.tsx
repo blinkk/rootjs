@@ -402,7 +402,14 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
       placement="bottom-end"
       label="Table actions"
       open={isMenuOpen}
-      onOpenChange={setIsMenuOpen}
+      onOpenChange={(open, reason) => {
+        setIsMenuOpen(open);
+        // Give the editor focus back after an action, not the menu button.
+        if (!open && reason === 'select') {
+          editor.focus();
+        }
+      }}
+      returnFocusOnSelect={false}
       className="LexicalEditor__tableActionMenu"
       trigger={
         <button

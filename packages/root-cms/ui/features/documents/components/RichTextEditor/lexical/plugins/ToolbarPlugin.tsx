@@ -123,6 +123,20 @@ const GROUP_CLASSES =
   'LexicalEditor__toolbar__group flex shrink-0 *:rounded-none *:first:rounded-l-sm *:last:rounded-r-sm *:not-first:border-l-0';
 
 /**
+ * Gives the editor focus back after a toolbar menu item is chosen, so typing
+ * carries on where it was. Pair it with `returnFocusOnSelect={false}`.
+ */
+function focusEditorOnSelect(
+  editor: LexicalEditor,
+  open: boolean,
+  reason: MenuOpenChangeReason
+) {
+  if (!open && reason === 'select') {
+    editor.focus();
+  }
+}
+
+/**
  * Returns the menu item elements of the dropdown that contains `element`
  * (in its items or its header).
  */
@@ -201,6 +215,8 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
   return (
     <Menu
       label="Block type"
+      returnFocusOnSelect={false}
+      onOpenChange={(open, reason) => focusEditorOnSelect(editor, open, reason)}
       trigger={
         <Button
           className={cn(
@@ -321,6 +337,8 @@ function MoreFormattingDropdown(props: MoreFormattingDropdownProps) {
   return (
     <Menu
       className="min-w-60"
+      returnFocusOnSelect={false}
+      onOpenChange={(open, reason) => focusEditorOnSelect(editor, open, reason)}
       trigger={
         <IconButton
           label="More formatting"
@@ -654,6 +672,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       return;
     }
     setComponentsMenuOpened(false);
+    focusEditorOnSelect(activeEditor, open, reason);
   };
 
   const getComponentIcon = (componentName: string) => {
@@ -758,6 +777,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               className="LexicalEditor__toolbar__insertDropdown__body w-70"
               open={componentsMenuOpened}
               onOpenChange={onComponentsMenuOpenChange}
+              returnFocusOnSelect={false}
               maxHeight={Math.min(480, window.innerHeight * 0.6)}
               header={
                 showComponentFilter && (

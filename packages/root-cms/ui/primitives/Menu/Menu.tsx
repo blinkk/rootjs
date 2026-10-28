@@ -58,6 +58,13 @@ export interface MenuProps extends Omit<
    */
   maxHeight?: number;
   /**
+   * Whether choosing an item returns focus to the trigger. Set `false` when
+   * the item's action focuses something else, e.g. a toolbar menu whose
+   * actions apply to an editor (focus it in `onOpenChange` on `select`).
+   * Escape and the trigger still return focus to the trigger. Default `true`.
+   */
+  returnFocusOnSelect?: boolean;
+  /**
    * Content pinned above the items, outside the scrolling list, e.g. a
    * filter input. (A menu may only contain items, so it can't go in
    * `children`.) Mark a field in it `data-autofocus` to focus it on open.
@@ -79,7 +86,8 @@ export interface MenuProps extends Omit<
  * keyboard support: arrow keys move between items (wrapping), Home/End jump
  * to the ends, typing jumps to the next item starting with those letters,
  * Enter/Space choose, Escape closes, and Tab closes and moves on. Choosing
- * an item closes the menu and returns focus to the trigger. On open, focus
+ * an item closes the menu and returns focus to the trigger (unless
+ * `returnFocusOnSelect` is `false`). On open, focus
  * goes to the first item, or to an element marked `data-autofocus` (such as
  * a filter input). Replaces Mantine's `Menu`.
  *
@@ -106,6 +114,7 @@ export function Menu(props: MenuProps) {
     defaultOpen = false,
     onOpenChange,
     maxHeight,
+    returnFocusOnSelect = true,
     header,
     width,
     label,
@@ -154,6 +163,8 @@ export function Menu(props: MenuProps) {
     open,
     reference,
     floating,
+    shouldReturnFocus: () =>
+      returnFocusOnSelect || reasonRef.current !== 'select',
     initialFocus: (menu) => {
       // An element marked `data-autofocus` (e.g. a filter input) wins.
       const autofocus = menu.querySelector<HTMLElement>('[data-autofocus]');

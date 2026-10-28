@@ -63,6 +63,11 @@ export interface UseOverlayFocusOptions {
    * focus where it is.
    */
   initialFocus: (floating: HTMLElement) => HTMLElement | null;
+  /**
+   * Called as the overlay closes; return `false` to leave focus alone (e.g.
+   * the caller moves it somewhere else). Default: always return focus.
+   */
+  shouldReturnFocus?: () => boolean;
 }
 
 /**
@@ -75,6 +80,8 @@ export function useOverlayFocus(options: UseOverlayFocusOptions) {
   const {open, reference, floating} = options;
   const initialFocusRef = useRef(options.initialFocus);
   initialFocusRef.current = options.initialFocus;
+  const shouldReturnFocusRef = useRef(options.shouldReturnFocus);
+  shouldReturnFocusRef.current = options.shouldReturnFocus;
   const wasOpenRef = useRef(false);
   const focusWasInsideRef = useRef(false);
 
@@ -102,7 +109,11 @@ export function useOverlayFocus(options: UseOverlayFocusOptions) {
       return;
     }
     wasOpenRef.current = false;
-    if (focusWasInsideRef.current && reference instanceof HTMLElement) {
+    if (
+      focusWasInsideRef.current &&
+      reference instanceof HTMLElement &&
+      (shouldReturnFocusRef.current?.() ?? true)
+    ) {
       reference.focus({preventScroll: true});
     }
   }, [open]);
