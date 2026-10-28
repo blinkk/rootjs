@@ -177,7 +177,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
         </Button>
         <Button
           icon={<IconCheck />}
-          variant="primary"
+          variant="green"
           size="xs"
           type="button"
           disabled={!parsedValue || !changed}

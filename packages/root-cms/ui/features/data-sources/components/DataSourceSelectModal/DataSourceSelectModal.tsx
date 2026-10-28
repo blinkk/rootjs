@@ -101,11 +101,14 @@ export function DataSourceSelectModal(
               </div>
               <div className="DataSourceSelectModal__item__action shrink-0">
                 {selectedIds.includes(ds.id) ? (
-                  <Button variant="default" onClick={() => onUnselect(ds.id)}>
+                  <Button
+                    variant="blue-light"
+                    onClick={() => onUnselect(ds.id)}
+                  >
                     Unselect
                   </Button>
                 ) : (
-                  <Button variant="primary" onClick={() => onSelect(ds.id)}>
+                  <Button variant="blue" onClick={() => onSelect(ds.id)}>
                     Select
                   </Button>
                 )}

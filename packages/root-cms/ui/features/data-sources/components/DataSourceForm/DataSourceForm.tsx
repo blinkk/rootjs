@@ -521,7 +521,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
       />
       <Button
         className="DataSourceForm__submit mt-8"
-        variant="primary"
+        variant="blue"
         size="sm"
         type="submit"
         loading={submitting}

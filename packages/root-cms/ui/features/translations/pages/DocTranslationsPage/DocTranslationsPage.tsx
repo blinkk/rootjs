@@ -203,7 +203,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
                     label="Open Google Sheet"
                     href={getSpreadsheetUrl(linkedSheet)}
                     target="_blank"
-                    className="border-transparent bg-success text-inverse hover:bg-success hover:brightness-90"
+                    variant="green"
                   >
                     <IconTable size={16} strokeWidth={2.25} />
                   </IconButton>

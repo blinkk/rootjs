@@ -181,7 +181,7 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
         ))}
         <Button
           className="TranslationsEditPage__formInputSubmit mt-6"
-          variant="primary"
+          variant="blue"
           type="submit"
           disabled={!!saving}
           loading={saving === 'translations'}
@@ -211,7 +211,7 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
         />
         <Button
           className="TranslationsEditPage__tagsFormSubmit mt-4"
-          variant="primary"
+          variant="blue"
           disabled={!!saving}
           loading={saving === 'tags'}
           onClick={async () => {

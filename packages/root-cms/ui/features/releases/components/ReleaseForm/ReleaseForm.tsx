@@ -276,7 +276,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
         >
           <Button
             className="ReleaseForm__submit"
-            variant="primary"
+            variant="blue"
             type="submit"
             loading={submitting}
             disabled={!canPublish}

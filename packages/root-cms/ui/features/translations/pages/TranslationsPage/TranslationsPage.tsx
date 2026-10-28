@@ -13,7 +13,7 @@ export function TranslationsPage() {
         <div className="TranslationsPage__header mb-6 flex flex-wrap items-center justify-between gap-4 md:mb-10">
           <Heading size="h1">Translations</Heading>
           <div className="TranslationsPage__headerButtons flex items-center gap-2">
-            <Button variant="primary" href="/cms/translations/arb">
+            <Button variant="blue" href="/cms/translations/arb">
               Download ARB
             </Button>
           </div>

@@ -3,7 +3,16 @@ import {forwardRef} from 'preact/compat';
 import {cn} from '../../utils/classes.js';
 import {Spinner} from '../Spinner/Spinner.js';
 
-export type ButtonVariant = 'default' | 'primary' | 'danger' | 'subtle';
+export type ButtonVariant =
+  | 'default'
+  | 'primary'
+  | 'subtle'
+  | 'danger'
+  | 'danger-outline'
+  | 'danger-subtle'
+  | 'blue'
+  | 'blue-light'
+  | 'green';
 export type ButtonSize = 'xs' | 'sm' | 'md';
 
 /**
@@ -24,10 +33,19 @@ export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
     'border border-border-strong bg-surface text-fg shadow-sm hover:bg-surface-hover active:bg-surface-active',
   primary:
     'border border-transparent bg-primary text-on-primary hover:bg-primary-hover',
-  danger:
-    'border border-transparent bg-danger text-inverse hover:brightness-90',
   subtle:
     'border border-transparent bg-transparent text-fg hover:bg-surface-hover active:bg-surface-active',
+  danger:
+    'border border-transparent bg-button-red text-inverse hover:bg-button-red-hover',
+  'danger-outline':
+    'border border-button-red bg-transparent text-button-red hover:bg-button-red-soft/35',
+  'danger-subtle':
+    'border border-transparent bg-transparent text-button-red hover:bg-button-red-soft',
+  blue: 'border border-transparent bg-button-blue text-inverse hover:bg-button-blue-hover',
+  'blue-light':
+    'border border-transparent bg-button-blue-soft text-button-blue hover:bg-button-blue-soft-hover/65',
+  green:
+    'border border-transparent bg-button-green text-inverse hover:bg-button-green-hover',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -45,9 +63,21 @@ const ICON_SIZE_CLASSES: Record<ButtonSize, string> = {
 
 interface ButtonOwnProps {
   /**
-   * `default` (bordered, the everyday button), `primary` (filled; the main
-   * action of a view), `danger` (filled; destructive actions), or `subtle`
-   * (no border until hovered; toolbars and dense rows). Default `default`.
+   * Default `default`.
+   *
+   * - `default`: bordered; the everyday button.
+   * - `primary`: filled black; the main action of a view.
+   * - `subtle`: no border until hovered; toolbars and dense rows.
+   * - `danger`: filled red; destructive actions. `danger-outline` (red
+   *   border and text) and `danger-subtle` (red text, no border) are its
+   *   quieter forms, e.g. "Disconnect" or "Delete group".
+   * - `blue`: filled blue, and `blue-light` (pale blue fill, blue text),
+   *   e.g. "Select" and "Unselect" in pickers.
+   * - `green`: filled green; confirming or opening a sheet, e.g. "Accept
+   *   changes".
+   *
+   * The colored variants keep the look of the Mantine buttons they replace
+   * (Mantine's `red`, `blue` and `green` at shade 6).
    */
   variant?: ButtonVariant;
   /** Height: `xs` 24px, `sm` 28px, `md` 36px. Default `sm`. */

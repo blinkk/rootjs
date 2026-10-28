@@ -30,10 +30,6 @@ import {
   getDataSource,
 } from '../../data-source.js';
 
-/** The green "open spreadsheet" button, as in Mantine's filled green. */
-const SHEET_BUTTON_CLASSES =
-  'bg-success text-inverse hover:bg-success hover:brightness-90 active:bg-success';
-
 export function DataSourcePage(props: {id: string}) {
   usePageTitle(`Data Source: ${props.id}`);
   const [loading, setLoading] = useState(true);
@@ -242,7 +238,7 @@ DataSourcePage.DataSectionWrap = (props: {
               label="Open spreadsheet"
               href={props.dataSource.url}
               target="_blank"
-              className={SHEET_BUTTON_CLASSES}
+              variant="green"
             >
               <IconTable stroke="2.25" />
             </IconButton>

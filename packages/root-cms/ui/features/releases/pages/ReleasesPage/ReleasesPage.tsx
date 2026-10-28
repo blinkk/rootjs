@@ -421,7 +421,7 @@ ReleasesPage.EmptyState = (props: {canPublish: boolean}) => {
         condition={!props.canPublish}
       >
         <Button
-          variant="primary"
+          variant="blue"
           size="md"
           href="/cms/releases/new"
           disabled={!props.canPublish}

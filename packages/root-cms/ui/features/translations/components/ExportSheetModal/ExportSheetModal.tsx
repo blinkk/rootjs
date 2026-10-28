@@ -457,10 +457,7 @@ export function ExportSheetModal(
                 >
                   Open Google Sheet
                 </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => context.closeModal(id)}
-                >
+                <Button variant="blue" onClick={() => context.closeModal(id)}>
                   Done
                 </Button>
               </>
@@ -468,7 +465,7 @@ export function ExportSheetModal(
               <>
                 <Button onClick={() => context.closeModal(id)}>Cancel</Button>
                 <Button
-                  variant="primary"
+                  variant="blue"
                   loading={loading}
                   disabled={buttonDisabled}
                   onClick={() => onSubmit()}

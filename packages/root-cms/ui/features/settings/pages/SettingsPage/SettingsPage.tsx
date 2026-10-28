@@ -584,7 +584,7 @@ function ShareSection() {
                 Discard
               </Button>
               <Button
-                variant="primary"
+                variant={dirty ? 'green' : 'primary'}
                 icon={<IconCheck />}
                 loading={saving}
                 disabled={!dirty || !currentUserIsAdmin}

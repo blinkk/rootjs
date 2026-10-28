@@ -252,8 +252,8 @@ export function ConnectSyncModal(props: {
           {existingSync && (
             <Button
               type="button"
+              variant="danger-outline"
               size="md"
-              className="border-danger text-danger"
               loading={disconnecting}
               disabled={submitting}
               onClick={() => onDisconnect()}

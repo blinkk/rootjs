@@ -161,7 +161,7 @@ TranslationsArbPage.RequestForm = () => {
       <div className="TranslationsArbPage__requestFormSubmit sticky -top-6 z-(--cms-z-sticky) flex flex-row flex-wrap gap-2.5 bg-surface py-2 md:-top-12">
         <Button onClick={onPreview}>Preview</Button>
         <Button
-          variant="primary"
+          variant="blue"
           loading={loading}
           type="submit"
           icon={<IconFileDownload size={16} strokeWidth={1.75} />}

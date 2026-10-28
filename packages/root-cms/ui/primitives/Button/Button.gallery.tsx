@@ -16,8 +16,32 @@ export const ButtonGallery = defineGallery({
       <div className="flex flex-wrap items-center gap-2">
         <Button>Default</Button>
         <Button variant="primary">Primary</Button>
-        <Button variant="danger">Danger</Button>
         <Button variant="subtle">Subtle</Button>
+      </div>
+    ),
+    Colors: () => (
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="blue">Blue</Button>
+          <Button variant="blue-light">Blue light</Button>
+          <Button variant="green">Green</Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="danger">Danger</Button>
+          <Button variant="danger-outline">Danger outline</Button>
+          <Button variant="danger-subtle">Danger subtle</Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="blue" disabled>
+            Disabled
+          </Button>
+          <Button variant="green" loading>
+            Saving
+          </Button>
+          <Button variant="danger-outline" disabled>
+            Disabled
+          </Button>
+        </div>
       </div>
     ),
     Sizes: () => (

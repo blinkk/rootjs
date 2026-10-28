@@ -104,6 +104,30 @@
   --cms-color-danger-soft: #fff5f5;
   --cms-color-danger-line: #ffa8a8;
 
+  /* --- Color: colored buttons ------------------------------------------ *
+   * The `blue`, `blue-light`, `green`, `danger`, `danger-outline` and
+   * `danger-subtle` variants of `Button` and `IconButton`. The values match
+   * the Mantine buttons the CMS used before (shade 6, hover shade 7). They
+   * sit below 4.5:1 contrast with their text, as Mantine's did.
+   */
+
+  /* Filled blue buttons, and the text of `blue-light` ones. */
+  --cms-button-blue: #228be6;
+  --cms-button-blue-hover: #1c7ed6;
+  /* The `blue-light` fill, and its hover (drawn at 65% opacity). */
+  --cms-button-blue-soft: #e7f5ff;
+  --cms-button-blue-soft-hover: #d0ebff;
+  /* Filled green buttons. */
+  --cms-button-green: #40c057;
+  --cms-button-green-hover: #37b24d;
+  /* Filled red (`danger`) buttons, and the text and border of the outline
+   * and subtle forms.
+   */
+  --cms-button-red: #fa5252;
+  --cms-button-red-hover: #f03e3e;
+  /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
+  --cms-button-red-soft: #fff5f5;
+
   /* --- Color: gradients ------------------------------------------------ *
    * Backgrounds for gradient badges (doc and release statuses, task
    * priorities, translation states), with white text on top. The values

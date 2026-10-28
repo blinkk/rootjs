@@ -3,6 +3,7 @@ import {
   IconDotsVertical,
   IconExternalLink,
   IconPlus,
+  IconTable,
   IconTrash,
 } from '@tabler/icons-preact';
 import {defineGallery} from '../../dev/gallery/types.js';
@@ -24,8 +25,30 @@ export const IconButtonGallery = defineGallery({
         <IconButton label="Add" variant="primary">
           <IconPlus />
         </IconButton>
+      </div>
+    ),
+    Colors: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <IconButton label="Open spreadsheet" variant="green">
+          <IconTable />
+        </IconButton>
+        <IconButton label="Add" variant="blue">
+          <IconPlus />
+        </IconButton>
+        <IconButton label="Add" variant="blue-light">
+          <IconPlus />
+        </IconButton>
         <IconButton label="Delete" variant="danger">
           <IconTrash />
+        </IconButton>
+        <IconButton label="Delete" variant="danger-outline">
+          <IconTrash />
+        </IconButton>
+        <IconButton label="Delete" variant="danger-subtle">
+          <IconTrash />
+        </IconButton>
+        <IconButton label="Open spreadsheet" variant="green" disabled>
+          <IconTable />
         </IconButton>
       </div>
     ),

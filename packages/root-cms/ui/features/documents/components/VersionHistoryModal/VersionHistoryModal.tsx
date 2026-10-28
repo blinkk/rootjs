@@ -254,7 +254,7 @@ export function VersionHistoryModal(
       <div className="VersionHistoryModal__actions flex flex-wrap items-center justify-between gap-3">
         {canCompare ? (
           <Button
-            variant="primary"
+            variant="blue"
             href={getCompareUrl()}
             target="_blank"
             iconRight={<IconArrowUpRight />}
@@ -262,7 +262,7 @@ export function VersionHistoryModal(
             Compare
           </Button>
         ) : (
-          <Button variant="primary" disabled iconRight={<IconArrowUpRight />}>
+          <Button variant="blue" disabled iconRight={<IconArrowUpRight />}>
             Compare
           </Button>
         )}

@@ -409,6 +409,7 @@ DocPickerModal.DocCard = (props: {
           {props.multiSelect ? (
             selected ? (
               <Button
+                variant="blue-light"
                 size={compact ? 'xs' : 'sm'}
                 onClick={() => {
                   setSelected(false);
@@ -419,7 +420,7 @@ DocPickerModal.DocCard = (props: {
               </Button>
             ) : (
               <Button
-                variant="primary"
+                variant="blue"
                 size={compact ? 'xs' : 'sm'}
                 onClick={() => {
                   setSelected(true);
@@ -431,7 +432,7 @@ DocPickerModal.DocCard = (props: {
             )
           ) : (
             <Button
-              variant="primary"
+              variant="blue"
               size={compact ? 'xs' : 'sm'}
               onClick={() => props.onDocSelected(props.doc)}
             >

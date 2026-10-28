@@ -72,6 +72,17 @@
   --color-danger-soft: var(--cms-color-danger-soft);
   --color-danger-line: var(--cms-color-danger-line);
 
+  /* Colored buttons (`Button` and `IconButton` variants only). */
+  --color-button-blue: var(--cms-button-blue);
+  --color-button-blue-hover: var(--cms-button-blue-hover);
+  --color-button-blue-soft: var(--cms-button-blue-soft);
+  --color-button-blue-soft-hover: var(--cms-button-blue-soft-hover);
+  --color-button-green: var(--cms-button-green);
+  --color-button-green-hover: var(--cms-button-green-hover);
+  --color-button-red: var(--cms-button-red);
+  --color-button-red-hover: var(--cms-button-red-hover);
+  --color-button-red-soft: var(--cms-button-red-soft);
+
   --font-*: initial;
   --font-sans: var(--cms-font-sans);
   --font-mono: var(--cms-font-mono);

@@ -22,6 +22,7 @@ defaults, so only on-scale utilities exist:
 | Text | `text-fg` `text-strong` `text-muted` `text-subtle` (placeholders and disabled only; it fails contrast by design) `text-inverse` `text-link` |
 | Actions | `bg-primary` `bg-primary-hover` `text-on-primary` `bg-accent` `ring-focus` |
 | Status | `{text,bg,border}-{info,success,warning,danger}`, with `-soft` (background) and `-line` (border) variants |
+| Colored buttons | `button-blue` `button-blue-hover` `button-blue-soft` `button-blue-soft-hover` `button-green` `button-green-hover` `button-red` `button-red-hover` `button-red-soft` (used only by the `Button` variants below) |
 | Type | `font-sans` `font-mono`; `text-2xs` 10 (badges only) · `text-xs` 11 · `text-sm` 12 · `text-base` 14 · `text-lg` 16 · `text-xl` 20 · `text-2xl` 24 |
 | Shape | `rounded-sm` 4 · `rounded-md` 6 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-full` |
 | Elevation | `shadow-sm` (cards) · `shadow-md` (menus, popovers) · `shadow-lg` (modals, toasts) |
@@ -119,6 +120,13 @@ re-implement them.
   `onValueChange(value)`.
 - Sizes are `xs` 24px, `sm` 28px (default) and `md` 36px. Mantine's `xs`
   maps to `sm`, and its `sm` to `md`.
+- `Button` and `IconButton` variants: `default` (bordered), `primary` (filled
+  black), `subtle` (borderless), and colored variants that keep the look of
+  the Mantine buttons they replace: `blue`, `blue-light`, `green`, `danger`
+  (filled red), `danger-outline` and `danger-subtle`. Map a Mantine button by
+  its `color` and `variant` (see "Migrating legacy values"). The colored
+  variants sit below 4.5:1 text contrast, as Mantine's did, so the visual
+  tests skip axe's `color-contrast` rule for them only.
 - Notifications go through `utils/notifications.ts` and modals through
   `useModals()`. Keep using those entry points; their internals are swapped.
 - Icons come from `@tabler/icons-preact`, at size 16 by default (14 in dense
@@ -190,6 +198,11 @@ Snap hard-coded values from old CSS onto the scales:
 | `#2b8a3e` | `success` |
 | `#ebfbee` `#d3f9d8` `#dafbe1` | `success-soft` |
 | Mantine `color="dark"` filled | `primary` |
+| Mantine `color="blue"` filled, or a filled `Button` with no `color` (the theme's primary color was blue) | `blue` |
+| Mantine `color="blue"` `variant="light"` | `blue-light` |
+| Mantine `color="green"` filled | `green` |
+| Mantine `color="red"` filled / `variant="outline"` / `variant="subtle"` | `danger` / `danger-outline` / `danger-subtle` |
+| Mantine `color="dark"` `variant="outline"` | `default` |
 | Mantine `variant="default"` | `bg-surface border-border-strong hover:bg-surface-hover` |
 | Font sizes 8–11px | `text-xs` |
 | 12px, 12.5px | `text-sm` |

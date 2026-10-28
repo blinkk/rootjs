@@ -73,12 +73,43 @@ function freezeAnimations() {
   document.head.appendChild(style);
 }
 
+/**
+ * Buttons whose colors match the Mantine buttons they replace, which sit
+ * below 4.5:1 contrast on purpose (see `--cms-button-*` in theme.css). Only
+ * their `color-contrast` results are skipped; every other rule still runs.
+ */
+const MANTINE_COLOR_BUTTONS = [
+  'blue',
+  'blue-light',
+  'green',
+  'danger',
+  'danger-outline',
+  'danger-subtle',
+]
+  .flatMap((variant) => [
+    `.Button--variant-${variant}`,
+    `.IconButton--variant-${variant}`,
+  ])
+  .join(', ');
+
+/** Whether an axe result is a known contrast exception. */
+function isExpectedViolation(id: string, node: axe.NodeResult) {
+  if (id !== 'color-contrast') {
+    return false;
+  }
+  const el = document.querySelector(node.target.join(' '));
+  return Boolean(el?.closest(MANTINE_COLOR_BUTTONS));
+}
+
 /** Summarizes axe violations so a failing test reads as a short list. */
 function formatViolations(violations: axe.Result[]): string[] {
   return violations.flatMap((violation) =>
-    violation.nodes.map(
-      (node) => `${violation.id}: ${node.target.join(' ')} — ${violation.help}`
-    )
+    violation.nodes
+      .filter((node) => !isExpectedViolation(violation.id, node))
+      .map(
+        (node) =>
+          `${violation.id}: ${node.target.join(' ')} — ${violation.help}`
+      )
   );
 }
 

@@ -578,7 +578,7 @@ export function TranslationsTable() {
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                variant="blue"
                 loading={isBulkUpdating}
                 onClick={handleBulkAddTags}
               >

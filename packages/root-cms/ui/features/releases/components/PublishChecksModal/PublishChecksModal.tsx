@@ -84,7 +84,8 @@ export function PublishChecksModal(
       <div className="PublishChecksModal__buttons flex flex-wrap items-center justify-end gap-2">
         {blocked && props.canBypass && (
           <Button
-            className="PublishChecksModal__bypass mr-auto border-danger-line text-danger"
+            variant="danger-outline"
+            className="PublishChecksModal__bypass mr-auto"
             onClick={() => {
               // Record the choice before closing: the close fires the modal's
               // `onClose`, which is what settles the caller's decision.

@@ -1724,7 +1724,7 @@ function ToolApprovalCard(props: {
           Reject
         </Button>
         <Button
-          variant="primary"
+          variant="green"
           size="xs"
           type="button"
           className="RootAIChat__approval__button RootAIChat__approval__button--primary"

@@ -273,9 +273,8 @@ function PermissionGroupEditor(props: PermissionGroupEditorProps) {
       </div>
       <div className="PermissionGroupsBox__editor__footer flex justify-end border-t border-border pt-2">
         <Button
-          variant="subtle"
+          variant="danger-subtle"
           size="xs"
-          className="text-danger"
           disabled={disabled}
           icon={<IconTrash />}
           onClick={confirmDelete}

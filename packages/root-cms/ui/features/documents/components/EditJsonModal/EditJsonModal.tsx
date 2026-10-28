@@ -110,7 +110,7 @@ export function EditJsonModal(
         </Button>
         <Button
           icon={<IconDeviceFloppy />}
-          variant="primary"
+          variant="blue"
           disabled={!valid || !changed}
           onClick={onSave}
         >

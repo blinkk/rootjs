@@ -37,10 +37,10 @@ export function ChatErrorNotice(props: ChatErrorNoticeProps) {
         <div className="ChatErrorNotice__actions ml-auto flex gap-2">
           {props.onDismiss && (
             <Button
-              variant="subtle"
+              variant="danger-subtle"
               size="xs"
               type="button"
-              className="ChatErrorNotice__button text-danger"
+              className="ChatErrorNotice__button"
               disabled={props.busy}
               onClick={props.onDismiss}
             >

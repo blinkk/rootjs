@@ -1356,9 +1356,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 label="Open Google Sheet"
                 href={getSpreadsheetUrl(linkedSheet)}
                 target="_blank"
-                variant="primary"
+                variant="green"
                 size="xs"
-                className="bg-success hover:bg-success hover:brightness-90"
               >
                 <IconTable strokeWidth={2.25} />
               </IconButton>
@@ -1447,7 +1446,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               )}
             </div>
             <Button
-              variant="primary"
+              variant="blue"
               onClick={() => notifyErrors(applyDocTag)}
               loading={loading}
               icon={<IconTool />}

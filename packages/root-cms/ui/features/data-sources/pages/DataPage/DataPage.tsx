@@ -31,10 +31,6 @@ import {DataSource, listDataSources} from '../../data-source.js';
 /** Cells cap their width and truncate, like the old table. */
 const CELL_CLASSES = 'max-w-88 overflow-hidden text-ellipsis';
 
-/** The green "open spreadsheet" button, as in Mantine's filled green. */
-const SHEET_BUTTON_CLASSES =
-  'bg-success text-inverse hover:bg-success hover:brightness-90 active:bg-success';
-
 export function DataPage() {
   usePageTitle('Data Sources');
   const {roles} = useProjectRoles();
@@ -55,11 +51,7 @@ export function DataPage() {
               label="You don't have access to create new data sources"
               condition={!canEdit}
             >
-              <Button
-                variant="primary"
-                href="/cms/data/new"
-                disabled={!canEdit}
-              >
+              <Button variant="blue" href="/cms/data/new" disabled={!canEdit}>
                 New data source
               </Button>
             </ConditionalTooltip>
@@ -172,7 +164,7 @@ DataPage.DataSourcesTable = () => {
                           rel="noreferrer"
                           size="xs"
                           label="Open spreadsheet"
-                          className={SHEET_BUTTON_CLASSES}
+                          variant="green"
                         >
                           <IconTable stroke="2.25" />
                         </IconButton>
