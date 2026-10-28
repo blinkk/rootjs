@@ -1,18 +1,27 @@
 @layer components {
   /*
    * Mantine's dividers between segments, hidden next to the selected one
-   * (the sliding indicator covers it).
+   * (the sliding indicator covers it). They're drawn as a pseudo-element
+   * rather than a border, so the items' rounded corners don't bend them.
    */
   .SegmentedControl__item {
     border: 0;
   }
 
-  .SegmentedControl__item + .SegmentedControl__item {
-    border-left: 1px solid var(--cms-color-border-strong);
+  .SegmentedControl__item + .SegmentedControl__item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background: var(--cms-color-border);
+    pointer-events: none;
   }
 
-  .SegmentedControl__item[aria-checked='true'],
-  .SegmentedControl__item[aria-checked='true'] + .SegmentedControl__item {
-    border-left-color: transparent;
+  .SegmentedControl__item[aria-checked='true']::before,
+  .SegmentedControl__item[aria-checked='true']
+    + .SegmentedControl__item::before {
+    background: transparent;
   }
 }

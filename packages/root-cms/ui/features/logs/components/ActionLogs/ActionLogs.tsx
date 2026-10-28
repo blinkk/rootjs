@@ -759,7 +759,7 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
     ...action.metadata,
   };
   return (
-    <div className="ActionLogsCompactItemDetails flex flex-col gap-2 font-mono pl-6">
+    <div className="ActionLogsCompactItemDetails flex flex-col gap-2 font-mono pl-7">
       <MetadataDisplay metadata={metadata} />
       <QuickLinks action={action} />
     </div>
