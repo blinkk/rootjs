@@ -102,13 +102,13 @@ const TASK_LAYOUT_OPTIONS: Array<{value: TaskLayout; label: JSX.Element}> = [
  * board columns. Custom statuses use the neutral tint.
  */
 const TASK_STATUS_BG_CLASSES: Record<string, string> = {
-  'in-progress': 'bg-info-soft',
-  'in-review': 'bg-warning-soft',
-  closed: 'bg-success-soft',
+  'in-progress': 'bg-task-in-progress',
+  'in-review': 'bg-task-in-review',
+  closed: 'bg-task-closed',
 };
 
 function getTaskStatusBgClass(status: string) {
-  return TASK_STATUS_BG_CLASSES[status] || 'bg-chip';
+  return TASK_STATUS_BG_CLASSES[status] || 'bg-task-new';
 }
 
 /** Classes for the composer's assignee, priority and target date buttons. */

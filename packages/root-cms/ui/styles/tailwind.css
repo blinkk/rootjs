@@ -83,6 +83,15 @@
   --color-button-red-hover: var(--cms-button-red-hover);
   --color-button-red-soft: var(--cms-button-red-soft);
 
+  /* Control tracks (`SegmentedControl`). */
+  --color-track: var(--cms-color-track);
+
+  /* Task status tints (`features/tasks`). */
+  --color-task-new: var(--cms-task-status-new);
+  --color-task-in-progress: var(--cms-task-status-in-progress);
+  --color-task-in-review: var(--cms-task-status-in-review);
+  --color-task-closed: var(--cms-task-status-closed);
+
   --font-*: initial;
   --font-sans: var(--cms-font-sans);
   --font-mono: var(--cms-font-mono);

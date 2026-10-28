@@ -168,7 +168,7 @@ export const SegmentedControl = forwardRef<
         !field && 'SegmentedControl',
         `SegmentedControl--size-${size}`,
         fullWidth && 'SegmentedControl--fullWidth',
-        'relative max-w-full overflow-x-auto rounded-md bg-surface-active p-1',
+        'relative max-w-full overflow-x-auto rounded-md bg-track p-1',
         'aria-invalid:outline-1 aria-invalid:outline-danger',
         fullWidth ? 'flex w-full' : 'inline-flex',
         'pointer-coarse:min-h-10',

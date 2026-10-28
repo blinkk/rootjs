@@ -128,6 +128,20 @@
   /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
   --cms-button-red-soft: #fff5f5;
 
+  /* --- Color: control tracks ------------------------------------------- *
+   * The grey well behind a `SegmentedControl`'s segments (Mantine gray 1).
+   */
+  --cms-color-track: #f1f3f5;
+
+  /* --- Color: task statuses -------------------------------------------- *
+   * Tints for the tasks page's list group headers and board columns, one
+   * per built-in status. Custom statuses use `--cms-task-status-new`.
+   */
+  --cms-task-status-new: #f1f3f5;
+  --cms-task-status-in-progress: #eef3fd;
+  --cms-task-status-in-review: #fdf3ea;
+  --cms-task-status-closed: #eef5f0;
+
   /* --- Color: gradients ------------------------------------------------ *
    * Backgrounds for gradient badges (doc and release statuses, task
    * priorities, translation states), with white text on top. The values
