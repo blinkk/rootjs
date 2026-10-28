@@ -1,6 +1,7 @@
 import type {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
 import {forwardRef} from 'preact/compat';
-import {useRef} from 'preact/hooks';
+import {useLayoutEffect, useRef, useState} from 'preact/hooks';
+import {useMergedRef} from '../../hooks/useMergedRef.js';
 import {cn} from '../../utils/classes.js';
 import {
   Field,
@@ -105,7 +106,10 @@ export const SegmentedControl = forwardRef<
   const id = useFieldId(idProp as string | undefined);
   const field = needsField(props);
   const control = fieldControlProps(id, props);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const setGroupRef = useMergedRef(groupRef, ref);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const indicator = useIndicator(groupRef, itemRefs, value);
   const items = data.map((item) =>
     typeof item === 'string' ? {value: item, label: item} : item
   ) as SegmentedControlItem[];
@@ -154,7 +158,7 @@ export const SegmentedControl = forwardRef<
     <div
       {...rootProps}
       {...control}
-      ref={ref}
+      ref={setGroupRef}
       role="radiogroup"
       aria-labelledby={label ? fieldLabelId(id) : rootProps['aria-labelledby']}
       aria-disabled={disabled || undefined}
@@ -163,7 +167,7 @@ export const SegmentedControl = forwardRef<
         !field && 'SegmentedControl',
         `SegmentedControl--size-${size}`,
         fullWidth && 'SegmentedControl--fullWidth',
-        'max-w-full gap-0.5 overflow-x-auto rounded-md bg-surface-active p-0.5',
+        'relative max-w-full gap-0.5 overflow-x-auto rounded-md bg-surface-active p-0.5',
         'aria-invalid:outline-1 aria-invalid:outline-danger',
         fullWidth ? 'flex w-full' : 'inline-flex',
         ROOT_SIZE_CLASSES[size],
@@ -171,6 +175,25 @@ export const SegmentedControl = forwardRef<
         !field && className
       )}
     >
+      {/* The selected segment's background, which slides between segments. */}
+      <span
+        className={cn(
+          'SegmentedControl__indicator',
+          'pointer-events-none absolute inset-y-0.5 left-0 rounded-sm bg-surface shadow-sm',
+          indicator.animate &&
+            'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
+          !indicator.rect && 'hidden'
+        )}
+        style={
+          indicator.rect
+            ? {
+                width: `${indicator.rect.width}px`,
+                transform: `translateX(${indicator.rect.left}px)`,
+              }
+            : undefined
+        }
+        aria-hidden="true"
+      />
       {items.map((item, index) => {
         const checked = item.value === value;
         return (
@@ -190,7 +213,10 @@ export const SegmentedControl = forwardRef<
               'SegmentedControl__item',
               'm-0 inline-flex shrink-0 cursor-pointer select-none appearance-none items-center py-0 justify-center whitespace-nowrap rounded-sm border-0 bg-transparent font-sans font-medium text-muted transition-colors',
               'hover:text-strong',
-              'aria-checked:bg-surface aria-checked:text-strong aria-checked:shadow-sm',
+              'relative aria-checked:text-strong',
+              // Until the indicator is measured, the segment draws its own.
+              !indicator.rect &&
+                'aria-checked:bg-surface aria-checked:shadow-sm',
               'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus',
               'disabled:cursor-not-allowed disabled:opacity-50',
               fullWidth && 'flex-1',
@@ -225,3 +251,41 @@ export const SegmentedControl = forwardRef<
 }) as unknown as <T extends string = string>(
   props: SegmentedControlProps<T> & {ref?: Ref<HTMLDivElement>}
 ) => ReturnType<FunctionComponent>;
+
+/**
+ * Measures the selected segment so the indicator can sit behind it, and
+ * re-measures when the group resizes. Movement is animated only after the
+ * first placement, so it doesn't slide in on mount.
+ */
+function useIndicator(
+  groupRef: {current: HTMLDivElement | null},
+  itemRefs: {current: Array<HTMLButtonElement | null>},
+  value: string
+) {
+  const [rect, setRect] = useState<{left: number; width: number} | null>(null);
+  const [animate, setAnimate] = useState(false);
+
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    if (!group) {
+      return;
+    }
+    const measure = () => {
+      const item = itemRefs.current.find(
+        (el) => el?.getAttribute('aria-checked') === 'true'
+      );
+      setRect(item ? {left: item.offsetLeft, width: item.offsetWidth} : null);
+    };
+    measure();
+    const frame = requestAnimationFrame(() => setAnimate(true));
+    const observer = new ResizeObserver(measure);
+    observer.observe(group);
+    itemRefs.current.forEach((el) => el && observer.observe(el));
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [value]);
+
+  return {rect, animate};
+}
