@@ -9,6 +9,9 @@ import type {GalleryEntry} from './types.js';
 /** Viewport widths the gallery can preview side by side. */
 const WIDTHS = [375, 768, 1280];
 
+/** `postMessage` type a frame uses to report its content height. */
+const FRAME_HEIGHT_MESSAGE = 'root-cms-gallery-frame-height';
+
 const GROUPS: GalleryEntry['group'][] = [
   'Foundations',
   'Primitives',
@@ -67,7 +70,7 @@ function GalleryShell(props: {entry: GalleryEntry}) {
               <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
                 {group}
               </h2>
-              <ul className="flex flex-wrap gap-1 md:flex-col">
+              <ul className="m-0 flex list-none flex-wrap gap-1 p-0 md:flex-col">
                 {entries.map((e) => (
                   <li key={e.id}>
                     <a
@@ -91,7 +94,7 @@ function GalleryShell(props: {entry: GalleryEntry}) {
           <h2 className="text-xl font-semibold text-strong">
             {props.entry.name}
           </h2>
-          <fieldset className="flex items-center gap-3">
+          <fieldset className="m-0 flex items-center gap-3 border-0 p-0">
             <legend className="sr-only">Viewport widths</legend>
             {WIDTHS.map((width) => (
               <label key={width} className="flex items-center gap-1">
@@ -137,25 +140,19 @@ function GalleryIframe(props: {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(400);
 
+  // The frame reports its content height once the CMS inside it has booted
+  // (see `GalleryFrame`), since the iframe's own body is pinned to 100%.
   useEffect(() => {
-    const iframe = ref.current;
-    if (!iframe) {
-      return;
-    }
-    let observer: ResizeObserver | null = null;
-    const onLoad = () => {
-      const body = iframe.contentDocument?.body;
-      if (!body) {
-        return;
+    const onMessage = (e: MessageEvent) => {
+      if (
+        e.source === ref.current?.contentWindow &&
+        e.data?.type === FRAME_HEIGHT_MESSAGE
+      ) {
+        setHeight(e.data.height);
       }
-      observer = new ResizeObserver(() => setHeight(body.scrollHeight));
-      observer.observe(body);
     };
-    iframe.addEventListener('load', onLoad);
-    return () => {
-      iframe.removeEventListener('load', onLoad);
-      observer?.disconnect();
-    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   const params = new URLSearchParams({frame: '1'});
@@ -172,7 +169,8 @@ function GalleryIframe(props: {
         title={`${props.entry.name} at ${props.width}px`}
         src={`/cms/_ui/${props.entry.id}?${params}`}
         width={props.width}
-        height={height}
+        // Inline, since the base styles set `iframe {height: auto}`.
+        style={{height: `${height}px`}}
         className="block rounded-md border border-border bg-surface"
       />
     </figure>
@@ -181,13 +179,33 @@ function GalleryIframe(props: {
 
 /** What renders inside each iframe: every story of the entry, stacked. */
 export function GalleryFrame(props: {entry: GalleryEntry; themed: boolean}) {
+  const ref = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     applyTestTheme(props.themed);
     return () => applyTestTheme(false);
   }, [props.themed]);
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.parent === window) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      window.parent.postMessage(
+        {type: FRAME_HEIGHT_MESSAGE, height: el.offsetHeight},
+        window.location.origin
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="GalleryFrame flex flex-col gap-8 bg-page p-4 text-fg">
+    <div
+      ref={ref}
+      className="GalleryFrame flex flex-col gap-8 bg-page p-4 text-fg"
+    >
       {Object.entries(props.entry.stories).map(([name, render]) => (
         <section
           key={name}

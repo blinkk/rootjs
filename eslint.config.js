@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import rootConfig from '@blinkk/eslint-config-root';
 
 /**
@@ -7,7 +8,13 @@ import rootConfig from '@blinkk/eslint-config-root';
  * packages/root-cms reports what's left and prunes migrated files.
  */
 const mantineAllowlist = JSON.parse(
-  fs.readFileSync('packages/root-cms/ui/mantine-allowlist.json', 'utf8')
+  fs.readFileSync(
+    path.join(
+      import.meta.dirname,
+      'packages/root-cms/ui/mantine-allowlist.json'
+    ),
+    'utf8'
+  )
 );
 
 export default [

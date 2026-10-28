@@ -29,7 +29,13 @@ const OUT_DIR = path.join(PACKAGE_DIR, '.ui-snapshots');
 const AUTH_PATH = path.join(OUT_DIR, 'auth.json');
 const ROUTES_PATH = path.join(import.meta.dirname, 'ui-snapshots.routes.json');
 
-/** How long to wait after the network goes quiet, for late renders. */
+/**
+ * How long to wait for the network to go quiet. Firestore keeps a connection
+ * open, so pages never reach a true "network idle"; this caps the wait.
+ */
+const NETWORK_IDLE_TIMEOUT_MS = 5000;
+
+/** How long to wait after that, for late renders. */
 const SETTLE_MS = 1000;
 
 interface SnapshotRoute {
@@ -99,7 +105,9 @@ async function capture(label: string) {
     for (const width of widths) {
       await page.setViewportSize({width, height: 900});
       await page.goto(`${values.base}${route.path}`, {waitUntil: 'load'});
-      await page.waitForLoadState('networkidle').catch(() => {});
+      await page
+        .waitForLoadState('networkidle', {timeout: NETWORK_IDLE_TIMEOUT_MS})
+        .catch(() => {});
       await page.waitForTimeout(SETTLE_MS);
       const file = path.join(labelDir, `${route.name}-${width}.png`);
       await page.screenshot({path: file, fullPage: true});

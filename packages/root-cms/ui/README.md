@@ -47,6 +47,13 @@ Lowest to highest priority: `theme` → `base` (`global.css`) → `components` �
 `utilities` → **unlayered** (legacy component CSS, Mantine, project themes,
 custom CSS).
 
+**No CSS reset yet:** Tailwind's preflight is off until Mantine is removed,
+so native defaults still apply. Reset them where you use them: `m-0 list-none
+p-0` on lists, `m-0 border-0 p-0` on fieldsets, `appearance-none` and an
+explicit border/background on buttons and inputs. `global.css` also sets
+`img, svg, iframe {height: auto}`, which overrides `height` attributes, so
+size those elements with classes or inline styles.
+
 **Gotcha while migrating:** unlayered legacy CSS beats every utility,
 whatever its specificity. When you convert an element to utilities, delete
 the legacy rules that target it. Don't style one element half with utilities
