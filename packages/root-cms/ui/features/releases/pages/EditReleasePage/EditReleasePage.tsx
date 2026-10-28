@@ -1,4 +1,3 @@
-import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {IconArchive, IconRestore} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -8,6 +7,8 @@ import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   showNotification,
@@ -16,7 +17,6 @@ import {
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
-import './EditReleasePage.css';
 import {
   Release,
   archiveRelease,
@@ -115,48 +115,47 @@ export function EditReleasePage(props: {id: string}) {
     });
   }
 
+  const archived = Boolean(release?.archivedAt);
+
   return (
     <Layout>
-      <div className="EditReleasePage">
-        <div className="EditReleasePage__header">
-          <Breadcrumbs className="EditReleasePage__header__breadcrumbs">
-            <a href="/cms/releases">Releases</a>
-            <a href={`/cms/releases/${props.id}`}>{props.id}</a>
-            <div>Edit</div>
-          </Breadcrumbs>
-          <div className="EditReleasePage__header__titleWrap">
-            <Heading size="h1">Edit release: {props.id}</Heading>
-            <div className="EditReleasePage__header__controls">
+      <div className="EditReleasePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="EditReleasePage__header mb-5 max-w-150">
+          <Breadcrumbs
+            className="EditReleasePage__breadcrumbs mb-3"
+            items={[
+              {label: 'Releases', href: '/cms/releases'},
+              {label: props.id, href: `/cms/releases/${props.id}`},
+              {label: 'Edit'},
+            ]}
+          />
+          <div className="EditReleasePage__titleWrap flex items-center gap-4">
+            <Heading size="h1" className="min-w-0 break-words">
+              Edit release: {props.id}
+            </Heading>
+            <div className="EditReleasePage__controls flex shrink-0 items-center">
               <ConditionalTooltip
                 label="You don't have access to archive releases"
                 condition={!canPublish}
               >
-                {release?.archivedAt ? (
-                  <Tooltip label="Unarchive" disabled={!canPublish}>
-                    <ActionIcon
-                      onClick={onUnarchiveClicked}
-                      loading={!roles}
-                      disabled={!canPublish}
-                    >
-                      <IconRestore size={20} stroke="1.5" />
-                    </ActionIcon>
-                  </Tooltip>
-                ) : (
-                  <Tooltip label="Archive" disabled={!canPublish}>
-                    <ActionIcon
-                      onClick={onArchiveClicked}
-                      loading={!roles}
-                      disabled={!canPublish}
-                    >
-                      <IconArchive size={20} stroke="1.5" />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
+                <IconButton
+                  label={archived ? 'Unarchive' : 'Archive'}
+                  tooltip={canPublish}
+                  onClick={archived ? onUnarchiveClicked : onArchiveClicked}
+                  loading={!roles}
+                  disabled={!canPublish}
+                >
+                  {archived ? (
+                    <IconRestore stroke="1.5" />
+                  ) : (
+                    <IconArchive stroke="1.5" />
+                  )}
+                </IconButton>
               </ConditionalTooltip>
             </div>
           </div>
         </div>
-        <Surface className="EditReleasePage__form">
+        <Surface className="EditReleasePage__form max-w-172 p-4 md:p-5">
           <ReleaseForm releaseId={props.id} />
         </Surface>
       </div>

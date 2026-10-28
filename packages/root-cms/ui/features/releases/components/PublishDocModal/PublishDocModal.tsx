@@ -1,14 +1,6 @@
 import './PublishDocModal.css';
 
 import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Loader,
-  Modal,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconCalendarEvent,
   IconCircleCheck,
@@ -25,12 +17,19 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
 import {testAiEnabled} from '../../../ai/ai.js';
@@ -76,12 +75,9 @@ export function usePublishDocModal(props: PublishDocModalProps) {
     open: () => {
       modals.openContextModal(MODAL_ID, {
         title: (
-          <span className="PublishDocModal__title">
-            <IconRocket size={18} stroke={1.75} />
-            <span className="PublishDocModal__title__text">
-              Publish {props.docId}
-            </span>
-          </span>
+          <ModalTitle icon={<IconRocket size={18} stroke={1.75} />}>
+            Publish {props.docId}
+          </ModalTitle>
         ),
         innerProps: props,
         size: '640px',
@@ -327,7 +323,7 @@ export function PublishDocModal(
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="PublishDocModal__confirmText"
+            className="PublishDocModal__confirmText mb-2 text-pretty"
           >
             Are you sure you want to publish the following doc? The doc will go
             live {publishType === 'now' ? 'now' : `at ${scheduledDate}`}.
@@ -336,8 +332,7 @@ export function PublishDocModal(
           {(decision.skipped || decision.bypassed) && (
             <Text
               size="body-sm"
-              color="red"
-              className="PublishDocModal__confirmText"
+              className="PublishDocModal__confirmText mt-2 text-pretty text-danger"
             >
               {decision.skipped
                 ? 'Publishing checks will be skipped.'
@@ -388,16 +383,16 @@ export function PublishDocModal(
   }
 
   return (
-    <div className="PublishDocModal">
+    <div className="PublishDocModal text-sm leading-normal text-fg">
       <form
-        className="PublishDocModal__form"
+        className="PublishDocModal__form flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
         }}
       >
         <div
-          className="PublishDocModal__types"
+          className="PublishDocModal__types flex flex-wrap gap-2"
           role="radiogroup"
           aria-label="Publish type"
         >
@@ -405,28 +400,28 @@ export function PublishDocModal(
             selected={publishType === 'now'}
             onClick={() => setPublishType('now')}
           >
-            <IconRocket size={15} stroke={1.75} />
+            <IconRocket size={14} stroke={1.75} />
             Publish now
           </PublishTypeButton>
           <PublishTypeButton
             selected={publishType === 'scheduled'}
             onClick={() => setPublishType('scheduled')}
           >
-            <IconCalendarEvent size={15} stroke={1.75} />
+            <IconCalendarEvent size={14} stroke={1.75} />
             Schedule
           </PublishTypeButton>
           <PublishTypeButton
             selected={publishType === 'release'}
             onClick={() => setPublishType('release')}
           >
-            <IconPackage size={15} stroke={1.75} />
+            <IconPackage size={14} stroke={1.75} />
             Add to release
           </PublishTypeButton>
         </div>
 
         {publishType === 'scheduled' && (
           <PublishField label="Publish at" help={`Timezone: ${timezone}.`}>
-            <input
+            <TextInput
               ref={dateTimeRef}
               className="PublishDocModal__input"
               type="datetime-local"
@@ -467,17 +462,14 @@ export function PublishDocModal(
                 : 'Optional. Describes the changes in the doc’s publish history.'
             }
           >
-            <div className="PublishDocModal__message">
-              <textarea
-                className={joinClassNames(
-                  'PublishDocModal__input',
-                  'PublishDocModal__input--textarea',
-                  aiAvailable && 'PublishDocModal__input--withAction'
-                )}
+            <div className="PublishDocModal__message relative">
+              <Textarea
+                className="PublishDocModal__input"
+                inputClassName={cn('resize-y', aiAvailable && 'pr-10')}
                 placeholder="What changed?"
                 aria-label="Publish message"
                 value={publishMessage}
-                rows={2}
+                minRows={2}
                 onInput={(e: Event) => {
                   const target = e.target as HTMLTextAreaElement;
                   setPublishMessage(target.value);
@@ -485,22 +477,18 @@ export function PublishDocModal(
                 }}
               />
               {aiAvailable && (
-                <Tooltip
-                  className="PublishDocModal__message__action"
-                  label="Suggest a publish message with Root AI"
-                  position="left"
-                  withArrow
-                >
-                  <ActionIcon
+                <div className="PublishDocModal__messageAction absolute right-1.5 top-1.5">
+                  <IconButton
                     variant="default"
-                    size="sm"
-                    aria-label="Suggest a publish message with Root AI"
+                    size="xs"
+                    label="Suggest a publish message with Root AI"
+                    tooltipPlacement="left"
                     loading={generatingMessage}
                     onClick={() => generatePublishMessage()}
                   >
-                    <IconRobot size={15} stroke={1.75} />
-                  </ActionIcon>
-                </Tooltip>
+                    <IconRobot stroke={1.75} />
+                  </IconButton>
+                </div>
               )}
             </div>
           </PublishField>
@@ -531,10 +519,8 @@ export function PublishDocModal(
             action={
               <Button
                 variant="subtle"
-                color="dark"
                 size="xs"
-                compact
-                leftIcon={<IconPlayerPlay size={13} stroke={1.75} />}
+                icon={<IconPlayerPlay stroke={1.75} />}
                 loading={checksRunning}
                 onClick={() => previewChecks()}
               >
@@ -550,9 +536,8 @@ export function PublishDocModal(
             />
             {publishChecks.isAdmin && (
               <Checkbox
-                className="PublishDocModal__skipChecks"
+                className="PublishDocModal__skipChecks mt-1"
                 label="Skip publishing checks (admins only)"
-                size="xs"
                 checked={skipChecks}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   setSkipChecks(e.currentTarget.checked);
@@ -562,28 +547,19 @@ export function PublishDocModal(
           </PublishField>
         )}
 
-        <div className="PublishDocModal__buttons">
+        <div className="PublishDocModal__buttons mt-1 flex justify-end gap-2">
+          <Button onClick={() => context.closeModal(id)}>Cancel</Button>
           <Button
-            variant="default"
-            onClick={() => context.closeModal(id)}
-            type="button"
-            size="xs"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="filled"
-            size="xs"
-            color="dark"
+            variant="primary"
             disabled={disabled}
             loading={loading || checksRunning || releaseActions.submitting}
-            leftIcon={
+            icon={
               publishType === 'scheduled' ? (
-                <IconCalendarEvent size={15} stroke={1.75} />
+                <IconCalendarEvent stroke={1.75} />
               ) : publishType === 'release' ? (
-                <IconPackage size={15} stroke={1.75} />
+                <IconPackage stroke={1.75} />
               ) : (
-                <IconRocket size={15} stroke={1.75} />
+                <IconRocket stroke={1.75} />
               )
             }
             type="submit"
@@ -593,6 +569,23 @@ export function PublishDocModal(
         </div>
       </form>
     </div>
+  );
+}
+
+/** A modal title with a leading icon. */
+function ModalTitle(props: {
+  icon: ComponentChildren;
+  children: ComponentChildren;
+}) {
+  return (
+    <span className="PublishDocModal__title flex min-w-0 items-center gap-2">
+      <span className="PublishDocModal__titleIcon flex shrink-0">
+        {props.icon}
+      </span>
+      <span className="PublishDocModal__titleText wrap-anywhere">
+        {props.children}
+      </span>
+    </span>
   );
 }
 
@@ -607,9 +600,14 @@ function PublishTypeButton(props: {
       type="button"
       role="radio"
       aria-checked={props.selected}
-      className={joinClassNames(
+      className={cn(
         'PublishDocModal__type',
-        props.selected && 'PublishDocModal__type--selected'
+        props.selected && 'PublishDocModal__type--selected',
+        'm-0 inline-flex h-control-sm cursor-pointer appearance-none items-center gap-1.5 whitespace-nowrap rounded-sm border border-solid px-3 font-sans text-sm font-semibold transition-colors',
+        'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
+        props.selected
+          ? 'border-info-line bg-info-soft text-info'
+          : 'border-border-strong bg-surface text-fg hover:bg-surface-hover'
       )}
       onClick={props.onClick}
     >
@@ -626,17 +624,84 @@ function PublishField(props: {
   children: ComponentChildren;
 }) {
   return (
-    <div className="PublishDocModal__field">
-      <div className="PublishDocModal__field__header">
-        <div className="PublishDocModal__field__label">{props.label}</div>
+    <div className="PublishDocModal__field flex flex-col gap-1.5">
+      <div className="PublishDocModal__fieldHeader flex min-h-6 items-center justify-between gap-2">
+        <div className="PublishDocModal__fieldLabel text-sm font-semibold">
+          {props.label}
+        </div>
         {props.action && (
-          <div className="PublishDocModal__field__action">{props.action}</div>
+          <div className="PublishDocModal__fieldAction">{props.action}</div>
         )}
       </div>
       {props.help && (
-        <div className="PublishDocModal__field__help">{props.help}</div>
+        <div className="PublishDocModal__fieldHelp -mt-1 text-xs text-muted">
+          {props.help}
+        </div>
       )}
       {props.children}
+    </div>
+  );
+}
+
+/** A bordered box of `Row`s, used for the changes, checks and releases. */
+function Panel(props: {
+  className?: string;
+  children: ComponentChildren;
+  [key: string]: unknown;
+}) {
+  const {className, children, ...rest} = props;
+  return (
+    <div
+      {...rest}
+      className={cn(
+        'PublishDocModal__panel overflow-hidden rounded-lg border border-solid border-border bg-surface',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Classes shared by `Row` and `ReleaseOption`. */
+const ROW_CLASSES =
+  'PublishDocModal__row flex min-h-10 items-center gap-2.5 border-0 border-t border-solid border-surface-active px-3 py-2 first:border-t-0';
+
+/**
+ * A line in a `Panel`: an icon, a label, a message and an optional action.
+ * Below `sm` the message moves under the label.
+ */
+function Row(props: {
+  icon: ComponentChildren;
+  label?: string;
+  message: ComponentChildren;
+  messageClassName?: string;
+  action?: ComponentChildren;
+}) {
+  return (
+    <div className={cn(ROW_CLASSES, 'max-sm:flex-wrap')}>
+      <span className="PublishDocModal__rowIcon flex w-4 shrink-0 items-center justify-center">
+        {props.icon}
+      </span>
+      {props.label && (
+        <div className="PublishDocModal__rowLabel shrink-0 font-semibold max-sm:min-w-0 max-sm:flex-1 sm:w-32">
+          {props.label}
+        </div>
+      )}
+      <div
+        className={cn(
+          'PublishDocModal__rowMessage min-w-0 flex-1 text-muted wrap-anywhere',
+          props.label && 'max-sm:order-last max-sm:basis-full max-sm:pl-6',
+          props.messageClassName
+        )}
+      >
+        {props.message}
+      </div>
+      {props.action && (
+        <div className="PublishDocModal__rowAction shrink-0">
+          {props.action}
+        </div>
+      )}
     </div>
   );
 }
@@ -668,120 +733,90 @@ function ChangesPanel(props: {docId: string; aiAvailable: boolean}) {
   }
 
   return (
-    <div className="PublishDocModal__panel">
-      <div className="PublishDocModal__row">
-        <IconGitCompare
-          className="PublishDocModal__row__icon"
-          size={17}
-          stroke={1.75}
-        />
-        <div className="PublishDocModal__row__label">Diff</div>
-        <div className="PublishDocModal__row__message">
-          Compare the draft to the published version.
-        </div>
-        <Button
-          className="PublishDocModal__row__button"
-          variant="default"
-          size="xs"
-          compact
-          onClick={() => setDiffOpen(true)}
-        >
-          View diff
-        </Button>
-      </div>
-      {props.aiAvailable && (
-        <div className="PublishDocModal__row">
-          <IconRobot
-            className="PublishDocModal__row__icon"
-            size={17}
-            stroke={1.75}
-          />
-          <div className="PublishDocModal__row__label">AI summary</div>
-          <div className="PublishDocModal__row__message">
-            Summarize the changes with Root AI.
-          </div>
-          <Button
-            className="PublishDocModal__row__button"
-            variant="default"
-            size="xs"
-            compact
-            onClick={() => openSummary()}
-          >
-            {hasSummary ? 'View summary' : 'Summarize'}
+    <Panel>
+      <Row
+        icon={<IconGitCompare size={16} stroke={1.75} />}
+        label="Diff"
+        message="Compare the draft to the published version."
+        action={
+          <Button size="xs" onClick={() => setDiffOpen(true)}>
+            View diff
           </Button>
-        </div>
+        }
+      />
+      {props.aiAvailable && (
+        <Row
+          icon={<IconRobot size={16} stroke={1.75} />}
+          label="AI summary"
+          message="Summarize the changes with Root AI."
+          action={
+            <Button size="xs" onClick={() => openSummary()}>
+              {hasSummary ? 'View summary' : 'Summarize'}
+            </Button>
+          }
+        />
       )}
 
-      <Modal
-        opened={diffOpen}
+      <Dialog
+        open={diffOpen}
         onClose={() => setDiffOpen(false)}
         title={
-          <span className="PublishDocModal__title">
-            <IconGitCompare size={18} stroke={1.75} />
-            <span className="PublishDocModal__title__text">
-              Changes to {docId}
-            </span>
-          </span>
+          <ModalTitle icon={<IconGitCompare size={18} stroke={1.75} />}>
+            Changes to {docId}
+          </ModalTitle>
         }
         size="min(calc(100% - 32px), 900px)"
-        overflow="inside"
       >
-        <DocDiffViewer
-          className="PublishDocModal__diff"
-          left={{docId, versionId: 'published'}}
-          right={{docId, versionId: 'draft'}}
-          showExpandButton={true}
-          showAiSummary={false}
-        />
-      </Modal>
+        {diffOpen && (
+          <DocDiffViewer
+            className="PublishDocModal__diff"
+            left={{docId, versionId: 'published'}}
+            right={{docId, versionId: 'draft'}}
+            showExpandButton={true}
+            showAiSummary={false}
+          />
+        )}
+      </Dialog>
 
-      <Modal
-        opened={summaryOpen}
+      <Dialog
+        open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
         title={
-          <span className="PublishDocModal__title">
-            <IconRobot size={18} stroke={1.75} />
-            <span className="PublishDocModal__title__text">
-              AI summary of changes
-            </span>
-          </span>
+          <ModalTitle icon={<IconRobot size={18} stroke={1.75} />}>
+            AI summary of changes
+          </ModalTitle>
         }
         size="640px"
+        footer={
+          <>
+            <Button
+              icon={<IconRobot stroke={1.75} />}
+              disabled={aiSummary.status === 'loading'}
+              onClick={() => aiSummary.generate()}
+            >
+              Regenerate
+            </Button>
+            <Button variant="primary" onClick={() => setSummaryOpen(false)}>
+              Done
+            </Button>
+          </>
+        }
       >
-        <div className="PublishDocModal__summary">
+        <div className="PublishDocModal__summary flex flex-col gap-3 text-sm leading-normal">
           <Text size="body-sm" color="gray">
             Root AI compared the draft of {docId} to the published version.
             Review the summary before relying on it.
           </Text>
-          <div className="PublishDocModal__summary__body">
+          <div className="PublishDocModal__summaryBody min-h-16 rounded-lg border border-solid border-border px-4 py-3">
             <AiSummaryResult
               status={aiSummary.status}
               summary={aiSummary.summary}
               error={aiSummary.error}
             />
           </div>
-          <div className="PublishDocModal__buttons">
-            <Button
-              variant="default"
-              size="xs"
-              leftIcon={<IconRobot size={15} stroke={1.75} />}
-              disabled={aiSummary.status === 'loading'}
-              onClick={() => aiSummary.generate()}
-            >
-              Regenerate
-            </Button>
-            <Button
-              variant="filled"
-              color="dark"
-              size="xs"
-              onClick={() => setSummaryOpen(false)}
-            >
-              Done
-            </Button>
-          </div>
         </div>
-      </Modal>
-    </div>
+      </Dialog>
+    </Panel>
   );
 }
 
@@ -796,37 +831,38 @@ function PublishChecksList(props: {
   running: boolean;
 }) {
   return (
-    <div className="PublishDocModal__panel">
+    <Panel>
       {props.checks.map((check) => {
         const result = props.results?.find(
           (r) => r.docId === props.docId && r.checkId === check.id
         );
         return (
-          <div className="PublishDocModal__row" key={check.id}>
-            <span className="PublishDocModal__row__icon">
+          <Row
+            key={check.id}
+            icon={
               <CheckStatusIcon
                 result={result}
                 level={check.level}
                 running={props.running}
               />
-            </span>
-            <div className="PublishDocModal__row__label">{check.label}</div>
-            <div className="PublishDocModal__row__message">
-              {result ? (
+            }
+            label={check.label}
+            message={
+              result ? (
                 <Markdown
-                  className="PublishDocModal__row__markdown"
+                  className="PublishDocModal__markdown"
                   code={result.message}
                 />
               ) : props.running ? (
                 'Running...'
               ) : (
                 check.description || 'Not run yet.'
-              )}
-            </div>
-          </div>
+              )
+            }
+          />
         );
       })}
-    </div>
+    </Panel>
   );
 }
 
@@ -837,21 +873,21 @@ function CheckStatusIcon(props: {
   running: boolean;
 }) {
   if (props.running) {
-    return <Loader size={15} color="gray" />;
+    return <Spinner size="sm" className="text-muted" />;
   }
   const result = props.result;
   if (!result) {
-    return <IconCircleDashed size={17} stroke={1.75} color="#adb5bd" />;
+    return <IconCircleDashed className="text-subtle" size={16} stroke={1.75} />;
   }
   if (result.status === 'success') {
-    return <IconCircleCheck size={17} stroke={1.75} color="#2f9e44" />;
+    return <IconCircleCheck className="text-success" size={16} stroke={1.75} />;
   }
   // Errors from warning-level checks don't block publishing, so they're shown
   // as warnings.
   if (result.status === 'error' && props.level === 'required') {
-    return <IconCircleX size={17} stroke={1.75} color="#e03131" />;
+    return <IconCircleX className="text-danger" size={16} stroke={1.75} />;
   }
-  return <IconAlertTriangle size={17} stroke={1.75} color="#f08c00" />;
+  return <IconAlertTriangle className="text-warning" size={16} stroke={1.75} />;
 }
 
 /** Checks if a doc has unpublished changes (draft is newer than published). */
@@ -920,39 +956,45 @@ function ReferenceDocs(props: {docIds: string[]; onBundle: () => void}) {
   }
   return (
     <PublishField label="Referenced docs">
-      <div className="PublishDocModal__panel">
-        <div className="PublishDocModal__row">
-          <IconAlertTriangle
-            className="PublishDocModal__row__icon"
-            size={17}
-            stroke={1.75}
-            color="#f08c00"
-          />
-          <div className="PublishDocModal__row__message PublishDocModal__row__message--wide">
-            {count === 1
+      <Panel>
+        <Row
+          icon={
+            <IconAlertTriangle
+              className="text-warning"
+              size={16}
+              stroke={1.75}
+            />
+          }
+          message={
+            count === 1
               ? '1 referenced doc has unpublished changes.'
-              : `${count} referenced docs have unpublished changes.`}
-          </div>
-          <Button
-            className="PublishDocModal__row__button"
-            variant="default"
-            size="xs"
-            compact
-            onClick={() => props.onBundle()}
-          >
-            Bundle into a release
-          </Button>
-        </div>
-        <DocList docIds={props.docIds} />
-      </div>
+              : `${count} referenced docs have unpublished changes.`
+          }
+          messageClassName="text-fg"
+          action={
+            <Button size="xs" onClick={() => props.onBundle()}>
+              Bundle into a release
+            </Button>
+          }
+        />
+        <DocList docIds={props.docIds} indent />
+      </Panel>
     </PublishField>
   );
 }
 
-/** A compact list of doc preview cards. */
-function DocList(props: {docIds: string[]}) {
+/**
+ * A compact list of doc preview cards. `indent` lines the cards up under the
+ * text of the row above them.
+ */
+function DocList(props: {docIds: string[]; indent?: boolean}) {
   return (
-    <div className="PublishDocModal__docs">
+    <div
+      className={cn(
+        'PublishDocModal__docs flex flex-col divide-y divide-surface-active border-0 border-solid border-surface-active not-first:border-t',
+        props.indent && 'PublishDocModal__docs--indent'
+      )}
+    >
       {props.docIds.map((docId) => (
         <DocPreviewCard
           key={docId}
@@ -996,22 +1038,14 @@ function ReleaseFields(props: ReleaseFieldsProps) {
         label="Release"
         help="Docs in a release go live together when the release is published."
       >
-        <div
-          className="PublishDocModal__panel"
-          role="radiogroup"
-          aria-label="Release"
-        >
+        <Panel role="radiogroup" aria-label="Release">
           {(props.loading || props.releases.length > 0) && (
-            <div className="PublishDocModal__releases">
+            <div className="PublishDocModal__releases max-h-52 overflow-y-auto">
               {props.loading ? (
-                <div className="PublishDocModal__row">
-                  <span className="PublishDocModal__row__icon">
-                    <Loader size={15} color="gray" />
-                  </span>
-                  <div className="PublishDocModal__row__message">
-                    Loading releases...
-                  </div>
-                </div>
+                <Row
+                  icon={<Spinner size="sm" className="text-muted" />}
+                  message="Loading releases..."
+                />
               ) : (
                 props.releases.map((release) => (
                   <ReleaseOption
@@ -1037,57 +1071,48 @@ function ReleaseFields(props: ReleaseFieldsProps) {
             }
           />
           {props.choice === NEW_RELEASE && (
-            <div className="PublishDocModal__newRelease">
-              <label className="PublishDocModal__newRelease__field">
-                <span className="PublishDocModal__field__label">
-                  Release ID
-                </span>
-                <input
-                  className="PublishDocModal__input"
-                  type="text"
-                  placeholder="e.g. my-release"
-                  value={props.newReleaseId}
-                  onInput={(e: Event) => {
-                    props.onNewReleaseIdChange(
-                      (e.target as HTMLInputElement).value
-                    );
-                  }}
-                />
-              </label>
-              <label className="PublishDocModal__newRelease__field">
-                <span className="PublishDocModal__field__label">
-                  Description (optional)
-                </span>
-                <textarea
-                  className="PublishDocModal__input PublishDocModal__input--textarea"
-                  rows={2}
-                  placeholder="Describe this release"
-                  value={props.newReleaseDescription}
-                  onInput={(e: Event) => {
-                    props.onNewReleaseDescriptionChange(
-                      (e.target as HTMLTextAreaElement).value
-                    );
-                  }}
-                />
-              </label>
+            <div className="PublishDocModal__newRelease flex flex-col gap-3 pb-3 pl-9 pr-3 pt-1">
+              <TextInput
+                className="PublishDocModal__newReleaseId"
+                label="Release ID"
+                placeholder="e.g. my-release"
+                value={props.newReleaseId}
+                onInput={(e: Event) => {
+                  props.onNewReleaseIdChange(
+                    (e.target as HTMLInputElement).value
+                  );
+                }}
+              />
+              <Textarea
+                className="PublishDocModal__newReleaseDescription"
+                inputClassName="resize-y"
+                label="Description (optional)"
+                minRows={2}
+                placeholder="Describe this release"
+                value={props.newReleaseDescription}
+                onInput={(e: Event) => {
+                  props.onNewReleaseDescriptionChange(
+                    (e.target as HTMLTextAreaElement).value
+                  );
+                }}
+              />
             </div>
           )}
-        </div>
+        </Panel>
       </PublishField>
 
       <PublishField label={`Docs to add (${props.docIds.length})`}>
-        <div className="PublishDocModal__panel">
+        <Panel>
           <DocList docIds={props.docIds} />
-        </div>
+        </Panel>
         {refCount > 0 && (
           <Checkbox
-            className="PublishDocModal__includeRefs"
+            className="PublishDocModal__includeRefs mt-1"
             label={
               refCount === 1
                 ? 'Include 1 referenced doc with unpublished changes'
                 : `Include ${refCount} referenced docs with unpublished changes`
             }
-            size="xs"
             checked={props.includeRefDocs}
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
               props.onIncludeRefDocsChange(e.currentTarget.checked);
@@ -1109,27 +1134,31 @@ function ReleaseOption(props: {
 }) {
   return (
     <label
-      className={joinClassNames(
-        'PublishDocModal__row',
+      className={cn(
+        ROW_CLASSES,
         'PublishDocModal__row--option',
-        props.selected && 'PublishDocModal__row--selected'
+        props.selected && 'PublishDocModal__row--selected',
+        'cursor-pointer',
+        props.selected ? 'bg-info-soft' : 'hover:bg-surface-hover'
       )}
     >
       <input
-        className="PublishDocModal__row__icon"
+        className="PublishDocModal__rowIcon m-0 w-4 shrink-0 cursor-pointer accent-primary"
         type="radio"
         name="publish-release"
         checked={props.selected}
         onChange={() => props.onSelect()}
       />
-      <div className="PublishDocModal__row__label PublishDocModal__row__label--auto">
+      <div className="PublishDocModal__rowLabel max-w-1/2 shrink-0 truncate font-semibold">
         {props.label}
       </div>
-      <div className="PublishDocModal__row__message PublishDocModal__row__message--truncate">
+      <div className="PublishDocModal__rowMessage min-w-0 flex-1 truncate text-muted">
         {props.message}
       </div>
       {props.meta && (
-        <div className="PublishDocModal__row__meta">{props.meta}</div>
+        <div className="PublishDocModal__rowMeta shrink-0 text-xs text-muted">
+          {props.meta}
+        </div>
       )}
     </label>
   );

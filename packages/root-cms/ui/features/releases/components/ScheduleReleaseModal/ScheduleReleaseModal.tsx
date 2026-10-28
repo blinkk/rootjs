@@ -1,17 +1,16 @@
-import {Button} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useState, useRef} from 'preact/hooks';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
 import {scheduleRelease} from '../../release.js';
 import {usePublishChecks} from '../../usePublishChecks.js';
-
-import './ScheduleReleaseModal.css';
 
 const MODAL_ID = 'ScheduleReleaseModal';
 
@@ -91,54 +90,39 @@ export function ScheduleReleaseModal(
 
   return (
     <div className="ScheduleReleaseModal">
-      <div className="ScheduleReleaseModal__content">
-        <form
-          className="ScheduleReleaseModal__form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            schedule();
-          }}
-        >
-          <div className="ScheduleReleaseModal__form__description">
-            Content in the release will go live at the datetime specified below.
+      <form
+        className="ScheduleReleaseModal__form flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          schedule();
+        }}
+      >
+        <div className="ScheduleReleaseModal__description text-sm leading-normal text-fg">
+          Content in the release will go live at the datetime specified below.
+        </div>
+        <div className="ScheduleReleaseModal__dateInput flex flex-col gap-1">
+          <TextInput
+            ref={dateTimeRef}
+            type="datetime-local"
+            aria-label="Go-live date and time"
+            value={scheduledDate}
+            min={getLocalISOString()}
+            onChange={(e: Event) => {
+              const target = e.target as HTMLInputElement;
+              setScheduledDate(target.value);
+            }}
+          />
+          <div className="ScheduleReleaseModal__timezone text-right text-xs text-muted">
+            timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
           </div>
-          <div className="ScheduleReleaseModal__form__dateInput">
-            <input
-              ref={dateTimeRef}
-              type="datetime-local"
-              value={scheduledDate}
-              min={getLocalISOString()}
-              onChange={(e: Event) => {
-                const target = e.target as HTMLInputElement;
-                setScheduledDate(target.value);
-              }}
-            />
-            <div className="ScheduleReleaseModal__form__dateInput__help">
-              timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-            </div>
-          </div>
-          <div className="ScheduleReleaseModal__form__buttons">
-            <Button
-              variant="outline"
-              onClick={() => context.closeModal(id)}
-              type="button"
-              size="xs"
-              color="dark"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="filled"
-              size="xs"
-              color="dark"
-              loading={loading}
-              type="submit"
-            >
-              Schedule
-            </Button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div className="ScheduleReleaseModal__buttons mt-2 flex justify-end gap-3">
+          <Button onClick={() => context.closeModal(id)}>Cancel</Button>
+          <Button variant="primary" loading={loading} type="submit">
+            Schedule
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -1,6 +1,3 @@
-import './ReleasesPage.css';
-
-import {Button, Loader, SegmentedControl} from '@mantine/core';
 import {
   IconCalendarTime,
   IconDatabase,
@@ -18,7 +15,10 @@ import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testCanPublish} from '../../../users/permissions.js';
@@ -38,11 +38,11 @@ export function ReleasesPage() {
 
   return (
     <Layout>
-      <div className="ReleasesPage">
-        <div className="ReleasesPage__header">
-          <div className="ReleasesPage__header__text">
+      <div className="ReleasesPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="ReleasesPage__header mb-8 flex max-w-7xl flex-wrap items-start gap-4">
+          <div className="ReleasesPage__headerText min-w-0 grow basis-100">
             <Heading size="h1">Releases</Heading>
-            <Text as="p">
+            <Text as="p" className="mb-0 mt-2 max-w-prose">
               Bundle one or more documents and publish them together. Schedule a
               release to go live at a specific time, or publish manually when
               you're ready.
@@ -53,13 +53,10 @@ export function ReleasesPage() {
             condition={!canPublish}
           >
             <Button
-              component="a"
-              color="dark"
-              size="xs"
-              leftIcon={<IconPlus size={16} />}
+              variant="primary"
+              icon={<IconPlus />}
               href="/cms/releases/new"
               disabled={!canPublish}
-              style={!canPublish ? {pointerEvents: 'none'} : undefined}
             >
               New release
             </Button>
@@ -92,6 +89,13 @@ function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
   }
   return isArchived;
 }
+
+/**
+ * Body cell classes: a table cell from `md` up, and a plain block in the
+ * stacked rows below it.
+ */
+const CELL_CLASSES =
+  'ReleasesPage__cell block p-0 md:table-cell md:border-0 md:border-b md:border-solid md:border-surface-active md:px-4 md:py-3 md:align-top md:group-last/row:border-b-0 md:group-hover/row:bg-surface-hover';
 
 ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   const [loading, setLoading] = useState(true);
@@ -136,25 +140,25 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   }, []);
 
   return (
-    <div className="ReleasesPage__ReleasesTable">
-      {loading && <Loader color="gray" size="xl" />}
+    <div className="ReleasesPage__releases max-w-7xl">
+      {loading && <Spinner size="lg" className="text-muted" />}
       {!loading && tableData.length === 0 && (
         <ReleasesPage.EmptyState canPublish={props.canPublish} />
       )}
       {!loading && tableData.length > 0 && (
         <>
-          <div className="ReleasesPage__ReleasesTable__filters">
+          <div className="ReleasesPage__filters mb-4">
             <SegmentedControl
               aria-label="Release filters"
-              size="sm"
+              size="md"
               value={filter}
-              onChange={(value: ReleaseListFilter) => setFilter(value)}
+              onValueChange={(value) => setFilter(value)}
               data={FILTER_OPTIONS.map((option) => ({
                 value: option.value,
                 label: (
-                  <span className="ReleasesPage__ReleasesTable__filter">
+                  <span className="ReleasesPage__filter flex items-center justify-center gap-1.5 whitespace-nowrap">
                     {option.label}
-                    <span className="ReleasesPage__ReleasesTable__filter__count">
+                    <span className="ReleasesPage__filterCount rounded-full bg-chip px-1.5 text-xs leading-4 text-muted">
                       {filterCounts[option.value] ?? 0}
                     </span>
                   </span>
@@ -163,28 +167,51 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
             />
           </div>
           {filteredReleases.length > 0 && (
-            <Surface className="ReleasesPage__ReleasesTable__surface">
-              <table className="ReleasesPage__ReleasesTable__table">
-                <thead>
+            <Surface className="ReleasesPage__tableSurface rounded-xl">
+              {/*
+               * Below `md` the table collapses into stacked rows: the release,
+               * its status and author, then its contents.
+               */}
+              <table className="ReleasesPage__table w-full border-collapse text-sm text-fg max-md:block">
+                <thead className="max-md:hidden">
                   <tr>
-                    <th>Release</th>
-                    <th>Contents</th>
-                    <th>Created by</th>
-                    <th>Status</th>
+                    {['Release', 'Contents', 'Created by', 'Status'].map(
+                      (label) => (
+                        <th
+                          key={label}
+                          className="ReleasesPage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
+                        >
+                          {label}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="max-md:block">
                   {filteredReleases.map((release) => (
-                    <tr key={release.id}>
-                      <td>
+                    <tr
+                      key={release.id}
+                      className="ReleasesPage__row group/row max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-2 max-md:border-0 max-md:border-b max-md:border-solid max-md:border-surface-active max-md:p-4 max-md:last:border-b-0"
+                    >
+                      <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
                         <ReleasesPage.ReleaseCell release={release} />
                       </td>
-                      <td>
+                      <td
+                        className={cn(
+                          CELL_CLASSES,
+                          'max-md:order-last max-md:w-full'
+                        )}
+                      >
                         <ReleasesPage.ContentsCell release={release} />
                       </td>
-                      <td>
+                      <td
+                        className={cn(
+                          CELL_CLASSES,
+                          'max-md:min-w-0 max-md:flex-1'
+                        )}
+                      >
                         {release.createdBy ? (
-                          <div className="ReleasesPage__ReleasesTable__createdBy">
+                          <div className="ReleasesPage__createdBy flex min-w-0 items-center gap-2 whitespace-nowrap">
                             <UserAvatar
                               email={release.createdBy}
                               size={24}
@@ -193,13 +220,13 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                             <UserTag email={release.createdBy} />
                           </div>
                         ) : (
-                          <span className="ReleasesPage__ReleasesTable__empty">
+                          <span className="ReleasesPage__empty text-muted">
                             —
                           </span>
                         )}
                       </td>
-                      <td>
-                        <div className="ReleasesPage__ReleasesTable__publishStatus">
+                      <td className={CELL_CLASSES}>
+                        <div className="ReleasesPage__publishStatus flex items-center gap-1.5">
                           <ReleaseStatusBadge release={release} />
                         </div>
                       </td>
@@ -212,7 +239,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
           {filteredReleases.length === 0 && (
             <Surface>
               <Text
-                className="ReleasesPage__ReleasesTable__noResults"
+                className="ReleasesPage__noResults px-5 py-10 text-center"
                 size="body-sm"
                 color="gray"
               >
@@ -231,20 +258,24 @@ ReleasesPage.ReleaseCell = (props: {release: Release}) => {
   const release = props.release;
   return (
     <a
-      className="ReleasesPage__ReleasesTable__release"
+      className="ReleasesPage__release group block min-w-0 text-fg no-underline"
       href={`/cms/releases/${release.id}`}
     >
-      <div className="ReleasesPage__ReleasesTable__release__title">
+      <div className="ReleasesPage__releaseTitle text-base font-semibold text-strong wrap-anywhere underline-offset-3 group-hover:underline">
         {release.description || release.id}
       </div>
       {release.description && (
-        <div className="ReleasesPage__ReleasesTable__release__id">
+        <div className="ReleasesPage__releaseId mt-0.5 font-mono text-sm text-muted wrap-anywhere">
           {release.id}
         </div>
       )}
     </a>
   );
 };
+
+/** Classes shared by the doc, data source and "more" chips. */
+const CHIP_CLASSES =
+  'inline-flex h-6 max-w-60 items-center gap-1 whitespace-nowrap rounded-md px-2 text-sm';
 
 /** Max number of chips to show before collapsing the rest. */
 const CONTENTS_CHIP_LIMIT = 6;
@@ -268,33 +299,47 @@ ReleasesPage.ContentsCell = (props: {release: Release}) => {
     })),
   ];
   if (items.length === 0) {
-    return <span className="ReleasesPage__ReleasesTable__empty">—</span>;
+    return <span className="ReleasesPage__empty text-muted">—</span>;
   }
   const collapsed = !expanded && items.length > CONTENTS_CHIP_LIMIT;
   const visibleItems = collapsed
     ? items.slice(0, CONTENTS_CHIP_LIMIT - 1)
     : items;
   return (
-    <div className="ReleasesPage__contents">
+    <div className="ReleasesPage__contents flex max-w-105 flex-wrap gap-1">
       {visibleItems.map((item) => (
         <a
-          className={joinClassNames(
-            'ReleasesPage__contents__chip',
-            item.isDataSource && 'ReleasesPage__contents__chip--dataSource'
+          className={cn(
+            'ReleasesPage__chip',
+            item.isDataSource && 'ReleasesPage__chip--dataSource',
+            CHIP_CLASSES,
+            'font-mono no-underline',
+            item.isDataSource
+              ? 'bg-success-soft text-success hover:brightness-95'
+              : 'bg-surface-hover text-fg hover:bg-surface-active'
           )}
           href={item.href}
           title={item.id}
           key={item.href}
         >
           {item.isDataSource && (
-            <IconDatabase size={12} stroke={2} aria-label="Data source" />
+            <IconDatabase
+              className="shrink-0"
+              size={12}
+              stroke={2}
+              aria-label="Data source"
+            />
           )}
-          <span className="ReleasesPage__contents__chip__label">{item.id}</span>
+          <span className="ReleasesPage__chipLabel truncate">{item.id}</span>
         </a>
       ))}
       {items.length > CONTENTS_CHIP_LIMIT && (
         <button
-          className="ReleasesPage__contents__chip ReleasesPage__contents__chip--more"
+          className={cn(
+            'ReleasesPage__chip ReleasesPage__chip--more',
+            CHIP_CLASSES,
+            'm-0 cursor-pointer appearance-none border border-dashed border-border-strong bg-surface font-sans font-medium text-muted hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+          )}
           type="button"
           onClick={() => setExpanded(!expanded)}
         >
@@ -335,29 +380,32 @@ const EMPTY_STATE_STEPS: EmptyStateStep[] = [
 /** Shown in place of the releases table when a project has no releases. */
 ReleasesPage.EmptyState = (props: {canPublish: boolean}) => {
   return (
-    <Surface className="ReleasesPage__EmptyState">
-      <div className="ReleasesPage__EmptyState__icon">
+    <Surface className="ReleasesPage__emptyState flex flex-col items-center px-4 py-12 text-center md:px-6">
+      <div className="ReleasesPage__emptyStateIcon mb-4 flex size-16 items-center justify-center rounded-full bg-info-soft text-info">
         <IconRocket size={32} stroke={1.5} />
       </div>
-      <Heading size="h2" className="ReleasesPage__EmptyState__title">
+      <Heading size="h2" className="ReleasesPage__emptyStateTitle">
         No releases yet
       </Heading>
       <Text
         as="p"
         size="body-sm"
         color="gray"
-        className="ReleasesPage__EmptyState__description"
+        className="ReleasesPage__emptyStateDescription mx-auto mb-0 mt-2 max-w-md"
       >
         Releases group changes across multiple documents so they go live
         together, either right away or at a scheduled time.
       </Text>
-      <ol className="ReleasesPage__EmptyState__steps">
+      <ol className="ReleasesPage__steps mx-0 my-8 grid w-full max-w-190 list-none grid-cols-1 gap-4 p-0 text-left md:grid-cols-3">
         {EMPTY_STATE_STEPS.map((step, i) => (
-          <li className="ReleasesPage__EmptyState__step" key={step.title}>
-            <div className="ReleasesPage__EmptyState__step__icon">
+          <li
+            className="ReleasesPage__step flex gap-3 rounded-lg border border-solid border-border p-4"
+            key={step.title}
+          >
+            <div className="ReleasesPage__stepIcon shrink-0 text-muted">
               {step.icon}
             </div>
-            <div className="ReleasesPage__EmptyState__step__body">
+            <div className="ReleasesPage__stepBody flex flex-col gap-1">
               <Text size="body-sm" weight="semi-bold">
                 {i + 1}. {step.title}
               </Text>
@@ -373,12 +421,10 @@ ReleasesPage.EmptyState = (props: {canPublish: boolean}) => {
         condition={!props.canPublish}
       >
         <Button
-          component="a"
-          color="blue"
-          size="sm"
+          variant="primary"
+          size="md"
           href="/cms/releases/new"
           disabled={!props.canPublish}
-          style={!props.canPublish ? {pointerEvents: 'none'} : undefined}
         >
           Create your first release
         </Button>

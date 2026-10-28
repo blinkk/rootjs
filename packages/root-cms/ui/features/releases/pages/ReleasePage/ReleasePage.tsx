@@ -1,16 +1,6 @@
 import './ReleasePage.css';
 
 import {
-  ActionIcon,
-  Breadcrumbs,
-  Button,
-  Checkbox,
-  Loader,
-  SegmentedControl,
-  Table,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconDatabase,
   IconFile,
   IconListSearch,
@@ -18,6 +8,7 @@ import {
   IconSettings,
   IconSparkles,
 } from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
 import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
@@ -29,12 +20,19 @@ import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {getTimeAgo} from '../../../../utils/time.js';
@@ -175,38 +173,36 @@ export function ReleasePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="ReleasePage__layout">
-        <div className="ReleasePage">
-          <div className="ReleasePage__header">
-            <Breadcrumbs className="ReleasePage__header__breadcrumbs">
-              <a href="/cms/releases">Releases</a>
-              <div>{id}</div>
-            </Breadcrumbs>
-            <div className="ReleasePage__header__titleWrap">
-              <Heading size="h1">{id}</Heading>
+      {/*
+       * `overflow-hidden!` beats the layout's own (unlayered) `overflow: auto`
+       * on its first child, so only the page and the AI panel scroll.
+       */}
+      <div className="ReleasePage__layout relative flex overflow-hidden!">
+        <div className="ReleasePage min-w-0 flex-1 overflow-auto bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+          <div className="ReleasePage__header mb-5">
+            <Breadcrumbs
+              className="ReleasePage__breadcrumbs mb-3"
+              items={[{label: 'Releases', href: '/cms/releases'}, {label: id}]}
+            />
+            <div className="ReleasePage__titleWrap flex flex-wrap items-center gap-3">
+              <Heading size="h1" className="min-w-0 wrap-anywhere">
+                {id}
+              </Heading>
               {release && <ReleaseStatusBadge release={release} />}
-              <div className="ReleasePage__header__actions">
-                <Tooltip label="Configure">
-                  <ActionIcon
-                    className="ReleasePage__header__configure"
-                    component="a"
-                    variant="default"
-                    size={30}
-                    href={`/cms/releases/${props.id}/edit`}
-                  >
-                    <IconSettings size={16} stroke="1.5" />
-                  </ActionIcon>
-                </Tooltip>
+              <div className="ReleasePage__headerActions flex flex-wrap items-start gap-2 md:ml-auto">
+                <IconButton
+                  className="ReleasePage__configure"
+                  label="Configure"
+                  variant="default"
+                  href={`/cms/releases/${props.id}/edit`}
+                >
+                  <IconSettings stroke="1.5" />
+                </IconButton>
                 {aiEnabled && (
                   <Button
-                    className={joinClassNames(
-                      'ReleasePage__header__ai',
-                      aiVisible && 'ReleasePage__header__ai--active'
-                    )}
-                    variant="default"
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconRobot size={16} />}
+                    className="ReleasePage__aiToggle aria-pressed:bg-surface-active"
+                    icon={<IconRobot />}
+                    aria-pressed={aiVisible}
                     onClick={() =>
                       aiVisible ? closeAi() : setAiVisible(() => true)
                     }
@@ -221,13 +217,13 @@ export function ReleasePage(props: {id: string}) {
             </div>
             {release?.description && (
               <Markdown
-                className="ReleasePage__header__description"
+                className="ReleasePage__description mt-2 max-w-200"
                 code={release.description}
               />
             )}
             {release && (
               <Text
-                className="ReleasePage__header__meta"
+                className="ReleasePage__meta mt-2"
                 size="body-sm"
                 color="gray"
               >
@@ -236,18 +232,19 @@ export function ReleasePage(props: {id: string}) {
             )}
           </div>
           <SegmentedControl
-            className="ReleasePage__tabs"
-            size="sm"
+            className="ReleasePage__tabs mb-5"
+            aria-label="Release views"
+            size="md"
             value={tab}
-            onChange={(value: string) => setTabParam(value)}
+            onValueChange={(value) => setTabParam(value)}
             data={[
               {label: 'Overview', value: 'overview'},
               {
                 label: (
-                  <span className="ReleasePage__tabs__label">
+                  <span className="ReleasePage__tabLabel flex items-center gap-1.5">
                     Changes
                     {diff && (
-                      <span className="ReleasePage__tabs__count">
+                      <span className="ReleasePage__tabCount rounded-lg bg-chip px-1.5 text-sm font-medium">
                         {numChanged}
                       </span>
                     )}
@@ -259,7 +256,7 @@ export function ReleasePage(props: {id: string}) {
           />
 
           {loading ? (
-            <Loader color="gray" size="xl" />
+            <Spinner size="lg" className="text-muted" />
           ) : release ? (
             tab === 'overview' ? (
               <ReleasePage.Overview
@@ -326,7 +323,7 @@ function ReleasePageAiPanel(props: ReleasePageAiPanelProps) {
     [props.releaseId]
   );
   return (
-    <div className="ReleasePage__ai">
+    <div className="ReleasePage__ai overflow-hidden bg-surface max-md:absolute max-md:inset-0 max-md:z-(--cms-z-sticky) md:w-105 md:shrink-0 md:border-0 md:border-l md:border-solid md:border-border">
       <RootAIChat
         variant="panel"
         releaseContext={releaseContext}
@@ -419,7 +416,7 @@ ReleasePage.Actions = (props: {
             the release will go live immediately.
           </Text>
           {(decision.skipped || decision.bypassed) && (
-            <Text size="body-sm" color="red">
+            <Text size="body-sm" className="text-danger">
               {decision.skipped
                 ? 'Publishing checks will be skipped.'
                 : 'Failed required checks will be bypassed.'}
@@ -516,13 +513,13 @@ ReleasePage.Actions = (props: {
             the release was published. Drafts are not changed.
           </Text>
           {conflicts.length > 0 && (
-            <div className="ReleasePage__rollbackConflicts">
+            <div className="ReleasePage__rollbackConflicts mt-3 rounded-sm border border-solid border-danger-line bg-danger-soft px-3 py-2.5">
               <Text size="body-sm" weight="semi-bold">
                 Warning: the following items have been published or unpublished
                 since the release was published. Rolling back will overwrite
                 those changes.
               </Text>
-              <ul>
+              <ul className="mb-0 mt-2 max-h-50 overflow-y-auto pl-5">
                 {conflicts.map((conflict) => (
                   <li key={rollbackConflictLabel(conflict)}>
                     <Text size="body-sm">
@@ -584,8 +581,8 @@ ReleasePage.Actions = (props: {
   }
 
   return (
-    <div className="ReleasePage__actions">
-      <div className="ReleasePage__actions__buttons">
+    <div className="ReleasePage__actions flex flex-col items-start gap-1.5 md:items-end">
+      <div className="ReleasePage__actionButtons flex flex-wrap gap-2">
         {!release.archivedAt && !release.scheduledAt && release.publishedAt && (
           <ConditionalTooltip
             label="You don't have access to rollback this release"
@@ -593,15 +590,11 @@ ReleasePage.Actions = (props: {
           >
             <Tooltip
               label="Restore the items in the release to their state before the release was published"
-              position="bottom"
-              withArrow
-              wrapLines
-              width={220}
+              placement="bottom"
+              contentClassName="max-w-55"
               disabled={!canPublish}
             >
               <Button
-                variant="default"
-                size="xs"
                 onClick={() => onRollbackClicked()}
                 loading={rollbackLoading}
                 disabled={!canPublish || publishLoading}
@@ -619,13 +612,10 @@ ReleasePage.Actions = (props: {
             >
               <Tooltip
                 label="Cancel the scheduled release"
-                position="bottom"
-                withArrow
+                placement="bottom"
                 disabled={!canPublish}
               >
                 <Button
-                  variant="default"
-                  size="xs"
                   onClick={() => onCancelScheduleClicked()}
                   disabled={!canPublish}
                 >
@@ -640,15 +630,11 @@ ReleasePage.Actions = (props: {
             >
               <Tooltip
                 label="Schedule the release to be published at a future date"
-                position="bottom"
-                withArrow
-                wrapLines
-                width={180}
+                placement="bottom"
+                contentClassName="max-w-45"
                 disabled={!canPublish}
               >
                 <Button
-                  variant="default"
-                  size="xs"
                   onClick={() => onScheduleClicked()}
                   disabled={!canPublish}
                 >
@@ -664,13 +650,11 @@ ReleasePage.Actions = (props: {
           >
             <Tooltip
               label="Publish the release immediately"
-              position="bottom"
-              withArrow
+              placement="bottom"
               disabled={!canPublish}
             >
               <Button
-                color="dark"
-                size="xs"
+                variant="primary"
                 onClick={() => onPublishClicked()}
                 loading={publishLoading || checksRunning}
                 disabled={!canPublish}
@@ -687,9 +671,8 @@ ReleasePage.Actions = (props: {
       </div>
       {!release.archivedAt && releaseHasChecks && publishChecks.isAdmin && (
         <Checkbox
-          className="ReleasePage__actions__skipChecks"
+          className="ReleasePage__skipChecks"
           label="Skip publishing checks (admins only)"
-          size="xs"
           checked={skipChecks}
           onChange={(e: ChangeEvent<HTMLInputElement>) => {
             setSkipChecks(e.currentTarget.checked);
@@ -730,17 +713,11 @@ ReleasePage.Overview = (props: {
   }
 
   return (
-    <div className="ReleasePage__Overview">
-      <div className="ReleasePage__Overview__main">
-        <div className="ReleasePage__sectionHeader">
+    <div className="ReleasePage__overview flex flex-wrap items-start gap-7">
+      <div className="ReleasePage__overviewMain min-w-0 max-w-250 shrink grow-999 basis-140">
+        <div className="ReleasePage__sectionHeader mb-4 flex h-8 items-center gap-4">
           <Heading size="h2">Contents</Heading>
-          <Button
-            component="a"
-            variant="default"
-            size="xs"
-            compact
-            href={`/cms/releases/${release.id}/edit`}
-          >
+          <Button size="xs" href={`/cms/releases/${release.id}/edit`}>
             Edit
           </Button>
         </div>
@@ -749,16 +726,25 @@ ReleasePage.Overview = (props: {
             Nothing has been added to this release yet.
           </Text>
         ) : (
-          <Surface className="ReleasePage__Contents">
-            <Table verticalSpacing="sm" fontSize="sm">
-              <thead>
+          <Surface className="ReleasePage__contents">
+            {/*
+             * Below `md` the table collapses into stacked rows: the item, then
+             * its status and when it was last modified.
+             */}
+            <table className="ReleasePage__contentsTable w-full border-collapse text-sm text-fg max-md:block">
+              <thead className="max-md:hidden">
                 <tr>
-                  <th>Item</th>
-                  <th>Status</th>
-                  <th>Last modified</th>
+                  {['Item', 'Status', 'Last modified'].map((label) => (
+                    <th
+                      key={label}
+                      className="ReleasePage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
+                    >
+                      {label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="max-md:block">
                 {docIds.map((docId) => (
                   <ReleasePage.ContentsDocRow
                     key={docId}
@@ -775,16 +761,17 @@ ReleasePage.Overview = (props: {
                   />
                 ))}
               </tbody>
-            </Table>
+            </table>
           </Surface>
         )}
       </div>
       {/* The sidebar is hidden until something is added to the release. */}
       {!isEmpty && (
-        <div className="ReleasePage__Overview__side">
+        // The top padding aligns the cards with the top of the contents table.
+        <div className="ReleasePage__overviewSide flex max-w-115 shrink grow basis-105 flex-col gap-4 md:pt-12">
           {props.onSummarize && props.onAudit && (
-            <Surface className="ReleasePage__card">
-              <div className="ReleasePage__card__title">
+            <Surface className="ReleasePage__card flex flex-col gap-2.5 p-4">
+              <div className="ReleasePage__cardTitle flex items-center gap-1.5 text-base font-semibold text-fg">
                 <IconRobot size={16} />
                 Root AI
               </div>
@@ -792,21 +779,17 @@ ReleasePage.Overview = (props: {
                 Get a summary of what this release changes, or have it checked
                 for anything that looks unintentional.
               </Text>
-              <div className="ReleasePage__card__buttons">
+              <div className="ReleasePage__cardButtons flex flex-wrap gap-2">
                 <Button
-                  variant="default"
                   size="xs"
-                  compact
-                  leftIcon={<IconSparkles size={14} />}
+                  icon={<IconSparkles />}
                   onClick={props.onSummarize}
                 >
                   Summarize
                 </Button>
                 <Button
-                  variant="default"
                   size="xs"
-                  compact
-                  leftIcon={<IconListSearch size={14} />}
+                  icon={<IconListSearch />}
                   onClick={props.onAudit}
                 >
                   Audit
@@ -814,9 +797,11 @@ ReleasePage.Overview = (props: {
               </div>
             </Surface>
           )}
-          <Surface className="ReleasePage__card">
-            <div className="ReleasePage__card__title">Details</div>
-            <dl className="ReleasePage__details">
+          <Surface className="ReleasePage__card flex flex-col gap-2.5 p-4">
+            <div className="ReleasePage__cardTitle flex items-center gap-1.5 text-base font-semibold text-fg">
+              Details
+            </div>
+            <dl className="ReleasePage__details m-0 grid gap-x-4 gap-y-2 text-sm">
               <ReleasePage.DetailsRow
                 label="Created"
                 at={release.createdAt}
@@ -866,14 +851,60 @@ ReleasePage.DetailsRow = (props: {
   const hasDate = testTimestamp(props.at);
   return (
     <>
-      <dt>{props.label}</dt>
-      <dd>
+      <dt className="ReleasePage__detailsLabel text-muted">{props.label}</dt>
+      <dd className="ReleasePage__detailsValue m-0 text-right text-fg wrap-anywhere">
         {hasDate ? formatDetailsDate(props.at) : '—'}
         {hasDate && props.by && ` by ${props.by}`}
       </dd>
     </>
   );
 };
+
+/** Classes for a row of the contents table; see `CELL_CLASSES`. */
+const ROW_CLASSES =
+  'ReleasePage__row group/row max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-2 max-md:border-0 max-md:border-b max-md:border-solid max-md:border-surface-active max-md:p-4 max-md:last:border-b-0';
+
+/**
+ * Classes for a cell of the contents table: a table cell from `md` up, and a
+ * plain block in the stacked rows below it.
+ */
+const CELL_CLASSES =
+  'ReleasePage__cell block p-0 md:table-cell md:border-0 md:border-b md:border-solid md:border-surface-active md:px-4 md:py-2.5 md:align-middle md:group-last/row:border-b-0';
+
+/** The icon, title and subtitle of an item in the contents table. */
+function ContentsItemLink(props: {
+  href: string;
+  icon: ComponentChildren;
+  iconClassName: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <a
+      className="ReleasePage__item group flex items-center gap-3 text-fg no-underline"
+      href={props.href}
+    >
+      <div
+        className={cn(
+          'ReleasePage__itemIcon flex size-8 shrink-0 items-center justify-center rounded-md',
+          props.iconClassName
+        )}
+      >
+        {props.icon}
+      </div>
+      <div className="ReleasePage__itemText min-w-0">
+        <div className="ReleasePage__itemTitle font-semibold wrap-anywhere underline-offset-3 group-hover:underline">
+          {props.title}
+        </div>
+        {props.subtitle && (
+          <div className="ReleasePage__itemSubtitle mt-0.5 text-sm text-muted wrap-anywhere">
+            {props.subtitle}
+          </div>
+        )}
+      </div>
+    </a>
+  );
+}
 
 ReleasePage.ContentsDocRow = (props: {
   docId: string;
@@ -887,38 +918,29 @@ ReleasePage.ContentsDocRow = (props: {
   const title = doc ? getDocTitle(docId, doc) : '';
   const sys: any = doc?.sys;
   return (
-    <tr>
-      <td>
-        <a
-          className="ReleasePage__Contents__item"
+    <tr className={ROW_CLASSES}>
+      <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
+        <ContentsItemLink
           href={`/cms/content/${docId}`}
-        >
-          <div className="ReleasePage__Contents__item__icon ReleasePage__Contents__item__icon--doc">
-            <IconFile size={16} stroke={1.5} />
-          </div>
-          <div className="ReleasePage__Contents__item__text">
-            <div className="ReleasePage__Contents__item__title">
-              {title || docId}
-            </div>
-            {title && (
-              <div className="ReleasePage__Contents__item__id">{docId}</div>
-            )}
-          </div>
-        </a>
+          icon={<IconFile size={16} stroke={1.5} />}
+          iconClassName="ReleasePage__itemIcon--doc bg-info-soft text-info"
+          title={title || docId}
+          subtitle={title ? docId : undefined}
+        />
       </td>
-      <td>
+      <td className={CELL_CLASSES}>
         {doc ? (
           <DocStatusBadges doc={doc} docId={docId} hideReleases />
         ) : props.loading ? (
-          <Loader size="xs" color="gray" />
+          <Spinner size="sm" className="text-muted" />
         ) : (
           <Text size="body-sm" color="gray">
             Not found
           </Text>
         )}
       </td>
-      <td>
-        <div className="ReleasePage__Contents__modified">
+      <td className={cn(CELL_CLASSES, 'max-md:min-w-0 max-md:flex-1')}>
+        <div className="ReleasePage__modified text-sm">
           <ReleasePage.ModifiedBy at={sys?.modifiedAt} by={sys?.modifiedBy} />
         </div>
       </td>
@@ -932,26 +954,21 @@ ReleasePage.ContentsDataSourceRow = (props: {
 }) => {
   const ds = props.dataSource;
   return (
-    <tr>
-      <td>
-        <a
-          className="ReleasePage__Contents__item"
+    <tr className={ROW_CLASSES}>
+      <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
+        <ContentsItemLink
           href={`/cms/data/${props.id}`}
-        >
-          <div className="ReleasePage__Contents__item__icon ReleasePage__Contents__item__icon--dataSource">
-            <IconDatabase size={16} stroke={1.5} />
-          </div>
-          <div className="ReleasePage__Contents__item__text">
-            <div className="ReleasePage__Contents__item__title">{props.id}</div>
-            <div className="ReleasePage__Contents__item__id">
-              {ds?.description || 'Data source'}
-            </div>
-          </div>
-        </a>
+          icon={<IconDatabase size={16} stroke={1.5} />}
+          iconClassName="ReleasePage__itemIcon--dataSource bg-success-soft text-success"
+          title={props.id}
+          subtitle={ds?.description || 'Data source'}
+        />
       </td>
-      <td>{ds && <ReleasePage.DataSourceStatusBadges dataSource={ds} />}</td>
-      <td>
-        <div className="ReleasePage__Contents__modified">
+      <td className={CELL_CLASSES}>
+        {ds && <ReleasePage.DataSourceStatusBadges dataSource={ds} />}
+      </td>
+      <td className={cn(CELL_CLASSES, 'max-md:min-w-0 max-md:flex-1')}>
+        <div className="ReleasePage__modified text-sm">
           <ReleasePage.ModifiedBy at={ds?.syncedAt} by={ds?.syncedBy} />
         </div>
       </td>
@@ -971,8 +988,8 @@ ReleasePage.ModifiedBy = (props: {at?: unknown; by?: string}) => {
   return (
     <>
       {hasDate && (
-        <Tooltip label={formatDate(props.at)} transition="pop" withArrow>
-          <span className="ReleasePage__Contents__modified__date">
+        <Tooltip label={formatDate(props.at)}>
+          <span className="ReleasePage__modifiedDate cursor-default underline decoration-dotted underline-offset-3">
             {formatTimeAgo(props.at)}
           </span>
         </Tooltip>
@@ -1041,7 +1058,7 @@ ReleasePage.Changes = (props: {
     docs[0];
 
   if (props.diffLoading) {
-    return <Loader color="gray" size="md" />;
+    return <Spinner className="text-muted" />;
   }
   if (!diff || docs.length === 0) {
     return (
@@ -1055,8 +1072,8 @@ ReleasePage.Changes = (props: {
   const numChanged = docs.filter((doc) => doc.status !== 'unchanged').length;
 
   return (
-    <div className="ReleasePage__Changes">
-      <div className="ReleasePage__Changes__toolbar">
+    <div className="ReleasePage__changes flex flex-col gap-4">
+      <div className="ReleasePage__changesToolbar">
         <Text size="body-sm" color="gray">
           {numChanged} of {docs.length} {docs.length === 1 ? 'doc' : 'docs'}{' '}
           changed, comparing <b>{labels.before}</b> to <b>{labels.after}</b>.
@@ -1065,28 +1082,31 @@ ReleasePage.Changes = (props: {
         </Text>
       </div>
 
-      <Surface className="ReleasePage__Changes__panes">
-        <div className="ReleasePage__Changes__list" role="listbox">
+      <Surface className="ReleasePage__changesPanes flex min-h-100 flex-col md:flex-row">
+        <div
+          className="ReleasePage__changesList max-h-60 shrink-0 overflow-y-auto border-0 border-b border-solid border-border py-2 md:max-h-none md:w-70 md:border-b-0 md:border-r"
+          role="listbox"
+          aria-label="Docs"
+        >
           {docs.map((doc) => (
             <button
               key={doc.docId}
               type="button"
               role="option"
               aria-selected={doc === selected}
-              className={joinClassNames(
-                'ReleasePage__Changes__list__item',
-                doc === selected && 'ReleasePage__Changes__list__item--active'
-              )}
+              className="ReleasePage__changesItem m-0 flex w-full cursor-pointer appearance-none flex-col gap-1 border-0 bg-transparent px-4 py-2.5 text-left font-sans text-fg hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus aria-selected:bg-surface-active"
               onClick={() => setSelectedDocId(doc.docId)}
             >
-              <div className="ReleasePage__Changes__list__item__docId">
+              <div className="ReleasePage__changesDocId text-sm font-semibold wrap-anywhere">
                 {doc.docId}
               </div>
-              <div className="ReleasePage__Changes__list__item__meta">
+              <div className="ReleasePage__changesMeta flex items-center gap-2 text-sm text-muted">
                 <span
-                  className={joinClassNames(
+                  className={cn(
                     'ReleasePage__status',
-                    `ReleasePage__status--${doc.status}`
+                    `ReleasePage__status--${doc.status}`,
+                    'rounded-sm px-1.5 py-px text-xs font-semibold',
+                    STATUS_CLASSES[doc.status]
                   )}
                 >
                   {DOC_DIFF_STATUS_LABELS[doc.status]}
@@ -1102,17 +1122,16 @@ ReleasePage.Changes = (props: {
             </button>
           ))}
         </div>
-        <div className="ReleasePage__Changes__diff">
+        <div className="ReleasePage__changesDiff min-w-0 flex-1 p-4 md:px-6 md:py-5">
           {selected && (
             <>
-              <div className="ReleasePage__Changes__diff__header">
-                <Heading size="h3">{selected.docId}</Heading>
+              <div className="ReleasePage__changesDiffHeader mb-4 flex items-center gap-3">
+                <Heading size="h3" className="min-w-0 wrap-anywhere">
+                  {selected.docId}
+                </Heading>
                 <Button
-                  className="ReleasePage__Changes__diff__header__open"
-                  component="a"
-                  variant="default"
+                  className="ReleasePage__openDoc ml-auto"
                   size="xs"
-                  compact
                   href={`/cms/content/${selected.docId}`}
                 >
                   Open doc
@@ -1131,6 +1150,15 @@ ReleasePage.Changes = (props: {
       </Surface>
     </div>
   );
+};
+
+/** Colors of the status pill in the changes list. */
+const STATUS_CLASSES: Record<ReleaseDocDiffStatus, string> = {
+  added: 'bg-success-soft text-success',
+  removed: 'bg-danger-soft text-danger',
+  modified: 'bg-warning-soft text-warning',
+  unchanged: 'bg-chip text-muted',
+  missing: 'bg-danger-soft text-danger',
 };
 
 /** Fetches the data sources with the given ids, keyed by id. */

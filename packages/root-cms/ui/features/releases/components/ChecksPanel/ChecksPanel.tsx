@@ -1,10 +1,10 @@
 import './ChecksPanel.css';
 
-import {Button} from '@mantine/core';
 import {IconPlayerPlay} from '@tabler/icons-preact';
 import {useCallback, useState} from 'preact/hooks';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {cn} from '../../../../utils/classes.js';
 import {CheckStatusBadge} from '../CheckStatusBadge/CheckStatusBadge.js';
 
 /** Status result from a check run. */
@@ -15,6 +15,13 @@ interface CheckResult {
   message: string;
   metadata?: Record<string, any>;
 }
+
+/** Background and border for a check's result, by status. */
+const RESULT_CLASSES: Record<CheckStatus, string> = {
+  success: 'border-success-line bg-success-soft',
+  warning: 'border-warning-line bg-warning-soft',
+  error: 'border-danger-line bg-danger-soft',
+};
 
 interface CheckState {
   loading: boolean;
@@ -109,21 +116,17 @@ export function ChecksPanel(props: ChecksPanelProps) {
   }, [props.docId, checks]);
 
   return (
-    <div className="ChecksPanel">
-      <div className="ChecksPanel__header">
-        <div className="ChecksPanel__header__title">Checks</div>
-        <Button
-          variant="default"
-          size="xs"
-          compact
-          leftIcon={<IconPlayerPlay size={12} />}
-          onClick={onRunAll}
-        >
+    <div className="ChecksPanel flex h-full flex-col overflow-hidden">
+      <div className="ChecksPanel__header flex h-9 shrink-0 items-center justify-between gap-2 border-0 border-b border-solid border-border bg-surface px-3">
+        <div className="ChecksPanel__title text-sm font-semibold text-fg">
+          Checks
+        </div>
+        <Button size="xs" icon={<IconPlayerPlay />} onClick={onRunAll}>
           Run All
         </Button>
       </div>
-      <div className="ChecksPanel__body">
-        <div className="ChecksPanel__checks">
+      <div className="ChecksPanel__body flex-1 overflow-auto p-3">
+        <div className="ChecksPanel__checks flex flex-col gap-2.5">
           {checks.map((check) => {
             const state = states[check.id];
             return (
@@ -151,9 +154,9 @@ function CheckItem(props: CheckItemProps) {
   const {check, state, onRun} = props;
 
   return (
-    <div className="ChecksPanel__check">
-      <div className="ChecksPanel__check__header">
-        <div className="ChecksPanel__check__label">
+    <div className="ChecksPanel__check rounded-md border border-solid border-border p-3">
+      <div className="ChecksPanel__checkHeader flex items-center justify-between gap-2">
+        <div className="ChecksPanel__checkLabel flex flex-wrap items-center gap-1.5 text-sm font-medium text-fg">
           {check.label}
           {state?.result && (
             <CheckStatusBadge
@@ -163,10 +166,8 @@ function CheckItem(props: CheckItemProps) {
           )}
         </div>
         <Button
-          className="ChecksPanel__check__runButton"
-          variant="default"
+          className="ChecksPanel__runButton"
           size="xs"
-          compact
           loading={state?.loading}
           onClick={onRun}
         >
@@ -174,22 +175,26 @@ function CheckItem(props: CheckItemProps) {
         </Button>
       </div>
       {check.description && (
-        <div className="ChecksPanel__check__description">
+        <div className="ChecksPanel__checkDescription mt-1 pr-12 text-xs leading-snug text-muted">
           {check.description}
         </div>
       )}
       {state?.result && (
         <div
-          className={joinClassNames(
-            'ChecksPanel__check__result',
-            `ChecksPanel__check__result--${state.result.status}`
+          className={cn(
+            'ChecksPanel__result',
+            `ChecksPanel__result--status-${state.result.status}`,
+            'mt-2.5 rounded-sm border border-solid p-2.5 text-sm leading-normal text-fg',
+            RESULT_CLASSES[state.result.status]
           )}
         >
           <Markdown code={state.result.message} />
         </div>
       )}
       {state?.error && (
-        <div className="ChecksPanel__check__error">{state.error}</div>
+        <div className="ChecksPanel__error mt-2.5 rounded-sm border border-solid border-danger-line bg-danger-soft p-2.5 text-sm text-danger">
+          {state.error}
+        </div>
       )}
     </div>
   );

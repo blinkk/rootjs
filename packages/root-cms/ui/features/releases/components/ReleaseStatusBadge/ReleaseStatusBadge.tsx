@@ -1,13 +1,10 @@
-import {Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
+import {ComponentChildren} from 'preact';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {getTimeAgo} from '../../../../utils/time.js';
 import {StatusBadge} from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
 import {Release} from '../../release.js';
 import '../../../documents/components/DocStatusBadges/DocStatusBadges.css';
-
-const TOOLTIP_PROPS = {
-  transition: 'pop',
-};
 
 export interface ReleaseStatusBadgeProps {
   release: Release;
@@ -17,55 +14,65 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   const release = props.release;
   if (testIsValidTimestamp(release.archivedAt)) {
     return (
-      <Tooltip
-        {...TOOLTIP_PROPS}
+      <StatusTooltip
         label={`Archived ${timeDiff(release.archivedAt)} by ${
           release.archivedBy
         }`}
       >
         <StatusBadge tone="archived">Archived</StatusBadge>
-      </Tooltip>
+      </StatusTooltip>
     );
   }
   if (testIsValidTimestamp(release.scheduledAt)) {
     return (
-      <Tooltip
-        {...TOOLTIP_PROPS}
+      <StatusTooltip
         label={`Scheduled ${formatDateTime(release.scheduledAt)} by ${
           release.scheduledBy
         }`}
-        wrapLines
-        width={240}
       >
         <StatusBadge tone="scheduled">Scheduled</StatusBadge>
-      </Tooltip>
+      </StatusTooltip>
     );
   }
   if (testIsValidTimestamp(release.publishedAt)) {
     return (
-      <Tooltip
-        {...TOOLTIP_PROPS}
+      <StatusTooltip
         label={`Published ${timeDiff(release.publishedAt)} by ${
           release.publishedBy
         }`}
       >
         <StatusBadge tone="published">Published</StatusBadge>
-      </Tooltip>
+      </StatusTooltip>
     );
   }
   if (testIsValidTimestamp(release.rolledBackAt)) {
     return (
-      <Tooltip
-        {...TOOLTIP_PROPS}
+      <StatusTooltip
         label={`Rolled back ${timeDiff(release.rolledBackAt)} by ${
           release.rolledBackBy
         }`}
       >
         <StatusBadge tone="draft">Rolled back</StatusBadge>
-      </Tooltip>
+      </StatusTooltip>
     );
   }
-  return <StatusBadge tone="draft">Unpublished</StatusBadge>;
+  return (
+    <span className="ReleaseStatusBadge inline-flex">
+      <StatusBadge tone="draft">Unpublished</StatusBadge>
+    </span>
+  );
+}
+
+/**
+ * A tooltip on a status badge. The badge doesn't forward its ref, so it's
+ * wrapped in a span the tooltip can anchor to.
+ */
+function StatusTooltip(props: {label: string; children: ComponentChildren}) {
+  return (
+    <Tooltip label={props.label} contentClassName="max-w-60">
+      <span className="ReleaseStatusBadge inline-flex">{props.children}</span>
+    </Tooltip>
+  );
 }
 
 function testIsValidTimestamp(ts: any): ts is Timestamp {

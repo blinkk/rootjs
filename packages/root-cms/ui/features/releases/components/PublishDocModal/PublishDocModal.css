@@ -1,331 +1,40 @@
-.PublishDocModal__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  font-size: 15px;
-  font-weight: 700;
+@layer components {
+  /* A check's message is rendered Markdown, kept to the row's line height. */
+  .PublishDocModal__markdown p {
+    margin: 0;
+  }
+
+  .PublishDocModal__markdown p + p,
+  .PublishDocModal__markdown ul,
+  .PublishDocModal__markdown ol {
+    margin: 4px 0 0;
+  }
+
+  .PublishDocModal__markdown ul,
+  .PublishDocModal__markdown ol {
+    padding-left: 16px;
+  }
 }
 
-.PublishDocModal__title svg {
-  flex-shrink: 0;
-}
+/*
+ * Overrides of other components' rules. Unlayered, since the rules they
+ * override are still unlayered.
+ */
 
-.PublishDocModal__title__text {
-  overflow-wrap: anywhere;
-}
-
-.PublishDocModal {
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.PublishDocModal__form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Publish type toggles. */
-
-.PublishDocModal__types {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.PublishDocModal__type {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: var(--surface-background);
-  color: var(--color-text-default);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.PublishDocModal__type:hover {
-  background: var(--button-background-hover);
-}
-
-.PublishDocModal__type:focus-visible {
-  outline: 2px solid #339af0;
-  outline-offset: 1px;
-}
-
-.PublishDocModal__type--selected,
-.PublishDocModal__type--selected:hover {
-  border-color: #a5d8ff;
-  background: #e7f5ff;
-  color: #1971c2;
-}
-
-/* Fields. */
-
-.PublishDocModal__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.PublishDocModal__field__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 22px;
-}
-
-.PublishDocModal__field__label {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.PublishDocModal__field__help {
-  margin-top: -4px;
-  font-size: 11.5px;
-  color: var(--color-text-gray);
-}
-
-.PublishDocModal__input {
-  display: block;
-  width: 100%;
-  min-height: 34px;
-  padding: 6px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: var(--surface-background);
-  color: inherit;
-  font-family: inherit;
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-
-.PublishDocModal__input:focus {
-  outline: none;
-  border-color: #228be6;
-  box-shadow: 0 0 0 3px rgba(34, 139, 230, 0.15);
-}
-
-.PublishDocModal__input--textarea {
-  min-height: 56px;
-  resize: vertical;
-}
-
-.PublishDocModal__input--withAction {
-  padding-right: 40px;
-}
-
-.PublishDocModal__message {
-  position: relative;
-}
-
-.PublishDocModal__message__action {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-}
-
-.PublishDocModal__skipChecks {
-  margin-top: 4px;
-}
-
-/* Panels made up of rows, used for the changes and the checks. */
-
-.PublishDocModal__panel {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--surface-background);
-  overflow: hidden;
-}
-
-.PublishDocModal__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 8px 12px;
-}
-
-.PublishDocModal__panel > * + .PublishDocModal__row {
-  border-top: 1px solid #f1f3f5;
-}
-
-.PublishDocModal__row__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 17px;
-}
-
-.PublishDocModal__row__label {
-  flex-shrink: 0;
-  width: 128px;
-  font-weight: 600;
-}
-
-.PublishDocModal__row__message {
-  flex: 1;
-  min-width: 0;
-  color: var(--color-text-gray);
-  overflow-wrap: anywhere;
-}
-
-.PublishDocModal__row__message--wide {
-  color: var(--color-text-default);
-}
-
-.PublishDocModal__row__markdown p {
-  margin: 0;
-}
-
-.PublishDocModal__row__markdown p + p,
-.PublishDocModal__row__markdown ul,
-.PublishDocModal__row__markdown ol {
-  margin: 4px 0 0;
-}
-
-.PublishDocModal__row__markdown ul,
-.PublishDocModal__row__markdown ol {
-  padding-left: 18px;
-}
-
-.PublishDocModal__row__button {
-  flex-shrink: 0;
-}
-
-.PublishDocModal__diff .DocDiffViewer__diff {
-  /* The diff modal sizes to its content instead of reserving space. */
-  min-height: 0;
-}
-
-.PublishDocModal__summary {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.PublishDocModal__summary__body {
-  min-height: 64px;
-  padding: 12px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-}
-
-.PublishDocModal__summary__body .AiSummaryResult {
-  padding-top: 0;
-}
-
-.PublishDocModal__docs {
-  display: flex;
-  flex-direction: column;
-}
-
+/* Pads the doc cards (`DocPreviewCard` sets its own padding). */
 .PublishDocModal__docs > * {
   padding: 8px 12px;
 }
 
-.PublishDocModal__docs > *:not(:last-child) {
-  border-bottom: 1px solid #f1f3f5;
+.PublishDocModal__docs--indent > * {
+  padding-left: 36px;
 }
 
-/* Indent the docs under the row that describes them. */
-.PublishDocModal__row + .PublishDocModal__docs {
-  border-top: 1px solid #f1f3f5;
+/* The diff modal sizes to its content instead of reserving space. */
+.PublishDocModal__diff .DocDiffViewer__diff {
+  min-height: 0;
 }
 
-.PublishDocModal__row + .PublishDocModal__docs > * {
-  padding-left: 39px;
-}
-
-.PublishDocModal__includeRefs {
-  margin-top: 4px;
-}
-
-/* The "Add to release" tab. */
-
-.PublishDocModal__releases {
-  max-height: 210px;
-  overflow-y: auto;
-}
-
-.PublishDocModal__releases > * + * {
-  border-top: 1px solid #f1f3f5;
-}
-
-.PublishDocModal__row--option {
-  cursor: pointer;
-}
-
-.PublishDocModal__row--option:hover {
-  background: var(--surface-background-hover);
-}
-
-.PublishDocModal__row--selected,
-.PublishDocModal__row--selected:hover {
-  background: #e7f5ff;
-}
-
-.PublishDocModal__row--option input {
-  margin: 0;
-  cursor: pointer;
-}
-
-.PublishDocModal__row__label--auto {
-  width: auto;
-  max-width: 50%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.PublishDocModal__row__message--truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.PublishDocModal__row__meta {
-  flex-shrink: 0;
-  color: var(--color-text-gray);
-  font-size: 11px;
-}
-
-.PublishDocModal__newRelease {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 12px 12px 39px;
-}
-
-.PublishDocModal__newRelease__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Footer. */
-
-.PublishDocModal__buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.PublishDocModal__confirmText {
-  text-wrap: pretty;
+.PublishDocModal__summaryBody .AiSummaryResult {
+  padding-top: 0;
 }

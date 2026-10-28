@@ -1,12 +1,13 @@
-import {Button, InputWrapper, TextInput} from '@mantine/core';
 import {IconLock, IconLockOpen} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
@@ -15,8 +16,6 @@ import {
   cmsLockPublishing,
   cmsUnlockPublishing,
 } from '../../../documents/doc.js';
-
-import './LockPublishingModal.css';
 
 const MODAL_ID = 'LockPublishingModal';
 
@@ -143,78 +142,59 @@ LockPublishingModal.Lock = (
 
   return (
     <div className="LockPublishingModal LockPublishingModal--lock">
-      <Text className="LockPublishingModal__body" size="body-sm">
+      <Text className="LockPublishingModal__body text-pretty" size="body-sm">
         {bodyText}
       </Text>
 
-      <form className="LockPublishingModal__form" onSubmit={(e) => onSubmit(e)}>
-        <div className="LockPublishingModal__form__section">
+      <form
+        className="LockPublishingModal__form mt-4 flex flex-col gap-4"
+        onSubmit={(e) => onSubmit(e)}
+      >
+        <TextInput
+          className="LockPublishingModal__reason"
+          name="reason"
+          label="Reason"
+          description="Specify a short reason so other content editors know why publishing is locked."
+          value={reason}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            setReason(e.currentTarget.value);
+          }}
+        />
+        <div className="LockPublishingModal__until flex flex-col gap-1">
           <TextInput
-            name="reason"
-            label="Reason"
-            description="Specify a short reason so other content editors know why publishing is locked."
-            size="xs"
-            radius={0}
-            value={reason}
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-              setReason(e.currentTarget.value);
-            }}
-          />
-        </div>
-        <div className="LockPublishingModal__form__section">
-          <InputWrapper
+            name="until"
+            type="datetime-local"
             label="Lock until"
             description="Optional. Publishing is unlocked at the specified time. If not provided, publishing will be locked indefinitely."
-            size="xs"
-          >
-            <div className="DocEditor__DateTimeField">
-              <input
-                name="until"
-                type="datetime-local"
-                min={getLocalISOString()}
-                defaultValue={until ? toLocalDateTimeString(until) : ''}
-                onChange={(e: Event) => {
-                  const target = e.target as HTMLInputElement;
-                  const datestr = target.value;
-                  setUntil(toTimestamp(datestr));
-                }}
-              />
-              <div className="DocEditor__DateTimeField__timezone">
-                timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-              </div>
-            </div>
-          </InputWrapper>
+            min={getLocalISOString()}
+            defaultValue={until ? toLocalDateTimeString(until) : ''}
+            onChange={(e: Event) => {
+              const target = e.target as HTMLInputElement;
+              const datestr = target.value;
+              setUntil(toTimestamp(datestr));
+            }}
+          />
+          <div className="LockPublishingModal__timezone text-right text-xs text-muted">
+            timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+          </div>
         </div>
-        <div className="LockPublishingModal__buttons">
+        <div className="LockPublishingModal__buttons mt-1 flex flex-wrap justify-end gap-3">
           {isEdit && (
             <Button
-              variant="filled"
-              size="xs"
-              color="red"
-              type="button"
-              leftIcon={<IconLockOpen size={14} />}
+              variant="danger"
+              icon={<IconLockOpen />}
               loading={unlocking}
               disabled={loading}
               onClick={() => onUnlock()}
-              className="LockPublishingModal__buttons__unlock"
+              className="LockPublishingModal__unlock mr-auto"
             >
               Unlock
             </Button>
           )}
+          <Button onClick={() => context.closeModal(id)}>Cancel</Button>
           <Button
-            variant="outline"
-            onClick={() => context.closeModal(id)}
-            type="button"
-            size="xs"
-            color="dark"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="filled"
-            size="xs"
-            color="dark"
-            leftIcon={<IconLock size={14} />}
+            variant="primary"
+            icon={<IconLock />}
             disabled={!reason || unlocking}
             type="submit"
             loading={loading}
@@ -251,27 +231,17 @@ LockPublishingModal.Unlock = (
   }
 
   return (
-    <div className="LockPublishingModal LockPublishingModal--unlock">
-      <Text className="LockPublishingModal__body">
+    <div className="LockPublishingModal LockPublishingModal--unlock flex flex-col items-start gap-3">
+      <Text className="LockPublishingModal__body text-pretty">
         Are you sure you want to unlock publishing for the following doc? This
         will re-enable content editors to publish the doc.
       </Text>
       <DocIdBadge docId={props.docId} />
-      <div className="LockPublishingModal__buttons">
+      <div className="LockPublishingModal__buttons mt-2 flex w-full justify-end gap-3">
+        <Button onClick={() => context.closeModal(id)}>Cancel</Button>
         <Button
-          variant="outline"
-          onClick={() => context.closeModal(id)}
-          type="button"
-          size="xs"
-          color="dark"
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="filled"
-          size="xs"
-          color="dark"
-          leftIcon={<IconLockOpen size={14} />}
+          variant="primary"
+          icon={<IconLockOpen />}
           loading={loading}
           onClick={() => onSubmit()}
         >

@@ -1,12 +1,12 @@
 import './PublishChecksModal.css';
 
-import {Button} from '@mantine/core';
 import {IconAlertTriangle, IconCircleX} from '@tabler/icons-preact';
 import {
   summarizePublishChecks,
   type PublishCheckResult,
 } from '../../../../../shared/publish-checks.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {type ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {PublishChecksResults} from '../PublishChecksResults/PublishChecksResults.js';
 
@@ -51,13 +51,23 @@ export function PublishChecksModal(
     : summary.warnings;
 
   return (
-    <div className="PublishChecksModal">
-      <div className="PublishChecksModal__intro">
-        <div className="PublishChecksModal__intro__icon">
+    <div className="PublishChecksModal flex flex-col gap-4">
+      <div className="PublishChecksModal__intro flex items-start gap-2">
+        <div className="PublishChecksModal__icon flex shrink-0 leading-none">
           {blocked ? (
-            <IconCircleX size={20} stroke={1.5} color="#c92a2a" />
+            <IconCircleX
+              className="text-danger"
+              size={20}
+              stroke={1.5}
+              aria-hidden="true"
+            />
           ) : (
-            <IconAlertTriangle size={20} stroke={1.5} color="#e67700" />
+            <IconAlertTriangle
+              className="text-warning"
+              size={20}
+              stroke={1.5}
+              aria-hidden="true"
+            />
           )}
         </div>
         <Text size="body-sm">
@@ -67,18 +77,14 @@ export function PublishChecksModal(
         </Text>
       </div>
 
-      <div className="PublishChecksModal__results">
+      <div className="PublishChecksModal__results overflow-y-auto">
         <PublishChecksResults results={shown} />
       </div>
 
-      <div className="PublishChecksModal__buttons">
+      <div className="PublishChecksModal__buttons flex flex-wrap items-center justify-end gap-2">
         {blocked && props.canBypass && (
           <Button
-            className="PublishChecksModal__buttons__bypass"
-            variant="outline"
-            size="xs"
-            color="red"
-            type="button"
+            className="PublishChecksModal__bypass mr-auto border-danger-line text-danger"
             onClick={() => {
               // Record the choice before closing: the close fires the modal's
               // `onClose`, which is what settles the caller's decision.
@@ -89,13 +95,7 @@ export function PublishChecksModal(
             {props.actionLabel} anyway
           </Button>
         )}
-        <Button
-          variant="filled"
-          onClick={() => context.closeModal(id)}
-          type="button"
-          size="xs"
-          color="dark"
-        >
+        <Button variant="primary" onClick={() => context.closeModal(id)}>
           {blocked ? 'Cancel' : 'Got it'}
         </Button>
       </div>

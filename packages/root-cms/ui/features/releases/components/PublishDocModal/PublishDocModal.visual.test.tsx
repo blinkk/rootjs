@@ -1,9 +1,8 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
 import './PublishDocModal.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render} from '@testing-library/preact';
 import {
   afterEach,
@@ -69,7 +68,8 @@ vi.mock('firebase/firestore', async (importOriginal) => {
   };
 });
 
-// Mock the doc utilities
+// Mock the doc utilities. Every export is listed: a factory mock without one
+// fails to link any module that imports it, which crashes the runner.
 vi.mock('../../../documents/doc.js', () => ({
   cmsPublishDoc: vi.fn(),
   cmsScheduleDoc: vi.fn(),
@@ -109,6 +109,7 @@ vi.mock('../../../documents/doc.js', () => ({
   testIsArchived: vi.fn(),
   testIsScheduled: vi.fn(),
   testPublishingLocked: vi.fn(),
+  testPublishingLockedAt: vi.fn(),
   cmsCopyDoc: vi.fn(),
   cmsCreateDoc: vi.fn(),
   cmsDocImportTranslations: vi.fn(),
@@ -116,6 +117,7 @@ vi.mock('../../../documents/doc.js', () => ({
   getPublishedDocRef: vi.fn(),
   getVersionDocRef: vi.fn(),
   getDraftDocs: vi.fn(),
+  getPublishedDocs: vi.fn(),
   cmsListVersions: vi.fn(),
   cmsRestoreVersion: vi.fn(),
   cmsLinkGoogleSheetL10n: vi.fn(),
@@ -151,7 +153,11 @@ vi.mock('../../../collections/collection.js', () => ({
 
 // Mock the doc cache used to look up referenced docs.
 vi.mock('../../../documents/doc-cache.js', () => ({
+  getDocFromCache: vi.fn(),
   getDocFromCacheOrFetch: vi.fn(() => Promise.resolve({sys: {}, fields: {}})),
+  setDocToCache: vi.fn(),
+  removeDocFromCache: vi.fn(),
+  removeDocsFromCache: vi.fn(),
 }));
 
 // Mock the pending releases shown in doc status badges.
@@ -261,21 +267,19 @@ function renderModal(docId: string, size: {width: number; height: number}) {
     innerProps: {docId},
   };
   render(
-    <MantineProvider>
-      <ModalsProvider>
-        <div
-          data-testid="wrapper"
-          style={{
-            width: size.width,
-            minHeight: size.height,
-            padding: 20,
-            background: '#fff',
-          }}
-        >
-          <PublishDocModal {...props} />
-        </div>
-      </ModalsProvider>
-    </MantineProvider>
+    <ModalsProvider>
+      <div
+        data-testid="wrapper"
+        style={{
+          width: size.width,
+          minHeight: size.height,
+          padding: 20,
+          background: '#fff',
+        }}
+      >
+        <PublishDocModal {...props} />
+      </div>
+    </ModalsProvider>
   );
 }
 

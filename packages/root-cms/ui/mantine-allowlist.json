@@ -36,20 +36,5 @@
   "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.tsx",
   "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.visual.test.tsx",
   "ui/features/documents/pages/DocumentPage/DocumentPage.tsx",
-  "ui/features/documents/pages/EmbeddedDocumentPage/EmbeddedDocumentPage.tsx",
-  "ui/features/releases/components/AddToReleaseModal/AddToReleaseModal.tsx",
-  "ui/features/releases/components/CheckStatusBadge/CheckStatusBadge.tsx",
-  "ui/features/releases/components/ChecksPanel/ChecksPanel.tsx",
-  "ui/features/releases/components/LockPublishingModal/LockPublishingModal.tsx",
-  "ui/features/releases/components/PublishChecksModal/PublishChecksModal.tsx",
-  "ui/features/releases/components/PublishChecksResults/PublishChecksResults.tsx",
-  "ui/features/releases/components/PublishDocModal/PublishDocModal.tsx",
-  "ui/features/releases/components/PublishDocModal/PublishDocModal.visual.test.tsx",
-  "ui/features/releases/components/ReleaseForm/ReleaseForm.tsx",
-  "ui/features/releases/components/ReleaseStatusBadge/ReleaseStatusBadge.tsx",
-  "ui/features/releases/components/ScheduleReleaseModal/ScheduleReleaseModal.tsx",
-  "ui/features/releases/pages/EditReleasePage/EditReleasePage.tsx",
-  "ui/features/releases/pages/NewReleasePage/NewReleasePage.tsx",
-  "ui/features/releases/pages/ReleasePage/ReleasePage.tsx",
-  "ui/features/releases/pages/ReleasesPage/ReleasesPage.tsx"
+  "ui/features/documents/pages/EmbeddedDocumentPage/EmbeddedDocumentPage.tsx"
 ]

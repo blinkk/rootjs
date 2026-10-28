@@ -1,18 +1,16 @@
-import {
-  ActionIcon,
-  Button,
-  InputWrapper,
-  LoadingOverlay,
-  TextInput,
-  Textarea,
-  Tooltip,
-} from '@mantine/core';
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Field} from '../../../../primitives/Field/Field.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {useDocPickerModal} from '../../../collections/components/DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../../collections/components/DocPreviewCard/DocPreviewCard.js';
@@ -28,7 +26,6 @@ import {
   getRelease,
   updateRelease,
 } from '../../release.js';
-import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
   className?: string;
@@ -201,7 +198,10 @@ export function ReleaseForm(props: ReleaseFormProps) {
 
   return (
     <form
-      className="ReleaseForm"
+      className={cn(
+        'ReleaseForm relative flex max-w-162 flex-col gap-4 text-base',
+        props.className
+      )}
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
@@ -214,8 +214,6 @@ export function ReleaseForm(props: ReleaseFormProps) {
         name="id"
         label="ID"
         description="Unique identifier for the release. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
-        size="xs"
-        radius={0}
         defaultValue={props.releaseId || generateReleaseId()}
         disabled={!!props.releaseId}
       />
@@ -224,16 +222,14 @@ export function ReleaseForm(props: ReleaseFormProps) {
         name="description"
         label="Description"
         description="Optional."
-        size="xs"
-        radius={0}
         value={release?.description}
         disabled={!canPublish}
       />
-      <InputWrapper
+      <Field
         className="ReleaseForm__input"
+        labelAs="div"
         label="Docs"
         description="Select one or more docs to add to the release. Note: you can add or edit this list at a later time, if needed."
-        size="xs"
       >
         {docIds.length > 0 && (
           <ReleaseForm.DocPreviewCards
@@ -243,20 +239,19 @@ export function ReleaseForm(props: ReleaseFormProps) {
           />
         )}
         <Button
-          className="ReleaseForm__docSelectButton"
-          color="dark"
-          size="xs"
+          className="ReleaseForm__selectButton mt-1.5 self-start"
+          variant="primary"
           onClick={() => openDocPickerModal()}
           disabled={!canPublish}
         >
           {'Select'}
         </Button>
-      </InputWrapper>
-      <InputWrapper
+      </Field>
+      <Field
         className="ReleaseForm__input"
+        labelAs="div"
         label="Data Sources"
         description="Optional. Data sources to publish with the release."
-        size="xs"
       >
         {dataSourceIds.length > 0 && (
           <ReleaseForm.DataSourceIds
@@ -266,35 +261,35 @@ export function ReleaseForm(props: ReleaseFormProps) {
           />
         )}
         <Button
-          className="ReleaseForm__docSelectButton"
-          color="dark"
-          size="xs"
+          className="ReleaseForm__selectButton mt-1.5 self-start"
+          variant="primary"
           onClick={() => openDataSourceSelectModal()}
           disabled={!canPublish}
         >
           {'Select'}
         </Button>
-      </InputWrapper>
-      <div className="ReleaseForm__submit__buttons">
+      </Field>
+      <div className="ReleaseForm__buttons mt-10 flex gap-3">
         <ConditionalTooltip
           label="You don't have access to create or edit releases"
           condition={!canPublish}
         >
-          <span>
-            <Button
-              className="ReleaseForm__submit"
-              color="blue"
-              size="xs"
-              type="submit"
-              loading={submitting}
-              disabled={!canPublish}
-            >
-              {props.buttonLabel || 'Save'}
-            </Button>
-          </span>
+          <Button
+            className="ReleaseForm__submit"
+            variant="primary"
+            type="submit"
+            loading={submitting}
+            disabled={!canPublish}
+          >
+            {props.buttonLabel || 'Save'}
+          </Button>
         </ConditionalTooltip>
       </div>
-      {error && <div className="ReleaseForm__error">Error: {error}</div>}
+      {error && (
+        <div className="ReleaseForm__error mt-4 text-base font-medium text-danger">
+          Error: {error}
+        </div>
+      )}
     </form>
   );
 }
@@ -305,38 +300,34 @@ ReleaseForm.DocPreviewCards = (props: {
   canEdit: boolean;
 }) => {
   return (
-    <div className="ReleaseForm__DocPreviewCards">
+    <div className="ReleaseForm__docs my-4 border-0 border-t border-solid border-border">
       {props.docIds.map((docId) => (
-        <div key={docId} className="ReleaseForm__DocPreviewCards__card">
+        <div
+          key={docId}
+          className="ReleaseForm__doc flex gap-3 border-0 border-b border-solid border-border"
+        >
           <DocPreviewCard
-            className="ReleaseForm__DocPreviewCards__card__preview"
+            className="ReleaseForm__docPreview min-w-0 flex-1"
             docId={docId}
           />
-          <div className="ReleaseForm__DocPreviewCards__card__controls">
+          <div className="ReleaseForm__docControls flex shrink-0 gap-0.5 pt-2">
             {props.canEdit && (
-              <div className="ReleaseForm__DocPreviewCards__card__controls__remove">
-                <Tooltip label="Remove">
-                  <ActionIcon
-                    className="ReleaseForm__DocPreviewCards__card__controls__remove__icon"
-                    onClick={() => props.onRemoveDoc(docId)}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              </div>
+              <IconButton
+                className="ReleaseForm__docRemove"
+                label="Remove"
+                onClick={() => props.onRemoveDoc(docId)}
+              >
+                <IconTrash />
+              </IconButton>
             )}
-            <div className="ReleaseForm__DocPreviewCards__card__controls__open">
-              <Tooltip label="Open">
-                <ActionIcon<'a'>
-                  component="a"
-                  className="ReleaseForm__DocPreviewCards__card__controls__open__icon"
-                  href={`/cms/content/${docId}`}
-                  target="_blank"
-                >
-                  <IconArrowUpRight size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </div>
+            <IconButton
+              className="ReleaseForm__docOpen"
+              label="Open"
+              href={`/cms/content/${docId}`}
+              target="_blank"
+            >
+              <IconArrowUpRight />
+            </IconButton>
           </div>
         </div>
       ))}
@@ -380,30 +371,36 @@ ReleaseForm.DataSourceIds = (props: {
   }, [props.ids.join(',')]);
 
   return (
-    <div className="ReleaseForm__DataSourceIds">
+    <div className="ReleaseForm__dataSources my-4 border-0 border-t border-solid border-border">
       {props.ids.map((id) => {
         const ds = dataSources[id];
         return (
-          <div key={id} className="ReleaseForm__DataSourceIds__item">
+          <div
+            key={id}
+            className="ReleaseForm__dataSource flex items-center gap-3 border-0 border-b border-solid border-border py-3"
+          >
             <DataSourceIcon
-              className="ReleaseForm__DataSourceIds__item__icon"
+              className="ReleaseForm__dataSourceIcon"
               type={ds?.type}
             />
-            <div className="ReleaseForm__DataSourceIds__item__info">
-              <div className="ReleaseForm__DataSourceIds__item__id">{id}</div>
+            <div className="ReleaseForm__dataSourceInfo min-w-0 flex-1">
+              <div className="ReleaseForm__dataSourceId break-words text-lg font-semibold leading-snug text-fg">
+                {id}
+              </div>
               {ds?.description && (
-                <div className="ReleaseForm__DataSourceIds__item__description">
+                <div className="ReleaseForm__dataSourceDescription mt-0.5 text-sm text-muted">
                   {ds.description}
                 </div>
               )}
             </div>
             {props.canEdit && (
-              <ActionIcon
-                className="ReleaseForm__DataSourceIds__item__remove"
+              <IconButton
+                className="ReleaseForm__dataSourceRemove"
+                label="Remove"
                 onClick={() => props.onRemove(id)}
               >
-                <IconTrash size={16} />
-              </ActionIcon>
+                <IconTrash />
+              </IconButton>
             )}
           </div>
         );
