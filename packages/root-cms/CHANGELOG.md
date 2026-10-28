@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 4.2.2
+
+### Patch Changes
+
+- 696e8c8: fix: store release rollback snapshots without nesting the previous data, so releases with deeply nested docs no longer fail to publish with "Property previous contains an invalid nested entity"
+  - @blinkk/root@4.2.2
+
 ## 4.2.1
 
 ### Patch Changes
