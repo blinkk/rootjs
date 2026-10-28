@@ -11,14 +11,6 @@ import {
   mergeRegister,
 } from '@lexical/utils';
 import {
-  ActionIcon,
-  ActionIconVariant,
-  Button,
-  Menu,
-  TextInput,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconList,
   IconListNumbers,
   IconH1,
@@ -76,7 +68,15 @@ import {
   RichTextParagraphSize,
   RichTextParagraphSizeOption,
 } from '../../../../../../../shared/richtext.js';
-import {joinClassNames} from '../../../../../../utils/classes.js';
+import {Button} from '../../../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../../../primitives/IconButton/IconButton.js';
+import {
+  Menu,
+  MenuGroup,
+  MenuItem,
+} from '../../../../../../primitives/Menu/Menu.js';
+import {TextInput} from '../../../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../../../utils/classes.js';
 import {
   TOOLBAR_BLOCK_LABELS,
   ToolbarBlockType,
@@ -101,9 +101,25 @@ import {sanitizeUrl} from '../utils/url.js';
  */
 const COMPONENT_FILTER_MIN_COMPONENTS = 8;
 
-function dropDownActiveClass(active: boolean) {
-  return active ? 'active dropdown-item-active' : '';
-}
+/**
+ * Classes for the toolbar's dropdown buttons (block type and components),
+ * matching the compact Mantine buttons they replace.
+ */
+const DROPDOWN_BUTTON_CLASSES =
+  'LexicalEditor__toolbar__dropdown shrink-0 tracking-wider';
+
+/**
+ * Classes for a pressed (active) toolbar icon button: Mantine's light blue.
+ */
+const ACTIVE_ICON_CLASSES =
+  'aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-hover';
+
+/**
+ * Joins a row of icon buttons into one segmented control: square inner
+ * corners and shared borders.
+ */
+const GROUP_CLASSES =
+  'LexicalEditor__toolbar__group flex shrink-0 *:rounded-none *:first:rounded-l-sm *:last:rounded-r-sm *:not-first:border-l-0';
 
 /** Returns the menu item elements of the dropdown that contains `element`. */
 function getMenuItems(element: HTMLElement): HTMLElement[] {
@@ -111,20 +127,11 @@ function getMenuItems(element: HTMLElement): HTMLElement[] {
   if (!menu) {
     return [];
   }
-  return Array.from(menu.querySelectorAll<HTMLElement>('.mantine-Menu-item'));
-}
-
-/**
- * Moves focus onto a menu item. Mantine tracks the highlighted item through
- * `mouseenter` rather than focus, so dispatch one to keep its highlight (and
- * its own arrow key handling) in sync.
- */
-function focusMenuItem(item?: HTMLElement) {
-  if (!item) {
-    return;
-  }
-  item.dispatchEvent(new MouseEvent('mouseenter'));
-  item.focus();
+  return Array.from(
+    menu.querySelectorAll<HTMLElement>(
+      '[role="menuitem"]:not([aria-disabled="true"])'
+    )
+  );
 }
 
 interface BlockTypeIconProps {
@@ -189,108 +196,110 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
     : TOOLBAR_BLOCK_LABELS[blockType];
   return (
     <Menu
-      control={
+      label="Block type"
+      trigger={
         <Button
-          className={joinClassNames(
-            'LexicalEditor__toolbar__dropdown',
+          className={cn(
+            DROPDOWN_BUTTON_CLASSES,
             'LexicalEditor__toolbar__blockFormatDropdown'
           )}
-          variant="default"
-          compact
-          leftIcon={
+          icon={
             paragraphSize ? (
               <IconTextSize size={16} />
             ) : (
               <BlockTypeIcon blockType={blockType} />
             )
           }
-          rightIcon={<IconChevronDown size={16} />}
+          iconRight={<IconChevronDown size={16} />}
         >
           {label}
         </Button>
       }
     >
-      <Menu.Item
+      <MenuItem
         icon={<BlockTypeIcon blockType="paragraph" />}
-        className={dropDownActiveClass(
-          blockType === 'paragraph' && !paragraphSize
-        )}
+        aria-current={
+          (blockType === 'paragraph' && !paragraphSize) || undefined
+        }
         onClick={() => formatParagraph(editor)}
       >
         Normal
-      </Menu.Item>
+      </MenuItem>
       {paragraphSizes.map((option) => (
-        <Menu.Item
+        <MenuItem
           key={option.value}
           icon={<IconTextSize size={16} />}
-          className={dropDownActiveClass(paragraphSize === option.value)}
+          aria-current={paragraphSize === option.value || undefined}
           onClick={() => formatParagraph(editor, option.value)}
         >
           {option.label}
-        </Menu.Item>
+        </MenuItem>
       ))}
-      <Menu.Item
+      <MenuItem
         icon={<BlockTypeIcon blockType="bullet" />}
-        className={dropDownActiveClass(blockType === 'bullet')}
+        aria-current={blockType === 'bullet' || undefined}
         onClick={() => formatBulletList(editor, blockType)}
       >
         Bullet List
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="number" />}
-        className={dropDownActiveClass(blockType === 'number')}
+        aria-current={blockType === 'number' || undefined}
         onClick={() => formatNumberedList(editor, blockType)}
       >
         Numbered List
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="h1" />}
-        className={dropDownActiveClass(blockType === 'h1')}
+        aria-current={blockType === 'h1' || undefined}
         onClick={() => formatHeading(editor, blockType, 'h1')}
       >
         Heading 1
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="h2" />}
-        className={dropDownActiveClass(blockType === 'h2')}
+        aria-current={blockType === 'h2' || undefined}
         onClick={() => formatHeading(editor, blockType, 'h2')}
       >
         Heading 2
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="h3" />}
-        className={dropDownActiveClass(blockType === 'h3')}
+        aria-current={blockType === 'h3' || undefined}
         onClick={() => formatHeading(editor, blockType, 'h3')}
       >
         Heading 3
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="h4" />}
-        className={dropDownActiveClass(blockType === 'h4')}
+        aria-current={blockType === 'h4' || undefined}
         onClick={() => formatHeading(editor, blockType, 'h4')}
       >
         Heading 4
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="h5" />}
-        className={dropDownActiveClass(blockType === 'h5')}
+        aria-current={blockType === 'h5' || undefined}
         onClick={() => formatHeading(editor, blockType, 'h5')}
       >
         Heading 5
-      </Menu.Item>
-      <Menu.Item
+      </MenuItem>
+      <MenuItem
         icon={<BlockTypeIcon blockType="quote" />}
-        className={dropDownActiveClass(blockType === 'quote')}
+        aria-current={blockType === 'quote' || undefined}
         onClick={() => formatBlockquote(editor, blockType)}
       >
         Quote
-      </Menu.Item>
+      </MenuItem>
     </Menu>
   );
 }
 
+/** Spacing between groups of toolbar controls. */
 function Divider() {
-  return <div className="divider" />;
+  return (
+    <div className="LexicalEditor__toolbar__divider shrink-0" aria-hidden />
+  );
 }
 
 interface MoreFormattingDropdownProps {
@@ -307,63 +316,57 @@ function MoreFormattingDropdown(props: MoreFormattingDropdownProps) {
 
   return (
     <Menu
-      styles={{
-        body: {
-          minWidth: '240px',
-        },
-      }}
-      control={
-        <Tooltip
-          className={joinClassNames(
-            'LexicalEditor__toolbar__actionIcon',
-            isAnyActive && 'LexicalEditor__toolbar__actionIcon--active'
-          )}
+      className="min-w-60"
+      trigger={
+        <IconButton
           label="More formatting"
-          position="top"
-          withArrow
+          variant="default"
+          className={cn(
+            'LexicalEditor__toolbar__actionIcon',
+            isAnyActive &&
+              'LexicalEditor__toolbar__actionIcon--active bg-button-blue-soft text-button-blue-hover'
+          )}
         >
-          <ActionIcon variant="default" title="More formatting">
-            <IconChevronDown size={16} />
-          </ActionIcon>
-        </Tooltip>
+          <IconChevronDown />
+        </IconButton>
       }
     >
-      <Menu.Item
-        icon={<IconStrikethrough size={16} />}
-        className={dropDownActiveClass(isStrikethrough)}
+      <MenuItem
+        icon={<IconStrikethrough />}
+        aria-current={isStrikethrough || undefined}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
         }}
       >
         Strikethrough ({SHORTCUTS.STRIKETHROUGH})
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconSuperscript size={16} />}
-        className={dropDownActiveClass(isSuperscript)}
+      </MenuItem>
+      <MenuItem
+        icon={<IconSuperscript />}
+        aria-current={isSuperscript || undefined}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
         }}
       >
         Superscript ({SHORTCUTS.SUPERSCRIPT})
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconSubscript size={16} />}
-        className={dropDownActiveClass(isSubscript)}
+      </MenuItem>
+      <MenuItem
+        icon={<IconSubscript />}
+        aria-current={isSubscript || undefined}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
         }}
       >
         Subscript ({SHORTCUTS.SUBSCRIPT})
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconCode size={16} />}
-        className={dropDownActiveClass(isCode)}
+      </MenuItem>
+      <MenuItem
+        icon={<IconCode />}
+        aria-current={isCode || undefined}
         onClick={() => {
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
         }}
       >
         Code
-      </Menu.Item>
+      </MenuItem>
     </Menu>
   );
 }
@@ -594,11 +597,26 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
   const [componentsMenuOpened, setComponentsMenuOpened] = useState(false);
   const [componentFilter, setComponentFilter] = useState('');
 
-  // Focus the filter as soon as it mounts, i.e. when the menu opens. The popper
-  // mounts the dropdown body asynchronously, so an effect keyed on the menu's
-  // open state would run before the input exists.
+  // Focus the filter as soon as it mounts, i.e. when the menu opens. The menu
+  // focuses its first item once it's positioned, a render later, so take focus
+  // back from that one move.
   const componentFilterRef = useCallback((input: HTMLInputElement | null) => {
-    input?.focus();
+    if (!input) {
+      return;
+    }
+    input.focus();
+    const menu = input.closest('[role="menu"]');
+    if (!menu) {
+      return;
+    }
+    const reclaimFocus = (e: Event) => {
+      menu.removeEventListener('focusin', reclaimFocus);
+      if (e.target !== input) {
+        input.focus({preventScroll: true});
+      }
+    };
+    menu.addEventListener('focusin', reclaimFocus);
+    window.setTimeout(() => menu.removeEventListener('focusin', reclaimFocus));
   }, []);
 
   // Only offer the filter input once the list is long enough to be worth
@@ -629,42 +647,52 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     filteredInlineComponents.length > 0 ||
     filteredBlockComponents.length > 0;
 
+  // The menu moves into its items on ArrowDown, and closes on Escape.
   const onComponentFilterKeyDown = (event: KeyboardEvent) => {
     const input = event.currentTarget as HTMLInputElement;
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      focusMenuItem(getMenuItems(input)[0]);
-    } else if (event.key === 'Enter') {
+    if (event.key === 'Enter') {
       event.preventDefault();
       getMenuItems(input)[0]?.click();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      // Clear the query first so that Escape doesn't discard a long search by
-      // accident; a second Escape closes the menu.
-      if (componentFilter) {
-        setComponentFilter('');
-      } else {
-        setComponentsMenuOpened(false);
-      }
     }
+  };
+
+  const onComponentsMenuOpenChange = (open: boolean) => {
+    if (open) {
+      setComponentFilter('');
+      setComponentsMenuOpened(true);
+      return;
+    }
+    // Escape clears the query first so that it doesn't discard a long search
+    // by accident; a second Escape closes the menu. The menu handles Escape
+    // before the input sees it, so check the event that's closing it.
+    const event = window.event;
+    if (
+      componentFilter &&
+      event instanceof KeyboardEvent &&
+      event.key === 'Escape'
+    ) {
+      setComponentFilter('');
+      return;
+    }
+    setComponentsMenuOpened(false);
   };
 
   const getComponentIcon = (componentName: string) => {
     switch (componentName) {
       case 'image':
-        return <IconPhoto size={16} />;
+        return <IconPhoto />;
       case 'html':
-        return <IconBracketsAngle size={16} />;
+        return <IconBracketsAngle />;
       default:
         break;
     }
-    return <IconCube size={16} />;
+    return <IconCube />;
   };
   const isCommentVariant = variant === 'comment';
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'LexicalEditor__toolbar',
         isCommentVariant && 'LexicalEditor__toolbar--comment'
       )}
@@ -685,7 +713,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
           </>
         )}
       <>
-        <div className="LexicalEditor__toolbar__group">
+        <div className={GROUP_CLASSES}>
           <ToolbarActionIcon
             tooltip={`Bold (${SHORTCUTS.BOLD})`}
             active={toolbarState.isBold}
@@ -693,7 +721,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
             }}
           >
-            <IconBold size={16} />
+            <IconBold />
           </ToolbarActionIcon>
           <ToolbarActionIcon
             tooltip={`Italic (${SHORTCUTS.ITALIC})`}
@@ -702,7 +730,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
             }}
           >
-            <IconItalic size={16} />
+            <IconItalic />
           </ToolbarActionIcon>
           <ToolbarActionIcon
             tooltip={`Underline (${SHORTCUTS.UNDERLINE})`}
@@ -711,7 +739,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
             }}
           >
-            <IconUnderline size={16} />
+            <IconUnderline />
           </ToolbarActionIcon>
           <MoreFormattingDropdown
             editor={activeEditor}
@@ -724,15 +752,13 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        <div className="LexicalEditor__toolbar__group">
-          <ToolbarActionIcon
-            tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
-            active={toolbarState.isLink}
-            onClick={insertLink}
-          >
-            <IconLink size={16} />
-          </ToolbarActionIcon>
-        </div>
+        <ToolbarActionIcon
+          tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
+          active={toolbarState.isLink}
+          onClick={insertLink}
+        >
+          <IconLink />
+        </ToolbarActionIcon>
 
         <Divider />
 
@@ -742,7 +768,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
             clearFormatting(activeEditor);
           }}
         >
-          <IconClearFormatting size={16} />
+          <IconClearFormatting />
         </ToolbarActionIcon>
 
         <Divider />
@@ -750,40 +776,31 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         {!isCommentVariant && (
           <>
             <Menu
-              classNames={{
-                body: 'LexicalEditor__toolbar__insertDropdown__body',
-              }}
-              opened={componentsMenuOpened}
-              onOpen={() => {
-                setComponentFilter('');
-                setComponentsMenuOpened(true);
-              }}
-              onClose={() => setComponentsMenuOpened(false)}
-              control={
+              className="LexicalEditor__toolbar__insertDropdown__body w-70"
+              open={componentsMenuOpened}
+              onOpenChange={onComponentsMenuOpenChange}
+              trigger={
                 <Button
-                  className={joinClassNames(
-                    'LexicalEditor__toolbar__dropdown',
+                  className={cn(
+                    DROPDOWN_BUTTON_CLASSES,
                     'LexicalEditor__toolbar__insertDropdown'
                   )}
-                  variant="default"
-                  compact
-                  leftIcon={<IconPuzzle size={16} />}
-                  rightIcon={<IconChevronDown size={16} />}
+                  icon={<IconPuzzle />}
+                  iconRight={<IconChevronDown />}
                 >
                   Components
                 </Button>
               }
             >
               {showComponentFilter && (
-                <div className="LexicalEditor__toolbar__insertDropdown__filter">
+                <div className="LexicalEditor__toolbar__insertDropdown__filter sticky -top-1 z-10 -mx-1 -mt-1 mb-1 border-0 border-b border-solid border-border bg-surface p-1.5">
                   <TextInput
                     ref={componentFilterRef}
-                    size="xs"
-                    icon={<IconSearch size={14} />}
+                    leftSection={<IconSearch />}
                     placeholder="Search components"
                     aria-label="Search components"
                     value={componentFilter}
-                    onInput={(event: any) =>
+                    onInput={(event) =>
                       setComponentFilter(event.currentTarget.value)
                     }
                     onKeyDown={onComponentFilterKeyDown}
@@ -791,67 +808,69 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                 </div>
               )}
               {(showTableItem || showHorizontalRuleItem) && (
-                <Menu.Label>Insert</Menu.Label>
+                <MenuGroup label="Insert">
+                  {showTableItem && (
+                    <MenuItem
+                      icon={<IconTable />}
+                      onClick={() => {
+                        activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                          columns: '3',
+                          rows: '3',
+                        });
+                      }}
+                    >
+                      Table
+                    </MenuItem>
+                  )}
+                  {showHorizontalRuleItem && (
+                    <MenuItem
+                      icon={<IconSeparatorHorizontal />}
+                      onClick={() => {
+                        activeEditor.dispatchCommand(
+                          INSERT_HORIZONTAL_RULE_COMMAND,
+                          undefined
+                        );
+                      }}
+                    >
+                      Horizontal Rule
+                    </MenuItem>
+                  )}
+                </MenuGroup>
               )}
-              {showTableItem && (
-                <Menu.Item
-                  icon={<IconTable size={16} />}
-                  onClick={() => {
-                    activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
-                      columns: '3',
-                      rows: '3',
-                    });
-                  }}
-                >
-                  Table
-                </Menu.Item>
-              )}
-              {showHorizontalRuleItem && (
-                <Menu.Item
-                  icon={<IconSeparatorHorizontal size={16} />}
-                  onClick={() => {
-                    activeEditor.dispatchCommand(
-                      INSERT_HORIZONTAL_RULE_COMMAND,
-                      undefined
-                    );
-                  }}
-                >
-                  Horizontal Rule
-                </Menu.Item>
-              )}
-
               {filteredInlineComponents.length > 0 && (
-                <>
-                  <Menu.Label>Inline Components</Menu.Label>
+                <MenuGroup label="Inline Components">
                   {filteredInlineComponents.map((component) => (
-                    <Menu.Item
+                    <MenuItem
                       key={component.name}
-                      icon={<IconCapsuleHorizontal size={16} />}
+                      icon={<IconCapsuleHorizontal />}
                       title={component.label || component.name}
                       onClick={() => onInsertInlineComponent?.(component.name)}
                     >
-                      {component.label || component.name}
-                    </Menu.Item>
+                      <span className="block truncate">
+                        {component.label || component.name}
+                      </span>
+                    </MenuItem>
                   ))}
-                </>
+                </MenuGroup>
               )}
               {filteredBlockComponents.length > 0 && (
-                <>
-                  <Menu.Label>Block Components</Menu.Label>
+                <MenuGroup label="Block Components">
                   {filteredBlockComponents.map((block) => (
-                    <Menu.Item
+                    <MenuItem
                       key={block.name}
                       icon={getComponentIcon(block.name)}
                       title={block.label || block.name}
                       onClick={() => onInsertBlockComponent?.(block.name)}
                     >
-                      {block.label || block.name}
-                    </Menu.Item>
+                      <span className="block truncate">
+                        {block.label || block.name}
+                      </span>
+                    </MenuItem>
                   ))}
-                </>
+                </MenuGroup>
               )}
               {!hasFilterResults && (
-                <div className="LexicalEditor__toolbar__insertDropdown__empty">
+                <div className="LexicalEditor__toolbar__insertDropdown__empty px-3 py-2 text-sm text-muted">
                   No components found.
                 </div>
               )}
@@ -865,31 +884,34 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 }
 
 export interface ToolbarActionIconProps {
-  variant?: ActionIconVariant;
+  /** `default` (bordered, the toolbar) or `subtle` (the floating toolbar). */
+  variant?: 'default' | 'subtle';
   active?: boolean;
-  tooltip?: string;
+  tooltip: string;
   onClick?: () => void;
+  className?: string;
   children?: ComponentChildren;
 }
 
+/**
+ * A formatting button in the toolbars: an icon button whose `tooltip` is also
+ * its accessible name, pressed (blue) while its format is active.
+ */
 export function ToolbarActionIcon(props: ToolbarActionIconProps) {
   return (
-    <Tooltip
-      className={joinClassNames(
-        'LexicalEditor__toolbar__actionIcon',
-        props.active && 'LexicalEditor__toolbar__actionIcon--active'
-      )}
+    <IconButton
       label={props.tooltip}
-      position="top"
-      withArrow
+      variant={props.variant || 'default'}
+      pressed={props.active}
+      onClick={props.onClick}
+      className={cn(
+        'LexicalEditor__toolbar__actionIcon',
+        props.active && 'LexicalEditor__toolbar__actionIcon--active',
+        ACTIVE_ICON_CLASSES,
+        props.className
+      )}
     >
-      <ActionIcon
-        variant={props.variant || 'default'}
-        onClick={props.onClick}
-        title={props.tooltip}
-      >
-        {props.children}
-      </ActionIcon>
-    </Tooltip>
+      {props.children}
+    </IconButton>
   );
 }

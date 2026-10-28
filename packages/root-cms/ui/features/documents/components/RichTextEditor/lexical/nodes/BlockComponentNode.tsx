@@ -2,7 +2,6 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {DecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
 import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {mergeRegister} from '@lexical/utils';
-import {Button, Loader} from '@mantine/core';
 import {
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
@@ -12,6 +11,8 @@ import {
 } from 'lexical';
 import {useEffect, useMemo} from 'preact/hooks';
 import {testIsImageFile} from '../../../../../../integrations/gcs.js';
+import {Button} from '../../../../../../primitives/Button/Button.js';
+import {Spinner} from '../../../../../../primitives/Spinner/Spinner.js';
 import {joinClassNames} from '../../../../../../utils/classes.js';
 import {cloneData} from '../../../../../../utils/objects.js';
 import {
@@ -96,8 +97,6 @@ function BlockComponent(props: BlockComponentProps) {
           <div className="LexicalEditor__customBlock__actions">
             <Button
               size="xs"
-              variant="default"
-              compact
               onClick={() =>
                 onEditBlock(props.blockName, {
                   mode: 'edit',
@@ -116,7 +115,7 @@ function BlockComponent(props: BlockComponentProps) {
           <img src={previewImage} alt="" />
           {props.data.loading && (
             <div className="LexicalEditor__customBlock__previewImage__loading">
-              <Loader variant="oval" color="gray" />
+              <Spinner size="lg" className="text-muted" />
             </div>
           )}
         </div>

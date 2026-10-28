@@ -15,8 +15,8 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
 - [x] `DocumentPage.css` sets `.DocumentPage__ai {flex: 0 0 420px}`, so the
       Root AI panel is clipped at 375px. The doc page header also overflows
       horizontally on mobile.
-- [ ] `ImagePastePlugin.visual.test.tsx` fails (before the rewrite too).
-- [ ] `LexicalEditor.css` is unlayered, so `TaskPage.css` and
+- [x] `ImagePastePlugin.visual.test.tsx` fails (before the rewrite too).
+- [x] `LexicalEditor.css` is unlayered, so `TaskPage.css` and
       `CommentEditor.css` keep unlayered overrides of it, and the
       CommentEditor placeholder stays at 13px to match Lexical's text. Drop the
       overrides once Lexical's CSS is layered.

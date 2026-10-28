@@ -1,6 +1,7 @@
-import {Button, Group, Modal, Stack, Text} from '@mantine/core';
 import {useMemo} from 'preact/hooks';
 import * as schema from '../../../../../../../core/schema.js';
+import {Button} from '../../../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../../../primitives/Dialog/Dialog.js';
 import {cloneData} from '../../../../../../utils/objects.js';
 import {
   DraftDocContext,
@@ -65,35 +66,32 @@ export function BlockComponentModal(props: BlockComponentModalProps) {
   };
 
   return (
-    <Modal
-      opened={props.opened}
+    <Dialog
+      className="BlockComponentModal"
+      open={props.opened}
       onClose={props.onClose}
       title={props.schema.label || props.schema.name}
       size="lg"
-      // Prevent stacking order issues with the ReferenceField's
-      // `DocPickerModal` by using a z-index lower than 200.
-      zIndex={190}
-    >
-      <Stack spacing="md">
-        {props.schema.fields.length > 0 ? (
-          <DraftDocContextProvider value={draftContext}>
-            <DocEditor.ObjectField field={objectField} deepKey="block" />
-          </DraftDocContextProvider>
-        ) : (
-          <Text size="sm" color="dimmed">
-            This block does not define any editable fields.
-          </Text>
-        )}
-        <Group position="right" spacing="sm">
-          <Button variant="default" size="xs" onClick={props.onClose}>
-            Cancel
-          </Button>
-          <Button size="xs" onClick={handleSubmit}>
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
+          <Button onClick={props.onClose}>Cancel</Button>
+          <Button variant="blue" onClick={handleSubmit}>
             {props.mode === 'edit' ? 'Save block' : 'Insert block'}
           </Button>
-        </Group>
-      </Stack>
-    </Modal>
+        </>
+      }
+    >
+      {props.schema.fields.length > 0 ? (
+        <DraftDocContextProvider value={draftContext}>
+          <DocEditor.ObjectField field={objectField} deepKey="block" />
+        </DraftDocContextProvider>
+      ) : (
+        <p className="BlockComponentModal__empty m-0 text-sm text-muted">
+          This block does not define any editable fields.
+        </p>
+      )}
+    </Dialog>
   );
 }
 

@@ -1,6 +1,8 @@
-import {Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../../../core/schema.js';
+import {Button} from '../../../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../../../primitives/Dialog/Dialog.js';
+import {TextInput} from '../../../../../../primitives/TextInput/TextInput.js';
 import {cloneData} from '../../../../../../utils/objects.js';
 import {
   DraftDocContext,
@@ -65,45 +67,44 @@ export function InlineComponentModal(props: InlineComponentModalProps) {
   };
 
   return (
-    <Modal
-      opened={props.opened}
+    <Dialog
+      className="InlineComponentModal"
+      open={props.opened}
       onClose={props.onClose}
       title={props.schema.label || props.schema.name}
       size="lg"
-      // Prevent stacking order issues with the ReferenceField's
-      // `DocPickerModal` by using a z-index lower than 200.
-      zIndex={190}
-    >
-      <Stack spacing="md">
-        <TextInput
-          label="Component ID"
-          value={componentId}
-          onChange={(event) => setComponentId(event.currentTarget.value)}
-          placeholder="component-id"
-          required
-        />
-        {props.schema.fields.length > 0 ? (
-          <DraftDocContextProvider value={draftContext}>
-            <DocEditor.ObjectField field={objectField} deepKey="component" />
-          </DraftDocContextProvider>
-        ) : (
-          <Text size="sm" color="dimmed">
-            This component does not define any editable fields.
-          </Text>
-        )}
-        <Group position="right" spacing="sm">
-          <Button variant="default" size="xs" onClick={props.onClose}>
-            Cancel
-          </Button>
+      bodyClassName="flex flex-col gap-4"
+      footer={
+        <>
+          <Button onClick={props.onClose}>Cancel</Button>
           <Button
-            size="xs"
+            variant="blue"
             onClick={handleSubmit}
             disabled={!componentId.trim()}
           >
             {props.mode === 'edit' ? 'Save component' : 'Insert component'}
           </Button>
-        </Group>
-      </Stack>
-    </Modal>
+        </>
+      }
+    >
+      <TextInput
+        className="InlineComponentModal__componentId"
+        size="md"
+        label="Component ID"
+        value={componentId}
+        onInput={(event) => setComponentId(event.currentTarget.value)}
+        placeholder="component-id"
+        required
+      />
+      {props.schema.fields.length > 0 ? (
+        <DraftDocContextProvider value={draftContext}>
+          <DocEditor.ObjectField field={objectField} deepKey="component" />
+        </DraftDocContextProvider>
+      ) : (
+        <p className="InlineComponentModal__empty m-0 text-sm text-muted">
+          This component does not define any editable fields.
+        </p>
+      )}
+    </Dialog>
   );
 }

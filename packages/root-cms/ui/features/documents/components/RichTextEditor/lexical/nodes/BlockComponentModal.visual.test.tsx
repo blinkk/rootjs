@@ -1,9 +1,8 @@
+import '../../../../../../styles/tailwind.out.css';
 import '../LexicalEditor.css';
 import '../../../../../../styles/global.css';
-import '../../../../../../styles/mantine.css';
 import '../../../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render} from '@testing-library/preact';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import * as schema from '../../../../../../../core/schema.js';
@@ -41,20 +40,18 @@ const carouselSchema = schema.define({
 
 function renderModal(initialValue: Record<string, any>) {
   return render(
-    <MantineProvider>
-      <ModalsProvider>
-        <DeeplinkProvider>
-          <BlockComponentModal
-            schema={carouselSchema}
-            opened={true}
-            initialValue={initialValue}
-            mode="edit"
-            onClose={() => {}}
-            onSubmit={() => {}}
-          />
-        </DeeplinkProvider>
-      </ModalsProvider>
-    </MantineProvider>
+    <ModalsProvider>
+      <DeeplinkProvider>
+        <BlockComponentModal
+          schema={carouselSchema}
+          opened={true}
+          initialValue={initialValue}
+          mode="edit"
+          onClose={() => {}}
+          onSubmit={() => {}}
+        />
+      </DeeplinkProvider>
+    </ModalsProvider>
   );
 }
 

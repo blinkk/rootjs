@@ -12,6 +12,7 @@ import {
   TableCellNode,
   TableRowNode,
 } from '@lexical/table';
+import {IconDotsVertical} from '@tabler/icons-preact';
 import {
   $getSelection,
   $isRangeSelection,
@@ -21,6 +22,11 @@ import {
 } from 'lexical';
 import {createPortal} from 'preact/compat';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {
+  Menu,
+  MenuDivider,
+  MenuItem,
+} from '../../../../../../primitives/Menu/Menu.js';
 
 interface TableActionMenuPluginProps {
   editor: LexicalEditor;
@@ -29,7 +35,6 @@ interface TableActionMenuPluginProps {
 export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
   const {editor} = props;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const [tableCellNode, setTableCellNode] = useState<TableCellNode | null>(
     null
   );
@@ -140,8 +145,7 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
     });
   }, [editor, tableCellNode, isMenuOpen, updateHeaderStates]);
 
-  const moveMenu = useCallback(() => {
-    const menu = menuRef.current;
+  const moveMenuButton = useCallback(() => {
     const menuButton = menuButtonRef.current;
     if (!menuButton || !tableCellNode) {
       return;
@@ -153,101 +157,36 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
     }
 
     const tableCellRect = tableCellNodeElement.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
 
-    // Position menu button in top-right corner of cell using fixed positioning
+    // Position the menu button in the top-right corner of the cell, using
+    // fixed positioning. The menu positions itself next to the button.
     menuButton.style.left = `${tableCellRect.right - 25}px`;
     menuButton.style.top = `${tableCellRect.top + 5}px`;
     menuButton.style.display = 'flex';
-
-    // Position menu dropdown with viewport bounds checking
-    if (menu) {
-      if (isMenuOpen) {
-        const menuWidth = 185;
-        const menuHeight = 280; // Approximate height of menu
-
-        // Default position: align right edge with button
-        let menuLeft = tableCellRect.right - menuWidth;
-        let menuTop = tableCellRect.top + 30;
-
-        // Check right edge - if menu would go off left side, align to left of cell instead
-        if (menuLeft < 10) {
-          menuLeft = tableCellRect.left;
-        }
-
-        // Check right edge - if still off screen, constrain to viewport
-        if (menuLeft + menuWidth > viewportWidth - 10) {
-          menuLeft = viewportWidth - menuWidth - 10;
-        }
-
-        // Check bottom edge - if menu would go below viewport, position above button
-        if (menuTop + menuHeight > viewportHeight - 10) {
-          menuTop = tableCellRect.top - menuHeight - 5;
-          // If still off screen at top, position at top of viewport
-          if (menuTop < 10) {
-            menuTop = 10;
-          }
-        }
-
-        menu.style.left = `${menuLeft}px`;
-        menu.style.top = `${menuTop}px`;
-        menu.style.display = 'block';
-      } else {
-        menu.style.display = 'none';
-      }
-    }
-  }, [editor, tableCellNode, isMenuOpen]);
+  }, [editor, tableCellNode]);
 
   useEffect(() => {
     if (!tableCellNode) {
       if (menuButtonRef.current) {
         menuButtonRef.current.style.display = 'none';
       }
-      if (menuRef.current) {
-        menuRef.current.style.display = 'none';
-      }
       setIsMenuOpen(false);
       return;
     }
 
-    moveMenu();
+    moveMenuButton();
 
-    // Update position on scroll
+    // Update the button's position on scroll. The menu handles Escape and
+    // clicks outside itself.
     const handleScroll = () => {
-      moveMenu();
-    };
-
-    // Close menu on Escape key
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isMenuOpen) {
-        setIsMenuOpen(false);
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    // Close menu on click outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        menuButtonRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        !menuButtonRef.current.contains(event.target as Node)
-      ) {
-        setIsMenuOpen(false);
-      }
+      moveMenuButton();
     };
 
     window.addEventListener('scroll', handleScroll, true);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       window.removeEventListener('scroll', handleScroll, true);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [tableCellNode, moveMenu, isMenuOpen]);
+  }, [tableCellNode, moveMenuButton]);
 
   useEffect(() => {
     return editor.registerCommand(
@@ -459,79 +398,40 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
   }
 
   return createPortal(
-    <>
-      <button
-        ref={menuButtonRef}
-        className="LexicalEditor__tableActionMenuButton"
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        type="button"
-      >
-        ⋮
-      </button>
-      {isMenuOpen && (
-        <div ref={menuRef} className="LexicalEditor__tableActionMenu">
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={insertRowAbove}
-          >
-            Insert row above
-          </button>
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={insertRowBelow}
-          >
-            Insert row below
-          </button>
-          <div className="LexicalEditor__tableActionMenuDivider" />
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={insertColumnLeft}
-          >
-            Insert column left
-          </button>
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={insertColumnRight}
-          >
-            Insert column right
-          </button>
-          <div className="LexicalEditor__tableActionMenuDivider" />
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={deleteColumn}
-          >
-            Delete column
-          </button>
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={deleteRow}
-          >
-            Delete row
-          </button>
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={deleteTable}
-          >
-            Delete table
-          </button>
-          <div className="LexicalEditor__tableActionMenuDivider" />
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={toggleRowHeader}
-          >
-            {isRowHeader ? 'Remove row header' : 'Convert to row header'}
-          </button>
-          <button
-            className="LexicalEditor__tableActionMenuItem"
-            onClick={toggleColumnHeader}
-          >
-            {isColumnHeader
-              ? 'Remove column header'
-              : 'Convert to column header'}
-          </button>
-        </div>
-      )}
-    </>,
+    <Menu
+      placement="bottom-end"
+      label="Table actions"
+      open={isMenuOpen}
+      onOpenChange={setIsMenuOpen}
+      className="LexicalEditor__tableActionMenu"
+      trigger={
+        <button
+          ref={menuButtonRef}
+          type="button"
+          aria-label="Table actions"
+          className="LexicalEditor__tableActionMenuButton fixed z-10 hidden size-5 cursor-pointer appearance-none items-center justify-center rounded-sm border border-solid border-border bg-chip p-0 text-fg transition-colors hover:bg-surface-active focus-visible:outline-2 focus-visible:outline-focus *:size-3.5"
+        >
+          <IconDotsVertical />
+        </button>
+      }
+    >
+      <MenuItem onClick={insertRowAbove}>Insert row above</MenuItem>
+      <MenuItem onClick={insertRowBelow}>Insert row below</MenuItem>
+      <MenuDivider />
+      <MenuItem onClick={insertColumnLeft}>Insert column left</MenuItem>
+      <MenuItem onClick={insertColumnRight}>Insert column right</MenuItem>
+      <MenuDivider />
+      <MenuItem onClick={deleteColumn}>Delete column</MenuItem>
+      <MenuItem onClick={deleteRow}>Delete row</MenuItem>
+      <MenuItem onClick={deleteTable}>Delete table</MenuItem>
+      <MenuDivider />
+      <MenuItem onClick={toggleRowHeader}>
+        {isRowHeader ? 'Remove row header' : 'Convert to row header'}
+      </MenuItem>
+      <MenuItem onClick={toggleColumnHeader}>
+        {isColumnHeader ? 'Remove column header' : 'Convert to column header'}
+      </MenuItem>
+    </Menu>,
     editorRootElement.parentElement || document.body
   );
 }

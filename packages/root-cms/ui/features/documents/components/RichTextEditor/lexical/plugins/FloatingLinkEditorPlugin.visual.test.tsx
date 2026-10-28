@@ -1,8 +1,7 @@
+import '../../../../../../styles/tailwind.out.css';
 import '../../../../../../styles/global.css';
-import '../../../../../../styles/mantine.css';
 import '../../../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render} from '@testing-library/preact';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -37,9 +36,7 @@ async function renderLinkEditor() {
   page.viewport(800, 600);
   const {container} = render(
     <div style={{padding: '20px', width: '600px'}}>
-      <MantineProvider>
-        <LexicalEditor value={LINK_VALUE} onChange={() => {}} />
-      </MantineProvider>
+      <LexicalEditor value={LINK_VALUE} onChange={() => {}} />
     </div>
   );
   const link = page.getByText('example');
@@ -70,7 +67,7 @@ describe('FloatingLinkEditorPlugin', () => {
   it('saves the target to the link', async () => {
     const {container, checkbox} = await renderLinkEditor();
     await userEvent.click(checkbox);
-    await userEvent.click(page.getByTitle('Save'));
+    await userEvent.click(page.getByRole('button', {name: 'Save'}));
     await vi.waitFor(() => {
       const anchor = container.querySelector('.LexicalEditor__editor a');
       expect(anchor?.getAttribute('target')).toBe('_blank');

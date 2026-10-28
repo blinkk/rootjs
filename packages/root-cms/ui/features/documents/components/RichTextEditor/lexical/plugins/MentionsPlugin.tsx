@@ -1,5 +1,3 @@
-import './MentionsPlugin.css';
-
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {
   LexicalTypeaheadMenuPlugin,
@@ -204,7 +202,8 @@ export function MentionsPlugin() {
       onSelectOption={onSelectOption}
       triggerFn={triggerFn}
       options={options}
-      anchorClassName="MentionsPlugin__anchor"
+      // Above pinned comment threads, at the old z-index of 300.
+      anchorClassName="MentionsPlugin__anchor z-(--cms-z-toast)"
       menuRenderFn={(
         anchorElementRef,
         {selectedIndex, selectOptionAndCleanUp, setHighlightedIndex}
@@ -214,7 +213,7 @@ export function MentionsPlugin() {
         }
         return createPortal(
           <ul
-            className="MentionsPlugin__menu"
+            className="MentionsPlugin__menu m-0 mt-1 max-h-60 w-65 list-none overflow-y-auto rounded-lg border border-solid border-border bg-surface p-1 shadow-md"
             role="listbox"
             aria-label="User mention suggestions"
           >
@@ -252,7 +251,8 @@ function MentionMenuItem(props: MentionMenuItemProps) {
       aria-selected={props.active}
       className={joinClassNames(
         'MentionsPlugin__item',
-        props.active && 'MentionsPlugin__item--active'
+        props.active && 'MentionsPlugin__item--active',
+        'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-active aria-selected:bg-surface-active'
       )}
       // Use mousedown so selection happens before the editor loses focus.
       onMouseDown={(e) => {
@@ -271,11 +271,15 @@ function MentionMenuItem(props: MentionMenuItemProps) {
         size={24}
         withTooltip={false}
       />
-      <div className="MentionsPlugin__item__text">
+      <div className="MentionsPlugin__item__text flex min-w-0 flex-col gap-px">
         {user.displayName && (
-          <div className="MentionsPlugin__item__name">{user.displayName}</div>
+          <div className="MentionsPlugin__item__name truncate text-sm font-medium text-fg">
+            {user.displayName}
+          </div>
         )}
-        <div className="MentionsPlugin__item__email">{user.email}</div>
+        <div className="MentionsPlugin__item__email truncate text-xs text-muted">
+          {user.email}
+        </div>
       </div>
     </li>
   );

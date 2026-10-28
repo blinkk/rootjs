@@ -1,8 +1,7 @@
+import '../../../../../../styles/tailwind.out.css';
 import '../../../../../../styles/global.css';
-import '../../../../../../styles/mantine.css';
 import '../../../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render, screen} from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi} from 'vitest';
@@ -53,13 +52,11 @@ describe('ImagePastePlugin', () => {
 
     render(
       <div style={{padding: '20px', width: '600px'}} data-testid="wrapper">
-        <MantineProvider>
-          <LexicalEditor
-            value={null}
-            onChange={() => {}}
-            placeholder="Paste an image here..."
-          />
-        </MantineProvider>
+        <LexicalEditor
+          value={null}
+          onChange={() => {}}
+          placeholder="Paste an image here..."
+        />
       </div>
     );
 
@@ -83,8 +80,15 @@ describe('ImagePastePlugin', () => {
     await user.click(editorTextbox);
     await user.paste(dataTransfer);
 
-    // Wait for the image block to appear.
-    const image = screen.getByRole('img');
+    // Wait for the image block to appear. Query it by class: Lexical also
+    // renders hidden `<img>` caret boundaries around decorator nodes.
+    const image = await vi.waitFor(() => {
+      const img = document.querySelector<HTMLImageElement>(
+        '.LexicalEditor__customBlock__previewImage img'
+      );
+      expect(img).not.toBeNull();
+      return img!;
+    });
     await expect.element(image).toBeVisible();
 
     // Wait for the loading spinner to disappear.

@@ -1,9 +1,8 @@
+import '../../../../../styles/tailwind.out.css';
 import './LexicalEditor.css';
 import '../../../../../styles/global.css';
-import '../../../../../styles/mantine.css';
 import '../../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render} from '@testing-library/preact';
 import {describe, it, vi, expect} from 'vitest';
 import {page} from 'vitest/browser';
@@ -131,11 +130,9 @@ describe('LexicalEditor', () => {
   it('renders with various blocks', async () => {
     page.viewport(800, 1000);
     render(
-      <MantineProvider>
-        <div style={{minHeight: '500px', padding: '20px'}}>
-          <LexicalEditor value={RICH_TEXT_DATA} autosize />
-        </div>
-      </MantineProvider>
+      <div style={{minHeight: '500px', padding: '20px'}}>
+        <LexicalEditor value={RICH_TEXT_DATA} autosize />
+      </div>
     );
     await expect
       .element(document.body)

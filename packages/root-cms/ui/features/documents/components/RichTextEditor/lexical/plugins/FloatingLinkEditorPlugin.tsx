@@ -1,9 +1,6 @@
-import './FloatingLinkEditorPlugin.css';
-
 import {$isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
-import {ActionIcon, Checkbox, Textarea, Tooltip} from '@mantine/core';
 import {IconArrowBackUp, IconCheck, IconTrash} from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -24,7 +21,10 @@ import {ComponentChildren} from 'preact';
 import {createPortal} from 'preact/compat';
 import {Dispatch, useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
-import {joinClassNames} from '../../../../../../utils/classes.js';
+import {Checkbox} from '../../../../../../primitives/Checkbox/Checkbox.js';
+import {IconButton} from '../../../../../../primitives/IconButton/IconButton.js';
+import {Textarea} from '../../../../../../primitives/Textarea/Textarea.js';
+import {cn} from '../../../../../../utils/classes.js';
 import {getSelectedNode} from '../utils/selection.js';
 
 const VERTICAL_GAP = 10;
@@ -51,7 +51,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     onDismiss,
   } = props;
   const editorRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [linkUrl, setLinkUrl] = useState('');
   const [editedLinkUrl, setEditedLinkUrl] = useState('');
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
@@ -411,65 +411,65 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   return (
     <div
       ref={editorRef}
-      className={joinClassNames(
+      className={cn(
         'LexicalEditor__linkEditor',
-        !isLink && 'LexicalEditor__linkEditor--hidden'
+        'absolute left-0 top-0 z-10 flex w-full max-w-100 items-center gap-2 rounded-lg border border-solid border-surface-active bg-surface p-2 opacity-0 shadow-md transition-opacity duration-500 will-change-transform',
+        !isLink && 'LexicalEditor__linkEditor--hidden hidden'
       )}
     >
       {!isLink || !lastSelection ? null : (
-        <div className="LexicalEditor__link__editForm">
+        <div className="LexicalEditor__link__editForm flex w-full flex-col gap-2">
           <Textarea
             ref={inputRef}
             className="LexicalEditor__link__input"
             value={editedLinkUrl}
-            onChange={(event: KeyboardEvent) => {
-              const target = event.target as HTMLInputElement;
-              updateEditedLinkUrl(target.value);
+            onInput={(event) => {
+              updateEditedLinkUrl(event.currentTarget.value);
             }}
-            onKeyDown={(event: KeyboardEvent) => {
+            onKeyDown={(event) => {
               monitorInputInteraction(event);
             }}
-            autosize={true}
+            autosize
             minRows={1}
-            radius="xs"
             placeholder="https://"
+            aria-label="Link URL"
           />
-          <div className="LexicalEditor__link__row">
+          <div className="LexicalEditor__link__row flex items-center gap-2">
             <Checkbox
               className="LexicalEditor__link__target"
+              color="blue"
               label="Open in new tab"
               checked={editedLinkTarget === '_blank'}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(event) =>
                 updateEditedLinkTarget(
                   event.currentTarget.checked ? '_blank' : null
                 )
               }
-              size="xs"
             />
-            <div className="LexicalEditor__link__controls">
-              <ToolbarActionIcon
+            <div className="LexicalEditor__link__controls ml-auto flex gap-1">
+              <LinkActionIcon
                 tooltip="Remove"
                 onClick={() => {
                   editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
                 }}
               >
-                <IconTrash size={12} />
-              </ToolbarActionIcon>
-              <ToolbarActionIcon
+                <IconTrash />
+              </LinkActionIcon>
+              <LinkActionIcon
                 tooltip="Undo"
                 onClick={handleUndo}
                 disabled={!hasChanges}
               >
-                <IconArrowBackUp size={12} />
-              </ToolbarActionIcon>
-              <ToolbarActionIcon
+                <IconArrowBackUp />
+              </LinkActionIcon>
+              <LinkActionIcon
                 tooltip="Save"
                 onClick={() => handleLinkSubmission()}
                 disabled={!hasChanges}
-                color="green"
+                primary
               >
-                <IconCheck size={12} />
-              </ToolbarActionIcon>
+                <IconCheck />
+              </LinkActionIcon>
             </div>
           </div>
         </div>
@@ -478,29 +478,29 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   );
 }
 
-interface ToolbarActionIconProps {
+interface LinkActionIconProps {
   tooltip: string;
   onClick: () => void;
   children: ComponentChildren;
   disabled?: boolean;
-  color?: string;
+  /** Fills the button green, for the main action. */
+  primary?: boolean;
 }
 
-function ToolbarActionIcon(props: ToolbarActionIconProps) {
+/** A small round icon button in the link editor. */
+function LinkActionIcon(props: LinkActionIconProps) {
   return (
-    <Tooltip label={props.tooltip} position="top" withArrow>
-      <ActionIcon
-        radius="xl"
-        variant={props.color ? 'filled' : 'default'}
-        color={props.color || 'dark'}
-        size="sm"
-        title={props.tooltip}
-        onClick={props.onClick}
-        disabled={props.disabled}
-      >
-        {props.children}
-      </ActionIcon>
-    </Tooltip>
+    <IconButton
+      label={props.tooltip}
+      round
+      size="xs"
+      variant={props.primary ? 'green' : 'default'}
+      className="*:size-3"
+      onClick={props.onClick}
+      disabled={props.disabled}
+    >
+      {props.children}
+    </IconButton>
   );
 }
 

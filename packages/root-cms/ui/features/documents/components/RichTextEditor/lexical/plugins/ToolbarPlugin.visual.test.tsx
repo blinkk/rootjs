@@ -1,8 +1,8 @@
+import '../../../../../../styles/tailwind.out.css';
 import '../LexicalEditor.css';
 import '../../../../../../styles/global.css';
 import '../../../../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render, screen} from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import {afterEach, describe, expect, it, vi} from 'vitest';
@@ -47,16 +47,14 @@ const FILTER_INLINE = [
 
 function renderFilterableEditor() {
   render(
-    <MantineProvider>
-      <DeeplinkProvider>
-        <div style={{minHeight: '500px', padding: '20px'}}>
-          <LexicalEditor
-            blockComponents={FILTER_BLOCKS}
-            inlineComponents={FILTER_INLINE}
-          />
-        </div>
-      </DeeplinkProvider>
-    </MantineProvider>
+    <DeeplinkProvider>
+      <div style={{minHeight: '500px', padding: '20px'}}>
+        <LexicalEditor
+          blockComponents={FILTER_BLOCKS}
+          inlineComponents={FILTER_INLINE}
+        />
+      </div>
+    </DeeplinkProvider>
   );
   return userEvent.setup();
 }

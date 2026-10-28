@@ -13,15 +13,5 @@
   "ui/features/documents/components/DocEditor/fields/MultiSelectField.tsx",
   "ui/features/documents/components/DocEditor/fields/ReferenceField.tsx",
   "ui/features/documents/components/DocEditor/fields/ReferencesField.tsx",
-  "ui/features/documents/components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/LexicalEditor.visual.test.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/nodes/BlockComponentModal.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/nodes/BlockComponentModal.visual.test.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/nodes/BlockComponentNode.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/nodes/InlineComponentModal.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/FloatingLinkEditorPlugin.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/FloatingLinkEditorPlugin.visual.test.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/ImagePastePlugin.visual.test.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.tsx",
-  "ui/features/documents/components/RichTextEditor/lexical/plugins/ToolbarPlugin.visual.test.tsx"
+  "ui/features/documents/components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.tsx"
 ]

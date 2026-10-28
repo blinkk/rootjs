@@ -3,19 +3,45 @@
   .TaskPage__files {
     grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
   }
+
+  /* Monospace mode for the comment editors. */
+  .TaskPage--mono .LexicalEditor__editor {
+    font-family: var(--cms-font-mono);
+  }
+
+  /*
+   * The editor, attachments, and actions share a single outlined box. The
+   * selectors outrank the editor's own rules (`LexicalEditor.css`).
+   */
+  .TaskPage__composerForm .CommentEditor.LexicalEditor .LexicalEditor__editor,
+  .TaskPage__composerForm .CommentEditor.LexicalEditor .LexicalEditor__editor:focus {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  .TaskPage__composerForm
+    .LexicalEditor--noToolbar.LexicalEditor--comment
+    .LexicalEditor__editor {
+    min-height: 88px;
+    padding: 14px 16px;
+  }
+
+  .TaskPage__composerForm .CommentEditor.LexicalEditor .LexicalEditor__placeholder {
+    left: 16px;
+    top: 14px;
+  }
 }
 
 /*
- * The rules below restyle the comment editor (Lexical) and comment body,
- * whose own CSS is still unlayered, so they stay unlayered too until those
- * components are migrated.
+ * The rules below restyle the comment body, whose own CSS is still
+ * unlayered, so they stay unlayered too until it's migrated.
  */
 
-/* Monospace mode for the description, comments, and comment editors. */
+/* Monospace mode for the description and comments. */
 .TaskPage--mono .TaskPage__description__content,
 .TaskPage--mono .TaskPage__description textarea,
-.TaskPage--mono .TaskPage__comment__body .CommentBody,
-.TaskPage--mono .LexicalEditor__editor {
+.TaskPage--mono .TaskPage__comment__body .CommentBody {
   font-family: var(--cms-font-mono);
 }
 
@@ -23,26 +49,4 @@
   font-size: var(--cms-text-base);
   line-height: 1.55;
   white-space: pre-wrap;
-}
-
-/* The editor, attachments, and actions share a single outlined box. */
-.TaskPage__composerForm .LexicalEditor__editor,
-.TaskPage__composerForm .LexicalEditor__editor:focus {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-
-.TaskPage__composerForm
-  .LexicalEditor--noToolbar.LexicalEditor--comment
-  .LexicalEditor__editor {
-  font-size: var(--cms-text-base);
-  min-height: 88px;
-  padding: 14px 16px;
-}
-
-.TaskPage__composerForm .CommentEditor .LexicalEditor__placeholder {
-  font-size: var(--cms-text-base);
-  left: 16px;
-  top: 14px;
 }

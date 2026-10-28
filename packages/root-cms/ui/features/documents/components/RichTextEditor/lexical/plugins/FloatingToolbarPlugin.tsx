@@ -1,5 +1,3 @@
-import './FloatingToolbarPlugin.css';
-
 import {$isCodeHighlightNode} from '@lexical/code';
 import {$isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
@@ -35,6 +33,12 @@ import {ToolbarActionIcon} from './ToolbarPlugin.js';
 
 const VERTICAL_GAP = 12;
 const HORIZONTAL_OFFSET = 5;
+
+/**
+ * Floating toolbar buttons are borderless and black, and get a border while
+ * their format is active.
+ */
+const FLOATING_ICON_CLASSES = 'text-strong aria-pressed:border-input-border';
 
 interface FloatingToolbarProps {
   editor: LexicalEditor;
@@ -199,96 +203,105 @@ function FloatingToolbar(props: FloatingToolbarProps) {
   return (
     <div
       ref={popupCharStylesEditorRef}
-      className="LexicalEditor__floatingToolbar"
+      className="LexicalEditor__floatingToolbar absolute left-0 top-0 z-10 flex max-w-full flex-wrap gap-0.5 rounded-lg border border-solid border-surface-active bg-surface p-1 align-middle opacity-0 shadow-md transition-opacity duration-500 will-change-transform"
     >
       {editor.isEditable() && (
         <>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Bold (${SHORTCUTS.BOLD})`}
             active={isBold}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
             }}
           >
-            <IconBold size={16} />
+            <IconBold />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Italic (${SHORTCUTS.ITALIC})`}
             active={isItalic}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
             }}
           >
-            <IconItalic size={16} />
+            <IconItalic />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Underline (${SHORTCUTS.UNDERLINE})`}
             active={isUnderline}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
             }}
           >
-            <IconUnderline size={16} />
+            <IconUnderline />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Strikethrough (${SHORTCUTS.STRIKETHROUGH})`}
             active={isStrikethrough}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
             }}
           >
-            <IconStrikethrough size={16} />
+            <IconStrikethrough />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Superscript (${SHORTCUTS.SUPERSCRIPT})`}
             active={isSuperscript}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
             }}
           >
-            <IconSuperscript size={16} />
+            <IconSuperscript />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Subscript (${SHORTCUTS.SUBSCRIPT})`}
             active={isSubscript}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
             }}
           >
-            <IconSubscript size={16} />
+            <IconSubscript />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip="Code"
             active={isCode}
             onClick={() => {
               editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
             }}
           >
-            <IconCode size={16} />
+            <IconCode />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             active={isLink}
             onClick={insertLink}
           >
-            <IconLink size={16} />
+            <IconLink />
           </ToolbarActionIcon>
           <ToolbarActionIcon
-            variant="hover"
+            variant="subtle"
+            className={FLOATING_ICON_CLASSES}
             tooltip={`Clear formatting (${SHORTCUTS.CLEAR_FORMATTING})`}
             onClick={() => {
               clearFormatting(editor);
             }}
           >
-            <IconClearFormatting size={16} />
+            <IconClearFormatting />
           </ToolbarActionIcon>
         </>
       )}

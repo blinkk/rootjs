@@ -1,5 +1,3 @@
-import './CommentEditor.css';
-
 import {RichTextData} from '../../../../shared/richtext.js';
 import {cn, joinClassNames} from '../../../utils/classes.js';
 import {LexicalEditor} from '../../documents/components/RichTextEditor/lexical/LexicalEditor.js';
