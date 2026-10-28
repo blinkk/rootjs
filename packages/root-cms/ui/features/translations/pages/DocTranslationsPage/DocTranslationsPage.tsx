@@ -1,0 +1,449 @@
+import {
+  ActionIcon,
+  Breadcrumbs,
+  Button,
+  Loader,
+  Menu,
+  Tooltip,
+} from '@mantine/core';
+import {showNotification, updateNotification} from '@mantine/notifications';
+import {
+  IconFileDownload,
+  IconFileUpload,
+  IconMoodLookDown,
+  IconScissors,
+  IconTable,
+  IconTool,
+} from '@tabler/icons-preact';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {Layout} from '../../../../app/layout/Layout.js';
+import {Heading} from '../../../../components/Heading/Heading.js';
+import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useArrayParam} from '../../../../hooks/useQueryParam.js';
+import {
+  GoogleSheetId,
+  getSpreadsheetUrl,
+} from '../../../../integrations/gsheets.js';
+import {joinClassNames} from '../../../../utils/classes.js';
+import {notifyErrors} from '../../../../utils/notifications.js';
+import {withTimeout} from '../../../../utils/with-timeout.js';
+import {
+  CsvTranslation,
+  cmsDocImportTranslations,
+  cmsGetLinkedGoogleSheetL10n,
+} from '../../../documents/doc.js';
+import {usePruneTranslationsModal} from '../../components/PruneTranslationsModal/PruneTranslationsModal.js';
+import {extractStringsForDoc} from '../../extract.js';
+import {
+  Translation,
+  TranslationsMap,
+  getTranslationForLanguage,
+  isLocaleExcludedFromTranslations,
+  loadTranslationsByHashes,
+  sourceHash,
+  toTranslationLanguages,
+} from '../../l10n.js';
+import './DocTranslationsPage.css';
+
+interface DocTranslationsPageProps {
+  collection: string;
+  slug: string;
+}
+
+export function DocTranslationsPage(props: DocTranslationsPageProps) {
+  usePageTitle(`Translations: ${props.collection}/${props.slug}`);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [sourceStrings, setSourceStrings] = useState<string[]>([]);
+  const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
+  const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [changesMap, setChangesMap] = useState<Record<string, Translation>>({});
+  const [saving, setSaving] = useState(false);
+  const collection = props.collection;
+  const slug = props.slug;
+  const docId = `${collection}/${slug}`;
+  const pruneModal = usePruneTranslationsModal();
+
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  // Columns are "translation languages", which may be shared by multiple
+  // root locales (per the `i18n.translationLanguages` config).
+  const defaultLocales = toTranslationLanguages(
+    (i18nConfig.locales || []).filter(
+      (l) => !isLocaleExcludedFromTranslations(l)
+    )
+  );
+  const [i18nLocales, setI18nLocales] = useArrayParam('locale', defaultLocales);
+
+  async function init() {
+    try {
+      const [sourceStrings, linkedSheet] = await withTimeout(
+        Promise.all([
+          extractStringsForDoc(docId),
+          cmsGetLinkedGoogleSheetL10n(docId),
+        ]),
+        undefined,
+        'loading doc strings'
+      );
+      // Hash each source string and load only the matching translations,
+      // instead of downloading the project's entire translations collection.
+      const hashes = await Promise.all(
+        sourceStrings.map((source) => sourceHash(source))
+      );
+      const translationsMap = await withTimeout(
+        loadTranslationsByHashes(hashes),
+        undefined,
+        'loading translations'
+      );
+      setSourceStrings(sourceStrings);
+      setTranslationsMap(translationsMap);
+      setLinkedSheet(linkedSheet);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      setNotFound(true);
+    }
+  }
+
+  useEffect(() => {
+    init();
+  }, []);
+
+  if (notFound) {
+    return <DocTranslationsPage.NotFound docId={docId} />;
+  }
+
+  function onChange(source: string, locale: string, translation: string) {
+    setHasChanges(true);
+    setChangesMap((current) => {
+      const newValue = {...current};
+      const translations = newValue[source] ?? {};
+      translations.source = source;
+      translations[locale] = translation;
+      newValue[source] = translations;
+      return newValue;
+    });
+  }
+
+  async function onSave() {
+    setSaving(true);
+    await notifyErrors(async () => {
+      console.log('EditTranslationsModal.onSave()');
+      const notificationId = `edit-translations-${docId}`;
+      showNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Saving translations',
+        message: `Updating for ${docId}...`,
+        autoClose: false,
+        disallowClose: true,
+      });
+      const changes: CsvTranslation[] = Object.values(changesMap);
+      console.log(changes);
+      await cmsDocImportTranslations(docId, changes);
+      updateNotification({
+        id: notificationId,
+        title: 'Saved translations',
+        message: `Updated translations for ${docId}!`,
+        autoClose: true,
+      });
+      setChangesMap({});
+      setHasChanges(false);
+    });
+    setSaving(false);
+  }
+
+  /** Toggles the locale in the URL and updates the state accordingly. */
+  function toggleLocale(locale: string) {
+    if (i18nLocales.length === defaultLocales.length) {
+      // Show only the selected locale.
+      setI18nLocales([locale]);
+    } else {
+      // Show all locales.
+      setI18nLocales(defaultLocales);
+    }
+  }
+
+  return (
+    <Layout>
+      <div className="DocTranslationsPage">
+        <div className="DocTranslationsPage__header">
+          <Breadcrumbs className="DocTranslationsPage__header__breadcrumbs">
+            <a href={`/cms/content/${collection}`}>{collection}</a>
+            <a href={`/cms/content/${collection}/${slug}`}>{slug}</a>
+            <div>translations</div>
+          </Breadcrumbs>
+          <div className="DocTranslationsPage__header__titleWrap">
+            <Heading size="h1">Translations: {docId}</Heading>
+          </div>
+          <div className="DocTranslationsPage__header__controls">
+            {linkedSheet && (
+              <div className="DocTranslationsPage__header__linkedSheet">
+                <div className="DocTranslationsPage__header__linkedSheet__controls">
+                  <Tooltip label="Open Google Sheet">
+                    <ActionIcon<'a'>
+                      component="a"
+                      href={getSpreadsheetUrl(linkedSheet)}
+                      target="_blank"
+                      variant="filled"
+                      color="green"
+                      size="sm"
+                    >
+                      <IconTable size={16} strokeWidth={2.25} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
+                  >
+                    Import from Sheet
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+                  >
+                    Export to Sheet
+                  </Button>
+                </div>
+              </div>
+            )}
+            <Menu
+              className="DocTranslationsPage__toolsMenu"
+              control={
+                <Tooltip label="Tools">
+                  <ActionIcon variant="default">
+                    <IconTool size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              }
+              size={220}
+            >
+              <Menu.Item
+                className="DocTranslationsPage__toolsMenu__item"
+                icon={<IconScissors size={16} />}
+                onClick={() =>
+                  pruneModal.open({
+                    docId,
+                    sourceStrings,
+                    onPruned: (prunedHashes) => {
+                      setTranslationsMap((prev) => {
+                        const next = {...prev};
+                        prunedHashes.forEach((hash) => delete next[hash]);
+                        return next;
+                      });
+                    },
+                  })
+                }
+              >
+                Prune unused strings
+              </Menu.Item>
+            </Menu>
+          </div>
+        </div>
+
+        <div
+          className={joinClassNames(
+            'DocTranslationsPage__content',
+            loading && 'DocTranslationsPage__content--loading'
+          )}
+        >
+          {loading ? (
+            <Loader color="gray" size="xl" />
+          ) : (
+            <DocTranslationsPage.Table
+              locales={i18nLocales}
+              sourceStrings={sourceStrings}
+              translationsMap={translationsMap}
+              onChange={onChange}
+              changesMap={changesMap}
+              onSelectLocale={(locale) => toggleLocale(locale)}
+            />
+          )}
+        </div>
+
+        <div className="DocTranslationsPage__footer">
+          <div className="DocTranslationsPage__footer__buttons">
+            <Button
+              variant="filled"
+              color="dark"
+              disabled={!hasChanges}
+              loading={saving}
+              onClick={() => onSave()}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+DocTranslationsPage.NotFound = (props: {docId: string}) => {
+  return (
+    <Layout>
+      <div className="DocTranslationsPage DocTranslationsPage--error">
+        <div className="DocTranslationsPage__error">
+          <div className="DocTranslationsPage__error__icon">
+            <IconMoodLookDown size={60} />
+          </div>
+          <div className="DocTranslationsPage__error__title">
+            Not found: {props.docId}
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+interface DocTranslationsPageTableProps {
+  locales: string[];
+  sourceStrings: string[];
+  translationsMap: TranslationsMap;
+  onChange: (source: string, locale: string, translation: string) => void;
+  onSelectLocale: (locale: string) => void;
+  changesMap: Record<string, Translation>;
+}
+
+DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const allLocales = toTranslationLanguages(
+    (i18nConfig.locales || []).filter(
+      (l) => !isLocaleExcludedFromTranslations(l)
+    )
+  );
+  const sourceToTranslationsMap = useMemo(() => {
+    const results: {[source: string]: Record<string, string>} = {};
+    Object.values(props.translationsMap).forEach(
+      (row: Record<string, string>) => {
+        results[row.source] = row;
+      }
+    );
+    return results;
+  }, [props.translationsMap]);
+
+  function getTranslation(source: string, locale: string) {
+    const sourceTranslations = sourceToTranslationsMap[source] || {};
+    const translation = getTranslationForLanguage(sourceTranslations, locale);
+    return {
+      translation: translation,
+      hasChanges: false,
+    };
+  }
+
+  return (
+    <div className="DocTranslationsPage__TableWrap">
+      <table className="DocTranslationsPage__Table">
+        <thead>
+          <tr>
+            <th className="DocTranslationsPage__Table__sourceCellHeader">
+              <div className="DocTranslationsPage__Table__headerLabel">
+                source
+              </div>
+            </th>
+            {props.locales.map((locale) => (
+              <th
+                key={locale}
+                onClick={() => props.onSelectLocale(locale)}
+                className="DocTranslationsPage__Table__localeHeader"
+              >
+                <Tooltip
+                  className="DocTranslationsPage__Table__headerTooltip"
+                  placement="start"
+                  withArrow
+                  label={
+                    props.locales.length === allLocales.length
+                      ? `Show only ${locale}`
+                      : 'Show all locales'
+                  }
+                >
+                  <div className="DocTranslationsPage__Table__headerLabel">
+                    {locale}
+                  </div>
+                </Tooltip>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {props.sourceStrings.map((source) => (
+            <tr key={source}>
+              <td className="DocTranslationsPage__Table__sourceCellWrap">
+                <div className="DocTranslationsPage__Table__sourceCell">
+                  {source}
+                </div>
+              </td>
+              {props.locales.map((locale) => {
+                const data = getTranslation(source, locale);
+                return (
+                  <td key={locale}>
+                    <DocTranslationsPage.Textarea
+                      source={source}
+                      locale={locale}
+                      value={data.translation}
+                      onChange={props.onChange}
+                      changesMap={props.changesMap}
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+DocTranslationsPage.Textarea = (props: {
+  value: string;
+  source: string;
+  locale: string;
+  onChange: (source: string, locale: string, translation: string) => void;
+  changesMap: Record<string, Translation>;
+}) => {
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const [value, setValue] = useState(props.value);
+  let changedValue = null;
+  if (props.locale in (props.changesMap[props.source] || {})) {
+    changedValue = props.changesMap[props.source][props.locale];
+  }
+  const hasChanges = changedValue !== null && changedValue !== props.value;
+
+  function updateTextareaHeight() {
+    window.requestAnimationFrame(() => {
+      const textarea = textInputRef.current!;
+      textarea.style.minHeight = 'auto';
+      // const parent = textarea.parentElement!;
+      // const height = Math.max(textarea.scrollHeight, parent.offsetHeight);
+      const height = textarea.scrollHeight;
+      textarea.style.minHeight = `${height}px`;
+    });
+  }
+
+  useEffect(() => {
+    updateTextareaHeight();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textInputRef}
+      className={joinClassNames(
+        'DocTranslationsPage__Textarea',
+        hasChanges && 'DocTranslationsPage__Textarea--hasChanges',
+        !value && 'DocTranslationsPage__Textarea--empty'
+      )}
+      onFocus={() => updateTextareaHeight()}
+      rows={1}
+      onChange={(e) => {
+        const newValue = (e.target as HTMLTextAreaElement).value;
+        setValue(newValue);
+        props.onChange(props.source, props.locale, newValue);
+      }}
+      value={value}
+    ></textarea>
+  );
+};

@@ -2,8 +2,8 @@
 
 Status: implemented — see `shared/publish-checks.ts` for the shared types and
 helpers, `checks.run` in `core/api.ts` for the server-side runner,
-`ui/hooks/usePublishChecks.tsx` for the client-side gate, and
-`ui/components/PublishChecksModal/` for the UI.
+`ui/features/releases/usePublishChecks.tsx` for the client-side gate, and
+`ui/features/releases/components/PublishChecksModal/` for the UI.
 
 ## Overview
 

@@ -1,7 +1,7 @@
 import {Button} from '@mantine/core';
 import {IconCloudOff, IconReload} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
-import {ErrorReport} from '../../utils/error-reports.js';
+import {ErrorReport} from '../../features/logs/error-reports.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {ErrorDetails} from '../ErrorDetails/ErrorDetails.js';
 import './DataLoadError.css';

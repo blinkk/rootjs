@@ -24,7 +24,7 @@ interface PublishedState {
 /**
  * Records the pre-release state of the items a release publishes, so that the
  * release can be rolled back from the CMS UI. Server-side counterpart of
- * `ReleaseRollbackRecorder` in `ui/utils/release-rollback.ts` (used when
+ * `ReleaseRollbackRecorder` in `ui/features/releases/release-rollback.ts` (used when
  * scheduled releases are published). See `shared/release-rollback.ts`.
  *
  * Each snapshot must be written to the same batch as the item's publish.

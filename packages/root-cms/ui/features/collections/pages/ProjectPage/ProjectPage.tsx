@@ -1,0 +1,73 @@
+import './ProjectPage.css';
+
+import {Button} from '@mantine/core';
+import {ComponentChildren} from 'preact';
+import {Layout} from '../../../../app/layout/Layout.js';
+import {Surface} from '../../../../components/Surface/Surface.js';
+import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {useBooleanParam} from '../../../../hooks/useQueryParam.js';
+import {ActionLogs} from '../../../logs/components/ActionLogs/ActionLogs.js';
+import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
+
+export function ProjectPage() {
+  // const projectName = window.__ROOT_CTX.rootConfig.projectName || 'Root CMS';
+  usePageTitle('Home');
+  return (
+    <Layout>
+      <div className="ProjectPage">
+        <div className="ProjectPage__main">
+          <div className="ProjectPage__section">
+            <ProjectPage.Collections />
+            <ProjectPage.ActionLogs />
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+interface SectionTitleProps {
+  className?: string;
+  children?: ComponentChildren;
+}
+
+ProjectPage.SectionTitle = (props: SectionTitleProps) => {
+  return <div className="ProjectPage__sectionTitle">{props.children}</div>;
+};
+
+ProjectPage.Collections = () => {
+  const collections = window.__ROOT_CTX.collections;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+
+  return (
+    <div className="ProjectPage__collections">
+      {/* <ProjectPage.SectionTitle>Content</ProjectPage.SectionTitle> */}
+      <CollectionTree collections={collections} projectId={projectId} />
+    </div>
+  );
+};
+
+ProjectPage.ActionLogs = () => {
+  // Use `?welcome=true` to show the onboarding message, e.g. for testing or
+  // when linking new users to the CMS.
+  const [showOnboarding] = useBooleanParam('welcome');
+  return (
+    <div className="ProjectPage__actionLogs">
+      <div className="ProjectPage__actionLogs__header">
+        <ProjectPage.SectionTitle>Recent actions</ProjectPage.SectionTitle>
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          compact
+          href="/cms/logs"
+        >
+          Show all
+        </Button>
+      </div>
+      <Surface>
+        <ActionLogs limit={10} compact showOnboarding={showOnboarding} />
+      </Surface>
+    </div>
+  );
+};

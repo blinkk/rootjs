@@ -1,12 +1,12 @@
 import {Button} from '@mantine/core';
 import {IconCheck, IconCopy} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {joinClassNames} from '../../utils/classes.js';
 import {
   ErrorReport,
   formatErrorReport,
   onErrorReportUpdate,
-} from '../../utils/error-reports.js';
+} from '../../features/logs/error-reports.js';
+import {joinClassNames} from '../../utils/classes.js';
 import './ErrorDetails.css';
 
 export interface ErrorDetailsProps {

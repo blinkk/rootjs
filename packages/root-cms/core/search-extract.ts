@@ -4,10 +4,10 @@
  *
  * Walks `fields: {...}` recursively and emits one record per leaf "text-bearing"
  * field. The emitted `deepKey` matches the format used by the doc editor's
- * deep-link system (see ui/hooks/useDeeplink.tsx) so that clicking a search
+ * deep-link system (see ui/features/documents/useDeeplink.tsx) so that clicking a search
  * result navigates the editor to the originating field.
  *
- * Reference for the deepKey format (see ui/components/DocEditor/DocEditor.tsx):
+ * Reference for the deepKey format (see ui/features/documents/components/DocEditor/DocEditor.tsx):
  * - Top-level field:     fields.<id>
  * - Nested object field: fields.<id>.<sub>
  * - Array item field:    fields.<id>.<autokey>.<sub>   (autokeys come from `_array`)

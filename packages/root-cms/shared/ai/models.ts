@@ -6,7 +6,7 @@
  * imports (`node:fs`, `firebase-admin`, etc.) so the same code can build a
  * `LanguageModel` on the server (one-shot helpers in `core/ai.ts`) and in the
  * browser (the `/cms/ai` chat now streams directly from the client — see
- * `ui/components/RootAIChat`). The provider SDKs (`@ai-sdk/*`) are all
+ * `ui/features/ai/components/RootAIChat`). The provider SDKs (`@ai-sdk/*`) are all
  * `fetch`-based and bundle cleanly for the browser.
  *
  * `google-vertex` is the one provider whose SDK package is NOT browser-safe

@@ -1,5 +1,5 @@
 import {useEffect} from 'preact/hooks';
-import {registerNavigationGuard} from '../utils/navigation-guard.js';
+import {registerNavigationGuard} from '../app/navigation-guard.js';
 
 const CONFIRMATION_MESSAGE =
   'You have unsaved changes. Are you sure you want to leave this page?';

@@ -1,7 +1,7 @@
 /**
  * Building blocks for recreating the Root.js CMS UI in screenshot scenes. The
  * markup and class names are simplified, but sizes, colors and iconography
- * follow the real CMS (see `packages/root-cms/ui/layout/Layout.tsx`).
+ * follow the real CMS (see `packages/root-cms/ui/app/layout/Layout.tsx`).
  */
 
 import {

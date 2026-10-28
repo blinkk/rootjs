@@ -1,7 +1,7 @@
 # Design: Syncing Assets from External Sources (Figma, Google Drive, …)
 
-Status: implemented (v1) — see `ui/utils/asset-sync/` for the engine and
-providers, `ui/components/AssetBrowser/AssetSyncModals.tsx` for the UI, and
+Status: implemented (v1) — see `ui/features/assets/asset-sync/` for the engine and
+providers, `ui/features/assets/components/AssetBrowser/AssetSyncModals.tsx` for the UI, and
 `assets.sync_proxy` in `core/api.ts` for the download relay.
 Author: root-cms team
 
@@ -44,14 +44,14 @@ parallel pipeline:
 
 | Existing piece | Where | Role in this feature |
 | --- | --- | --- |
-| Asset library data layer | `ui/utils/assets.ts` | Folders/files at `Projects/<pid>/Assets/*`; `createAssetFile`, `replaceAssetFile`, `syncAssetToDocs` |
-| Client-side GCS upload | `ui/utils/gcs.ts` (`uploadFileToGCS`) | Uploading downloaded exports; SHA-1 hash naming doubles as change detection |
+| Asset library data layer | `ui/features/assets/assets.ts` | Folders/files at `Projects/<pid>/Assets/*`; `createAssetFile`, `replaceAssetFile`, `syncAssetToDocs` |
+| Client-side GCS upload | `ui/integrations/gcs.ts` (`uploadFileToGCS`) | Uploading downloaded exports; SHA-1 hash naming doubles as change detection |
 | Asset→doc fan-out | `assets.ts` (`syncAssetToDocs`) | Propagating a re-synced asset to docs that embed it |
-| Drive download helper | `ui/utils/gdrive.ts` (`downloadFromDrive`) | Template for per-user, client-side third-party fetch; becomes the Drive provider's `download()` |
-| gapi OAuth hook | `ui/hooks/useGapiClient.ts` | Per-user credential precedent (browser-held, never server-stored); reused as-is for the Drive provider |
-| Data sources | `ui/utils/data-source.ts`, `core/api.ts` (`data.sync`) | Structural template for "config doc + on-demand sync"; its cron model is the template for future scheduled sync |
+| Drive download helper | `ui/integrations/gdrive.ts` (`downloadFromDrive`) | Template for per-user, client-side third-party fetch; becomes the Drive provider's `download()` |
+| gapi OAuth hook | `ui/integrations/useGapiClient.ts` | Per-user credential precedent (browser-held, never server-stored); reused as-is for the Drive provider |
+| Data sources | `ui/features/data-sources/data-source.ts`, `core/api.ts` (`data.sync`) | Structural template for "config doc + on-demand sync"; its cron model is the template for future scheduled sync |
 | RPC API layer | `core/api.ts` (`/cms/api/<ns>.<verb>`) | Home for the optional download-proxy endpoint (§7.3) |
-| Roles/ACL + rules | `core/security.ts`, `ui/utils/permissions.ts` | Gating who may sync (same as who may upload assets) |
+| Roles/ACL + rules | `core/security.ts`, `ui/features/users/permissions.ts` | Gating who may sync (same as who may upload assets) |
 
 The key architectural fact: **all asset writes are client-side** (Firebase
 Storage + Firestore web SDKs under the signed-in user). The sync engine
@@ -66,7 +66,7 @@ user's own Figma token" the natural and only credential involved.
 │  AssetBrowser ──▶ ConnectSyncSourceModal / SyncProgressModal         │
 │                        │                                             │
 │                        ▼                                             │
-│              asset-sync engine (ui/utils/asset-sync/engine.ts)       │
+│              asset-sync engine (ui/features/assets/asset-sync/engine.ts)       │
 │                │                │                    │               │
 │      provider.list()   provider.download()   assets.ts writes        │
 │                │                │                    │               │
@@ -93,7 +93,7 @@ is a narrowly-scoped download relay for CORS fallback.
 
 ### 4.1 Folder metadata: the sync source
 
-Extend `AssetFolder` (in `ui/utils/assets.ts`) with an optional `sync`
+Extend `AssetFolder` (in `ui/features/assets/assets.ts`) with an optional `sync`
 field. This is the durable, project-shared record of "what this folder is
 connected to" — and it deliberately contains **no credentials**.
 
@@ -168,7 +168,7 @@ Notes:
   (`core/security.ts` gives `userCanPublish()` write on project
   subcollections), so connecting/syncing is implicitly EDITOR+ — the same
   bar as uploading assets. The UI additionally gates with
-  `testCanPublish()` from `ui/utils/permissions.ts`.
+  `testCanPublish()` from `ui/features/users/permissions.ts`.
 - ⚠️ `moveFolder()` in `assets.ts` re-creates the *top-level* folder doc
   from an explicit field list (unlike descendants, which are spread), so
   today a `sync` field would be silently dropped on rename/move. The
@@ -245,7 +245,7 @@ A small client util owns this concern so the storage backend can change
 without touching providers:
 
 ```ts
-// ui/utils/asset-sync/tokens.ts
+// ui/features/assets/asset-sync/tokens.ts
 export function getProviderToken(provider: string): string | null;
 export function setProviderToken(provider: string, token: string): void;
 export function clearProviderToken(provider: string): void;
@@ -254,7 +254,7 @@ export function clearProviderToken(provider: string): void;
 ## 5. Provider abstraction
 
 All provider-specific logic sits behind one interface in
-`ui/utils/asset-sync/provider.ts`; the engine, data model, and UI are
+`ui/features/assets/asset-sync/provider.ts`; the engine, data model, and UI are
 provider-agnostic. Adding Google Drive later = adding one file that
 implements this interface and registering it.
 
@@ -298,14 +298,14 @@ export interface AssetSyncProvider {
   download(asset: RemoteAsset, auth: SyncAuthContext): Promise<File>;
 }
 
-// ui/utils/asset-sync/registry.ts
+// ui/features/assets/asset-sync/registry.ts
 export const SYNC_PROVIDERS: Record<string, AssetSyncProvider>;
 ```
 
 `parseSourceUrl` lets the connect modal accept a bare URL and auto-detect
 the provider (first provider whose parser matches wins).
 
-### 5.1 Figma provider (`ui/utils/asset-sync/providers/figma.ts`)
+### 5.1 Figma provider (`ui/features/assets/asset-sync/providers/figma.ts`)
 
 **URL parsing.** Accept both current and legacy forms:
 
@@ -362,7 +362,7 @@ download concurrency (default 4) and the provider batches `/v1/images`
 ids (Figma accepts large id lists per call); on 429, back off using the
 `Retry-After` header and resume.
 
-### 5.2 Google Drive provider (`ui/utils/asset-sync/gdrive.ts`)
+### 5.2 Google Drive provider (`ui/features/assets/asset-sync/gdrive.ts`)
 
 - `parseSourceUrl`: `https://drive.google.com/drive/folders/<folderId>`
   (plus `/drive/u/<n>/folders/…` and `open?id=…` forms).
@@ -392,7 +392,7 @@ The engine, schema, and folder UI needed no changes beyond the optional
 OAuth fields on the provider interface — the test the abstraction had to
 pass.
 
-## 6. Sync engine (`ui/utils/asset-sync/engine.ts`)
+## 6. Sync engine (`ui/features/assets/asset-sync/engine.ts`)
 
 ```ts
 export async function syncFolder(
@@ -618,7 +618,7 @@ All in `ui/components/`, Mantine modals registered in `ui.tsx`'s
 ## 10. Implementation plan
 
 **Phase 1 — foundations**
-- `ui/utils/asset-sync/{provider,registry,tokens,engine}.ts` + types.
+- `ui/features/assets/asset-sync/{provider,registry,tokens,engine}.ts` + types.
 - Extend `AssetFile`/`AssetFolder` types with `source`/`sync`;
   `createAssetFile` accepts `source`; fix `moveFolder` to preserve extra
   folder fields (`sync`) on rename/move.

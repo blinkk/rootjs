@@ -1,9 +1,9 @@
 # Field Comments
 
 Status: implemented — see `shared/comments.ts` for the shared types and
-helpers, `ui/utils/comments.ts` for the firestore access,
-`ui/hooks/useFieldComments.tsx` for the client-side state,
-`ui/components/CommentThread/` and `ui/components/CommentsPanel/` for the
+helpers, `ui/features/comments/comments.ts` for the firestore access,
+`ui/features/comments/useFieldComments.tsx` for the client-side state,
+`ui/features/comments/CommentThread/` and `ui/features/comments/CommentsPanel/` for the
 UI, and `core/services-notifications-comments.ts` for email notifications.
 
 ## Overview
@@ -41,7 +41,7 @@ they survive sanitization and can be extracted server-side.
   edit or delete their own comments.
 
 The comment box is the same `CommentEditor` component used by the task
-manager (`ui/components/CommentEditor/`). Tasks use its default variant
+manager (`ui/features/comments/CommentEditor/`). Tasks use its default variant
 (with toolbar); field comments use `variant="minimal"`.
 
 ## Data model

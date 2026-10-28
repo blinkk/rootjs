@@ -1,7 +1,7 @@
 /**
  * @fileoverview Server-side data layer for the asset library.
  *
- * Mirrors the CMS UI's asset library (`ui/utils/assets.ts`) for use from the
+ * Mirrors the CMS UI's asset library (`ui/features/assets/assets.ts`) for use from the
  * `RootCMSClient` and the `root-cms` CLI: files are uploaded to the project's
  * GCS bucket (and registered with the Google Cloud Image service when `gci`
  * is enabled), recorded at `Projects/<projectId>/Assets/<assetId>`, and
@@ -562,7 +562,7 @@ function isValidAsset(data: any): data is Asset {
   );
 }
 
-/** Returns the GCS object filename, mirroring `ui/utils/gcs.ts`. */
+/** Returns the GCS object filename, mirroring `ui/integrations/gcs.ts`. */
 function getGcsFilename(
   filename: string,
   hash: string,

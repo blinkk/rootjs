@@ -4,7 +4,7 @@
  * Read tools (`doc_get`, `docs_list`, etc.) run their `execute` against a
  * pluggable `CmsToolReadBackend`. The `/cms/ai` chat now streams directly from
  * the browser, so the client supplies a Firebase-web-SDK backend (see
- * `ui/components/RootAIChat/clientCmsTools.ts`). The factory itself is
+ * `ui/features/ai/components/RootAIChat/clientCmsTools.ts`). The factory itself is
  * data-source agnostic.
  *
  * Write tools (`doc_set`, `doc_create`, `doc_updateField`, `doc_duplicate`,

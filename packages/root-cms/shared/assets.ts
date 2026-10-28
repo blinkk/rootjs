@@ -1,7 +1,7 @@
 /**
  * @fileoverview Isomorphic helpers for the asset library.
  *
- * Shared by the CMS UI (`ui/utils/assets.ts`) and the server-side
+ * Shared by the CMS UI (`ui/features/assets/assets.ts`) and the server-side
  * `RootCMSClient` (`core/assets.ts`) so that both write the same asset db
  * docs, embed the same field values in CMS docs and fan out asset updates the
  * same way.
@@ -59,7 +59,7 @@ export interface UploadedFile {
   /**
    * When the file was selected from the asset library, the id of the asset at
    * `Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to
-   * docs that embed it (see `ui/utils/assets.ts` and `core/assets.ts`).
+   * docs that embed it (see `ui/features/assets/assets.ts` and `core/assets.ts`).
    */
   assetId?: string;
 }

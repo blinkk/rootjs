@@ -810,7 +810,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /**
    * Relays an asset download for the asset sync feature (see
-   * `ui/utils/asset-sync/`), used as a fallback when the browser can't
+   * `ui/features/assets/asset-sync/`), used as a fallback when the browser can't
    * fetch a provider's (pre-signed, unauthenticated) download URL directly
    * due to CORS. The relay is deliberately dumb: it only allows known
    * provider download hosts (no user-controlled hosts, preventing SSRF),
