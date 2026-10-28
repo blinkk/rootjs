@@ -498,7 +498,9 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   return (
     <div className="DocEditor__statusBar">
-      <div className="DocEditor__statusBar__viewers">
+      {/* Below `md` the bar is wider than the header, so the actions come
+          first and the presence and status details scroll in after them. */}
+      <div className="DocEditor__statusBar__viewers max-md:order-last max-md:ml-2">
         <Viewers
           id={`doc/${props.docId}`}
           onViewerClick={onViewerClick}
@@ -507,7 +509,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       </div>
       <DocEditor.SaveState />
       {data?.sys && (
-        <div className="DocEditor__statusBar__statusBadges mr-4">
+        <div className="DocEditor__statusBar__statusBadges max-md:order-last max-md:ml-2 md:mr-4">
           <DocStatusBadges
             doc={data as CMSDoc}
             docId={props.docId}
@@ -526,7 +528,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
                 window.dispatchEvent(new CustomEvent('root:toggle-search'));
               }}
             >
-              Search
+              <span className={STATUS_BAR_LABEL_CLASSES}>Search</span>
             </Button>
           </Tooltip>
         </div>
@@ -540,9 +542,9 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
                 window.dispatchEvent(new CustomEvent(TOGGLE_COMMENTS_EVENT));
               }}
             >
-              Comments
+              <span className={STATUS_BAR_LABEL_CLASSES}>Comments</span>
               {fieldComments.openCount > 0 && (
-                <span className="DocEditor__statusBar__comments__count ml-2.5 inline-block min-w-4.5 rounded-full bg-button-blue-hover px-1 py-1 text-center text-2xs font-semibold leading-none text-inverse">
+                <span className="DocEditor__statusBar__comments__count ml-1 md:ml-2.5 inline-block min-w-4.5 rounded-full bg-button-blue-hover px-1 py-1 text-center text-2xs font-semibold leading-none text-inverse">
                   {fieldComments.openCount}
                 </span>
               )}
@@ -559,7 +561,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
                 window.dispatchEvent(new CustomEvent('root:toggle-checks'));
               }}
             >
-              Checks
+              <span className={STATUS_BAR_LABEL_CLASSES}>Checks</span>
             </Button>
           </div>
         )}
@@ -574,7 +576,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
                   window.dispatchEvent(new CustomEvent('root:toggle-ai'));
                 }}
               >
-                Root AI
+                <span className={STATUS_BAR_LABEL_CLASSES}>Root AI</span>
               </Button>
             </Tooltip>
           </div>
@@ -582,6 +584,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       </div>
       <div className="DocEditor__statusBar__i18n mr-2">
         <Button
+          className="max-md:gap-0 max-md:px-1.5"
           icon={<IconPlanet />}
           onClick={() => {
             localizationModal.open({
@@ -592,7 +595,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             });
           }}
         >
-          Localization
+          <span className={STATUS_BAR_LABEL_CLASSES}>Localization</span>
         </Button>
       </div>
       <div className="DocEditor__statusBar__publishButton">
@@ -654,8 +657,15 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
  * pressed (active) panel.
  */
 const STATUS_BAR_GROUP_BUTTON_CLASSES =
-  'DocEditor__statusBar__buttonGroup__button z-0 -ml-px rounded-none group-first/segment:ml-0 group-first/segment:rounded-l-sm group-last/segment:rounded-r-sm ' +
+  'DocEditor__statusBar__buttonGroup__button z-0 -ml-px rounded-none max-md:gap-0 max-md:px-1.5 group-first/segment:ml-0 group-first/segment:rounded-l-sm group-last/segment:rounded-r-sm ' +
   'aria-pressed:z-10 aria-pressed:border-info-line aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-hover aria-pressed:hover:bg-button-blue-soft';
+
+/**
+ * Hides a status bar button's label (but not from screen readers) below
+ * `md`, where the bar shares the mobile header with the menu button. Its
+ * button gets `max-md:gap-0 max-md:px-1.5` to stay square.
+ */
+const STATUS_BAR_LABEL_CLASSES = 'max-md:sr-only';
 
 /**
  * Lets editors know that a scheduled publish uses the doc's content from when
@@ -691,7 +701,7 @@ DocEditor.SaveState = () => {
     setSaveState(saveState);
   });
   return (
-    <div className="DocEditor__statusBar__saveState mr-4 font-medium italic">
+    <div className="DocEditor__statusBar__saveState font-medium italic max-md:order-last max-md:ml-2 md:mr-4">
       {saveState === SaveState.SAVED && 'saved!'}
       {saveState === SaveState.SAVING && 'saving...'}
       {saveState === SaveState.UPDATES_PENDING && 'saving...'}

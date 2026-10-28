@@ -135,6 +135,7 @@
     z-index: 9;
     display: flex;
     align-items: center;
+    box-sizing: border-box;
     width: 100%;
     cursor: pointer;
     user-select: none;
