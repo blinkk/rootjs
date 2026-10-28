@@ -9,7 +9,10 @@ import {SourceDocButton} from './SourceField.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
-  const [value, setValue] = useDraftDocValue<string[]>(props.deepKey, []);
+  const [rawValue, setValue] = useDraftDocValue<unknown>(props.deepKey, []);
+  // Docs can hold a single string (e.g. after a schema changed from a
+  // select) or other stray data; treat those as a list rather than crash.
+  const value = useMemo(() => toStringList(rawValue), [rawValue]);
   const [sourceOptions, setSourceOptions] = useState<FieldOption[]>([]);
   const [created, setCreated] = useState<FieldOption[]>([]);
   const [loading, setLoading] = useState(Boolean(field.source));
@@ -65,7 +68,7 @@ export function MultiSelectField(props: FieldProps) {
       }
     }
     // Include any selected values not present in the options list.
-    for (const selected of value || []) {
+    for (const selected of value) {
       if (selected && !optionsByValue.has(selected)) {
         optionsByValue.set(selected, {value: selected, label: selected});
       }
@@ -81,7 +84,7 @@ export function MultiSelectField(props: FieldProps) {
       aria-label={field.label || field.id}
       className="rounded-none"
       placeholder={field.placeholder}
-      value={value || []}
+      value={value}
       creatable={field.creatable || false}
       getCreateLabel={(query: string) => `+ Add "${query}"`}
       onCreate={(query: string) => {
@@ -106,4 +109,15 @@ export function MultiSelectField(props: FieldProps) {
     );
   }
   return <div className="DocEditor__MultiSelectField">{multiSelect}</div>;
+}
+
+/** Coerces a stored multiselect value to a list of strings. */
+function toStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  if (typeof value === 'string' && value) {
+    return [value];
+  }
+  return [];
 }
