@@ -28,7 +28,7 @@ defaults, so only on-scale utilities exist:
 | AI | `text-violet` `bg-violet` `bg-violet-soft` `border-violet`, and `text-violet-strong` on `bg-violet-soft`: AI features and AI-generated content (Badge `tone="violet"`) |
 | Type | `font-sans` `font-mono`; `text-2xs` 10 (badges only) · `text-xs` 11 · `text-sm` 12 · `text-base` 14 · `text-lg` 16 · `text-xl` 20 · `text-2xl` 24 |
 | Shape | `rounded-sm` 4 · `rounded-md` 6 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-full` |
-| Elevation | `shadow-sm` (cards) · `shadow-md` (menus, popovers) · `shadow-lg` (modals, toasts) |
+| Elevation | `shadow-xs` (selected segment) · `shadow-sm` (cards) · `shadow-md` (menus, popovers) · `shadow-lg` (modals, toasts) |
 | Stacking | `z-(--cms-z-sticky)` `z-(--cms-z-dropdown)` `z-(--cms-z-floating)` (windows that float beside the page, e.g. pinned comments) `z-(--cms-z-modal)` `z-(--cms-z-toast)` `z-(--cms-z-tooltip)` |
 | Controls | `h-control-xs` 24 · `h-control-sm` 28 · `h-control-md` 36 (also `w-`, `size-`, `min-h-`) for buttons and single-line inputs |
 | Spacing | Tailwind's 4px scale (`p-2` = 8px). Half steps up to 3.5 (`gap-1.5` = 6px) are fine for dense controls |

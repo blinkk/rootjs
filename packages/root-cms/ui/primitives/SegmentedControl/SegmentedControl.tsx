@@ -179,7 +179,7 @@ export const SegmentedControl = forwardRef<
       <span
         className={cn(
           'SegmentedControl__indicator',
-          'pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface shadow-sm',
+          'pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface shadow-xs',
           indicator.animate &&
             'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
           !indicator.rect && 'hidden'
@@ -216,7 +216,7 @@ export const SegmentedControl = forwardRef<
               'relative aria-checked:text-strong',
               // Until the indicator is measured, the segment draws its own.
               !indicator.rect &&
-                'aria-checked:bg-surface aria-checked:shadow-sm',
+                'aria-checked:bg-surface aria-checked:shadow-xs',
               'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus',
               'disabled:cursor-not-allowed disabled:opacity-50',
               fullWidth && 'flex-1',

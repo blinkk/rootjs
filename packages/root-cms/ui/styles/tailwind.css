@@ -123,6 +123,7 @@
   --spacing-control-md: var(--cms-control-height-md);
 
   --shadow-*: initial;
+  --shadow-xs: var(--cms-shadow-xs);
   --shadow-sm: var(--cms-shadow-sm);
   --shadow-md: var(--cms-shadow-md);
   --shadow-lg: var(--cms-shadow-lg);

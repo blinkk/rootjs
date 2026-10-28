@@ -486,7 +486,8 @@ function TaskSortMenu(props: {
       placement="bottom-end"
       trigger={
         <Button
-          className="TaskManager__sortToggle"
+          // Matches the original toggle: a light border and no shadow.
+          className="TaskManager__sortToggle rounded-lg border-border font-normal shadow-none"
           size="md"
           icon={<IconArrowsSort strokeWidth="1.8" />}
           aria-label={`Sort by ${current.label.toLowerCase()}`}

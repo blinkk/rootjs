@@ -211,6 +211,8 @@
   --cms-radius-lg: 8px;
   --cms-radius-xl: 12px;
 
+  /* The selected segment of a `SegmentedControl` (Mantine's `xs` shadow). */
+  --cms-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
   /* Cards and raised buttons. */
   --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   /* Menus, popovers and tooltips. */
