@@ -1,7 +1,13 @@
 import {IconChevronDown, IconChevronRight} from '@tabler/icons-preact';
 import type {ComponentChildren, JSX} from 'preact';
 import {createContext} from 'preact';
-import {useContext, useId, useState} from 'preact/hooks';
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {cn} from '../../utils/classes.js';
 
 interface AccordionContextValue {
@@ -131,6 +137,8 @@ export function AccordionItem(props: AccordionItemProps) {
   }
   const id = useId();
   const open = ctx.isOpen(value);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const visible = useCollapse(panelRef, open);
   const chevronLeft = ctx.chevronPosition === 'left';
   const Chevron = chevronLeft ? IconChevronRight : IconChevronDown;
 
@@ -171,14 +179,68 @@ export function AccordionItem(props: AccordionItemProps) {
         />
       </button>
       <div
+        ref={panelRef}
         role="region"
         id={`${id}-panel`}
         aria-labelledby={`${id}-control`}
-        hidden={!open}
-        className="Accordion__panel px-2 pb-3 text-sm"
+        hidden={!visible}
+        className="Accordion__panel overflow-hidden"
       >
-        {(open || keepMounted) && children}
+        <div className="Accordion__content px-2 pb-3 text-sm">
+          {(visible || keepMounted) && children}
+        </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Animates a panel's height as it opens and closes, keeping it visible until
+ * the closing animation ends. Returns whether the panel should be shown.
+ * Toggles instantly when reduced motion is preferred.
+ */
+function useCollapse(ref: {current: HTMLElement | null}, open: boolean) {
+  const [shown, setShown] = useState(open);
+  const animation = useRef<Animation | null>(null);
+  const mounted = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const reduceMotion =
+      typeof window.matchMedia !== 'function' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!el || typeof el.animate !== 'function' || reduceMotion) {
+      setShown(open);
+      return;
+    }
+    // Starts from the current height, so toggling mid-animation reverses
+    // smoothly.
+    const from = animation.current ? el.getBoundingClientRect().height : null;
+    animation.current?.cancel();
+    if (open) {
+      setShown(true);
+    }
+    const full = el.scrollHeight;
+    const anim = el.animate(
+      {
+        height: open
+          ? [`${from ?? 0}px`, `${full}px`]
+          : [`${from ?? full}px`, '0px'],
+      },
+      {duration: 200, easing: 'ease-out'}
+    );
+    animation.current = anim;
+    anim.onfinish = () => {
+      animation.current = null;
+      if (!open) {
+        setShown(false);
+      }
+    };
+  }, [open]);
+
+  return open || shown;
 }
