@@ -3,15 +3,18 @@ import {AvatarGallery} from '../../primitives/Avatar/Avatar.gallery.js';
 import {BadgeGallery} from '../../primitives/Badge/Badge.gallery.js';
 import {BreadcrumbsGallery} from '../../primitives/Breadcrumbs/Breadcrumbs.gallery.js';
 import {ButtonGallery} from '../../primitives/Button/Button.gallery.js';
+import {DialogGallery} from '../../primitives/Dialog/Dialog.gallery.js';
 import {DividerGallery} from '../../primitives/Divider/Divider.gallery.js';
 import {IconButtonGallery} from '../../primitives/IconButton/IconButton.gallery.js';
 import {KbdGallery} from '../../primitives/Kbd/Kbd.gallery.js';
 import {LoadingOverlayGallery} from '../../primitives/LoadingOverlay/LoadingOverlay.gallery.js';
+import {ModalsGallery} from '../../primitives/modals/ModalsProvider.gallery.js';
 import {PaginationGallery} from '../../primitives/Pagination/Pagination.gallery.js';
 import {SkeletonGallery} from '../../primitives/Skeleton/Skeleton.gallery.js';
 import {SpinnerGallery} from '../../primitives/Spinner/Spinner.gallery.js';
 import {TableGallery} from '../../primitives/Table/Table.gallery.js';
 import {TabsGallery} from '../../primitives/Tabs/Tabs.gallery.js';
+import {ToastGallery} from '../../primitives/Toast/Toast.gallery.js';
 import {TokensGallery} from './TokensGallery.js';
 import type {GalleryEntry} from './types.js';
 
@@ -26,13 +29,16 @@ export const GALLERY_ENTRIES: GalleryEntry[] = [
   BadgeGallery,
   BreadcrumbsGallery,
   ButtonGallery,
+  DialogGallery,
   DividerGallery,
   IconButtonGallery,
   KbdGallery,
   LoadingOverlayGallery,
+  ModalsGallery,
   PaginationGallery,
   SkeletonGallery,
   SpinnerGallery,
   TableGallery,
   TabsGallery,
+  ToastGallery,
 ];

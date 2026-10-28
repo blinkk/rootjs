@@ -1,0 +1,19 @@
+@layer components {
+  /*
+   * Below `md` the panel is a full-screen sheet, so it keeps clear of the
+   * notch and home indicator. From `md` up it's a centered box whose width
+   * comes from the `size` prop (via `--Dialog-width`, set inline).
+   */
+  .Dialog__panel {
+    width: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  @media (width >= 48rem) {
+    .Dialog__panel {
+      width: var(--Dialog-width, 440px);
+      padding: 0;
+    }
+  }
+}
