@@ -9,6 +9,17 @@ import type {GalleryEntry} from './types.js';
 /** Viewport widths the gallery can preview side by side. */
 const WIDTHS = [375, 768, 1280];
 
+/**
+ * Device heights for `screenshot: 'viewport'` entries. Their overlays render
+ * outside the stories' content, so those frames get a realistic viewport
+ * instead of being sized to the content.
+ */
+const VIEWPORT_HEIGHTS: Record<number, number> = {
+  375: 812,
+  768: 1024,
+  1280: 800,
+};
+
 /** `postMessage` type a frame uses to report its content height. */
 const FRAME_HEIGHT_MESSAGE = 'root-cms-gallery-frame-height';
 
@@ -32,9 +43,15 @@ export function GalleryPage(props: GalleryPageProps) {
   const entry =
     GALLERY_ENTRIES.find((e) => e.id === props.entryId) ?? GALLERY_ENTRIES[0];
   if (query.frame) {
-    return <GalleryFrame entry={entry} themed={query.theme === 'test'} />;
+    return (
+      <GalleryFrame
+        entry={entry}
+        themed={query.theme === 'test'}
+        story={query.story}
+      />
+    );
   }
-  return <GalleryShell entry={entry} />;
+  return <GalleryShell key={entry.id} entry={entry} />;
 }
 
 function GalleryShell(props: {entry: GalleryEntry}) {
@@ -46,6 +63,11 @@ function GalleryShell(props: {entry: GalleryEntry}) {
     'root::GalleryPage:themed',
     false
   );
+  // Overlay stories render open, so they're previewed one at a time rather
+  // than stacked on top of each other.
+  const isViewport = props.entry.screenshot === 'viewport';
+  const storyNames = Object.keys(props.entry.stories);
+  const [story, setStory] = useState(storyNames[0]);
   usePageTitle(`${props.entry.name} · UI gallery`);
 
   function toggleWidth(width: number) {
@@ -115,14 +137,30 @@ function GalleryShell(props: {entry: GalleryEntry}) {
             />
             Test theme
           </label>
+          {isViewport && (
+            <label className="flex items-center gap-2">
+              Story
+              <select
+                value={story}
+                onChange={(e) => setStory(e.currentTarget.value)}
+              >
+                {storyNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <div className="GalleryPage__frames flex items-start gap-4 overflow-x-auto pb-4">
           {widths.map((width) => (
             <GalleryIframe
-              key={`${props.entry.id}-${width}-${themed}`}
+              key={`${props.entry.id}-${width}-${themed}-${isViewport ? story : ''}`}
               entry={props.entry}
               width={width}
               themed={themed}
+              story={isViewport ? story : undefined}
             />
           ))}
         </div>
@@ -131,14 +169,22 @@ function GalleryShell(props: {entry: GalleryEntry}) {
   );
 }
 
-/** One viewport-width preview, sized to the height of its content. */
+/**
+ * One viewport-width preview, sized to the height of its content (or to a
+ * device height, for `screenshot: 'viewport'` entries).
+ */
 function GalleryIframe(props: {
   entry: GalleryEntry;
   width: number;
   themed: boolean;
+  story?: string;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(400);
+  const [contentHeight, setContentHeight] = useState(400);
+  const height =
+    props.entry.screenshot === 'viewport'
+      ? Math.max(contentHeight, VIEWPORT_HEIGHTS[props.width] ?? 800)
+      : contentHeight;
 
   // The frame reports its content height once the CMS inside it has booted
   // (see `GalleryFrame`), since the iframe's own body is pinned to 100%.
@@ -148,7 +194,7 @@ function GalleryIframe(props: {
         e.source === ref.current?.contentWindow &&
         e.data?.type === FRAME_HEIGHT_MESSAGE
       ) {
-        setHeight(e.data.height);
+        setContentHeight(e.data.height);
       }
     };
     window.addEventListener('message', onMessage);
@@ -158,6 +204,9 @@ function GalleryIframe(props: {
   const params = new URLSearchParams({frame: '1'});
   if (props.themed) {
     params.set('theme', 'test');
+  }
+  if (props.story) {
+    params.set('story', props.story);
   }
   return (
     <figure className="GalleryPage__frame shrink-0">
@@ -171,14 +220,22 @@ function GalleryIframe(props: {
         width={props.width}
         // Inline, since the base styles set `iframe {height: auto}`.
         style={{height: `${height}px`}}
-        className="block rounded-md border border-border bg-surface"
+        // `box-content`, so the border doesn't shrink the previewed viewport.
+        className="box-content block rounded-md border border-border bg-surface"
       />
     </figure>
   );
 }
 
-/** What renders inside each iframe: every story of the entry, stacked. */
-export function GalleryFrame(props: {entry: GalleryEntry; themed: boolean}) {
+/**
+ * What renders inside each iframe: every story of the entry, stacked, or
+ * just `story` when set.
+ */
+export function GalleryFrame(props: {
+  entry: GalleryEntry;
+  themed: boolean;
+  story?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -206,18 +263,20 @@ export function GalleryFrame(props: {entry: GalleryEntry; themed: boolean}) {
       ref={ref}
       className="GalleryFrame flex flex-col gap-8 bg-page p-4 text-fg"
     >
-      {Object.entries(props.entry.stories).map(([name, render]) => (
-        <section
-          key={name}
-          className="GalleryFrame__story flex flex-col gap-2"
-          data-story={name}
-        >
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {name}
-          </h3>
-          <div className="GalleryFrame__content">{render()}</div>
-        </section>
-      ))}
+      {Object.entries(props.entry.stories)
+        .filter(([name]) => !props.story || name === props.story)
+        .map(([name, render]) => (
+          <section
+            key={name}
+            className="GalleryFrame__story flex flex-col gap-2"
+            data-story={name}
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {name}
+            </h3>
+            <div className="GalleryFrame__content">{render()}</div>
+          </section>
+        ))}
     </div>
   );
 }
