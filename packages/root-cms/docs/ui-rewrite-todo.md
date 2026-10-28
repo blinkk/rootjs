@@ -27,9 +27,6 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
 - [ ] Rich text: typing fast right after select-all + delete can come out
       scrambled (also before the rewrite). Possibly a race between
       `RichTextField`'s value sync and `OnChangePlugin`.
-- [ ] Rich text toolbar menus (block type, Components, etc.) return focus to
-      their toolbar button after an action rather than to the editor. Decide
-      whether the editor should get focus back.
 - [ ] `IconButton` can't be shrunk with a `size-*` className: tailwind-merge
       doesn't group the custom `size-control-*` utilities with `size-*`.
       Teach `cn` about them (extend the tailwind-merge config).
