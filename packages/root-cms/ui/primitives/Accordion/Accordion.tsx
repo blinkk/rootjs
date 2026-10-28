@@ -131,6 +131,13 @@ export interface AccordionItemProps extends Omit<
   /** Prevents the item from being toggled. */
   disabled?: boolean;
   className?: string;
+  /**
+   * Classes for the header button (without `href`), e.g. `px-0` to line its
+   * label up with flush content.
+   */
+  controlClassName?: string;
+  /** Classes for the content wrapper, e.g. `px-0` for edge-to-edge content. */
+  contentClassName?: string;
   children?: ComponentChildren;
 }
 
@@ -153,6 +160,8 @@ export function AccordionItem(props: AccordionItemProps) {
     keepMounted = false,
     disabled = false,
     className,
+    controlClassName,
+    contentClassName,
     children,
     ...rest
   } = props;
@@ -220,7 +229,8 @@ export function AccordionItem(props: AccordionItemProps) {
             'flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent px-2 py-3 text-left font-sans text-base font-medium text-strong transition-colors',
             'hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            chevronLeft && 'flex-row-reverse'
+            chevronLeft && 'flex-row-reverse',
+            controlClassName
           )}
         >
           <span className="Accordion__label min-w-0 flex-1 truncate">
@@ -258,7 +268,12 @@ export function AccordionItem(props: AccordionItemProps) {
         hidden={!visible}
         className="Accordion__panel overflow-hidden"
       >
-        <div className="Accordion__content px-2 pb-3 text-sm">
+        <div
+          className={cn(
+            'Accordion__content px-2 pb-3 text-sm',
+            contentClassName
+          )}
+        >
           {(visible || keepMounted) && children}
         </div>
       </div>

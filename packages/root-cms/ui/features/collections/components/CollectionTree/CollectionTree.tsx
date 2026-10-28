@@ -93,9 +93,12 @@ function CollectionNodeItem(props: CollectionNodeItemProps) {
     return (
       <AccordionItem
         className="CollectionTree__group border-b-0"
+        // No side padding, so the cards fill the column.
+        controlClassName="px-0"
+        contentClassName="px-0"
         value={node.id}
         label={
-          <span className="CollectionTree__group__label font-semibold">
+          <span className="CollectionTree__group__label font-medium">
             {node.name}
           </span>
         }
