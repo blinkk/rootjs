@@ -1,3 +1,5 @@
+import './SegmentedControl.css';
+
 import type {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {useLayoutEffect, useRef, useState} from 'preact/hooks';
@@ -36,7 +38,11 @@ interface SegmentedControlOwnProps<T extends string> extends Omit<
   value: T;
   /** Called with the newly selected value. */
   onValueChange: (value: T) => void;
-  /** Height: `xs` 24px, `sm` 28px, `md` 36px. Default `sm`. */
+  /**
+   * Size: `xs` (about 32px tall, 12px text) matches Mantine's `xs`, `sm`
+   * (about 36px) sits between, and `md` (about 40px, 14px text) matches
+   * Mantine's `sm`. Default `sm`.
+   */
   size?: InputSize;
   /** Stretches to its container, with equal-width segments. */
   fullWidth?: boolean;
@@ -53,16 +59,11 @@ export type SegmentedControlProps<T extends string = string> =
       keyof SegmentedControlOwnProps<T> | 'onChange'
     >;
 
-const ROOT_SIZE_CLASSES: Record<InputSize, string> = {
-  xs: 'h-control-xs',
-  sm: 'h-control-sm',
-  md: 'h-control-md',
-};
-
+/** Segment padding, matching Mantine's (the group adds 4px around them). */
 const ITEM_SIZE_CLASSES: Record<InputSize, string> = {
-  xs: 'gap-1 px-2 text-sm',
-  sm: 'gap-1.5 px-2.5 text-sm',
-  md: 'gap-1.5 px-3 text-base',
+  xs: 'gap-1 px-1.5 py-0.75 text-sm',
+  sm: 'gap-1.5 px-2.5 py-1.25 text-sm',
+  md: 'gap-1.5 px-2.5 py-1.25 text-base',
 };
 
 /**
@@ -167,11 +168,10 @@ export const SegmentedControl = forwardRef<
         !field && 'SegmentedControl',
         `SegmentedControl--size-${size}`,
         fullWidth && 'SegmentedControl--fullWidth',
-        'relative max-w-full gap-0.5 overflow-x-auto rounded-md bg-surface-active p-0.5',
+        'relative max-w-full overflow-x-auto rounded-md bg-surface-active p-1',
         'aria-invalid:outline-1 aria-invalid:outline-danger',
         fullWidth ? 'flex w-full' : 'inline-flex',
-        ROOT_SIZE_CLASSES[size],
-        'pointer-coarse:h-10',
+        'pointer-coarse:min-h-10',
         !field && className
       )}
     >
@@ -179,7 +179,7 @@ export const SegmentedControl = forwardRef<
       <span
         className={cn(
           'SegmentedControl__indicator',
-          'pointer-events-none absolute inset-y-0.5 left-0 rounded-sm bg-surface shadow-sm',
+          'pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface shadow-sm',
           indicator.animate &&
             'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
           !indicator.rect && 'hidden'
@@ -211,7 +211,7 @@ export const SegmentedControl = forwardRef<
             tabIndex={index === tabIndex ? 0 : -1}
             className={cn(
               'SegmentedControl__item',
-              'm-0 inline-flex shrink-0 cursor-pointer select-none appearance-none items-center py-0 justify-center whitespace-nowrap rounded-sm border-0 bg-transparent font-sans font-medium text-muted transition-colors',
+              'm-0 inline-flex shrink-0 cursor-pointer select-none appearance-none items-center justify-center whitespace-nowrap rounded-sm bg-transparent font-sans font-medium text-muted transition-colors',
               'hover:text-strong',
               'relative aria-checked:text-strong',
               // Until the indicator is measured, the segment draws its own.

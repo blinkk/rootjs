@@ -150,6 +150,7 @@ export function CommentsPanel(props: CommentsPanelProps) {
       <div className="CommentsPanel__filters shrink-0 border-b border-border px-3 py-2">
         <SegmentedControl
           aria-label="Comment filters"
+          size="xs"
           fullWidth
           value={filter}
           onValueChange={setFilter}

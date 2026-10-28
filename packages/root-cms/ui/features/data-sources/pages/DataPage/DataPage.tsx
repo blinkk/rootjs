@@ -109,6 +109,7 @@ DataPage.DataSourcesTable = () => {
       {!loading && hasArchived && (
         <div className="DataPage__DataSourcesTable__filters mb-5 flex justify-end">
           <Switch
+            size="md"
             label="Show archived"
             checked={showArchived}
             onChange={(e: any) =>

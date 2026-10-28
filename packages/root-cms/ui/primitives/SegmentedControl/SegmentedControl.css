@@ -1,0 +1,18 @@
+@layer components {
+  /*
+   * Mantine's dividers between segments, hidden next to the selected one
+   * (the sliding indicator covers it).
+   */
+  .SegmentedControl__item {
+    border: 0;
+  }
+
+  .SegmentedControl__item + .SegmentedControl__item {
+    border-left: 1px solid var(--cms-color-border-strong);
+  }
+
+  .SegmentedControl__item[aria-checked='true'],
+  .SegmentedControl__item[aria-checked='true'] + .SegmentedControl__item {
+    border-left-color: transparent;
+  }
+}

@@ -21,13 +21,13 @@ import {
 export type SwitchSize = CheckboxSize;
 
 const TRACK_SIZE_CLASSES: Record<SwitchSize, string> = {
-  sm: 'h-4 w-7',
-  md: 'h-5 w-9',
+  sm: 'h-4 w-7.5',
+  md: 'h-5 w-9.5',
 };
 
 const THUMB_SIZE_CLASSES: Record<SwitchSize, string> = {
-  sm: 'size-3 peer-checked:translate-x-3',
-  md: 'size-4 peer-checked:translate-x-4',
+  sm: 'left-0.5 top-0.5 size-3 peer-checked:translate-x-3.5',
+  md: 'left-0.75 top-0.75 size-3.5 peer-checked:translate-x-4.5',
 };
 
 /** Offsets the track so it centers on the label's first line. */
@@ -37,7 +37,7 @@ const CONTROL_OFFSET_CLASSES: Record<SwitchSize, string> = {
 };
 
 interface SwitchOwnProps extends FieldLabelProps {
-  /** Track and label size: `sm` 28×16px, `md` 36×20px. Default `sm`. */
+  /** Track and label size: `sm` 30×16px, `md` 38×20px (Mantine `xs`, `sm`). Default `sm`. */
   size?: SwitchSize;
   /** Puts the label before the switch instead of after it. */
   labelPosition?: 'left' | 'right';
@@ -82,7 +82,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
         className={cn(
           'Switch',
           `Switch--size-${size}`,
-          'flex min-w-0 items-start gap-2',
+          'flex min-w-0 items-start gap-3',
           labelPosition === 'left' && 'Switch--labelLeft flex-row-reverse',
           labelPosition === 'left' && Boolean(label) && 'justify-end',
           className
@@ -115,7 +115,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           />
           <span
             className={cn(
-              'Switch__thumb pointer-events-none absolute left-0.5 top-0.5 rounded-full bg-surface shadow-sm transition-transform',
+              'Switch__thumb pointer-events-none absolute rounded-full bg-surface shadow-sm transition-transform',
               THUMB_SIZE_CLASSES[size]
             )}
             aria-hidden="true"
