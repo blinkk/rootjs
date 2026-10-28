@@ -1,6 +1,3 @@
-import './ComponentPickerModal.css';
-
-import {Button, Image, SegmentedControl, TextInput} from '@mantine/core';
 import {
   IconLayoutGrid,
   IconLayoutList,
@@ -10,15 +7,20 @@ import {
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import * as schema from '../../../../../core/schema.js';
+import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../utils/classes.js';
 
 const MODAL_ID = 'ComponentPickerModal';
 const LAYOUT_STORAGE_KEY = 'root::ComponentPickerModal:layout';
-const GRID_COLUMNS = 3;
 
 export type ComponentPickerLayout = 'list' | 'grid';
 
@@ -56,7 +58,6 @@ export function useComponentPickerModal() {
       modals.openContextModal(MODAL_ID, {
         innerProps: props,
         size: '720px',
-        overflow: 'inside',
         title: 'Select a component',
       });
     },
@@ -115,11 +116,29 @@ export function ComponentPickerModal(
     cards[focusedIndex]?.scrollIntoView({block: 'nearest'});
   }, [focusedIndex]);
 
+  /**
+   * The number of cards per row: the grid has 3 columns, or 2 on narrow
+   * screens, so count the cards on the first row.
+   */
+  function getColumnCount() {
+    if (layout !== 'grid' || !cardsContainerRef.current) {
+      return 1;
+    }
+    const cards = Array.from(
+      cardsContainerRef.current.querySelectorAll<HTMLElement>(
+        '.ComponentPickerModal__Card'
+      )
+    );
+    const top = cards[0]?.offsetTop;
+    const count = cards.filter((card) => card.offsetTop === top).length;
+    return Math.max(1, count);
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
     if (filtered.length === 0) {
       return;
     }
-    const cols = layout === 'grid' ? GRID_COLUMNS : 1;
+    const cols = getColumnCount();
     const last = filtered.length - 1;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -143,55 +162,48 @@ export function ComponentPickerModal(
   }
 
   const showRemoveButton = !!props.onRemove && !searchQuery.trim();
-  const layoutClass =
-    layout === 'grid'
-      ? 'ComponentPickerModal--grid'
-      : 'ComponentPickerModal--list';
+  const grid = layout === 'grid';
 
   return (
     <div
-      className={`ComponentPickerModal ${layoutClass}`}
+      className={cn(
+        'ComponentPickerModal flex flex-col',
+        grid ? 'ComponentPickerModal--grid' : 'ComponentPickerModal--list'
+      )}
       onKeyDown={handleKeyDown}
     >
-      <div className="ComponentPickerModal__controls">
+      <div className="ComponentPickerModal__controls sticky top-0 z-1 mb-2 flex items-center gap-2 border-0 border-b border-solid border-border bg-surface pb-3">
         <TextInput
-          // `data-autofocus` cooperates with Mantine's modal focus trap, which
-          // runs in setTimeout(0) and would otherwise override any imperative
-          // focus call we made on mount.
+          // The dialog focuses the element with `data-autofocus` on open.
           data-autofocus
+          aria-label="Search components"
           placeholder={props.searchPlaceholder || 'Search components...'}
           value={searchQuery}
-          onChange={(e: any) => setSearchQuery(e.target.value)}
-          icon={<IconSearch size={16} />}
-          size="xs"
-          className="ComponentPickerModal__controls__search"
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
+          leftSection={<IconSearch />}
+          className="ComponentPickerModal__controls__search min-w-0 flex-1"
         />
         <SegmentedControl
-          className="ComponentPickerModal__controls__layout"
+          className="ComponentPickerModal__controls__layout shrink-0"
           size="xs"
+          aria-label="Layout"
           value={layout}
-          onChange={(value: ComponentPickerLayout) => setLayout(value)}
+          onValueChange={(value) => setLayout(value)}
           data={[
             {
               value: 'list',
+              ariaLabel: 'List layout',
               label: (
-                <span
-                  className="ComponentPickerModal__controls__layout__option"
-                  aria-label="List layout"
-                  title="List layout"
-                >
+                <span className="ComponentPickerModal__controls__layout__option inline-flex h-3.5 items-center justify-center">
                   <IconLayoutList size={14} />
                 </span>
               ),
             },
             {
               value: 'grid',
+              ariaLabel: 'Grid layout',
               label: (
-                <span
-                  className="ComponentPickerModal__controls__layout__option"
-                  aria-label="Grid layout"
-                  title="Grid layout"
-                >
+                <span className="ComponentPickerModal__controls__layout__option inline-flex h-3.5 items-center justify-center">
                   <IconLayoutGrid size={14} />
                 </span>
               ),
@@ -200,13 +212,21 @@ export function ComponentPickerModal(
         />
       </div>
       {filtered.length === 0 ? (
-        <div className="ComponentPickerModal__empty">
+        <div className="ComponentPickerModal__empty px-5 py-10 text-center text-base text-subtle">
           {props.options.length === 0
             ? 'No component types available.'
             : 'No components match your search.'}
         </div>
       ) : (
-        <div className="ComponentPickerModal__cards" ref={cardsContainerRef}>
+        <div
+          className={cn(
+            'ComponentPickerModal__cards',
+            grid
+              ? 'grid grid-cols-2 gap-3 py-2 sm:grid-cols-3'
+              : 'flex flex-col'
+          )}
+          ref={cardsContainerRef}
+        >
           {filtered.map((opt, i) => (
             <ComponentPickerModal.Card
               key={opt.key}
@@ -220,17 +240,17 @@ export function ComponentPickerModal(
         </div>
       )}
       {showRemoveButton && (
-        <div className="ComponentPickerModal__footer">
-          <Button
-            variant="subtle"
-            color="red"
-            size="xs"
-            leftIcon={<IconTrash size={14} />}
-            onClick={() => props.onRemove?.()}
-          >
-            Clear selection
-          </Button>
-        </div>
+        <DialogFooter>
+          <div className="ComponentPickerModal__footer flex w-full justify-start">
+            <Button
+              variant="danger-subtle"
+              icon={<IconTrash size={14} />}
+              onClick={() => props.onRemove?.()}
+            >
+              Clear selection
+            </Button>
+          </div>
+        </DialogFooter>
       )}
     </div>
   );
@@ -251,44 +271,57 @@ ComponentPickerModal.Card = (props: {
   // editor can tell which component the preset belongs to.
   const subtitle = preset ? s.label || s.name : '';
 
-  const dim = props.layout === 'grid' ? 180 : 120;
-  const imgWidth = dim;
-  const imgHeight = props.layout === 'grid' ? 120 : 90;
-
-  const className = [
-    'ComponentPickerModal__Card',
-    props.focused ? 'ComponentPickerModal__Card--focused' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const grid = props.layout === 'grid';
 
   return (
     <button
       type="button"
-      className={className}
+      className={cn(
+        'ComponentPickerModal__Card m-0 flex w-full cursor-pointer appearance-none items-stretch bg-transparent text-left font-sans text-inherit outline-none transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover',
+        grid
+          ? 'flex-col gap-2 rounded-sm border border-solid border-border p-2'
+          : 'gap-3 border-0 border-t border-solid border-border py-3 pl-0 pr-2 first:border-t-0',
+        props.focused && 'ComponentPickerModal__Card--focused bg-surface-hover'
+      )}
       onClick={props.onSelect}
       onMouseEnter={props.onMouseEnter}
     >
-      <div className="ComponentPickerModal__Card__image">
-        <Image
-          src={image}
-          width={imgWidth}
-          height={imgHeight}
+      <div
+        className={cn(
+          'ComponentPickerModal__Card__image shrink-0 overflow-hidden border border-solid border-border',
+          grid ? 'h-30 w-full' : 'h-22.5 w-30'
+        )}
+      >
+        <FilePreview
+          className={grid ? 'w-full!' : undefined}
+          file={image}
+          width={grid ? 180 : 120}
+          height={grid ? 120 : 90}
           withPlaceholder={!image}
           alt={title}
         />
       </div>
-      <div className="ComponentPickerModal__Card__content">
+      <div
+        className={cn(
+          'ComponentPickerModal__Card__content flex min-w-0 flex-1 flex-col gap-1',
+          grid ? 'justify-start px-1 pb-1' : 'justify-center px-3'
+        )}
+      >
         {subtitle && (
-          <div className="ComponentPickerModal__Card__content__subtitle">
+          <div className="ComponentPickerModal__Card__content__subtitle text-xs font-medium uppercase tracking-wider text-muted">
             {subtitle}
           </div>
         )}
-        <div className="ComponentPickerModal__Card__content__title">
+        <div
+          className={cn(
+            'ComponentPickerModal__Card__content__title font-semibold leading-snug',
+            grid ? 'text-base' : 'text-xl'
+          )}
+        >
           {title}
         </div>
         {description && (
-          <div className="ComponentPickerModal__Card__content__description">
+          <div className="ComponentPickerModal__Card__content__description line-clamp-2 text-sm leading-snug text-muted">
             {description}
           </div>
         )}

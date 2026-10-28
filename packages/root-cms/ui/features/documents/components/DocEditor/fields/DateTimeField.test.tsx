@@ -9,18 +9,12 @@ vi.mock('../../../useDraftDoc.js', () => ({
   useDraftDocValue: (key: string) => useDraftDocValueMock(key),
 }));
 
-vi.mock('@mantine/core', () => ({
-  Select: (props: any) => (
-    <div className={props.className}>
-      <input
-        data-testid="mantine-select-input"
-        value={props.value}
-        onChange={(e: any) => props.onChange(e.target.value)}
-      />
-    </div>
-  ),
-  MantineProvider: ({children}: any) => <div>{children}</div>,
-}));
+/** Returns the timezone select's input, or null when it isn't rendered. */
+function queryTimezoneSelect() {
+  return screen.queryByRole('combobox', {
+    name: 'Timezone',
+  }) as HTMLInputElement | null;
+}
 
 describe('DateTimeField', () => {
   beforeEach(() => {
@@ -37,9 +31,7 @@ describe('DateTimeField', () => {
       <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
     );
 
-    const select = screen.getByTestId(
-      'mantine-select-input'
-    ) as HTMLInputElement;
+    const select = queryTimezoneSelect()!;
     expect(select).not.toBeNull();
 
     const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -55,7 +47,7 @@ describe('DateTimeField', () => {
       />
     );
 
-    expect(screen.queryByTestId('mantine-select-input')).toBeNull();
+    expect(queryTimezoneSelect()).toBeNull();
     expect(screen.getByText('timezone: Asia/Tokyo')).not.toBeNull();
   });
 
@@ -134,10 +126,7 @@ describe('DateTimeField', () => {
       <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
     );
 
-    const select = screen.getByTestId(
-      'mantine-select-input'
-    ) as HTMLInputElement;
-    expect(select.value).toBe('Europe/London');
+    expect(queryTimezoneSelect()!.value).toBe('Europe/London');
   });
 
   it('updates metadata when timezone changes', () => {
@@ -156,10 +145,10 @@ describe('DateTimeField', () => {
       <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
     );
 
-    const select = screen.getByTestId(
-      'mantine-select-input'
-    ) as HTMLInputElement;
-    fireEvent.change(select, {target: {value: 'America/New_York'}});
+    const select = queryTimezoneSelect()!;
+    select.focus();
+    fireEvent.input(select, {target: {value: 'America/New_York'}});
+    fireEvent.keyDown(select, {key: 'Enter'});
 
     expect(setStoredTimezone).toHaveBeenCalledWith('America/New_York');
   });
@@ -182,7 +171,7 @@ describe('DateTimeField', () => {
       />
     );
 
-    expect(screen.queryByTestId('mantine-select-input')).toBeNull();
+    expect(queryTimezoneSelect()).toBeNull();
     expect(screen.getByText('timezone: Asia/Tokyo')).not.toBeNull();
   });
 });

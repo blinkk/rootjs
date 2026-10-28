@@ -1,15 +1,4 @@
 import {
-  ActionIcon,
-  Button,
-  Group,
-  Modal,
-  NumberInput,
-  Stack,
-  Text,
-  Tooltip,
-  useMantineTheme,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconArrowsHorizontal,
   IconArrowsVertical,
@@ -31,7 +20,12 @@ import {
   testAspectRatioMatches,
 } from '../../../../../../shared/aspect-ratio.js';
 import {GCI_URL_PREFIX} from '../../../../../integrations/gcs.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
+import {NumberInput} from '../../../../../primitives/NumberInput/NumberInput.js';
+import {Tooltip} from '../../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../../utils/classes.js';
 import {
   CropBounds,
   CropHandle,
@@ -51,7 +45,10 @@ const MIN_CROP_DISPLAY_SIZE = 24;
 /** The padding around the image inside the stage, in pixels. */
 const STAGE_PADDING = 24;
 
-/** The default height of the stage, in pixels. */
+/**
+ * The fallback height of the stage, in pixels, until it's measured. The
+ * stage is 460px tall, or 320px below `md`.
+ */
 const STAGE_HEIGHT = 460;
 
 /** Handles rendered on the crop box. */
@@ -112,7 +109,6 @@ interface DragState {
  * or locked to a preset, recommended or custom aspect ratio.
  */
 export function ImageEditorDialog(props: ImageEditorDialogProps) {
-  const theme = useMantineTheme();
   const [activeSrc, setActiveSrc] = useState(props.src);
   const [saving, setSaving] = useState(false);
   const [bounds, setBounds] = useState<CropBounds | null>(null);
@@ -415,23 +411,57 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
         }
       : undefined;
 
+  const canRestore = Boolean(
+    props.originalSrc && activeSrc !== props.originalSrc
+  );
+
   return (
-    <Modal
-      opened={props.opened}
+    <Dialog
+      className="ImageEditorDialog"
+      open={props.opened}
       onClose={props.onClose}
       title="Edit Image"
       size="xl"
       centered
-      overlayColor={
-        theme.colorScheme === 'dark'
-          ? theme.colors.dark[9]
-          : theme.colors.gray[2]
+      footer={
+        <>
+          {canRestore && (
+            <Button
+              className="ImageEditorDialog__restore mr-auto"
+              size="md"
+              onClick={handleRevert}
+              disabled={saving}
+            >
+              Restore Original
+            </Button>
+          )}
+          <Button onClick={props.onClose} disabled={saving}>
+            Cancel
+          </Button>
+          {props.onSaveAsCopy && (
+            <Button
+              onClick={() => handleSave(props.onSaveAsCopy!)}
+              disabled={saving || !outputCrop}
+            >
+              Save as copy
+            </Button>
+          )}
+          <Button
+            variant="blue"
+            onClick={() => handleSave(props.onSave)}
+            loading={saving}
+            disabled={!outputCrop}
+            icon={<IconCheck />}
+          >
+            Save
+          </Button>
+        </>
       }
     >
-      <Stack spacing="md">
-        <div className="ImageEditorDialog__Toolbar">
+      <div className="flex flex-col gap-4">
+        <div className="ImageEditorDialog__Toolbar flex items-center justify-between gap-2">
           <div
-            className="ImageEditorDialog__AspectRatios"
+            className="ImageEditorDialog__AspectRatios flex flex-wrap gap-1.5"
             role="radiogroup"
             aria-label="Aspect ratio"
           >
@@ -444,14 +474,15 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
               const button = (
                 <Button
                   key={option.id}
+                  className="ImageEditorDialog__AspectRatio rounded-full"
                   size="xs"
-                  compact
-                  radius="xl"
-                  variant={selected ? 'filled' : 'default'}
+                  variant={selected ? 'blue' : 'default'}
                   role="radio"
                   aria-checked={selected}
-                  leftIcon={
-                    option.recommended ? <IconStarFilled size={12} /> : null
+                  icon={
+                    option.recommended ? (
+                      <IconStarFilled className="size-3!" />
+                    ) : null
                   }
                   onClick={() => selectOption(option)}
                 >
@@ -460,11 +491,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
               );
               if (option.recommended) {
                 return (
-                  <Tooltip
-                    key={option.id}
-                    label="Recommended aspect ratio"
-                    withArrow
-                  >
+                  <Tooltip key={option.id} label="Recommended aspect ratio">
                     {button}
                   </Tooltip>
                 );
@@ -473,64 +500,53 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
             })}
           </div>
           {showOrientationToggle && (
-            <Tooltip
+            <IconButton
+              className="ImageEditorDialog__orientation"
+              variant="default"
               label={isPortrait ? 'Switch to landscape' : 'Switch to portrait'}
-              withArrow
+              onClick={toggleOrientation}
             >
-              <ActionIcon
-                variant="default"
-                size="md"
-                onClick={toggleOrientation}
-                aria-label={
-                  isPortrait ? 'Switch to landscape' : 'Switch to portrait'
-                }
-              >
-                {isPortrait ? (
-                  <IconRectangle size={18} />
-                ) : (
-                  <IconRectangleVertical size={18} />
-                )}
-              </ActionIcon>
-            </Tooltip>
+              {isPortrait ? <IconRectangle /> : <IconRectangleVertical />}
+            </IconButton>
           )}
         </div>
 
         {selectedOption.id === 'custom' && (
-          <Group spacing="xs" className="ImageEditorDialog__Custom">
+          <div className="ImageEditorDialog__Custom flex flex-wrap items-center gap-2">
             <NumberInput
-              size="xs"
+              className="w-24"
               aria-label="Custom aspect ratio width"
               placeholder="Width"
               min={1}
               value={customWidth || undefined}
-              onChange={(val: number | undefined) => setCustomWidth(val || 0)}
+              onValueChange={(val) => setCustomWidth(val || 0)}
             />
-            <Text size="sm" color="dimmed">
-              :
-            </Text>
+            <span className="text-base text-muted">:</span>
             <NumberInput
-              size="xs"
+              className="w-24"
               aria-label="Custom aspect ratio height"
               placeholder="Height"
               min={1}
               value={customHeight || undefined}
-              onChange={(val: number | undefined) => setCustomHeight(val || 0)}
+              onValueChange={(val) => setCustomHeight(val || 0)}
             />
-            <Text size="xs" color="dimmed">
+            <span className="text-sm text-muted">
               Enter a ratio (e.g. 21:9) or exact dimensions (e.g. 1200:630).
-            </Text>
-          </Group>
+            </span>
+          </div>
         )}
 
         <div
-          className="ImageEditorDialog__Stage"
+          className="ImageEditorDialog__Stage relative flex h-115 w-full select-none items-center justify-center overflow-hidden bg-fg max-md:h-80"
           ref={setStageEl}
-          style={{height: `${STAGE_HEIGHT}px`}}
         >
-          <div className="ImageEditorDialog__Canvas" style={canvasStyle}>
+          <div
+            className="ImageEditorDialog__Canvas relative flex-none"
+            style={canvasStyle}
+          >
             <img
               key={cropperSrc}
-              className="ImageEditorDialog__Image"
+              className="ImageEditorDialog__Image pointer-events-none block size-full"
               src={cropperSrc}
               crossOrigin="anonymous"
               alt=""
@@ -539,15 +555,15 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
             />
             {crop && bounds && (
               <>
-                <div className="ImageEditorDialog__Shade">
+                <div className="ImageEditorDialog__Shade pointer-events-none absolute inset-0 overflow-hidden">
                   <div
-                    className="ImageEditorDialog__Shade__Window"
+                    className="ImageEditorDialog__Shade__Window absolute"
                     style={cropStyle}
                   />
                 </div>
                 <div
-                  className={joinClassNames(
-                    'ImageEditorDialog__Crop',
+                  className={cn(
+                    'ImageEditorDialog__Crop absolute cursor-move touch-none',
                     dragging && 'ImageEditorDialog__Crop--dragging'
                   )}
                   style={cropStyle}
@@ -560,12 +576,12 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
                   onPointerCancel={onPointerUp}
                   onKeyDown={onCropKeyDown}
                 >
-                  <div className="ImageEditorDialog__Crop__Grid" />
+                  <div className="ImageEditorDialog__Crop__Grid pointer-events-none absolute inset-0" />
                   {CROP_HANDLES.map((handle) => (
                     <div
                       key={handle}
-                      className={joinClassNames(
-                        'ImageEditorDialog__Crop__Handle',
+                      className={cn(
+                        'ImageEditorDialog__Crop__Handle absolute touch-none',
                         `ImageEditorDialog__Crop__Handle--${handle}`
                       )}
                       data-handle={handle}
@@ -578,19 +594,19 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
           </div>
         </div>
 
-        <Group position="apart" spacing="xs">
-          <dl className="ImageEditorDialog__Details">
-            <div className="ImageEditorDialog__Details__Row">
-              <dt>Image size:</dt>
-              <dd>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <dl className="ImageEditorDialog__Details m-0 flex flex-col gap-0.5 text-sm">
+            <div className="ImageEditorDialog__Details__Row flex gap-1.5">
+              <dt className="min-w-22 text-muted">Image size:</dt>
+              <dd className="m-0 flex items-center gap-2 tabular-nums">
                 {outputCrop
                   ? `${outputCrop.width} × ${outputCrop.height} px`
                   : 'Loading…'}
               </dd>
             </div>
-            <div className="ImageEditorDialog__Details__Row">
-              <dt>Aspect ratio:</dt>
-              <dd>
+            <div className="ImageEditorDialog__Details__Row flex gap-1.5">
+              <dt className="min-w-22 text-muted">Aspect ratio:</dt>
+              <dd className="m-0 flex flex-wrap items-center gap-x-2 tabular-nums">
                 {outputCrop
                   ? formatDimensionsAspectRatio(
                       outputCrop.width,
@@ -599,7 +615,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
                     )
                   : '–'}
                 {mismatchesRecommended && (
-                  <span className="ImageEditorDialog__Mismatch">
+                  <span className="ImageEditorDialog__Mismatch inline-flex items-center gap-1 text-sm text-warning">
                     <IconAlertTriangle size={14} />
                     Recommended:{' '}
                     {recommendedRatios
@@ -610,85 +626,35 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
               </dd>
             </div>
           </dl>
-          <Group spacing="xs">
-            <Tooltip label="Center horizontally" withArrow>
-              <ActionIcon
-                variant="default"
-                onClick={centerHorizontally}
-                size="lg"
-                aria-label="Center horizontally"
-              >
-                <IconArrowsHorizontal size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Center vertically" withArrow>
-              <ActionIcon
-                variant="default"
-                onClick={centerVertically}
-                size="lg"
-                aria-label="Center vertically"
-              >
-                <IconArrowsVertical size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Reset crop" withArrow>
-              <ActionIcon
-                variant="default"
-                onClick={resetCrop}
-                size="lg"
-                aria-label="Reset crop"
-              >
-                <IconRefresh size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Group>
-
-        <Group
-          position={
-            props.originalSrc && activeSrc !== props.originalSrc
-              ? 'apart'
-              : 'right'
-          }
-          mt="md"
-        >
-          {props.originalSrc && activeSrc !== props.originalSrc && (
-            <Button variant="default" onClick={handleRevert} disabled={saving}>
-              Restore Original
-            </Button>
-          )}
-          <Group spacing="xs">
-            <Button
+          <div className="ImageEditorDialog__actions flex gap-2">
+            <IconButton
               variant="default"
-              size="xs"
-              onClick={props.onClose}
-              disabled={saving}
+              size="md"
+              label="Center horizontally"
+              onClick={centerHorizontally}
             >
-              Cancel
-            </Button>
-            {props.onSaveAsCopy && (
-              <Button
-                variant="default"
-                size="xs"
-                onClick={() => handleSave(props.onSaveAsCopy!)}
-                disabled={saving || !outputCrop}
-              >
-                Save as copy
-              </Button>
-            )}
-            <Button
-              size="xs"
-              onClick={() => handleSave(props.onSave)}
-              loading={saving}
-              disabled={!outputCrop}
-              leftIcon={<IconCheck size={20} />}
+              <IconArrowsHorizontal />
+            </IconButton>
+            <IconButton
+              variant="default"
+              size="md"
+              label="Center vertically"
+              onClick={centerVertically}
             >
-              Save
-            </Button>
-          </Group>
-        </Group>
-      </Stack>
-    </Modal>
+              <IconArrowsVertical />
+            </IconButton>
+            <IconButton
+              variant="default"
+              size="md"
+              label="Reset crop"
+              onClick={resetCrop}
+            >
+              <IconRefresh />
+            </IconButton>
+          </div>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 

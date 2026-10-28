@@ -1,10 +1,11 @@
-import {Loader, MultiSelect} from '@mantine/core';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
+import {MultiSelect} from '../../../../../primitives/MultiSelect/MultiSelect.js';
+import {Spinner} from '../../../../../primitives/Spinner/Spinner.js';
 import {FieldOption, resolveFieldSource} from '../../../field-source.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
-import {FieldSourceItem, SourceDocButton} from './SourceField.js';
+import {SourceDocButton} from './SourceField.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
@@ -41,7 +42,7 @@ export function MultiSelectField(props: FieldProps) {
 
   const staticOptions = useMemo<FieldOption[]>(() => {
     return (field.options || []).map((option) => {
-      // Mantine requires both label and value to be set.
+      // Options need both a label and a value.
       if (typeof option === 'string') {
         return {label: option, value: option};
       }
@@ -74,12 +75,13 @@ export function MultiSelectField(props: FieldProps) {
 
   const multiSelect = (
     <MultiSelect
+      // An option's `description` (from the source's `helpKey`) shows beneath
+      // its label in the dropdown.
       data={data}
-      size="xs"
-      radius={0}
+      aria-label={field.label || field.id}
+      className="rounded-none"
       placeholder={field.placeholder}
-      value={value}
-      searchable
+      value={value || []}
       creatable={field.creatable || false}
       getCreateLabel={(query: string) => `+ Add "${query}"`}
       onCreate={(query: string) => {
@@ -87,22 +89,18 @@ export function MultiSelectField(props: FieldProps) {
         setCreated((current) => [...current, item]);
         return item;
       }}
-      onChange={(newValue: string[]) => setValue(newValue)}
-      itemComponent={field.source?.helpKey ? FieldSourceItem : undefined}
+      onValueChange={(newValue: string[]) => setValue(newValue)}
       nothingFound={loading ? 'Loading…' : undefined}
-      rightSection={loading ? <Loader size="xs" /> : undefined}
-      // Due to issues with preact/compat, use a div for the dropdown el.
-      dropdownComponent="div"
+      rightSection={loading ? <Spinner size="sm" /> : undefined}
     />
   );
 
   if (field.source?.doc) {
     return (
-      <div
-        className="DocEditor__MultiSelectField"
-        style={{display: 'flex', alignItems: 'center', gap: 8}}
-      >
-        <div style={{flex: 1, minWidth: 0}}>{multiSelect}</div>
+      <div className="DocEditor__MultiSelectField flex items-center gap-2">
+        <div className="DocEditor__MultiSelectField__input min-w-0 flex-1">
+          {multiSelect}
+        </div>
         <SourceDocButton source={field.source} />
       </div>
     );

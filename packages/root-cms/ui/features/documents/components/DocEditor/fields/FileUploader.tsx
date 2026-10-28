@@ -1,8 +1,6 @@
-import './FileUploader.css';
-
 import {useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {cn} from '../../../../../utils/classes.js';
 import {
   FileFieldInternal,
   FileFieldLoadingState,
@@ -58,7 +56,7 @@ export function FileUploader(props: FileUploaderProps) {
   };
 
   return (
-    <div className={joinClassNames('FileUploader', props.className)}>
+    <div className={cn('FileUploader relative', props.className)}>
       <FileFieldInternal
         field={props.field || defaultField}
         value={value}

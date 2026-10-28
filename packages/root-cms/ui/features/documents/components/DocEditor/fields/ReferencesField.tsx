@@ -1,16 +1,15 @@
-import './ReferencesField.css';
-
 import {
   DragDropContext,
   Droppable,
   Draggable,
   DropResult,
 } from '@hello-pangea/dnd';
-import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {IconGripVertical, IconPencil, IconTrash} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
+import {cn} from '../../../../../utils/classes.js';
 import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../../../collections/components/DocPreviewCard/DocPreviewCard.js';
 import {useDraftDoc, useDraftDocField} from '../../../useDraftDoc.js';
@@ -101,7 +100,7 @@ export function ReferencesField(props: FieldProps) {
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="ReferencesField__refs"
+                className="ReferencesField__refs mb-4"
               >
                 {refIds.map((refId, index) => (
                   <Draggable key={refId} draggableId={refId} index={index}>
@@ -109,43 +108,41 @@ export function ReferencesField(props: FieldProps) {
                       <div
                         ref={provided.innerRef}
                         {...(provided.draggableProps as any)}
-                        className={joinClassNames(
-                          'ReferencesField__card',
+                        className={cn(
+                          'ReferencesField__card flex items-stretch gap-2 border-0 border-b border-solid border-border py-2.5 first:border-t',
                           snapshot.isDragging &&
-                            'ReferencesField__card--dragging'
+                            'ReferencesField__card--dragging rounded-sm border bg-surface-hover shadow-md'
                         )}
                       >
                         <div
-                          className="ReferencesField__card__handle"
+                          className="ReferencesField__card__handle flex cursor-grab items-center px-2 text-subtle active:cursor-grabbing"
                           {...(provided.dragHandleProps as any)}
                         >
                           <IconGripVertical size={16} stroke={'1.5'} />
                         </div>
                         <DocPreviewCard
-                          className="ReferencesField__card__preview"
+                          className="ReferencesField__card__preview min-w-0 flex-1 p-0"
                           docId={refId}
                           variant="compact"
                           clickable
                           statusBadges
                         />
-                        <div className="ReferencesField__card__controls">
-                          <Tooltip label="Quick edit">
-                            <ActionIcon
-                              onClick={() =>
-                                referenceFieldEditorModal.open({docId: refId})
-                              }
-                            >
-                              <IconPencil size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                          <Tooltip label="Remove">
-                            <ActionIcon
-                              className="ReferencesField__card__controls__remove"
-                              onClick={() => removeDoc(refId)}
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
-                          </Tooltip>
+                        <div className="ReferencesField__card__controls flex items-start px-2">
+                          <IconButton
+                            label="Quick edit"
+                            onClick={() =>
+                              referenceFieldEditorModal.open({docId: refId})
+                            }
+                          >
+                            <IconPencil />
+                          </IconButton>
+                          <IconButton
+                            className="ReferencesField__card__controls__remove"
+                            label="Remove"
+                            onClick={() => removeDoc(refId)}
+                          >
+                            <IconTrash />
+                          </IconButton>
                         </div>
                       </div>
                     )}
@@ -157,9 +154,11 @@ export function ReferencesField(props: FieldProps) {
           </Droppable>
         </DragDropContext>
       ) : (
-        <div className="ReferencesField__none">None selected</div>
+        <div className="ReferencesField__none mb-4 font-mono">
+          None selected
+        </div>
       )}
-      <Button color="dark" size="xs" onClick={() => openDocPickerModal()}>
+      <Button variant="primary" onClick={() => openDocPickerModal()}>
         {field.buttonLabel || 'Select'}
       </Button>
     </div>

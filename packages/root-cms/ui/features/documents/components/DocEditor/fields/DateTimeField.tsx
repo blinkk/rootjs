@@ -1,10 +1,14 @@
-import {Select} from '@mantine/core';
 import {formatInTimeZone, fromZonedTime} from 'date-fns-tz';
 import {Timestamp} from 'firebase/firestore';
 import {useMemo, useState} from 'preact/hooks';
-import {DateTimeField as DateTimeFieldSchema} from '../../../core/schema.js';
+import {DateTimeField as DateTimeFieldSchema} from '../../../../../../core/schema.js';
+import {Select} from '../../../../../primitives/Select/Select.js';
+import {TextInput} from '../../../../../primitives/TextInput/TextInput.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
+
+/** The IANA timezones the browser supports, for the timezone select. */
+const TIMEZONES = Intl.supportedValuesOf('timeZone');
 
 export function DateTimeField(props: FieldProps) {
   const field = props.field as DateTimeFieldSchema;
@@ -77,36 +81,42 @@ export function DateTimeField(props: FieldProps) {
 
   return (
     <div className="DocEditor__DateTimeField">
-      <div className="DocEditor__DateTimeField__row">
-        <input
+      <div className="DocEditor__DateTimeField__row flex flex-wrap items-center gap-x-2 gap-y-1">
+        <TextInput
           type="datetime-local"
+          aria-label="Date and time"
           value={dateStr}
           onChange={(e) => {
-            const target = e.target as HTMLInputElement;
+            const target = e.currentTarget;
             onDateChange(target.value, target.validity);
           }}
-          className="DocEditor__DateTimeField__input"
+          className="DocEditor__DateTimeField__input min-w-50 flex-1"
+          inputClassName="rounded-none"
         />
         {field.timezone ? (
-          <div className="DocEditor__DateTimeField__timezone">
+          <div className="DocEditor__DateTimeField__timezone text-right text-xs font-normal">
             timezone: {field.timezone}
           </div>
         ) : (
           <Select
-            className="DocEditor__DateTimeField__timezoneSelect"
+            className="DocEditor__DateTimeField__timezoneSelect w-45"
+            aria-label="Timezone"
             value={activeTimezone}
-            onChange={(val: string | null) => {
+            onValueChange={(val) => {
               if (val) {
                 onTimezoneChange(val);
               }
             }}
-            data={Intl.supportedValuesOf('timeZone')}
+            data={TIMEZONES}
             searchable
-            size="xs"
           />
         )}
       </div>
-      {error && <div className="DocEditor__DateTimeField__error">{error}</div>}
+      {error && (
+        <div className="DocEditor__DateTimeField__error mt-1 text-sm text-danger">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

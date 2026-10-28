@@ -1,21 +1,14 @@
-import {
-  Button,
-  Group,
-  LoadingOverlay,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-  Tooltip,
-  useMantineTheme,
-} from '@mantine/core';
 import {IconCheck, IconRobot} from '@tabler/icons-preact';
 import {useMemo, useState} from 'preact/hooks';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../../primitives/Dialog/Dialog.js';
+import {LoadingOverlay} from '../../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {Select} from '../../../../../primitives/Select/Select.js';
+import {Textarea} from '../../../../../primitives/Textarea/Textarea.js';
 import {showNotification} from '../../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {Tooltip} from '../../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../../utils/classes.js';
 import {getAiImageEditingModels} from '../../../../ai/ai.js';
-import './AiImageEditorDialog.css';
 
 /** A single image in the edit history. */
 interface ImageVersion {
@@ -49,7 +42,6 @@ interface AiImageEditorDialogProps {
  * result (or step back to an earlier one and branch off it) before saving.
  */
 export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
-  const theme = useMantineTheme();
   const models = useMemo(() => getAiImageEditingModels(), []);
   const [modelId, setModelId] = useState(models[0]?.id || '');
   const [versions, setVersions] = useState<ImageVersion[]>([{src: props.src}]);
@@ -121,45 +113,55 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
   }
 
   return (
-    <Modal
-      opened={props.opened}
+    <Dialog
+      className="AiImageEditorDialog"
+      open={props.opened}
       onClose={props.onClose}
       title="Edit with AI"
       size="xl"
       centered
-      overlayColor={
-        theme.colorScheme === 'dark'
-          ? theme.colors.dark[9]
-          : theme.colors.gray[2]
+      footer={
+        <>
+          <Button size="md" onClick={props.onClose} disabled={busy}>
+            Discard
+          </Button>
+          <Button
+            variant="blue"
+            size="md"
+            loading={saving}
+            disabled={selectedIndex === 0 || generating}
+            icon={<IconCheck />}
+            onClick={handleSave}
+          >
+            Save
+          </Button>
+        </>
       }
     >
-      <Stack spacing="md">
-        <div className="AiImageEditorDialog__Canvas">
+      <div className="flex flex-col gap-4">
+        <div className="AiImageEditorDialog__Canvas relative flex h-100 w-full items-center justify-center bg-fg max-md:h-75">
           <LoadingOverlay visible={generating} />
           <img
-            className="AiImageEditorDialog__Canvas__Image"
+            className="AiImageEditorDialog__Canvas__Image block max-h-full max-w-full object-contain"
             src={selectedVersion.src}
             alt={selectedVersion.prompt || 'Image being edited'}
           />
         </div>
 
         {versions.length > 1 && (
-          <div className="AiImageEditorDialog__Versions">
+          <div className="AiImageEditorDialog__Versions flex gap-2 overflow-x-auto pb-1 *:flex-none">
             {versions.map((version, index) => (
               <Tooltip
                 key={index}
                 label={version.prompt || 'Original'}
-                position="top"
-                withArrow
-                wrapLines
-                width={220}
+                contentClassName="max-w-55"
               >
                 <button
                   type="button"
-                  className={joinClassNames(
-                    'AiImageEditorDialog__Versions__Item',
+                  className={cn(
+                    'AiImageEditorDialog__Versions__Item relative m-0 size-16 flex-none cursor-pointer appearance-none rounded-sm border-2 border-solid border-transparent bg-fg p-0 disabled:cursor-default',
                     index === selectedIndex &&
-                      'AiImageEditorDialog__Versions__Item--selected'
+                      'AiImageEditorDialog__Versions__Item--selected border-focus'
                   )}
                   disabled={busy}
                   onClick={() => setSelectedIndex(index)}
@@ -170,8 +172,12 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
                   }
                   aria-pressed={index === selectedIndex}
                 >
-                  <img src={version.src} alt="" />
-                  <span className="AiImageEditorDialog__Versions__Item__Label">
+                  <img
+                    className="block size-full object-contain"
+                    src={version.src}
+                    alt=""
+                  />
+                  <span className="AiImageEditorDialog__Versions__Item__Label absolute inset-x-0 bottom-0 truncate bg-strong/75 px-0.5 text-xs leading-snug text-inverse">
                     {index === 0 ? 'Original' : `v${index}`}
                   </span>
                 </button>
@@ -182,6 +188,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
 
         <Textarea
           label="Describe the change"
+          size="md"
           placeholder="e.g. remove the background, or make the sky purple"
           value={prompt}
           minRows={2}
@@ -189,8 +196,8 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
           maxRows={6}
           disabled={busy}
           data-autofocus
-          onChange={(e: any) => setPrompt(e.currentTarget.value)}
-          onKeyDown={(e: KeyboardEvent) => {
+          onInput={(e) => setPrompt(e.currentTarget.value)}
+          onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
               e.preventDefault();
               handleGenerate();
@@ -198,53 +205,39 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
           }}
         />
 
-        <Group position="apart" align="flex-end">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           {models.length > 1 ? (
             <Select
-              className="AiImageEditorDialog__ModelSelect"
+              className="AiImageEditorDialog__ModelSelect w-full max-w-60"
               label="Model"
-              size="xs"
               data={models.map((model) => ({
                 value: model.id,
                 label: model.label,
               }))}
               value={modelId}
               disabled={busy}
-              onChange={(value: string | null) => setModelId(value || '')}
+              onValueChange={(value) => setModelId(value || '')}
             />
           ) : (
-            <Text size="xs" color="dimmed">
+            <div className="AiImageEditorDialog__status text-sm text-muted">
               {selectedIndex > 0
                 ? `Editing v${selectedIndex}`
                 : 'Editing the original'}
-            </Text>
+            </div>
           )}
           <Button
-            variant="light"
+            variant="blue-light"
+            size="md"
             loading={generating}
             disabled={saving || !prompt.trim()}
-            leftIcon={<IconRobot size={16} />}
+            icon={<IconRobot />}
             onClick={handleGenerate}
           >
             {generating ? 'Generating...' : 'Generate'}
           </Button>
-        </Group>
-
-        <Group position="right" mt="md">
-          <Button variant="default" onClick={props.onClose} disabled={busy}>
-            Discard
-          </Button>
-          <Button
-            loading={saving}
-            disabled={selectedIndex === 0 || generating}
-            leftIcon={<IconCheck size={16} />}
-            onClick={handleSave}
-          >
-            Save
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 

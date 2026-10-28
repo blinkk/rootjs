@@ -7,45 +7,6 @@ import {
 } from '@testing-library/preact';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
-// Mock Mantine. The real components need a MantineProvider context that isn't
-// available under @preact/compat in jsdom; these stubs keep the test focused
-// on the dialog's own iteration logic.
-vi.mock('@mantine/core', () => ({
-  Button: ({children, onClick, disabled, loading}: any) => (
-    <button onClick={onClick} disabled={disabled || loading}>
-      {children}
-    </button>
-  ),
-  Group: ({children}: any) => <div>{children}</div>,
-  LoadingOverlay: ({visible}: any) => (visible ? <div>Loading</div> : null),
-  Modal: ({children, opened}: any) => (opened ? <div>{children}</div> : null),
-  Select: ({value, onChange, data}: any) => (
-    <select
-      aria-label="Model"
-      value={value}
-      onChange={(e: any) => onChange(e.currentTarget.value)}
-    >
-      {data.map((item: any) => (
-        <option value={item.value}>{item.label}</option>
-      ))}
-    </select>
-  ),
-  Stack: ({children}: any) => <div>{children}</div>,
-  Text: ({children}: any) => <div>{children}</div>,
-  // Mantine's Textarea fires `onChange` on every keystroke (React semantics,
-  // via the @preact/compat alias), so bind it to `onInput` here.
-  Textarea: ({label, value, onChange, onKeyDown}: any) => (
-    <textarea
-      aria-label={label}
-      value={value}
-      onInput={onChange}
-      onKeyDown={onKeyDown}
-    />
-  ),
-  Tooltip: ({children}: any) => <div>{children}</div>,
-  useMantineTheme: () => ({colorScheme: 'light', colors: {dark: [], gray: []}}),
-}));
-
 vi.mock('../../../../../primitives/Toast/toastStore.js', () => ({
   showNotification: vi.fn(),
 }));
@@ -66,17 +27,20 @@ function editRequests(fetchMock: any): any[] {
     .map((call: any[]) => JSON.parse(call[1].body));
 }
 
+/** Returns the button with the given accessible name. */
+function button(name: string) {
+  return screen.getByRole('button', {name}) as HTMLButtonElement;
+}
+
 /** Types `text` into the prompt input and clicks Generate. */
 async function generate(text: string) {
   fireEvent.input(screen.getByLabelText('Describe the change'), {
     target: {value: text},
   });
   await waitFor(() => {
-    expect((screen.getByText('Generate') as HTMLButtonElement).disabled).toBe(
-      false
-    );
+    expect(button('Generate').disabled).toBe(false);
   });
-  fireEvent.click(screen.getByText('Generate'));
+  fireEvent.click(button('Generate'));
 }
 
 describe('AiImageEditorDialog', () => {
@@ -166,16 +130,12 @@ describe('AiImageEditorDialog', () => {
 
   test('cannot save until an edit has been generated', async () => {
     const onSave = renderDialog();
-    expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
+    expect(button('Save').disabled).toBe(true);
 
     await generate('make the sky purple');
-    await waitFor(() =>
-      expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(
-        false
-      )
-    );
+    await waitFor(() => expect(button('Save').disabled).toBe(false));
 
-    fireEvent.click(screen.getByText('Save'));
+    fireEvent.click(button('Save'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     // The saved file is named after the original, with the generated ext.
     expect(onSave.mock.calls[0][0].name).toBe('photo-edited.png');
@@ -184,17 +144,9 @@ describe('AiImageEditorDialog', () => {
   test('keeps the original selectable and does not save it', async () => {
     renderDialog();
     await generate('make the sky purple');
-    await waitFor(() =>
-      expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(
-        false
-      )
-    );
+    await waitFor(() => expect(button('Save').disabled).toBe(false));
 
     fireEvent.click(screen.getByLabelText('Original'));
-    await waitFor(() =>
-      expect((screen.getByText('Save') as HTMLButtonElement).disabled).toBe(
-        true
-      )
-    );
+    await waitFor(() => expect(button('Save').disabled).toBe(true));
   });
 });

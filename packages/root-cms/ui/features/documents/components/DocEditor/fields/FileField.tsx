@@ -1,25 +1,6 @@
 import './FileField.css';
 
 import {
-  ActionIcon,
-  Box,
-  Button,
-  Checkbox,
-  Divider,
-  Group,
-  Loader,
-  LoadingOverlay,
-  MantineSize,
-  Menu,
-  Modal,
-  Select,
-  Table,
-  Text,
-  Textarea,
-  Tooltip,
-  useMantineTheme,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconCopy,
   IconCrop,
@@ -39,7 +20,7 @@ import {
   IconUnlink,
 } from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
-import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
+import {CSSProperties, forwardRef} from 'preact/compat';
 import {lazy, Suspense} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
@@ -67,11 +48,30 @@ import {
   parseGoogleDriveId,
 } from '../../../../../integrations/gdrive.js';
 import {useGapiClient} from '../../../../../integrations/useGapiClient.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../../primitives/Checkbox/Checkbox.js';
+import {Dialog} from '../../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
+import {LoadingOverlay} from '../../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {
+  Menu,
+  MenuDivider,
+  MenuGroup,
+  MenuItem,
+} from '../../../../../primitives/Menu/Menu.js';
+import {Select} from '../../../../../primitives/Select/Select.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '../../../../../primitives/Table/Table.js';
+import {Textarea} from '../../../../../primitives/Textarea/Textarea.js';
 import {
   hideNotification,
   showNotification,
 } from '../../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../../utils/classes.js';
+import {cn} from '../../../../../utils/classes.js';
 import {testAiEnabled, testAiImageEditingEnabled} from '../../../../ai/ai.js';
 import {
   buildAssetFieldValue,
@@ -189,7 +189,6 @@ export interface FileFieldInternalProps {
 
 export function FileFieldInternal(props: FileFieldInternalProps) {
   const {field, value, setValue, loadingState, setLoadingState} = props;
-  const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -580,17 +579,13 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         setAspectRatioWarningIgnored: props.setAspectRatioWarningIgnored,
       }}
     >
-      <Modal
+      <Dialog
+        className="FileField__placeholderDialog"
         size="sm"
-        opened={placeholderModalOpened}
+        open={placeholderModalOpened}
         onClose={() => setPlaceholderModalOpened(false)}
         title="Placeholder image"
         centered
-        overlayColor={
-          theme.colorScheme === 'dark'
-            ? theme.colors.dark[9]
-            : theme.colors.gray[2]
-        }
       >
         <GenerateImageForm
           onSubmit={(file) => {
@@ -598,40 +593,39 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
             setPlaceholderModalOpened(false);
           }}
         />
-      </Modal>
-      <Modal
+      </Dialog>
+      <Dialog
+        className="FileField__deleteDialog"
         size="sm"
-        opened={deleteModalOpened}
+        open={deleteModalOpened}
         onClose={() => setDeleteModalOpened(false)}
         title="Delete file?"
         centered
-        overlayColor={
-          theme.colorScheme === 'dark'
-            ? theme.colors.dark[9]
-            : theme.colors.gray[2]
+        footer={
+          <div className="grid w-full grid-cols-2 gap-2">
+            <Button
+              size="md"
+              onClick={() => setDeleteModalOpened(false)}
+              disabled={loadingState === 'loading'}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={handleRemoveFileConfirm}
+              loading={loadingState === 'loading'}
+            >
+              Delete
+            </Button>
+          </div>
         }
       >
-        <Text size="sm" mb="lg">
+        <p className="m-0 text-base">
           Are you sure you want to delete this file from GCS? This action cannot
           be undone.
-        </Text>
-        <Group grow spacing="xs">
-          <Button
-            variant="default"
-            onClick={() => setDeleteModalOpened(false)}
-            disabled={loadingState === 'loading'}
-          >
-            Cancel
-          </Button>
-          <Button
-            color="red"
-            onClick={handleRemoveFileConfirm}
-            loading={loadingState === 'loading'}
-          >
-            Delete
-          </Button>
-        </Group>
-      </Modal>
+        </p>
+      </Dialog>
       {imageEditorOpened && value?.src && (
         <Suspense fallback={null}>
           <ImageEditorDialog
@@ -667,44 +661,39 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
 
       {/* Pending Upload Warning */}
       {pendingUpload ? (
-        <div className="FileField__overwriteWarning">
-          <div className="FileField__overwriteWarning__header">
-            <Text size="sm" color="red" weight={700}>
-              File already exists
-            </Text>
+        <div className="FileField__overwriteWarning flex flex-col gap-3 rounded-sm border border-solid border-input-border bg-surface-hover p-3 text-base">
+          <div className="FileField__overwriteWarning__header flex items-center justify-between font-bold text-danger">
+            File already exists
           </div>
-          <Text size="sm">
+          <div>
             A file named <strong>{pendingUpload.name}</strong> already exists.
-          </Text>
+          </div>
           {existingFileUrl && (
-            <Text size="sm" className="FileField__overwriteWarning__link">
+            <div className="FileField__overwriteWarning__link">
               <a
+                className="inline-flex items-center gap-1 whitespace-nowrap font-bold text-inherit underline"
                 href={existingFileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 View existing file <IconExternalLink size={12} />
               </a>
-            </Text>
+            </div>
           )}
 
-          <div className="FileField__overwriteWarning__checkbox">
+          <div className="FileField__overwriteWarning__checkbox mt-1">
             <Checkbox
+              color="blue"
+              size="md"
               label="Confirm overwrite"
               checked={overwriteConfirmed}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setOverwriteConfirmed(e.currentTarget.checked)
-              }
+              onChange={(e) => setOverwriteConfirmed(e.currentTarget.checked)}
             />
           </div>
 
-          <Group
-            grow
-            spacing="xs"
-            className="FileField__overwriteWarning__actions"
-          >
+          <div className="FileField__overwriteWarning__actions mt-1 grid grid-cols-2 gap-2">
             <Button
-              variant="default"
+              size="md"
               onClick={() => {
                 setPendingUpload(null);
                 setExistingFileUrl(null);
@@ -715,23 +704,25 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
               Cancel
             </Button>
             <Button
+              variant="danger"
+              size="md"
               disabled={!overwriteConfirmed}
               onClick={() =>
                 uploadFile(pendingUpload, undefined, {namingMode: 'clean'})
               }
-              color="red"
               loading={loadingState === 'loading'}
             >
               Overwrite
             </Button>
-          </Group>
+          </div>
         </div>
       ) : (
         <>
           <div
-            className={joinClassNames(
-              'FileField',
-              props.showNamingOptions && 'FileField--withOptions'
+            className={cn(
+              'FileField relative border border-solid',
+              props.showNamingOptions && 'FileField--withOptions',
+              value?.src ? 'p-0' : 'p-2.5'
             )}
           >
             <FileField.Dropzone ref={dropZoneRef} />
@@ -745,33 +736,15 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
           </div>
 
           {props.showNamingOptions && !value && (
-            <div className="FileField__settings" style={{marginTop: 8}}>
+            <div className="FileField__settings relative z-2 mt-2">
               <Select
                 label="File name options"
-                size="xs"
-                itemComponent={NamingModeSelectItem}
-                data={[
-                  {
-                    value: 'hash',
-                    label: 'Hash the file name',
-                    description:
-                      "The filename will be hashed so the file's original name won't be exposed.",
-                  },
-                  {
-                    value: 'hash-path',
-                    label: 'Use a hashed path with the original file name',
-                    description:
-                      'Use the original file name, but put it inside a hashed directory.',
-                  },
-                  {
-                    value: 'clean',
-                    label: 'Use the original file name only',
-                    description:
-                      'The file will be uploaded to the bucket as-is, without a hashed directory.',
-                  },
-                ]}
+                // Each option's description shows beneath its label.
+                data={NAMING_MODE_OPTIONS}
                 value={namingMode}
-                onChange={(val: any) => setNamingMode(val || 'hash')}
+                onValueChange={(val) =>
+                  setNamingMode((val as typeof namingMode) || 'hash')
+                }
                 disabled={loadingState === 'loading' || !!value}
               />
             </div>
@@ -894,113 +867,123 @@ FileField.Preview = () => {
     return null;
   }
 
+  const showsVideo = !infoOpened && testIsVideoFile(ctx.value.src);
+  const canvasStyle = canvasPreviewInlineStyles(ctx.value, infoOpened);
+  if (showsVideo && !canvasStyle.backgroundColor) {
+    // Videos letterbox on black.
+    canvasStyle.backgroundColor = '#000';
+  }
+  if (dragging) {
+    // Let the dragging tint from `FileField.css` show.
+    delete canvasStyle.backgroundColor;
+  }
+  const hasAssetBadge = Boolean(ctx.value.assetId);
+
   return (
-    <div className="FileField__Preview">
-      <div className="FileField__Preview__InfoButton">
+    <div className="FileField__Preview pointer-events-none relative z-1">
+      <div className="FileField__Preview__InfoButton pointer-events-auto absolute right-1.5 top-1.5 z-2 flex gap-1">
         {supportsCanvasPreview && (
-          <Tooltip label="Toggle file info" position="top" withArrow>
-            <ActionIcon
-              onClick={() => setInfoOpened((o) => !o)}
-              size="sm"
-              variant="outline"
-              className="FileField__Preview__InfoButton__Icon"
-              aria-label="Toggle file info"
-            >
-              <IconInfoCircle size={16} />
-            </ActionIcon>
-          </Tooltip>
+          <IconButton
+            className="FileField__Preview__InfoButton__Icon"
+            variant="default"
+            size="xs"
+            label="Toggle file info"
+            pressed={infoOpened}
+            onClick={() => setInfoOpened((o) => !o)}
+          >
+            <IconInfoCircle />
+          </IconButton>
         )}
         <Menu
-          classNames={{body: 'FileField__Preview__Menu'}}
-          shadow="sm"
-          control={
-            <ActionIcon
-              variant="outline"
-              size="sm"
-              radius="sm"
-              c="black"
+          className="FileField__Preview__Menu"
+          placement="bottom-end"
+          width={230}
+          trigger={
+            <IconButton
               className="FileField__Preview__InfoButton__Icon"
+              variant="default"
+              size="xs"
+              label="File options"
             >
-              <IconDotsVertical size={16} />
-            </ActionIcon>
+              <IconDotsVertical />
+            </IconButton>
           }
         >
           {ctx.allowEditing && (
             <>
-              <Menu.Label size="sm">REPLACE</Menu.Label>
-              <Menu.Item
-                icon={
-                  ctx.variant === 'image' ? (
-                    <IconPhotoUp size={16} />
-                  ) : (
-                    <IconFileUpload size={16} />
-                  )
-                }
-                onClick={() => ctx.requestFileUpload()}
-              >
-                Upload {ctx.variant === 'image' ? 'image' : 'file'}
-              </Menu.Item>
-              {ctx.assetPickerEnabled && (
-                <Menu.Item
-                  icon={<IconLibraryPhoto size={16} />}
-                  onClick={() => ctx.requestAssetPicker()}
+              <MenuGroup label="REPLACE">
+                <MenuItem
+                  icon={
+                    ctx.variant === 'image' ? (
+                      <IconPhotoUp />
+                    ) : (
+                      <IconFileUpload />
+                    )
+                  }
+                  onClick={() => ctx.requestFileUpload()}
                 >
-                  Select from asset library
-                </Menu.Item>
-              )}
-              {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
-                <Menu.Item
-                  disabled={!ctx.value?.src}
-                  icon={<IconPhotoStar size={16} />}
-                  onClick={() => {
-                    ctx.requestPlaceholderModalOpen();
-                  }}
-                >
-                  Placeholder image
-                </Menu.Item>
-              )}
-              {testIsImageFile(ctx.value?.src) &&
-                !ctx.value?.src?.endsWith('.svg') && (
-                  <>
-                    <Menu.Item
-                      disabled={!ctx.value?.src}
-                      icon={<IconCrop size={16} />}
-                      closeMenuOnClick
-                      onClick={() => {
-                        ctx.requestImageEditorOpen();
-                      }}
-                    >
-                      Edit image
-                    </Menu.Item>
-                    {aiImageEditingEnabled && (
-                      <Menu.Item
+                  Upload {ctx.variant === 'image' ? 'image' : 'file'}
+                </MenuItem>
+                {ctx.assetPickerEnabled && (
+                  <MenuItem
+                    icon={<IconLibraryPhoto />}
+                    onClick={() => ctx.requestAssetPicker()}
+                  >
+                    Select from asset library
+                  </MenuItem>
+                )}
+                {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
+                  <MenuItem
+                    disabled={!ctx.value?.src}
+                    icon={<IconPhotoStar />}
+                    onClick={() => {
+                      ctx.requestPlaceholderModalOpen();
+                    }}
+                  >
+                    Placeholder image
+                  </MenuItem>
+                )}
+                {testIsImageFile(ctx.value?.src) &&
+                  !ctx.value?.src?.endsWith('.svg') && (
+                    <>
+                      <MenuItem
                         disabled={!ctx.value?.src}
-                        icon={<IconRobot size={16} />}
-                        closeMenuOnClick
+                        icon={<IconCrop />}
                         onClick={() => {
-                          ctx.requestAiImageEditorOpen();
+                          ctx.requestImageEditorOpen();
                         }}
                       >
-                        Edit with AI
-                      </Menu.Item>
-                    )}
-                  </>
-                )}
-              <Divider />
+                        Edit image
+                      </MenuItem>
+                      {aiImageEditingEnabled && (
+                        <MenuItem
+                          disabled={!ctx.value?.src}
+                          icon={<IconRobot />}
+                          onClick={() => {
+                            ctx.requestAiImageEditorOpen();
+                          }}
+                        >
+                          Edit with AI
+                        </MenuItem>
+                      )}
+                    </>
+                  )}
+              </MenuGroup>
+              <MenuDivider />
             </>
           )}
-          <Menu.Item
+          <MenuItem
             disabled={ctx.value?.src?.startsWith('data:')}
             onClick={() => {
               ctx?.requestFileDownload();
             }}
-            icon={<IconDownload size={16} />}
+            icon={<IconDownload />}
           >
             Download file
-          </Menu.Item>
-          <Menu.Item
-            closeOnItemClick={false}
-            icon={<IconCopy size={16} />}
+          </MenuItem>
+          <MenuItem
+            closeOnClick={false}
+            icon={<IconCopy />}
             onClick={() => {
               setCopied(false);
               let url = ctx.value?.src || '';
@@ -1018,38 +1001,32 @@ FileField.Preview = () => {
             }}
           >
             {copied ? 'Copied!' : 'Copy URL'}
-          </Menu.Item>
+          </MenuItem>
           {ctx.value?.assetId && (
-            <Menu.Item<'a'>
-              component="a"
+            <MenuItem
               href={`/cms/assets?asset=${ctx.value.assetId}`}
               target="_blank"
               rel="noreferrer"
-              icon={<IconExternalLink size={16} />}
+              icon={<IconExternalLink />}
             >
               View in asset library
-            </Menu.Item>
+            </MenuItem>
           )}
           {ctx.allowEditing && ctx.value?.assetId && (
-            <Menu.Item
-              icon={<IconUnlink size={16} />}
-              onClick={() => ctx.unlinkAsset()}
-            >
+            <MenuItem icon={<IconUnlink />} onClick={() => ctx.unlinkAsset()}>
               Unlink from asset library
-            </Menu.Item>
+            </MenuItem>
           )}
           {ctx.allowEditing &&
             testIsImageFile(ctx.value?.src || '') &&
             ctx.value?.canvasBgColor && (
-              <Menu.Item
+              <MenuItem
+                role="menuitemcheckbox"
+                aria-checked={ctx.value?.canvasBgColor === 'dark'}
                 icon={
-                  ctx.value?.canvasBgColor === 'dark' ? (
-                    <IconSquareCheckFilled size={16} />
-                  ) : (
-                    <IconSquareCheck size={16} style={{opacity: 0.25}} />
-                  )
+                  <CheckIcon checked={ctx.value?.canvasBgColor === 'dark'} />
                 }
-                closeOnItemClick={false}
+                closeOnClick={false}
                 onClick={() => {
                   const newColor =
                     ctx.value?.canvasBgColor === 'dark' ? 'light' : 'dark';
@@ -1059,20 +1036,16 @@ FileField.Preview = () => {
                 }}
               >
                 Use dark canvas
-              </Menu.Item>
+              </MenuItem>
             )}
           {ctx.allowEditing &&
             ctx.setAspectRatioWarningIgnored &&
             testAspectRatioMismatch(ctx.value, ctx.aspectRatios) && (
-              <Menu.Item
-                icon={
-                  ctx.aspectRatioWarningIgnored ? (
-                    <IconSquareCheckFilled size={16} />
-                  ) : (
-                    <IconSquareCheck size={16} style={{opacity: 0.25}} />
-                  )
-                }
-                closeOnItemClick={false}
+              <MenuItem
+                role="menuitemcheckbox"
+                aria-checked={ctx.aspectRatioWarningIgnored}
+                icon={<CheckIcon checked={ctx.aspectRatioWarningIgnored} />}
+                closeOnClick={false}
                 onClick={() => {
                   ctx.setAspectRatioWarningIgnored?.(
                     !ctx.aspectRatioWarningIgnored
@@ -1080,45 +1053,41 @@ FileField.Preview = () => {
                 }}
               >
                 Ignore aspect ratio warning
-              </Menu.Item>
+              </MenuItem>
             )}
           {ctx.allowEditing && ctx.setAltDisabledByMetadata && (
-            <Menu.Item
-              icon={
-                ctx.altDisabledByMetadata ? (
-                  <IconSquareCheckFilled size={16} />
-                ) : (
-                  <IconSquareCheck size={16} style={{opacity: 0.25}} />
-                )
-              }
-              closeOnItemClick={false}
+            <MenuItem
+              role="menuitemcheckbox"
+              aria-checked={ctx.altDisabledByMetadata}
+              icon={<CheckIcon checked={ctx.altDisabledByMetadata} />}
+              closeOnClick={false}
               onClick={() => {
                 ctx.setAltDisabledByMetadata?.(!ctx.altDisabledByMetadata);
               }}
             >
               Disable alt text
-            </Menu.Item>
+            </MenuItem>
           )}
-          <Divider />
-          <Menu.Item
-            color="red"
+          <MenuDivider />
+          <MenuItem
+            danger
             onClick={() => {
               ctx?.removeFile();
             }}
-            icon={<IconTrash size={16} />}
+            icon={<IconTrash />}
           >
             Remove file
-          </Menu.Item>
+          </MenuItem>
         </Menu>
       </div>
 
       <div
-        className={joinClassNames(
-          'FileField__Canvas',
+        className={cn(
+          'FileField__Canvas relative min-h-20 w-full',
           infoOpened && 'FileField__Canvas--infoOpened',
-          dragging && 'dragging'
+          dragging && 'FileField__Canvas--dragging'
         )}
-        style={canvasPreviewInlineStyles(ctx.value)}
+        style={canvasStyle}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -1159,92 +1128,83 @@ FileField.Preview = () => {
       >
         <LoadingOverlay visible={ctx.loadingState === 'loading'} />
         {infoOpened ? (
-          <div className="FileField__Canvas__Info">
+          <div className="FileField__Canvas__Info pointer-events-auto h-full overflow-auto px-2.5 pb-2.5 pt-10">
             <IconPaperclip
               size={16}
-              className="FileField__Canvas__Info__Icon"
+              className="FileField__Canvas__Info__Icon absolute left-2.5 top-3"
             />
             <Table
               className="FileField__Canvas__Info__Table"
-              verticalSpacing="xs"
-              fontSize="xs"
+              tableClassName="table-fixed"
+              withColumnBorders
             >
-              <tbody>
+              <TableBody>
                 {ctx.value?.filename && (
-                  <tr>
-                    <td>
-                      <b>Name</b>
-                    </td>
-                    <td>{ctx.value.filename}</td>
-                  </tr>
+                  <InfoRow label="Name">
+                    <span className="wrap-anywhere">{ctx.value.filename}</span>
+                  </InfoRow>
                 )}
                 {ctx.value?.assetId && (
-                  <tr>
-                    <td>
-                      <b>Asset</b>
-                    </td>
-                    <td>
-                      <a
-                        href={`/cms/assets?asset=${ctx.value.assetId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open in asset library
-                      </a>
-                    </td>
-                  </tr>
+                  <InfoRow label="Asset">
+                    <a
+                      className="text-inherit"
+                      href={`/cms/assets?asset=${ctx.value.assetId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open in asset library
+                    </a>
+                  </InfoRow>
                 )}
                 {ctx.value?.uploadedAt && (
-                  <tr>
-                    <td>
-                      <b>Uploaded</b>
-                    </td>
-                    <td>
-                      {new Date(
-                        parseInt(ctx.value.uploadedAt as string, 10)
-                      ).toLocaleString()}
-                      {ctx.value.uploadedBy && <> by {ctx.value.uploadedBy}</>}
-                    </td>
-                  </tr>
+                  <InfoRow label="Uploaded">
+                    {new Date(
+                      parseInt(ctx.value.uploadedAt as string, 10)
+                    ).toLocaleString()}
+                    {ctx.value.uploadedBy && (
+                      <span className="wrap-anywhere">
+                        {' '}
+                        by {ctx.value.uploadedBy}
+                      </span>
+                    )}
+                  </InfoRow>
                 )}
                 {Boolean(ctx.value?.width && ctx.value?.height) && (
-                  <tr>
-                    <td>
-                      <b>Dimensions</b>
-                    </td>
-                    <td>
-                      {ctx.value!.width}x{ctx.value!.height}
-                    </td>
-                  </tr>
+                  <InfoRow label="Dimensions">
+                    {ctx.value!.width}x{ctx.value!.height}
+                  </InfoRow>
                 )}
-                <tr>
-                  <td>
-                    <b>URL</b>
-                  </td>
-                  <td>
-                    <Textarea
-                      readOnly
-                      value={ctx.value?.src}
-                      size="xs"
-                      radius={0}
-                      autosize
-                      maxRows={10}
-                    />
-                  </td>
-                </tr>
-              </tbody>
+                <InfoRow label="URL">
+                  <Textarea
+                    aria-label="URL"
+                    readOnly
+                    value={ctx.value?.src}
+                    size="xs"
+                    inputClassName="rounded-none"
+                    autosize
+                    minRows={1}
+                    maxRows={10}
+                  />
+                </InfoRow>
+              </TableBody>
             </Table>
           </div>
         ) : (
           <>
             {Boolean(ctx.value?.width && ctx.value?.height) && (
-              <Box radius="sm" className="FileField__Preview__Info">
+              <div
+                className={cn(
+                  'FileField__Preview__Info pointer-events-auto absolute left-1.5 z-1 rounded-sm bg-strong px-1.5 py-0.5 text-2xs font-bold leading-tight text-inverse',
+                  // Below the asset library badge, when there is one.
+                  hasAssetBadge ? 'bottom-1.5' : 'top-1.5'
+                )}
+              >
                 {ctx.value!.width}x{ctx.value!.height}
-              </Box>
+              </div>
             )}
-            {ctx.value?.assetId && (
+            {hasAssetBadge && (
               <a
-                className="FileField__Preview__AssetLibraryBadge"
+                className="FileField__Preview__AssetLibraryBadge pointer-events-auto absolute left-1.5 top-1.5 z-1 block rounded-sm bg-info px-1.5 py-0.5 text-2xs font-bold leading-tight text-inverse no-underline active:translate-y-px"
                 href={`/cms/assets?asset=${ctx.value?.assetId}`}
                 target="_blank"
               >
@@ -1263,28 +1223,28 @@ FileField.Preview = () => {
                 }}
                 src={ctx.value.src}
                 alt={ctx.value.alt || 'Uploaded file preview'}
-                className="FileField__Preview__Image"
+                className="FileField__Preview__Image pointer-events-auto mx-auto block h-full max-w-full object-contain object-center"
+                style={previewInlineStyles(ctx.value)}
               />
             )}
-            {testIsVideoFile(ctx.value?.src) && (
-              <>
-                <video
-                  className="FileField__Preview__Image"
-                  controls
-                  muted
-                  preload="metadata"
-                >
-                  <source
-                    src={ctx.value.src}
-                    type={`video/${getFileExt(ctx.value.src)}`}
-                  />
-                </video>
-              </>
+            {showsVideo && (
+              <video
+                className="FileField__Preview__Image pointer-events-auto mx-auto block h-full max-w-full object-contain object-center"
+                style={previewInlineStyles(ctx.value)}
+                controls
+                muted
+                preload="metadata"
+              >
+                <source
+                  src={ctx.value.src}
+                  type={`video/${getFileExt(ctx.value.src)}`}
+                />
+              </video>
             )}
           </>
         )}
-        {ctx.allowEditing && (
-          <div className="FileField__reupload">
+        {ctx.allowEditing && !infoOpened && (
+          <div className="FileField__reupload pointer-events-auto absolute bottom-1.5 right-1.5 z-1">
             <FileField.UploadButton
               className="FileField__reupload__button"
               compact
@@ -1298,43 +1258,58 @@ FileField.Preview = () => {
         (ctx.altText ||
           testShouldHaveAltText(ctx.value?.filename) ||
           ctx.variant === 'image') && (
-          <div className="DocEditor__ImageField__imagePreview__Image__Alt">
+          <div className="DocEditor__ImageField__imagePreview__Image__Alt flex items-center gap-2 border-0 border-t border-solid border-input-border p-2">
             <Textarea
-              radius={0}
-              className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea"
+              className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea pointer-events-auto min-w-0 flex-1"
+              inputClassName="rounded-none"
+              aria-label="Alt text"
               value={ctx.altText}
               placeholder="Alt text"
-              size="xs"
               autosize
+              minRows={1}
               disabled={ctx.loadingState === 'loading'}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              onInput={(e) => {
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
             {aiEnabled &&
               !ctx.altText &&
               ctx.value?.src?.startsWith('http') && (
-                <Tooltip
+                <IconButton
+                  className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton pointer-events-auto relative z-2 *:size-5"
                   label="Generate alt text with AI"
-                  position="top"
-                  withArrow
+                  onClick={() => {
+                    ctx.requestGenerateAltText();
+                  }}
+                  disabled={ctx.loadingState === 'loading'}
                 >
-                  <ActionIcon
-                    className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton"
-                    onClick={() => {
-                      ctx.requestGenerateAltText();
-                    }}
-                    disabled={ctx.loadingState === 'loading'}
-                  >
-                    <IconRobot size={20} stroke="1.75" />
-                  </ActionIcon>
-                </Tooltip>
+                  <IconRobot stroke="1.75" />
+                </IconButton>
               )}
           </div>
         )}
     </div>
   );
 };
+
+/** A label and value row in the file info table. */
+function InfoRow(props: {label: string; children: ComponentChildren}) {
+  return (
+    <TableRow>
+      <TableCell className="w-28 font-bold">{props.label}</TableCell>
+      <TableCell>{props.children}</TableCell>
+    </TableRow>
+  );
+}
+
+/** The check box icon of a menu item that toggles a setting. */
+function CheckIcon(props: {checked: boolean}) {
+  return props.checked ? (
+    <IconSquareCheckFilled />
+  ) : (
+    <IconSquareCheck className="opacity-25" />
+  );
+}
 
 /**
  * Warns the user when an uploaded image or video doesn't match the field's
@@ -1363,12 +1338,15 @@ FileField.AspectRatioWarning = () => {
     .map((ratio) => formatAspectRatio(ratio))
     .join(' or ');
   return (
-    <div className="FileField__AspectRatioWarning" role="status">
+    <div
+      className="FileField__AspectRatioWarning pointer-events-auto flex items-start gap-2 border-0 border-t border-solid border-warning-line bg-warning-soft p-2 text-sm leading-snug text-fg"
+      role="status"
+    >
       <IconAlertTriangle
         size={16}
-        className="FileField__AspectRatioWarning__Icon"
+        className="FileField__AspectRatioWarning__Icon mt-px flex-none text-warning"
       />
-      <div className="FileField__AspectRatioWarning__Message">
+      <div className="FileField__AspectRatioWarning__Message min-w-0 flex-1">
         This {isVideo ? 'video' : 'image'} is{' '}
         <strong>
           {formatDimensionsAspectRatio(width, height, [
@@ -1379,25 +1357,25 @@ FileField.AspectRatioWarning = () => {
         ({width}x{height}). The recommended aspect ratio is{' '}
         <strong>{recommended}</strong>.
       </div>
-      <div className="FileField__AspectRatioWarning__Actions">
+      <div className="FileField__AspectRatioWarning__Actions flex flex-none gap-1">
         {canCrop && (
-          <button
-            type="button"
-            className="FileField__AspectRatioWarning__Button"
+          <Button
+            className="FileField__AspectRatioWarning__Button font-medium"
+            size="xs"
             onClick={() => ctx.requestImageEditorOpen()}
           >
             Crop
-          </button>
+          </Button>
         )}
         {ctx.allowEditing && ctx.setAspectRatioWarningIgnored && (
-          <button
-            type="button"
-            className="FileField__AspectRatioWarning__Button"
+          <Button
+            className="FileField__AspectRatioWarning__Button font-medium"
+            size="xs"
             title="Dismiss this warning for the current file"
             onClick={() => ctx.setAspectRatioWarningIgnored?.(true)}
           >
             Dismiss
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -1407,31 +1385,23 @@ FileField.AspectRatioWarning = () => {
 FileField.UploadButton = (props: {className?: string; compact?: boolean}) => {
   const ctx = useFileField();
   const loading = ctx.loadingState === 'loading';
-  const iconSize = props.compact ? 14 : 16;
   return (
     <Button
-      color="black"
-      variant="default"
+      size={props.compact ? 'xs' : 'sm'}
       disabled={loading}
-      size={(props.compact ? 'compact-xs' : 'compact-md') as MantineSize}
-      className={joinClassNames(
+      loading={loading && !props.compact}
+      className={cn(
         'FileField__FileUploadButton',
-        props.compact && 'FileField__FileUploadButton--compact'
+        props.compact && 'FileField__FileUploadButton--compact',
+        // The full label wraps instead of truncating in narrow fields.
+        !props.compact &&
+          'h-auto min-h-control-sm shrink py-1 text-center leading-tight **:whitespace-normal',
+        props.className
       )}
       onClick={() => {
         ctx.requestFileUpload();
       }}
-      leftIcon={
-        <>
-          {loading && !props.compact ? (
-            <Loader size={iconSize} />
-          ) : ctx?.variant === 'image' ? (
-            <IconPhotoUp size={iconSize} />
-          ) : (
-            <IconFileUpload size={iconSize} />
-          )}
-        </>
-      }
+      icon={ctx?.variant === 'image' ? <IconPhotoUp /> : <IconFileUpload />}
     >
       {loading && !props.compact
         ? 'Uploading...'
@@ -1447,9 +1417,9 @@ FileField.InvisibleDropzone = (props: {children: ComponentChildren}) => {
   const ctx = useFileField();
   return (
     <div
-      className={joinClassNames(
-        'FileField__InvisibleDropzone',
-        dragging && 'dragging'
+      className={cn(
+        'FileField__InvisibleDropzone contents',
+        dragging && 'FileField__InvisibleDropzone--dragging'
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -1496,31 +1466,27 @@ FileField.Empty = () => {
       .join(', ');
   }, [ctx.acceptedFileTypes]);
   return (
-    <div className="FileField__Empty">
-      <div className="FileField__Empty__Label">
-        <FileField.UploadButton />
+    <div className="FileField__Empty pointer-events-none relative z-2 flex flex-col items-center gap-1 pt-5 *:pointer-events-auto">
+      <div className="FileField__Empty__Label flex max-w-full justify-between gap-2">
+        <FileField.UploadButton className="min-w-0" />
         {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
-          <div>
-            <Tooltip label="Create placeholder image">
-              <ActionIcon
-                className="FileField__Empty__Label__PlaceholderButton"
-                onClick={() => {
-                  ctx.requestPlaceholderModalOpen();
-                }}
-                title="Create placeholder image"
-              >
-                <IconPhotoStar size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </div>
+          <IconButton
+            className="FileField__Empty__Label__PlaceholderButton"
+            label="Create placeholder image"
+            onClick={() => {
+              ctx.requestPlaceholderModalOpen();
+            }}
+          >
+            <IconPhotoStar />
+          </IconButton>
         )}
       </div>
       {ctx.allowEditing && ctx.assetPickerEnabled && (
-        <div className="FileField__Empty__AssetLibrary">
+        <div className="FileField__Empty__AssetLibrary relative z-2 text-sm font-medium">
           or select from{' '}
           <button
             type="button"
-            className="FileField__Empty__AssetLibrary__link"
+            className="FileField__Empty__AssetLibrary__link m-0 cursor-pointer appearance-none border-0 bg-transparent p-0 font-sans text-sm font-medium text-fg underline underline-offset-3"
             onClick={() => ctx.requestAssetPicker()}
           >
             asset library
@@ -1529,7 +1495,7 @@ FileField.Empty = () => {
       )}
       {acceptsLabel && (
         <div>
-          <div className="FileField__Empty__AcceptTypes">
+          <div className="FileField__Empty__AcceptTypes relative z-1 mt-5 block text-xs">
             Allowed file types: {acceptsLabel}
           </div>
         </div>
@@ -1544,7 +1510,12 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
   return (
     <button
       ref={ref}
-      className={joinClassNames('FileField__Dropzone', dragging && 'dragging')}
+      type="button"
+      aria-label="Drop or paste to upload a file"
+      className={cn(
+        'FileField__Dropzone absolute inset-0 m-0 cursor-default appearance-none border-0 p-0 focus:outline-1 focus:outline-focus',
+        dragging && 'FileField__Dropzone--dragging'
+      )}
       onDblClick={() => {
         ctx?.requestFileUpload();
       }}
@@ -1631,21 +1602,27 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
   );
 });
 
-const NamingModeSelectItem = forwardRef(
-  (props: {label: string; description: string; ref: any}) => {
-    const {label, description, ...selectProps} = props;
-    return (
-      <div className="FileField__NamingModeItem" {...selectProps}>
-        <Text size="sm" weight={500}>
-          {label}
-        </Text>
-        <Text size="xs" color="dimmed">
-          {description}
-        </Text>
-      </div>
-    );
-  }
-);
+/** Options for the standalone uploader's file naming select. */
+const NAMING_MODE_OPTIONS = [
+  {
+    value: 'hash',
+    label: 'Hash the file name',
+    description:
+      "The filename will be hashed so the file's original name won't be exposed.",
+  },
+  {
+    value: 'hash-path',
+    label: 'Use a hashed path with the original file name',
+    description:
+      'Use the original file name, but put it inside a hashed directory.',
+  },
+  {
+    value: 'clean',
+    label: 'Use the original file name only',
+    description:
+      'The file will be uploaded to the bucket as-is, without a hashed directory.',
+  },
+];
 
 /**
  * Returns whether an uploaded image or video doesn't match any of the
@@ -1689,24 +1666,44 @@ function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
   );
 }
 
-function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
+/**
+ * Inline styles for the preview canvas: the file's aspect ratio and a max
+ * height (both dropped while the info panel is open), and a dark background
+ * when the file asks for one.
+ */
+function canvasPreviewInlineStyles(
+  uploadedFile: UploadedFile,
+  infoOpened: boolean
+) {
   const inlineStyles: CSSProperties = {};
-  if (uploadedFile.width && uploadedFile.height) {
-    inlineStyles['--canvas-aspect-ratio'] =
-      `${uploadedFile.width} / ${uploadedFile.height}`;
-
-    inlineStyles['--canvas-asset-width'] = `${uploadedFile.width}px`;
-    let maxHeight = Math.min(uploadedFile.height, 280);
-    if (maxHeight < 80) {
-      maxHeight = 80;
+  if (!infoOpened) {
+    inlineStyles.aspectRatio = '16 / 9';
+    inlineStyles.maxHeight = '280px';
+    if (uploadedFile.width && uploadedFile.height) {
+      inlineStyles.aspectRatio = `${uploadedFile.width} / ${uploadedFile.height}`;
+      let maxHeight = Math.min(uploadedFile.height, 280);
+      if (maxHeight < 80) {
+        maxHeight = 80;
+      }
+      inlineStyles.maxHeight = `${maxHeight}px`;
     }
-    inlineStyles['--canvas-max-height'] = `${maxHeight}px`;
   }
 
   if (uploadedFile.canvasBgColor === 'dark') {
-    inlineStyles['--canvas-bg-color'] = '#000';
+    // The canvas shows the file itself, so it's black whatever the theme.
+    inlineStyles.backgroundColor = '#000';
   }
   return inlineStyles;
+}
+
+/** Inline styles for the previewed image or video: its natural width, capped by the canvas. */
+function previewInlineStyles(uploadedFile: UploadedFile): CSSProperties {
+  return {
+    width:
+      uploadedFile.width && uploadedFile.height
+        ? `${uploadedFile.width}px`
+        : '100%',
+  };
 }
 
 function getMetadataKey(key: string) {

@@ -1,9 +1,10 @@
-import './ReferenceField.css';
-
-import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconPencil, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../../../core/schema.js';
+import {FilePreview} from '../../../../../components/FilePreview/FilePreview.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
+import {Spinner} from '../../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../../utils/objects.js';
 import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/DocPickerModal.js';
@@ -54,31 +55,29 @@ export function ReferenceField(props: FieldProps) {
   return (
     <div className="ReferenceField">
       {refId ? (
-        <div className="ReferenceField__ref">
+        <div className="ReferenceField__ref mb-4 flex gap-1">
           <ReferenceField.Preview id={refId} />
-          <div className="ReferenceField__remove">
-            <Tooltip label="Quick edit">
-              <ActionIcon
-                className="ReferenceField__remove__icon"
-                onClick={() => referenceFieldEditorModal.open({docId: refId})}
-              >
-                <IconPencil size={16} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Remove">
-              <ActionIcon
-                className="ReferenceField__remove__icon"
-                onClick={() => setValue(null)}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Tooltip>
+          <div className="ReferenceField__remove flex justify-end">
+            <IconButton
+              className="ReferenceField__remove__icon"
+              label="Quick edit"
+              onClick={() => referenceFieldEditorModal.open({docId: refId})}
+            >
+              <IconPencil />
+            </IconButton>
+            <IconButton
+              className="ReferenceField__remove__icon"
+              label="Remove"
+              onClick={() => setValue(null)}
+            >
+              <IconTrash />
+            </IconButton>
           </div>
         </div>
       ) : (
-        <div className="ReferenceField__none">None selected</div>
+        <div className="ReferenceField__none mb-4 font-mono">None selected</div>
       )}
-      <Button color="dark" size="xs" onClick={() => openDocPicker()}>
+      <Button variant="primary" onClick={() => openDocPicker()}>
         {field.buttonLabel || 'Select'}
       </Button>
     </div>
@@ -107,10 +106,10 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
   }, [props.id]);
 
   return (
-    <div className="ReferenceField__Preview">
+    <div className="ReferenceField__Preview w-full min-w-0 flex-1">
       {loading ? (
-        <div className="ReferenceField__Preview__loading">
-          <Loader color="gray" size="sm" />
+        <div className="ReferenceField__Preview__loading text-muted">
+          <Spinner size="lg" />
         </div>
       ) : previewDoc ? (
         <ReferenceField.DocCard doc={previewDoc} />
@@ -130,7 +129,7 @@ ReferenceField.DocCard = (props: {doc: any}) => {
   const docId = doc.id || doc.sys?.id || '';
   if (!docId) {
     return (
-      <div className="ReferenceField__DocCard ReferenceField__DocCard--error">
+      <div className="ReferenceField__DocCard ReferenceField__DocCard--error flex items-center overflow-hidden break-all border border-border p-2">
         {JSON.stringify(doc)}
       </div>
     );
@@ -151,25 +150,25 @@ ReferenceField.DocCard = (props: {doc: any}) => {
 
   return (
     <a
-      className="ReferenceField__DocCard"
+      className="ReferenceField__DocCard flex items-center overflow-hidden border border-border p-2 text-inherit no-underline"
       href={`/cms/content/${docId}`}
       target="_blank"
     >
-      <div className="ReferenceField__DocCard__image">
-        <Image
-          src={previewImage?.src}
+      <div className="ReferenceField__DocCard__image shrink-0 border border-border">
+        <FilePreview
+          file={previewImage}
           width={80}
           height={60}
           withPlaceholder={!previewImage?.src}
         />
       </div>
-      <div className="ReferenceField__DocCard__content">
+      <div className="ReferenceField__DocCard__content block min-w-0 flex-1 px-2">
         <div className="ReferenceField__DocCard__content__header">
-          <div className="ReferenceField__DocCard__content__header__docId">
+          <div className="ReferenceField__DocCard__content__header__docId mb-1 text-sm font-medium leading-tight">
             {docId}
           </div>
         </div>
-        <div className="ReferenceField__DocCard__content__title">
+        <div className="ReferenceField__DocCard__content__title line-clamp-1 text-xl font-semibold leading-tight">
           {previewTitle || '[UNTITLED]'}
         </div>
       </div>

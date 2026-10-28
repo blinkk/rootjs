@@ -1,17 +1,12 @@
-import {
-  Button,
-  ColorInput,
-  Group,
-  Image,
-  Select,
-  SegmentedControl,
-  Stack,
-  Textarea,
-  TextInput,
-} from '@mantine/core';
 import {IconRobot} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {UploadedFile} from '../../../../../integrations/gcs.js';
+import {Button} from '../../../../../primitives/Button/Button.js';
+import {ColorInput} from '../../../../../primitives/ColorInput/ColorInput.js';
+import {SegmentedControl} from '../../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {Select} from '../../../../../primitives/Select/Select.js';
+import {Textarea} from '../../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../../primitives/Toast/toastStore.js';
 import {testAiImageGenerationEnabled} from '../../../../ai/ai.js';
 
@@ -188,19 +183,21 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
   }
 
   return (
-    <Stack gap="md">
+    <div className="GenerateImageForm flex flex-col gap-4">
       {aiEnabled && (
         <SegmentedControl
+          className="GenerateImageForm__mode"
+          aria-label="Placeholder type"
           value={mode}
-          onChange={(val) => setMode(val as Mode)}
+          onValueChange={(val) => setMode(val)}
           data={[
             {label: 'Simple', value: 'simple'},
             {
               label: (
-                <Group gap={5}>
+                <span className="flex items-center gap-1">
                   <IconRobot size={16} />
                   <span>Generate with AI</span>
-                </Group>
+                </span>
               ),
               value: 'ai',
             },
@@ -210,86 +207,94 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
       )}
 
       {mode === 'simple' ? (
-        <form onSubmit={handleSimpleSubmit}>
-          <Stack gap="xs">
+        <form
+          className="GenerateImageForm__simple"
+          onSubmit={handleSimpleSubmit}
+        >
+          <div className="flex flex-col gap-4">
             <TextInput
               label="Width"
               name="width"
               type="number"
+              size="md"
               value={width}
-              onChange={(e) => setWidth(parseInt(e.currentTarget.value, 10))}
+              onInput={(e) => setWidth(parseInt(e.currentTarget.value, 10))}
               data-autofocus
             />
             <TextInput
               label="Height"
               name="height"
               type="number"
+              size="md"
               value={height}
-              onChange={(e) => setHeight(parseInt(e.currentTarget.value, 10))}
+              onInput={(e) => setHeight(parseInt(e.currentTarget.value, 10))}
             />
-            <TextInput name="label" label="Label" defaultValue="" />
+            <TextInput name="label" label="Label" size="md" defaultValue="" />
             <ColorInput
               name="backgroundColor"
               label="Background color"
-              format="hex"
+              size="md"
               defaultValue="#868e96"
               swatches={PLACEHOLDER_COLORS}
             />
-          </Stack>
-          <Group justify="flex-end" mt="md">
-            <Button variant="filled" type="submit">
+          </div>
+          <div className="GenerateImageForm__actions mt-4 flex gap-4">
+            <Button variant="blue" size="md" type="submit">
               Create
             </Button>
-          </Group>
+          </div>
         </form>
       ) : (
-        <Stack gap="xs">
+        <div className="GenerateImageForm__ai flex flex-col gap-4">
           <Select
             label="Aspect Ratio"
+            size="md"
             data={ASPECT_RATIOS}
             value={aspectRatio}
-            onChange={(val) => setAspectRatio(val as string)}
+            onValueChange={(val) => setAspectRatio(val as string)}
           />
           <Textarea
             label="Prompt"
+            size="md"
             placeholder="Describe the image you want to generate..."
             minRows={3}
             value={prompt}
-            onChange={(e) => setPrompt(e.currentTarget.value)}
+            onInput={(e) => setPrompt(e.currentTarget.value)}
             data-autofocus
             required={true}
           />
 
           {generatedImage && (
-            <Image
+            <img
+              className="GenerateImageForm__preview block h-50 w-full object-contain"
               src={generatedImage}
               alt="Generated preview"
-              height={200}
-              fit="contain"
             />
           )}
 
-          <Group justify="flex-end" mt="md">
+          <div className="GenerateImageForm__actions mt-4 flex gap-4">
             <Button
-              variant="light"
+              variant="blue-light"
+              size="md"
               onClick={handleGenerate}
               loading={generating}
               disabled={saving || !prompt}
-              leftIcon={<IconRobot size={16} />}
+              icon={<IconRobot size={16} />}
             >
               {generating ? 'Generating...' : 'Preview'}
             </Button>
             <Button
-              variant="filled"
+              variant="blue"
+              size="md"
               onClick={handleAiSave}
               loading={saving}
               disabled={!generatedImage || generating}
             >
               {saving ? 'Saving...' : 'Save'}
             </Button>
-          </Group>
-        </Stack>
+          </div>
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }

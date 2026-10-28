@@ -1,7 +1,6 @@
-import './ReferenceFieldEditorModal.css';
-
-import {Button} from '@mantine/core';
 import {IconArrowUpRight} from '@tabler/icons-preact';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {
   type ContextModalProps,
   useModals,
@@ -25,7 +24,6 @@ export function useReferenceFieldEditorModal() {
         innerProps: props,
         title: `Edit ${props.docId}`,
         size: 'xl',
-        overflow: 'inside',
         closeOnClickOutside: false,
         closeOnEscape: false,
       });
@@ -45,7 +43,7 @@ export function ReferenceFieldEditorModal(
     <div className="ReferenceFieldEditorModal">
       <DraftDocProvider docId={docId} autoSave={false} flushOnStop={false}>
         <DocEditor
-          className="ReferenceFieldEditorModal__DocEditor"
+          className="ReferenceFieldEditorModal__DocEditor pb-15"
           docId={innerProps.docId}
           hideStatusBar
         />
@@ -58,6 +56,10 @@ export function ReferenceFieldEditorModal(
   );
 }
 
+/**
+ * The modal's actions, pinned in the dialog's footer. Rendered inside the
+ * `DraftDocProvider` so Save can flush the draft.
+ */
 ReferenceFieldEditorModal.Footer = (props: {
   docId: string;
   onCancel: () => void;
@@ -65,33 +67,30 @@ ReferenceFieldEditorModal.Footer = (props: {
   const draft = useDraftDoc();
 
   return (
-    <div className="ReferenceFieldEditorModal__footer">
-      <div className="ReferenceFieldEditorModal__footer__start">
+    <DialogFooter>
+      <div className="ReferenceFieldEditorModal__footer flex w-full flex-wrap items-center justify-end gap-3">
+        <div className="ReferenceFieldEditorModal__footer__start min-w-0 flex-1">
+          <Button
+            href={`/cms/content/${props.docId}`}
+            target="_blank"
+            iconRight={<IconArrowUpRight />}
+            className="max-w-full"
+          >
+            Open {props.docId}
+          </Button>
+        </div>
+        <Button onClick={props.onCancel}>Cancel</Button>
         <Button
-          component="a"
-          variant="default"
-          size="xs"
-          rightIcon={<IconArrowUpRight size={16} />}
-          href={`/cms/content/${props.docId}`}
-          target="_blank"
+          variant="primary"
+          onClick={async () => {
+            await draft.controller.flush();
+            props.onCancel();
+          }}
         >
-          Open {props.docId}
+          Save
         </Button>
       </div>
-      <Button variant="default" size="xs" onClick={props.onCancel}>
-        Cancel
-      </Button>
-      <Button
-        color="dark"
-        size="xs"
-        onClick={async () => {
-          await draft.controller.flush();
-          props.onCancel();
-        }}
-      >
-        Save
-      </Button>
-    </div>
+    </DialogFooter>
   );
 };
 

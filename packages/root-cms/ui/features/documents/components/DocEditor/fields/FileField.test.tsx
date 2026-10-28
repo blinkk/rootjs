@@ -2,45 +2,6 @@ import {cleanup, fireEvent, render, waitFor} from '@testing-library/preact';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import * as schema from '../../../../../../core/schema.js';
 
-// Mock Mantine components. The real components require a MantineProvider
-// context that isn't available under @preact/compat in jsdom; these stubs keep
-// the test focused on the field's own upload logic.
-vi.mock('@mantine/core', () => {
-  const Passthrough = ({children}: any) => <div>{children}</div>;
-  const Menu: any = Passthrough;
-  Menu.Target = Passthrough;
-  Menu.Dropdown = Passthrough;
-  Menu.Item = Passthrough;
-  Menu.Label = Passthrough;
-  Menu.Divider = Passthrough;
-  return {
-    ActionIcon: Passthrough,
-    Box: Passthrough,
-    Button: Passthrough,
-    Checkbox: Passthrough,
-    Divider: Passthrough,
-    Group: Passthrough,
-    Loader: Passthrough,
-    LoadingOverlay: Passthrough,
-    Menu,
-    Modal: Passthrough,
-    Select: Passthrough,
-    Table: Passthrough,
-    Text: Passthrough,
-    Textarea: Passthrough,
-    Tooltip: Passthrough,
-    useMantineTheme: () => ({
-      colorScheme: 'light',
-      primaryColor: 'blue',
-      colors: {
-        blue: Array(10).fill('#228be6'),
-        dark: Array(10).fill('#1a1b1e'),
-        gray: Array(10).fill('#ced4da'),
-      },
-    }),
-  };
-});
-
 vi.mock('./GenerateImageForm.js', () => ({
   GenerateImageForm: () => null,
 }));
@@ -118,7 +79,7 @@ function renderField(field: schema.FileField) {
 }
 
 /** Drops a file onto the field's dropzone. */
-function dropFile(container: HTMLElement) {
+function dropFile(container: Element) {
   const dropZone = container.querySelector('.FileField__Dropzone')!;
   const file = new File(['hello'], 'hero.png', {type: 'image/png'});
   fireEvent.drop(dropZone, {dataTransfer: {files: [file]}});
