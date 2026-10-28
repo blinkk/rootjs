@@ -22,7 +22,7 @@ defaults, so only on-scale utilities exist:
 | Text | `text-fg` `text-strong` `text-muted` `text-subtle` (placeholders and disabled only; it fails contrast by design) `text-inverse` `text-link` |
 | Actions | `bg-primary` `bg-primary-hover` `text-on-primary` `bg-accent` `ring-focus` |
 | Status | `{text,bg,border}-{info,success,warning,danger}`, with `-soft` (background) and `-line` (border) variants |
-| Colored buttons | `button-blue` `button-blue-hover` `button-blue-soft` `button-blue-soft-hover` `button-green` `button-green-hover` `button-red` `button-red-hover` `button-red-soft` (used only by the `Button` variants below) |
+| Colored buttons | `button-blue` `button-blue-hover` `button-blue-soft` `button-blue-soft-hover` `button-green` `button-green-hover` `button-red` `button-red-hover` `button-red-soft` (used by the `Button` variants below and `Checkbox color="blue"`) |
 | AI | `text-violet` `bg-violet` `bg-violet-soft` `border-violet`, and `text-violet-strong` on `bg-violet-soft`: AI features and AI-generated content (Badge `tone="violet"`) |
 | Type | `font-sans` `font-mono`; `text-2xs` 10 (badges only) · `text-xs` 11 · `text-sm` 12 · `text-base` 14 · `text-lg` 16 · `text-xl` 20 · `text-2xl` 24 |
 | Shape | `rounded-sm` 4 · `rounded-md` 6 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-full` |

@@ -313,6 +313,7 @@ LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
           const disabled = allEnabledLocales.length <= 1 && checked;
           return (
             <Checkbox
+              color="blue"
               value={locale}
               checked={checked}
               disabled={disabled}

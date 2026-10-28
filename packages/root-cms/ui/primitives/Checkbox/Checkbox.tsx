@@ -37,6 +37,15 @@ const BOX_SIZE_CLASSES: Record<CheckboxSize, string> = {
   md: 'size-5',
 };
 
+/** Checked colors. `blue` is Mantine's (the `--cms-button-blue` token). */
+export type CheckboxColor = 'primary' | 'blue';
+
+const BOX_COLOR_CLASSES: Record<CheckboxColor, string> = {
+  primary:
+    'peer-checked:border-primary peer-checked:bg-primary peer-indeterminate:border-primary peer-indeterminate:bg-primary',
+  blue: 'peer-checked:border-button-blue peer-checked:bg-button-blue peer-indeterminate:border-button-blue peer-indeterminate:bg-button-blue',
+};
+
 /** Offsets the control so it centers on the label's first line. */
 const CONTROL_OFFSET_CLASSES: Record<CheckboxSize, string> = {
   sm: 'mt-0.5',
@@ -46,6 +55,8 @@ const CONTROL_OFFSET_CLASSES: Record<CheckboxSize, string> = {
 interface CheckboxOwnProps extends FieldLabelProps {
   /** Box and label size: `sm` 16px, `md` 20px. Default `sm`. */
   size?: CheckboxSize;
+  /** Fill when checked: `primary` (black, default) or `blue` (Mantine's). */
+  color?: CheckboxColor;
   /** Shows a dash instead of a check, for a partly selected group. */
   indeterminate?: boolean;
   /** Classes for the root. */
@@ -78,6 +89,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       error,
       required,
       size = 'sm',
+      color = 'primary',
       indeterminate = false,
       className,
       id: idProp,
@@ -100,6 +112,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         className={cn(
           'Checkbox',
           `Checkbox--size-${size}`,
+          `Checkbox--color-${color}`,
           'flex min-w-0 items-start gap-2',
           className
         )}
@@ -121,7 +134,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           <span
             className={cn(
               'Checkbox__box pointer-events-none absolute inset-0 rounded-sm border border-border-strong bg-surface transition-colors',
-              'peer-hover:border-muted peer-checked:border-primary peer-checked:bg-primary peer-indeterminate:border-primary peer-indeterminate:bg-primary',
+              'peer-hover:border-muted',
+              BOX_COLOR_CLASSES[color],
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
               'peer-aria-invalid:border-danger',
               'peer-disabled:opacity-50'
