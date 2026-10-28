@@ -23,3 +23,76 @@
 @import 'tailwindcss/utilities.css' layer(utilities) source(none);
 
 @source '../';
+
+/*
+ * Design tokens. Tailwind's default palette, radii, fonts, type sizes and
+ * shadows are cleared, so only the CMS's tokens exist as utilities (e.g.
+ * `bg-surface`, `text-muted`, `border-border`, `rounded-md`, `text-sm`,
+ * `shadow-md`). `inline` makes each utility read the `--cms-*` property
+ * directly, so a theme that changes one of them restyles every utility
+ * that uses it. Spacing keeps Tailwind's 4px scale (`p-2` = 8px), and the
+ * breakpoints keep Tailwind's defaults (`sm` 640, `md` 768, `lg` 1024).
+ */
+@theme inline {
+  --color-*: initial;
+  --color-page: var(--cms-color-page);
+  --color-surface: var(--cms-color-surface);
+  --color-surface-hover: var(--cms-color-surface-hover);
+  --color-surface-active: var(--cms-color-surface-active);
+  --color-chip: var(--cms-color-chip);
+  --color-overlay: var(--cms-color-overlay);
+  --color-border: var(--cms-color-border);
+  --color-border-strong: var(--cms-color-border-strong);
+  --color-fg: var(--cms-color-text);
+  --color-strong: var(--cms-color-text-strong);
+  --color-muted: var(--cms-color-text-muted);
+  --color-subtle: var(--cms-color-text-subtle);
+  --color-inverse: var(--cms-color-text-inverse);
+  --color-link: var(--cms-color-link);
+  --color-primary: var(--cms-color-primary);
+  --color-primary-hover: var(--cms-color-primary-hover);
+  --color-on-primary: var(--cms-color-on-primary);
+  --color-accent: var(--cms-accent);
+  --color-focus: var(--cms-color-focus);
+  --color-info: var(--cms-color-info);
+  --color-info-soft: var(--cms-color-info-soft);
+  --color-info-line: var(--cms-color-info-line);
+  --color-success: var(--cms-color-success);
+  --color-success-soft: var(--cms-color-success-soft);
+  --color-success-line: var(--cms-color-success-line);
+  --color-warning: var(--cms-color-warning);
+  --color-warning-soft: var(--cms-color-warning-soft);
+  --color-warning-line: var(--cms-color-warning-line);
+  --color-danger: var(--cms-color-danger);
+  --color-danger-soft: var(--cms-color-danger-soft);
+  --color-danger-line: var(--cms-color-danger-line);
+
+  --font-*: initial;
+  --font-sans: var(--cms-font-sans);
+  --font-mono: var(--cms-font-mono);
+
+  --text-*: initial;
+  --text-xs: var(--cms-text-xs);
+  --text-xs--line-height: 1.4;
+  --text-sm: var(--cms-text-sm);
+  --text-sm--line-height: 1.5;
+  --text-base: var(--cms-text-base);
+  --text-base--line-height: 1.5;
+  --text-lg: var(--cms-text-lg);
+  --text-lg--line-height: 1.4;
+  --text-xl: var(--cms-text-xl);
+  --text-xl--line-height: 1.3;
+  --text-2xl: var(--cms-text-2xl);
+  --text-2xl--line-height: 1.2;
+
+  --radius-*: initial;
+  --radius-sm: var(--cms-radius-sm);
+  --radius-md: var(--cms-radius-md);
+  --radius-lg: var(--cms-radius-lg);
+  --radius-xl: var(--cms-radius-xl);
+
+  --shadow-*: initial;
+  --shadow-sm: var(--cms-shadow-sm);
+  --shadow-md: var(--cms-shadow-md);
+  --shadow-lg: var(--cms-shadow-lg);
+}

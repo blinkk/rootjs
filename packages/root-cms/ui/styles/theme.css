@@ -8,12 +8,137 @@
  * theme written against them keeps working when the markup underneath
  * changes.
  *
+ * Every Tailwind color, radius, font, type size and shadow used by the UI
+ * resolves to one of these properties (see tailwind.css), so changing a value
+ * here restyles both utility classes and component CSS.
+ *
  * Rules that target the CMS's class names are a different matter: they work
  * today and may break with any release. Themes are experimental.
  */
 
 :root {
-  /* --- Structure -------------------------------------------------------
+  /* --- Color: surfaces ------------------------------------------------- */
+
+  /* The page behind cards and panels. */
+  --cms-color-page: #fbfbf9;
+  /* Cards, panels, inputs, menus and modals. */
+  --cms-color-surface: #ffffff;
+  /* A hovered row, menu item or quiet button. */
+  --cms-color-surface-hover: #f5f5f3;
+  /* A pressed or selected row, menu item or quiet button. */
+  --cms-color-surface-active: #ececea;
+  /* Chips, tags, inline code and other small filled shapes. */
+  --cms-color-chip: #ececea;
+  /* The dimmed backdrop behind a modal. */
+  --cms-color-overlay: rgba(20, 20, 18, 0.4);
+
+  /* --- Color: lines ---------------------------------------------------- */
+
+  /* Borders and dividers. */
+  --cms-color-border: #e4e4e1;
+  /* Input borders and dividers that need more contrast. */
+  --cms-color-border-strong: #cfcfcb;
+
+  /* --- Color: text ----------------------------------------------------- */
+
+  /* Body text. */
+  --cms-color-text: #333333;
+  /* Headings and emphasized text. */
+  --cms-color-text-strong: #1f1f1f;
+  /* Secondary text: help, metadata, timestamps. */
+  --cms-color-text-muted: #6b7280;
+  /* Placeholders, disabled text and decorative icons. */
+  --cms-color-text-subtle: #a3a3a0;
+  /* Text on a filled, dark background. */
+  --cms-color-text-inverse: #ffffff;
+  /* Links. */
+  --cms-color-link: #1971c2;
+
+  /* --- Color: actions -------------------------------------------------- */
+
+  /* Filled (primary) buttons. */
+  --cms-color-primary: #1f1f1f;
+  --cms-color-primary-hover: #000000;
+  /* Text and icons on a primary button. */
+  --cms-color-on-primary: #ffffff;
+  /* The accent color: active tabs and nav items, inline groups, and divider
+   * hovers.
+   */
+  --cms-accent: #d9a6c8;
+  /* Keyboard focus rings. */
+  --cms-color-focus: #228be6;
+
+  /* --- Color: status --------------------------------------------------- *
+   * Each status has a strong color (text, icons, filled badges), a soft
+   * background and a line color for borders.
+   */
+
+  --cms-color-info: #1971c2;
+  --cms-color-info-soft: #e7f5ff;
+  --cms-color-info-line: #a5d8ff;
+  --cms-color-success: #2b8a3e;
+  --cms-color-success-soft: #ebfbee;
+  --cms-color-success-line: #b2f2bb;
+  --cms-color-warning: #e67700;
+  --cms-color-warning-soft: #fff9db;
+  --cms-color-warning-line: #ffe066;
+  --cms-color-danger: #c92a2a;
+  --cms-color-danger-soft: #fff5f5;
+  --cms-color-danger-line: #ffa8a8;
+
+  /* --- Type ------------------------------------------------------------ */
+
+  --cms-font-sans: 'Inter', sans-serif;
+  --cms-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* The type scale. */
+  --cms-text-xs: 11px;
+  --cms-text-sm: 12px;
+  --cms-text-base: 14px;
+  --cms-text-lg: 16px;
+  --cms-text-xl: 20px;
+  --cms-text-2xl: 24px;
+
+  /* Base size for the document editor's text. */
+  --cms-font-size: 12px;
+  /* Field labels. */
+  --cms-label-size: 12px;
+  /* Help text beneath a label. */
+  --cms-help-size: 12px;
+  /* Its colour. */
+  --cms-help-color: inherit;
+
+  /* --- Shape and elevation --------------------------------------------- */
+
+  --cms-radius-sm: 4px;
+  --cms-radius-md: 6px;
+  --cms-radius-lg: 8px;
+  --cms-radius-xl: 12px;
+
+  /* Cards and raised buttons. */
+  --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  /* Menus, popovers and tooltips. */
+  --cms-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* Modals and toasts. */
+  --cms-shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* --- Layout ---------------------------------------------------------- */
+
+  --cms-header-height: 48px;
+  --cms-sidebar-width-collapsed: 48px;
+  --cms-sidebar-width-expanded: 208px;
+  /* Space around a page's content. */
+  --cms-page-padding: 32px;
+  /* The same, on screens narrower than 768px. */
+  --cms-page-padding-mobile: 16px;
+  /* Height of buttons and single-line inputs. */
+  --cms-control-height-sm: 28px;
+  --cms-control-height-md: 36px;
+
+  /* --- Field groups ----------------------------------------------------
    * A field group ("drawer") runs edge to edge across the field column by
    * default, so its header reads as a band. Pull it back into the column
    * (bleed 0) and give it a border to make it read as a box instead.
@@ -33,21 +158,18 @@
   --cms-drawer-indent: 0;
   /* A rule down that space (a `border` shorthand). */
   --cms-drawer-rule: none;
-  /* The accent color: active tabs and nav items, inline groups, and divider
-   * hovers.
-   */
-  --cms-accent: #d9a6c8;
-
-  /* --- Type and rhythm ------------------------------------------------- */
-
-  /* Base size for the document editor's text. */
-  --cms-font-size: 12px;
-  /* Field labels. */
-  --cms-label-size: 12px;
-  /* Help text beneath a label. */
-  --cms-help-size: 12px;
-  /* Its colour. */
-  --cms-help-color: inherit;
   /* Vertical space between fields. */
   --cms-field-gap: 16px;
+}
+
+/*
+ * Stacking order. These aren't meant to be themed, but live here so every
+ * layer is defined in one place.
+ */
+:root {
+  --cms-z-sticky: 10;
+  --cms-z-dropdown: 100;
+  --cms-z-modal: 200;
+  --cms-z-toast: 300;
+  --cms-z-tooltip: 400;
 }

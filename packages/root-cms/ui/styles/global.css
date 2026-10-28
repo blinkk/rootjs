@@ -1,107 +1,114 @@
+/*
+ * Legacy variables, kept as aliases of the theme tokens (theme.css) while
+ * components are migrated. Don't use them in new code; they're removed once
+ * nothing reads them.
+ */
 :root {
-  --font-family-default: 'Inter', sans-serif;
-  --font-family-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --color-text-default: #333333;
-  --color-text-dark: #333333;
-  --color-text-gray: #6b7280;
-  /* --color-border: #efefef; */
-  --color-border: #e4e4e1;
-  --button-background-hover: #f5f5f5;
-  --button-background-active: #e5e5e5;
-  --page-background: #fbfbf9;
+  --font-family-default: var(--cms-font-sans);
+  --font-family-mono: var(--cms-font-mono);
+  --color-text-default: var(--cms-color-text);
+  --color-text-dark: var(--cms-color-text);
+  --color-text-gray: var(--cms-color-text-muted);
+  --color-border: var(--cms-color-border);
+  --button-background-hover: var(--cms-color-surface-hover);
+  --button-background-active: var(--cms-color-surface-active);
+  --page-background: var(--cms-color-page);
   --page-padding: 30px;
-  --surface-background: #fff;
-  --surface-background-hover: rgb(248, 249, 250);
-  --surface-background-active: rgb(248, 249, 250);
-  --surface-border-radius: 8px;
-  --chip-background: #efefef;
-  --chip-text-color: #000;
-  --header-height: 48px;
-  --sidebar-width-collapsed: 48px;
-  --sidebar-width-expanded: 208px;
+  --surface-background: var(--cms-color-surface);
+  --surface-background-hover: var(--cms-color-surface-hover);
+  --surface-background-active: var(--cms-color-surface-hover);
+  --surface-border-radius: var(--cms-radius-lg);
+  --chip-background: var(--cms-color-chip);
+  --chip-text-color: var(--cms-color-text-strong);
+  --header-height: var(--cms-header-height);
+  --sidebar-width-collapsed: var(--cms-sidebar-width-collapsed);
+  --sidebar-width-expanded: var(--cms-sidebar-width-expanded);
   --sidebar-border-width: 1px;
   --sidebar-width: var(--sidebar-width-collapsed);
 }
 
-html {
-  box-sizing: border-box;
-  overflow-x: hidden;
-  font-size: 16px;
-  line-height: 1.5;
-}
+/*
+ * Element defaults. They sit in the `base` layer so Tailwind utilities
+ * (and any unlayered component CSS) override them.
+ */
+@layer base {
+  html {
+    box-sizing: border-box;
+    overflow-x: hidden;
+    font-size: 16px;
+    line-height: 1.5;
+  }
 
-*,
-*:before,
-*:after {
-  box-sizing: inherit;
-}
+  *,
+  *:before,
+  *:after {
+    box-sizing: inherit;
+  }
 
-html,
-body {
-  /* font-family: tokens.$font-family-primary; */
-  font-family: var(--font-family-default);
-  color: var(--color-text-default);
-  height: 100%;
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  scroll-behavior: smooth;
-}
+  html,
+  body {
+    font-family: var(--font-family-default);
+    color: var(--color-text-default);
+    height: 100%;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
 
-img,
-picture,
-figure,
-video,
-canvas,
-svg,
-iframe {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0;
-}
+  img,
+  picture,
+  figure,
+  video,
+  canvas,
+  svg,
+  iframe {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+  }
 
-details > div {
-  box-sizing: border-box;
-}
+  details > div {
+    box-sizing: border-box;
+  }
 
-a {
-  color: inherit;
-}
+  a {
+    color: inherit;
+  }
 
-select {
-  color-scheme: light;
-}
+  select {
+    color-scheme: light;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-p {
-  margin: 0;
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  p {
+    margin: 0;
+  }
 
-body.menu\:open {
-  overflow: hidden;
-}
+  body.menu\:open {
+    overflow: hidden;
+  }
 
-#root {
-  margin: 0 auto;
-  min-height: 100vh;
-  position: relative;
-}
+  #root {
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+  }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
 }
-
