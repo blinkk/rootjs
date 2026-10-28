@@ -738,7 +738,7 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
       <div className="ActionLogsCompactItemPreview__timestamp truncate">
         <ActionTimestamp timestamp={action.timestamp} />
       </div>
-      <div className="ActionLogsCompactItemPreview__action max-w-full truncate rounded-sm md:justify-self-end bg-chip px-1.5 py-0.5 font-semibold">
+      <div className="ActionLogsCompactItemPreview__action max-w-full truncate rounded-sm md:justify-self-end bg-chip px-1.5 py-0 font-semibold">
         {action.action}
       </div>
       <div className="ActionLogsCompactItemPreview__actionMetaId truncate">
@@ -758,7 +758,7 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
     ...action.metadata,
   };
   return (
-    <div className="ActionLogsCompactItemDetails flex flex-col gap-2 font-mono">
+    <div className="ActionLogsCompactItemDetails flex flex-col gap-2 font-mono pl-6">
       <MetadataDisplay metadata={metadata} />
       <QuickLinks action={action} />
     </div>
