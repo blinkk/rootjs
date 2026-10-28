@@ -483,20 +483,24 @@ snapshots to its PR.
 
 `DocEditor.tsx` alone is 3.2k lines, and the area is 7.6k.
 
-- [ ] 4.1 `DocumentPage` + `EmbeddedDocumentPage` + `DocumentPagePreviewBar`:
+- [x] 4.1 `DocumentPage` + `EmbeddedDocumentPage` + `DocumentPagePreviewBar`:
       the edit/preview tab layout on mobile, plus the status bar and actions.
-- [ ] 4.2 `DocEditor` field chrome (groups/drawers, arrays, labels, help, the
+- [x] 4.2 `DocEditor` field chrome (groups/drawers, arrays, labels, help, the
       existing `--cms-drawer-*` contract) and the simple fields.
-- [ ] 4.3 Complex fields: `FileField`, `ImageEditorDialog`,
+- [x] 4.3 Complex fields: `FileField`, `ImageEditorDialog`,
       `AiImageEditorDialog`, `GenerateImageForm`, `Reference(s)Field`,
       `MultiSelectField`, `DateTimeField`.
-- [ ] 4.4 `RichTextEditor` toolbar and floating link editor (Lexical stays; we
+- [x] 4.4 `RichTextEditor` toolbar and floating link editor (Lexical stays; we
       reskin only).
 
 4.2 and 4.3 can run in parallel once 4.1 is in.
 
 **Checkpoint 4:** a full editing session on a phone (create doc → edit all field
-types → preview → publish).
+types → preview → publish). Done on 375px phone emulation with the publish
+dialog opened and cancelled. It turned up a missing viewport meta tag on the
+app page (phones were laying the CMS out at 980px), the status bar
+overflowing the mobile header, and array item headers sized without
+`border-box`; all fixed.
 
 ### Phase 5: Removal & polish (serial)
 
