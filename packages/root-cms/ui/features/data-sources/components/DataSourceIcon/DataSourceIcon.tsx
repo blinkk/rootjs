@@ -1,6 +1,6 @@
 import {IconTable, IconWorld} from '@tabler/icons-preact';
+import {cn} from '../../../../utils/classes.js';
 import {DataSourceType} from '../../data-source.js';
-import './DataSourceIcon.css';
 
 export interface DataSourceIconProps {
   className?: string;
@@ -15,12 +15,12 @@ export interface DataSourceIconProps {
 export function DataSourceIcon(props: DataSourceIconProps) {
   const size = props.size ?? 36;
   const iconSize = Math.round(size * 0.55);
-  const className = props.className
-    ? `DataSourceIcon ${props.className}`
-    : 'DataSourceIcon';
   return (
     <div
-      className={className}
+      className={cn(
+        'DataSourceIcon flex shrink-0 items-center justify-center rounded-md bg-chip text-muted',
+        props.className
+      )}
       style={{width: `${size}px`, height: `${size}px`}}
     >
       {props.type === 'gsheet' ? (

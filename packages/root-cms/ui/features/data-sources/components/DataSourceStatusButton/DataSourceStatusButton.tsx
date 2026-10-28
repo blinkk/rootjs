@@ -1,13 +1,14 @@
-import {Button, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {TimeSinceActionTooltip} from '../../../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {
@@ -15,7 +16,6 @@ import {
   publishDataSource,
   syncDataSource,
 } from '../../data-source.js';
-import './DataSourceStatusButton.css';
 
 export interface DataSourceStatusButtonProps {
   dataSource: DataSource;
@@ -101,7 +101,7 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
   }
 
   return (
-    <div className="DataSourceStatusButton">
+    <div className="DataSourceStatusButton flex items-center gap-2">
       <div className="DataSourceStatusButton__label">
         {!loading && (
           <TimeSinceActionTooltip timestamp={timestamp} email={email} />
@@ -117,14 +117,12 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
           condition={isArchived || (isPublishAction && !canPublish)}
         >
           <Tooltip
-            transition="pop"
             label={buttonTooltip}
             disabled={isArchived || (isPublishAction && !canPublish)}
           >
             <Button
               variant="default"
               size="xs"
-              compact
               onClick={() => onClick()}
               loading={loading}
               disabled={isArchived || (isPublishAction && !canPublish)}

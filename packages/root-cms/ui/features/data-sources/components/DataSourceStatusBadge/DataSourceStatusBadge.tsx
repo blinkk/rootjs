@@ -1,11 +1,8 @@
-import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {getTimeAgo} from '../../../../utils/time.js';
 import {DataSource} from '../../data-source.js';
-
-const TOOLTIP_PROPS = {
-  transition: 'pop',
-};
 
 export interface DataSourceStatusBadgeProps {
   dataSource: DataSource;
@@ -16,12 +13,11 @@ export function DataSourceStatusBadge(props: DataSourceStatusBadgeProps) {
   if (testIsValidTimestamp(dataSource.archivedAt)) {
     return (
       <Tooltip
-        {...TOOLTIP_PROPS}
         label={`Archived ${timeDiff(dataSource.archivedAt)} by ${
           dataSource.archivedBy
         }`}
       >
-        <Badge size="xs" color="gray" variant="filled">
+        <Badge size="xs" variant="gradient" gradient="gray">
           Archived
         </Badge>
       </Tooltip>
@@ -30,23 +26,18 @@ export function DataSourceStatusBadge(props: DataSourceStatusBadgeProps) {
   if (testIsValidTimestamp(dataSource.publishedAt)) {
     return (
       <Tooltip
-        {...TOOLTIP_PROPS}
         label={`Published ${timeDiff(dataSource.publishedAt)} by ${
           dataSource.publishedBy
         }`}
       >
-        <Badge
-          size="xs"
-          variant="gradient"
-          gradient={{from: 'teal', to: 'lime', deg: 105}}
-        >
+        <Badge size="xs" variant="gradient" gradient="green">
           Published
         </Badge>
       </Tooltip>
     );
   }
   return (
-    <Badge size="xs" variant="gradient" gradient={{from: 'indigo', to: 'cyan'}}>
+    <Badge size="xs" variant="gradient" gradient="blue">
       Unpublished
     </Badge>
   );

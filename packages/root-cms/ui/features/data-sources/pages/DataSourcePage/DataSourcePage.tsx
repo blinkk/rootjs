@@ -1,13 +1,3 @@
-import {
-  ActionIcon,
-  Breadcrumbs,
-  Button,
-  JsonInput,
-  Loader,
-  Table,
-  Textarea,
-  Tooltip,
-} from '@mantine/core';
 import {IconSettings, IconTable} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
@@ -16,6 +6,20 @@ import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../../primitives/Table/Table.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
@@ -25,7 +29,10 @@ import {
   getFromDataSource,
   getDataSource,
 } from '../../data-source.js';
-import './DataSourcePage.css';
+
+/** The green "open spreadsheet" button, as in Mantine's filled green. */
+const SHEET_BUTTON_CLASSES =
+  'bg-success text-inverse hover:bg-success hover:brightness-90 active:bg-success';
 
 export function DataSourcePage(props: {id: string}) {
   usePageTitle(`Data Source: ${props.id}`);
@@ -67,24 +74,26 @@ export function DataSourcePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="DataSourcePage">
-        <div className="DataSourcePage__header">
-          <Breadcrumbs className="DataSourcePage__header__breadcrumbs">
-            <a href="/cms/data">Data</a>
-            <div>{id}</div>
-          </Breadcrumbs>
-          <div className="DataSourcePage__header__titleWrap">
-            <Heading size="h1">Data Source: {id}</Heading>
-            <div className="DataSourcePage__header__controls">
-              <Tooltip label="Configure">
-                <ActionIcon component="a" href={`/cms/data/${props.id}/edit`}>
-                  <IconSettings size={24} stroke="1.5" />
-                </ActionIcon>
-              </Tooltip>
+      <div className="DataSourcePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="DataSourcePage__header mb-8">
+          <Breadcrumbs
+            className="DataSourcePage__header__breadcrumbs mb-3"
+            items={[{label: 'Data', href: '/cms/data'}, {label: id}]}
+          />
+          <div className="DataSourcePage__header__titleWrap flex items-center gap-3">
+            <Heading size="h1" className="min-w-0 break-words">
+              Data Source: {id}
+            </Heading>
+            <div className="DataSourcePage__header__controls flex items-center">
+              <IconButton label="Configure" href={`/cms/data/${props.id}/edit`}>
+                <IconSettings stroke="1.5" />
+              </IconButton>
             </div>
           </div>
           {dataSource?.description && (
-            <Text as="p">{dataSource.description}</Text>
+            <Text as="p" className="mt-1">
+              {dataSource.description}
+            </Text>
           )}
         </div>
 
@@ -96,7 +105,9 @@ export function DataSourcePage(props: {id: string}) {
         )}
 
         {loading ? (
-          <Loader color="gray" size="xl" />
+          <div className="DataSourcePage__loading flex justify-center p-5 text-muted">
+            <Spinner size="lg" />
+          </div>
         ) : dataSource ? (
           <DataSourcePage.DataSection dataSource={dataSource} data={data} />
         ) : (
@@ -114,18 +125,26 @@ DataSourcePage.SyncStatus = (props: {
   const dataSource = props.dataSource;
   return (
     <div className="DataSourcePage__SyncStatus">
-      <Heading size="h2">Status</Heading>
-      <Surface className="DataSourcePage__SyncStatus__content">
-        <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
-          <thead>
-            <tr>
-              <th>last synced</th>
-              <th>last published</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
+      <Heading size="h2" className="mb-4">
+        Status
+      </Heading>
+      <Surface className="DataSourcePage__SyncStatus__content max-w-100">
+        <Table
+          dense
+          striped
+          hover
+          label="Sync status"
+          className="rounded-none border-0"
+        >
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>last synced</TableHeaderCell>
+              <TableHeaderCell>last published</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableCell>
                 <DataSourceStatusButton
                   dataSource={dataSource}
                   action="sync"
@@ -135,15 +154,15 @@ DataSourcePage.SyncStatus = (props: {
                     }
                   }}
                 />
-              </td>
-              <td>
+              </TableCell>
+              <TableCell>
                 <DataSourceStatusButton
                   dataSource={dataSource}
                   action="publish"
                 />
-              </td>
-            </tr>
-          </tbody>
+              </TableCell>
+            </TableRow>
+          </TableBody>
         </Table>
       </Surface>
     </div>
@@ -212,30 +231,25 @@ DataSourcePage.DataSectionWrap = (props: {
   children: ComponentChildren;
 }) => {
   return (
-    <div className="DataSourcePage__DataSection">
-      <div className="DataSourcePage__DataSection__header">
+    <div className="DataSourcePage__DataSection mt-10">
+      <div className="DataSourcePage__DataSection__header mb-4 flex flex-wrap items-center justify-between gap-3">
         <Heading size="h2">Data</Heading>
-        <div className="DataSourcePage__DataSection__header__actions">
+        <div className="DataSourcePage__DataSection__header__actions flex items-center gap-3">
           {props.dataSource.url?.startsWith(
             'https://docs.google.com/spreadsheets/'
           ) && (
-            <Tooltip label="Open spreadsheet">
-              <ActionIcon<'a'>
-                component="a"
-                href={props.dataSource.url}
-                target="_blank"
-                variant="filled"
-                color="green"
-              >
-                <IconTable size={16} stroke="2.25" />
-              </ActionIcon>
-            </Tooltip>
+            <IconButton
+              label="Open spreadsheet"
+              href={props.dataSource.url}
+              target="_blank"
+              className={SHEET_BUTTON_CLASSES}
+            >
+              <IconTable stroke="2.25" />
+            </IconButton>
           )}
           {props.dataSource.previewUrl && (
             <Button
-              component="a"
               variant="default"
-              size="xs"
               href={props.dataSource.previewUrl}
               target="_blank"
             >
@@ -258,30 +272,36 @@ DataSourcePage.DataTable = (props: {headers?: string[]; rows?: string[][]}) => {
   return (
     <div className="DataSourcePage__DataTable">
       <Table
-        className="DataSourcePage__DataTable__table"
-        verticalSpacing="xs"
+        className="rounded-none border-0"
+        tableClassName="DataSourcePage__DataTable__table"
+        dense
         striped
-        highlightOnHover
-        fontSize="xs"
+        hover
+        label="Data"
       >
         {headers.length > 0 && (
-          <thead>
-            <tr>
+          <TableHead>
+            <TableRow>
               {headers.map((header) => (
-                <th key={header}>{header}</th>
+                <TableHeaderCell key={header}>{header}</TableHeaderCell>
               ))}
-            </tr>
-          </thead>
+            </TableRow>
+          </TableHead>
         )}
-        <tbody>
+        <TableBody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
+            <TableRow key={rowIndex}>
               {row.map((cell, i) => (
-                <td key={i}>{cell}</td>
+                <TableCell
+                  key={i}
+                  className="max-w-100 overflow-hidden text-ellipsis"
+                >
+                  {cell}
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
+        </TableBody>
       </Table>
     </div>
   );
@@ -292,11 +312,12 @@ DataSourcePage.DefaultDataDisplay = (props: {data: any}) => {
   if (typeof data === 'object') {
     return (
       <JsonInput
+        size="md"
         value={JSON.stringify(data, null, 2)}
         minRows={20}
         maxRows={100}
       />
     );
   }
-  return <Textarea value={String(data)} minRows={12} maxRows={100} />;
+  return <Textarea size="md" value={String(data)} minRows={12} maxRows={100} />;
 };

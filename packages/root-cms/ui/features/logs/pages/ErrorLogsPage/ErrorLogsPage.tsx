@@ -1,4 +1,3 @@
-import {Button, Loader, TextInput} from '@mantine/core';
 import {IconCheck, IconCopy, IconSearch} from '@tabler/icons-preact';
 import {
   collection,
@@ -15,6 +14,9 @@ import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {ErrorReport, formatErrorReport} from '../../error-reports.js';
@@ -48,32 +50,36 @@ export function ErrorLogsPage() {
 
   return (
     <Layout>
-      <div className="ErrorLogsPage">
-        <div className="ErrorLogsPage__header">
-          <div className="ErrorLogsPage__header__title">
+      <div className="ErrorLogsPage flex flex-col gap-4 bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="ErrorLogsPage__header mb-3.5">
+          <div className="ErrorLogsPage__header__title flex flex-wrap items-center justify-between gap-4">
             <Heading size="h1">Error Logs</Heading>
-            <Button component="a" href="/cms/logs" variant="default" size="xs">
+            <Button href="/cms/logs" variant="default" size="sm">
               View action logs
             </Button>
           </div>
-          <p>
+          <p className="mt-4 mb-0 max-w-150 text-base">
             Errors that users ran into in the CMS UI. Stack traces are mapped to
             the original source files. Errors can also be viewed from the
-            command line with <code>root-cms errors.get &lt;id&gt;</code>.
+            command line with{' '}
+            <code className="whitespace-nowrap rounded-sm border border-solid border-border bg-chip px-1.5 py-0.5 font-mono text-sm">
+              root-cms errors.get &lt;id&gt;
+            </code>
+            .
           </p>
         </div>
         <TextInput
-          className="ErrorLogsPage__search"
+          className="ErrorLogsPage__search w-full max-w-100"
+          size="md"
+          aria-label="Search errors"
           placeholder="Search by error ID, message or user..."
-          icon={<IconSearch size={16} />}
+          leftSection={<IconSearch />}
           value={search}
-          onChange={(e: Event) =>
-            setSearch((e.target as HTMLInputElement).value)
-          }
+          onInput={(e) => setSearch(e.currentTarget.value)}
         />
         {loading ? (
-          <div className="ErrorLogsPage__loading">
-            <Loader color="gray" size="xl" />
+          <div className="ErrorLogsPage__loading flex min-h-50 items-center justify-center text-muted">
+            <Spinner size="lg" />
           </div>
         ) : (
           <Surface className="ErrorLogsPage__list">
@@ -85,7 +91,7 @@ export function ErrorLogsPage() {
               />
             ))}
             {filteredReports.length === 0 && (
-              <div className="ErrorLogsPage__empty">
+              <div className="ErrorLogsPage__empty px-5 py-10 text-center text-base text-muted">
                 {reports.length === 0
                   ? 'No errors have been reported.'
                   : 'No errors found matching your search.'}
@@ -109,29 +115,36 @@ function ErrorLogItem(props: {report: ErrorReport; open?: boolean}) {
   }
 
   return (
-    <details className="ErrorLogsPage__item" open={props.open}>
-      <summary className="ErrorLogsPage__item__summary">
-        <span className="ErrorLogsPage__item__time">
+    <details
+      className="ErrorLogsPage__item border-0 border-solid border-border not-first:border-t"
+      open={props.open}
+    >
+      <summary className="ErrorLogsPage__item__summary flex cursor-pointer list-none flex-col items-start gap-1 px-4 py-2.5 text-sm hover:bg-surface-hover md:flex-row md:items-center md:gap-4">
+        <span className="ErrorLogsPage__item__time shrink-0 whitespace-nowrap text-muted md:w-40">
           {new Date(report.timestamp).toLocaleString('en', {
             dateStyle: 'medium',
             timeStyle: 'short',
           })}
         </span>
-        <span className="ErrorLogsPage__item__message">
+        <span className="ErrorLogsPage__item__message w-full min-w-0 truncate md:w-auto md:flex-1">
           {report.name ? `${report.name}: ` : ''}
           {report.message}
         </span>
-        <span className="ErrorLogsPage__item__user">{report.by || '—'}</span>
-        <code className="ErrorLogsPage__item__id">{report.id}</code>
+        <span className="ErrorLogsPage__item__user max-w-full truncate text-muted md:shrink-0">
+          {report.by || '—'}
+        </span>
+        <code className="ErrorLogsPage__item__id break-all font-mono text-sm md:shrink-0">
+          {report.id}
+        </code>
       </summary>
-      <div className="ErrorLogsPage__item__body">
-        <pre className="ErrorLogsPage__item__stack">
+      <div className="ErrorLogsPage__item__body px-4 pb-4">
+        <pre className="ErrorLogsPage__item__stack mt-0 mb-3 max-h-120 overflow-auto whitespace-pre-wrap break-words rounded-sm border border-solid border-border p-3 font-mono text-xs leading-normal">
           {formatErrorReport(report)}
         </pre>
         <Button
           variant="default"
-          size="xs"
-          leftIcon={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+          size="sm"
+          icon={copied ? <IconCheck /> : <IconCopy />}
           onClick={() => notifyErrors(copyDetails)}
         >
           {copied ? 'Copied' : 'Copy error details'}

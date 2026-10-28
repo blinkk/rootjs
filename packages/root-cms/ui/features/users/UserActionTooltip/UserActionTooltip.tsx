@@ -1,7 +1,5 @@
-import './UserActionTooltip.css';
-
-import {Tooltip} from '@mantine/core';
 import {ComponentChildren} from 'preact';
+import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 
 export interface UserActionTooltipProps {
@@ -29,9 +27,9 @@ export interface UserActionTooltipProps {
   children: ComponentChildren;
   /** Tooltip position. */
   position?: 'top' | 'bottom' | 'left' | 'right';
-  /** Mantine transition name. Defaults to "pop". */
+  /** Ignored; kept for compatibility with the Mantine-based version. */
   transition?: string;
-  /** Whether to show the tooltip arrow. Defaults to true. */
+  /** Ignored: the tooltip always has an arrow. */
   withArrow?: boolean;
 }
 
@@ -44,26 +42,36 @@ export interface UserActionTooltipProps {
 export function UserActionTooltip(props: UserActionTooltipProps) {
   const {heading, message, detail, user} = props;
   const label = (
-    <div className="UserActionTooltip">
-      {user && <UserAvatar email={user} size={20} withTooltip={false} />}
-      <div className="UserActionTooltip__text">
+    <div className="UserActionTooltip flex max-w-60 items-center gap-2">
+      {user && (
+        <UserAvatar
+          className="UserActionTooltip__avatar shrink-0 border border-inverse/35"
+          email={user}
+          size={20}
+          withTooltip={false}
+        />
+      )}
+      <div className="UserActionTooltip__text flex min-w-0 flex-col *:min-w-0 *:wrap-anywhere *:whitespace-normal">
         {heading && (
-          <span className="UserActionTooltip__heading">{heading}</span>
+          <span className="UserActionTooltip__heading mb-1.5 border-b border-inverse/20 pb-1.5 font-semibold">
+            {heading}
+          </span>
         )}
         <span>{message}</span>
-        {detail && <span className="UserActionTooltip__detail">{detail}</span>}
+        {detail && (
+          <span className="UserActionTooltip__detail opacity-85">{detail}</span>
+        )}
         {user && <span>by {user}</span>}
       </div>
     </div>
   );
+  // The trigger is wrapped so any children work, whether or not they forward
+  // a ref (Mantine's tooltip also wrapped its target).
   return (
-    <Tooltip
-      label={label}
-      position={props.position}
-      transition={props.transition ?? 'pop'}
-      withArrow={props.withArrow ?? true}
-    >
-      {props.children}
+    <Tooltip label={label} placement={props.position}>
+      <span className="UserActionTooltip__trigger inline-flex max-w-full">
+        {props.children}
+      </span>
     </Tooltip>
   );
 }

@@ -1,19 +1,22 @@
-import {
-  Button,
-  Checkbox,
-  LoadingOverlay,
-  NumberInput,
-  Select,
-  TextInput,
-  Textarea,
-} from '@mantine/core';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isValidCronExpression} from '../../../../../core/cron-schedule.js';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {parseSpreadsheetUrl} from '../../../../integrations/gsheets.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {NumberInput} from '../../../../primitives/NumberInput/NumberInput.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {
+  INPUT_BASE_CLASSES,
+  INPUT_SIZE_CLASSES,
+  TextInput,
+} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {
   CronScheduleType,
@@ -27,7 +30,6 @@ import {
   getDataSource,
   updateDataSource,
 } from '../../data-source.js';
-import './DataSourceForm.css';
 
 const HTTP_URL_HELP = 'Enter the URL to make the HTTP request.';
 const GSHEET_URL_HELP =
@@ -254,7 +256,10 @@ export function DataSourceForm(props: DataSourceFormProps) {
 
   return (
     <form
-      className="DataSourceForm"
+      className={cn(
+        'DataSourceForm relative max-w-162 text-base',
+        props.className
+      )}
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
@@ -262,50 +267,44 @@ export function DataSourceForm(props: DataSourceFormProps) {
       }}
     >
       <LoadingOverlay visible={loading} />
-      <div className="DataSourceForm__input">
+      <div className="DataSourceForm__input mt-4">
         <Select
           name="type"
           label="Type"
           data={typeSelectOptions}
           value={dataSourceType}
-          onChange={(e: DataSourceType) => setDataSourceType(e)}
-          size="xs"
-          radius={0}
-          // Due to issues with preact/compat, use a div for the dropdown el.
-          dropdownComponent="div"
+          onValueChange={(e) => setDataSourceType(e as DataSourceType)}
+          size="sm"
         />
       </div>
       <TextInput
-        className="DataSourceForm__input"
+        className="DataSourceForm__input mt-4"
         name="id"
         label="ID"
         description="Unique identifier for the data source. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
-        size="xs"
-        radius={0}
+        size="sm"
         value={props.dataSourceId}
         disabled={!!props.dataSourceId}
       />
       <Textarea
-        className="DataSourceForm__input"
+        className="DataSourceForm__input mt-4"
         name="description"
         label="Description"
         description="Optional."
-        size="xs"
-        radius={0}
+        size="sm"
         value={dataSource?.description}
       />
       <TextInput
-        className="DataSourceForm__input"
+        className="DataSourceForm__input mt-4"
         name="url"
         label="URL"
-        description={urlHelp}
-        size="xs"
-        radius={0}
+        description={<span className="break-words">{urlHelp}</span>}
+        size="sm"
         value={dataSource?.url}
       />
       {dataSourceType === 'http' && (
         <>
-          <div className="DataSourceForm__input">
+          <div className="DataSourceForm__input mt-4">
             <Select
               name="httpMethod"
               label="HTTP Request Method"
@@ -314,36 +313,31 @@ export function DataSourceForm(props: DataSourceFormProps) {
                 {value: 'POST', label: 'POST'},
               ]}
               value={httpMethod}
-              onChange={(e: HttpMethod) => setHttpMethod(e)}
-              size="xs"
-              radius={0}
-              // Due to issues with preact/compat, use a div for the dropdown el.
-              dropdownComponent="div"
+              onValueChange={(e) => setHttpMethod(e as HttpMethod)}
+              size="sm"
             />
           </div>
           <Textarea
-            className="DataSourceForm__input"
+            className="DataSourceForm__input mt-4"
             name="httpHeaders"
             label="HTTP Request Headers"
             description="Format as `HeaderName: Value`, each value on its own line."
-            size="xs"
-            radius={0}
+            size="sm"
             value={headersToString(dataSource?.httpOptions?.headers || {})}
           />
           {httpMethod === 'POST' && (
             <Textarea
-              className="DataSourceForm__input"
+              className="DataSourceForm__input mt-4"
               name="httpRequestBody"
               label="HTTP Request Body"
-              size="xs"
-              radius={0}
+              size="sm"
               value={dataSource?.httpOptions?.body}
             />
           )}
         </>
       )}
       {dataSourceType === 'gsheet' && (
-        <div className="DataSourceForm__input">
+        <div className="DataSourceForm__input mt-4">
           <Select
             name="dataFormat"
             label="Data Format"
@@ -352,23 +346,22 @@ export function DataSourceForm(props: DataSourceFormProps) {
               {value: 'grid', label: 'grid'},
             ]}
             value={dataFormat}
-            onChange={(e: GsheetDataFormat) => setDataFormat(e)}
-            size="xs"
-            radius={0}
-            // Due to issues with preact/compat, use a div for the dropdown el.
-            dropdownComponent="div"
+            onValueChange={(e) => setDataFormat(e as GsheetDataFormat)}
+            size="sm"
           />
           {dataFormat === 'grid' && (
-            <div className="DataSourceForm__input__example">
+            <div className="DataSourceForm__input__example mt-3 text-sm">
               Data is stored as an array of arrays, including the header row,
               e.g.
-              <code>[[header1, header2], [foo, bar]]</code>
+              <code className="ml-1 bg-chip p-1 font-medium">
+                [[header1, header2], [foo, bar]]
+              </code>
             </div>
           )}
           {dataFormat === 'map' && (
-            <div className="DataSourceForm__input__example">
+            <div className="DataSourceForm__input__example mt-3 text-sm">
               Data is stored as an array of maps, e.g.
-              <code>
+              <code className="ml-1 bg-chip p-1 font-medium">
                 [{'{'}header1: foo, header2: bar{'}'}]
               </code>
             </div>
@@ -376,18 +369,20 @@ export function DataSourceForm(props: DataSourceFormProps) {
         </div>
       )}
 
-      <div className="DataSourceForm__section">
-        <div className="DataSourceForm__section__label">Sync Schedule</div>
+      <div className="DataSourceForm__section mt-6">
+        <div className="DataSourceForm__section__label mb-2 text-base font-semibold">
+          Sync Schedule
+        </div>
         <Checkbox
-          className="DataSourceForm__input"
+          className="DataSourceForm__input mt-4"
           label="Enable scheduled sync"
           checked={cronEnabled}
           onChange={(e) => setCronEnabled(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
         {cronEnabled && (
-          <div className="DataSourceForm__cron">
-            <div className="DataSourceForm__input">
+          <div className="DataSourceForm__cron mt-3">
+            <div className="DataSourceForm__input mt-4">
               <Select
                 label="Schedule"
                 data={[
@@ -397,46 +392,49 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   {value: 'custom', label: 'Custom (cron expression)'},
                 ]}
                 value={cronSchedule}
-                onChange={(e: CronScheduleType) => setCronSchedule(e)}
-                size="xs"
-                radius={0}
-                dropdownComponent="div"
+                onValueChange={(e) => setCronSchedule(e as CronScheduleType)}
+                size="sm"
               />
             </div>
 
             {cronSchedule === 'interval' && (
-              <div className="DataSourceForm__cron__row">
+              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span>Run every</span>
                 <NumberInput
-                  className="DataSourceForm__cron__interval"
+                  className="DataSourceForm__cron__interval w-20"
+                  aria-label="Interval"
                   value={cronInterval}
-                  onChange={(val) => setCronInterval(Number(val) || 1)}
+                  onValueChange={(val) => setCronInterval(Number(val) || 1)}
                   min={1}
-                  size="xs"
-                  radius={0}
+                  size="sm"
                 />
                 <Select
-                  className="DataSourceForm__cron__unit"
+                  className="DataSourceForm__cron__unit w-30"
+                  aria-label="Interval unit"
                   data={[
                     {value: 'minutes', label: 'minutes'},
                     {value: 'hours', label: 'hours'},
                     {value: 'days', label: 'days'},
                   ]}
                   value={cronUnit}
-                  onChange={(e: CronUnit) => setCronUnit(e)}
-                  size="xs"
-                  radius={0}
-                  dropdownComponent="div"
+                  onValueChange={(e) => setCronUnit(e as CronUnit)}
+                  size="sm"
                 />
               </div>
             )}
 
             {cronSchedule === 'daily' && (
-              <div className="DataSourceForm__cron__row">
+              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span>Run every day at</span>
                 <input
                   type="time"
-                  className="DataSourceForm__cron__time"
+                  aria-label="Time"
+                  className={cn(
+                    'DataSourceForm__cron__time',
+                    INPUT_BASE_CLASSES,
+                    INPUT_SIZE_CLASSES.sm,
+                    'w-auto'
+                  )}
                   value={cronDailyTime}
                   onChange={(e) =>
                     setCronDailyTime((e.target as HTMLInputElement).value)
@@ -446,21 +444,26 @@ export function DataSourceForm(props: DataSourceFormProps) {
             )}
 
             {cronSchedule === 'weekly' && (
-              <div className="DataSourceForm__cron__row">
+              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span>Run every</span>
                 <Select
-                  className="DataSourceForm__cron__weekday"
+                  className="DataSourceForm__cron__weekday w-35"
+                  aria-label="Day of week"
                   data={WEEKDAYS}
                   value={cronWeeklyDay}
-                  onChange={(val: string) => val && setCronWeeklyDay(val)}
-                  size="xs"
-                  radius={0}
-                  dropdownComponent="div"
+                  onValueChange={(val) => val && setCronWeeklyDay(val)}
+                  size="sm"
                 />
                 <span>at</span>
                 <input
                   type="time"
-                  className="DataSourceForm__cron__time"
+                  aria-label="Time"
+                  className={cn(
+                    'DataSourceForm__cron__time',
+                    INPUT_BASE_CLASSES,
+                    INPUT_SIZE_CLASSES.sm,
+                    'w-auto'
+                  )}
                   value={cronWeeklyTime}
                   onChange={(e) =>
                     setCronWeeklyTime((e.target as HTMLInputElement).value)
@@ -470,7 +473,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
             )}
 
             {cronSchedule === 'custom' && (
-              <div className="DataSourceForm__input">
+              <div className="DataSourceForm__input mt-4">
                 <TextInput
                   label="Cron expression"
                   description='Standard 5-field cron, e.g. "0 19 * * *" runs every day at 7pm, "0 17 * * 5" runs every Friday at 5pm.'
@@ -479,57 +482,57 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   onChange={(e: any) =>
                     setCronExpression((e.target as HTMLInputElement).value)
                   }
-                  size="xs"
-                  radius={0}
+                  size="sm"
                 />
               </div>
             )}
 
             {cronSchedule !== 'interval' && (
-              <div className="DataSourceForm__input">
+              <div className="DataSourceForm__input mt-4">
                 <Select
                   label="Timezone"
                   data={TIMEZONE_OPTIONS}
                   value={cronTimezone}
-                  onChange={(val: string) => val && setCronTimezone(val)}
+                  onValueChange={(val) => val && setCronTimezone(val)}
                   searchable
-                  size="xs"
-                  radius={0}
-                  dropdownComponent="div"
+                  size="sm"
                 />
               </div>
             )}
 
             <Checkbox
-              className="DataSourceForm__input"
+              className="DataSourceForm__input mt-4"
               label="Auto-publish after sync"
               checked={cronAutoPublish}
               onChange={(e) => setCronAutoPublish(e.currentTarget.checked)}
-              size="xs"
+              size="sm"
             />
           </div>
         )}
       </div>
 
       <TextInput
-        className="DataSourceForm__input"
+        className="DataSourceForm__input mt-4"
         name="previewUrl"
         label="Preview URL"
         description="URL where users can preview the data source."
-        size="xs"
-        radius={0}
+        size="sm"
         value={dataSource?.previewUrl}
       />
       <Button
-        className="DataSourceForm__submit"
-        color="blue"
-        size="xs"
+        className="DataSourceForm__submit mt-8"
+        variant="primary"
+        size="sm"
         type="submit"
         loading={submitting}
       >
         {props.buttonLabel || 'Save'}
       </Button>
-      {error && <div className="DataSourceForm__error">Error: {error}</div>}
+      {error && (
+        <div className="DataSourceForm__error mt-8 text-base font-medium text-danger">
+          Error: {error}
+        </div>
+      )}
     </form>
   );
 }

@@ -1,5 +1,3 @@
-import './AssetPickerModal.css';
-
 import {
   type ContextModalProps,
   useModals,
@@ -67,7 +65,7 @@ export function AssetPickerModal(
   }
 
   return (
-    <div className="AssetPickerModal">
+    <div className="AssetPickerModal min-h-80">
       <AssetBrowser
         mode="pick"
         accept={props.accept}

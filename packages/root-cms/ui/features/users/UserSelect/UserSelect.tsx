@@ -1,9 +1,7 @@
-import './UserSelect.css';
-
-import {CloseButton, MultiSelect, Select} from '@mantine/core';
-import {forwardRef} from 'preact/compat';
 import {useMemo, useState} from 'preact/hooks';
-import {joinClassNames} from '../../../utils/classes.js';
+import {MultiSelect} from '../../../primitives/MultiSelect/MultiSelect.js';
+import {Select} from '../../../primitives/Select/Select.js';
+import {cn} from '../../../utils/classes.js';
 import {useProjectUsers} from '../useProjectUsers.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {
@@ -32,54 +30,29 @@ function useUserSelectData(selected: string[]) {
   return {data, loading, addCreated};
 }
 
-/** Returns a copy of `props` with the given keys removed. */
-function omitProps(props: Record<string, any>, keys: string[]) {
-  const rest: Record<string, any> = {};
-  Object.keys(props).forEach((key) => {
-    if (!keys.includes(key)) {
-      rest[key] = props[key];
-    }
-  });
-  return rest;
-}
-
-/** Fields supplied by the `data` entries, which must not reach the DOM. */
-const ITEM_PROPS = [
-  'value',
-  'label',
-  'email',
-  'displayName',
-  'photoURL',
-  'freeValue',
-];
-
-/**
- * Dropdown option showing a user's avatar, display name, and email. Mantine
- * passes each `data` entry's fields through as props.
- */
-const UserSelectItemComponent = forwardRef((props: any, ref: any) => {
-  const {label, email} = props;
-  const others = omitProps(props, ITEM_PROPS);
-  const profile = toProfile(props);
+/** Dropdown option showing a user's avatar, display name, and email. */
+function renderUserOption(item: UserSelectItem) {
   return (
-    <div {...others} ref={ref}>
-      <div className="UserSelect__item">
-        <UserAvatar
-          email={email}
-          profile={profile}
-          size={24}
-          withTooltip={false}
-        />
-        <div className="UserSelect__item__text">
-          <div className="UserSelect__item__label">{label}</div>
-          {email && email !== label && (
-            <div className="UserSelect__item__email">{email}</div>
-          )}
+    <div className="UserSelect__item flex min-w-0 items-center gap-2">
+      <UserAvatar
+        email={item.email}
+        profile={toProfile(item)}
+        size={24}
+        withTooltip={false}
+      />
+      <div className="UserSelect__item__text flex min-w-0 flex-col leading-snug">
+        <div className="UserSelect__item__label truncate text-sm">
+          {item.label}
         </div>
+        {item.email && item.email !== item.label && (
+          <div className="UserSelect__item__email truncate text-xs text-muted">
+            {item.email}
+          </div>
+        )}
       </div>
     </div>
   );
-});
+}
 
 export interface UserSelectProps {
   /** Currently selected email, or an empty string when unset. */
@@ -112,93 +85,65 @@ export function UserSelect(props: UserSelectProps) {
   const selectedItem = data.find((item) => item.value === value);
 
   return (
-    <Select
-      className={joinClassNames('UserSelect', props.className)}
-      size="xs"
+    <Select<UserSelectItem>
+      className={cn('UserSelect', props.className)}
+      size="sm"
       data={data}
       value={value || null}
-      onChange={(newValue: string | null) => props.onChange(newValue || '')}
+      onValueChange={(newValue) => props.onChange(newValue || '')}
       placeholder={props.placeholder || 'Search or enter an email'}
+      aria-label={props.placeholder || 'Search or enter an email'}
       disabled={props.disabled}
       autoFocus={props.autoFocus}
-      initiallyOpened={props.initiallyOpened}
+      defaultOpen={props.initiallyOpened}
       searchable
       clearable
       creatable
-      icon={
+      leftSection={
         value ? (
           <UserAvatar
             email={value}
             // While the user list loads, `profile` is left undefined so the
             // avatar falls back to fetching the profile on its own.
             profile={selectedItem ? toProfile(selectedItem) : undefined}
-            size={20}
+            size={16}
             withTooltip={false}
           />
         ) : undefined
       }
-      itemComponent={UserSelectItemComponent}
-      filter={(query: string, item: UserSelectItem) =>
-        matchesQuery(query, item)
-      }
+      renderOption={renderUserOption}
+      filter={(query, item) => matchesQuery(query, item)}
       shouldCreate={shouldCreateItem}
-      getCreateLabel={(query: string) => `+ Use "${query.trim()}"`}
-      onCreate={(query: string) => addCreated(query)}
+      getCreateLabel={(query) => `+ Use "${query.trim()}"`}
+      onCreate={(query) => {
+        addCreated(query);
+      }}
       nothingFound={loading ? 'Loading…' : 'No users found'}
       maxDropdownHeight={280}
-      // Due to issues with preact/compat, use a div for the dropdown el.
-      dropdownComponent="div"
     />
   );
 }
 
-/** Styling props Mantine passes to `valueComponent` that the chip handles. */
-const VALUE_PROPS = [
-  ...ITEM_PROPS,
-  'onRemove',
-  'classNames',
-  'styles',
-  'size',
-  'radius',
-  'variant',
-  'disabled',
-  'readOnly',
-];
-
-/** Chip rendered for each selected user in the multi-user picker. */
-const UserSelectValueComponent = forwardRef((props: any, ref: any) => {
-  const {label, email, onRemove} = props;
-  const others = omitProps(props, VALUE_PROPS);
-  const profile = toProfile(props);
+/** Chip label for each selected user in the multi-user picker. */
+function renderUserValue(item: UserSelectItem) {
   return (
-    <div
-      {...others}
-      ref={ref}
-      className="UserSelect__value"
-      title={email}
+    <span
+      className="UserSelect__value inline-flex min-w-0 items-center gap-1"
+      title={item.email}
       // Lets callers read the underlying email off the chip, e.g. to copy the
       // full addresses instead of the display names.
-      data-user-email={email}
+      data-user-email={item.email}
     >
       <UserAvatar
-        email={email}
-        profile={profile}
-        size={18}
+        email={item.email}
+        profile={toProfile(item)}
+        size={14}
         withTooltip={false}
       />
-      <span className="UserSelect__value__label">{label}</span>
-      {!props.disabled && !props.readOnly && (
-        <CloseButton
-          className="UserSelect__value__remove"
-          onMouseDown={onRemove}
-          size={16}
-          iconSize={12}
-          variant="transparent"
-        />
-      )}
-    </div>
+      <span className="UserSelect__value__label truncate">{item.label}</span>
+    </span>
   );
-});
+}
 
 export interface UserMultiSelectProps {
   /** Currently selected emails. */
@@ -229,33 +174,27 @@ export function UserMultiSelect(props: UserMultiSelectProps) {
   const {data, loading, addCreated} = useUserSelectData(value);
 
   return (
-    <MultiSelect
-      className={joinClassNames(
-        'UserSelect',
-        'UserSelect--multi',
-        props.className
-      )}
-      size="xs"
+    <MultiSelect<UserSelectItem>
+      className={cn('UserSelect', 'UserSelect--multi', props.className)}
+      size="sm"
       data={data}
       value={value}
-      onChange={(newValue: string[]) => props.onChange(newValue)}
+      onValueChange={(newValue) => props.onChange(newValue)}
       placeholder={props.placeholder || 'Search or enter an email'}
+      aria-label={props.placeholder || 'Search or enter an email'}
       disabled={props.disabled}
-      searchable
-      clearSearchOnChange
       creatable
-      itemComponent={UserSelectItemComponent}
-      valueComponent={UserSelectValueComponent}
-      filter={(query: string, selected: boolean, item: UserSelectItem) =>
-        !selected && matchesQuery(query, item)
-      }
+      renderOption={renderUserOption}
+      renderValue={renderUserValue}
+      getRemoveLabel={(item) => `Remove ${item.email}`}
+      filter={(query, item) => matchesQuery(query, item)}
       shouldCreate={shouldCreateItem}
-      getCreateLabel={(query: string) => `+ Add "${query.trim()}"`}
-      onCreate={(query: string) => addCreated(query)}
+      getCreateLabel={(query) => `+ Add "${query.trim()}"`}
+      onCreate={(query) => {
+        addCreated(query);
+      }}
       nothingFound={loading ? 'Loading…' : 'No users found'}
       maxDropdownHeight={280}
-      // Due to issues with preact/compat, use a div for the dropdown el.
-      dropdownComponent="div"
     />
   );
 }

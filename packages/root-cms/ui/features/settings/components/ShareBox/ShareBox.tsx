@@ -1,13 +1,14 @@
-import {Button, Select, TextInput} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../../../core/client.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../utils/classes.js';
 import {sortByKey} from '../../../../utils/objects.js';
 import {EmailAvatar} from '../../../users/EmailAvatar/EmailAvatar.js';
 import {UserProfile, isOrgEmail} from '../../../users/user-profile.js';
 import {useUserProfiles} from '../../../users/useUserProfile.js';
-import './ShareBox.css';
 
 export interface ShareBoxProps {
   className?: string;
@@ -55,36 +56,33 @@ export function ShareBox(props: ShareBoxProps) {
   );
 
   return (
-    <div className={joinClassNames(props.className, 'ShareBox')}>
+    <div className={cn('ShareBox relative min-h-30', props.className)}>
       <form
-        className="ShareBox__addUser"
+        className="ShareBox__addUser flex w-full items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           addUser(emailInput);
         }}
       >
         <TextInput
-          className="ShareBox__addUser__email"
+          className="ShareBox__addUser__email min-w-0 flex-1"
+          aria-label="Email to add"
           placeholder="grogu@example.com"
           type="email"
           value={emailInput}
-          onChange={(e: any) => setEmailInput(e.target.value)}
-          radius={0}
-          size="xs"
+          onInput={(e) => setEmailInput(e.currentTarget.value)}
           disabled={!currentUserIsAdmin}
         />
         <Button
-          className="ShareBox__addUser__button"
-          size="xs"
-          radius={0}
-          color="dark"
+          className="ShareBox__addUser__button w-30"
+          variant="primary"
           type="submit"
           disabled={!currentUserIsAdmin}
         >
           Add user
         </Button>
       </form>
-      <div className="ShareBox__users">
+      <div className="ShareBox__users mt-3 flex max-h-160 flex-col overflow-auto rounded-sm border border-border py-2.5">
         {users.map((user) => (
           <ShareBox.User
             key={user.email}
@@ -111,15 +109,15 @@ export interface ShareBoxUserProps {
 ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
   return (
-    <div className="ShareBox__user">
+    <div className="ShareBox__user flex w-full items-center gap-2 px-3 py-1.5 hover:bg-surface-hover md:px-4">
       <EmailAvatar
-        className="ShareBox__user__avatar"
+        className="ShareBox__user__avatar size-6 shrink-0"
         email={props.email}
         profile={props.profile}
         size={24}
       />
       <Text
-        className="ShareBox__user__email"
+        className="ShareBox__user__email min-w-0 flex-1 truncate"
         size="body-sm"
         weight="semi-bold"
         color="gray"
@@ -127,7 +125,7 @@ ShareBox.User = (props: ShareBoxUserProps) => {
         {props.email}
         {isCurrentUser && ' (you)'}
       </Text>
-      <div className="ShareBox__user__roleSelect">
+      <div className="ShareBox__user__roleSelect w-36 shrink-0">
         <Select
           data={[
             {value: 'ADMIN', label: 'ADMIN'},
@@ -136,11 +134,13 @@ ShareBox.User = (props: ShareBoxUserProps) => {
             {value: 'VIEWER', label: 'VIEWER'},
             {value: 'REMOVE', label: 'REMOVE'},
           ]}
+          aria-label={`Role for ${props.email}`}
           value={props.role}
-          radius={0}
-          size="xs"
           disabled={isCurrentUser || !props.currentUserIsAdmin}
-          onChange={(value: string) => {
+          onValueChange={(value) => {
+            if (!value) {
+              return;
+            }
             if (value === 'REMOVE') {
               props.onRemove(props.email);
             } else {

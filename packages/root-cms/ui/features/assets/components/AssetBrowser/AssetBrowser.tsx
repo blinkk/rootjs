@@ -1,16 +1,6 @@
 import './AssetBrowser.css';
 
 import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Loader,
-  Menu,
-  Modal,
-  Table,
-  TextInput,
-} from '@mantine/core';
-import {
   IconAlertTriangle,
   IconChevronDown,
   IconChevronRight,
@@ -34,7 +24,6 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-preact';
-import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {
   Pagination,
@@ -49,12 +38,27 @@ import {
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../../../integrations/gcs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../../../../primitives/Table/Table.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {
   hideNotification,
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
@@ -105,8 +109,10 @@ import {
 import {AssetDetailsModal, testIsCroppableAsset} from './AssetDetailsModal.js';
 import {
   AssetThumbnail,
+  THUMB_CLASSES,
   copyAssetUrl,
   downloadAssetFile,
+  thumbSizeStyle,
 } from './AssetPreview.js';
 import {
   ConnectSyncModal,
@@ -145,6 +151,13 @@ const PAGE_SIZE = 100;
 
 /** localStorage key the user's preferred sort order is remembered under. */
 const SORT_STORAGE_KEY = 'root::AssetBrowser:sort';
+
+/** Drops the table's vertical cell dividers; rows only have horizontal ones. */
+const NO_COL_BORDER = 'not-last:border-r-0';
+
+/** Classes for the danger callouts in the delete confirmation. */
+const WARNING_CLASSES =
+  'AssetBrowser__deleteModal__warning rounded-sm bg-danger-soft px-3 py-2 text-base text-danger';
 
 /**
  * A Drive-like file browser for the project's asset library. Lists the
@@ -551,63 +564,57 @@ export function AssetBrowser(props: AssetBrowserProps) {
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'AssetBrowser',
-        props.className,
-        `AssetBrowser--${props.mode}`
+        `AssetBrowser--mode-${props.mode}`,
+        'min-w-0',
+        props.className
       )}
     >
-      <div className="AssetBrowser__toolbar">
-        <div className="AssetBrowser__toolbar__folder">
+      <div className="AssetBrowser__toolbar mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="AssetBrowser__toolbar__folder flex min-w-0 items-center gap-1">
           <AssetBrowser.Breadcrumbs folder={folder} onNavigate={setFolder} />
           {props.mode === 'manage' && preserveFilenameFolder !== null && (
             <span
-              className="AssetBrowser__toolbar__preserveBadge"
+              className="AssetBrowser__toolbar__preserveBadge inline-flex items-center text-muted"
               title={`Uploads to this folder preserve filenames (set on "${preserveFilenameFolder}")`}
             >
               <IconLetterCase size={14} />
             </span>
           )}
           {props.mode === 'manage' && canManage && currentFolder && (
-            <ActionIcon
-              className="AssetBrowser__toolbar__folderSettings"
-              size="sm"
-              title="Folder settings"
-              aria-label="Folder settings"
+            <IconButton
+              className="AssetBrowser__toolbar__folderSettings text-muted"
+              size="xs"
+              label="Folder settings"
               onClick={() => setFolderSettingsTarget(currentFolder)}
             >
-              <IconSettings size={16} />
-            </ActionIcon>
+              <IconSettings />
+            </IconButton>
           )}
         </div>
-        <div className="AssetBrowser__toolbar__actions">
+        <div className="AssetBrowser__toolbar__actions flex flex-wrap items-center gap-2">
           <TextInput
-            className="AssetBrowser__toolbar__filter"
+            className="AssetBrowser__toolbar__filter w-full sm:w-45"
             placeholder="Search by name"
-            size="xs"
-            icon={<IconSearch size={14} />}
+            aria-label="Search by name"
+            leftSection={<IconSearch />}
             value={filter}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setFilter(e.currentTarget.value)
-            }
+            onInput={(e) => setFilter(e.currentTarget.value)}
           />
           {props.mode === 'manage' &&
             canManage &&
             currentFolder &&
             (currentFolder.sync ? (
               <Button
-                variant="default"
-                size="xs"
-                leftIcon={<IconRefresh size={16} />}
+                icon={<IconRefresh />}
                 onClick={() => setSyncRunTarget(currentFolder)}
               >
                 Sync
               </Button>
             ) : (
               <Button
-                variant="default"
-                size="xs"
-                leftIcon={<IconCloudDownload size={16} />}
+                icon={<IconCloudDownload />}
                 onClick={() => setSyncSettingsTarget(currentFolder)}
               >
                 Connect sync source
@@ -615,9 +622,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
             ))}
           {showUpload && props.mode === 'manage' && (
             <Button
-              variant="default"
-              size="xs"
-              leftIcon={<IconFolderPlus size={16} />}
+              icon={<IconFolderPlus />}
               onClick={() => setNewFolderModalOpened(true)}
             >
               New folder
@@ -626,38 +631,34 @@ export function AssetBrowser(props: AssetBrowserProps) {
           {showUpload &&
             (props.mode === 'manage' ? (
               <Menu
-                shadow="sm"
-                position="bottom"
-                placement="end"
-                control={
+                placement="bottom-end"
+                trigger={
                   <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconUpload size={16} />}
+                    variant="primary"
+                    icon={<IconUpload />}
                     loading={uploading}
                   >
                     Upload
                   </Button>
                 }
               >
-                <Menu.Item
-                  icon={<IconFileUpload size={14} />}
+                <MenuItem
+                  icon={<IconFileUpload />}
                   onClick={() => requestUpload()}
                 >
                   Upload files
-                </Menu.Item>
-                <Menu.Item
-                  icon={<IconFolderUp size={14} />}
+                </MenuItem>
+                <MenuItem
+                  icon={<IconFolderUp />}
                   onClick={() => requestUpload({directory: true})}
                 >
                   Upload folder
-                </Menu.Item>
+                </MenuItem>
               </Menu>
             ) : (
               <Button
-                color="dark"
-                size="xs"
-                leftIcon={<IconUpload size={16} />}
+                variant="primary"
+                icon={<IconUpload />}
                 loading={uploading}
                 onClick={() => requestUpload()}
               >
@@ -674,51 +675,43 @@ export function AssetBrowser(props: AssetBrowserProps) {
         />
       )}
       {showSelection && selectedAssets.length > 0 && (
-        <div className="AssetBrowser__selectionBar">
-          <div className="AssetBrowser__selectionBar__count">
+        <div className="AssetBrowser__selectionBar mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-chip px-3 py-1.5">
+          <div className="AssetBrowser__selectionBar__count text-sm font-semibold">
             {selectedAssets.length} selected
           </div>
-          <div className="AssetBrowser__selectionBar__actions">
+          <div className="AssetBrowser__selectionBar__actions flex flex-wrap items-center gap-2">
             <Button
-              variant="default"
-              size="xs"
-              leftIcon={<IconFolderSymlink size={14} />}
+              icon={<IconFolderSymlink />}
               onClick={() => setMoveTarget(selectedAssets)}
             >
               Move
             </Button>
             {selectedAltFiles.length > 0 && (
-              <Button
-                variant="default"
-                size="xs"
-                onClick={() => setDisableAltTarget(selectedAltFiles)}
-              >
+              <Button onClick={() => setDisableAltTarget(selectedAltFiles)}>
                 Disable alt text
               </Button>
             )}
             <Button
-              color="red"
-              size="xs"
-              leftIcon={<IconTrash size={14} />}
+              variant="danger"
+              icon={<IconTrash />}
               onClick={() => setDeleteTarget(selectedAssets)}
             >
               Delete
             </Button>
-            <Button
-              variant="subtle"
-              color="gray"
-              size="xs"
-              onClick={() => setSelected(new Map())}
-            >
+            <Button variant="subtle" onClick={() => setSelected(new Map())}>
               Clear
             </Button>
           </div>
         </div>
       )}
       <div
-        className={joinClassNames(
+        className={cn(
           'AssetBrowser__listing',
-          dragging && 'dragging'
+          'relative rounded-lg border border-border bg-surface',
+          // The picker's listing scrolls (see AssetBrowser.css for its height).
+          props.mode === 'pick' ? 'overflow-y-auto' : 'overflow-hidden',
+          dragging &&
+            'AssetBrowser__listing--dragging outline-2 -outline-offset-4 outline-muted outline-dashed'
         )}
         onDragOver={(e) => {
           if (!showUpload) {
@@ -748,12 +741,12 @@ export function AssetBrowser(props: AssetBrowserProps) {
         }}
       >
         {loading || (searching && searchIndex === null) ? (
-          <div className="AssetBrowser__loading">
-            <Loader color="gray" size="lg" />
+          <div className="AssetBrowser__loading flex min-h-40 flex-col items-center justify-center gap-1 p-5 text-muted">
+            <Spinner size="lg" />
           </div>
         ) : filteredAssets.length === 0 ? (
           <div
-            className="AssetBrowser__empty"
+            className="AssetBrowser__empty flex min-h-40 flex-col items-center justify-center gap-1 p-5 text-center text-sm text-muted"
             data-testid="asset-browser-empty"
           >
             {filter ? (
@@ -773,17 +766,20 @@ export function AssetBrowser(props: AssetBrowserProps) {
           </div>
         ) : (
           <Table
-            className="AssetBrowser__table"
-            verticalSpacing="xs"
-            fontSize="xs"
-            highlightOnHover
+            className="AssetBrowser__table rounded-none border-0"
+            label="Assets"
+            hover
           >
-            <thead>
-              <tr>
+            <TableHead>
+              <TableRow>
                 {showSelection && (
-                  <th className="AssetBrowser__table__checkboxCol">
+                  <TableHeaderCell
+                    className={cn(
+                      'AssetBrowser__table__checkboxCol w-0',
+                      NO_COL_BORDER
+                    )}
+                  >
                     <Checkbox
-                      size="xs"
                       aria-label="Select all"
                       checked={allSelected}
                       indeterminate={
@@ -792,7 +788,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                       }
                       onChange={() => toggleSelectAll()}
                     />
-                  </th>
+                  </TableHeaderCell>
                 )}
                 <AssetSortHeader
                   field="name"
@@ -801,49 +797,65 @@ export function AssetBrowser(props: AssetBrowserProps) {
                   onSort={setSort}
                 />
                 <AssetSortHeader
-                  className="AssetBrowser__table__modifiedCol"
+                  className="AssetBrowser__table__modifiedCol md:w-50"
                   field="modified"
                   label="modified"
                   sort={sort}
                   onSort={setSort}
                 />
-                <th className="AssetBrowser__table__actionsCol"></th>
-              </tr>
-            </thead>
-            <tbody>
+                <TableHeaderCell
+                  className={cn(
+                    'AssetBrowser__table__actionsCol w-0',
+                    NO_COL_BORDER
+                  )}
+                >
+                  <span className="sr-only">Actions</span>
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {pageItems.map((asset) =>
                 asset.type === 'folder' ? (
-                  <tr
+                  <TableRow
                     key={asset.id}
-                    className="AssetBrowser__row AssetBrowser__row--folder"
+                    className="AssetBrowser__row AssetBrowser__row--folder cursor-pointer"
                     onClick={() =>
                       setFolder(joinFolderPath(asset.parent, asset.name))
                     }
                   >
                     {showSelection && (
-                      <td
-                        className="AssetBrowser__checkboxCell"
+                      <TableCell
+                        className={cn(
+                          'AssetBrowser__checkboxCell cursor-default',
+                          NO_COL_BORDER
+                        )}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
-                          size="xs"
                           aria-label={`Select ${asset.name}`}
                           checked={selected.has(asset.id)}
                           onChange={() => toggleSelected(asset)}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td>
-                      <div className="AssetBrowser__nameCell">
-                        <div className="AssetBrowser__thumb">
+                    <TableCell className={NO_COL_BORDER}>
+                      <div className="AssetBrowser__nameCell flex items-center gap-2.5">
+                        <div
+                          className={cn(
+                            'AssetBrowser__thumb',
+                            THUMB_CLASSES,
+                            'bg-transparent'
+                          )}
+                          style={thumbSizeStyle(36)}
+                        >
                           <IconFolder size={24} stroke="1.5" />
                         </div>
-                        <div className="AssetBrowser__nameCell__text">
-                          <div className="AssetBrowser__nameCell__name">
+                        <div className="AssetBrowser__nameCell__text flex min-w-0 flex-col items-start gap-px">
+                          <div className="AssetBrowser__nameCell__name font-medium break-words">
                             {asset.name}
                             {asset.sync && (
                               <span
-                                className="AssetBrowser__syncBadge"
+                                className="AssetBrowser__syncBadge ml-1.5 inline-flex items-center align-middle text-muted"
                                 title={`Synced from ${
                                   getSyncProvider(asset.sync.provider)?.label ||
                                   asset.sync.provider
@@ -857,7 +869,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                             )}
                             {asset.preserveFilename && (
                               <span
-                                className="AssetBrowser__preserveBadge"
+                                className="AssetBrowser__preserveBadge ml-1.5 inline-flex items-center align-middle text-muted"
                                 title="Uploads to this folder preserve filenames"
                               >
                                 <IconLetterCase size={12} />
@@ -872,57 +884,58 @@ export function AssetBrowser(props: AssetBrowserProps) {
                           />
                         </div>
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell className={NO_COL_BORDER}>
                       <AssetModifiedBy asset={asset} />
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="AssetBrowser__actionsCell">
+                    </TableCell>
+                    <TableCell
+                      className={NO_COL_BORDER}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="AssetBrowser__actionsCell flex items-center justify-end">
                         {props.mode === 'manage' && canManage && (
                           <Menu
-                            shadow="sm"
-                            position="bottom"
-                            placement="end"
-                            control={
-                              <ActionIcon size="sm">
-                                <IconDotsVertical size={16} />
-                              </ActionIcon>
+                            placement="bottom-end"
+                            trigger={
+                              <IconButton size="xs" label="More actions">
+                                <IconDotsVertical />
+                              </IconButton>
                             }
                           >
-                            <Menu.Item
-                              icon={<IconPencil size={14} />}
+                            <MenuItem
+                              icon={<IconPencil />}
                               onClick={() => setRenameTarget(asset)}
                             >
                               Rename
-                            </Menu.Item>
-                            <Menu.Item
-                              icon={<IconFolderSymlink size={14} />}
+                            </MenuItem>
+                            <MenuItem
+                              icon={<IconFolderSymlink />}
                               onClick={() => setMoveTarget([asset])}
                             >
                               Move
-                            </Menu.Item>
-                            <Menu.Item
-                              icon={<IconSettings size={14} />}
+                            </MenuItem>
+                            <MenuItem
+                              icon={<IconSettings />}
                               onClick={() => setFolderSettingsTarget(asset)}
                             >
                               Folder settings
-                            </Menu.Item>
-                            <Menu.Item
-                              color="red"
-                              icon={<IconTrash size={14} />}
+                            </MenuItem>
+                            <MenuItem
+                              danger
+                              icon={<IconTrash />}
                               onClick={() => setDeleteTarget([asset])}
                             >
                               Delete
-                            </Menu.Item>
+                            </MenuItem>
                           </Menu>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  <tr
+                  <TableRow
                     key={asset.id}
-                    className="AssetBrowser__row AssetBrowser__row--file"
+                    className="AssetBrowser__row AssetBrowser__row--file cursor-pointer"
                     onClick={() => {
                       if (props.mode === 'pick') {
                         onPickFile(asset);
@@ -932,35 +945,37 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     }}
                   >
                     {showSelection && (
-                      <td
-                        className="AssetBrowser__checkboxCell"
+                      <TableCell
+                        className={cn(
+                          'AssetBrowser__checkboxCell cursor-default',
+                          NO_COL_BORDER
+                        )}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
-                          size="xs"
                           aria-label={`Select ${asset.name}`}
                           checked={selected.has(asset.id)}
                           onChange={() => toggleSelected(asset)}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td>
-                      <div className="AssetBrowser__nameCell">
+                    <TableCell className={NO_COL_BORDER}>
+                      <div className="AssetBrowser__nameCell flex items-center gap-2.5">
                         <AssetThumbnail file={asset.file} size={36} />
-                        <div className="AssetBrowser__nameCell__text">
-                          <div className="AssetBrowser__nameCell__name">
+                        <div className="AssetBrowser__nameCell__text flex min-w-0 flex-col items-start gap-px">
+                          <div className="AssetBrowser__nameCell__name font-medium break-words">
                             {asset.name}
                             {Boolean(
                               asset.file?.width && asset.file?.height
                             ) && (
-                              <span className="AssetBrowser__nameCell__dimens">
+                              <span className="AssetBrowser__nameCell__dimens font-normal text-muted">
                                 {' '}
                                 ({asset.file.width}x{asset.file.height})
                               </span>
                             )}
                             {asset.source?.missingSince && (
                               <span
-                                className="AssetBrowser__missingBadge"
+                                className="AssetBrowser__missingBadge ml-1.5 inline-flex items-center gap-1 rounded-full bg-warning-soft px-1.5 py-px align-middle text-xs font-normal text-warning"
                                 title="This asset no longer exists at its sync source. It is kept here since docs may still use it; delete it manually if unused."
                               >
                                 <IconAlertTriangle size={12} />
@@ -976,12 +991,15 @@ export function AssetBrowser(props: AssetBrowserProps) {
                           />
                         </div>
                       </div>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell className={NO_COL_BORDER}>
                       <AssetModifiedBy asset={asset} />
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="AssetBrowser__actionsCell">
+                    </TableCell>
+                    <TableCell
+                      className={NO_COL_BORDER}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="AssetBrowser__actionsCell flex items-center justify-end">
                         {props.mode !== 'pick' && (
                           <FileActionsMenu
                             asset={asset}
@@ -997,17 +1015,17 @@ export function AssetBrowser(props: AssetBrowserProps) {
                           />
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               )}
-            </tbody>
+            </TableBody>
           </Table>
         )}
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="AssetBrowser__footer">
+        <div className="AssetBrowser__footer flex flex-wrap items-center justify-between gap-3">
           <PaginationSummary
             start={pagination.start}
             end={pagination.end}
@@ -1145,12 +1163,19 @@ function AssetSyncBar(props: {
       ? sync.lastSyncedAt.toMillis()
       : 0;
   return (
-    <div className="AssetBrowser__syncBar">
-      <div className="AssetBrowser__syncBar__info">
-        <SyncProviderIcon provider={sync.provider} size={16} />
-        <span>
+    <div className="AssetBrowser__syncBar mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-chip px-3 py-1.5">
+      <div className="AssetBrowser__syncBar__info flex min-w-0 items-center gap-2 text-sm">
+        <span className="flex shrink-0">
+          <SyncProviderIcon provider={sync.provider} size={16} />
+        </span>
+        <span className="min-w-0">
           Synced from{' '}
-          <a href={sync.url} target="_blank" rel="noreferrer">
+          <a
+            className="font-semibold text-inherit"
+            href={sync.url}
+            target="_blank"
+            rel="noreferrer"
+          >
             {provider?.label || sync.provider}
           </a>
           {lastSyncedMillis ? (
@@ -1163,7 +1188,7 @@ function AssetSyncBar(props: {
             <> · never synced</>
           )}
           {sync.lastSyncResult && !sync.lastSyncResult.ok && (
-            <span className="AssetBrowser__syncBar__warning">
+            <span className="AssetBrowser__syncBar__warning text-warning">
               {' '}
               · last sync had errors
             </span>
@@ -1171,14 +1196,14 @@ function AssetSyncBar(props: {
         </span>
       </div>
       {props.canManage && (
-        <div className="AssetBrowser__syncBar__actions">
-          <ActionIcon
-            size="sm"
-            title="Sync settings"
+        <div className="AssetBrowser__syncBar__actions flex items-center gap-2">
+          <IconButton
+            size="xs"
+            label="Sync settings"
             onClick={props.onSettings}
           >
-            <IconSettings size={16} />
-          </ActionIcon>
+            <IconSettings />
+          </IconButton>
         </div>
       )}
     </div>
@@ -1214,17 +1239,18 @@ function AssetSortHeader(props: {
   const active = props.sort.field === props.field;
   const dir = active ? props.sort.dir : null;
   return (
-    <th
-      className={props.className}
+    <TableHeaderCell
+      className={cn(NO_COL_BORDER, props.className)}
       aria-sort={
         dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'
       }
     >
       <button
         type="button"
-        className={joinClassNames(
+        className={cn(
           'AssetBrowser__table__sortHeader',
-          active && 'active'
+          'm-0 inline-flex cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-left font-sans text-sm font-bold text-inherit hover:text-fg',
+          active && 'AssetBrowser__table__sortHeader--active text-fg'
         )}
         aria-label={`Sort by ${props.label}`}
         onClick={() =>
@@ -1238,7 +1264,7 @@ function AssetSortHeader(props: {
           <IconChevronDown size={12} stroke={2.5} />
         ) : null}
       </button>
-    </th>
+    </TableHeaderCell>
   );
 }
 
@@ -1257,20 +1283,31 @@ AssetBrowser.Breadcrumbs = (props: {
     });
   });
   return (
-    <div className="AssetBrowser__breadcrumbs">
+    <nav
+      className="AssetBrowser__breadcrumbs flex min-h-7 min-w-0 flex-wrap items-center gap-0.5"
+      aria-label="Folder"
+    >
       {crumbs.map((crumb, i) => (
-        <div key={crumb.path} className="AssetBrowser__breadcrumbs__crumb">
+        <div
+          key={crumb.path}
+          className="AssetBrowser__breadcrumbs__crumb flex min-w-0 items-center gap-0.5"
+        >
           {i > 0 && (
             <IconChevronRight
-              className="AssetBrowser__breadcrumbs__divider"
+              className="AssetBrowser__breadcrumbs__divider shrink-0 text-muted"
               size={14}
+              aria-hidden="true"
             />
           )}
           <button
-            className={joinClassNames(
+            type="button"
+            className={cn(
               'AssetBrowser__breadcrumbs__link',
-              i === crumbs.length - 1 && 'active'
+              'm-0 cursor-pointer appearance-none rounded-sm border-0 bg-transparent px-1.5 py-0.5 text-left font-sans text-base font-medium text-muted wrap-anywhere',
+              'enabled:hover:bg-surface-hover enabled:hover:text-fg focus-visible:outline-2 focus-visible:outline-focus',
+              'disabled:cursor-default disabled:text-fg'
             )}
+            aria-current={i === crumbs.length - 1 ? 'location' : undefined}
             disabled={i === crumbs.length - 1}
             onClick={() => props.onNavigate(crumb.path)}
           >
@@ -1278,7 +1315,7 @@ AssetBrowser.Breadcrumbs = (props: {
           </button>
         </div>
       ))}
-    </div>
+    </nav>
   );
 };
 
@@ -1294,53 +1331,41 @@ function FileActionsMenu(props: {
   const asset = props.asset;
   return (
     <Menu
-      shadow="sm"
-      position="bottom"
-      placement="end"
-      control={
-        <ActionIcon size="sm">
-          <IconDotsVertical size={16} />
-        </ActionIcon>
+      placement="bottom-end"
+      trigger={
+        <IconButton size="xs" label="More actions">
+          <IconDotsVertical />
+        </IconButton>
       }
     >
-      <Menu.Item icon={<IconInfoCircle size={14} />} onClick={props.onDetails}>
+      <MenuItem icon={<IconInfoCircle />} onClick={props.onDetails}>
         Details
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconCopy size={14} />}
-        onClick={() => copyAssetUrl(asset.file)}
-      >
+      </MenuItem>
+      <MenuItem icon={<IconCopy />} onClick={() => copyAssetUrl(asset.file)}>
         Copy URL
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconDownload size={14} />}
+      </MenuItem>
+      <MenuItem
+        icon={<IconDownload />}
         onClick={() => downloadAssetFile(asset.file)}
       >
         Download
-      </Menu.Item>
+      </MenuItem>
       {props.canManage && (
         <>
           {testIsCroppableAsset(asset) && (
-            <Menu.Item icon={<IconCrop size={14} />} onClick={props.onCrop}>
+            <MenuItem icon={<IconCrop />} onClick={props.onCrop}>
               Crop
-            </Menu.Item>
+            </MenuItem>
           )}
-          <Menu.Item icon={<IconPencil size={14} />} onClick={props.onRename}>
+          <MenuItem icon={<IconPencil />} onClick={props.onRename}>
             Rename
-          </Menu.Item>
-          <Menu.Item
-            icon={<IconFolderSymlink size={14} />}
-            onClick={props.onMove}
-          >
+          </MenuItem>
+          <MenuItem icon={<IconFolderSymlink />} onClick={props.onMove}>
             Move
-          </Menu.Item>
-          <Menu.Item
-            color="red"
-            icon={<IconTrash size={14} />}
-            onClick={props.onDelete}
-          >
+          </MenuItem>
+          <MenuItem danger icon={<IconTrash />} onClick={props.onDelete}>
             Delete
-          </Menu.Item>
+          </MenuItem>
         </>
       )}
     </Menu>
@@ -1364,7 +1389,8 @@ function AssetLocation(props: {
   }
   return (
     <button
-      className="AssetBrowser__nameCell__path"
+      type="button"
+      className="AssetBrowser__nameCell__path m-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-left font-sans text-xs text-muted break-words hover:underline"
       title="Go to folder"
       onClick={(e) => {
         e.stopPropagation();
@@ -1385,7 +1411,7 @@ function AssetModifiedBy(props: {asset: Asset}) {
   const by = props.asset.modifiedBy || props.asset.createdBy || '';
   const millis = ts && typeof ts.toMillis === 'function' ? ts.toMillis() : 0;
   return (
-    <div className="AssetBrowser__modifiedCell">
+    <div className="AssetBrowser__modifiedCell flex items-center gap-2 whitespace-nowrap">
       {by && <UserAvatar email={by} size={20} />}
       <span>{millis ? getTimeAgo(millis) : '—'}</span>
     </div>
@@ -1421,15 +1447,15 @@ function NewFolderModal(props: {
   }
 
   return (
-    <Modal
-      opened={props.opened}
+    <Dialog
+      open={props.opened}
       onClose={props.onClose}
       title="New folder"
       size="sm"
       centered
     >
       <form
-        className="AssetBrowser__modalForm"
+        className="AssetBrowser__modalForm flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
@@ -1437,11 +1463,11 @@ function NewFolderModal(props: {
       >
         <TextInput
           data-autofocus
+          size="md"
           placeholder="Folder name"
+          aria-label="Folder name"
           value={name}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setName(e.currentTarget.value)
-          }
+          onInput={(e) => setName(e.currentTarget.value)}
         />
         <PreserveFilenameCheckbox
           checked={preserveFilename}
@@ -1449,11 +1475,17 @@ function NewFolderModal(props: {
           disabled={loading}
           onChange={setPreserveFilename}
         />
-        <Button type="submit" color="dark" loading={loading} disabled={!name}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          loading={loading}
+          disabled={!name}
+        >
           Create
         </Button>
       </form>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -1475,15 +1507,12 @@ function PreserveFilenameCheckbox(props: {
       <Checkbox
         label="Preserve filenames when uploading"
         description="Uploaded files keep their original filename at the end of the file URL (e.g. …/<hash>/report.pdf) instead of a content hash. Applies to this folder and its subfolders."
-        size="xs"
         checked={inherited || props.checked}
         disabled={inherited || props.disabled}
-        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-          props.onChange(e.currentTarget.checked)
-        }
+        onChange={(e) => props.onChange(e.currentTarget.checked)}
       />
       {inherited && (
-        <div className="AssetBrowser__folderSettings__inherited">
+        <div className="AssetBrowser__folderSettings__inherited mt-1 text-sm text-muted">
           Inherited from the folder <b>{props.inheritedFrom}</b>. Change the
           setting there to disable it.
         </div>
@@ -1543,22 +1572,22 @@ function FolderSettingsModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title={`Folder settings: ${folderPath}`}
       size="md"
       centered
     >
       <form
-        className="AssetBrowser__folderSettings"
+        className="AssetBrowser__folderSettings flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
         }}
       >
         {inheritedFrom === undefined ? (
-          <Loader color="gray" size="sm" />
+          <Spinner className="text-muted" />
         ) : (
           <PreserveFilenameCheckbox
             checked={preserveFilename}
@@ -1567,19 +1596,13 @@ function FolderSettingsModal(props: {
             onChange={setPreserveFilename}
           />
         )}
-        <div className="AssetBrowser__folderSettings__buttons">
-          <Button
-            variant="default"
-            size="xs"
-            onClick={props.onClose}
-            disabled={saving}
-          >
+        <div className="AssetBrowser__folderSettings__buttons flex justify-end gap-2">
+          <Button onClick={props.onClose} disabled={saving}>
             Cancel
           </Button>
           <Button
             type="submit"
-            color="dark"
-            size="xs"
+            variant="primary"
             loading={saving}
             disabled={inheritedFrom === undefined || !dirty}
           >
@@ -1587,7 +1610,7 @@ function FolderSettingsModal(props: {
           </Button>
         </div>
       </form>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -1609,15 +1632,15 @@ function RenameAssetModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title={`Rename ${props.asset.type}`}
       size="sm"
       centered
     >
       <form
-        className="AssetBrowser__modalForm"
+        className="AssetBrowser__modalForm flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
@@ -1625,16 +1648,22 @@ function RenameAssetModal(props: {
       >
         <TextInput
           data-autofocus
+          size="md"
+          aria-label="Name"
           value={name}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setName(e.currentTarget.value)
-          }
+          onInput={(e) => setName(e.currentTarget.value)}
         />
-        <Button type="submit" color="dark" loading={loading} disabled={!name}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          loading={loading}
+          disabled={!name}
+        >
           Rename
         </Button>
       </form>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -1704,8 +1733,8 @@ function MoveAssetModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title={
         assets.length === 1
@@ -1715,13 +1744,15 @@ function MoveAssetModal(props: {
       size="md"
       centered
     >
-      <div className="AssetBrowser__moveModal">
+      <div className="AssetBrowser__moveModal flex flex-col gap-3">
         <AssetBrowser.Breadcrumbs folder={path} onNavigate={setPath} />
-        <div className="AssetBrowser__moveModal__folders">
+        <div className="AssetBrowser__moveModal__folders flex max-h-60 min-h-30 flex-col overflow-y-auto rounded-sm border border-border p-1">
           {loading ? (
-            <Loader color="gray" size="sm" />
+            <Spinner className="text-muted" />
           ) : folders.length === 0 ? (
-            <div className="AssetBrowser__moveModal__empty">No subfolders.</div>
+            <div className="AssetBrowser__moveModal__empty flex flex-1 items-center justify-center text-sm text-muted">
+              No subfolders.
+            </div>
           ) : (
             folders.map((folderAsset) => {
               const folderPath = joinFolderPath(
@@ -1730,13 +1761,16 @@ function MoveAssetModal(props: {
               );
               return (
                 <button
+                  type="button"
                   key={folderAsset.id}
-                  className="AssetBrowser__moveModal__folder"
+                  className="AssetBrowser__moveModal__folder m-0 flex shrink-0 cursor-pointer appearance-none items-center gap-2 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans text-sm text-fg enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-focus"
                   disabled={isDisabledFolder(folderPath)}
                   onClick={() => setPath(folderPath)}
                 >
                   <IconFolder size={16} stroke="1.5" />
-                  <span>{folderAsset.name}</span>
+                  <span className="flex-1 wrap-anywhere">
+                    {folderAsset.name}
+                  </span>
                   <IconChevronRight size={14} />
                 </button>
               );
@@ -1744,7 +1778,8 @@ function MoveAssetModal(props: {
           )}
         </div>
         <Button
-          color="dark"
+          variant="primary"
+          size="md"
           fullWidth
           loading={moving}
           disabled={assets.every((asset) => asset.parent === path)}
@@ -1753,7 +1788,7 @@ function MoveAssetModal(props: {
           Move here
         </Button>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -1884,8 +1919,8 @@ function DeleteAssetModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title={
         assets.length === 1
@@ -1895,8 +1930,8 @@ function DeleteAssetModal(props: {
       size="sm"
       centered
     >
-      <div className="AssetBrowser__deleteModal">
-        <div className="AssetBrowser__deleteModal__text">
+      <div className="AssetBrowser__deleteModal flex flex-col gap-3">
+        <div className="AssetBrowser__deleteModal__text text-base wrap-anywhere">
           Are you sure you want to delete{' '}
           {assets.length === 1 ? (
             <b>{assets[0].name}</b>
@@ -1913,13 +1948,13 @@ function DeleteAssetModal(props: {
           )}
         </div>
         {checkingFolders && (
-          <div className="AssetBrowser__deleteModal__checking">
-            <Loader size="xs" />
+          <div className="AssetBrowser__deleteModal__checking flex items-center gap-2 text-base text-muted">
+            <Spinner size="sm" label={null} />
             <span>Checking folder contents...</span>
           </div>
         )}
         {!checkingFolders && deletesFolderContents && (
-          <div className="AssetBrowser__deleteModal__warning">
+          <div className={WARNING_CLASSES}>
             {folders.length === 1 ? 'This folder is' : 'These folders are'} not
             empty.{' '}
             {folderContents
@@ -1930,18 +1965,19 @@ function DeleteAssetModal(props: {
           </div>
         )}
         {usageCount !== null && usageCount > 0 && (
-          <div className="AssetBrowser__deleteModal__warning">
+          <div className={WARNING_CLASSES}>
             {assets.length === 1 ? 'This asset is' : 'These assets are'}{' '}
             currently used in {usageCount} doc(s). Those docs will no longer
             receive updates when the asset changes.
           </div>
         )}
-        <div className="AssetBrowser__deleteModal__buttons">
-          <Button variant="default" onClick={props.onClose} disabled={loading}>
+        <div className="AssetBrowser__deleteModal__buttons flex justify-end gap-2">
+          <Button size="md" onClick={props.onClose} disabled={loading}>
             Cancel
           </Button>
           <Button
-            color="red"
+            variant="danger"
+            size="md"
             loading={loading}
             disabled={checkingFolders}
             onClick={() => onDelete()}
@@ -1950,7 +1986,7 @@ function DeleteAssetModal(props: {
           </Button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -2001,29 +2037,34 @@ function DisableAltTextModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title="Disable alt text?"
       size="sm"
       centered
     >
-      <div className="AssetBrowser__deleteModal">
-        <div className="AssetBrowser__deleteModal__text">
+      <div className="AssetBrowser__deleteModal flex flex-col gap-3">
+        <div className="AssetBrowser__deleteModal__text text-base">
           Disable alt text for <b>{assets.length} file(s)</b>? The alt text
           input is hidden in docs that use these assets and their embedded alt
           text is cleared. Alt text can be re-enabled per asset from its
           details.
         </div>
-        <div className="AssetBrowser__deleteModal__buttons">
-          <Button variant="default" onClick={props.onClose} disabled={loading}>
+        <div className="AssetBrowser__deleteModal__buttons flex justify-end gap-2">
+          <Button size="md" onClick={props.onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button color="dark" loading={loading} onClick={() => onConfirm()}>
+          <Button
+            variant="primary"
+            size="md"
+            loading={loading}
+            onClick={() => onConfirm()}
+          >
             Disable alt text
           </Button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }

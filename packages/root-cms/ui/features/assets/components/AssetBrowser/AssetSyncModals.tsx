@@ -1,4 +1,3 @@
-import {Button, Modal, TextInput} from '@mantine/core';
 import {
   IconAlertTriangle,
   IconBrandFigma,
@@ -12,10 +11,12 @@ import {
   IconRefresh,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
-import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {syncFolder} from '../../asset-sync/engine.js';
 import {
   getSyncProvider,
@@ -47,6 +48,24 @@ export function SyncProviderIcon(props: {provider?: string; size?: number}) {
   }
   return <IconCloudDownload size={size} />;
 }
+
+/** Muted explanatory text in the sync modals. */
+const TEXT_CLASSES = 'AssetBrowser__syncModal__text text-base text-muted';
+
+/** Small help text under a token input. */
+const HELP_CLASSES = 'AssetBrowser__syncModal__tokenHelp text-sm text-muted';
+
+/** Error callout in the sync modals. */
+const ERROR_CLASSES =
+  'AssetBrowser__syncModal__error rounded-sm bg-danger-soft px-3 py-2 text-base text-danger wrap-anywhere';
+
+/** Right-aligned row of modal buttons. */
+const BUTTONS_CLASSES =
+  'AssetBrowser__syncModal__buttons flex flex-wrap justify-end gap-2';
+
+/** An inline, underlined text button. */
+const LINK_BUTTON_CLASSES =
+  'AssetBrowser__syncModal__linkButton m-0 cursor-pointer appearance-none border-0 bg-transparent p-0 font-sans text-sm text-inherit underline';
 
 /**
  * Modal for connecting a folder to an external sync source (or changing /
@@ -150,8 +169,8 @@ export function ConnectSyncModal(props: {
   }
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       title={
         existingSync
@@ -162,13 +181,13 @@ export function ConnectSyncModal(props: {
       centered
     >
       <form
-        className="AssetBrowser__syncModal"
+        className="AssetBrowser__syncModal flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           onSubmit();
         }}
       >
-        <div className="AssetBrowser__syncModal__text">
+        <div className={TEXT_CLASSES}>
           Sync assets from an external source into this folder — the exportable
           assets of a Figma file or node, or the files of a Google Drive folder.
           The connection is saved with this folder and can be re-synced when the
@@ -176,6 +195,7 @@ export function ConnectSyncModal(props: {
         </div>
         <TextInput
           data-autofocus
+          size="md"
           label="Source URL"
           placeholder="https://www.figma.com/design/… or https://drive.google.com/drive/folders/…"
           description={
@@ -184,28 +204,23 @@ export function ConnectSyncModal(props: {
               : 'Link to a Figma file/node ("Copy link to selection" in Figma) or a Google Drive folder.'
           }
           value={url}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setUrl(e.currentTarget.value)
-          }
+          onInput={(e) => setUrl(e.currentTarget.value)}
         />
         {isOAuth && provider?.tokenHelp && (
-          <div className="AssetBrowser__syncModal__tokenHelp">
-            {provider.tokenHelp.text}
-          </div>
+          <div className={HELP_CLASSES}>{provider.tokenHelp.text}</div>
         )}
         {showTokenSection && provider && (
-          <div className="AssetBrowser__syncModal__token">
+          <div className="AssetBrowser__syncModal__token flex flex-col gap-2">
             <TextInput
+              type="password"
+              size="md"
               label={`${provider.label} access token`}
               placeholder="Personal access token"
-              type="password"
               value={tokenInput}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setTokenInput(e.currentTarget.value)
-              }
+              onInput={(e) => setTokenInput(e.currentTarget.value)}
             />
             {provider.tokenHelp && (
-              <div className="AssetBrowser__syncModal__tokenHelp">
+              <div className={HELP_CLASSES}>
                 {provider.tokenHelp.text}{' '}
                 {provider.tokenHelp.url && (
                   <a
@@ -221,24 +236,24 @@ export function ConnectSyncModal(props: {
           </div>
         )}
         {!showTokenSection && provider && hasStoredToken && (
-          <div className="AssetBrowser__syncModal__tokenSaved">
+          <div className="AssetBrowser__syncModal__tokenSaved text-sm text-muted">
             Using the {provider.label} token saved in this browser.{' '}
             <button
               type="button"
-              className="AssetBrowser__syncModal__linkButton"
+              className={LINK_BUTTON_CLASSES}
               onClick={() => setShowTokenInput(true)}
             >
               Change token
             </button>
           </div>
         )}
-        {error && <div className="AssetBrowser__syncModal__error">{error}</div>}
-        <div className="AssetBrowser__syncModal__buttons">
+        {error && <div className={ERROR_CLASSES}>{error}</div>}
+        <div className={BUTTONS_CLASSES}>
           {existingSync && (
             <Button
               type="button"
-              variant="outline"
-              color="red"
+              size="md"
+              className="border-danger text-danger"
               loading={disconnecting}
               disabled={submitting}
               onClick={() => onDisconnect()}
@@ -248,7 +263,8 @@ export function ConnectSyncModal(props: {
           )}
           <Button
             type="submit"
-            color="dark"
+            variant="primary"
+            size="md"
             loading={submitting}
             disabled={disconnecting}
           >
@@ -256,7 +272,7 @@ export function ConnectSyncModal(props: {
           </Button>
         </div>
       </form>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -374,8 +390,8 @@ export function SyncProgressModal(props: {
   const running = status === 'running';
 
   return (
-    <Modal
-      opened
+    <Dialog
+      open
       onClose={props.onClose}
       closeOnClickOutside={!running}
       closeOnEscape={!running}
@@ -384,24 +400,23 @@ export function SyncProgressModal(props: {
       size="md"
       centered
     >
-      <div className="AssetBrowser__syncProgress">
+      <div className="AssetBrowser__syncProgress flex flex-col gap-4">
         {status === 'running' && <SyncRunningView progress={progress} />}
 
         {status === 'token' && provider && provider.authType === 'oauth' && (
-          <div className="AssetBrowser__syncProgress__token">
-            <div className="AssetBrowser__syncModal__text">
+          <div className="AssetBrowser__syncProgress__token flex flex-col gap-4">
+            <div className={TEXT_CLASSES}>
               {provider.tokenHelp?.text ||
                 `Sign in to ${provider.label} to sync. Only your account's access to the source is used.`}
             </div>
-            {error && (
-              <div className="AssetBrowser__syncModal__error">{error}</div>
-            )}
-            <div className="AssetBrowser__syncModal__buttons">
-              <Button variant="default" onClick={props.onClose}>
+            {error && <div className={ERROR_CLASSES}>{error}</div>}
+            <div className={BUTTONS_CLASSES}>
+              <Button size="md" onClick={props.onClose}>
                 Cancel
               </Button>
               <Button
-                color="dark"
+                variant="primary"
+                size="md"
                 loading={savingToken}
                 onClick={() => signInAndRetry()}
               >
@@ -412,24 +427,23 @@ export function SyncProgressModal(props: {
         )}
 
         {status === 'token' && provider && provider.authType !== 'oauth' && (
-          <div className="AssetBrowser__syncProgress__token">
-            <div className="AssetBrowser__syncModal__text">
+          <div className="AssetBrowser__syncProgress__token flex flex-col gap-4">
+            <div className={TEXT_CLASSES}>
               A {provider.label} access token is needed to sync. Your token is
               stored only in this browser and is used to verify you have access
               to the source.
             </div>
             <TextInput
+              type="password"
               data-autofocus
+              size="md"
               label={`${provider.label} access token`}
               placeholder="Personal access token"
-              type="password"
               value={tokenInput}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setTokenInput(e.currentTarget.value)
-              }
+              onInput={(e) => setTokenInput(e.currentTarget.value)}
             />
             {provider.tokenHelp && (
-              <div className="AssetBrowser__syncModal__tokenHelp">
+              <div className={HELP_CLASSES}>
                 {provider.tokenHelp.text}{' '}
                 {provider.tokenHelp.url && (
                   <a
@@ -442,15 +456,14 @@ export function SyncProgressModal(props: {
                 )}
               </div>
             )}
-            {error && (
-              <div className="AssetBrowser__syncModal__error">{error}</div>
-            )}
-            <div className="AssetBrowser__syncModal__buttons">
-              <Button variant="default" onClick={props.onClose}>
+            {error && <div className={ERROR_CLASSES}>{error}</div>}
+            <div className={BUTTONS_CLASSES}>
+              <Button size="md" onClick={props.onClose}>
                 Cancel
               </Button>
               <Button
-                color="dark"
+                variant="primary"
+                size="md"
                 loading={savingToken}
                 disabled={!tokenInput.trim()}
                 onClick={() => saveTokenAndRetry()}
@@ -462,17 +475,21 @@ export function SyncProgressModal(props: {
         )}
 
         {status === 'conflict' && conflict && (
-          <div className="AssetBrowser__syncProgress__conflict">
-            <div className="AssetBrowser__syncModal__text">
+          <div className="AssetBrowser__syncProgress__conflict flex flex-col gap-4">
+            <div className={TEXT_CLASSES}>
               A sync started by <b>{conflict.startedBy}</b> appears to be in
               progress. Running two syncs at once is usually harmless but may
               duplicate work.
             </div>
-            <div className="AssetBrowser__syncModal__buttons">
-              <Button variant="default" onClick={props.onClose}>
+            <div className={BUTTONS_CLASSES}>
+              <Button size="md" onClick={props.onClose}>
                 Cancel
               </Button>
-              <Button color="dark" onClick={() => run({force: true})}>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => run({force: true})}
+              >
                 Sync anyway
               </Button>
             </div>
@@ -480,15 +497,15 @@ export function SyncProgressModal(props: {
         )}
 
         {status === 'done' && summary && (
-          <div className="AssetBrowser__syncProgress__done">
+          <div className="AssetBrowser__syncProgress__done flex flex-col gap-4">
             <SyncSummaryView summary={summary} />
-            <div className="AssetBrowser__syncModal__buttons">
+            <div className={BUTTONS_CLASSES}>
               {summary.failed.length > 0 && (
-                <Button variant="default" onClick={() => run()}>
+                <Button size="md" onClick={() => run()}>
                   Retry failed
                 </Button>
               )}
-              <Button color="dark" onClick={props.onClose}>
+              <Button variant="primary" size="md" onClick={props.onClose}>
                 Done
               </Button>
             </div>
@@ -496,20 +513,20 @@ export function SyncProgressModal(props: {
         )}
 
         {status === 'error' && (
-          <div className="AssetBrowser__syncProgress__error">
-            <div className="AssetBrowser__syncModal__error">{error}</div>
-            <div className="AssetBrowser__syncModal__buttons">
-              <Button variant="default" onClick={props.onClose}>
+          <div className="AssetBrowser__syncProgress__error flex flex-col gap-4">
+            <div className={ERROR_CLASSES}>{error}</div>
+            <div className={BUTTONS_CLASSES}>
+              <Button size="md" onClick={props.onClose}>
                 Close
               </Button>
-              <Button color="dark" onClick={() => run()}>
+              <Button variant="primary" size="md" onClick={() => run()}>
                 Retry
               </Button>
             </div>
           </div>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -540,18 +557,21 @@ export function SyncRunningView(props: {progress: SyncProgress}) {
   const percent = determinate ? Math.round((completed / total) * 100) : 100;
   const label = syncPhaseLabel(progress);
   return (
-    <div className="AssetBrowser__syncProgress__running">
-      <div className="AssetBrowser__syncProgress__status">
-        <div className="AssetBrowser__syncProgress__phase">{label}</div>
+    <div className="AssetBrowser__syncProgress__running flex flex-col gap-2 py-2">
+      <div className="AssetBrowser__syncProgress__status flex items-baseline justify-between gap-3">
+        <div className="AssetBrowser__syncProgress__phase min-w-0 text-base font-medium wrap-anywhere">
+          {label}
+        </div>
         {determinate && (
-          <div className="AssetBrowser__syncProgress__count">
+          <div className="AssetBrowser__syncProgress__count shrink-0 text-sm tabular-nums text-muted">
             {completed} / {total}
           </div>
         )}
       </div>
       <div
-        className={joinClassNames(
+        className={cn(
           'AssetBrowser__syncProgress__bar',
+          'relative h-1.5 overflow-hidden rounded-full bg-surface-active',
           indeterminate && 'AssetBrowser__syncProgress__bar--indeterminate'
         )}
         role="progressbar"
@@ -561,19 +581,19 @@ export function SyncRunningView(props: {progress: SyncProgress}) {
         aria-valuenow={determinate ? percent : undefined}
       >
         <div
-          className="AssetBrowser__syncProgress__barFill"
+          className="AssetBrowser__syncProgress__barFill h-full rounded-full bg-fg transition-all duration-200 ease-in-out"
           style={indeterminate ? undefined : {width: `${percent}%`}}
         />
       </div>
-      <div className="AssetBrowser__syncProgress__detail">
+      <div className="AssetBrowser__syncProgress__detail min-h-4.5 text-sm">
         {progress.note ? (
-          <span className="AssetBrowser__syncProgress__note">
-            <IconAlertTriangle size={13} />
+          <span className="AssetBrowser__syncProgress__note inline-flex items-center gap-1 text-warning">
+            <IconAlertTriangle className="shrink-0" size={14} />
             {progress.note}
           </span>
         ) : (
           progress.currentName && (
-            <span className="AssetBrowser__syncProgress__current">
+            <span className="AssetBrowser__syncProgress__current block truncate text-muted">
               {progress.currentName}
             </span>
           )
@@ -583,27 +603,57 @@ export function SyncRunningView(props: {progress: SyncProgress}) {
   );
 }
 
+type SyncStatTone = 'added' | 'updated' | 'unchanged' | 'missing' | 'failed';
+
 /** A single count in the completed-sync stat grid. */
 function SyncStat(props: {
   icon: ComponentChildren;
   label: string;
   value: number;
-  tone: 'added' | 'updated' | 'unchanged' | 'missing' | 'failed';
+  tone: SyncStatTone;
 }) {
+  const zero = props.value === 0;
+  // Zero counts are de-emphasized so the meaningful numbers stand out; the
+  // missing and failed tones are only shown when non-zero.
+  const mutedIcon = zero && props.tone !== 'missing' && props.tone !== 'failed';
+  const iconClasses: Record<SyncStatTone, string> = {
+    added: mutedIcon ? 'text-muted' : 'text-success',
+    updated: mutedIcon ? 'text-muted' : 'text-link',
+    unchanged: 'text-muted',
+    missing: 'text-warning',
+    failed: 'text-danger',
+  };
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'AssetBrowser__syncStat',
         `AssetBrowser__syncStat--${props.tone}`,
-        props.value === 0 && 'AssetBrowser__syncStat--zero'
+        zero && 'AssetBrowser__syncStat--zero opacity-60',
+        'flex min-w-19 flex-1 basis-19 flex-col items-center gap-0.5 rounded-md border border-border px-2 py-2.5',
+        zero ? 'text-muted' : 'text-fg'
       )}
     >
-      <div className="AssetBrowser__syncStat__icon">{props.icon}</div>
-      <div className="AssetBrowser__syncStat__value">{props.value}</div>
-      <div className="AssetBrowser__syncStat__label">{props.label}</div>
+      <div
+        className={cn(
+          'AssetBrowser__syncStat__icon flex',
+          iconClasses[props.tone]
+        )}
+      >
+        {props.icon}
+      </div>
+      <div className="AssetBrowser__syncStat__value text-xl font-semibold leading-tight tabular-nums">
+        {props.value}
+      </div>
+      <div className="AssetBrowser__syncStat__label text-xs uppercase tracking-wider text-muted">
+        {props.label}
+      </div>
     </div>
   );
 }
+
+/** Classes shared by the summary's warning and error callouts. */
+const CALLOUT_CLASSES =
+  'AssetBrowser__syncSummary__callout flex items-start gap-2 rounded-md px-3 py-2.5 text-base';
 
 /** Number of failed items listed before the "show all" toggle. */
 const FAILED_PREVIEW_COUNT = 5;
@@ -641,25 +691,33 @@ export function SyncSummaryView(props: {summary: SyncSummary}) {
   }
 
   return (
-    <div className="AssetBrowser__syncSummary">
+    <div className="AssetBrowser__syncSummary flex flex-col gap-3">
       <div
-        className={joinClassNames(
+        className={cn(
           'AssetBrowser__syncSummary__banner',
-          `AssetBrowser__syncSummary__banner--${tone}`
+          `AssetBrowser__syncSummary__banner--${tone}`,
+          'flex items-start gap-2.5 rounded-md p-3',
+          tone === 'success' && 'bg-success-soft text-success',
+          tone === 'warning' && 'bg-warning-soft text-warning',
+          tone === 'neutral' && 'bg-chip text-muted'
         )}
       >
         {tone === 'warning' ? (
-          <IconAlertTriangle size={20} />
+          <IconAlertTriangle className="mt-px shrink-0" size={20} />
         ) : (
-          <IconCircleCheck size={20} />
+          <IconCircleCheck className="mt-px shrink-0" size={20} />
         )}
-        <div className="AssetBrowser__syncSummary__bannerText">
-          <div className="AssetBrowser__syncSummary__title">{title}</div>
-          <div className="AssetBrowser__syncSummary__subtitle">{subtitle}</div>
+        <div className="AssetBrowser__syncSummary__bannerText min-w-0">
+          <div className="AssetBrowser__syncSummary__title text-base font-semibold">
+            {title}
+          </div>
+          <div className="AssetBrowser__syncSummary__subtitle mt-0.5 text-sm text-muted">
+            {subtitle}
+          </div>
         </div>
       </div>
 
-      <div className="AssetBrowser__syncSummary__stats">
+      <div className="AssetBrowser__syncSummary__stats flex flex-wrap gap-2">
         <SyncStat
           tone="added"
           icon={<IconCirclePlus size={16} />}
@@ -697,15 +755,20 @@ export function SyncSummaryView(props: {summary: SyncSummary}) {
       </div>
 
       {docCount > 0 && (
-        <div className="AssetBrowser__syncSummary__note">
-          <IconRefresh size={14} />
+        <div className="AssetBrowser__syncSummary__note flex items-center gap-1.5 text-sm text-muted">
+          <IconRefresh className="shrink-0" size={14} />
           Refreshed in {docCount} document{docCount === 1 ? '' : 's'}.
         </div>
       )}
 
       {summary.missing > 0 && (
-        <div className="AssetBrowser__syncSummary__callout AssetBrowser__syncSummary__callout--warning">
-          <IconAlertTriangle size={16} />
+        <div
+          className={cn(
+            CALLOUT_CLASSES,
+            'AssetBrowser__syncSummary__callout--warning bg-warning-soft text-warning'
+          )}
+        >
+          <IconAlertTriangle className="mt-px shrink-0" size={16} />
           <div>
             {summary.missing} asset{summary.missing === 1 ? ' is' : 's are'} no
             longer in the source. They were kept in this folder — delete them
@@ -715,19 +778,24 @@ export function SyncSummaryView(props: {summary: SyncSummary}) {
       )}
 
       {failedCount > 0 && (
-        <div className="AssetBrowser__syncSummary__callout AssetBrowser__syncSummary__callout--error">
-          <IconCircleX size={16} />
-          <div className="AssetBrowser__syncSummary__failed">
-            <div className="AssetBrowser__syncSummary__failedTitle">
+        <div
+          className={cn(
+            CALLOUT_CLASSES,
+            'AssetBrowser__syncSummary__callout--error bg-danger-soft text-danger'
+          )}
+        >
+          <IconCircleX className="mt-px shrink-0" size={16} />
+          <div className="AssetBrowser__syncSummary__failed min-w-0 flex-1">
+            <div className="AssetBrowser__syncSummary__failedTitle font-semibold">
               {failedCount} item{failedCount === 1 ? '' : 's'} failed to sync
             </div>
-            <ul className="AssetBrowser__syncSummary__failedList">
+            <ul className="AssetBrowser__syncSummary__failedList m-0 mt-1.5 flex max-h-45 list-none flex-col gap-1.5 overflow-y-auto p-0">
               {visibleFailed.map((item, i) => (
                 <li key={`${item.name}-${i}`}>
-                  <div className="AssetBrowser__syncSummary__failedName">
+                  <div className="AssetBrowser__syncSummary__failedName text-sm font-medium wrap-anywhere">
                     {item.name}
                   </div>
-                  <div className="AssetBrowser__syncSummary__failedError">
+                  <div className="AssetBrowser__syncSummary__failedError text-sm text-muted wrap-anywhere">
                     {item.error}
                   </div>
                 </li>
@@ -736,7 +804,7 @@ export function SyncSummaryView(props: {summary: SyncSummary}) {
             {failedCount > FAILED_PREVIEW_COUNT && (
               <button
                 type="button"
-                className="AssetBrowser__syncModal__linkButton"
+                className={LINK_BUTTON_CLASSES}
                 onClick={() => setShowAllFailed(!showAllFailed)}
               >
                 {showAllFailed

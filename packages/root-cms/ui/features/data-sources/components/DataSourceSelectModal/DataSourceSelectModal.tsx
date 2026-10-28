@@ -1,14 +1,14 @@
-import {Button, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {DataSource, listDataSources} from '../../data-source.js';
 import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
-import './DataSourceSelectModal.css';
 
 const MODAL_ID = 'DataSourceSelectModal';
 
@@ -25,7 +25,6 @@ export function useDataSourceSelectModal() {
       modals.openContextModal(MODAL_ID, {
         innerProps: props,
         size: '600px',
-        overflow: 'inside',
       });
     },
     close: () => {
@@ -72,44 +71,41 @@ export function DataSourceSelectModal(
   return (
     <div className="DataSourceSelectModal">
       {loading ? (
-        <div className="DataSourceSelectModal__loading">
-          <Loader color="gray" size="xl" />
+        <div className="DataSourceSelectModal__loading flex justify-center p-5 text-muted">
+          <Spinner size="lg" />
         </div>
       ) : dataSources.length === 0 ? (
-        <div className="DataSourceSelectModal__empty">No data sources.</div>
+        <div className="DataSourceSelectModal__empty text-base">
+          No data sources.
+        </div>
       ) : (
-        <div className="DataSourceSelectModal__list">
+        <div className="DataSourceSelectModal__list border-0 border-t border-solid border-border">
           {dataSources.map((ds) => (
-            <div key={ds.id} className="DataSourceSelectModal__item">
+            <div
+              key={ds.id}
+              className="DataSourceSelectModal__item flex items-center gap-3 border-0 border-b border-solid border-border py-3"
+            >
               <DataSourceIcon
                 className="DataSourceSelectModal__item__icon"
                 type={ds.type}
               />
-              <div className="DataSourceSelectModal__item__info">
-                <div className="DataSourceSelectModal__item__id">{ds.id}</div>
+              <div className="DataSourceSelectModal__item__info min-w-0 flex-1">
+                <div className="DataSourceSelectModal__item__id break-words text-lg font-semibold leading-snug">
+                  {ds.id}
+                </div>
                 {ds.description && (
-                  <div className="DataSourceSelectModal__item__description">
+                  <div className="DataSourceSelectModal__item__description mt-0.5 text-base text-muted">
                     {ds.description}
                   </div>
                 )}
               </div>
-              <div className="DataSourceSelectModal__item__action">
+              <div className="DataSourceSelectModal__item__action shrink-0">
                 {selectedIds.includes(ds.id) ? (
-                  <Button
-                    variant="light"
-                    color="blue"
-                    size="xs"
-                    onClick={() => onUnselect(ds.id)}
-                  >
+                  <Button variant="default" onClick={() => onUnselect(ds.id)}>
                     Unselect
                   </Button>
                 ) : (
-                  <Button
-                    variant="filled"
-                    color="blue"
-                    size="xs"
-                    onClick={() => onSelect(ds.id)}
-                  >
+                  <Button variant="primary" onClick={() => onSelect(ds.id)}>
                     Select
                   </Button>
                 )}

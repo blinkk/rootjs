@@ -9,19 +9,29 @@ import {
   testIsVideoFile,
 } from '../../../../integrations/gcs.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
+
+/** Classes for a row thumbnail box (sized by `thumbSizeStyle()`). */
+export const THUMB_CLASSES =
+  'flex shrink-0 items-center justify-center overflow-hidden rounded-sm bg-chip text-muted';
+
+/** Width (4:3) and height of a row thumbnail of the given height. */
+export function thumbSizeStyle(size: number) {
+  return {width: `${Math.round((size * 4) / 3)}px`, height: `${size}px`};
+}
 
 /** Renders a small thumbnail preview for an asset file. */
 export function AssetThumbnail(props: {file: UploadedFile; size: number}) {
   const file = props.file || ({} as UploadedFile);
   const src = file.src || '';
   const filename = file.filename || src;
-  const inlineStyle = {
-    '--asset-thumb-size': `${props.size}px`,
-  };
+  const className = cn('AssetBrowser__thumb', THUMB_CLASSES);
+  const style = thumbSizeStyle(props.size);
   if (src && testIsImageFile(filename)) {
     return (
-      <div className="AssetBrowser__thumb" style={inlineStyle}>
+      <div className={className} style={style}>
         <img
+          className="size-full object-contain"
           src={getAssetPreviewUrl(file, props.size * 2)}
           alt={file.alt || ''}
           loading="lazy"
@@ -31,16 +41,24 @@ export function AssetThumbnail(props: {file: UploadedFile; size: number}) {
   }
   if (src && testIsVideoFile(filename)) {
     return (
-      <div className="AssetBrowser__thumb" style={inlineStyle}>
-        <video src={src} muted playsInline preload="metadata" />
+      <div className={className} style={style}>
+        <video
+          className="size-full object-contain"
+          src={src}
+          muted
+          playsInline
+          preload="metadata"
+        />
       </div>
     );
   }
   const ext = getFileExt(filename);
   return (
-    <div className="AssetBrowser__thumb" style={inlineStyle}>
+    <div className={className} style={style}>
       {ext && ext.length <= 4 ? (
-        <div className="AssetBrowser__thumb__ext">{ext}</div>
+        <div className="AssetBrowser__thumb__ext text-2xs font-bold uppercase tracking-wider">
+          {ext}
+        </div>
       ) : (
         <IconFile size={20} stroke="1.5" />
       )}

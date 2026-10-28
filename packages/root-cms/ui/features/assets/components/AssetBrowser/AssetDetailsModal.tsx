@@ -1,15 +1,4 @@
 import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Loader,
-  Modal,
-  Table,
-  Textarea,
-  TextInput,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconCopy,
   IconCrop,
   IconDownload,
@@ -18,7 +7,8 @@ import {
   IconFileUpload,
   IconTrash,
 } from '@tabler/icons-preact';
-import {ChangeEvent, lazy, Suspense} from 'preact/compat';
+import type {ComponentChildren} from 'preact';
+import {lazy, Suspense} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {
   UploadedFile,
@@ -27,6 +17,19 @@ import {
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../../../integrations/gcs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '../../../../primitives/Table/Table.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {formatDateTime} from '../../../../utils/time.js';
@@ -283,27 +286,33 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   }
 
   return (
-    <Modal
+    <Dialog
       className="AssetBrowser__detailsModal"
-      opened
+      open
       onClose={props.onClose}
-      title={asset.name}
+      title={<span className="wrap-anywhere">{asset.name}</span>}
       size={720}
-      overflow="outside"
       centered
     >
-      <div className="AssetBrowser__details">
-        <div className="AssetBrowser__details__preview">
+      <div className="AssetBrowser__details flex flex-col gap-4">
+        <div className="AssetBrowser__details__preview flex max-h-80 min-h-30 items-center justify-center overflow-hidden rounded-lg bg-chip">
           {isImage ? (
             <img
+              className="block max-h-80 max-w-full object-contain"
               src={getAssetPreviewUrl(file, 800)}
               alt={file.alt || ''}
               style={file.canvasBgColor === 'dark' ? {background: '#000'} : {}}
             />
           ) : isVideo ? (
-            <video src={file.src} controls muted preload="metadata" />
+            <video
+              className="block max-h-80 max-w-full object-contain"
+              src={file.src}
+              controls
+              muted
+              preload="metadata"
+            />
           ) : (
-            <div className="AssetBrowser__details__preview__placeholder">
+            <div className="AssetBrowser__details__preview__placeholder flex flex-col items-center gap-2 p-6 text-sm text-muted wrap-anywhere">
               <IconFile size={48} stroke="1" />
               <div>{filename}</div>
             </div>
@@ -311,86 +320,64 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
         </div>
 
         <Table
-          className="AssetBrowser__details__table"
-          verticalSpacing="xs"
-          fontSize="xs"
+          className="AssetBrowser__details__table rounded-none border-0"
+          tableClassName="table-fixed"
+          dense
         >
-          <tbody>
-            <tr>
-              <td>
-                <b>Filename</b>
-              </td>
-              <td>{filename}</td>
-            </tr>
+          <TableBody>
+            <DetailsRow label="Filename">
+              <span className="wrap-anywhere">{filename}</span>
+            </DetailsRow>
             {Boolean(file.width && file.height) && (
-              <tr>
-                <td>
-                  <b>Dimensions</b>
-                </td>
-                <td>
-                  {file.width}x{file.height}
-                </td>
-              </tr>
+              <DetailsRow label="Dimensions">
+                {file.width}x{file.height}
+              </DetailsRow>
             )}
             {asset.createdAt && (
-              <tr>
-                <td>
-                  <b>Uploaded</b>
-                </td>
-                <td>
-                  {formatDateTime(asset.createdAt)}
-                  {asset.createdBy && <> by {asset.createdBy}</>}
-                </td>
-              </tr>
+              <DetailsRow label="Uploaded">
+                {formatDateTime(asset.createdAt)}
+                {asset.createdBy && <> by {asset.createdBy}</>}
+              </DetailsRow>
             )}
             {asset.modifiedAt && (
-              <tr>
-                <td>
-                  <b>Modified</b>
-                </td>
-                <td>
-                  {formatDateTime(asset.modifiedAt)}
-                  {asset.modifiedBy && <> by {asset.modifiedBy}</>}
-                </td>
-              </tr>
+              <DetailsRow label="Modified">
+                {formatDateTime(asset.modifiedAt)}
+                {asset.modifiedBy && <> by {asset.modifiedBy}</>}
+              </DetailsRow>
             )}
-            <tr>
-              <td>
-                <b>URL</b>
-              </td>
-              <td>
-                <div className="AssetBrowser__details__url">
-                  <TextInput
-                    readOnly
-                    value={file.src || ''}
-                    size="xs"
-                    radius="xs"
-                    onClick={(e: Event) =>
-                      (e.target as HTMLInputElement).select()
-                    }
-                    styles={{root: {flex: 1, minWidth: 0}}}
-                  />
-                  <Tooltip label="Copy URL" transition="pop">
-                    <ActionIcon size="sm" onClick={() => copyAssetUrl(file)}>
-                      <IconCopy size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                </div>
-              </td>
-            </tr>
-          </tbody>
+            <DetailsRow label="URL">
+              <div className="AssetBrowser__details__url flex items-center gap-2">
+                <TextInput
+                  className="min-w-0 flex-1"
+                  readOnly
+                  aria-label="URL"
+                  value={file.src || ''}
+                  size="xs"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <IconButton
+                  size="xs"
+                  label="Copy URL"
+                  onClick={() => copyAssetUrl(file)}
+                >
+                  <IconCopy />
+                </IconButton>
+              </div>
+            </DetailsRow>
+          </TableBody>
         </Table>
 
         {(isImage || isVideo) && (
-          <div className="AssetBrowser__details__alt">
+          <div className="AssetBrowser__details__alt flex flex-col items-start gap-2">
             {altDisabled ? (
-              <div className="AssetBrowser__details__alt__disabledNote">
+              <div className="AssetBrowser__details__alt__disabledNote text-sm text-muted">
                 Alt text is disabled for this asset. Docs that use it hide the
                 alt text input and render no alt text.
               </div>
             ) : (
               <>
                 <Textarea
+                  className="w-full"
                   label="Alt text"
                   description="Used as the default alt text when the asset is selected in a doc. Updating it syncs docs that use this asset."
                   autosize
@@ -398,15 +385,11 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
                   size="xs"
                   value={altText}
                   disabled={!props.canManage || saving}
-                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                    setAltText(e.currentTarget.value)
-                  }
+                  onInput={(e) => setAltText(e.currentTarget.value)}
                 />
                 {props.canManage && altDirty && (
                   <Button
-                    size="xs"
-                    color="dark"
-                    mt={8}
+                    variant="primary"
                     loading={saving}
                     onClick={() => onSaveAltText()}
                   >
@@ -419,49 +402,45 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
               <Checkbox
                 className="AssetBrowser__details__alt__disableCheckbox"
                 label="Disable alt text (e.g. decorative images)"
-                size="xs"
-                mt={8}
                 checked={altDisabled}
                 disabled={saving}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  onToggleAltDisabled(e.currentTarget.checked)
-                }
+                onChange={(e) => onToggleAltDisabled(e.currentTarget.checked)}
               />
             )}
           </div>
         )}
 
         <div className="AssetBrowser__details__usage">
-          <div className="AssetBrowser__details__usage__title">Used in</div>
+          <div className="AssetBrowser__details__usage__title mb-1.5 text-base font-semibold">
+            Used in
+          </div>
           {usageDocs === null ? (
-            <Loader color="gray" size="sm" />
+            <Spinner className="text-muted" />
           ) : usageDocs.length === 0 ? (
-            <div className="AssetBrowser__details__usage__empty">
+            <div className="AssetBrowser__details__usage__empty text-sm text-muted">
               No docs use this asset.
             </div>
           ) : (
-            <div className="AssetBrowser__details__usage__list">
+            <div className="AssetBrowser__details__usage__list flex max-h-45 flex-col divide-y divide-border overflow-y-auto rounded-sm border border-border">
               {usageDocs.map((cmsDoc) => (
                 <a
                   key={cmsDoc.id}
-                  className="AssetBrowser__details__usage__doc"
+                  className="AssetBrowser__details__usage__doc flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm font-medium text-fg no-underline hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
                   href={`/cms/content/${cmsDoc.id}`}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <span>{cmsDoc.id}</span>
-                  <IconExternalLink size={14} />
+                  <span className="min-w-0 wrap-anywhere">{cmsDoc.id}</span>
+                  <IconExternalLink className="shrink-0" size={14} />
                 </a>
               ))}
             </div>
           )}
         </div>
 
-        <div className="AssetBrowser__details__buttons">
+        <div className="AssetBrowser__details__buttons flex flex-wrap items-center gap-2">
           <Button
-            variant="default"
-            size="xs"
-            leftIcon={<IconDownload size={14} />}
+            icon={<IconDownload />}
             onClick={() => downloadAssetFile(file)}
           >
             Download
@@ -470,9 +449,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
             <>
               {canCrop && (
                 <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconCrop size={14} />}
+                  icon={<IconCrop />}
                   disabled={saving}
                   onClick={() => setCropping(true)}
                 >
@@ -480,20 +457,16 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
                 </Button>
               )}
               <Button
-                variant="default"
-                size="xs"
-                leftIcon={<IconFileUpload size={14} />}
+                icon={<IconFileUpload />}
                 loading={saving}
                 onClick={() => onReplaceFile()}
               >
                 Replace file
               </Button>
               <Button
-                className="AssetBrowser__details__buttons__delete"
-                color="red"
-                variant="filled"
-                size="xs"
-                leftIcon={<IconTrash size={14} />}
+                className="AssetBrowser__details__buttons__delete ml-auto"
+                variant="danger"
+                icon={<IconTrash />}
                 disabled={saving}
                 onClick={() => setConfirmingDelete(true)}
               >
@@ -503,7 +476,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           )}
         </div>
         {pendingReplace && (
-          <div className="AssetBrowser__details__confirmReplace">
+          <div className="AssetBrowser__details__confirmReplace flex flex-col gap-2 rounded-sm bg-warning-soft p-3 text-base text-warning">
             <div>
               The new file has a different type (<b>.{getFileExt(filename)}</b>{' '}
               → <b>.{getFileExt(pendingReplace.name)}</b>). Replacing will
@@ -522,18 +495,12 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
               )}
               . Docs that use this asset will be updated.
             </div>
-            <div className="AssetBrowser__details__confirmReplace__buttons">
-              <Button
-                variant="default"
-                size="xs"
-                onClick={() => setPendingReplace(null)}
-                disabled={saving}
-              >
+            <div className="AssetBrowser__details__confirmReplace__buttons flex gap-2">
+              <Button onClick={() => setPendingReplace(null)} disabled={saving}>
                 Cancel
               </Button>
               <Button
-                color="dark"
-                size="xs"
+                variant="primary"
                 loading={saving}
                 onClick={() => replaceFile(pendingReplace)}
               >
@@ -543,7 +510,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           </div>
         )}
         {confirmingDelete && (
-          <div className="AssetBrowser__details__confirmDelete">
+          <div className="AssetBrowser__details__confirmDelete flex flex-col gap-2 rounded-sm bg-danger-soft p-3 text-base text-danger">
             <div>
               Delete <b>{asset.name}</b> from the asset library?
               {usageDocs && usageDocs.length > 0 && (
@@ -555,18 +522,15 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
                 </>
               )}
             </div>
-            <div className="AssetBrowser__details__confirmDelete__buttons">
+            <div className="AssetBrowser__details__confirmDelete__buttons flex gap-2">
               <Button
-                variant="default"
-                size="xs"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={saving}
               >
                 Cancel
               </Button>
               <Button
-                color="red"
-                size="xs"
+                variant="danger"
                 loading={saving}
                 onClick={() => onDelete()}
               >
@@ -576,7 +540,19 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           </div>
         )}
       </div>
-    </Modal>
+    </Dialog>
+  );
+}
+
+/** A label / value row in the details table. */
+function DetailsRow(props: {label: string; children?: ComponentChildren}) {
+  return (
+    <TableRow>
+      <TableCell className="w-25 font-bold not-last:border-r-0">
+        {props.label}
+      </TableCell>
+      <TableCell>{props.children}</TableCell>
+    </TableRow>
   );
 }
 

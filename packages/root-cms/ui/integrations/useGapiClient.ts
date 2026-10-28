@@ -1,5 +1,5 @@
-import {useLocalStorage} from '@mantine/hooks';
 import {useEffect, useState} from 'preact/hooks';
+import {useLocalStorage} from '../hooks/useLocalStorage.js';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
@@ -32,10 +32,10 @@ export function useGapiClient(): GapiClient {
   );
   const [loading, setLoading] = useState(enabled);
   const [tokenExpiresAt, setTokenExpiresAt] = useState(0);
-  const [userConsent, setUserConsent] = useLocalStorage<GapiUserConsent>({
-    key: `root-cms::${projectId}::gapi-user-consent`,
-    defaultValue: {},
-  });
+  const [userConsent, setUserConsent] = useLocalStorage<GapiUserConsent>(
+    `root-cms::${projectId}::gapi-user-consent`,
+    {}
+  );
 
   async function initGapi() {
     try {

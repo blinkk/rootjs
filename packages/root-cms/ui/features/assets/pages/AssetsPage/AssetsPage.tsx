@@ -6,7 +6,6 @@ import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useQueryParam} from '../../../../hooks/useQueryParam.js';
 import {AssetBrowser} from '../../components/AssetBrowser/AssetBrowser.js';
-import './AssetsPage.css';
 
 /**
  * The asset library page. Provides a Drive-like interface for uploading and
@@ -31,10 +30,13 @@ export function AssetsPage() {
 
   return (
     <Layout>
-      <div className="AssetsPage" data-testid="assets-page">
-        <div className="AssetsPage__header">
+      <div
+        className="AssetsPage min-h-full bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)"
+        data-testid="assets-page"
+      >
+        <div className="AssetsPage__header mb-8">
           <Heading size="h1">Asset Library</Heading>
-          <Text as="p">
+          <Text as="p" className="AssetsPage__intro mt-2 mb-0 max-w-150">
             The asset library can be used to store and organize files used
             throughout the project. Replacing a file in the asset library
             automatically updates all draft docs that use it (requires
@@ -42,7 +44,7 @@ export function AssetsPage() {
           </Text>
         </div>
         <AssetBrowser
-          className="AssetsPage__browser"
+          className="AssetsPage__browser max-w-240"
           mode="manage"
           folder={folder}
           onFolderChange={setFolder}

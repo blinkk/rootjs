@@ -1,11 +1,10 @@
 import {useState} from 'preact/hooks';
-import {joinClassNames} from '../../../utils/classes.js';
+import {cn} from '../../../utils/classes.js';
 import {
   UserProfile,
   getAvatarColor,
   getEmailAvatarInitial,
 } from '../user-profile.js';
-import './EmailAvatar.css';
 
 export interface EmailAvatarProps {
   email: string;
@@ -20,7 +19,10 @@ export function EmailAvatar(props: EmailAvatarProps) {
   const [imgError, setImgError] = useState(false);
   const photoURL = props.profile?.photoURL || '';
   const displayName = props.profile?.displayName || props.email;
-  const className = joinClassNames('EmailAvatar', props.className);
+  const className = cn(
+    'EmailAvatar block shrink-0 rounded-full object-cover',
+    props.className
+  );
   const style = {width: size, height: size};
 
   if (photoURL && !imgError) {

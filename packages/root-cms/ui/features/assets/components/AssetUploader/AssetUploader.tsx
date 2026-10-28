@@ -1,4 +1,3 @@
-import {TextInput} from '@mantine/core';
 import {IconFileUpload} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
@@ -7,9 +6,13 @@ import {
   uploadFileToGCS,
   testIsImageFile,
 } from '../../../../integrations/gcs.js';
+import {
+  BUTTON_BASE_CLASSES,
+  BUTTON_VARIANT_CLASSES,
+} from '../../../../primitives/Button/Button.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
-import './AssetUploader.css';
+import {cn} from '../../../../utils/classes.js';
 
 export interface AssetUploaderProps {
   accept?: string[];
@@ -103,26 +106,42 @@ export function AssetUploader(props: AssetUploaderProps) {
 
   return (
     <div
-      className={joinClassNames('AssetUploader', isDragging && 'dragging')}
+      className={cn(
+        'AssetUploader',
+        // Negative margins enlarge the drag and drop zone.
+        '-m-2.5 p-2.5',
+        isDragging &&
+          'AssetUploader--dragging outline-2 outline-strong outline-dashed'
+      )}
       ref={ref}
     >
       {asset?.src ? (
         <AssetUploader.FilePreview asset={asset} />
       ) : (
-        <Text className="AssetUploader__noImage">Choose a file to upload.</Text>
+        <Text className="AssetUploader__noImage font-mono">
+          Choose a file to upload.
+        </Text>
       )}
       <label
-        className="AssetUploader__uploadButton"
+        className={cn(
+          'AssetUploader__uploadButton',
+          BUTTON_BASE_CLASSES,
+          BUTTON_VARIANT_CLASSES.primary,
+          'mt-4 h-control-sm gap-2.5 px-3.5 text-base font-semibold',
+          // Like before, the button stays clickable while uploading.
+          'aria-disabled:pointer-events-auto'
+        )}
         role="button"
         aria-disabled={loading}
       >
         <input
+          className="hidden"
           type="file"
           accept={accept}
           onChange={onFileChange}
           ref={inputRef}
         />
-        <div className="AssetUploader__uploadButton__icon">
+        <div className="AssetUploader__uploadButton__icon flex">
           <IconFileUpload size={16} />
         </div>
         <div className="AssetUploader__uploadButton__label">
@@ -143,11 +162,11 @@ AssetUploader.FilePreview = (props: {asset: any}) => {
     return <AssetUploader.ImagePreview asset={props.asset} />;
   }
   return (
-    <div className="AssetUploader__FilePreview">
+    <div className="AssetUploader__FilePreview max-w-175">
       <TextInput
         className="AssetUploader__FilePreview__fileUrl"
         size="xs"
-        radius={0}
+        aria-label="File URL"
         value={asset.src}
         disabled={true}
       />
@@ -159,16 +178,17 @@ AssetUploader.ImagePreview = (props: {asset: any}) => {
   const asset = props.asset;
   console.log(asset);
   return (
-    <div className="AssetUploader__ImagePreview">
-      <div className="AssetUploader__ImagePreview__image">
+    <div className="AssetUploader__ImagePreview mb-2.5 max-w-175">
+      <div className="AssetUploader__ImagePreview__image relative mb-2.5 aspect-video w-full border border-border bg-surface-hover p-2.5">
         <img
+          className="block size-full object-contain object-center"
           src={formatImageSrc(asset.src)}
           width={asset.width}
           height={asset.height}
           alt={asset.alt || ''}
         />
         {asset.width && asset.height && (
-          <div className="AssetUploader__ImagePreview__dimens">
+          <div className="AssetUploader__ImagePreview__dimens absolute -right-px -top-px bg-strong px-2 py-1 text-xs font-bold text-inverse">
             {`${asset.width}x${asset.height}`}
           </div>
         )}
@@ -176,7 +196,7 @@ AssetUploader.ImagePreview = (props: {asset: any}) => {
       <TextInput
         className="AssetUploader__ImagePreview__image__url"
         size="xs"
-        radius={0}
+        aria-label="Image URL"
         value={asset.src}
         disabled={true}
       />

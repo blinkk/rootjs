@@ -1,5 +1,3 @@
-import './SettingsPage.css';
-import {Button, LoadingOverlay, Select, Textarea} from '@mantine/core';
 import {IconCheck} from '@tabler/icons-preact';
 import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -21,8 +19,13 @@ import {
 } from '../../../../hooks/useTheme.js';
 import {useUnsavedChangesWarning} from '../../../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../../../hooks/useUserPreferences.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {logAction} from '../../../logs/actions.js';
@@ -37,6 +40,13 @@ import {
   PermissionGroup,
   derivedRolesFromGroups,
 } from '../../permissionGroups.js';
+
+/** Classes for each two-column section (description left, card right). */
+const SECTION_CLASSES =
+  'SettingsPage__section grid max-w-7xl grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-16';
+
+/** Classes for a single setting inside a section's card. */
+const SETTING_CLASSES = 'SettingsPage__section__setting flex flex-col gap-2';
 
 function formatRelative(ts: number | null): string {
   if (!ts) {
@@ -154,7 +164,7 @@ function ResetSignInSetting() {
   }
 
   return (
-    <div className="SettingsPage__section__setting">
+    <div className={SETTING_CLASSES}>
       <Text size="body" weight="semi-bold">
         Reset sign-in
       </Text>
@@ -166,18 +176,16 @@ function ResetSignInSetting() {
           role and content are not affected.
         </p>
       </Text>
-      <div className="SettingsPage__siteAdmin__resetSignIn">
+      <div className="SettingsPage__siteAdmin__resetSignIn mt-1 flex flex-wrap items-center gap-2">
         <UserSelect
-          className="SettingsPage__siteAdmin__resetSignIn__user"
+          className="SettingsPage__siteAdmin__resetSignIn__user min-w-0 max-w-90 flex-1 basis-48"
           value={email}
           onChange={(value: string) => setEmail(value.trim().toLowerCase())}
           placeholder="Search or enter an email"
           disabled={submitting}
         />
         <Button
-          variant="default"
           size="xs"
-          compact
           loading={submitting}
           disabled={!email || loading || nothingToReset}
           onClick={confirmReset}
@@ -282,9 +290,9 @@ function SiteAdminSection() {
   const running = indexStatus.running || submitting;
 
   return (
-    <div className="SettingsPage__section">
-      <div className="SettingsPage__section__left">
-        <Heading className="SettingsPage__section__left__title">
+    <div className={SECTION_CLASSES}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
           Site Admin
         </Heading>
         <Text
@@ -298,8 +306,8 @@ function SiteAdminSection() {
           </p>
         </Text>
       </div>
-      <Surface className="SettingsPage__section__right">
-        <div className="SettingsPage__section__setting">
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+        <div className={SETTING_CLASSES}>
           <Text size="body" weight="semi-bold">
             Search index
           </Text>
@@ -310,7 +318,7 @@ function SiteAdminSection() {
               results (e.g. after a schema change).
             </p>
           </Text>
-          <div className="SettingsPage__siteAdmin__searchStats">
+          <div className="SettingsPage__siteAdmin__searchStats mt-1 grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm text-muted sm:grid-cols-2">
             <div>
               <strong>Last indexed:</strong> {formatRelative(last)}
             </div>
@@ -324,20 +332,12 @@ function SiteAdminSection() {
               <strong>Shards:</strong> {shardCount}
             </div>
           </div>
-          <div className="SettingsPage__siteAdmin__searchButtons">
-            <Button
-              variant="default"
-              size="xs"
-              compact
-              loading={running}
-              onClick={() => rebuild(false)}
-            >
+          <div className="SettingsPage__siteAdmin__searchButtons mt-3 flex flex-wrap gap-2">
+            <Button size="xs" loading={running} onClick={() => rebuild(false)}>
               Rebuild incremental
             </Button>
             <Button
-              variant="default"
               size="xs"
-              compact
               loading={running}
               onClick={() => {
                 if (
@@ -518,9 +518,11 @@ function ShareSection() {
   }
 
   return (
-    <div className="SettingsPage__section SettingsPage__section__users">
-      <div className="SettingsPage__section__left">
-        <Heading className="SettingsPage__section__left__title">Share</Heading>
+    <div className={cn(SECTION_CLASSES, 'SettingsPage__section__users')}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
+          Share
+        </Heading>
         <Text
           className="SettingsPage__section__body"
           size="body-sm"
@@ -548,13 +550,10 @@ function ShareSection() {
           </p>
         </Text>
       </div>
-      <Surface className="SettingsPage__section__right">
-        <div className="SettingsPage__share">
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <div className="SettingsPage__share__subsection">
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+        <div className="SettingsPage__share relative flex min-h-30 flex-col gap-6">
+          <LoadingOverlay visible={loading} />
+          <div className="SettingsPage__share__subsection flex flex-col gap-2">
             <Heading className="SettingsPage__section__right__title" size="h3">
               Users
             </Heading>
@@ -565,7 +564,7 @@ function ShareSection() {
               currentUserIsAdmin={currentUserIsAdmin}
             />
           </div>
-          <div className="SettingsPage__share__subsection">
+          <div className="SettingsPage__share__subsection flex flex-col gap-2">
             <Heading className="SettingsPage__section__right__title" size="h3">
               Groups
             </Heading>
@@ -576,25 +575,17 @@ function ShareSection() {
               disabled={!currentUserIsAdmin}
             />
           </div>
-          <div className="SettingsPage__share__saveBar">
+          <div className="SettingsPage__share__saveBar flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
             <Text size="body-sm" weight="semi-bold" color="gray">
               {dirty ? 'You have unsaved changes.' : 'All changes saved.'}
             </Text>
-            <div className="SettingsPage__share__saveBar__actions">
-              <Button
-                variant="default"
-                size="xs"
-                radius={0}
-                disabled={!dirty || saving}
-                onClick={discard}
-              >
+            <div className="SettingsPage__share__saveBar__actions flex gap-2">
+              <Button disabled={!dirty || saving} onClick={discard}>
                 Discard
               </Button>
               <Button
-                size="xs"
-                radius={0}
-                color={dirty ? 'green' : 'dark'}
-                leftIcon={<IconCheck size={14} />}
+                variant="primary"
+                icon={<IconCheck />}
                 loading={saving}
                 disabled={!dirty || !currentUserIsAdmin}
                 onClick={save}
@@ -644,7 +635,7 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
     }
   };
   return (
-    <div className="SettingsPage__section__setting">
+    <div className={SETTING_CLASSES}>
       <Text size="body" weight="semi-bold">
         {props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
       </Text>
@@ -663,13 +654,13 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
         maxRows={16}
         placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
         className="SettingsPage__customCss"
+        inputClassName="font-mono text-sm"
+        aria-label={props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
         value={value}
         onFocus={() => {
           editing.current = true;
         }}
-        onChange={(e: Event) =>
-          setValue((e.currentTarget as HTMLTextAreaElement).value)
-        }
+        onInput={(e) => setValue(e.currentTarget.value)}
         onBlur={save}
       />
     </div>
@@ -703,7 +694,7 @@ function ThemePreference() {
       ? current
       : projectDefault;
   return (
-    <div className="SettingsPage__section__setting">
+    <div className={SETTING_CLASSES}>
       <Text size="body" weight="semi-bold">
         Theme
       </Text>
@@ -711,10 +702,11 @@ function ThemePreference() {
         <p>How the CMS looks for you.</p>
       </Text>
       <Select
-        className="SettingsPage__theme__select"
+        className="SettingsPage__theme__select max-w-90"
+        aria-label="Theme"
         data={options}
         value={value}
-        onChange={(next: string | null) => {
+        onValueChange={(next) => {
           userPrefs.setPreference(
             THEME_PREFERENCE_KEY,
             !next || next === projectDefault ? null : next
@@ -728,9 +720,11 @@ function ThemePreference() {
 /** Theme and custom CSS: how the CMS looks, per user and per project. */
 function ThemeSection() {
   return (
-    <div className="SettingsPage__section">
-      <div className="SettingsPage__section__left">
-        <Heading className="SettingsPage__section__left__title">Theme</Heading>
+    <div className={SECTION_CLASSES}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
+          Theme
+        </Heading>
         <Text
           className="SettingsPage__section__body"
           size="body-sm"
@@ -744,7 +738,7 @@ function ThemeSection() {
           </p>
         </Text>
       </div>
-      <Surface className="SettingsPage__section__right">
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
         <ThemePreference />
         <CustomCssSetting scope="site" />
         <CustomCssSetting scope="user" />
@@ -761,11 +755,11 @@ export function SettingsPage() {
     !projectRoles.loading && isCurrentUserAdmin(projectRoles.roles);
   return (
     <Layout>
-      <div className="SettingsPage">
+      <div className="SettingsPage flex flex-col gap-16 bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
         <ShareSection />
-        <div className="SettingsPage__section">
-          <div className="SettingsPage__section__left">
-            <Heading className="SettingsPage__section__left__title">
+        <div className={SECTION_CLASSES}>
+          <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+            <Heading className="SettingsPage__section__left__title mb-2">
               Site Settings
             </Heading>
             <Text
@@ -780,9 +774,9 @@ export function SettingsPage() {
               </p>
             </Text>
           </div>
-          <Surface className="SettingsPage__section__right">
+          <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
             {SITE_SETTINGS.map((setting) => (
-              <div className="SettingsPage__section__setting" key={setting.key}>
+              <div className={SETTING_CLASSES} key={setting.key}>
                 <Text size="body" weight="semi-bold">
                   {setting.name}
                 </Text>
@@ -793,13 +787,11 @@ export function SettingsPage() {
                   autosize
                   minRows={2}
                   maxRows={4}
+                  aria-label={setting.name}
                   value={siteSettings.settings[setting.key] || ''}
                   placeholder={setting.placeholder}
-                  onChange={(e: Event) =>
-                    siteSettings.setSettings(
-                      setting.key,
-                      (e.currentTarget as HTMLTextAreaElement).value
-                    )
+                  onInput={(e) =>
+                    siteSettings.setSettings(setting.key, e.currentTarget.value)
                   }
                 />
                 {setting.ui && (

@@ -1,4 +1,3 @@
-import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {
   IconArchive,
   IconCloudOff,
@@ -8,11 +7,12 @@ import {
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {Layout} from '../../../../app/layout/Layout.js';
-import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   showNotification,
@@ -29,7 +29,6 @@ import {
   unarchiveDataSource,
   unpublishDataSource,
 } from '../../data-source.js';
-import './EditDataSourcePage.css';
 
 export function EditDataSourcePage(props: {id: string}) {
   usePageTitle(`Edit Data Source: ${props.id}`);
@@ -213,67 +212,72 @@ export function EditDataSourcePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="EditDataSourcePage">
-        <div className="EditDataSourcePage__header">
-          <Breadcrumbs className="EditDataSourcePage__header__breadcrumbs">
-            <a href="/cms/data">Data Sources</a>
-            <a href={`/cms/data/${props.id}`}>{props.id}</a>
-            <div>Edit</div>
-          </Breadcrumbs>
-          <div className="EditDataSourcePage__header__titleWrap">
-            <Heading size="h1">Edit Data Source: {props.id}</Heading>
-            <div className="EditDataSourcePage__header__controls">
+      <div className="EditDataSourcePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="EditDataSourcePage__header mb-5 max-w-150">
+          <Breadcrumbs
+            className="EditDataSourcePage__header__breadcrumbs mb-3"
+            items={[
+              {label: 'Data Sources', href: '/cms/data'},
+              {label: props.id, href: `/cms/data/${props.id}`},
+              {label: 'Edit'},
+            ]}
+          />
+          <div className="EditDataSourcePage__header__titleWrap flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Heading size="h1" className="min-w-0 break-words">
+              Edit Data Source: {props.id}
+            </Heading>
+            <div className="EditDataSourcePage__header__controls flex items-center">
               {isPublished && !isArchived && (
-                <ConditionalTooltip
-                  label="You don't have access to unpublish data sources"
-                  condition={!canPublish}
+                <IconButton
+                  label="Unpublish"
+                  tooltip={
+                    canPublish
+                      ? true
+                      : "You don't have access to unpublish data sources"
+                  }
+                  onClick={onUnpublishClicked}
+                  loading={!roles}
+                  disabled={!canPublish}
                 >
-                  <Tooltip label="Unpublish" disabled={!canPublish}>
-                    <ActionIcon
-                      onClick={onUnpublishClicked}
-                      loading={!roles}
-                      disabled={!canPublish}
-                    >
-                      <IconCloudOff size={20} stroke="1.5" />
-                    </ActionIcon>
-                  </Tooltip>
-                </ConditionalTooltip>
+                  <IconCloudOff stroke="1.5" />
+                </IconButton>
               )}
-              <ConditionalTooltip
-                label="You don't have access to archive data sources"
-                condition={!canPublish}
-              >
-                {isArchived ? (
-                  <Tooltip label="Unarchive" disabled={!canPublish}>
-                    <ActionIcon
-                      onClick={onUnarchiveClicked}
-                      loading={!roles}
-                      disabled={!canPublish}
-                    >
-                      <IconRestore size={20} stroke="1.5" />
-                    </ActionIcon>
-                  </Tooltip>
-                ) : (
-                  <Tooltip label="Archive" disabled={!canPublish}>
-                    <ActionIcon
-                      onClick={onArchiveClicked}
-                      loading={!roles}
-                      disabled={!canPublish}
-                    >
-                      <IconArchive size={20} stroke="1.5" />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </ConditionalTooltip>
-              <Tooltip label="Delete">
-                <ActionIcon onClick={onDeleteClicked}>
-                  <IconTrashFilled size={20} stroke="1.5" />
-                </ActionIcon>
-              </Tooltip>
+              {isArchived ? (
+                <IconButton
+                  label="Unarchive"
+                  tooltip={
+                    canPublish
+                      ? true
+                      : "You don't have access to archive data sources"
+                  }
+                  onClick={onUnarchiveClicked}
+                  loading={!roles}
+                  disabled={!canPublish}
+                >
+                  <IconRestore stroke="1.5" />
+                </IconButton>
+              ) : (
+                <IconButton
+                  label="Archive"
+                  tooltip={
+                    canPublish
+                      ? true
+                      : "You don't have access to archive data sources"
+                  }
+                  onClick={onArchiveClicked}
+                  loading={!roles}
+                  disabled={!canPublish}
+                >
+                  <IconArchive stroke="1.5" />
+                </IconButton>
+              )}
+              <IconButton label="Delete" onClick={onDeleteClicked}>
+                <IconTrashFilled stroke="1.5" />
+              </IconButton>
             </div>
           </div>
         </div>
-        <Surface className="EditDataSourcePage__form">
+        <Surface className="EditDataSourcePage__form max-w-172 p-4 md:p-5">
           <DataSourceForm dataSourceId={props.id} />
         </Surface>
       </div>
