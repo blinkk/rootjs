@@ -26,6 +26,7 @@ defaults, so only on-scale utilities exist:
 | Shape | `rounded-sm` 4 · `rounded-md` 6 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-full` |
 | Elevation | `shadow-sm` (cards) · `shadow-md` (menus, popovers) · `shadow-lg` (modals, toasts) |
 | Stacking | `z-(--cms-z-sticky)` `z-(--cms-z-dropdown)` `z-(--cms-z-modal)` `z-(--cms-z-toast)` `z-(--cms-z-tooltip)` |
+| Controls | `h-control-xs` 24 · `h-control-sm` 28 · `h-control-md` 36 (also `w-`, `size-`, `min-h-`) for buttons and single-line inputs |
 | Spacing | Tailwind's 4px scale (`p-2` = 8px). Half steps up to 3.5 (`gap-1.5` = 6px) are fine for dense controls |
 
 Rules:
@@ -182,7 +183,7 @@ Snap hard-coded values from old CSS onto the scales:
 | Mantine `variant="default"` | `bg-surface border-border-strong hover:bg-surface-hover` |
 | Font sizes 8–11px | `text-xs` |
 | 12px, 12.5px | `text-sm` |
-| 13px | ⚠ pending decision (see the plan's Checkpoint 0) |
+| 13px | By context: `text-sm` in tables, lists, menus and editor chrome; `text-base` in body copy, form controls and dialogs |
 | 14px, 15px | `text-base` |
 | 16px | `text-lg` |
 | 18–22px | `text-xl` |

@@ -4,7 +4,7 @@ import '../../styles/theme.css';
 
 import {cleanup, render} from '@testing-library/preact';
 import axe from 'axe-core';
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {page} from 'vitest/browser';
 import type {GalleryEntry} from './types.js';
 
@@ -30,6 +30,7 @@ const VIEWPORTS = [
  */
 export function testGallery(entry: GalleryEntry) {
   describe(`${entry.name} gallery`, () => {
+    beforeAll(() => freezeAnimations());
     afterEach(() => cleanup());
 
     for (const [story, renderStory] of Object.entries(entry.stories)) {
@@ -54,6 +55,14 @@ export function testGallery(entry: GalleryEntry) {
       }
     }
   });
+}
+
+/** Stops animations and transitions, so screenshots are deterministic. */
+function freezeAnimations() {
+  const style = document.createElement('style');
+  style.textContent =
+    '*, *::before, *::after { animation: none !important; transition: none !important; }';
+  document.head.appendChild(style);
 }
 
 /** Summarizes axe violations so a failing test reads as a short list. */

@@ -91,6 +91,10 @@
   --radius-lg: var(--cms-radius-lg);
   --radius-xl: var(--cms-radius-xl);
 
+  --spacing-control-xs: var(--cms-control-height-xs);
+  --spacing-control-sm: var(--cms-control-height-sm);
+  --spacing-control-md: var(--cms-control-height-md);
+
   --shadow-*: initial;
   --shadow-sm: var(--cms-shadow-sm);
   --shadow-md: var(--cms-shadow-md);

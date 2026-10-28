@@ -138,6 +138,7 @@
   /* The same, on screens narrower than 768px. */
   --cms-page-padding-mobile: 16px;
   /* Height of buttons and single-line inputs. */
+  --cms-control-height-xs: 24px;
   --cms-control-height-sm: 28px;
   --cms-control-height-md: 36px;
 
