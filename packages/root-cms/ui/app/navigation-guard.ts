@@ -7,7 +7,7 @@
  * button) the event target is `window` itself, so capture/bubble phases don't
  * apply and listeners run in registration order. To run *before* the router,
  * `installNavigationGuards()` must be called at app bootstrap, before the
- * `<LocationProvider>` mounts (see ui.tsx).
+ * `<LocationProvider>` mounts (see main.tsx).
  */
 
 export interface NavigationGuard {

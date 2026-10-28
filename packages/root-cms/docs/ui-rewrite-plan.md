@@ -224,7 +224,7 @@ access, Google integrations, and pure helpers. The proposal is to organize by
 packages/root-cms/ui/
   main.tsx                 # was ui.tsx: bootstrap only (firebase init, render)
   app/                     # App, providers, route table, Layout, error boundary
-    App.tsx  routes.ts  providers.tsx  layout/  AppErrorBoundary/
+    App.tsx  AppProviders.tsx  routes.tsx  session.ts  layout/  …
   primitives/              # Phase 1: Button, Dialog, Menu, Select, …
     Button/Button.tsx  …  index.ts
   components/              # shared cross-feature composites only
@@ -330,9 +330,10 @@ until you've signed off.
         `useSiteSettings`, `useUserPreferences`, `useTheme`).
       - Two features were added: `features/users/` (avatars, tags, user
         select, roles/permissions, profiles) and `features/sidebar-tools/`.
-      - `ui.tsx` was only renamed to `main.tsx`. Splitting it into
-        `app/App.tsx` + `routes.ts` + `providers.tsx` is code, so it moves to
-        2.1.
+      - `ui.tsx` was only renamed to `main.tsx`. It was split after Phase 2:
+        `main.tsx` (bootstrap), `app/App.tsx`, `app/AppProviders.tsx`,
+        `app/routes.tsx`, `app/session.ts`, `app/MantineCompatProvider.tsx`
+        and `types/root-ctx.d.ts` (`window.__ROOT_CTX`).
 - [x] 0.0b Design audit. Inventory: 236 distinct colors, 36 font sizes, 61
       spacings, 23 radii, 19 shadows. The scales and the legacy → token
       snapping table are in `ui/README.md`.

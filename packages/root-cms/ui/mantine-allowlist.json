@@ -1,4 +1,5 @@
 [
+  "ui/app/MantineCompatProvider.tsx",
   "ui/app/lazy-route.test.tsx",
   "ui/components/FilePreview/FilePreview.tsx",
   "ui/components/Pagination/Pagination.tsx",
@@ -23,9 +24,9 @@
   "ui/features/collections/pages/CollectionPage/CollectionPage.tsx",
   "ui/features/collections/pages/ProjectPage/ProjectPage.tsx",
   "ui/features/comments/CommentEditor/CommentEditor.visual.test.tsx",
-  "ui/features/comments/CommentsPanel/CommentsPanel.tsx",
   "ui/features/comments/CommentThread/CommentThread.tsx",
   "ui/features/comments/CommentThread/CommentThread.visual.test.tsx",
+  "ui/features/comments/CommentsPanel/CommentsPanel.tsx",
   "ui/features/comments/PinnedCommentThreads/PinnedCommentThreads.tsx",
   "ui/features/comments/PinnedCommentThreads/PinnedCommentThreads.visual.test.tsx",
   "ui/features/data-sources/components/DataSourceForm/DataSourceForm.tsx",
@@ -41,6 +42,7 @@
   "ui/features/documents/components/DocDiffViewer/DocDiffViewer.tsx",
   "ui/features/documents/components/DocEditor/ArrayField.visual.test.tsx",
   "ui/features/documents/components/DocEditor/DocEditor.tsx",
+  "ui/features/documents/components/DocEditor/FieldViewers.visual.test.tsx",
   "ui/features/documents/components/DocEditor/fields/AiImageEditorDialog.test.tsx",
   "ui/features/documents/components/DocEditor/fields/AiImageEditorDialog.tsx",
   "ui/features/documents/components/DocEditor/fields/BooleanField.tsx",
@@ -59,7 +61,6 @@
   "ui/features/documents/components/DocEditor/fields/SelectField.tsx",
   "ui/features/documents/components/DocEditor/fields/SourceField.tsx",
   "ui/features/documents/components/DocEditor/fields/StringField.tsx",
-  "ui/features/documents/components/DocEditor/FieldViewers.visual.test.tsx",
   "ui/features/documents/components/DocStatusBadges/DocStatusBadges.tsx",
   "ui/features/documents/components/DocumentPagePreviewBar/DocumentPagePreviewBar.tsx",
   "ui/features/documents/components/EditJsonModal/EditJsonModal.tsx",
@@ -82,8 +83,8 @@
   "ui/features/logs/pages/ErrorLogsPage/ErrorLogsPage.tsx",
   "ui/features/logs/pages/LogsPage/LogsPage.tsx",
   "ui/features/releases/components/AddToReleaseModal/AddToReleaseModal.tsx",
-  "ui/features/releases/components/ChecksPanel/ChecksPanel.tsx",
   "ui/features/releases/components/CheckStatusBadge/CheckStatusBadge.tsx",
+  "ui/features/releases/components/ChecksPanel/ChecksPanel.tsx",
   "ui/features/releases/components/LockPublishingModal/LockPublishingModal.tsx",
   "ui/features/releases/components/PublishChecksModal/PublishChecksModal.tsx",
   "ui/features/releases/components/PublishChecksResults/PublishChecksResults.tsx",
@@ -126,6 +127,5 @@
   "ui/features/users/UserActionTooltip/UserActionTooltip.tsx",
   "ui/features/users/UserSelect/UserSelect.tsx",
   "ui/hooks/useSiteSettings.tsx",
-  "ui/integrations/useGapiClient.ts",
-  "ui/main.tsx"
+  "ui/integrations/useGapiClient.ts"
 ]
