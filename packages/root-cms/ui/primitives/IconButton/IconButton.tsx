@@ -1,4 +1,10 @@
-import type {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
+import type {
+  ComponentChildren,
+  FunctionComponent,
+  JSX,
+  Ref,
+  VNode,
+} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {cn} from '../../utils/classes.js';
 import {
@@ -7,7 +13,9 @@ import {
   type ButtonSize,
   type ButtonVariant,
 } from '../Button/Button.js';
+import type {Placement} from '../floating/useFloating.js';
 import {Spinner} from '../Spinner/Spinner.js';
+import {Tooltip} from '../Tooltip/Tooltip.js';
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   xs: 'size-control-xs *:size-3.5',
@@ -33,6 +41,14 @@ interface IconButtonOwnProps {
   loading?: boolean;
   /** Fully rounded instead of the standard corner radius. */
   round?: boolean;
+  /**
+   * The tooltip shown on hover and keyboard focus: `true` (default) shows
+   * `label`, other content replaces it, and `false` turns it off (e.g. when
+   * the button is already wrapped in its own `Tooltip`).
+   */
+  tooltip?: boolean | ComponentChildren;
+  /** Preferred side for the tooltip. Default `top`. */
+  tooltipPlacement?: Placement;
   className?: string;
 }
 
@@ -51,8 +67,8 @@ type IconButtonAsLink = IconButtonOwnProps &
 export type IconButtonProps = IconButtonAsButton | IconButtonAsLink;
 
 /**
- * A square, icon-only button (or link, when `href` is set). Replaces
- * Mantine's `ActionIcon`.
+ * A square, icon-only button (or link, when `href` is set), with its `label`
+ * shown as a tooltip. Replaces Mantine's `ActionIcon`.
  *
  * ```tsx
  * <IconButton label="Delete field" onClick={remove}>
@@ -74,6 +90,8 @@ export const IconButton = forwardRef<
     pressed,
     loading = false,
     round = false,
+    tooltip = true,
+    tooltipPlacement,
     className,
     ...rest
   } = props;
@@ -96,10 +114,22 @@ export const IconButton = forwardRef<
     children
   );
 
+  const withTooltip = (el: VNode<any>) =>
+    tooltip === false || tooltip === null ? (
+      el
+    ) : (
+      <Tooltip
+        label={tooltip === true ? label : tooltip}
+        placement={tooltipPlacement}
+      >
+        {el}
+      </Tooltip>
+    );
+
   if (rest.href !== undefined) {
     const {disabled, href, ...anchorProps} = rest as IconButtonAsLink;
     const inactive = disabled || loading;
-    return (
+    return withTooltip(
       <a
         {...anchorProps}
         ref={ref as Ref<HTMLAnchorElement>}
@@ -119,7 +149,7 @@ export const IconButton = forwardRef<
     disabled,
     ...buttonProps
   } = rest as IconButtonAsButton;
-  return (
+  return withTooltip(
     <button
       {...buttonProps}
       ref={ref as Ref<HTMLButtonElement>}

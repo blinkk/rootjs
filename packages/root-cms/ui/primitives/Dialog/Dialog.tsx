@@ -320,6 +320,9 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
                 <IconButton
                   label={closeLabel}
                   className="Dialog__close -mr-1.5"
+                  // The browser focuses it on open; a tooltip would pop up
+                  // every time.
+                  tooltip={false}
                   onClick={() => onClose()}
                 >
                   <IconX />
