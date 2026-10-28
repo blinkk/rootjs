@@ -9,8 +9,8 @@ import {IconButton} from '../IconButton/IconButton.js';
 import {pushDialog, removeDialog} from './dialogStack.js';
 
 /**
- * Width of the dialog from `md` up (below `md` it's always a full-screen
- * sheet). The named sizes match Mantine's `Modal`: `xs` 320px, `sm` 380px,
+ * Width of the dialog from `md` up (below `md` it's always a full-width
+ * bottom sheet). The named sizes match Mantine's `Modal`: `xs` 320px, `sm` 380px,
  * `md` 440px, `lg` 620px, `xl` 780px, `full` 100%, and `auto` (fits the
  * content). A number is pixels; any other string is a CSS width, e.g.
  * `'600px'` or `'min(calc(100% - 32px), 900px)'`.
@@ -87,8 +87,8 @@ export type DialogProps = DialogOwnProps &
  * A modal dialog, built on a native `<dialog>` opened with `showModal()`, so
  * the browser traps focus and makes the page behind it inert. Escape and
  * backdrop clicks call `onClose`, and focus returns to the element that
- * opened it. From `md` up it's a centered panel; below `md` it's a
- * full-screen sheet. Replaces Mantine's `Modal`.
+ * opened it. From `md` up it's a centered panel; below `md` it's a bottom
+ * sheet that grows with its content up to near the top of the screen. Replaces Mantine's `Modal`.
  *
  * ```tsx
  * <Dialog
@@ -283,15 +283,15 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
           'Dialog',
           `Dialog--size-${sizeName}`,
           centered && 'Dialog--centered',
-          'm-0 size-full max-h-none max-w-none overflow-hidden border-0 bg-transparent p-0 font-sans text-fg backdrop:bg-overlay',
-          'open:flex items-stretch justify-center md:items-start md:px-4 md:py-16',
+          'm-0 size-full max-h-none max-w-none overflow-hidden border-0 bg-transparent px-0 pb-0 font-sans text-fg backdrop:bg-overlay',
+          'open:flex items-end justify-center md:items-start md:px-4 md:py-16',
           centered && 'md:items-center',
           className
         )}
       >
         <div
           className={cn(
-            'Dialog__panel flex max-w-full flex-col bg-surface shadow-lg md:max-h-full md:rounded-lg md:border md:border-border',
+            'Dialog__panel flex max-h-full max-w-full flex-col rounded-t-xl bg-surface shadow-lg md:rounded-lg md:border md:border-border',
             panelClassName
           )}
           style={{'--Dialog-width': dialogWidth(size)}}

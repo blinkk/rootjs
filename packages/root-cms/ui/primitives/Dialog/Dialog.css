@@ -1,13 +1,19 @@
 @layer components {
   /*
-   * Below `md` the panel is a full-screen sheet, so it keeps clear of the
-   * notch and home indicator. From `md` up it's a centered box whose width
-   * comes from the `size` prop (via `--Dialog-width`, set inline).
+   * Below `md` the panel is a bottom sheet: it keeps clear of the home
+   * indicator, and the gap above it (clear of the notch) shows the backdrop,
+   * which can be tapped to close. From `md` up it's a centered box whose
+   * width comes from the `size` prop (via `--Dialog-width`, set inline).
    */
+  /* Overridden from `md` up by the `md:py-16` utility. */
+  .Dialog {
+    padding-top: max(3rem, env(safe-area-inset-top));
+  }
+
   .Dialog__panel {
     width: 100%;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right)
-      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
   }
 
   @media (width >= 48rem) {
