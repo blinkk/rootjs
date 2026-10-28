@@ -679,6 +679,7 @@ function ActionLogsCompact(props: ActionLogsProps) {
         {actions.map((action, i) => (
           <AccordionItem
             className="ActionLogsCompact__item last:border-b-0"
+            controlClassName="pl-3"
             value={String(i)}
             label={<ActionLogsCompactItemPreview action={action} />}
             key={i}
