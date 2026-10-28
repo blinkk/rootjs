@@ -1,8 +1,6 @@
-import './ChatErrorNotice.css';
-
-import {Button} from '@mantine/core';
 import {IconRefresh} from '@tabler/icons-preact';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {cn} from '../../../../utils/classes.js';
 
 /** Props for {@link ChatErrorNotice}. */
 export interface ChatErrorNoticeProps {
@@ -25,21 +23,24 @@ export interface ChatErrorNoticeProps {
 export function ChatErrorNotice(props: ChatErrorNoticeProps) {
   return (
     <div
-      className={joinClassNames('ChatErrorNotice', props.className)}
+      className={cn(
+        'ChatErrorNotice',
+        'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-base text-danger',
+        props.className
+      )}
       role="alert"
     >
-      <div className="ChatErrorNotice__message">
+      <div className="ChatErrorNotice__message min-w-0 shrink grow basis-60 wrap-anywhere">
         <strong>Error:</strong> {props.error.message}
       </div>
       {(props.onRetry || props.onDismiss) && (
-        <div className="ChatErrorNotice__actions">
+        <div className="ChatErrorNotice__actions ml-auto flex gap-2">
           {props.onDismiss && (
             <Button
               variant="subtle"
-              color="red"
               size="xs"
               type="button"
-              className="ChatErrorNotice__button"
+              className="ChatErrorNotice__button text-danger"
               disabled={props.busy}
               onClick={props.onDismiss}
             >
@@ -48,12 +49,11 @@ export function ChatErrorNotice(props: ChatErrorNoticeProps) {
           )}
           {props.onRetry && (
             <Button
-              variant="filled"
-              color="red"
+              variant="danger"
               size="xs"
               type="button"
               className="ChatErrorNotice__button"
-              leftIcon={<IconRefresh size={14} />}
+              icon={<IconRefresh />}
               disabled={props.busy}
               onClick={props.onRetry}
             >

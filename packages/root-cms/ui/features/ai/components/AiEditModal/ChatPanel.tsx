@@ -13,29 +13,19 @@
  * user to approve and save.
  */
 import {useChat} from '@ai-sdk/react';
-import {ActionIcon, Badge, Loader, Tooltip} from '@mantine/core';
-import {
-  IconChevronDown,
-  IconChevronRight,
-  IconPaperclip,
-  IconRobot,
-  IconSend2,
-  IconX,
-} from '@tabler/icons-preact';
+import {IconPaperclip, IconRobot, IconSend2, IconX} from '@tabler/icons-preact';
 import type {UIMessage} from 'ai';
 import {lastAssistantMessageIsCompleteWithToolCalls} from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {BouncingLoader} from '../../../../components/BouncingLoader/BouncingLoader.js';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {uploadFileToGCS} from '../../../../integrations/gcs.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {ChatErrorNotice} from '../ChatErrorNotice/ChatErrorNotice.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
-// Tool-call, reasoning, and streaming-indicator UI is shared with the Root AI
-// page (`RootAIChat`) so the two surfaces stay visually consistent. Reuse its
-// stylesheet and the `RootAIChat__*` class names below rather than duplicating
-// the styles here.
-import '../RootAIChat/RootAIChat.css';
 import {createClientChatTransport} from '../RootAIChat/clientChatTransport.js';
 import {createReadOnlyClientCmsTools} from '../RootAIChat/clientCmsTools.js';
 import {
@@ -43,7 +33,9 @@ import {
   maybeAuthorizeGoogle,
 } from '../RootAIChat/clientGoogleTools.js';
 import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
-import {prettyToolName, prettyToolState} from '../RootAIChat/toolLabels.js';
+// Tool-call and reasoning UI is shared with the Root AI page (`RootAIChat`),
+// so the two surfaces stay visually consistent.
+import {ReasoningPartView, ToolPartView} from '../RootAIChat/RootAIChat.js';
 
 /** Result emitted by the "Edit with AI" chat to the parent modal. */
 export interface AiResponse {
@@ -113,8 +105,8 @@ export function ChatPanel(props: ChatPanelProps) {
 
   if (!config && !configError) {
     return (
-      <div className="AiEditModal__ChatPanel__loading">
-        <Loader size="sm" color="gray" />
+      <div className="AiEditModal__ChatPanel__loading flex h-full items-center justify-center text-muted">
+        <Spinner />
       </div>
     );
   }
@@ -122,11 +114,11 @@ export function ChatPanel(props: ChatPanelProps) {
   const isEnabled = !!config?.enabled && (config.models?.length || 0) > 0;
   if (!isEnabled) {
     return (
-      <div className="AiEditModal__ChatPanel__notConfigured">
-        <div className="AiEditModal__ChatPanel__notConfigured__icon">
+      <div className="AiEditModal__ChatPanel__notConfigured flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-muted">
+        <div className="AiEditModal__ChatPanel__notConfigured__icon text-muted">
           <IconRobot size={32} />
         </div>
-        <div className="AiEditModal__ChatPanel__notConfigured__title">
+        <div className="AiEditModal__ChatPanel__notConfigured__title font-semibold">
           Root AI is not configured for this project.
         </div>
         <div className="AiEditModal__ChatPanel__notConfigured__body">
@@ -134,7 +126,7 @@ export function ChatPanel(props: ChatPanelProps) {
           <code>root.config.ts</code>.
         </div>
         {configError && (
-          <pre className="AiEditModal__ChatPanel__notConfigured__error">
+          <pre className="AiEditModal__ChatPanel__notConfigured__error mt-2 mb-0 w-full whitespace-pre-wrap rounded-sm bg-surface-hover p-2 text-left text-xs">
             {configError}
           </pre>
         )}
@@ -282,7 +274,7 @@ function ChatPanelInner(props: {
       />
       {error && (
         <ChatErrorNotice
-          className="AiEditModal__ChatPanel__error"
+          className="AiEditModal__ChatPanel__error my-2 shrink-0"
           error={error}
           busy={isStreaming}
           onRetry={() => regenerate()}
@@ -319,6 +311,9 @@ function ChatPanelInner(props: {
   );
 }
 
+const TRANSCRIPT_CLASSES =
+  'AiEditModal__ChatPanel__transcript min-h-0 flex-1 overflow-y-auto px-1 py-2';
+
 function ChatTranscript(props: {
   messages: UIMessage[];
   isStreaming: boolean;
@@ -335,18 +330,21 @@ function ChatTranscript(props: {
   if (props.messages.length === 0) {
     return (
       <div
-        className="AiEditModal__ChatPanel__transcript AiEditModal__ChatPanel__transcript--empty"
+        className={cn(
+          TRANSCRIPT_CLASSES,
+          'AiEditModal__ChatPanel__transcript--empty flex items-center justify-center'
+        )}
         ref={ref}
       >
-        <div className="AiEditModal__ChatPanel__welcome">
-          <div className="AiEditModal__ChatPanel__welcome__icon">
+        <div className="AiEditModal__ChatPanel__welcome flex flex-col items-center gap-2 p-6 text-center text-muted">
+          <div className="AiEditModal__ChatPanel__welcome__icon w-12 rounded-full border border-border p-2 *:w-full">
             <IconRootAI />
           </div>
-          <div className="AiEditModal__ChatPanel__welcome__title">
+          <div className="AiEditModal__ChatPanel__welcome__title text-2xl font-bold leading-tight text-strong">
             Edit with Root AI
           </div>
           {props.welcome && (
-            <div className="AiEditModal__ChatPanel__welcome__body">
+            <div className="AiEditModal__ChatPanel__welcome__body max-w-150 text-center text-lg leading-normal md:px-6">
               {props.welcome}
             </div>
           )}
@@ -356,13 +354,13 @@ function ChatTranscript(props: {
   }
 
   return (
-    <div className="AiEditModal__ChatPanel__transcript" ref={ref}>
-      <div className="AiEditModal__ChatPanel__transcript__inner">
+    <div className={TRANSCRIPT_CLASSES} ref={ref}>
+      <div className="AiEditModal__ChatPanel__transcript__inner flex flex-col gap-3">
         {props.messages.map((m) => (
           <MessageView key={m.id} message={m} />
         ))}
         {props.isStreaming && (
-          <div className="RootAIChat__streamingIndicator">
+          <div className="RootAIChat__streamingIndicator mt-2 pl-11">
             <BouncingLoader size={6} />
           </div>
         )}
@@ -378,23 +376,28 @@ function MessageView(props: {message: UIMessage}) {
   const photoURL = isUser ? window.firebase.user?.photoURL : null;
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'AiEditModal__ChatPanel__message',
-        `AiEditModal__ChatPanel__message--${message.role}`
+        `AiEditModal__ChatPanel__message--${message.role}`,
+        'flex items-start gap-2'
       )}
     >
-      <div className="AiEditModal__ChatPanel__message__avatar">
+      <div className="AiEditModal__ChatPanel__message__avatar flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-chip text-muted">
         {photoURL ? (
-          <img src={photoURL} alt={username} />
+          <img
+            className="size-full object-cover"
+            src={photoURL}
+            alt={username}
+          />
         ) : (
           <IconRobot size={18} />
         )}
       </div>
-      <div className="AiEditModal__ChatPanel__message__body">
-        <div className="AiEditModal__ChatPanel__message__username">
+      <div className="AiEditModal__ChatPanel__message__body min-w-0 flex-1">
+        <div className="AiEditModal__ChatPanel__message__username mb-0.5 text-sm font-semibold text-muted">
           {username}
         </div>
-        <div className="AiEditModal__ChatPanel__message__parts">
+        <div className="AiEditModal__ChatPanel__message__parts flex flex-col gap-1.5">
           {(message.parts || []).map((part, i) => (
             <PartView key={i} part={part} />
           ))}
@@ -417,7 +420,7 @@ function PartView(props: {part: any}) {
       return null;
     }
     return (
-      <div className="AiEditModal__ChatPanel__textPart">
+      <div className="AiEditModal__ChatPanel__textPart text-base leading-normal wrap-break-word">
         <Markdown code={visibleText} />
       </div>
     );
@@ -440,123 +443,28 @@ function PartView(props: {part: any}) {
   return null;
 }
 
-function ReasoningPartView(props: {text: string}) {
-  const [open, setOpen] = useState(false);
-  if (!props.text) {
-    return null;
-  }
-  return (
-    <div
-      className={joinClassNames(
-        'RootAIChat__reasoning',
-        open && 'RootAIChat__reasoning--open'
-      )}
-    >
-      <button
-        type="button"
-        className="RootAIChat__reasoning__toggle"
-        onClick={() => setOpen(!open)}
-      >
-        <IconChevronDown
-          size={14}
-          style={{transform: open ? 'rotate(0deg)' : 'rotate(-90deg)'}}
-        />
-        <span>Thinking</span>
-      </button>
-      {open && (
-        <div className="RootAIChat__reasoning__body">
-          <Markdown code={props.text} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 function FilePartView(props: {part: any}) {
   const part = props.part;
   if (part.mediaType?.startsWith('image/')) {
     return (
       <div className="AiEditModal__ChatPanel__filePart">
-        <img src={part.url} alt={part.filename || 'attachment'} />
+        <img
+          className="block max-w-50 rounded-sm"
+          src={part.url}
+          alt={part.filename || 'attachment'}
+        />
       </div>
     );
   }
   return (
     <a
-      className="AiEditModal__ChatPanel__filePart AiEditModal__ChatPanel__filePart--link"
+      className="AiEditModal__ChatPanel__filePart AiEditModal__ChatPanel__filePart--link inline-flex min-w-0 items-center gap-1 text-sm text-link wrap-anywhere"
       href={part.url}
       target="_blank"
     >
       <IconPaperclip size={14} />
       <span>{part.filename || part.url}</span>
     </a>
-  );
-}
-
-function ToolPartView(props: {part: any}) {
-  const part = props.part;
-  const toolName: string =
-    typeof part.type === 'string' && part.type.startsWith('tool-')
-      ? part.type.slice('tool-'.length)
-      : part.toolName || 'tool';
-  const state: string = part.state || '';
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="RootAIChat__tool">
-      <button
-        type="button"
-        className="RootAIChat__tool__header"
-        onClick={() => setOpen(!open)}
-      >
-        <IconChevronDown
-          className={joinClassNames(
-            'RootAIChat__tool__header__icon',
-            open && 'RootAIChat__tool__header__icon--open'
-          )}
-          size={14}
-        />
-        <Badge color="dark" variant="filled" size="xs">
-          {toolName}
-        </Badge>
-        <span className="RootAIChat__tool__title">
-          {prettyToolName(toolName, part.input)}
-        </span>
-        <span className="RootAIChat__tool__state">
-          {prettyToolState(state)}
-        </span>
-      </button>
-      {open && (
-        <div className="RootAIChat__tool__body">
-          {part.input && (
-            <details>
-              <summary>
-                <IconChevronRight
-                  size={14}
-                  className="RootAIChat__tool__json__icon"
-                />
-                <span>Input</span>
-              </summary>
-              <pre>{JSON.stringify(part.input, null, 2)}</pre>
-            </details>
-          )}
-          {part.output && (
-            <details>
-              <summary>
-                <IconChevronRight
-                  size={14}
-                  className="RootAIChat__tool__json__icon"
-                />
-                <span>Output</span>
-              </summary>
-              <pre>{JSON.stringify(part.output, null, 2)}</pre>
-            </details>
-          )}
-          {part.errorText && (
-            <div className="RootAIChat__tool__error">{part.errorText}</div>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -641,37 +549,43 @@ function ChatComposer(props: {
     files.forEach(uploadFile);
   };
 
+  const hasAttachments = uploading || attachments.length > 0;
+
   return (
-    <div className="AiEditModal__ChatPanel__composer">
-      <div
-        className={joinClassNames(
-          'AiEditModal__ChatPanel__composer__prompt',
-          (uploading || attachments.length > 0) &&
-            'AiEditModal__ChatPanel__composer__prompt--hasImage'
-        )}
-      >
+    <div className="AiEditModal__ChatPanel__composer relative z-10 shrink-0 px-2 pt-3">
+      <div className="AiEditModal__ChatPanel__composer__prompt relative mx-auto max-w-200">
         {props.canAttach && (
-          <label className="AiEditModal__ChatPanel__composer__imageUpload">
+          <>
             <input
               ref={fileRef}
               type="file"
-              className="AiEditModal__ChatPanel__composer__imageUpload__input"
+              className="AiEditModal__ChatPanel__composer__imageUpload__input hidden"
+              aria-hidden="true"
+              tabIndex={-1}
               onChange={onFileChange}
             />
-            <Tooltip label="Upload file">
-              <ActionIcon
-                component="div"
-                className="AiEditModal__ChatPanel__composer__imageUpload__icon"
-                radius="xl"
+            {/*
+             * Positioned on a wrapper, since the tooltip's own wrapper
+             * would otherwise sit in the flow and add a line box.
+             */}
+            <div className="AiEditModal__ChatPanel__composer__imageUpload absolute bottom-2 left-2 flex">
+              <IconButton
+                round
+                label="Upload file"
+                onClick={() => fileRef.current?.click()}
               >
-                <IconPaperclip size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </label>
+                <IconPaperclip />
+              </IconButton>
+            </div>
+          </>
         )}
         <textarea
           ref={textareaRef}
-          className="AiEditModal__ChatPanel__composer__textInput"
+          aria-label="Message"
+          className={cn(
+            'AiEditModal__ChatPanel__composer__textInput box-border block max-h-50 w-full resize-none appearance-none overflow-hidden rounded-xl border border-border bg-surface px-12 py-3 font-sans text-base font-normal leading-normal text-fg transition-shadow placeholder:text-subtle focus:border-border-strong focus:shadow-sm focus:outline-none',
+            hasAttachments && 'pb-22'
+          )}
           placeholder="Tell me what you want to change..."
           value={text}
           rows={1}
@@ -690,64 +604,62 @@ function ChatComposer(props: {
             }
           }}
         />
-        {(uploading || attachments.length > 0) && (
-          <div className="AiEditModal__ChatPanel__composer__attachments">
-            {uploading && <Loader size="sm" />}
+        {hasAttachments && (
+          <div className="AiEditModal__ChatPanel__composer__attachments absolute bottom-2 left-11 flex items-center gap-1.5">
+            {uploading && <Spinner />}
             {attachments.map((a, i) => (
-              <Tooltip
-                key={i}
-                label={a.filename}
-                transition="pop"
-                position="top"
-                withArrow
-              >
+              <Tooltip key={i} label={a.filename} placement="top">
                 <button
-                  className="AiEditModal__ChatPanel__composer__attachment"
+                  type="button"
+                  aria-label={`Remove ${a.filename}`}
+                  className="AiEditModal__ChatPanel__composer__attachment group/attachment relative m-0 size-16 cursor-pointer appearance-none rounded-lg border border-border bg-surface-active p-1 font-sans focus-visible:outline-2 focus-visible:outline-focus"
                   onClick={() =>
                     setAttachments((prev) => prev.filter((_, idx) => idx !== i))
                   }
                 >
                   {a.mediaType.startsWith('image/') ? (
-                    <img src={a.url} alt={a.filename} />
+                    <img
+                      className="size-full object-contain object-center"
+                      src={a.url}
+                      alt={a.filename}
+                    />
                   ) : (
-                    <span className="AiEditModal__ChatPanel__composer__attachment__name">
+                    <span className="AiEditModal__ChatPanel__composer__attachment__name block text-center text-xs wrap-break-word">
                       {a.filename}
                     </span>
                   )}
-                  <div className="AiEditModal__ChatPanel__composer__attachment__close">
-                    <IconX size={20} color="white" />
+                  <div className="AiEditModal__ChatPanel__composer__attachment__close absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 rounded-full bg-overlay p-0.5 text-inverse opacity-0 transition-opacity group-hover/attachment:opacity-100 group-focus-visible/attachment:opacity-100 pointer-coarse:opacity-100">
+                    <IconX size={20} />
                   </div>
                 </button>
               </Tooltip>
             ))}
           </div>
         )}
-        {props.isStreaming ? (
-          <ActionIcon
-            className="AiEditModal__ChatPanel__composer__submit"
-            variant="filled"
-            color="dark"
-            radius="xl"
-            onClick={props.onStop}
-            title="Stop"
-          >
-            <IconX size={18} />
-          </ActionIcon>
-        ) : (
-          <ActionIcon
-            className="AiEditModal__ChatPanel__composer__submit"
-            variant="filled"
-            color="dark"
-            radius="xl"
-            disabled={uploading || (!text && attachments.length === 0)}
-            onClick={submit}
-            title="Send"
-          >
-            <IconSend2 size={18} />
-          </ActionIcon>
-        )}
+        <div className="AiEditModal__ChatPanel__composer__submit absolute right-2 bottom-2 flex">
+          {props.isStreaming ? (
+            <IconButton
+              variant="primary"
+              round
+              label="Stop"
+              onClick={props.onStop}
+            >
+              <IconX />
+            </IconButton>
+          ) : (
+            <IconButton
+              variant="primary"
+              round
+              label="Send"
+              disabled={uploading || (!text && attachments.length === 0)}
+              onClick={submit}
+            >
+              <IconSend2 />
+            </IconButton>
+          )}
+        </div>
       </div>
-      <div className="AiEditModal__ChatPanel__composer__disclaimer">
+      <div className="AiEditModal__ChatPanel__composer__disclaimer mt-3 px-5 text-center text-sm text-balance text-muted">
         Root AI is experimental and makes mistakes. Check all info.
       </div>
     </div>

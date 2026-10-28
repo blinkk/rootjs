@@ -1,18 +1,6 @@
 import './TaskPage.css';
 
 import {
-  ActionIcon,
-  Breadcrumbs,
-  Button,
-  Loader,
-  Menu,
-  Popover,
-  Switch,
-  Textarea,
-  TextInput,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconCalendar,
   IconCheck,
   IconChevronDown,
@@ -44,9 +32,19 @@ import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {uploadFileToGCS} from '../../../../integrations/gcs.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Popover} from '../../../../primitives/Popover/Popover.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Switch} from '../../../../primitives/Switch/Switch.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {
   CommentBody,
@@ -105,6 +103,47 @@ import {
   updateTaskStatus,
   updateTaskTargetLaunch,
 } from '../../tasks.js';
+
+/** Section headings, e.g. "Description" and "Activity". */
+const SECTION_TITLE_CLASSES =
+  'TaskPage__sectionHeader__title m-0 flex items-center gap-1.5 text-base font-semibold';
+
+/** The row holding a section heading and its actions. */
+const SECTION_HEADER_CLASSES =
+  'TaskPage__sectionHeader flex min-h-control-sm items-center justify-between gap-2';
+
+/** Small text action, e.g. "Reply", "Assign me", "CC me". */
+const TEXT_BUTTON_CLASSES =
+  'TaskPage__textButton m-0 cursor-pointer appearance-none rounded-sm border-0 bg-transparent p-0 font-sans text-sm font-medium text-strong underline-offset-3 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:no-underline disabled:opacity-60';
+
+/**
+ * Hides a secondary action until its row (a `group`) is hovered, on devices
+ * that can hover. Touch screens always show it.
+ */
+const REVEAL_ON_HOVER_CLASSES =
+  'pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100';
+
+/** Borderless sidebar trigger that only shows a background on hover. */
+const DETAIL_BUTTON_CLASSES =
+  'TaskPage__detail__button group m-0 flex min-h-control-sm w-full cursor-pointer appearance-none items-center gap-2 rounded-md border-0 bg-transparent px-2 text-left font-sans text-sm font-medium text-strong hover:bg-surface-hover aria-expanded:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent pointer-coarse:min-h-10';
+
+/** Placeholder text in a sidebar trigger, e.g. "Unassigned". */
+const DETAIL_BUTTON_EMPTY_CLASSES =
+  'TaskPage__detail__button--empty font-normal text-muted';
+
+const DETAIL_CHEVRON_CLASSES =
+  'TaskPage__detail__chevron ml-auto shrink-0 text-subtle pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-aria-expanded:opacity-100';
+
+/** An old or new value in an activity row. */
+const ACTIVITY_VALUE_CLASSES =
+  'TaskPage__activity__value rounded-sm bg-chip px-1 py-px font-medium';
+
+/** The comment editor, attachments, and actions share one outlined box. */
+const COMPOSER_FORM_CLASSES =
+  'TaskPage__composerForm flex flex-col rounded-lg border border-solid border-border bg-surface transition-colors focus-within:border-border-strong';
+
+const COMPOSER_ACTIONS_CLASSES =
+  'TaskPage__composer__actions flex items-center justify-end gap-2 border-0 border-t border-solid border-border py-2 pl-2.5 pr-2';
 
 const TASK_STATUS_OPTIONS = [
   {value: 'new', label: 'New'},
@@ -191,20 +230,33 @@ export function TaskPage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className={joinClassNames('TaskPage', monoText && 'TaskPage--mono')}>
-        <header className="TaskPage__header">
-          <Breadcrumbs className="TaskPage__header__breadcrumbs">
-            <a href="/cms/tasks">Tasks</a>
-            <div>#{taskId}</div>
-          </Breadcrumbs>
-          <div className="TaskPage__header__titleRow">
+      <div
+        className={cn(
+          'TaskPage',
+          monoText && 'TaskPage--mono',
+          'bg-page p-(--cms-page-padding-mobile) text-strong md:p-(--cms-page-padding)'
+        )}
+      >
+        <header className="TaskPage__header mb-6 max-w-350 border-0 border-b border-solid border-border pb-5">
+          <Breadcrumbs
+            className="TaskPage__header__breadcrumbs mb-3"
+            items={[
+              {label: 'Tasks', href: '/cms/tasks'},
+              {label: `#${taskId}`},
+            ]}
+          />
+          <div className="TaskPage__header__titleRow flex items-start justify-between gap-4">
             <TaskTitle task={task} taskId={taskId} />
             {task && <TaskActionsMenu task={task} />}
           </div>
           {task && (
-            <div className="TaskPage__header__meta">
-              Opened by <UserTag email={task.createdBy || 'unknown'} /> on{' '}
-              {formatTaskDate(task.createdAt)}
+            <div className="TaskPage__header__meta mt-1.5 text-sm">
+              Opened by{' '}
+              <UserTag
+                className="font-medium"
+                email={task.createdBy || 'unknown'}
+              />{' '}
+              on {formatTaskDate(task.createdAt)}
               {task.updatedAt && (
                 <> · Updated {formatTaskDateTime(task.updatedAt)}</>
               )}
@@ -213,23 +265,34 @@ export function TaskPage(props: {id: string}) {
         </header>
 
         {loading && (
-          <div className="TaskPage__loading">
-            <Loader color="gray" size="xl" />
+          <div className="TaskPage__loading flex min-h-35 items-center justify-center text-muted">
+            <Spinner size="lg" />
           </div>
         )}
-        {!loading && error && <div className="TaskPage__error">{error}</div>}
+        {!loading && error && (
+          <div className="TaskPage__error flex min-h-35 items-center justify-center text-base text-danger">
+            {error}
+          </div>
+        )}
         {!loading && !error && !task && (
-          <Surface className="TaskPage__notFound">Task not found.</Surface>
+          <Surface className="TaskPage__notFound flex min-h-35 max-w-160 items-center justify-center">
+            Task not found.
+          </Surface>
         )}
         {!loading && !error && task && (
           <>
             {task.deleted && <TaskDeletedBanner task={task} />}
             <MentionSuggestionsContext.Provider value={participants}>
-              <div className="TaskPage__body">
-                <main className="TaskPage__main">
+              <div className="TaskPage__body flex max-w-350 flex-col gap-6 lg:flex-row lg:items-start lg:gap-12">
+                <main className="TaskPage__main flex min-w-0 flex-1 flex-col gap-5">
                   <TaskDescription task={task} />
                   <TaskAttachments task={task} />
-                  <h2 className="TaskPage__sectionHeader__title TaskPage__activityHeading">
+                  <h2
+                    className={cn(
+                      SECTION_TITLE_CLASSES,
+                      'TaskPage__activityHeading mt-3'
+                    )}
+                  >
                     Activity
                   </h2>
                   <TaskTimeline
@@ -237,16 +300,18 @@ export function TaskPage(props: {id: string}) {
                     comments={comments}
                     events={events}
                   />
-                  <div className="TaskPage__composer">
+                  <div className="TaskPage__composer mt-1">
                     <TaskCommentComposer taskId={task.id} />
                   </div>
                 </main>
-                <aside className="TaskPage__side">
+                {/*
+                 * The page element is itself the scroll container, so the
+                 * sticky sidebar pins below the page's own top padding.
+                 */}
+                <aside className="TaskPage__side order-first min-w-0 lg:sticky lg:top-0 lg:order-none lg:w-70 lg:shrink-0">
                   <TaskMetadataPanel task={task} />
                   <Switch
-                    className="TaskPage__monoToggle"
-                    size="xs"
-                    color="dark"
+                    className="TaskPage__monoToggle border-0 border-t border-solid border-border pt-4"
                     label="Monospace font"
                     checked={monoText}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -285,8 +350,11 @@ function TaskDeletedBanner(props: {task: Task}) {
   }
 
   return (
-    <div className="TaskPage__deletedBanner">
-      <div className="TaskPage__deletedBanner__text">
+    <div
+      className="TaskPage__deletedBanner mb-4 flex max-w-350 flex-wrap items-center justify-between gap-3 rounded-lg border border-solid border-danger-line bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
+      role="status"
+    >
+      <div className="TaskPage__deletedBanner__text min-w-0">
         This task was deleted
         {task.deletedBy && (
           <>
@@ -297,13 +365,7 @@ function TaskDeletedBanner(props: {task: Task}) {
         {task.deletedAt && <> {formatTaskDateTime(task.deletedAt)}</>}. It no
         longer appears in task lists.
       </div>
-      <Button
-        compact
-        size="xs"
-        variant="default"
-        loading={restoring}
-        onClick={onRestore}
-      >
+      <Button size="xs" loading={restoring} onClick={onRestore}>
         Restore task
       </Button>
     </div>
@@ -365,7 +427,7 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
   if (editing) {
     return (
       <form
-        className="TaskPage__header__titleForm"
+        className="TaskPage__header__titleForm flex min-w-0 max-w-240 flex-1 flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           saveTitle();
@@ -373,7 +435,10 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
       >
         <TextInput
           autoFocus
-          className="TaskPage__header__titleInput"
+          aria-label="Task title"
+          className="TaskPage__header__titleInput min-w-0 basis-full sm:flex-1 sm:basis-56"
+          inputClassName="text-xl font-bold"
+          size="md"
           disabled={saving}
           value={draft}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -387,21 +452,18 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
           }}
         />
         <Button
-          compact
           size="xs"
-          color="dark"
+          variant="primary"
           type="submit"
           loading={saving}
-          leftIcon={<IconCheck size={14} strokeWidth="1.8" />}
+          icon={<IconCheck strokeWidth="1.8" />}
         >
           Save
         </Button>
         <Button
-          compact
           size="xs"
-          variant="default"
           type="button"
-          leftIcon={<IconX size={14} strokeWidth="1.8" />}
+          icon={<IconX strokeWidth="1.8" />}
           onClick={() => {
             setDraft(task.title);
             setEditing(false);
@@ -414,13 +476,18 @@ function TaskTitle(props: {task: Task | null; taskId: string}) {
   }
 
   return (
-    <div className="TaskPage__header__titleContent">
-      <Heading size="h1">{task.title}</Heading>
-      <Tooltip label="Edit title">
-        <ActionIcon size="sm" onClick={() => setEditing(true)}>
-          <IconPencil size={16} strokeWidth="1.8" />
-        </ActionIcon>
-      </Tooltip>
+    <div className="TaskPage__header__titleContent flex min-w-0 items-center gap-1.5">
+      <Heading size="h1" className="wrap-anywhere">
+        {task.title}
+      </Heading>
+      <IconButton
+        className="shrink-0"
+        label="Edit title"
+        size="xs"
+        onClick={() => setEditing(true)}
+      >
+        <IconPencil strokeWidth="1.8" />
+      </IconButton>
     </div>
   );
 }
@@ -478,27 +545,24 @@ function TaskActionsMenu(props: {task: Task}) {
 
   return (
     <Menu
-      className="TaskPage__header__menu"
-      position="bottom"
-      placement="end"
-      shadow="md"
-      control={
-        <ActionIcon variant="default" size="md" title="More actions">
-          <IconDots size={16} strokeWidth="1.8" />
-        </ActionIcon>
+      placement="bottom-end"
+      trigger={
+        <IconButton
+          className="TaskPage__header__menu shrink-0"
+          label="More actions"
+          variant="default"
+        >
+          <IconDots strokeWidth="1.8" />
+        </IconButton>
       }
     >
-      <Menu.Item icon={<IconLink size={14} />} onClick={copyLink}>
+      <MenuItem icon={<IconLink />} onClick={copyLink}>
         Copy link
-      </Menu.Item>
+      </MenuItem>
       {!task.deleted && (
-        <Menu.Item
-          color="red"
-          icon={<IconTrash size={14} />}
-          onClick={onDeleteTask}
-        >
+        <MenuItem danger icon={<IconTrash />} onClick={onDeleteTask}>
           Delete task
-        </Menu.Item>
+        </MenuItem>
       )}
     </Menu>
   );
@@ -535,22 +599,26 @@ function TaskDescription(props: {task: Task}) {
   }
 
   return (
-    <Surface className="TaskPage__description">
-      <div className="TaskPage__sectionHeader">
-        <h2 className="TaskPage__sectionHeader__title">Description</h2>
+    <Surface className="TaskPage__description pb-4 pl-5 pr-4 pt-3">
+      <div className={SECTION_HEADER_CLASSES}>
+        <h2 className={SECTION_TITLE_CLASSES}>Description</h2>
         {!editing && (
-          <Tooltip label="Edit description">
-            <ActionIcon size="sm" onClick={() => setEditing(true)}>
-              <IconPencil size={16} strokeWidth="1.8" />
-            </ActionIcon>
-          </Tooltip>
+          <IconButton
+            label="Edit description"
+            size="xs"
+            onClick={() => setEditing(true)}
+          >
+            <IconPencil strokeWidth="1.8" />
+          </IconButton>
         )}
       </div>
       {editing ? (
-        <div className="TaskPage__description__edit">
+        <div className="TaskPage__description__edit mt-1 flex flex-col gap-2.5">
           <Textarea
             autosize
             autoFocus
+            aria-label="Description"
+            size="md"
             minRows={4}
             value={draft}
             placeholder="Add task details, scope, and acceptance criteria."
@@ -558,12 +626,10 @@ function TaskDescription(props: {task: Task}) {
               setDraft(e.currentTarget.value)
             }
           />
-          <div className="TaskPage__description__editActions">
+          <div className="TaskPage__description__editActions flex justify-end gap-2">
             <Button
-              compact
               size="xs"
-              variant="default"
-              leftIcon={<IconX size={14} strokeWidth="1.8" />}
+              icon={<IconX strokeWidth="1.8" />}
               onClick={() => {
                 setEditing(false);
                 setDraft(task.description || '');
@@ -572,11 +638,10 @@ function TaskDescription(props: {task: Task}) {
               Cancel
             </Button>
             <Button
-              compact
               size="xs"
-              color="dark"
+              variant="primary"
               loading={saving}
-              leftIcon={<IconCheck size={14} strokeWidth="1.8" />}
+              icon={<IconCheck strokeWidth="1.8" />}
               onClick={saveDescription}
             >
               Save
@@ -585,9 +650,10 @@ function TaskDescription(props: {task: Task}) {
         </div>
       ) : (
         <div
-          className={joinClassNames(
-            'TaskPage__description__content',
-            !task.description && 'TaskPage__description__content--empty'
+          className={cn(
+            'TaskPage__description__content mt-1 whitespace-pre-wrap text-base leading-normal',
+            !task.description &&
+              'TaskPage__description__content--empty italic text-muted'
           )}
         >
           {task.description || 'No description provided.'}
@@ -672,7 +738,7 @@ function TaskAttachments(props: {task: Task}) {
       />
       <input
         ref={inputRef}
-        className="TaskPage__fileInput"
+        className="TaskPage__fileInput hidden"
         type="file"
         multiple
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -685,24 +751,24 @@ function TaskAttachments(props: {task: Task}) {
   // Without any files, only the upload button is shown.
   if (attachments.length === 0) {
     return (
-      <div className="TaskPage__attachments TaskPage__attachments--empty">
+      <div className="TaskPage__attachments TaskPage__attachments--empty -mt-2 flex flex-col items-end gap-2">
         {attachButton}
       </div>
     );
   }
 
   return (
-    <section className="TaskPage__attachments">
-      <div className="TaskPage__sectionHeader">
-        <h2 className="TaskPage__sectionHeader__title">
+    <section className="TaskPage__attachments flex flex-col gap-2">
+      <div className={SECTION_HEADER_CLASSES}>
+        <h2 className={SECTION_TITLE_CLASSES}>
           Attachments
-          <span className="TaskPage__sectionHeader__count">
+          <span className="TaskPage__sectionHeader__count font-medium">
             {attachments.length}
           </span>
         </h2>
         {attachButton}
       </div>
-      <div className="TaskPage__files">
+      <div className="TaskPage__files grid gap-2">
         {attachments.map((attachment) => (
           <TaskAttachmentTile
             key={attachment.id}
@@ -725,7 +791,10 @@ function TaskAttachFilesButton(props: {
   return (
     <button
       type="button"
-      className="TaskPage__textButton TaskPage__attachButton"
+      className={cn(
+        TEXT_BUTTON_CLASSES,
+        'TaskPage__attachButton inline-flex items-center gap-1'
+      )}
       disabled={props.uploading}
       onClick={props.onClick}
     >
@@ -751,24 +820,31 @@ function TaskAttachmentTile(props: {
   const name = formatTaskAttachmentName(attachment);
   const size = formatFileSize(attachment.size);
   return (
-    <div className="TaskPage__file">
+    <div className="TaskPage__file group relative flex min-w-0 items-center rounded-lg border border-solid border-border bg-surface hover:border-border-strong">
       <a
-        className="TaskPage__file__link"
+        className="TaskPage__file__link flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-strong no-underline focus-visible:outline-2 focus-visible:outline-focus"
         href={attachment.src}
         target="_blank"
         rel="noreferrer"
         title={name}
       >
-        <span className="TaskPage__file__thumb">
+        <span className="TaskPage__file__thumb flex h-8 w-10 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-surface-hover text-subtle">
           {isImageAttachment(attachment) ? (
-            <img src={attachment.src} alt="" loading="lazy" />
+            <img
+              className="size-full object-cover"
+              src={attachment.src}
+              alt=""
+              loading="lazy"
+            />
           ) : (
             <IconFile size={16} strokeWidth="1.8" />
           )}
         </span>
-        <span className="TaskPage__file__text">
-          <span className="TaskPage__file__name">{name}</span>
-          <span className="TaskPage__file__meta">
+        <span className="TaskPage__file__text flex min-w-0 flex-col text-sm leading-snug">
+          <span className="TaskPage__file__name truncate font-medium">
+            {name}
+          </span>
+          <span className="TaskPage__file__meta truncate">
             {size || 'File'}
             {props.showAttachedBy && attachment.attachedBy && (
               <>
@@ -780,16 +856,18 @@ function TaskAttachmentTile(props: {
         </span>
       </a>
       {props.onRemove && (
-        <Tooltip label="Remove attachment">
-          <ActionIcon
-            className="TaskPage__file__remove"
-            size="sm"
-            disabled={props.removing}
-            onClick={props.onRemove}
-          >
-            <IconX size={14} strokeWidth="1.8" />
-          </ActionIcon>
-        </Tooltip>
+        <IconButton
+          className={cn(
+            'TaskPage__file__remove mr-1 focus-visible:opacity-100',
+            REVEAL_ON_HOVER_CLASSES
+          )}
+          label="Remove attachment"
+          size="xs"
+          disabled={props.removing}
+          onClick={props.onRemove}
+        >
+          <IconX strokeWidth="1.8" />
+        </IconButton>
       )}
     </div>
   );
@@ -803,12 +881,12 @@ function TaskDetail(props: {
   children: ComponentChildren;
 }) {
   return (
-    <div className="TaskPage__detail">
-      <div className="TaskPage__detail__label">
+    <div className="TaskPage__detail flex flex-col gap-1 py-3">
+      <div className="TaskPage__detail__label flex items-center justify-between text-sm font-semibold">
         <span>{props.label}</span>
         {props.action}
       </div>
-      <div className="TaskPage__detail__value">{props.children}</div>
+      <div className="TaskPage__detail__value -ml-2">{props.children}</div>
     </div>
   );
 }
@@ -947,22 +1025,21 @@ function TaskMetadataPanel(props: {task: Task}) {
     formatTaskStatus(status);
 
   return (
-    <div className="TaskPage__details">
+    <div className="TaskPage__details flex flex-col divide-y divide-border lg:-mt-3">
       <TaskDetail label="Status">
         <Menu
-          position="bottom"
-          placement="start"
-          shadow="md"
-          control={
+          label="Status"
+          placement="bottom-start"
+          trigger={
             <button
               type="button"
-              className="TaskPage__detail__button"
+              className={DETAIL_BUTTON_CLASSES}
               disabled={savingField === 'status'}
             >
               <TaskStatusRing status={status} />
               <span>{statusLabel}</span>
               <IconChevronDown
-                className="TaskPage__detail__chevron"
+                className={DETAIL_CHEVRON_CLASSES}
                 size={14}
                 strokeWidth="1.8"
               />
@@ -970,16 +1047,19 @@ function TaskMetadataPanel(props: {task: Task}) {
           }
         >
           {TASK_STATUS_OPTIONS.map((option) => (
-            <Menu.Item
+            <MenuItem
               key={option.value}
               icon={<TaskStatusRing status={option.value} />}
-              className={joinClassNames(
-                option.value === status && 'TaskPage__menuItem--active'
+              hint={option.value === status ? <IconCheck /> : undefined}
+              aria-current={option.value === status || undefined}
+              className={cn(
+                option.value === status &&
+                  'TaskPage__menuItem--active font-bold'
               )}
               onClick={() => saveStatus(option.value)}
             >
               {option.label}
-            </Menu.Item>
+            </MenuItem>
           ))}
         </Menu>
       </TaskDetail>
@@ -991,7 +1071,7 @@ function TaskMetadataPanel(props: {task: Task}) {
           !isAssignedToMe && (
             <button
               type="button"
-              className="TaskPage__textButton"
+              className={TEXT_BUTTON_CLASSES}
               disabled={savingField === 'assignee'}
               onClick={() => saveAssignee(currentUserEmail)}
             >
@@ -1001,23 +1081,19 @@ function TaskMetadataPanel(props: {task: Task}) {
         }
       >
         <Popover
-          opened={assigneePopoverOpen}
-          onClose={() => setAssigneePopoverOpen(false)}
-          position="bottom"
-          placement="start"
-          shadow="md"
+          label="Assignee"
+          open={assigneePopoverOpen}
+          onOpenChange={setAssigneePopoverOpen}
+          placement="bottom-start"
           width={280}
-          withArrow
-          target={
+          trigger={
             <button
               type="button"
-              className={joinClassNames(
-                'TaskPage__detail__button',
-                !task.assignee && 'TaskPage__detail__button--empty'
+              className={cn(
+                DETAIL_BUTTON_CLASSES,
+                !task.assignee && DETAIL_BUTTON_EMPTY_CLASSES
               )}
-              aria-expanded={assigneePopoverOpen}
               disabled={savingField === 'assignee'}
-              onClick={() => setAssigneePopoverOpen(!assigneePopoverOpen)}
             >
               {task.assignee ? (
                 <>
@@ -1032,7 +1108,7 @@ function TaskMetadataPanel(props: {task: Task}) {
                 <span>Unassigned</span>
               )}
               <IconChevronDown
-                className="TaskPage__detail__chevron"
+                className={DETAIL_CHEVRON_CLASSES}
                 size={14}
                 strokeWidth="1.8"
               />
@@ -1053,18 +1129,17 @@ function TaskMetadataPanel(props: {task: Task}) {
 
       <TaskDetail label="Priority">
         <Menu
-          position="bottom"
-          placement="start"
-          shadow="md"
-          control={
+          label="Priority"
+          placement="bottom-start"
+          trigger={
             <button
               type="button"
-              className="TaskPage__detail__button"
+              className={DETAIL_BUTTON_CLASSES}
               disabled={savingField === 'priority'}
             >
               <TaskPriorityBadge priority={priority} />
               <IconChevronDown
-                className="TaskPage__detail__chevron"
+                className={DETAIL_CHEVRON_CLASSES}
                 size={14}
                 strokeWidth="1.8"
               />
@@ -1072,42 +1147,40 @@ function TaskMetadataPanel(props: {task: Task}) {
           }
         >
           {TASK_PRIORITY_OPTIONS.map((option) => (
-            <Menu.Item
+            <MenuItem
               key={option}
-              className={joinClassNames(
-                option === priority && 'TaskPage__menuItem--active'
+              hint={option === priority ? <IconCheck /> : undefined}
+              aria-current={option === priority || undefined}
+              className={cn(
+                option === priority && 'TaskPage__menuItem--active font-bold'
               )}
               onClick={() => savePriority(option)}
             >
               <TaskPriorityBadge priority={option} />
-            </Menu.Item>
+            </MenuItem>
           ))}
         </Menu>
       </TaskDetail>
 
       <TaskDetail label="Target launch">
         <Popover
-          opened={datePopoverOpen}
-          onClose={() => closeDatePopover()}
-          position="bottom"
-          placement="start"
-          shadow="md"
+          label="Target launch"
+          open={datePopoverOpen}
+          onOpenChange={(open) =>
+            open ? openDatePopover() : closeDatePopover()
+          }
+          placement="bottom-start"
           width={300}
-          withArrow
-          target={
+          trigger={
             <button
               type="button"
-              className={joinClassNames(
-                'TaskPage__detail__button',
-                !targetLaunch && 'TaskPage__detail__button--empty'
+              className={cn(
+                DETAIL_BUTTON_CLASSES,
+                !targetLaunch && DETAIL_BUTTON_EMPTY_CLASSES
               )}
-              aria-expanded={datePopoverOpen}
               disabled={savingField === 'targetLaunchDate'}
-              onClick={() =>
-                datePopoverOpen ? closeDatePopover() : openDatePopover()
-              }
             >
-              <span className="TaskPage__targetLaunch">
+              <span className="TaskPage__targetLaunch flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 {targetLaunch ? (
                   <TaskTargetLaunchLabel
                     launch={targetLaunch}
@@ -1119,18 +1192,19 @@ function TaskMetadataPanel(props: {task: Task}) {
                 )}
                 {targetLaunchHint && (
                   <span
-                    className={joinClassNames(
-                      'TaskPage__targetLaunch__hint',
+                    className={cn(
+                      'TaskPage__targetLaunch__hint flex gap-1.5 text-sm font-normal text-muted',
                       targetLaunchOverdue &&
-                        'TaskPage__targetLaunch__hint--overdue'
+                        'TaskPage__targetLaunch__hint--overdue text-danger'
                     )}
                   >
+                    <span aria-hidden="true">·</span>
                     {targetLaunchHint}
                   </span>
                 )}
               </span>
               <IconChevronDown
-                className="TaskPage__detail__chevron"
+                className={DETAIL_CHEVRON_CLASSES}
                 size={14}
                 strokeWidth="1.8"
               />
@@ -1153,7 +1227,7 @@ function TaskMetadataPanel(props: {task: Task}) {
           !isCcdToMe && (
             <button
               type="button"
-              className="TaskPage__textButton"
+              className={TEXT_BUTTON_CLASSES}
               disabled={savingField === 'cc'}
               onClick={() => saveCcList([...ccList, currentUserEmail])}
             >
@@ -1163,18 +1237,21 @@ function TaskMetadataPanel(props: {task: Task}) {
         }
       >
         {ccList.length > 0 && (
-          <div className="TaskPage__ccList" onCopy={handleCopyCc}>
+          <div
+            className="TaskPage__ccList mb-1.5 ml-2 mt-1 flex flex-wrap gap-1.5"
+            onCopy={handleCopyCc}
+          >
             {ccList.map((email) => (
               <span
-                className="TaskPage__ccChip"
+                className="TaskPage__ccChip inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-full bg-chip pl-0.5 pr-1 text-sm"
                 key={email}
                 data-user-email={email}
               >
                 <UserAvatar email={email} size={18} withTooltip={false} />
-                <UserTag email={email} />
+                <UserTag className="truncate" email={email} />
                 <button
                   type="button"
-                  className="TaskPage__ccChip__remove"
+                  className="TaskPage__ccChip__remove m-0 inline-flex size-5 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-muted hover:bg-border hover:text-strong focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:bg-transparent"
                   aria-label={`Remove ${email} from cc`}
                   disabled={savingField === 'cc'}
                   onClick={() =>
@@ -1188,20 +1265,19 @@ function TaskMetadataPanel(props: {task: Task}) {
           </div>
         )}
         <Popover
-          opened={ccPopoverOpen}
-          onClose={() => setCcPopoverOpen(false)}
-          position="bottom"
-          placement="start"
-          shadow="md"
+          label="Add people to cc"
+          open={ccPopoverOpen}
+          onOpenChange={setCcPopoverOpen}
+          placement="bottom-start"
           width={280}
-          withArrow
-          target={
+          trigger={
             <button
               type="button"
-              className="TaskPage__textButton TaskPage__addPeople"
-              aria-expanded={ccPopoverOpen}
+              className={cn(
+                TEXT_BUTTON_CLASSES,
+                'TaskPage__addPeople ml-2 py-1'
+              )}
               disabled={savingField === 'cc'}
-              onClick={() => setCcPopoverOpen(!ccPopoverOpen)}
             >
               + Add people
             </button>
@@ -1306,7 +1382,7 @@ function TaskTimeline(props: {
   }, [task, comments, events]);
 
   return (
-    <ol className="TaskPage__timeline">
+    <ol className="TaskPage__timeline m-0 flex list-none flex-col gap-3.5 p-0">
       {entries.map((entry) => {
         if (entry.kind === 'group') {
           return (
@@ -1407,26 +1483,26 @@ function TaskActivityGroup(props: {task: Task; items: ActivityItem[]}) {
     <div className="TaskPage__activityGroup">
       <button
         type="button"
-        className="TaskPage__activityGroup__summary"
+        className="TaskPage__activityGroup__summary group m-0 flex max-w-full cursor-pointer appearance-none items-center gap-2.5 rounded-sm border-0 bg-transparent py-0 pl-1.5 pr-0 text-left font-sans text-sm leading-5 text-strong focus-visible:outline-2 focus-visible:outline-focus"
         aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
       >
         <UserAvatarGroup
-          className="TaskPage__activityGroup__avatars"
+          className="TaskPage__activityGroup__avatars shrink-0 *:-ml-1.5 *:first:ml-0"
           emails={actors}
           size={18}
           max={3}
         />
-        <span className="TaskPage__activityGroup__text">
+        <span className="TaskPage__activityGroup__text min-w-0 wrap-anywhere">
           {summary} ·{' '}
           {firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`}
         </span>
-        <span className="TaskPage__activityGroup__toggle">
+        <span className="TaskPage__activityGroup__toggle inline-flex shrink-0 items-center gap-0.5 font-medium underline-offset-3 group-hover:underline">
           {expanded ? 'Hide' : 'Show all'}
           <IconChevronDown
-            className={joinClassNames(
-              'TaskPage__activityGroup__chevron',
-              expanded && 'TaskPage__activityGroup__chevron--open'
+            className={cn(
+              'TaskPage__activityGroup__chevron transition-transform',
+              expanded && 'TaskPage__activityGroup__chevron--open rotate-180'
             )}
             size={12}
             strokeWidth="2"
@@ -1434,7 +1510,7 @@ function TaskActivityGroup(props: {task: Task; items: ActivityItem[]}) {
         </span>
       </button>
       {expanded && (
-        <ol className="TaskPage__activityGroup__items">
+        <ol className="TaskPage__activityGroup__items mb-0 ml-3.5 mr-0 mt-2 flex list-none flex-col gap-2 border-0 border-l border-solid border-border py-1 pl-2.5 pr-0">
           {items.map((item) => (
             <li key={item.id}>
               <TaskActivityRow task={task} item={item} showTime />
@@ -1459,12 +1535,12 @@ function TaskActivityRow(props: {
     ? formatTaskDateTime(item.createdAt)
     : formatTaskDate(item.createdAt);
   return (
-    <div className="TaskPage__activity">
-      <span className="TaskPage__activity__icon">
+    <div className="TaskPage__activity flex items-start gap-2.5 pl-1.5 text-sm leading-5">
+      <span className="TaskPage__activity__icon inline-flex size-5 shrink-0 items-center justify-center text-subtle">
         <TaskActivityIcon item={item} />
       </span>
-      <span className="TaskPage__activity__text">
-        <b>
+      <span className="TaskPage__activity__text min-w-0 wrap-anywhere">
+        <b className="font-medium">
           <UserTag email={actor} />
         </b>{' '}
         {item.kind === 'opened' ? (
@@ -1474,11 +1550,11 @@ function TaskActivityRow(props: {
         ) : (
           <>
             changed {formatTaskField(item.event.field)} from{' '}
-            <span className="TaskPage__activity__value">
+            <span className={ACTIVITY_VALUE_CLASSES}>
               {formatTaskEventValue(item.event, 'old')}
             </span>{' '}
             to{' '}
-            <span className="TaskPage__activity__value">
+            <span className={ACTIVITY_VALUE_CLASSES}>
               {formatTaskEventValue(item.event, 'new')}
             </span>
           </>
@@ -1558,7 +1634,7 @@ function TaskCcEventSummary(props: {event: TaskEvent}) {
     emails.map((email, index) => (
       <span key={email}>
         {index > 0 && ', '}
-        <b>
+        <b className="font-medium">
           <UserTag email={email} />
         </b>
       </span>
@@ -1572,11 +1648,11 @@ function TaskCcEventSummary(props: {event: TaskEvent}) {
   return (
     <>
       changed cc from{' '}
-      <span className="TaskPage__activity__value">
+      <span className={ACTIVITY_VALUE_CLASSES}>
         {formatTaskEventValue(event, 'old')}
       </span>{' '}
       to{' '}
-      <span className="TaskPage__activity__value">
+      <span className={ACTIVITY_VALUE_CLASSES}>
         {formatTaskEventValue(event, 'new')}
       </span>
     </>
@@ -1595,7 +1671,7 @@ function TaskCommentThread(props: {
   const {comment} = props;
   const [replying, setReplying] = useState(false);
   return (
-    <Surface className="TaskPage__thread">
+    <Surface className="TaskPage__thread divide-y divide-border overflow-visible">
       <TaskCommentRow
         comment={comment}
         commentNumbers={props.commentNumbers}
@@ -1609,7 +1685,7 @@ function TaskCommentThread(props: {
         />
       ))}
       {replying && (
-        <div className="TaskPage__thread__reply">
+        <div className="TaskPage__thread__reply px-4 pb-3.5 pt-3 sm:pl-14">
           <TaskCommentComposer
             taskId={comment.taskId}
             parentId={comment.id}
@@ -1686,16 +1762,22 @@ function TaskCommentRow(props: {
   }
 
   return (
-    <div id={anchorId} className="TaskPage__comment">
+    <div
+      id={anchorId}
+      className="TaskPage__comment group flex scroll-mt-4 gap-3 px-4 pb-5 pt-4 first:rounded-t-lg last:rounded-b-lg target:bg-warning-soft"
+    >
       <UserAvatar email={comment.createdBy} size={28} />
-      <div className="TaskPage__comment__main">
-        <div className="TaskPage__comment__header">
-          <div className="TaskPage__comment__byline">
-            <b>
+      <div className="TaskPage__comment__main min-w-0 flex-1">
+        <div className="TaskPage__comment__header flex min-h-6 items-center justify-between gap-2">
+          <div className="TaskPage__comment__byline flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm">
+            <b className="font-semibold">
               <UserTag email={comment.createdBy || 'unknown'} />
             </b>
             {anchorId ? (
-              <a className="TaskPage__comment__timestamp" href={`#${anchorId}`}>
+              <a
+                className="TaskPage__comment__timestamp text-inherit no-underline underline-offset-3 hover:underline"
+                href={`#${anchorId}`}
+              >
                 {formatTaskDateTime(comment.createdAt)}
               </a>
             ) : (
@@ -1703,25 +1785,37 @@ function TaskCommentRow(props: {
             )}
             {comment.updatedAt && !comment.isDeleted && <span>(edited)</span>}
           </div>
-          <div className="TaskPage__comment__actions">
+          <div className="TaskPage__comment__actions flex shrink-0 items-center gap-1">
             {canModify && !editing && (
-              <Tooltip label="Edit">
-                <ActionIcon size="sm" onClick={() => setEditing(true)}>
-                  <IconPencil size={14} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
+              <IconButton
+                className={cn(
+                  'focus-visible:opacity-100',
+                  REVEAL_ON_HOVER_CLASSES
+                )}
+                label="Edit"
+                size="xs"
+                onClick={() => setEditing(true)}
+              >
+                <IconPencil strokeWidth="1.8" />
+              </IconButton>
             )}
             {canModify && !editing && (
-              <Tooltip label="Delete">
-                <ActionIcon size="sm" onClick={onDelete}>
-                  <IconTrash size={14} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
+              <IconButton
+                className={cn(
+                  'focus-visible:opacity-100',
+                  REVEAL_ON_HOVER_CLASSES
+                )}
+                label="Delete"
+                size="xs"
+                onClick={onDelete}
+              >
+                <IconTrash strokeWidth="1.8" />
+              </IconButton>
             )}
             {props.onReply && (
               <button
                 type="button"
-                className="TaskPage__textButton"
+                className={cn(TEXT_BUTTON_CLASSES, 'ml-1')}
                 onClick={props.onReply}
               >
                 Reply
@@ -1730,7 +1824,12 @@ function TaskCommentRow(props: {
           </div>
         </div>
         {editing ? (
-          <div className="TaskPage__comment__edit TaskPage__composerForm">
+          <div
+            className={cn(
+              'TaskPage__comment__edit mt-2',
+              COMPOSER_FORM_CLASSES
+            )}
+          >
             <CommentEditor
               variant="minimal"
               value={editBody}
@@ -1738,12 +1837,9 @@ function TaskCommentRow(props: {
               onChange={setEditBody}
               onSubmitShortcut={onEdit}
             />
-            <div className="TaskPage__composer__actions">
+            <div className={COMPOSER_ACTIONS_CLASSES}>
               <Button
                 className="TaskPage__composer__button"
-                size="xs"
-                radius={6}
-                variant="default"
                 onClick={() => {
                   setEditing(false);
                   setEditBody(
@@ -1755,9 +1851,7 @@ function TaskCommentRow(props: {
               </Button>
               <Button
                 className="TaskPage__composer__button"
-                size="xs"
-                radius={6}
-                color="dark"
+                variant="primary"
                 loading={saving}
                 disabled={!editBody}
                 onClick={onEdit}
@@ -1767,14 +1861,14 @@ function TaskCommentRow(props: {
             </div>
           </div>
         ) : (
-          <div className="TaskPage__comment__body">
+          <div className="TaskPage__comment__body mt-2.5 whitespace-pre-wrap text-base leading-normal">
             <CommentBody
               body={comment.body}
               content={comment.content}
               deleted={comment.isDeleted}
             />
             {!comment.isDeleted && attachments.length > 0 && (
-              <div className="TaskPage__files TaskPage__files--comment">
+              <div className="TaskPage__files TaskPage__files--comment mt-2.5 grid gap-2">
                 {attachments.map((attachment) => (
                   <TaskAttachmentTile
                     key={attachment.id}
@@ -1871,7 +1965,7 @@ function TaskCommentComposer(props: {
   }
 
   return (
-    <form className="TaskPage__composerForm" onSubmit={onSubmit}>
+    <form className={COMPOSER_FORM_CLASSES} onSubmit={onSubmit}>
       <CommentEditor
         key={editorKey}
         variant="minimal"
@@ -1883,61 +1977,60 @@ function TaskCommentComposer(props: {
         onPasteFiles={uploadFiles}
       />
       {attachments.length > 0 && (
-        <div className="TaskPage__composer__attachments">
+        <div className="TaskPage__composer__attachments flex flex-wrap gap-1.5 px-4 pb-2.5">
           {attachments.map((attachment) => (
-            <div className="TaskPage__composer__attachment" key={attachment.id}>
-              <IconPaperclip size={14} strokeWidth="1.8" />
-              <span className="TaskPage__composer__attachment__name">
+            <div
+              className="TaskPage__composer__attachment inline-flex min-h-6 max-w-full items-center gap-1 rounded-full border border-solid border-border bg-surface-hover py-0.5 pl-2.5 pr-1.5 text-sm"
+              key={attachment.id}
+            >
+              <IconPaperclip className="shrink-0" size={14} strokeWidth="1.8" />
+              <span className="TaskPage__composer__attachment__name truncate">
                 {formatTaskAttachmentName(attachment)}
               </span>
-              <ActionIcon
+              <IconButton
+                label="Remove attachment"
                 size="xs"
-                title="Remove attachment"
+                round
                 onClick={() =>
                   setAttachments((current) =>
                     current.filter((a) => a.id !== attachment.id)
                   )
                 }
               >
-                <IconX size={12} strokeWidth="1.8" />
-              </ActionIcon>
+                <IconX strokeWidth="1.8" />
+              </IconButton>
             </div>
           ))}
         </div>
       )}
-      <div className="TaskPage__composer__actions">
+      <div className={COMPOSER_ACTIONS_CLASSES}>
         <TaskAttachFilesButton
           uploading={uploading}
           onClick={() => fileInputRef.current?.click()}
         />
         <input
           ref={fileInputRef}
-          className="TaskPage__fileInput"
+          className="TaskPage__fileInput hidden"
           type="file"
           multiple
           onChange={(e: ChangeEvent<HTMLInputElement>) => {
             uploadFiles(Array.from(e.currentTarget.files || []));
           }}
         />
-        <div className="TaskPage__composer__actions__spacer" />
+        <div className="TaskPage__composer__actions__spacer flex-1" />
         {props.onCancel && (
           <Button
             className="TaskPage__composer__button"
-            size="xs"
-            radius={6}
-            variant="default"
             type="button"
             onClick={props.onCancel}
           >
             Cancel
           </Button>
         )}
-        <Tooltip label="Cmd+Enter to submit" withArrow>
+        <Tooltip label="Cmd+Enter to submit">
           <Button
             className="TaskPage__composer__button"
-            size="xs"
-            radius={6}
-            color="dark"
+            variant="primary"
             type="submit"
             loading={submitting}
             disabled={!canSubmit}

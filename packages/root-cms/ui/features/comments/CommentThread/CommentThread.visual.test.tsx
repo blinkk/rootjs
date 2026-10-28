@@ -1,7 +1,7 @@
+import '../../../styles/tailwind.out.css';
 import '../../../styles/global.css';
 import '../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render, screen, waitFor} from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import {
@@ -135,16 +135,14 @@ afterEach(() => {
 describe('CommentThread', () => {
   it('renders the thread history with mentions and a composer', () => {
     render(
-      <MantineProvider>
-        <div style={{width: '380px', padding: '20px'}}>
-          <CommentThread
-            docId="Pages/foo"
-            fieldKey="fields.hero.title"
-            fieldLabel="Hero › Title"
-            thread={THREAD}
-          />
-        </div>
-      </MantineProvider>
+      <div style={{width: '380px', padding: '20px'}}>
+        <CommentThread
+          docId="Pages/foo"
+          fieldKey="fields.hero.title"
+          fieldLabel="Hero › Title"
+          thread={THREAD}
+        />
+      </div>
     );
     expect(screen.getByText('Hero › Title')).toBeTruthy();
     expect(screen.getByText('Sure, on it.')).toBeTruthy();
@@ -161,14 +159,12 @@ describe('CommentThread', () => {
   it('resolves and reopens the thread', async () => {
     const user = userEvent.setup();
     const {rerender} = render(
-      <MantineProvider>
-        <CommentThread
-          docId="Pages/foo"
-          fieldKey="fields.hero.title"
-          fieldLabel="Hero › Title"
-          thread={THREAD}
-        />
-      </MantineProvider>
+      <CommentThread
+        docId="Pages/foo"
+        fieldKey="fields.hero.title"
+        fieldLabel="Hero › Title"
+        thread={THREAD}
+      />
     );
     await user.click(screen.getByRole('button', {name: 'Mark as resolved'}));
     expect(comments.resolveFieldCommentThread).toHaveBeenCalledWith(
@@ -177,14 +173,12 @@ describe('CommentThread', () => {
     );
 
     rerender(
-      <MantineProvider>
-        <CommentThread
-          docId="Pages/foo"
-          fieldKey="fields.hero.title"
-          fieldLabel="Hero › Title"
-          thread={{...THREAD, status: 'resolved'}}
-        />
-      </MantineProvider>
+      <CommentThread
+        docId="Pages/foo"
+        fieldKey="fields.hero.title"
+        fieldLabel="Hero › Title"
+        thread={{...THREAD, status: 'resolved'}}
+      />
     );
     expect(screen.getByText('Resolved')).toBeTruthy();
     await user.click(screen.getByRole('button', {name: 'Reopen thread'}));
@@ -198,15 +192,13 @@ describe('CommentThread', () => {
     const user = userEvent.setup();
     const onCommentAdded = vi.fn();
     render(
-      <MantineProvider>
-        <CommentThread
-          docId="Pages/foo"
-          fieldKey="fields.hero.title"
-          fieldLabel="Hero › Title"
-          thread={null}
-          onCommentAdded={onCommentAdded}
-        />
-      </MantineProvider>
+      <CommentThread
+        docId="Pages/foo"
+        fieldKey="fields.hero.title"
+        fieldLabel="Hero › Title"
+        thread={null}
+        onCommentAdded={onCommentAdded}
+      />
     );
     const editor = document.querySelector<HTMLElement>(
       '.LexicalEditor__editor'
@@ -238,14 +230,12 @@ describe('CommentThread', () => {
   it('hides the composer and controls for read-only users', () => {
     fieldCommentsCtx.canComment = false;
     render(
-      <MantineProvider>
-        <CommentThread
-          docId="Pages/foo"
-          fieldKey="fields.hero.title"
-          fieldLabel="Hero › Title"
-          thread={THREAD}
-        />
-      </MantineProvider>
+      <CommentThread
+        docId="Pages/foo"
+        fieldKey="fields.hero.title"
+        fieldLabel="Hero › Title"
+        thread={THREAD}
+      />
     );
     expect(screen.queryByRole('button', {name: 'Add comment'})).toBeNull();
     expect(screen.queryByRole('button', {name: 'Mark as resolved'})).toBeNull();

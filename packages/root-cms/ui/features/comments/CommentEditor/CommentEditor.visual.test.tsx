@@ -1,7 +1,7 @@
+import '../../../styles/tailwind.out.css';
 import '../../../styles/global.css';
 import '../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {cleanup, render, screen, waitFor} from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
@@ -53,17 +53,15 @@ describe('CommentEditor', () => {
     const user = userEvent.setup();
     let value: RichTextData | null = null;
     render(
-      <MantineProvider>
-        <div style={{padding: '20px'}}>
-          <CommentEditor
-            variant="minimal"
-            placeholder="Comment…"
-            onChange={(next) => {
-              value = next;
-            }}
-          />
-        </div>
-      </MantineProvider>
+      <div style={{padding: '20px'}}>
+        <CommentEditor
+          variant="minimal"
+          placeholder="Comment…"
+          onChange={(next) => {
+            value = next;
+          }}
+        />
+      </div>
     );
 
     const editor = document.querySelector<HTMLElement>(
@@ -104,11 +102,7 @@ describe('CommentEditor', () => {
 
   it('does not open the menu for emails typed inline', async () => {
     const user = userEvent.setup();
-    render(
-      <MantineProvider>
-        <CommentEditor variant="minimal" placeholder="Comment…" />
-      </MantineProvider>
-    );
+    render(<CommentEditor variant="minimal" placeholder="Comment…" />);
     const editor = document.querySelector<HTMLElement>(
       '.LexicalEditor__editor'
     )!;

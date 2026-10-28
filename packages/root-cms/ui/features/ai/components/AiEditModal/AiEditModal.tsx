@@ -1,19 +1,26 @@
 import './AiEditModal.css';
 
-import {Button, JsonInput, Tabs} from '@mantine/core';
 import {
   IconArrowBackUp,
   IconCheck,
   IconFileDiff,
   IconJson,
 } from '@tabler/icons-preact';
-import {useRef, useState} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import {useMemo, useCallback} from 'preact/hooks';
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+} from '../../../../primitives/Tabs/Tabs.js';
 import {deserializeDocJson} from '../../../documents/doc.js';
 import {AiResponse, ChatPanel} from './ChatPanel.js';
 
@@ -45,7 +52,7 @@ export function useAiEditModal() {
 
 export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   const {innerProps: props, context, id} = modalProps;
-  const diffTabRef = useRef<HTMLButtonElement | null>(null);
+  const [tab, setTab] = useState<string>('json');
 
   const originalValue = useMemo(
     () => JSON.stringify(props.data || {}, null, 2),
@@ -84,14 +91,14 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
       const newValue = JSON.stringify(resp.data, null, 2);
       setValue(newValue);
       // Show the diff automatically when the AI is done editing.
-      diffTabRef.current?.click();
+      setTab('diff');
     }
   }, []);
 
   return (
     <div className="AiEditModal">
-      <div className="AiEditModal__SplitPanel">
-        <div className="AiEditModal__SplitPanel__ChatPanel">
+      <div className="AiEditModal__SplitPanel grid grid-cols-1 gap-6 md:h-170 md:grid-cols-2">
+        <div className="AiEditModal__SplitPanel__ChatPanel flex h-120 min-h-0 flex-col md:h-full">
           <ChatPanel
             editModeData={parsedValue}
             onEditModeResponse={handleEditModeResponse}
@@ -107,38 +114,52 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
             </p>
           </ChatPanel>
         </div>
-        <div className="AiEditModal__SplitPanel__JsonPanel">
-          <Tabs className="AiEditModal__Tabs" grow>
-            <Tabs.Tab label="JSON" icon={<IconJson size={20} />}>
-              <div className="AiEditModal__JsonEditor">
-                <JsonInput
-                  value={value}
-                  onChange={(newValue: string) => setValue(newValue)}
-                  formatOnBlur
-                  height="100%"
-                  className="AiEditModal__JsonInput"
-                />
-              </div>
-            </Tabs.Tab>
-            <Tabs.Tab
-              ref={diffTabRef}
-              label="Diff"
-              icon={<IconFileDiff size={20} />}
+        <div className="AiEditModal__SplitPanel__JsonPanel flex h-120 min-h-0 flex-col md:h-full">
+          <Tabs
+            className="AiEditModal__Tabs flex min-h-0 flex-1 flex-col"
+            value={tab}
+            onChange={setTab}
+            grow
+          >
+            <TabList aria-label="Edit views">
+              <Tab value="json" icon={<IconJson />}>
+                JSON
+              </Tab>
+              <Tab value="diff" icon={<IconFileDiff />}>
+                Diff
+              </Tab>
+            </TabList>
+            <TabPanel
+              value="json"
+              className="AiEditModal__JsonEditor min-h-0 w-full flex-1"
             >
-              <div className="AiEditModal__JsonDiffViewer">
+              <JsonInput
+                aria-label="JSON"
+                value={value}
+                onValueChange={(newValue: string) => setValue(newValue)}
+                formatOnBlur
+                className="AiEditModal__JsonInput h-full w-full"
+                inputClassName="h-full w-full resize-none text-sm leading-normal"
+              />
+            </TabPanel>
+            <TabPanel value="diff" className="min-h-0 w-full flex-1">
+              <div className="AiEditModal__JsonDiffViewer h-full w-full overflow-auto rounded-sm border border-border-strong">
                 {props.data && value && (
-                  <JsDiff oldCode={originalValue} newCode={value} />
+                  <JsDiff
+                    className="h-full"
+                    oldCode={originalValue}
+                    newCode={value}
+                  />
                 )}
               </div>
-            </Tabs.Tab>
+            </TabPanel>
           </Tabs>
         </div>
       </div>
-      <div className="AiEditModal__buttons">
+      <div className="AiEditModal__buttons mt-6 flex flex-wrap justify-end gap-3">
         <Button
           variant="default"
           size="xs"
-          color="dark"
           type="button"
           onClick={() => context.closeModal(id)}
         >
@@ -148,17 +169,17 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           variant="default"
           size="xs"
           type="button"
-          leftIcon={<IconArrowBackUp size={16} />}
+          icon={<IconArrowBackUp />}
           disabled={!changed}
           onClick={() => setValue(originalValue)}
         >
           Reset
         </Button>
         <Button
-          leftIcon={<IconCheck size={16} />}
-          variant="filled"
+          icon={<IconCheck />}
+          variant="primary"
           size="xs"
-          color="green"
+          type="button"
           disabled={!parsedValue || !changed}
           onClick={onSave}
         >

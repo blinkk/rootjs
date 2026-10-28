@@ -1,9 +1,11 @@
-.CommentEditor {
-  width: 100%;
-}
-
+/*
+ * Positions the Lexical placeholder over the comment editor's padding. These
+ * rules override `LexicalEditor.css`, which is still unlayered legacy CSS, so
+ * they stay unlayered too until the editor is migrated (Phase 4). The 13px
+ * size matches the comment editor's text there.
+ */
 .CommentEditor .LexicalEditor__placeholder {
-  color: var(--color-text-gray);
+  color: var(--cms-color-text-muted);
   font-size: 13px;
   left: 12px;
   line-height: 1.5;

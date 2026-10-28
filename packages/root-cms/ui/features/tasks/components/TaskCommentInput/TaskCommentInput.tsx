@@ -1,11 +1,10 @@
-import {ActionIcon, Loader, Tooltip} from '@mantine/core';
 import {IconSend2} from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {cn} from '../../../../utils/classes.js';
 import {UserProfile} from '../../../users/user-profile.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {useAllUserProfiles} from '../../../users/useUserProfile.js';
-import './TaskCommentInput.css';
 
 export interface TaskCommentInputProps {
   /** Initial value of the comment input. */
@@ -233,15 +232,21 @@ export function TaskCommentInput(props: TaskCommentInputProps) {
     }
   }
 
+  const inactive = props.disabled || submitting;
   return (
     <div
-      className={joinClassNames('TaskCommentInput', props.className)}
-      data-disabled={props.disabled || submitting ? 'true' : 'false'}
+      className={cn(
+        'TaskCommentInput',
+        'relative flex flex-col gap-1 rounded-lg border border-border bg-surface py-2 pr-2 pl-3',
+        inactive && 'pointer-events-none opacity-70',
+        props.className
+      )}
+      data-disabled={inactive ? 'true' : 'false'}
     >
-      <div className="TaskCommentInput__field">
+      <div className="TaskCommentInput__field flex flex-col gap-2">
         <textarea
           ref={textareaRef}
-          className="TaskCommentInput__textarea"
+          className="TaskCommentInput__textarea m-0 block max-h-50 min-h-8 w-full resize-none appearance-none border-0 bg-transparent px-0 py-1 font-sans text-base text-fg outline-none placeholder:text-subtle"
           placeholder={props.placeholder || 'Add a comment. Use @ to mention.'}
           rows={1}
           value={value}
@@ -251,39 +256,35 @@ export function TaskCommentInput(props: TaskCommentInputProps) {
             // Delay closing so a click on a suggestion still fires.
             setTimeout(() => setMention(null), 150);
           }}
-          disabled={props.disabled || submitting}
+          disabled={inactive}
         />
-        <div className="TaskCommentInput__actions">
+        <div className="TaskCommentInput__actions flex items-center justify-end gap-2">
           {props.onCancel && (
             <button
               type="button"
-              className="TaskCommentInput__cancel"
+              className="TaskCommentInput__cancel m-0 cursor-pointer appearance-none rounded-sm border-0 bg-transparent px-2 py-1 font-sans text-sm text-muted hover:bg-surface-active focus-visible:outline-2 focus-visible:outline-focus"
               onClick={props.onCancel}
               disabled={submitting}
             >
               Cancel
             </button>
           )}
-          <Tooltip
+          <IconButton
+            className="TaskCommentInput__submit"
             label={props.submitLabel || 'Comment (Cmd+Enter)'}
-            position="top"
-            withArrow
+            variant="primary"
+            round
+            loading={submitting}
+            onClick={submit}
+            disabled={!value.trim() || submitting || props.disabled}
           >
-            <ActionIcon
-              variant="filled"
-              color="dark"
-              radius="xl"
-              onClick={submit}
-              disabled={!value.trim() || submitting || props.disabled}
-            >
-              {submitting ? <Loader size={14} /> : <IconSend2 size={16} />}
-            </ActionIcon>
-          </Tooltip>
+            <IconSend2 />
+          </IconButton>
         </div>
       </div>
       {mention && suggestions.length > 0 && (
         <ul
-          className="TaskCommentInput__suggestions"
+          className="TaskCommentInput__suggestions absolute right-0 bottom-full left-0 z-(--cms-z-dropdown) m-0 mb-1.5 max-h-60 list-none overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-md"
           role="listbox"
           aria-label="User mention suggestions"
         >
@@ -292,11 +293,7 @@ export function TaskCommentInput(props: TaskCommentInputProps) {
               key={profile.email}
               role="option"
               aria-selected={index === mention.selectedIndex}
-              className={joinClassNames(
-                'TaskCommentInput__suggestion',
-                index === mention.selectedIndex &&
-                  'TaskCommentInput__suggestion--active'
-              )}
+              className="TaskCommentInput__suggestion flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-active aria-selected:bg-surface-active"
               // Use mousedown so this fires before the textarea's blur handler.
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -314,13 +311,13 @@ export function TaskCommentInput(props: TaskCommentInputProps) {
                 size={24}
                 withTooltip={false}
               />
-              <div className="TaskCommentInput__suggestion__text">
+              <div className="TaskCommentInput__suggestion__text flex min-w-0 flex-col gap-px">
                 {profile.displayName && (
-                  <div className="TaskCommentInput__suggestion__name">
+                  <div className="TaskCommentInput__suggestion__name truncate text-sm font-medium text-strong">
                     {profile.displayName}
                   </div>
                 )}
-                <div className="TaskCommentInput__suggestion__email">
+                <div className="TaskCommentInput__suggestion__email truncate text-xs text-muted">
                   {profile.email}
                 </div>
               </div>

@@ -1,11 +1,12 @@
 import './AiSummary.css';
 
-import {Button, Loader} from '@mantine/core';
 import {IconRobot} from '@tabler/icons-preact';
 import {useRef, useState} from 'preact/hooks';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {cn} from '../../../../utils/classes.js';
 import {cmsGetDocDiffSummary} from '../../../documents/doc.js';
 
 export type AiSummaryStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -65,14 +66,23 @@ export interface AiSummaryResultProps {
 
 /** Renders the output of `useAiSummary()`. Renders nothing while idle. */
 export function AiSummaryResult(props: AiSummaryResultProps) {
-  const className = joinClassNames(props.className, 'AiSummaryResult');
+  const className = cn(
+    'AiSummaryResult',
+    'block pt-2 font-sans text-sm leading-normal',
+    props.className
+  );
   if (props.status === 'idle') {
     return null;
   }
   if (props.status === 'loading') {
     return (
-      <div className={joinClassNames(className, 'AiSummaryResult--loading')}>
-        <Loader size="sm" color="gray" />
+      <div
+        className={cn(
+          className,
+          'AiSummaryResult--loading flex items-center gap-2'
+        )}
+      >
+        <Spinner className="text-muted" label={null} />
         <Text size="body-sm" color="gray">
           Summarizing changes...
         </Text>
@@ -122,18 +132,23 @@ export function AiSummary(props: AiSummaryProps) {
   const generated = aiSummary.status === 'success';
 
   return (
-    <div className={joinClassNames(props.className, 'AiSummary')}>
-      <div className="AiSummary__header">
-        <IconRobot className="AiSummary__header__icon" size={18} />
-        <div className="AiSummary__header__label">AI summary</div>
-        <div className="AiSummary__header__help">
+    <div
+      className={cn(
+        'AiSummary',
+        'rounded-sm border border-border bg-surface',
+        props.className
+      )}
+    >
+      <div className="AiSummary__header flex items-center gap-2 px-3 py-2 font-sans text-sm">
+        <IconRobot className="AiSummary__header__icon shrink-0" size={18} />
+        <div className="AiSummary__header__label font-semibold">AI summary</div>
+        <div className="AiSummary__header__help min-w-0 flex-1 text-muted">
           Summarize the changes with Root AI.
         </div>
         <Button
-          className="AiSummary__header__button"
+          className="AiSummary__header__button shrink-0"
           variant="default"
           size="xs"
-          compact
           loading={aiSummary.status === 'loading'}
           onClick={() => aiSummary.generate()}
         >
@@ -141,7 +156,7 @@ export function AiSummary(props: AiSummaryProps) {
         </Button>
       </div>
       {aiSummary.status !== 'idle' && (
-        <div className="AiSummary__body">
+        <div className="AiSummary__body border-t border-border px-3 pt-1 pb-3">
           <AiSummaryResult
             status={aiSummary.status}
             summary={aiSummary.summary}

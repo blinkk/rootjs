@@ -1,5 +1,3 @@
-import './EmbeddedAIPage.css';
-
 import {useEffect, useRef} from 'preact/hooks';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
@@ -32,7 +30,7 @@ export function EmbeddedAIPage() {
   }, [docId]);
 
   return (
-    <div className="EmbeddedAIPage">
+    <div className="EmbeddedAIPage h-dvh w-full overflow-hidden bg-surface">
       <RootAIChat variant="panel" docContext={docId ? {docId} : undefined} />
     </div>
   );

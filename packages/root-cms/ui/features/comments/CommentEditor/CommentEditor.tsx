@@ -1,7 +1,7 @@
 import './CommentEditor.css';
 
 import {RichTextData} from '../../../../shared/richtext.js';
-import {joinClassNames} from '../../../utils/classes.js';
+import {cn, joinClassNames} from '../../../utils/classes.js';
 import {LexicalEditor} from '../../documents/components/RichTextEditor/lexical/LexicalEditor.js';
 
 export interface CommentEditorProps {
@@ -67,7 +67,7 @@ export function CommentEditor(props: CommentEditorProps) {
       onPaste={onPaste}
     >
       <LexicalEditor
-        className={joinClassNames('CommentEditor', props.className)}
+        className={cn('CommentEditor w-full', props.className)}
         placeholder={props.placeholder}
         value={props.value}
         onChange={props.onChange}

@@ -1,7 +1,7 @@
+import '../../../styles/tailwind.out.css';
 import '../../../styles/global.css';
 import '../../../styles/theme.css';
 
-import {MantineProvider} from '@mantine/core';
 import {act, cleanup, render, screen, waitFor} from '@testing-library/preact';
 import {LocationProvider} from 'preact-iso';
 import {
@@ -114,14 +114,12 @@ function CaptureContext() {
 
 function renderPinned() {
   return render(
-    <MantineProvider>
-      <LocationProvider>
-        <PinnedCommentThreadsProvider>
-          <CaptureContext />
-          <PinnedCommentThreads />
-        </PinnedCommentThreadsProvider>
-      </LocationProvider>
-    </MantineProvider>
+    <LocationProvider>
+      <PinnedCommentThreadsProvider>
+        <CaptureContext />
+        <PinnedCommentThreads />
+      </PinnedCommentThreadsProvider>
+    </LocationProvider>
   );
 }
 

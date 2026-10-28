@@ -1,9 +1,10 @@
-import './CommentsPanel.css';
-
-import {ActionIcon, Loader, SegmentedControl} from '@mantine/core';
 import {IconX} from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {FieldCommentThread, isOpenThread} from '../../../../shared/comments.js';
+import {Badge} from '../../../primitives/Badge/Badge.js';
+import {IconButton} from '../../../primitives/IconButton/IconButton.js';
+import {SegmentedControl} from '../../../primitives/SegmentedControl/SegmentedControl.js';
+import {Spinner} from '../../../primitives/Spinner/Spinner.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {useCollectionSchema} from '../../collections/useCollectionSchema.js';
 import {formatFieldPath} from '../../documents/field-labels.js';
@@ -12,6 +13,9 @@ import {CommentThread} from '../CommentThread/CommentThread.js';
 import {useFieldComments} from '../useFieldComments.js';
 
 type CommentsFilter = 'open' | 'resolved' | 'all';
+
+const EMPTY_CLASSES =
+  'CommentsPanel__empty px-1 py-2 text-sm leading-normal text-muted';
 
 export interface CommentsPanelProps {
   /** The document ID whose comments are shown. */
@@ -127,26 +131,28 @@ export function CommentsPanel(props: CommentsPanelProps) {
   };
 
   return (
-    <div className="CommentsPanel">
-      <div className="CommentsPanel__header">
-        <div className="CommentsPanel__header__title">
+    <div className="CommentsPanel flex h-full flex-col overflow-hidden">
+      <div className="CommentsPanel__header flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3">
+        <div className="CommentsPanel__header__title flex items-center gap-1.5 text-sm font-semibold">
           Comments
           {openCount > 0 && (
-            <span className="CommentsPanel__header__count">{openCount}</span>
+            <Badge className="CommentsPanel__header__count" tone="info">
+              {openCount}
+            </Badge>
           )}
         </div>
         {props.onClose && (
-          <ActionIcon size="xs" onClick={props.onClose} title="Close comments">
-            <IconX size={14} />
-          </ActionIcon>
+          <IconButton size="xs" onClick={props.onClose} label="Close comments">
+            <IconX />
+          </IconButton>
         )}
       </div>
-      <div className="CommentsPanel__filters">
+      <div className="CommentsPanel__filters shrink-0 border-b border-border px-3 py-2">
         <SegmentedControl
-          size="xs"
+          aria-label="Comment filters"
           fullWidth
           value={filter}
-          onChange={(value: string) => setFilter(value as CommentsFilter)}
+          onValueChange={setFilter}
           data={[
             {value: 'open', label: `Open (${openCount})`},
             {value: 'resolved', label: `Resolved (${resolvedCount})`},
@@ -154,13 +160,16 @@ export function CommentsPanel(props: CommentsPanelProps) {
           ]}
         />
       </div>
-      <div className="CommentsPanel__body" ref={bodyRef}>
+      <div
+        className="CommentsPanel__body flex flex-1 flex-col gap-2.5 overflow-auto p-3"
+        ref={bodyRef}
+      >
         {ctx?.loading ? (
-          <div className="CommentsPanel__loading">
-            <Loader size="sm" color="gray" />
+          <div className="CommentsPanel__loading flex justify-center p-6 text-muted">
+            <Spinner />
           </div>
         ) : ctx?.error ? (
-          <div className="CommentsPanel__empty">Failed to load comments.</div>
+          <div className={EMPTY_CLASSES}>Failed to load comments.</div>
         ) : (
           <>
             {draftFieldKey && (
@@ -190,7 +199,7 @@ export function CommentsPanel(props: CommentsPanelProps) {
               />
             ))}
             {visibleThreads.length === 0 && !draftFieldKey && (
-              <div className="CommentsPanel__empty">
+              <div className={EMPTY_CLASSES}>
                 {threads.length === 0
                   ? 'No comments yet. Use the comment button next to a field label to start a thread.'
                   : filter === 'open'
@@ -221,7 +230,9 @@ function CommentsPanelThread(props: CommentsPanelThreadProps) {
     <div
       className={joinClassNames(
         'CommentsPanel__thread',
-        props.focused && 'CommentsPanel__thread--focused'
+        props.focused && 'CommentsPanel__thread--focused',
+        'rounded-lg border bg-surface p-3 transition-[border-color,box-shadow] duration-200',
+        props.focused ? 'border-focus ring-2 ring-focus/20' : 'border-border'
       )}
       data-field-key={props.fieldKey}
     >

@@ -9,7 +9,7 @@ import {
 } from '../../../../shared/richtext.js';
 import {sanitizeInlineHtml} from '../../../../shared/sanitize.js';
 import {Markdown} from '../../../components/Markdown/Markdown.js';
-import {joinClassNames} from '../../../utils/classes.js';
+import {cn, joinClassNames} from '../../../utils/classes.js';
 import {UserTag} from '../../users/UserTag/UserTag.js';
 
 export interface CommentBodyProps {
@@ -34,9 +34,14 @@ export interface CommentBodyProps {
 export function CommentBody(props: CommentBodyProps) {
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'CommentBody',
         props.deleted && 'CommentBody--deleted',
+        // Long unbreakable tokens (e.g. Google Docs urls) wrap instead of
+        // overflowing the popover. `anywhere` also keeps them out of the
+        // min-content width, so they can't widen flex parents either.
+        'whitespace-pre-wrap text-base leading-normal break-normal wrap-anywhere',
+        props.deleted && 'italic text-muted',
         props.className
       )}
       onClick={onCommentBodyClick}
@@ -113,7 +118,11 @@ function toVNode(node: Node, key: number): ComponentChildren {
   const mentionEmail = el.getAttribute('data-mention');
   if (el.tagName === 'A' && mentionEmail) {
     return (
-      <UserTag key={key} className="CommentBody__mention" email={mentionEmail}>
+      <UserTag
+        key={key}
+        className="CommentBody__mention whitespace-nowrap font-semibold underline underline-offset-3"
+        email={mentionEmail}
+      >
         {children}
       </UserTag>
     );

@@ -17,12 +17,12 @@
 import './RootAIChat.css';
 
 import {useChat} from '@ai-sdk/react';
-import {ActionIcon, Badge, Button, Loader, Menu, Tooltip} from '@mantine/core';
 import {
   IconCheck,
   IconChevronDown,
   IconChevronRight,
   IconCopy,
+  IconHistory,
   IconMessageCirclePlus,
   IconPaperclip,
   IconPencil,
@@ -34,8 +34,16 @@ import {
 import type {UIMessage} from 'ai';
 import {lastAssistantMessageIsCompleteWithToolCalls} from 'ai';
 import {marked} from 'marked';
+import {createContext} from 'preact';
 import type {ComponentChildren} from 'preact';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isGoogleWriteTool} from '../../../../../core/ai-tools-google.js';
 import type {SerializedAiSkillSummary} from '../../../../../shared/ai/extensions.js';
@@ -47,7 +55,13 @@ import {BouncingLoader} from '../../../../components/BouncingLoader/BouncingLoad
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {uploadFileToGCS} from '../../../../integrations/gcs.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {cn} from '../../../../utils/classes.js';
 import {stableJsonStringify} from '../../../../utils/objects.js';
 import {
   ChatSummary,
@@ -266,6 +280,18 @@ interface ToolApprovalControls {
 
 const NEW_CHAT_ID = '';
 
+/** The chat's variant, so nested views can size themselves for the panel. */
+const ChatVariantContext = createContext<RootAIChatVariant>('page');
+
+/** Whether the chat is rendered as the compact side panel. */
+function useIsPanel() {
+  return useContext(ChatVariantContext) === 'panel';
+}
+
+/** Inline `<code>` in the "not configured" message. */
+const CODE_CLASSES =
+  'rounded-sm border border-border bg-surface-hover px-1 font-mono';
+
 export function RootAIChat(props: RootAIChatProps) {
   const [config, setConfig] = useState<AiConfigResponse | null>(null);
   const [configError, setConfigError] = useState<string>('');
@@ -292,57 +318,70 @@ export function RootAIChat(props: RootAIChatProps) {
   const isEnabled = !!config?.enabled && (config.models?.length || 0) > 0;
 
   return (
-    <div
-      className={joinClassNames('RootAIChat', `RootAIChat--${props.variant}`)}
-    >
-      {!config && !configError ? (
-        <div className="RootAIChat__loading">
-          <Loader size="md" color="gray" />
-        </div>
-      ) : isEnabled ? (
-        <ChatExperience
-          variant={props.variant}
-          config={config!}
-          initialChatId={
-            props.variant === 'panel' ? undefined : props.initialChatId
-          }
-          docContext={props.docContext}
-          releaseContext={props.releaseContext}
-          prompt={props.prompt}
-          suggestedPrompts={props.suggestedPrompts}
-          onClose={props.onClose}
-        />
-      ) : (
-        <NotConfigured error={configError} onClose={props.onClose} />
-      )}
-    </div>
+    <ChatVariantContext.Provider value={props.variant}>
+      <div
+        className={cn(
+          'RootAIChat',
+          `RootAIChat--${props.variant}`,
+          'relative flex size-full min-h-0 flex-col overflow-hidden bg-page'
+        )}
+      >
+        {!config && !configError ? (
+          <div className="RootAIChat__loading flex flex-1 items-center justify-center text-muted">
+            <Spinner size="lg" />
+          </div>
+        ) : isEnabled ? (
+          <ChatExperience
+            variant={props.variant}
+            config={config!}
+            initialChatId={
+              props.variant === 'panel' ? undefined : props.initialChatId
+            }
+            docContext={props.docContext}
+            releaseContext={props.releaseContext}
+            prompt={props.prompt}
+            suggestedPrompts={props.suggestedPrompts}
+            onClose={props.onClose}
+          />
+        ) : (
+          <NotConfigured error={configError} onClose={props.onClose} />
+        )}
+      </div>
+    </ChatVariantContext.Provider>
   );
 }
 
 function NotConfigured(props: {error?: string; onClose?: () => void}) {
+  const isPanel = useIsPanel();
   return (
-    <div className="RootAIChat__notEnabled">
+    <div className="RootAIChat__notEnabled absolute inset-x-0 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 px-6 text-center">
       {props.onClose && (
-        <ActionIcon
-          className="RootAIChat__notEnabled__close"
-          onClick={props.onClose}
-          title="Close"
-        >
-          <IconX size={16} />
-        </ActionIcon>
+        <div className="RootAIChat__notEnabled__close absolute top-2 right-2 flex">
+          <IconButton label="Close" onClick={props.onClose}>
+            <IconX />
+          </IconButton>
+        </div>
       )}
-      <div className="RootAIChat__notEnabled__icon">
+      <div className="RootAIChat__notEnabled__icon flex rounded-full border border-border p-1.5">
         <IconRobot size={36} />
       </div>
-      <div className="RootAIChat__notEnabled__title">
+      <div
+        className={cn(
+          'RootAIChat__notEnabled__title font-bold leading-tight',
+          isPanel ? 'text-xl' : 'text-2xl'
+        )}
+      >
         Root AI is not configured for this project.
       </div>
-      <div className="RootAIChat__notEnabled__body">
-        Add an <code>ai.models</code> entry to <code>cmsPlugin()</code> in{' '}
-        <code>root.config.ts</code>.
+      <div className="RootAIChat__notEnabled__body text-base text-muted">
+        Add an <code className={CODE_CLASSES}>ai.models</code> entry to{' '}
+        <code className={CODE_CLASSES}>cmsPlugin()</code> in{' '}
+        <code className={CODE_CLASSES}>root.config.ts</code>.
       </div>
       {props.error && (
-        <pre className="RootAIChat__notEnabled__error">{props.error}</pre>
+        <pre className="RootAIChat__notEnabled__error mt-3 mb-0 max-w-150 overflow-auto rounded-md border border-danger-line bg-danger-soft px-3 py-2 font-mono text-sm text-danger">
+          {props.error}
+        </pre>
       )}
     </div>
   );
@@ -491,9 +530,10 @@ function ChatExperience(props: {
   };
 
   return (
-    <div className="RootAIChat__layout">
+    <div className="RootAIChat__layout flex min-h-0 flex-1">
       {!isPanel && (
         <ChatHistorySidebar
+          className="hidden md:flex"
           chats={chats}
           activeChatId={activeChatId}
           onSelect={openChat}
@@ -501,9 +541,17 @@ function ChatExperience(props: {
           onDelete={deleteChat}
         />
       )}
-      <div className="RootAIChat__main">
-        {isPanel && (
+      <div className="RootAIChat__main relative flex min-h-0 min-w-0 flex-1 flex-col">
+        {isPanel ? (
           <PanelHeader onNewChat={startNewChat} onClose={props.onClose} />
+        ) : (
+          <MobileHeader
+            chats={chats}
+            activeChatId={activeChatId}
+            onSelect={openChat}
+            onNew={startNewChat}
+            onDelete={deleteChat}
+          />
         )}
         <ChatPane
           key={resetKey}
@@ -539,83 +587,148 @@ function ChatExperience(props: {
 
 function PanelHeader(props: {onNewChat: () => void; onClose?: () => void}) {
   return (
-    <div className="RootAIChat__panelHeader">
-      <div className="RootAIChat__panelHeader__title">
+    <div className="RootAIChat__panelHeader flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3">
+      <div className="RootAIChat__panelHeader__title flex items-center gap-1.5 text-sm font-semibold">
         <IconRobot size={14} />
         <span>Root AI</span>
       </div>
-      <div className="RootAIChat__panelHeader__actions">
-        <Tooltip label="New chat">
-          <ActionIcon size="xs" onClick={props.onNewChat}>
-            <IconMessageCirclePlus size={14} />
-          </ActionIcon>
-        </Tooltip>
+      <div className="RootAIChat__panelHeader__actions flex items-center gap-0.5">
+        <IconButton size="xs" label="New chat" onClick={props.onNewChat}>
+          <IconMessageCirclePlus />
+        </IconButton>
         {props.onClose && (
-          <Tooltip label="Close (⌘ + i)">
-            <ActionIcon size="xs" onClick={props.onClose}>
-              <IconX size={14} />
-            </ActionIcon>
-          </Tooltip>
+          <IconButton size="xs" label="Close (⌘ + i)" onClick={props.onClose}>
+            <IconX />
+          </IconButton>
         )}
       </div>
     </div>
   );
 }
 
-function ChatHistorySidebar(props: {
+interface ChatHistoryProps {
   chats: ChatSummary[];
   activeChatId: string;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
-}) {
+}
+
+/**
+ * The page variant's header below `md`, where the history sidebar is hidden:
+ * opens the chat history in a drawer, and starts a new chat.
+ */
+function MobileHeader(props: ChatHistoryProps) {
+  const [open, setOpen] = useState(false);
+  const activeChat = props.chats.find((c) => c.id === props.activeChatId);
   return (
-    <aside className="RootAIChat__sidebar">
+    <div className="RootAIChat__mobileHeader flex h-10 shrink-0 items-center gap-1 border-b border-border bg-surface px-2 md:hidden">
+      <IconButton
+        label="Chat history"
+        tooltip={false}
+        onClick={() => setOpen(true)}
+      >
+        <IconHistory />
+      </IconButton>
+      <div className="RootAIChat__mobileHeader__title min-w-0 flex-1 truncate text-sm font-semibold">
+        {activeChat?.title || 'New chat'}
+      </div>
+      <IconButton label="New chat" tooltip={false} onClick={props.onNew}>
+        <IconMessageCirclePlus />
+      </IconButton>
+      <Dialog
+        className="RootAIChat__historyDrawer"
+        bodyClassName="flex flex-col px-0 pb-0"
+        open={open}
+        onClose={() => setOpen(false)}
+        position="left"
+        size={280}
+        title="Chats"
+      >
+        <ChatHistoryList
+          {...props}
+          onSelect={(id) => {
+            setOpen(false);
+            props.onSelect(id);
+          }}
+          onNew={() => {
+            setOpen(false);
+            props.onNew();
+          }}
+        />
+      </Dialog>
+    </div>
+  );
+}
+
+function ChatHistorySidebar(props: ChatHistoryProps & {className?: string}) {
+  const {className, ...listProps} = props;
+  return (
+    <aside
+      className={cn(
+        'RootAIChat__sidebar min-h-0 w-65 shrink-0 flex-col overflow-hidden border-r border-border bg-surface',
+        className
+      )}
+    >
+      <ChatHistoryList {...listProps} />
+    </aside>
+  );
+}
+
+/** The "New chat" button and the list of past chats. */
+function ChatHistoryList(props: ChatHistoryProps) {
+  return (
+    <>
       <button
         type="button"
-        className="RootAIChat__sidebar__newButton"
+        className="RootAIChat__sidebar__newButton m-3 flex shrink-0 cursor-pointer appearance-none items-center gap-2 rounded-lg border border-border bg-page px-3 py-2.5 font-sans text-base font-semibold text-fg transition-colors hover:bg-surface-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         onClick={props.onNew}
       >
         <IconMessageCirclePlus size={18} />
         <span>New chat</span>
       </button>
-      <div className="RootAIChat__sidebar__list">
+      <div className="RootAIChat__sidebar__list flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto px-2 pb-3">
         {props.chats.length === 0 && (
-          <div className="RootAIChat__sidebar__empty">No chats yet.</div>
-        )}
-        {props.chats.map((chat) => (
-          <div
-            key={chat.id}
-            className={joinClassNames(
-              'RootAIChat__sidebar__item',
-              chat.id === props.activeChatId &&
-                'RootAIChat__sidebar__item--active'
-            )}
-            onClick={() => props.onSelect(chat.id)}
-          >
-            <div
-              className="RootAIChat__sidebar__item__title"
-              title={chat.title || 'Untitled chat'}
-            >
-              {chat.title || 'Untitled chat'}
-            </div>
-            <button
-              type="button"
-              className="RootAIChat__sidebar__item__delete"
-              title="Delete chat"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (window.confirm('Delete this chat?')) {
-                  props.onDelete(chat.id);
-                }
-              }}
-            >
-              <IconTrash size={14} />
-            </button>
+          <div className="RootAIChat__sidebar__empty p-3 text-center text-sm text-muted">
+            No chats yet.
           </div>
-        ))}
+        )}
+        {props.chats.map((chat) => {
+          const active = chat.id === props.activeChatId;
+          return (
+            <div
+              key={chat.id}
+              className={cn(
+                'RootAIChat__sidebar__item group/item flex items-center gap-1 rounded-md pr-1 transition-colors hover:bg-surface-active',
+                active && 'bg-surface-hover'
+              )}
+            >
+              <button
+                type="button"
+                className="RootAIChat__sidebar__item__title min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-md border-0 bg-transparent py-2 pl-3 text-left font-sans text-sm text-fg focus-visible:outline-2 focus-visible:outline-focus pointer-coarse:py-3"
+                title={chat.title || 'Untitled chat'}
+                aria-current={active ? 'true' : undefined}
+                onClick={() => props.onSelect(chat.id)}
+              >
+                {chat.title || 'Untitled chat'}
+              </button>
+              <IconButton
+                size="xs"
+                label="Delete chat"
+                className="RootAIChat__sidebar__item__delete text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover/item:opacity-100 pointer-coarse:opacity-100"
+                onClick={() => {
+                  if (window.confirm('Delete this chat?')) {
+                    props.onDelete(chat.id);
+                  }
+                }}
+              >
+                <IconTrash />
+              </IconButton>
+            </div>
+          );
+        })}
       </div>
-    </aside>
+    </>
   );
 }
 
@@ -636,69 +749,75 @@ function ChatHeader(props: {
     availableModes.find((mode) => mode.id === props.executionMode) ||
     availableModes[0];
   return (
-    <div className="RootAIChat__options">
+    <div className="RootAIChat__options mx-auto mt-2.5 flex max-w-200 flex-wrap items-center justify-between gap-2">
       <Menu
-        control={
+        label="Execution mode"
+        width={300}
+        trigger={
           <Button
             type="button"
-            className="RootAIChat__modePicker"
+            className="RootAIChat__modePicker min-w-0"
             variant="subtle"
-            color="dark"
             size="xs"
-            compact
-            leftIcon={<IconPencil size={16} />}
+            icon={<IconPencil />}
           >
             {selectedMode.label}
           </Button>
         }
       >
         {availableModes.map((mode) => (
-          <Menu.Item
+          <MenuItem
             key={mode.id}
+            hint={mode.id === selectedMode.id ? <IconCheck /> : undefined}
             onClick={() => props.onSelectExecutionMode(mode.id)}
           >
-            <div className="RootAIChat__modePicker__option">
-              <div className="RootAIChat__modePicker__option__label">
+            <div className="RootAIChat__modePicker__option flex flex-col gap-0.5">
+              <div className="RootAIChat__modePicker__option__label mb-1 font-medium">
                 {mode.label}
               </div>
-              <div className="RootAIChat__modePicker__option__description">
+              <div className="RootAIChat__modePicker__option__description text-sm leading-snug text-muted">
                 {mode.description}
               </div>
             </div>
-          </Menu.Item>
+          </MenuItem>
         ))}
       </Menu>
       <Menu
-        control={
+        label="Model"
+        placement="bottom-end"
+        trigger={
           <Button
             type="button"
-            className="RootAIChat__modelPicker"
+            className="RootAIChat__modelPicker min-w-0"
             variant="subtle"
-            color="dark"
             size="xs"
-            compact
-            leftIcon={<IconRobot size={16} />}
+            icon={<IconRobot />}
           >
-            {props.selectedModel?.label || 'Select model'}
+            <span className="truncate">
+              {props.selectedModel?.label || 'Select model'}
+            </span>
           </Button>
         }
       >
         {props.models.map((model) => (
-          <Menu.Item
+          <MenuItem
             key={model.id}
+            hint={
+              model.id === props.selectedModel?.id ? <IconCheck /> : undefined
+            }
             onClick={() => props.onSelectModel(model.id)}
           >
-            <div className="RootAIChat__modelPicker__option">
-              <div className="RootAIChat__modelPicker__option__label">
+            <div className="RootAIChat__modelPicker__option flex min-w-50 flex-col gap-0.5">
+              <div className="RootAIChat__modelPicker__option__label font-medium">
                 {model.label}
               </div>
               {model.description && (
-                <div className="RootAIChat__modelPicker__option__description">
+                <div className="RootAIChat__modelPicker__option__description text-sm text-muted">
                   {model.description}
                 </div>
               )}
             </div>
-          </Menu.Item>
+          </MenuItem>
         ))}
       </Menu>
     </div>
@@ -1109,7 +1228,7 @@ function ChatPane(props: {
       />
       {error && (
         <ChatErrorNotice
-          className="RootAIChat__error"
+          className="RootAIChat__error mx-3 mb-3 shrink-0 md:mx-auto md:w-full md:max-w-200"
           error={error}
           busy={isStreaming}
           onRetry={() => regenerate()}
@@ -1154,27 +1273,48 @@ function ChatTranscript(props: {
     }
   }, [props.messages]);
 
+  const isPanel = useIsPanel();
+  const transcriptClasses = cn(
+    'RootAIChat__transcript relative min-h-0 flex-1 overflow-y-auto scroll-smooth',
+    isPanel ? 'px-3.5 pt-6 pb-4' : 'px-4 pt-8 pb-8 md:px-5 md:pt-18'
+  );
+
   if (props.messages.length === 0) {
     return (
       <div
-        className="RootAIChat__transcript RootAIChat__transcript--empty"
+        className={cn(
+          transcriptClasses,
+          'RootAIChat__transcript--empty flex items-center justify-center'
+        )}
         ref={ref}
       >
-        <div className="RootAIChat__welcome">
-          <div className="RootAIChat__welcome__icon">
+        <div className="RootAIChat__welcome flex flex-col items-center gap-3 text-center">
+          <div className="RootAIChat__welcome__icon flex rounded-full border border-border p-2">
             <IconRobot size={36} />
           </div>
-          <div className="RootAIChat__welcome__title">Root AI</div>
-          <div className="RootAIChat__welcome__body">
+          <div
+            className={cn(
+              'RootAIChat__welcome__title font-bold leading-tight',
+              isPanel ? 'text-xl' : 'text-2xl'
+            )}
+          >
+            Root AI
+          </div>
+          <div
+            className={cn(
+              'RootAIChat__welcome__body max-w-120 text-muted',
+              isPanel ? 'text-base' : 'text-lg'
+            )}
+          >
             {props.emptyMessage || 'What are we going to get done today?'}
           </div>
           {props.suggestedPrompts && props.suggestedPrompts.length > 0 && (
-            <div className="RootAIChat__welcome__suggestions">
+            <div className="RootAIChat__welcome__suggestions mt-1 flex w-full max-w-90 flex-col items-stretch gap-1.5">
               {props.suggestedPrompts.map((text) => (
                 <button
                   key={text}
                   type="button"
-                  className="RootAIChat__welcome__suggestion"
+                  className="RootAIChat__welcome__suggestion cursor-pointer appearance-none rounded-lg border border-border bg-surface px-3 py-2 text-left font-sans text-sm text-fg transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   onClick={() => props.onSelectSuggestedPrompt?.(text)}
                 >
                   {text}
@@ -1188,8 +1328,13 @@ function ChatTranscript(props: {
   }
 
   return (
-    <div className="RootAIChat__transcript" ref={ref}>
-      <div className="RootAIChat__transcript__inner">
+    <div className={transcriptClasses} ref={ref}>
+      <div
+        className={cn(
+          'RootAIChat__transcript__inner mx-auto flex max-w-200 flex-col',
+          isPanel ? 'gap-5' : 'gap-8'
+        )}
+      >
         {props.messages.map((m) => (
           <MessageView
             key={m.id}
@@ -1198,7 +1343,7 @@ function ChatTranscript(props: {
           />
         ))}
         {props.isStreaming && (
-          <div className="RootAIChat__streamingIndicator">
+          <div className="RootAIChat__streamingIndicator mt-2 pl-11">
             <BouncingLoader size={6} />
           </div>
         )}
@@ -1253,38 +1398,52 @@ function MessageView(props: {
     }
   }, [getMessageMarkdown]);
 
+  const isPanel = useIsPanel();
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'RootAIChat__message',
-        `RootAIChat__message--${message.role}`
+        `RootAIChat__message--${message.role}`,
+        'group/message flex',
+        isPanel ? 'gap-2.5' : 'gap-4'
       )}
     >
-      <div className="RootAIChat__message__avatar">
+      <div className="RootAIChat__message__avatar flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-surface">
         {photoURL ? (
-          <img src={photoURL} alt={username} />
+          <img
+            className="size-full object-cover"
+            src={photoURL}
+            alt={username}
+          />
         ) : (
           <IconRobot size={20} />
         )}
       </div>
-      <div className="RootAIChat__message__body">
-        <div className="RootAIChat__message__username">{username}</div>
-        <div className="RootAIChat__message__parts">
+      <div className="RootAIChat__message__body relative min-w-0 flex-1">
+        <div className="RootAIChat__message__username font-bold leading-7">
+          {username}
+        </div>
+        <div
+          className={cn(
+            'RootAIChat__message__parts mt-1 flex flex-col gap-3 text-base',
+            isPanel ? 'leading-normal' : 'leading-relaxed'
+          )}
+        >
           {(message.parts || []).map((part, i) => (
             <PartView key={i} part={part} toolApprovals={props.toolApprovals} />
           ))}
         </div>
-        <button
-          type="button"
-          className={joinClassNames(
-            'RootAIChat__message__copy',
-            copied && 'RootAIChat__message__copy--copied'
+        <IconButton
+          variant="default"
+          label={copied ? 'Copied!' : 'Copy message'}
+          className={cn(
+            'RootAIChat__message__copy absolute top-0 right-0 text-muted transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/message:opacity-100 pointer-coarse:opacity-100',
+            copied ? 'opacity-100' : 'opacity-0'
           )}
-          title={copied ? 'Copied!' : 'Copy message'}
           onClick={handleCopy}
         >
-          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-        </button>
+          {copied ? <IconCheck /> : <IconCopy />}
+        </IconButton>
       </div>
     </div>
   );
@@ -1297,7 +1456,7 @@ function PartView(props: {part: any; toolApprovals?: ToolApprovalControls}) {
       return null;
     }
     return (
-      <div className="RootAIChat__textPart">
+      <div className="RootAIChat__textPart whitespace-normal wrap-break-word">
         <Markdown code={part.text} />
       </div>
     );
@@ -1311,7 +1470,7 @@ function PartView(props: {part: any; toolApprovals?: ToolApprovalControls}) {
   if (part.type === 'source-url') {
     return (
       <a
-        className="RootAIChat__sourcePart"
+        className="RootAIChat__sourcePart inline-block text-sm text-link wrap-anywhere"
         href={part.url}
         target="_blank"
         rel="noopener noreferrer"
@@ -1331,36 +1490,38 @@ function PartView(props: {part: any; toolApprovals?: ToolApprovalControls}) {
   }
   return (
     <div className="RootAIChat__unknownPart">
-      <pre>{JSON.stringify(part, null, 2)}</pre>
+      <pre className="m-0 whitespace-pre-wrap rounded-sm border border-dashed border-border bg-surface-hover p-1.5 font-mono text-sm text-muted wrap-anywhere">
+        {JSON.stringify(part, null, 2)}
+      </pre>
     </div>
   );
 }
 
-function ReasoningPartView(props: {text: string}) {
+/**
+ * A collapsible "Thinking" block for a reasoning part. Shared with the
+ * "Edit with AI" chat panel.
+ */
+export function ReasoningPartView(props: {text: string}) {
   const [open, setOpen] = useState(false);
   if (!props.text) {
     return null;
   }
   return (
-    <div
-      className={joinClassNames(
-        'RootAIChat__reasoning',
-        open && 'RootAIChat__reasoning--open'
-      )}
-    >
+    <div className="RootAIChat__reasoning rounded-lg border border-border bg-surface-hover text-base">
       <button
         type="button"
-        className="RootAIChat__reasoning__toggle"
+        className="RootAIChat__reasoning__toggle group/toggle flex w-full cursor-pointer appearance-none items-center gap-1.5 border-0 bg-transparent px-3 py-2 text-left font-sans text-base font-semibold text-muted focus-visible:outline-2 focus-visible:outline-focus"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         <IconChevronDown
           size={14}
-          style={{transform: open ? 'rotate(0deg)' : 'rotate(-90deg)'}}
+          className="-rotate-90 transition-transform group-aria-expanded/toggle:rotate-0"
         />
         <span>Thinking</span>
       </button>
       {open && (
-        <div className="RootAIChat__reasoning__body">
+        <div className="RootAIChat__reasoning__body px-3 pb-3 text-muted wrap-break-word">
           <Markdown code={props.text} />
         </div>
       )}
@@ -1372,14 +1533,18 @@ function FilePartView(props: {part: any}) {
   const part = props.part;
   if (part.mediaType?.startsWith('image/')) {
     return (
-      <div className="RootAIChat__filePart">
-        <img src={part.url} alt={part.filename || 'attachment'} />
+      <div className="RootAIChat__filePart max-w-80">
+        <img
+          className="block max-h-60 max-w-full rounded-lg border border-border"
+          src={part.url}
+          alt={part.filename || 'attachment'}
+        />
       </div>
     );
   }
   return (
     <a
-      className="RootAIChat__filePart RootAIChat__filePart--link"
+      className="RootAIChat__filePart RootAIChat__filePart--link inline-flex min-w-0 items-center gap-1.5 text-base text-link wrap-anywhere"
       href={part.url}
       target="_blank"
       rel="noopener noreferrer"
@@ -1390,7 +1555,12 @@ function FilePartView(props: {part: any}) {
   );
 }
 
-function ToolPartView(props: {
+/**
+ * A tool call: a header that expands to show its input, output and, for
+ * writes that need a decision, the approval card. Shared with the "Edit with
+ * AI" chat panel.
+ */
+export function ToolPartView(props: {
   part: any;
   toolApprovals?: ToolApprovalControls;
 }) {
@@ -1417,33 +1587,35 @@ function ToolPartView(props: {
   }, [approval]);
 
   return (
-    <div className="RootAIChat__tool">
+    <div className="RootAIChat__tool text-sm">
       <button
         type="button"
-        className="RootAIChat__tool__header"
+        className="RootAIChat__tool__header group/tool flex w-full cursor-pointer appearance-none items-center gap-1.5 border-0 bg-transparent px-0 py-1 text-left font-sans text-sm text-fg focus-visible:outline-2 focus-visible:outline-focus"
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         <IconChevronDown
-          className={joinClassNames(
-            'RootAIChat__tool__header__icon',
-            open && 'RootAIChat__tool__header__icon--open'
-          )}
+          className="RootAIChat__tool__header__icon shrink-0 -rotate-90 transition-transform group-aria-expanded/tool:rotate-0"
           size={14}
         />
-        <Badge color="dark" variant="filled" size="xs">
+        <Badge
+          className="max-w-32 shrink-0 truncate"
+          variant="filled"
+          size="xs"
+        >
           {toolName}
         </Badge>
-        <span className="RootAIChat__tool__title">
+        <span className="RootAIChat__tool__title min-w-0 truncate font-semibold text-strong">
           {prettyToolName(toolName, part.input)}
         </span>
-        <span className="RootAIChat__tool__state">
+        <span className="RootAIChat__tool__state shrink-0 text-sm text-muted">
           {approval
             ? prettyApprovalState(approval.status)
             : prettyToolState(state)}
         </span>
       </button>
       {open && (
-        <div className="RootAIChat__tool__body">
+        <div className="RootAIChat__tool__body flex flex-col gap-2 pt-1 pb-2 pl-5">
           {approval && approvalControls && (
             <ToolApprovalCard
               approval={approval}
@@ -1453,37 +1625,53 @@ function ToolPartView(props: {
           )}
           {part.output?.receipt && <ToolReceipt output={part.output} />}
           {part.input && (
-            <details>
-              <summary>
+            <details className={TOOL_DETAILS_CLASSES}>
+              <summary className={TOOL_SUMMARY_CLASSES}>
                 <IconChevronRight
                   size={14}
-                  className="RootAIChat__tool__json__icon"
+                  className={TOOL_JSON_ICON_CLASSES}
                 />
                 <span>Input</span>
               </summary>
-              <pre>{JSON.stringify(part.input, null, 2)}</pre>
+              <pre className={TOOL_PRE_CLASSES}>
+                {JSON.stringify(part.input, null, 2)}
+              </pre>
             </details>
           )}
           {part.output && (
-            <details>
-              <summary>
+            <details className={TOOL_DETAILS_CLASSES}>
+              <summary className={TOOL_SUMMARY_CLASSES}>
                 <IconChevronRight
                   size={14}
-                  className="RootAIChat__tool__json__icon"
+                  className={TOOL_JSON_ICON_CLASSES}
                 />
                 <span>Output</span>
               </summary>
-              <pre>{JSON.stringify(part.output, null, 2)}</pre>
+              <pre className={TOOL_PRE_CLASSES}>
+                {JSON.stringify(part.output, null, 2)}
+              </pre>
             </details>
           )}
           {part.errorText && (
-            <div className="RootAIChat__tool__error">{part.errorText}</div>
+            <div className="RootAIChat__tool__error font-mono text-sm text-danger wrap-anywhere">
+              {part.errorText}
+            </div>
           )}
         </div>
       )}
     </div>
   );
 }
+
+/** The `<details>` around a tool call's input or output JSON. */
+const TOOL_DETAILS_CLASSES =
+  'group/details rounded-md border border-border bg-surface px-2.5 py-1.5';
+const TOOL_SUMMARY_CLASSES =
+  'flex cursor-pointer list-none items-center gap-1 text-sm font-semibold';
+const TOOL_JSON_ICON_CLASSES =
+  'RootAIChat__tool__json__icon shrink-0 transition-transform group-open/details:rotate-90';
+const TOOL_PRE_CLASSES =
+  'mt-1.5 mb-0 max-h-60 overflow-auto whitespace-pre-wrap font-mono text-sm wrap-break-word';
 
 function getToolCallId(part: any): string {
   return part.toolCallId || part.id || '';
@@ -1497,41 +1685,36 @@ function ToolApprovalCard(props: {
   const preview = props.approval.preview;
   const hasDiff = preview.before !== undefined && preview.after !== undefined;
   return (
-    <div className="RootAIChat__approval">
-      <div className="RootAIChat__approval__header">
-        <div>
-          <div className="RootAIChat__approval__title">{preview.title}</div>
-          <div className="RootAIChat__approval__summary">{preview.summary}</div>
+    <div className="RootAIChat__approval overflow-hidden rounded-lg border border-info-line bg-surface">
+      <div className="RootAIChat__approval__header flex justify-between gap-4 border-b border-border p-3">
+        <div className="min-w-0">
+          <div className="RootAIChat__approval__title font-bold text-strong">
+            {preview.title}
+          </div>
+          <div className="RootAIChat__approval__summary mt-0.5 text-muted">
+            {preview.summary}
+          </div>
         </div>
-        <Badge
-          className="RootAIChat__approval__status"
-          variant="light"
-          color="gray"
-        >
+        <Badge className="RootAIChat__approval__status self-start">
           {props.approval.status === 'executing' ? 'Applying' : 'Review'}
         </Badge>
       </div>
       {preview.details.length > 0 && (
-        <div className="RootAIChat__approval__details">
-          {preview.details.map((detail) => (
-            <div key={`${detail.label}:${detail.value}`}>
-              <span>{detail.label}</span>
-              <strong>{detail.value}</strong>
-            </div>
-          ))}
-        </div>
+        <DetailsList
+          className="RootAIChat__approval__details"
+          details={preview.details}
+        />
       )}
       {hasDiff && (
         <JsDiff
-          className="RootAIChat__approval__diff"
+          className="RootAIChat__approval__diff max-h-80 border-b border-border"
           oldCode={formatDiffValue(preview.before)}
           newCode={formatDiffValue(preview.after)}
         />
       )}
-      <div className="RootAIChat__approval__actions">
+      <div className="RootAIChat__approval__actions flex flex-wrap justify-end gap-2 px-3 py-2.5">
         <Button
           variant="default"
-          color="dark"
           size="xs"
           type="button"
           className="RootAIChat__approval__button"
@@ -1541,8 +1724,7 @@ function ToolApprovalCard(props: {
           Reject
         </Button>
         <Button
-          variant="filled"
-          color="green"
+          variant="primary"
           size="xs"
           type="button"
           className="RootAIChat__approval__button RootAIChat__approval__button--primary"
@@ -1556,6 +1738,35 @@ function ToolApprovalCard(props: {
   );
 }
 
+/** Label/value pairs in an approval card or a receipt. */
+function DetailsList(props: {
+  className: string;
+  details: Array<{label: string; value: ComponentChildren}>;
+}) {
+  return (
+    <div
+      className={cn(
+        props.className,
+        'flex flex-wrap gap-2 border-b border-border px-3 py-2.5'
+      )}
+    >
+      {props.details.map((detail) => (
+        <div
+          key={`${detail.label}:${detail.value}`}
+          className="min-w-0 flex-1 basis-45"
+        >
+          <span className="block text-xs font-bold uppercase text-muted">
+            {detail.label}
+          </span>
+          <strong className="mt-0.5 block text-sm text-strong wrap-anywhere">
+            {detail.value}
+          </strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Diffs text (e.g. Google Doc edits) as-is, and anything else as JSON. */
 function formatDiffValue(value: unknown): string {
   return typeof value === 'string' ? value : stableJsonStringify(value);
@@ -1564,29 +1775,25 @@ function formatDiffValue(value: unknown): string {
 function ToolReceipt(props: {output: any}) {
   const receipt = props.output.receipt;
   return (
-    <div className="RootAIChat__receipt">
-      <div className="RootAIChat__receipt__title">
+    <div className="RootAIChat__receipt overflow-hidden rounded-lg border border-success-line bg-surface">
+      <div className="RootAIChat__receipt__title flex items-center gap-1.5 px-3 pt-2.5 font-bold text-success">
         <IconCheck size={14} />
         <span>{receipt.title}</span>
       </div>
-      <div className="RootAIChat__receipt__summary">{receipt.summary}</div>
+      <div className="RootAIChat__receipt__summary px-3 pt-1 pb-2.5 text-fg">
+        {receipt.summary}
+      </div>
       {receipt.details?.length > 0 && (
-        <div className="RootAIChat__receipt__details">
-          {receipt.details.map((detail: any) => (
-            <div key={`${detail.label}:${detail.value}`}>
-              <span>{detail.label}</span>
-              <strong>{detail.value}</strong>
-            </div>
-          ))}
-        </div>
+        <DetailsList
+          className="RootAIChat__receipt__details"
+          details={receipt.details}
+        />
       )}
       {receipt.adminUrl && (
         <Button
-          component="a"
-          className="RootAIChat__receipt__link"
+          className="RootAIChat__receipt__link mx-3 my-2.5"
           variant="default"
           size="xs"
-          compact
           href={receipt.adminUrl}
           {...(/^https?:/.test(receipt.adminUrl)
             ? {target: '_blank', rel: 'noopener noreferrer'}
@@ -1632,6 +1839,7 @@ function ChatComposer(props: {
   };
 
   useEffect(fitTextarea, [text, attachments]);
+  const isPanel = useIsPanel();
 
   // While the text is just `/` plus a partial name, suggest matching skills.
   const skillQuery = text.match(/^\/([a-zA-Z0-9_-]*)$/)?.[1];
@@ -1730,27 +1938,37 @@ function ChatComposer(props: {
   };
 
   return (
-    <div className="RootAIChat__composer">
+    <div
+      className={cn(
+        'RootAIChat__composer relative z-10 shrink-0 border-t border-border bg-page',
+        isPanel ? 'px-3 pt-2.5 pb-3' : 'px-3 pt-3 pb-3 md:px-5 md:pb-5'
+      )}
+    >
       {skillMatches.length > 0 && (
-        <div className="RootAIChat__skillMenu" role="listbox">
+        <div
+          className={cn(
+            'RootAIChat__skillMenu absolute bottom-full mx-auto -mb-1 max-h-60 max-w-200 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-md',
+            isPanel ? 'inset-x-3' : 'inset-x-3 md:inset-x-5'
+          )}
+          role="listbox"
+        >
           {skillMatches.map((skill, i) => (
             <button
               key={skill.name}
               type="button"
               role="option"
               aria-selected={i === activeSkillIndex}
-              className={joinClassNames(
-                'RootAIChat__skillMenu__item',
-                i === activeSkillIndex && 'RootAIChat__skillMenu__item--active'
-              )}
+              className="RootAIChat__skillMenu__item flex w-full cursor-pointer appearance-none flex-col gap-0.5 rounded-lg border-0 bg-transparent px-2.5 py-1.5 text-left font-sans text-fg aria-selected:bg-surface-active"
               // Keep focus in the textarea.
               onMouseDown={(e) => e.preventDefault()}
               onMouseEnter={() => setSkillIndex(i)}
               onClick={() => selectSkill(skill)}
             >
-              <span className="RootAIChat__skillMenu__name">/{skill.name}</span>
+              <span className="RootAIChat__skillMenu__name text-base font-medium">
+                /{skill.name}
+              </span>
               {skill.description && (
-                <span className="RootAIChat__skillMenu__description">
+                <span className="RootAIChat__skillMenu__description text-sm text-muted">
                   {skill.description}
                 </span>
               )}
@@ -1759,19 +1977,27 @@ function ChatComposer(props: {
         </div>
       )}
       {attachments.length > 0 && (
-        <div className="RootAIChat__composer__attachments">
+        <div className="RootAIChat__composer__attachments mx-auto mb-2 flex max-w-200 flex-wrap gap-2">
           {attachments.map((a, i) => (
-            <div key={i} className="RootAIChat__composer__attachment">
+            <div
+              key={i}
+              className="RootAIChat__composer__attachment relative size-16 overflow-hidden rounded-lg border border-border bg-surface-hover"
+            >
               {a.mediaType.startsWith('image/') ? (
-                <img src={a.url} alt={a.filename} />
+                <img
+                  className="size-full object-cover"
+                  src={a.url}
+                  alt={a.filename}
+                />
               ) : (
-                <span className="RootAIChat__composer__attachment__name">
+                <span className="RootAIChat__composer__attachment__name block p-2 text-xs break-all">
                   {a.filename}
                 </span>
               )}
               <button
                 type="button"
-                className="RootAIChat__composer__attachment__remove"
+                aria-label={`Remove ${a.filename}`}
+                className="RootAIChat__composer__attachment__remove absolute top-0.5 right-0.5 flex size-4.5 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-overlay p-0 text-inverse"
                 onClick={() =>
                   setAttachments((prev) => prev.filter((_, idx) => idx !== i))
                 }
@@ -1782,36 +2008,35 @@ function ChatComposer(props: {
           ))}
         </div>
       )}
-      <div className="RootAIChat__composer__row">
-        <Tooltip
+      <div className="RootAIChat__composer__row mx-auto flex max-w-200 items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2 transition-shadow focus-within:border-border-strong focus-within:shadow-sm">
+        <IconButton
+          round
+          className="RootAIChat__composer__attach"
           label={
             props.canAttach
               ? 'Attach file'
               : "Model doesn't support attachments"
           }
-          className="RootAIChat__composer__attachTooltip"
+          disabled={!props.canAttach}
+          onClick={() => fileRef.current?.click()}
         >
-          <ActionIcon
-            component="label"
-            radius="xl"
-            className={joinClassNames(
-              'RootAIChat__composer__attach',
-              !props.canAttach && 'RootAIChat__composer__attach--disabled'
-            )}
-            disabled={!props.canAttach}
-          >
-            {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
-            <input
-              ref={fileRef}
-              type="file"
-              style={{display: 'none'}}
-              onChange={onFileChange}
-            />
-          </ActionIcon>
-        </Tooltip>
+          {uploading ? <Spinner size="sm" /> : <IconPaperclip />}
+        </IconButton>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={onFileChange}
+        />
         <textarea
           ref={textareaRef}
-          className="RootAIChat__composer__textarea"
+          aria-label="Message"
+          className={cn(
+            'RootAIChat__composer__textarea max-h-60 min-w-0 flex-1 resize-none appearance-none border-0 bg-transparent px-0 py-0.5 font-sans leading-6 text-fg outline-none placeholder:text-subtle',
+            isPanel ? 'text-base' : 'text-lg'
+          )}
           placeholder={
             props.disabled
               ? 'Select a model…'
@@ -1838,30 +2063,28 @@ function ChatComposer(props: {
           }}
         />
         {props.isStreaming ? (
-          <ActionIcon
+          <IconButton
             className="RootAIChat__composer__button RootAIChat__composer__stopButton"
-            radius="xl"
-            color="dark"
-            variant="filled"
+            round
+            variant="primary"
+            label="Stop"
             onClick={props.onStop}
-            title="Stop"
           >
-            <IconX size={18} />
-          </ActionIcon>
+            <IconX />
+          </IconButton>
         ) : (
-          <ActionIcon
+          <IconButton
             className="RootAIChat__composer__button RootAIChat__composer__submitButton"
-            radius="xl"
-            color="dark"
-            variant="filled"
+            round
+            variant="primary"
+            label="Send"
             disabled={
               props.disabled || uploading || (!text && attachments.length === 0)
             }
             onClick={submit}
-            title="Send"
           >
-            <IconSend2 size={18} />
-          </ActionIcon>
+            <IconSend2 />
+          </IconButton>
         )}
       </div>
       {props.controls}

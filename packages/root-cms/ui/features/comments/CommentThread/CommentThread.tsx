@@ -1,6 +1,3 @@
-import './CommentThread.css';
-
-import {ActionIcon, Button, Loader, Tooltip} from '@mantine/core';
 import {
   IconArrowBackUp,
   IconCheck,
@@ -18,8 +15,12 @@ import {
   isOpenThread,
 } from '../../../../shared/comments.js';
 import {RichTextData} from '../../../../shared/richtext.js';
+import {Badge} from '../../../primitives/Badge/Badge.js';
+import {Button} from '../../../primitives/Button/Button.js';
+import {IconButton} from '../../../primitives/IconButton/IconButton.js';
 import {showNotification} from '../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../utils/classes.js';
+import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../utils/classes.js';
 import {errorMessage} from '../../../utils/notifications.js';
 import {formatDateTime, getTimeAgo} from '../../../utils/time.js';
 import {UserAvatar} from '../../users/UserAvatar/UserAvatar.js';
@@ -64,6 +65,14 @@ export interface CommentThreadProps {
   resolvedCount?: number;
   className?: string;
 }
+
+/** Classes shared by the field label, whether it's a link or plain text. */
+const FIELD_CLASSES =
+  'CommentThread__field flex min-w-0 items-center gap-1.5 text-left font-sans text-sm font-semibold text-fg';
+
+/** Resets a native button so it reads as inline text. */
+const TEXT_BUTTON_CLASSES =
+  'm-0 cursor-pointer appearance-none rounded-sm border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 /**
  * Renders the comment thread for a single field: the field's comment history,
@@ -124,59 +133,68 @@ export function CommentThread(props: CommentThreadProps) {
 
   const fieldLabel = (
     <>
-      <IconMessageCircle size={14} strokeWidth="1.8" />
-      <span className="CommentThread__field__label">{props.fieldLabel}</span>
+      <IconMessageCircle className="shrink-0" size={14} strokeWidth="1.8" />
+      <span className="CommentThread__field__label truncate underline-offset-2 group-hover/field:underline">
+        {props.fieldLabel}
+      </span>
     </>
   );
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'CommentThread',
         !isOpen && 'CommentThread--resolved',
+        'flex flex-col gap-2.5',
         props.className
       )}
     >
-      <div className="CommentThread__header">
+      <div className="CommentThread__header flex min-h-6 items-center justify-between gap-2">
         {props.onNavigate ? (
           <button
             type="button"
-            className="CommentThread__field CommentThread__field--link"
+            className={cn(
+              'CommentThread__field--link group/field',
+              TEXT_BUTTON_CLASSES,
+              FIELD_CLASSES
+            )}
             onClick={props.onNavigate}
             title="Go to field"
           >
             {fieldLabel}
           </button>
         ) : (
-          <div className="CommentThread__field">{fieldLabel}</div>
+          <div className={FIELD_CLASSES}>{fieldLabel}</div>
         )}
-        <div className="CommentThread__header__actions">
-          {!isOpen && <span className="CommentThread__status">Resolved</span>}
+        <div className="CommentThread__header__actions flex shrink-0 items-center gap-1">
+          {!isOpen && (
+            <Badge className="CommentThread__status" tone="success">
+              Resolved
+            </Badge>
+          )}
           {thread && canComment && (
-            <Tooltip
+            <IconButton
+              size="xs"
+              className="CommentThread__statusButton"
+              onClick={toggleStatus}
+              loading={statusPending}
               label={isOpen ? 'Mark as resolved' : 'Reopen thread'}
-              withArrow
             >
-              <ActionIcon
-                size="sm"
-                className="CommentThread__statusButton"
-                onClick={toggleStatus}
-                loading={statusPending}
-                aria-label={isOpen ? 'Mark as resolved' : 'Reopen thread'}
-              >
-                {isOpen ? (
-                  <IconCheck size={16} strokeWidth="2" />
-                ) : (
-                  <IconArrowBackUp size={16} strokeWidth="1.8" />
-                )}
-              </ActionIcon>
-            </Tooltip>
+              {isOpen ? (
+                <IconCheck strokeWidth="2" />
+              ) : (
+                <IconArrowBackUp strokeWidth="1.8" />
+              )}
+            </IconButton>
           )}
           {props.headerActions}
         </div>
       </div>
       {thread && thread.comments.length > 0 && (
-        <div className="CommentThread__entries" ref={entriesRef}>
+        <div
+          className="CommentThread__entries flex flex-col gap-3"
+          ref={entriesRef}
+        >
           {thread.comments.map((entry) =>
             !entry.type || entry.type === 'comment' ? (
               <CommentThreadComment
@@ -192,17 +210,15 @@ export function CommentThread(props: CommentThreadProps) {
         </div>
       )}
       {!isOpen ? (
-        <div className="CommentThread__resolvedNote">
+        <div className="CommentThread__resolvedNote flex flex-col items-start gap-2 text-sm leading-normal text-muted">
           <span>
             This thread is resolved. Reopen it to continue the conversation, or
             start a new thread on the field.
           </span>
           {canComment && (
             <Button
-              compact
               size="xs"
-              variant="default"
-              leftIcon={<IconMessageCircle size={14} strokeWidth="1.8" />}
+              icon={<IconMessageCircle strokeWidth="1.8" />}
               onClick={startNewThread}
             >
               New thread
@@ -220,7 +236,7 @@ export function CommentThread(props: CommentThreadProps) {
         />
       ) : (
         !thread && (
-          <div className="CommentThread__readOnly">
+          <div className="CommentThread__readOnly text-sm text-muted">
             You don't have permission to comment on this doc.
           </div>
         )
@@ -228,7 +244,11 @@ export function CommentThread(props: CommentThreadProps) {
       {!thread && (props.resolvedCount || 0) > 0 && (
         <button
           type="button"
-          className="CommentThread__resolvedLink"
+          className={cn(
+            'CommentThread__resolvedLink',
+            TEXT_BUTTON_CLASSES,
+            'self-start text-left font-sans text-sm text-muted underline underline-offset-2 hover:text-fg'
+          )}
           onClick={() =>
             openFieldCommentsPanel({
               fieldKey: props.fieldKey,
@@ -286,7 +306,7 @@ function CommentThreadComposer(props: CommentThreadComposerProps) {
   }
 
   return (
-    <div className="CommentThread__composer">
+    <div className="CommentThread__composer flex flex-col gap-1.5">
       <CommentEditor
         key={editorKey}
         variant="minimal"
@@ -296,23 +316,18 @@ function CommentThreadComposer(props: CommentThreadComposerProps) {
         autoFocus={props.autoFocus}
         onSubmitShortcut={submit}
       />
-      <div className="CommentThread__composer__actions">
-        <Tooltip label="Comment (⌘ + Enter)" withArrow>
-          <ActionIcon
-            variant="filled"
-            color="dark"
-            radius="xl"
-            onClick={submit}
-            disabled={!canSubmit}
-            aria-label="Add comment"
-          >
-            {submitting ? (
-              <Loader size={14} color="white" />
-            ) : (
-              <IconSend2 size={16} />
-            )}
-          </ActionIcon>
-        </Tooltip>
+      <div className="CommentThread__composer__actions flex justify-end">
+        <IconButton
+          variant="primary"
+          round
+          onClick={submit}
+          disabled={!canSubmit}
+          loading={submitting}
+          label="Add comment"
+          tooltip="Comment (⌘ + Enter)"
+        >
+          <IconSend2 />
+        </IconButton>
       </div>
     </div>
   );
@@ -377,17 +392,18 @@ function CommentThreadComment(props: CommentThreadCommentProps) {
 
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'CommentThread__comment',
-        comment.deleted && 'CommentThread__comment--deleted'
+        comment.deleted && 'CommentThread__comment--deleted',
+        'group/comment flex gap-2'
       )}
     >
-      <div className="CommentThread__comment__avatar">
+      <div className="CommentThread__comment__avatar shrink-0 pt-px">
         <UserAvatar email={comment.createdBy} size={24} />
       </div>
-      <div className="CommentThread__comment__main">
-        <div className="CommentThread__comment__header">
-          <span className="CommentThread__comment__author">
+      <div className="CommentThread__comment__main flex min-w-0 flex-1 flex-col gap-1">
+        <div className="CommentThread__comment__header flex min-h-5 flex-wrap items-center gap-1.5 text-sm text-muted">
+          <span className="CommentThread__comment__author font-semibold text-fg">
             <UserTag email={comment.createdBy || 'unknown'} />
           </span>
           <CommentTime
@@ -395,33 +411,34 @@ function CommentThreadComment(props: CommentThreadCommentProps) {
             timestamp={comment.createdAt}
           />
           {comment.updatedAt && !comment.deleted && (
-            <span className="CommentThread__comment__edited">(edited)</span>
+            <span className="CommentThread__comment__edited text-xs">
+              (edited)
+            </span>
           )}
           {canModify && !editing && (
-            <div className="CommentThread__comment__actions">
-              <Tooltip label="Edit" withArrow>
-                <ActionIcon
-                  size="xs"
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit comment"
-                >
-                  <IconPencil size={14} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Delete" withArrow>
-                <ActionIcon
-                  size="xs"
-                  onClick={onDelete}
-                  aria-label="Delete comment"
-                >
-                  <IconTrash size={14} strokeWidth="1.8" />
-                </ActionIcon>
-              </Tooltip>
+            // Revealed on hover and focus; always shown on touch screens.
+            <div className="CommentThread__comment__actions ml-auto flex gap-0.5 opacity-0 transition-opacity group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 pointer-coarse:opacity-100">
+              <IconButton
+                size="xs"
+                onClick={() => setEditing(true)}
+                label="Edit comment"
+                tooltip="Edit"
+              >
+                <IconPencil strokeWidth="1.8" />
+              </IconButton>
+              <IconButton
+                size="xs"
+                onClick={onDelete}
+                label="Delete comment"
+                tooltip="Delete"
+              >
+                <IconTrash strokeWidth="1.8" />
+              </IconButton>
             </div>
           )}
         </div>
         {editing ? (
-          <div className="CommentThread__comment__edit">
+          <div className="CommentThread__comment__edit flex flex-col gap-2">
             <CommentEditor
               variant="minimal"
               value={editBody}
@@ -430,11 +447,9 @@ function CommentThreadComment(props: CommentThreadCommentProps) {
               onSubmitShortcut={onSave}
               autoFocus
             />
-            <div className="CommentThread__comment__editActions">
+            <div className="CommentThread__comment__editActions flex justify-end gap-1.5">
               <Button
-                compact
                 size="xs"
-                variant="default"
                 onClick={() => {
                   setEditing(false);
                   setEditBody(comment.body || null);
@@ -443,9 +458,8 @@ function CommentThreadComment(props: CommentThreadCommentProps) {
                 Cancel
               </Button>
               <Button
-                compact
                 size="xs"
-                color="dark"
+                variant="primary"
                 loading={saving}
                 disabled={!editBody}
                 onClick={onSave}
@@ -456,7 +470,7 @@ function CommentThreadComment(props: CommentThreadCommentProps) {
           </div>
         ) : (
           <CommentBody
-            className="CommentThread__comment__body"
+            className="CommentThread__comment__body pr-3"
             body={comment.body}
             content={comment.content}
             deleted={comment.deleted}
@@ -471,19 +485,19 @@ function CommentThreadEvent(props: {entry: FieldComment}) {
   const {entry} = props;
   const verb = entry.type === 'resolved' ? 'resolved' : 'reopened';
   return (
-    <div className="CommentThread__event">
-      <span className="CommentThread__event__icon">
+    <div className="CommentThread__event flex items-center gap-1.5 pl-1 text-sm text-muted">
+      <span className="CommentThread__event__icon inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-surface-active *:size-3">
         {entry.type === 'resolved' ? (
-          <IconCheck size={12} strokeWidth="2.5" />
+          <IconCheck strokeWidth="2.5" />
         ) : (
-          <IconArrowBackUp size={12} strokeWidth="2" />
+          <IconArrowBackUp strokeWidth="2" />
         )}
       </span>
       <span>
         <UserTag email={entry.createdBy || 'unknown'} /> {verb} this thread
       </span>
       <CommentTime
-        className="CommentThread__event__time"
+        className="CommentThread__event__time ml-auto"
         timestamp={entry.createdAt}
       />
     </div>
@@ -499,7 +513,7 @@ function CommentTime(props: {
     return null;
   }
   return (
-    <Tooltip label={formatDateTime(props.timestamp as any)} withArrow>
+    <Tooltip label={formatDateTime(props.timestamp as any)}>
       <span className={props.className}>{getTimeAgo(millis)}</span>
     </Tooltip>
   );

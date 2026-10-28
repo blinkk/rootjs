@@ -1,12 +1,12 @@
-import './TaskTargetLaunch.css';
-
-import {Button, SegmentedControl} from '@mantine/core';
 import {
   IconBolt,
   IconCalendar,
   IconClock,
   IconInfinity,
 } from '@tabler/icons-preact';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {
   formatTaskTargetLaunch,
@@ -105,71 +105,65 @@ export function TaskTargetLaunchPicker(props: TaskTargetLaunchPickerProps) {
     props.onChange({...value, ...changes});
   }
 
+  const noteClasses =
+    'TaskTargetLaunch__picker__note mx-0.5 my-0 text-sm leading-snug text-muted';
   return (
-    <div className="TaskTargetLaunch__picker">
+    <div className="TaskTargetLaunch__picker flex flex-col gap-3">
       <SegmentedControl
         className="TaskTargetLaunch__picker__types"
+        aria-label="Target launch type"
         size="xs"
         fullWidth
         value={value.type}
         data={TARGET_LAUNCH_TYPE_OPTIONS}
-        onChange={(type: TaskTargetLaunchType) => update({type})}
+        onValueChange={(type: TaskTargetLaunchType) => update({type})}
       />
       {value.type === 'anytime' && (
-        <p className="TaskTargetLaunch__picker__note">
-          No deadline. Launch whenever it's ready.
-        </p>
+        <p className={noteClasses}>No deadline. Launch whenever it's ready.</p>
       )}
       {value.type === 'asap' && (
-        <p className="TaskTargetLaunch__picker__note">
-          Urgent. Launch as soon as possible.
-        </p>
+        <p className={noteClasses}>Urgent. Launch as soon as possible.</p>
       )}
       {(value.type === 'date' || value.type === 'datetime') && (
         <div
           className={joinClassNames(
-            'TaskTargetLaunch__picker__fields',
+            'TaskTargetLaunch__picker__fields flex gap-2',
             value.type === 'datetime' &&
               'TaskTargetLaunch__picker__fields--datetime'
           )}
         >
-          <label className="TaskTargetLaunch__picker__field">
-            Date
-            <input
-              type="date"
-              value={value.date}
+          <TextInput
+            className="TaskTargetLaunch__picker__field min-w-0 flex-1"
+            label="Date"
+            type="date"
+            value={value.date}
+            onInput={(e) =>
+              update({date: (e.currentTarget as HTMLInputElement).value})
+            }
+          />
+          {value.type === 'datetime' && (
+            <TextInput
+              className="TaskTargetLaunch__picker__field w-28 shrink-0"
+              label="Time"
+              type="time"
+              value={value.time}
               onInput={(e) =>
-                update({date: (e.currentTarget as HTMLInputElement).value})
+                update({time: (e.currentTarget as HTMLInputElement).value})
               }
             />
-          </label>
-          {value.type === 'datetime' && (
-            <label className="TaskTargetLaunch__picker__field">
-              Time
-              <input
-                type="time"
-                value={value.time}
-                onInput={(e) =>
-                  update({time: (e.currentTarget as HTMLInputElement).value})
-                }
-              />
-            </label>
           )}
         </div>
       )}
       {value.type === 'datetime' && (
-        <p className="TaskTargetLaunch__picker__note">
-          In your time zone ({getTimeZoneName()}).
-        </p>
+        <p className={noteClasses}>In your time zone ({getTimeZoneName()}).</p>
       )}
-      <div className="TaskTargetLaunch__picker__actions">
-        <Button compact size="xs" variant="default" onClick={props.onClear}>
+      <div className="TaskTargetLaunch__picker__actions flex justify-end gap-2">
+        <Button size="xs" onClick={props.onClear}>
           Clear
         </Button>
         <Button
-          compact
           size="xs"
-          color="dark"
+          variant="primary"
           disabled={!complete}
           onClick={props.onDone}
         >
@@ -198,8 +192,8 @@ export function TaskTargetLaunchLabel(props: TaskTargetLaunchLabelProps) {
   const {launch} = props;
   if (launch?.type === 'asap') {
     return (
-      <span className="TaskTargetLaunch__asap">
-        <IconBolt size={11} strokeWidth="2.4" />
+      <span className="TaskTargetLaunch__asap inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-full bg-danger-soft px-2 text-xs font-bold tracking-wide text-danger">
+        <IconBolt className="size-3" strokeWidth="2.4" />
         ASAP
       </span>
     );
@@ -213,15 +207,17 @@ export function TaskTargetLaunchLabel(props: TaskTargetLaunchLabelProps) {
   return (
     <span
       className={joinClassNames(
-        'TaskTargetLaunch__label',
+        'TaskTargetLaunch__label inline-flex items-center gap-2 whitespace-nowrap',
         launch?.type === 'anytime' && 'TaskTargetLaunch__label--anytime',
-        props.overdue && 'TaskTargetLaunch__label--overdue'
+        props.overdue && 'TaskTargetLaunch__label--overdue text-danger'
       )}
     >
       {props.withIcon && launch && (
         <Icon
-          className="TaskTargetLaunch__label__icon"
-          size={15}
+          className={joinClassNames(
+            'TaskTargetLaunch__label__icon size-4 shrink-0',
+            props.overdue ? 'text-danger' : 'text-muted'
+          )}
           strokeWidth="1.8"
         />
       )}

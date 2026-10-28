@@ -1,697 +1,83 @@
-.TaskManager {
-  /* Status colors shared by the list group headers and board columns. The
-     default matches the Mantine segmented control background (gray[1]). */
-  --task-status-bg: #f1f3f5;
-  --task-status-bg-in-progress: #eef3fd;
-  --task-status-bg-in-review: #fdf3ea;
-  --task-status-bg-closed: #eef5f0;
-  display: flex;
-  flex-direction: column;
-}
-
-.TaskManager--page {
-  max-width: 1280px;
-}
-
-/*
- * The description drawer sits after the title in the DOM so it follows the
- * title in the tab order; grid areas place it below the top row.
- */
-.TaskManager__composer {
-  align-items: center;
-  background: var(--surface-background);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-  column-gap: 12px;
-  display: grid;
-  grid-template-areas:
-    'icon title controls submit'
-    'drawer drawer drawer drawer';
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  padding: 8px 8px 8px 16px;
-}
-
-.TaskManager__composer:focus-within {
-  border-color: #d4d4cf;
-}
-
-.TaskManager__composer__icon {
-  color: #9ca3af;
-  grid-area: icon;
-}
-
-.TaskManager__composer__title,
-.TaskManager__composer__description {
-  background: transparent;
-  border: none;
-  color: var(--color-text-default);
-  font-family: var(--font-family-default);
-  outline: none;
-  padding: 0;
-}
-
-.TaskManager__composer__title {
-  grid-area: title;
-  font-size: 14px;
-  font-weight: 500;
-  height: 36px;
-  min-width: 0;
-}
-
-.TaskManager__composer__title::placeholder,
-.TaskManager__composer__description::placeholder {
-  color: #a6a6a1;
-  font-weight: 400;
-}
-
-/* The drawer animates open by transitioning its single grid row. */
-.TaskManager__composer__drawer {
-  display: grid;
-  grid-area: drawer;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.2s ease;
-}
-
-.TaskManager__composer__drawer--open {
-  grid-template-rows: 1fr;
-}
-
-.TaskManager__composer__drawer__inner {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.TaskManager__composer__description {
-  display: block;
-  field-sizing: content;
-  font-size: 14px;
-  line-height: 20px;
-  margin: 4px 0 4px 30px;
-  max-height: 240px;
-  min-height: 60px;
-  resize: none;
-  width: calc(100% - 38px);
-}
-
-.TaskManager__composer__controls {
-  align-items: center;
-  display: flex;
-  grid-area: controls;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.TaskManager__composer__control {
-  align-items: center;
-  background: transparent;
-  border: 1px dashed #d4d4cf;
-  border-radius: 8px;
-  color: #5b616b;
-  cursor: pointer;
-  display: inline-flex;
-  font-family: var(--font-family-default);
-  font-size: 13px;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  white-space: nowrap;
-}
-
-.TaskManager__composer__control:hover {
-  background: #f5f5f2;
-}
-
-.TaskManager__composer__control--set {
-  background: #f3f3f0;
-  border-style: solid;
-  border-color: #e4e4e1;
-  color: var(--color-text-default);
-}
-
-.TaskManager__composer__control[aria-expanded='true'] {
-  border-color: #1f1f1f;
-  border-style: solid;
-  color: #1f1f1f;
-}
-
-.TaskManager__composer__submit {
-  grid-area: submit;
-}
-
-/* Match the height of the composer controls. */
-.TaskManager__composer .TaskManager__composer__submit {
-  height: 32px;
-}
-
-.TaskManager__composer__menuItem--active {
-  font-weight: 700;
-}
-
-.TaskManager__composer + .TaskManager__listHeader {
-  margin-top: 24px;
-}
-
-.TaskManager__listHeader {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.TaskManager__listHeader__actions {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-}
-
-.TaskManager__filters {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.TaskManager__filter {
-  align-items: center;
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-.TaskManager__filter__count {
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 999px;
-  color: var(--color-text-gray);
-  font-size: 11px;
-  line-height: 16px;
-  padding: 0 6px;
-}
-
-.TaskManager__layoutToggle {
-  flex: 0 0 auto;
-}
-
-.TaskManager__sortToggle {
-  align-items: center;
-  background: #fff;
-  border: 1px solid #e4e4e1;
-  border-radius: 8px;
-  color: var(--color-text-default);
-  cursor: pointer;
-  display: inline-flex;
-  font-family: var(--font-family-default);
-  font-size: 14px;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px;
-  white-space: nowrap;
-}
-
-.TaskManager__sortToggle:hover {
-  background: #f5f5f2;
-}
-
-.TaskManager__layoutOption {
-  align-items: center;
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-}
-
-/* Keep the icons from shrinking inside the segmented control labels. */
-.TaskManager__layoutOption svg {
-  flex: 0 0 auto;
-}
-
-.TaskManager__list {
-  min-height: 56px;
-}
-
-.TaskManager__list__state {
-  align-items: center;
-  color: var(--color-text-gray);
-  display: flex;
-  font-size: 14px;
-  justify-content: center;
-  min-height: 72px;
-  padding: 20px;
-}
-
-.TaskManager__list__state.error {
-  color: #b42318;
-}
-
-.TaskManager__taskRow {
-  align-items: center;
-  color: inherit;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  min-height: 64px;
-  padding: 12px 18px;
-  text-decoration: none;
-}
-
-.TaskManager__taskRow + .TaskManager__taskRow {
-  border-top: 1px solid var(--color-border);
-}
-
-.TaskManager__taskRow:hover {
-  background: var(--surface-background-hover);
-}
-
-.TaskManager__taskRow:active {
-  background: var(--surface-background-active);
-}
-
-.TaskManager__taskRow__avatar {
-  align-items: center;
-  background: #d7c1a2;
-  border-radius: 50%;
-  color: #fff;
-  display: flex;
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 700;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-.TaskManager__taskRow:nth-of-type(3n + 1) .TaskManager__taskRow__avatar {
-  background: #667085;
-}
-
-.TaskManager__taskRow:nth-of-type(3n + 2) .TaskManager__taskRow__avatar {
-  background: #8b78a5;
-}
-
-.TaskManager__taskRow:nth-of-type(3n + 3) .TaskManager__taskRow__avatar {
-  background: #6f9d7a;
-}
-
-.TaskManager__taskRow__content {
-  min-width: 0;
-}
-
-.TaskManager__taskRow__title {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.TaskManager__taskRow__meta {
-  color: var(--color-text-gray);
-  font-family: var(--font-family-mono);
-  font-size: 12px;
-  line-height: 1.4;
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.TaskManager__taskRow__badges {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.TaskManager__taskRow__status {
-  align-items: center;
-  background: var(--chip-background);
-  border-radius: 999px;
-  color: var(--color-text-default);
-  display: inline-flex;
-  font-family: var(--font-family-mono);
-  font-size: 12px;
-  font-weight: 700;
-  gap: 7px;
-  justify-content: center;
-  line-height: 1;
-  min-height: 26px;
-  padding: 0 11px;
-  text-transform: lowercase;
-  white-space: nowrap;
-}
-
-.TaskManager__taskRow__status span {
-  background: currentColor;
-  border-radius: 50%;
-  height: 6px;
-  width: 6px;
-}
-
-.TaskManager__priorityBadge {
-  flex: 0 0 auto;
-}
-
-.TaskManager__taskRow__date {
-  align-items: center;
-  border-radius: 999px;
-  display: inline-flex;
-  font-family: var(--font-family-mono);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  min-height: 26px;
-  padding: 0 11px;
-  white-space: nowrap;
-}
-
-.TaskManager__taskRow__date {
-  background: #f3f4f6;
-  color: var(--color-text-gray);
-}
-
-.TaskManager__groups {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.TaskManager__group.Surface {
-  border-radius: 12px;
-}
-
-.TaskManager__group__header {
-  align-items: center;
-  background: var(--task-status-bg);
-  border-bottom: 1px solid #ececea;
-  display: flex;
-  gap: 10px;
-  padding: 10px 16px;
-}
-
-.TaskManager__group__header--in-progress {
-  background: var(--task-status-bg-in-progress);
-}
-
-.TaskManager__group__header--in-review {
-  background: var(--task-status-bg-in-review);
-}
-
-.TaskManager__group__header--closed {
-  background: var(--task-status-bg-closed);
-}
-
-.TaskManager__group__title {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.TaskManager__group__count {
-  color: var(--color-text-gray);
-  font-size: 13px;
-}
-
-.TaskManager__statusRing {
-  border: 1.5px solid #9ca3af;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  height: 14px;
-  width: 14px;
-}
-
-.TaskManager__statusRing--new {
-  border-style: dashed;
-}
-
-.TaskManager__statusRing--in-progress {
-  background: conic-gradient(#2563eb 0 50%, transparent 0) content-box;
-  border-color: #2563eb;
-  padding: 2px;
-}
-
-.TaskManager__statusRing--in-review {
-  background: conic-gradient(#c2410c 0 75%, transparent 0) content-box;
-  border-color: #c2410c;
-  padding: 2px;
-}
-
-.TaskManager__statusRing--closed {
-  background: #3b7a57 content-box;
-  border-color: #3b7a57;
-  padding: 2px;
-}
-
-.TaskManager__listRow {
-  align-items: center;
-  color: inherit;
-  display: grid;
-  font-size: 14px;
-  gap: 12px;
-  grid-template-columns: 24px minmax(0, 1fr) 72px 112px;
-  min-height: 48px;
-  padding: 0 16px;
-  text-decoration: none;
-}
-
-.TaskManager__listRow + .TaskManager__listRow {
-  border-top: 1px solid #f1f1ee;
-}
-
-.TaskManager__listRow:hover {
-  background: var(--surface-background-hover);
-}
-
-.TaskManager__listRow__unassigned {
-  align-items: center;
-  border: 1px dashed #c9c9c4;
-  border-radius: 50%;
-  color: #9ca3af;
-  display: flex;
-  height: 24px;
-  justify-content: center;
-  width: 24px;
-}
-
-.TaskManager__listRow__content {
-  align-items: baseline;
-  display: flex;
-  gap: 10px;
-  min-width: 0;
-}
-
-.TaskManager__listRow__title {
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.TaskManager__listRow:hover .TaskManager__listRow__title {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.TaskManager__listRow__id {
-  color: var(--color-text-gray);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.TaskManager__listRow .TaskManager__priorityBadge {
-  justify-self: start;
-}
-
-.TaskManager__listRow__date {
-  color: var(--color-text-gray);
-  font-size: 12px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.TaskManager__board {
-  align-items: stretch;
-  display: grid;
-  gap: 16px;
-  /* Cap columns at the width they have in the 3-up (open) layout. */
-  grid-auto-columns: minmax(250px, calc((100% - 32px) / 3));
-  grid-auto-flow: column;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.TaskManager__boardColumn {
-  background: var(--task-status-bg);
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 480px;
-  outline: 2px dashed transparent;
-  outline-offset: -2px;
-  padding: 12px;
-  transition: outline-color 0.15s ease;
-}
-
-.TaskManager__boardColumn--dropTarget {
-  outline-color: #9ca3af;
-}
-
-.TaskManager__boardColumn--in-progress {
-  background: var(--task-status-bg-in-progress);
-}
-
-.TaskManager__boardColumn--in-review {
-  background: var(--task-status-bg-in-review);
-}
-
-.TaskManager__boardColumn--closed {
-  background: var(--task-status-bg-closed);
-}
-
-.TaskManager__boardColumn__header {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  padding: 2px 4px 4px;
-}
-
-.TaskManager__boardColumn__title {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.TaskManager__boardColumn__count {
-  color: #4b5563;
-  font-size: 12px;
-}
-
-.TaskManager__boardColumn__tasks {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.TaskManager__boardColumn__empty {
-  align-items: center;
-  color: #6b7280;
-  display: flex;
-  flex: 1;
-  font-size: 13px;
-  justify-content: center;
-  min-height: 88px;
-}
-
-.TaskManager__boardCard {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.06),
-    0 0 0 1px rgba(16, 24, 40, 0.05);
-  color: #1f1f1f;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  text-decoration: none;
-  transition: box-shadow 0.15s ease;
-}
-
-.TaskManager__boardCard[draggable='true'] {
-  cursor: grab;
-}
-
-.TaskManager__boardCard--dragging {
-  opacity: 0.4;
-}
-
-.TaskManager__boardCard:hover {
-  box-shadow:
-    0 2px 6px rgba(16, 24, 40, 0.08),
-    0 0 0 1px rgba(16, 24, 40, 0.1);
-}
-
-.TaskManager__boardCard__header {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-}
-
-.TaskManager__boardCard__id {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.TaskManager__boardCard__title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.TaskManager__boardCard__description {
-  color: #5b616b;
-  display: -webkit-box;
-  font-size: 13px;
-  line-height: 1.45;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.TaskManager__boardCard__footer {
-  align-items: center;
-  border-top: 1px solid #f1f1ee;
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-  padding-top: 8px;
-}
-
-.TaskManager__boardCard__date {
-  color: #6b7280;
-  font-size: 12px;
-  min-width: 0;
-}
-
-.TaskManager__boardCard__date .TaskTargetLaunch__label {
-  gap: 6px;
-}
-
-@media (max-width: 680px) {
+@layer components {
+  /*
+   * The description drawer sits after the title in the DOM so it follows the
+   * title in the tab order; grid areas place it below the top row. On phones
+   * the controls and the submit button move to their own row.
+   */
   .TaskManager__composer {
     grid-template-areas:
       'icon title title'
       'drawer drawer drawer'
       'controls controls submit';
     grid-template-columns: auto minmax(0, 1fr) auto;
-    row-gap: 8px;
+  }
+
+  @media (width >= 48rem) {
+    .TaskManager__composer {
+      grid-template-areas:
+        'icon title controls submit'
+        'drawer drawer drawer drawer';
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+    }
+  }
+
+  .TaskManager__composer__icon {
+    grid-area: icon;
+  }
+
+  .TaskManager__composer__title {
+    grid-area: title;
   }
 
   .TaskManager__composer__controls {
-    flex: 1;
+    grid-area: controls;
   }
 
-  .TaskManager__listRow {
-    grid-template-columns: 24px minmax(0, 1fr) auto;
+  .TaskManager__composer__submit {
+    grid-area: submit;
   }
 
-  .TaskManager__listRow__date {
-    display: none;
+  /* The drawer animates open by transitioning its single grid row. */
+  .TaskManager__composer__drawer {
+    grid-area: drawer;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease;
   }
 
-  .TaskManager__taskRow {
-    align-items: start;
-    grid-template-columns: 28px minmax(0, 1fr);
+  .TaskManager__composer__drawer--open {
+    grid-template-rows: 1fr;
   }
 
-  .TaskManager__taskRow__badges {
-    grid-column: 2;
-    justify-content: flex-start;
-    justify-self: start;
+  /* Cap columns at the width they have in the 3-up (open) layout. */
+  .TaskManager__board {
+    grid-auto-columns: minmax(250px, calc((100% - 32px) / 3));
+  }
+
+  .TaskManager__statusRing {
+    border: 1.5px solid var(--cms-color-text-subtle);
+  }
+
+  .TaskManager__statusRing--new {
+    border-style: dashed;
+  }
+
+  .TaskManager__statusRing--in-progress {
+    background: conic-gradient(var(--cms-color-info) 0 50%, transparent 0)
+      content-box;
+    border-color: var(--cms-color-info);
+    padding: 2px;
+  }
+
+  .TaskManager__statusRing--in-review {
+    background: conic-gradient(var(--cms-color-warning) 0 75%, transparent 0)
+      content-box;
+    border-color: var(--cms-color-warning);
+    padding: 2px;
+  }
+
+  .TaskManager__statusRing--closed {
+    background: var(--cms-color-success) content-box;
+    border-color: var(--cms-color-success);
+    padding: 2px;
   }
 }

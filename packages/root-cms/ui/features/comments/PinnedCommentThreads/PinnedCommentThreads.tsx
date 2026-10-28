@@ -1,10 +1,11 @@
 import './PinnedCommentThreads.css';
 
-import {ActionIcon, Loader, Tooltip} from '@mantine/core';
 import {IconGripHorizontal, IconX} from '@tabler/icons-preact';
-import {createPortal} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {Portal} from '../../../primitives/floating/Portal.js';
+import {IconButton} from '../../../primitives/IconButton/IconButton.js';
+import {Spinner} from '../../../primitives/Spinner/Spinner.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {CommentThread} from '../CommentThread/CommentThread.js';
 import {
@@ -70,16 +71,20 @@ export function PinnedCommentThreads() {
     return null;
   }
 
-  return createPortal(
-    <div className="PinnedCommentThreads">
-      {ctx.pinned.map((item) => (
-        <PinnedCommentWindow
-          key={pinnedThreadKey(item.docId, item.fieldKey)}
-          item={item}
-        />
-      ))}
-    </div>,
-    document.body
+  // The windows belong to the page, not to any open dialog, so they always
+  // render into the body (a modal dialog covers them, as it does the page).
+  // They sit above the app and alongside popovers, below dialogs and toasts.
+  return (
+    <Portal container={document.body}>
+      <div className="PinnedCommentThreads pointer-events-none fixed inset-0 z-(--cms-z-dropdown)">
+        {ctx.pinned.map((item) => (
+          <PinnedCommentWindow
+            key={pinnedThreadKey(item.docId, item.fieldKey)}
+            item={item}
+          />
+        ))}
+      </div>
+    </Portal>
   );
 }
 
@@ -188,12 +193,17 @@ function PinnedCommentWindow(props: PinnedCommentWindowProps) {
       className={joinClassNames(
         'PinnedCommentThreads__window',
         dragPosition && 'PinnedCommentThreads__window--dragging',
-        flash && 'PinnedCommentThreads__window--flash'
+        flash && 'PinnedCommentThreads__window--flash',
+        'pointer-events-auto absolute flex flex-col rounded-md border border-border bg-surface transition-shadow duration-200',
+        dragPosition ? 'select-none shadow-lg' : 'shadow-md'
       )}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: `${PINNED_COMMENT_WINDOW_WIDTH}px`,
+        // Narrower on small screens, so the window fits between the margins.
+        width: `min(${PINNED_COMMENT_WINDOW_WIDTH}px, calc(100vw - ${
+          VIEWPORT_MARGIN * 2
+        }px))`,
         zIndex: props.item.z || 0,
       }}
       role="dialog"
@@ -201,11 +211,15 @@ function PinnedCommentWindow(props: PinnedCommentWindowProps) {
       onPointerDown={() => ctx.bringToFront(docId, fieldKey)}
     >
       <div
-        className="PinnedCommentThreads__window__titleBar"
+        className={joinClassNames(
+          'PinnedCommentThreads__window__titleBar',
+          'flex h-8 shrink-0 touch-none items-center gap-1.5 border-b border-border pl-2 pr-1.5',
+          dragPosition ? 'cursor-grabbing' : 'cursor-grab'
+        )}
         onPointerDown={onPointerDown}
       >
         <div
-          className="PinnedCommentThreads__window__handle"
+          className="PinnedCommentThreads__window__handle flex shrink-0 items-center justify-center rounded-sm text-muted focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
           tabIndex={0}
           role="button"
           aria-label="Move comment window (use arrow keys)"
@@ -213,20 +227,21 @@ function PinnedCommentWindow(props: PinnedCommentWindowProps) {
         >
           <IconGripHorizontal size={14} strokeWidth="1.8" />
         </div>
-        <div className="PinnedCommentThreads__window__docId" title={docId}>
+        <div
+          className="PinnedCommentThreads__window__docId min-w-0 flex-1 truncate text-xs text-muted"
+          title={docId}
+        >
           {docId}
         </div>
-        <Tooltip label="Unpin" withArrow>
-          <ActionIcon
-            size="sm"
-            aria-label="Unpin"
-            onClick={() => ctx.unpin(docId, fieldKey)}
-          >
-            <IconX size={16} strokeWidth="1.8" />
-          </ActionIcon>
-        </Tooltip>
+        <IconButton
+          size="xs"
+          label="Unpin"
+          onClick={() => ctx.unpin(docId, fieldKey)}
+        >
+          <IconX strokeWidth="1.8" />
+        </IconButton>
       </div>
-      <div className="PinnedCommentThreads__window__body">
+      <div className="PinnedCommentThreads__window__body p-3">
         <FieldCommentsProvider docId={docId}>
           <PinnedCommentWindowThread item={props.item} />
         </FieldCommentsProvider>
@@ -251,8 +266,8 @@ function PinnedCommentWindowThread(props: PinnedCommentWindowThreadProps) {
 
   if (comments.loading) {
     return (
-      <div className="PinnedCommentThreads__window__loading">
-        <Loader size="sm" color="gray" />
+      <div className="PinnedCommentThreads__window__loading flex justify-center p-4 text-muted">
+        <Spinner />
       </div>
     );
   }
