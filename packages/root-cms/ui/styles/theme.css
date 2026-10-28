@@ -70,6 +70,21 @@
   /* Keyboard focus rings. */
   --cms-color-focus: #228be6;
 
+  /* --- Color: inputs --------------------------------------------------- *
+   * Text fields, selects and their chips. Cooler and a touch stronger than
+   * the chrome greys above, like the Mantine controls the CMS used before.
+   */
+
+  /* Input borders. */
+  --cms-input-border: #ced4da;
+  /* Text typed into an input. */
+  --cms-input-text: #000000;
+  /* Placeholders and the select chevron. Decorative contrast only. */
+  --cms-input-placeholder: #adb5bd;
+  /* Selected-value chips in a multi-select. */
+  --cms-input-chip: #f1f3f5;
+  --cms-input-chip-text: #495057;
+
   /* --- Color: status --------------------------------------------------- *
    * Each status has a strong color (text, icons, filled badges), a soft
    * background and a line color for borders. Strong colors keep at least

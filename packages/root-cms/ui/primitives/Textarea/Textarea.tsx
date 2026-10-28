@@ -14,9 +14,9 @@ import {INPUT_BASE_CLASSES, type InputSize} from '../TextInput/TextInput.js';
 
 /** Padding and text size of multi-line inputs, per size. */
 export const TEXTAREA_SIZE_CLASSES: Record<InputSize, string> = {
-  xs: 'px-2 py-0.5 text-lg md:text-sm',
-  sm: 'px-2.5 py-1 text-lg md:text-sm',
-  md: 'px-3 py-1.5 text-lg md:text-base',
+  xs: 'px-2 py-0.5 text-sm',
+  sm: 'px-2.5 py-1 text-sm',
+  md: 'px-3 py-1.5 text-base',
 };
 
 interface TextareaOwnProps extends FieldLabelProps {

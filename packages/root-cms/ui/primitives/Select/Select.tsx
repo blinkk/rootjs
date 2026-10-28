@@ -414,7 +414,7 @@ export const Select = forwardRef<HTMLElement, SelectProps>((props, ref) => {
       {leftSection && (
         <span
           className={cn(
-            'Select__leftSection pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center text-subtle',
+            'Select__leftSection pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center text-input-placeholder',
             INPUT_SECTION_CLASSES[size]
           )}
           aria-hidden="true"
@@ -482,7 +482,7 @@ export const Select = forwardRef<HTMLElement, SelectProps>((props, ref) => {
       )}
       <span
         className={cn(
-          'Select__rightSection absolute inset-y-0 right-0 flex items-center justify-center text-muted',
+          'Select__rightSection absolute inset-y-0 right-0 flex items-center justify-center text-input-placeholder',
           INPUT_SECTION_CLASSES[size],
           INPUT_RIGHT_SECTION_CLASSES[size],
           !showClear && !rightSection && 'pointer-events-none'

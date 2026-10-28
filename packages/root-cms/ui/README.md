@@ -145,8 +145,10 @@ Every screen must work at **375px wide**. Breakpoints: `sm` 640, `md` 768,
 
 - Touch targets are at least 40×40px on coarse pointers: use the
   `pointer-coarse:` variant to enlarge them.
-- Text inputs use at least 16px text below `md`, so iOS doesn't zoom on
-  focus.
+- Inputs keep their desktop text size on mobile. The viewport's
+  `maximum-scale=1` (in `core/app.tsx`) stops iOS zooming in on focus.
+- Inputs use the `--cms-input-*` tokens (`border-input-border`,
+  `text-input-fg`, …), which are cooler than the chrome greys.
 - Respect safe areas on fixed elements (`env(safe-area-inset-*)`).
 - No horizontal page scroll. Only specific regions (tables, code) may scroll
   sideways.

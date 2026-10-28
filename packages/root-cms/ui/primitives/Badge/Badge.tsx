@@ -48,8 +48,8 @@ const GRADIENT_CLASSES: Record<BadgeGradient, string> = {
 };
 
 const SIZE_CLASSES: Record<BadgeSize, string> = {
-  xs: 'h-4 gap-1 px-1.5',
-  sm: 'h-5 gap-1 px-2',
+  xs: 'h-4 gap-1 px-2',
+  sm: 'h-5 gap-1 px-2.5',
 };
 
 interface BadgeOwnProps {

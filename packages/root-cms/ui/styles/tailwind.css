@@ -54,6 +54,11 @@
   --color-on-primary: var(--cms-color-on-primary);
   --color-accent: var(--cms-accent);
   --color-focus: var(--cms-color-focus);
+  --color-input-border: var(--cms-input-border);
+  --color-input-fg: var(--cms-input-text);
+  --color-input-placeholder: var(--cms-input-placeholder);
+  --color-input-chip: var(--cms-input-chip);
+  --color-input-chip-fg: var(--cms-input-chip-text);
   --color-info: var(--cms-color-info);
   --color-info-soft: var(--cms-color-info-soft);
   --color-info-line: var(--cms-color-info-line);

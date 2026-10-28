@@ -195,7 +195,7 @@ export function Tab(props: TabProps) {
       className={cn(
         'Tabs__tab',
         'relative inline-flex h-10 shrink-0 cursor-pointer appearance-none items-center justify-center gap-2 whitespace-nowrap border-0 border-b-2 border-solid border-transparent bg-transparent px-4 font-sans text-base text-muted transition-colors',
-        'hover:text-fg aria-selected:border-accent aria-selected:text-strong',
+        'hover:text-fg aria-selected:border-strong aria-selected:text-strong',
         'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
         'disabled:cursor-not-allowed disabled:text-subtle',
         ctx.grow && 'flex-1',

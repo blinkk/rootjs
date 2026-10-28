@@ -31,7 +31,7 @@ export interface TooltipProps {
    * `ConditionalTooltip`: `disabled={!reason}`.
    */
   disabled?: boolean;
-  /** Delay before showing, in ms. Default 300. */
+  /** Delay before showing, in ms. Default 100. */
   delay?: number;
   /**
    * Keeps the tooltip open while the pointer is over it, so its content can
@@ -79,7 +79,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     children,
     placement = 'top',
     disabled = false,
-    delay = 300,
+    delay = 100,
     interactive = false,
     open: openProp,
     defaultOpen = false,

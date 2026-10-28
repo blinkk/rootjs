@@ -20,6 +20,7 @@ Edit freely; subagents get pointed at this file.
 | 11 | IconButton tooltips | On by default, showing `label`; `tooltip={false}` opts out. |
 | 12 | Tab scroll fade | Not needed. |
 | 13 | Select with no matches | Stays closed unless `nothingFound` is set (as in Mantine). |
+| 14 | Input look | Closer to Mantine: cool `--cms-input-*` greys, pill chips, no 16px mobile text. Tabs underline in black. |
 
 ## Goals
 
@@ -201,8 +202,8 @@ calls it out in its PR summary.
 | Popovers / menus | Bottom sheet on touch (optional, per component) |
 
 Touch targets are at least 40px on coarse pointers
-(`@media (pointer: coarse)`). Inputs use ≥ 16px text on mobile so iOS doesn't
-zoom.
+(`@media (pointer: coarse)`). Inputs keep their desktop text size on mobile;
+`maximum-scale=1` on the viewport stops iOS zooming on focus.
 
 ### D6. Branching
 

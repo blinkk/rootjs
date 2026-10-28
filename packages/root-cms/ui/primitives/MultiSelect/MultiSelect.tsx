@@ -44,20 +44,27 @@ const ROW_SIZE_CLASSES: Record<InputSize, string> = {
 };
 
 /**
- * Left padding of the inline input when there are no chips, so the
+ * Left padding of the values row. With the inline input's own `px-1`, the
  * placeholder lines up with `TextInput`'s.
  */
-const EMPTY_INPUT_PADDING_CLASSES: Record<InputSize, string> = {
+const VALUES_PADDING_CLASSES: Record<InputSize, string> = {
   xs: 'pl-1',
   sm: 'pl-1.5',
   md: 'pl-2',
 };
 
-/** Text size of the inline input: 16px below `md`, so iOS doesn't zoom. */
+/** Height, padding and text size of the chips, per size. */
+const CHIP_SIZE_CLASSES: Record<InputSize, string> = {
+  xs: 'h-4 pl-2 text-xs',
+  sm: 'h-4.5 pl-2.5 text-xs',
+  md: 'h-5.5 pl-3 text-sm',
+};
+
+/** Text size of the inline input, per size. */
 const INPUT_TEXT_CLASSES: Record<InputSize, string> = {
-  xs: 'text-lg md:text-sm',
-  sm: 'text-lg md:text-sm',
-  md: 'text-lg md:text-base',
+  xs: 'text-sm',
+  sm: 'text-sm',
+  md: 'text-base',
 };
 
 /** Width of the left and right sections, per size. */
@@ -313,7 +320,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
       <div
         ref={combobox.setReference}
         className={cn(
-          'MultiSelect__box flex min-w-0 cursor-text items-stretch rounded-sm border border-border-strong bg-surface font-sans text-fg transition-colors',
+          'MultiSelect__box flex min-w-0 cursor-text items-stretch rounded-sm border border-input-border bg-surface font-sans text-input-fg transition-colors',
           'focus-within:border-focus focus-within:outline-1 focus-within:outline-focus',
           'has-aria-invalid:border-danger has-aria-invalid:focus-within:outline-danger',
           // Unlike TextInput, a disabled box isn't faded with opacity: the
@@ -344,7 +351,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         {leftSection && (
           <span
             className={cn(
-              'MultiSelect__leftSection pointer-events-none flex shrink-0 items-center justify-center text-subtle',
+              'MultiSelect__leftSection pointer-events-none flex shrink-0 items-center justify-center text-input-placeholder',
               SECTION_CLASSES[size]
             )}
             aria-hidden="true"
@@ -354,17 +361,17 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         )}
         <div
           className={cn(
-            'MultiSelect__values flex min-w-0 flex-1 flex-wrap items-center gap-1',
-            !leftSection && 'pl-1'
+            'MultiSelect__values flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1',
+            !leftSection && VALUES_PADDING_CLASSES[size]
           )}
         >
           {selectedOptions.map((option) => (
             <span
               key={option.value}
               className={cn(
-                'MultiSelect__chip inline-flex min-w-0 max-w-full items-center gap-0.5 rounded-sm bg-chip pl-1.5 text-sm leading-tight text-fg',
-                disabled ? 'pr-1.5 text-muted' : 'pr-0.5',
-                ROW_SIZE_CLASSES[size],
+                'MultiSelect__chip inline-flex min-w-0 max-w-full items-center gap-0.5 rounded-full bg-input-chip font-medium leading-none text-input-chip-fg',
+                CHIP_SIZE_CLASSES[size],
+                disabled ? 'pr-2.5' : 'pr-0.5',
                 'pointer-coarse:h-7'
               )}
             >
@@ -376,7 +383,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
                   type="button"
                   tabIndex={-1}
                   aria-label={getRemoveLabel(option)}
-                  className="MultiSelect__chipRemove m-0 flex size-4 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-sm border-0 bg-transparent p-0 text-muted hover:bg-surface-active hover:text-fg *:size-3 pointer-coarse:size-6"
+                  className="MultiSelect__chipRemove m-0 flex size-4 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-input-chip-fg hover:bg-surface-active *:size-2.5 pointer-coarse:size-6"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => remove(option.value)}
                 >
@@ -406,12 +413,9 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
             placeholder={value.length === 0 ? placeholder : undefined}
             value={query}
             className={cn(
-              'MultiSelect__input m-0 min-w-16 flex-1 basis-16 appearance-none border-0 bg-transparent p-0 px-1 font-sans text-fg shadow-none outline-none placeholder:text-subtle disabled:cursor-not-allowed disabled:opacity-60',
+              'MultiSelect__input m-0 min-w-12 flex-1 basis-12 appearance-none border-0 bg-transparent p-0 px-1 font-sans text-input-fg shadow-none outline-none placeholder:text-input-placeholder disabled:cursor-not-allowed disabled:opacity-60',
               ROW_SIZE_CLASSES[size],
               INPUT_TEXT_CLASSES[size],
-              value.length === 0 &&
-                !leftSection &&
-                EMPTY_INPUT_PADDING_CLASSES[size],
               inputClassName
             )}
             onInput={(e) => {
@@ -431,7 +435,7 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         </div>
         <span
           className={cn(
-            'MultiSelect__rightSection flex shrink-0 items-center justify-center self-center text-muted',
+            'MultiSelect__rightSection flex shrink-0 items-center justify-center self-center text-input-placeholder',
             SECTION_CLASSES[size],
             !showClear && !rightSection && 'pointer-events-none'
           )}

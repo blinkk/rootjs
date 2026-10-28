@@ -19,21 +19,20 @@ export type InputSize = FieldSize;
  * `INPUT_SIZE_CLASSES` (single-line) or your own padding (multi-line).
  */
 export const INPUT_BASE_CLASSES =
-  'm-0 block w-full min-w-0 appearance-none rounded-sm border border-border-strong bg-surface font-sans text-fg shadow-none transition-colors ' +
-  'placeholder:text-subtle ' +
+  'm-0 block w-full min-w-0 appearance-none rounded-sm border border-input-border bg-surface font-sans text-input-fg shadow-none transition-colors ' +
+  'placeholder:text-input-placeholder ' +
   'focus-visible:border-focus focus-visible:outline-1 focus-visible:outline-focus ' +
   'aria-invalid:border-danger aria-invalid:focus-visible:outline-danger ' +
   'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-muted disabled:opacity-60';
 
 /**
- * Height, horizontal padding and text size of single-line inputs. Text is
- * 16px below `md` so iOS doesn't zoom on focus, and inputs grow to 40px on
- * coarse pointers.
+ * Height, horizontal padding and text size of single-line inputs. Inputs
+ * grow to 40px on coarse pointers.
  */
 export const INPUT_SIZE_CLASSES: Record<InputSize, string> = {
-  xs: 'h-control-xs px-2 text-lg md:text-sm pointer-coarse:h-10',
-  sm: 'h-control-sm px-2.5 text-lg md:text-sm pointer-coarse:h-10',
-  md: 'h-control-md px-3 text-lg md:text-base pointer-coarse:h-10',
+  xs: 'h-control-xs px-2 text-sm pointer-coarse:h-10',
+  sm: 'h-control-sm px-2.5 text-sm pointer-coarse:h-10',
+  md: 'h-control-md px-3 text-base pointer-coarse:h-10',
 };
 
 /** Left padding that makes room for a left section, per size. */
@@ -134,7 +133,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         {leftSection && (
           <span
             className={cn(
-              'TextInput__leftSection pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center text-subtle',
+              'TextInput__leftSection pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center text-input-placeholder',
               INPUT_SECTION_CLASSES[size]
             )}
             aria-hidden="true"

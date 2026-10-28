@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-preact';
 import type {ComponentChildren} from 'preact';
 import {createPortal} from 'preact/compat';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {cn} from '../../utils/classes.js';
 import {useOverlayRoot} from '../Dialog/dialogStack.js';
 import {IconButton} from '../IconButton/IconButton.js';
@@ -53,6 +53,30 @@ export interface ToastProps {
   defaultAutoClose: number | false;
   /** Called to hide the toast (dismissed or timed out). */
   onHide: (id: string) => void;
+  /**
+   * Set once the toast has been hidden: it plays its exit animation, then
+   * calls `onExited`.
+   */
+  leaving?: boolean;
+  /** Called when the exit animation ends. */
+  onExited?: (id: string) => void;
+}
+
+/** Whether to animate: skipped for reduced motion and in jsdom. */
+function canAnimate(el: HTMLElement | null): el is HTMLElement {
+  return (
+    !!el &&
+    typeof el.animate === 'function' &&
+    typeof window.matchMedia === 'function' &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+/** Toasts slide in from the right from `md` up, and up from the bottom below. */
+function enterOffset() {
+  return window.matchMedia('(width >= 48rem)').matches
+    ? 'translateX(24px)'
+    : 'translateY(16px)';
 }
 
 /** Resolves a toast's auto-close delay, like Mantine's `getAutoClose`. */
@@ -74,7 +98,8 @@ function autoCloseDelay(
  * auto-close timer pauses while it's hovered or focused.
  */
 export function Toast(props: ToastProps) {
-  const {toast, onHide} = props;
+  const {toast, onHide, leaving = false, onExited} = props;
+  const ref = useRef<HTMLDivElement>(null);
   const status = toastStatus(toast.color);
   const delay = autoCloseDelay(toast, props.defaultAutoClose);
   const timerRef = useRef<number | undefined>(undefined);
@@ -114,8 +139,59 @@ export function Toast(props: ToastProps) {
     toast.onOpen?.(toast);
   }, []);
 
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (canAnimate(el)) {
+      el.animate(
+        [
+          {opacity: 0, transform: enterOffset()},
+          {opacity: 1, transform: 'none'},
+        ],
+        {duration: 200, easing: 'ease-out'}
+      );
+    }
+  }, []);
+
+  // Exit: fade and slide out, then collapse the space it took so the toasts
+  // around it slide into place.
+  useLayoutEffect(() => {
+    if (!leaving) {
+      return;
+    }
+    window.clearTimeout(timerRef.current);
+    const el = ref.current;
+    if (!canAnimate(el)) {
+      onExited?.(toast.id);
+      return;
+    }
+    const height = `${el.offsetHeight}px`;
+    // Also cancels the list's gap next to the toast.
+    const gapSide = el.previousElementSibling ? 'marginTop' : 'marginBottom';
+    const anim = el.animate(
+      [
+        {opacity: 1, transform: 'none', height},
+        {opacity: 0, transform: enterOffset(), height, offset: 0.6},
+        {
+          opacity: 0,
+          transform: enterOffset(),
+          height: '0px',
+          paddingTop: '0px',
+          paddingBottom: '0px',
+          borderWidth: '0px',
+          [gapSide]: '-8px',
+        },
+      ],
+      {duration: 300, easing: 'ease-in-out', fill: 'forwards'}
+    );
+    anim.onfinish = () => onExited?.(toast.id);
+    return () => anim.cancel();
+  }, [leaving]);
+
   // (Re)start the timer when shown, and whenever the toast is updated.
   useEffect(() => {
+    if (leaving) {
+      return undefined;
+    }
     remainingRef.current = delay === false ? 0 : delay;
     if (!pausedRef.current.hover && !pausedRef.current.focus) {
       start();
@@ -131,9 +207,12 @@ export function Toast(props: ToastProps) {
 
   return (
     <div
+      ref={ref}
+      aria-hidden={leaving || undefined}
       className={cn(
         'Toast',
         `Toast--status-${status}`,
+        leaving && 'Toast--leaving pointer-events-none',
         'pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pl-4 pr-3 text-base text-fg shadow-lg',
         toast.className
       )}
@@ -227,12 +306,41 @@ export function Toaster(props: ToasterProps) {
   const limit = props.limit ?? 5;
   const defaultAutoClose = props.autoClose ?? 4000;
   const [toasts, setToasts] = useState(() => store.getToasts());
+  // Hidden toasts stay rendered, where they were, until their exit
+  // animation ends.
+  const [leaving, setLeaving] = useState<
+    Array<{toast: ToastData; index: number}>
+  >([]);
+  const shownRef = useRef<ToastData[]>([]);
   const root = useOverlayRoot();
 
   useEffect(() => {
     setToasts(store.getToasts());
     return store.subscribe(() => setToasts(store.getToasts()));
   }, [store]);
+
+  const shown = toasts.slice(0, limit);
+  useLayoutEffect(() => {
+    const ids = new Set(shown.map((t) => t.id));
+    const gone = shownRef.current
+      .map((toast, index) => ({toast, index}))
+      .filter(({toast}) => !ids.has(toast.id));
+    shownRef.current = shown;
+    if (gone.length > 0) {
+      setLeaving((current) => [
+        ...current.filter(({toast}) => !ids.has(toast.id)),
+        ...gone,
+      ]);
+    }
+  }, [toasts, limit]);
+
+  const items = shown.map((toast) => ({toast, leaving: false}));
+  leaving
+    .filter(({toast}) => !items.some((item) => item.toast.id === toast.id))
+    .sort((a, b) => a.index - b.index)
+    .forEach(({toast, index}) => {
+      items.splice(Math.min(index, items.length), 0, {toast, leaving: true});
+    });
 
   return createPortal(
     <section
@@ -244,12 +352,18 @@ export function Toaster(props: ToasterProps) {
         aria-live="polite"
         aria-relevant="additions text"
       >
-        {toasts.slice(0, limit).map((toast) => (
+        {items.map(({toast, leaving: isLeaving}) => (
           <Toast
             key={toast.id}
             toast={toast}
             defaultAutoClose={defaultAutoClose}
             onHide={(id) => store.hide(id)}
+            leaving={isLeaving}
+            onExited={(id) =>
+              setLeaving((current) =>
+                current.filter(({toast: t}) => t.id !== id)
+              )
+            }
           />
         ))}
       </div>

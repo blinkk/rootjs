@@ -262,7 +262,12 @@ function SignIn(props: SignInProps) {
         <title>{props.title}</title>
         <meta name="robots" content="noindex" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* `maximum-scale=1` stops iOS zooming in when an input under 16px is
+            focused; pinch-zoom still works. */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1"
+        />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
