@@ -320,8 +320,8 @@ export const MultiSelect = forwardRef<HTMLInputElement, MultiSelectProps>(
         ref={combobox.setReference}
         className={cn(
           'MultiSelect__box flex min-w-0 cursor-text items-stretch rounded-sm border border-input-border bg-surface font-sans text-input-fg transition-colors',
-          'focus-within:border-focus focus-within:outline-1 focus-within:outline-focus',
-          'has-aria-invalid:border-danger has-aria-invalid:focus-within:outline-danger',
+          'focus-within:border-focus',
+          'has-aria-invalid:border-danger has-aria-invalid:focus-within:border-danger',
           // Unlike TextInput, a disabled box isn't faded with opacity: the
           // chips are text that still needs contrast.
           'has-disabled:cursor-not-allowed has-disabled:bg-surface-hover',

@@ -25,14 +25,14 @@ const DATETIME_TYPES = new Set([
 /**
  * The input box shared by every text-like control (`TextInput`, `Textarea`,
  * `NumberInput`, and later `Select`): border, background, placeholder,
- * focus ring, and the invalid, disabled and read-only states. Pair it with
+ * focus border (a color change only, as in Mantine), and the invalid, disabled and read-only states. Pair it with
  * `INPUT_SIZE_CLASSES` (single-line) or your own padding (multi-line).
  */
 export const INPUT_BASE_CLASSES =
   'm-0 block w-full min-w-0 appearance-none rounded-sm border border-input-border bg-surface font-sans text-input-fg shadow-none transition-colors ' +
   'placeholder:text-input-placeholder ' +
-  'focus-visible:border-focus focus-visible:outline-1 focus-visible:outline-focus ' +
-  'aria-invalid:border-danger aria-invalid:focus-visible:outline-danger ' +
+  'focus-visible:border-focus focus-visible:outline-none ' +
+  'aria-invalid:border-danger aria-invalid:focus-visible:border-danger ' +
   'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-muted disabled:opacity-60';
 
 /**
