@@ -23,12 +23,14 @@ defaults, so only on-scale utilities exist:
 | Actions | `bg-primary` `bg-primary-hover` `text-on-primary` `bg-accent` `ring-focus` |
 | Status | `{text,bg,border}-{info,success,warning,danger}`, with `-soft` (background) and `-line` (border) variants |
 | Colored buttons | `button-blue` `button-blue-hover` `button-blue-soft` `button-blue-soft-hover` `button-green` `button-green-hover` `button-red` `button-red-hover` `button-red-soft` (used only by the `Button` variants below) |
+| AI | `text-violet` `bg-violet` `bg-violet-soft` `border-violet`, and `text-violet-strong` on `bg-violet-soft`: AI features and AI-generated content (Badge `tone="violet"`) |
 | Type | `font-sans` `font-mono`; `text-2xs` 10 (badges only) · `text-xs` 11 · `text-sm` 12 · `text-base` 14 · `text-lg` 16 · `text-xl` 20 · `text-2xl` 24 |
 | Shape | `rounded-sm` 4 · `rounded-md` 6 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-full` |
 | Elevation | `shadow-sm` (cards) · `shadow-md` (menus, popovers) · `shadow-lg` (modals, toasts) |
-| Stacking | `z-(--cms-z-sticky)` `z-(--cms-z-dropdown)` `z-(--cms-z-modal)` `z-(--cms-z-toast)` `z-(--cms-z-tooltip)` |
+| Stacking | `z-(--cms-z-sticky)` `z-(--cms-z-dropdown)` `z-(--cms-z-floating)` (windows that float beside the page, e.g. pinned comments) `z-(--cms-z-modal)` `z-(--cms-z-toast)` `z-(--cms-z-tooltip)` |
 | Controls | `h-control-xs` 24 · `h-control-sm` 28 · `h-control-md` 36 (also `w-`, `size-`, `min-h-`) for buttons and single-line inputs |
 | Spacing | Tailwind's 4px scale (`p-2` = 8px). Half steps up to 3.5 (`gap-1.5` = 6px) are fine for dense controls |
+| Page padding | `p-page` (also `px-`, `py-`, `pt-`, `pb-page`): 16px below `md`, 32px from `md`, around a page's content |
 
 Rules:
 
@@ -95,7 +97,8 @@ themes, tests and debugging. Utilities do the styling.
   `Button--size-sm`) and `Block--name` for booleans (`Menu__item--danger`).
 - Interactive state goes in ARIA (`aria-expanded`, `aria-selected`,
   `aria-disabled`, `aria-invalid`, `aria-current`) and is styled with
-  Tailwind's `aria-*:` variants. It isn't duplicated as a modifier.
+  Tailwind's `aria-*:` variants, or `current:` for any `aria-current` value
+  (`page`, `true`, `location`, …). It isn't duplicated as a modifier.
 - No other naming styles in new code (`size:body-sm`, `active`, `is-open`).
 - Use `cn()` from `utils/classes.ts` whenever a `className` prop is merged, so
   the caller's utilities win. `joinClassNames()` is fine everywhere else.
@@ -118,6 +121,9 @@ re-implement them.
   `forwardRef` from `preact/compat`) when it wraps a single DOM element.
 - Positioning (tooltips, popovers, menus, selects) uses `@floating-ui/dom`
   through the shared `useFloating` hook. Modals use native `<dialog>`.
+- `Tooltip` attaches to its trigger directly (no wrapper), so the trigger
+  keeps its own layout classes (`absolute`, `float-right`). Only text, or a
+  component that doesn't forward its ref, gets a wrapper span.
 - Overlays render through `primitives/floating/Portal`, which targets the
   topmost open `<dialog>` (a modal dialog makes the rest of the page inert).
   Never portal straight to `document.body`.

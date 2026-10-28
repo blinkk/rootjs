@@ -307,6 +307,7 @@ export function TaskManager(props: TaskManagerProps) {
         </div>
         <div className="TaskManager__composer__controls flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           <Popover
+            withArrow
             label="Assign task"
             open={assignPopoverOpen}
             onOpenChange={setAssignPopoverOpen}
@@ -376,6 +377,7 @@ export function TaskManager(props: TaskManagerProps) {
             ))}
           </Menu>
           <Popover
+            withArrow
             label="Target date"
             open={targetDatePopoverOpen}
             onOpenChange={(open) =>

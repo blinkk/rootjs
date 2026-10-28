@@ -47,6 +47,11 @@ export interface PopoverProps extends Omit<
   trapFocus?: boolean;
   /** Close on a press outside the popover and its trigger. Default `true`. */
   closeOnOutsideClick?: boolean;
+  /**
+   * Shows an arrow pointing at the trigger, and leaves a wider gap for it.
+   * Default `false`, like Mantine's.
+   */
+  withArrow?: boolean;
   /** Classes for the popover panel. */
   className?: string;
 }
@@ -81,6 +86,7 @@ export function Popover(props: PopoverProps) {
     label,
     trapFocus = true,
     closeOnOutsideClick = true,
+    withArrow = false,
     className,
     style,
     onKeyDown,
@@ -95,10 +101,12 @@ export function Popover(props: PopoverProps) {
     defaultOpen,
     onOpenChange
   );
-  const {setReference, setFloating, reference, floating} = useFloating({
-    open,
-    placement,
-  });
+  const {setReference, setFloating, setArrow, reference, floating} =
+    useFloating({
+      open,
+      placement,
+      offset: withArrow ? 8 : 4,
+    });
   const triggerRef = useMergedRef<Element>(
     getElementRef(trigger),
     setReference
@@ -115,8 +123,46 @@ export function Popover(props: PopoverProps) {
     open,
     reference,
     floating,
-    initialFocus: (panel) => getTabbables(panel)[0] ?? panel,
+    initialFocus: (el) => {
+      // With an arrow, the floating element is a wrapper around the panel.
+      const panel = withArrow ? (el.firstElementChild as HTMLElement) : el;
+      return getTabbables(panel)[0] ?? panel;
+    },
   });
+
+  function renderPanel(
+    positionClasses: string,
+    panelRef?: (el: HTMLElement | null) => void
+  ) {
+    return (
+      <div
+        {...rest}
+        ref={panelRef}
+        id={panelId}
+        role="dialog"
+        aria-label={label}
+        aria-labelledby={label ? undefined : triggerId}
+        tabIndex={-1}
+        className={cn(
+          'Popover overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-base text-fg shadow-md focus:outline-none',
+          positionClasses,
+          className
+        )}
+        style={{
+          ...(typeof style === 'object' ? style : {}),
+          width: width !== undefined ? `${width}px` : undefined,
+        }}
+        onKeyDown={(e) => {
+          onKeyDown?.(e);
+          if (trapFocus) {
+            trapTabKey(e, e.currentTarget);
+          }
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -130,31 +176,23 @@ export function Popover(props: PopoverProps) {
       })}
       {open && (
         <Portal>
-          <div
-            {...rest}
-            ref={setFloating}
-            id={panelId}
-            role="dialog"
-            aria-label={label}
-            aria-labelledby={label ? undefined : triggerId}
-            tabIndex={-1}
-            className={cn(
-              'Popover z-(--cms-z-dropdown) w-max overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-base text-fg shadow-md focus:outline-none',
-              className
-            )}
-            style={{
-              ...(typeof style === 'object' ? style : {}),
-              width: width !== undefined ? `${width}px` : undefined,
-            }}
-            onKeyDown={(e) => {
-              onKeyDown?.(e);
-              if (trapFocus) {
-                trapTabKey(e, e.currentTarget);
-              }
-            }}
-          >
-            {children}
-          </div>
+          {withArrow ? (
+            // The panel scrolls, which would clip an arrow inside it, so the
+            // arrow sits next to it in a positioned wrapper.
+            <div
+              ref={setFloating}
+              className="Popover__floating z-(--cms-z-dropdown) flex w-max flex-col"
+            >
+              {renderPanel('relative z-10 min-h-0 max-w-full')}
+              <div
+                ref={setArrow}
+                className="Popover__arrow absolute size-2.5 rotate-45 border border-border bg-surface"
+                aria-hidden="true"
+              />
+            </div>
+          ) : (
+            renderPanel('z-(--cms-z-dropdown) w-max', setFloating)
+          )}
         </Portal>
       )}
     </>

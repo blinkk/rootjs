@@ -119,7 +119,7 @@ export function EditReleasePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="EditReleasePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="EditReleasePage bg-page p-page">
         <div className="EditReleasePage__header mb-5 max-w-150">
           <Breadcrumbs
             className="EditReleasePage__breadcrumbs mb-3"

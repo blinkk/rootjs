@@ -212,7 +212,7 @@ export function EditDataSourcePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="EditDataSourcePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="EditDataSourcePage bg-page p-page">
         <div className="EditDataSourcePage__header mb-5 max-w-150">
           <Breadcrumbs
             className="EditDataSourcePage__header__breadcrumbs mb-3"

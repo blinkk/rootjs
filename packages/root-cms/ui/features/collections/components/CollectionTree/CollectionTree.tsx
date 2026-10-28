@@ -165,7 +165,7 @@ function CollectionCard(props: {node: CollectionNode; active: boolean}) {
         'flex w-full items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-base font-medium text-fg no-underline transition-colors',
         'hover:bg-surface-hover active:translate-y-0.5 active:bg-surface-active',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-        active && 'border-muted text-strong'
+        'current:border-muted current:text-strong'
       )}
       href={`/cms/content/${node.id}`}
       aria-current={active ? 'page' : undefined}

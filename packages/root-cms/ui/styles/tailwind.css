@@ -118,3 +118,58 @@
   --shadow-md: var(--cms-shadow-md);
   --shadow-lg: var(--cms-shadow-lg);
 }
+
+/*
+ * AI (violet): `text-violet`, `bg-violet`, `bg-violet-soft`,
+ * `border-violet`, … for AI features and AI-generated content, and
+ * `text-violet-strong` for violet text on `bg-violet-soft`.
+ */
+@theme inline {
+  --color-violet: var(--cms-color-violet);
+  --color-violet-soft: var(--cms-color-violet-soft);
+  --color-violet-strong: var(--cms-color-violet-strong);
+}
+
+/*
+ * Page padding: `p-page` is the space around a page's content, 16px below
+ * `md` and 32px from `md` up (`--cms-page-padding-mobile` and
+ * `--cms-page-padding`). `px-page`, `py-page`, `pt-page` and `pb-page` set
+ * one axis or side.
+ */
+@utility p-page {
+  padding: var(--cms-page-padding-mobile);
+  @variant md {
+    padding: var(--cms-page-padding);
+  }
+}
+@utility px-page {
+  padding-inline: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-inline: var(--cms-page-padding);
+  }
+}
+@utility py-page {
+  padding-block: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-block: var(--cms-page-padding);
+  }
+}
+@utility pt-page {
+  padding-top: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-top: var(--cms-page-padding);
+  }
+}
+@utility pb-page {
+  padding-bottom: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-bottom: var(--cms-page-padding);
+  }
+}
+
+/*
+ * `current:` styles the current item in a nav, tree or list: an element
+ * with `aria-current` set to anything but `false` (`page`, `true`, `step`,
+ * …), e.g. `current:bg-surface-active`.
+ */
+@custom-variant current (&[aria-current]:not([aria-current='false']));

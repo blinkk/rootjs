@@ -12,7 +12,7 @@ export function ProjectPage() {
   usePageTitle('Home');
   return (
     <Layout>
-      <div className="ProjectPage bg-page p-4 md:p-8">
+      <div className="ProjectPage bg-page p-page">
         <div className="ProjectPage__main flex max-w-320 flex-col gap-7">
           {/*
            * The collections column matches the collection list on the

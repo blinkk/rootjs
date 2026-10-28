@@ -9,7 +9,7 @@ export function TranslationsPage() {
   usePageTitle('Translations');
   return (
     <Layout>
-      <div className="TranslationsPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding) md:pb-5">
+      <div className="TranslationsPage bg-page p-page md:pb-5">
         <div className="TranslationsPage__header mb-6 flex flex-wrap items-center justify-between gap-4 md:mb-10">
           <Heading size="h1">Translations</Heading>
           <div className="TranslationsPage__headerButtons flex items-center gap-2">

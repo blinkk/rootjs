@@ -47,6 +47,7 @@ function DocsTable(props: {
   striped?: boolean;
   hover?: boolean;
   stickyFirstColumn?: boolean;
+  withColumnBorders?: boolean;
   label?: string;
 }) {
   return (
@@ -90,6 +91,9 @@ export const TableGallery = defineGallery({
     ),
     'Sticky first column': () => (
       <DocsTable stickyFirstColumn hover label="Documents (sticky)" />
+    ),
+    'Column borders': () => (
+      <DocsTable withColumnBorders label="Documents (column borders)" />
     ),
     'Key/value details': () => (
       <Table dense className="max-w-sm" label="File details">

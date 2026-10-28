@@ -52,6 +52,54 @@ export const TextInputGallery = defineGallery({
         />
       </div>
     ),
+    'Date and time': () => (
+      <div className="flex max-w-sm flex-col gap-4">
+        <div className="flex gap-2">
+          <TextInput
+            className="min-w-0 flex-1"
+            label="Date"
+            type="date"
+            defaultValue="2026-10-27"
+          />
+          <TextInput
+            className="w-28 shrink-0"
+            label="Time"
+            type="time"
+            defaultValue="19:00"
+          />
+        </div>
+        <TextInput
+          label="Publish at"
+          type="datetime-local"
+          defaultValue="2026-10-27T19:00"
+        />
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span>Run every day at</span>
+          <TextInput
+            className="w-28"
+            aria-label="Time"
+            type="time"
+            defaultValue="09:30"
+          />
+        </div>
+        <TextInput label="Disabled" type="time" defaultValue="12:00" disabled />
+      </div>
+    ),
+    'Section content': () => (
+      // Icons in a section are sized by the input; other content keeps its
+      // own size, e.g. a 20px avatar.
+      <div className="flex max-w-sm flex-col gap-3">
+        <TextInput
+          aria-label="Assignee"
+          defaultValue="ada@example.com"
+          leftSection={
+            <span className="flex size-5 items-center justify-center rounded-full bg-info text-2xs font-semibold text-inverse">
+              A
+            </span>
+          }
+        />
+      </div>
+    ),
     States: () => (
       <div className="flex max-w-sm flex-col gap-4">
         <TextInput

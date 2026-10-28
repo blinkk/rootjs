@@ -38,6 +38,7 @@ import {
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../../../integrations/gcs.js';
+import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
 import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
@@ -151,9 +152,6 @@ const PAGE_SIZE = 100;
 
 /** localStorage key the user's preferred sort order is remembered under. */
 const SORT_STORAGE_KEY = 'root::AssetBrowser:sort';
-
-/** Drops the table's vertical cell dividers; rows only have horizontal ones. */
-const NO_COL_BORDER = 'not-last:border-r-0';
 
 /** Classes for the danger callouts in the delete confirmation. */
 const WARNING_CLASSES =
@@ -773,12 +771,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
             <TableHead>
               <TableRow>
                 {showSelection && (
-                  <TableHeaderCell
-                    className={cn(
-                      'AssetBrowser__table__checkboxCol w-0',
-                      NO_COL_BORDER
-                    )}
-                  >
+                  <TableHeaderCell className="AssetBrowser__table__checkboxCol w-0">
                     <Checkbox
                       aria-label="Select all"
                       checked={allSelected}
@@ -803,12 +796,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                   sort={sort}
                   onSort={setSort}
                 />
-                <TableHeaderCell
-                  className={cn(
-                    'AssetBrowser__table__actionsCol w-0',
-                    NO_COL_BORDER
-                  )}
-                >
+                <TableHeaderCell className="AssetBrowser__table__actionsCol w-0">
                   <span className="sr-only">Actions</span>
                 </TableHeaderCell>
               </TableRow>
@@ -825,10 +813,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                   >
                     {showSelection && (
                       <TableCell
-                        className={cn(
-                          'AssetBrowser__checkboxCell cursor-default',
-                          NO_COL_BORDER
-                        )}
+                        className="AssetBrowser__checkboxCell cursor-default"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -838,7 +823,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         />
                       </TableCell>
                     )}
-                    <TableCell className={NO_COL_BORDER}>
+                    <TableCell>
                       <div className="AssetBrowser__nameCell flex items-center gap-2.5">
                         <div
                           className={cn(
@@ -885,13 +870,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className={NO_COL_BORDER}>
+                    <TableCell>
                       <AssetModifiedBy asset={asset} />
                     </TableCell>
-                    <TableCell
-                      className={NO_COL_BORDER}
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="AssetBrowser__actionsCell flex items-center justify-end">
                         {props.mode === 'manage' && canManage && (
                           <Menu
@@ -946,10 +928,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                   >
                     {showSelection && (
                       <TableCell
-                        className={cn(
-                          'AssetBrowser__checkboxCell cursor-default',
-                          NO_COL_BORDER
-                        )}
+                        className="AssetBrowser__checkboxCell cursor-default"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -959,7 +938,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         />
                       </TableCell>
                     )}
-                    <TableCell className={NO_COL_BORDER}>
+                    <TableCell>
                       <div className="AssetBrowser__nameCell flex items-center gap-2.5">
                         <AssetThumbnail file={asset.file} size={36} />
                         <div className="AssetBrowser__nameCell__text flex min-w-0 flex-col items-start gap-px">
@@ -992,13 +971,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className={NO_COL_BORDER}>
+                    <TableCell>
                       <AssetModifiedBy asset={asset} />
                     </TableCell>
-                    <TableCell
-                      className={NO_COL_BORDER}
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="AssetBrowser__actionsCell flex items-center justify-end">
                         {props.mode !== 'pick' && (
                           <FileActionsMenu
@@ -1240,7 +1216,7 @@ function AssetSortHeader(props: {
   const dir = active ? props.sort.dir : null;
   return (
     <TableHeaderCell
-      className={cn(NO_COL_BORDER, props.className)}
+      className={props.className}
       aria-sort={
         dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'
       }
@@ -1283,39 +1259,16 @@ AssetBrowser.Breadcrumbs = (props: {
     });
   });
   return (
-    <nav
-      className="AssetBrowser__breadcrumbs flex min-h-7 min-w-0 flex-wrap items-center gap-0.5"
+    <Breadcrumbs
+      className="AssetBrowser__breadcrumbs flex min-h-7 items-center"
       aria-label="Folder"
-    >
-      {crumbs.map((crumb, i) => (
-        <div
-          key={crumb.path}
-          className="AssetBrowser__breadcrumbs__crumb flex min-w-0 items-center gap-0.5"
-        >
-          {i > 0 && (
-            <IconChevronRight
-              className="AssetBrowser__breadcrumbs__divider shrink-0 text-muted"
-              size={14}
-              aria-hidden="true"
-            />
-          )}
-          <button
-            type="button"
-            className={cn(
-              'AssetBrowser__breadcrumbs__link',
-              'm-0 cursor-pointer appearance-none rounded-sm border-0 bg-transparent px-1.5 py-0.5 text-left font-sans text-base font-medium text-muted wrap-anywhere',
-              'enabled:hover:bg-surface-hover enabled:hover:text-fg focus-visible:outline-2 focus-visible:outline-focus',
-              'disabled:cursor-default disabled:text-fg'
-            )}
-            aria-current={i === crumbs.length - 1 ? 'location' : undefined}
-            disabled={i === crumbs.length - 1}
-            onClick={() => props.onNavigate(crumb.path)}
-          >
-            {crumb.label}
-          </button>
-        </div>
-      ))}
-    </nav>
+      current="location"
+      separator={<IconChevronRight size={14} className="block" />}
+      items={crumbs.map((crumb) => ({
+        label: crumb.label,
+        onClick: () => props.onNavigate(crumb.path),
+      }))}
+    />
   );
 };
 

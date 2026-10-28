@@ -326,6 +326,7 @@ function MultiReleaseBadge(props: {releases: Release[]}) {
   const releases = props.releases;
   return (
     <Popover
+      withArrow
       open={opened}
       onOpenChange={setOpened}
       placement="bottom"

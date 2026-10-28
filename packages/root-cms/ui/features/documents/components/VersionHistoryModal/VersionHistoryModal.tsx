@@ -348,6 +348,7 @@ export function VersionHistoryModal(
                         </Text>
                         {version.publishMessage && (
                           <Popover
+                            withArrow
                             open={openTooltip === messageKey}
                             onOpenChange={(open) =>
                               setOpenTooltip(open ? messageKey : null)
@@ -372,6 +373,7 @@ export function VersionHistoryModal(
                         )}
                         {releaseId && (
                           <Popover
+                            withArrow
                             open={openTooltip === releaseKey}
                             onOpenChange={(open) =>
                               setOpenTooltip(open ? releaseKey : null)

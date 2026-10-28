@@ -8,7 +8,7 @@ export function TasksPage() {
   usePageTitle('Tasks');
   return (
     <Layout>
-      <div className="TasksPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="TasksPage bg-page p-page">
         <div className="TasksPage__header mb-7 max-w-320">
           <Heading size="h1">Tasks</Heading>
         </div>

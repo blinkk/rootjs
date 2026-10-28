@@ -1,3 +1,4 @@
+import './TextInput.css';
 import type {ComponentChildren, JSX} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {cn} from '../../utils/classes.js';
@@ -11,6 +12,15 @@ import {
 } from '../Field/Field.js';
 
 export type InputSize = FieldSize;
+
+/** Input types that show the browser's date or time picker. */
+const DATETIME_TYPES = new Set([
+  'date',
+  'time',
+  'datetime-local',
+  'month',
+  'week',
+]);
 
 /**
  * The input box shared by every text-like control (`TextInput`, `Textarea`,
@@ -51,9 +61,9 @@ export const INPUT_RIGHT_PADDING_CLASSES: Record<InputSize, string> = {
 
 /** Width of the left and right sections, per size (square with the input). */
 export const INPUT_SECTION_CLASSES: Record<InputSize, string> = {
-  xs: 'w-6 *:size-3.5 pointer-coarse:w-8',
-  sm: 'w-7 *:size-4 pointer-coarse:w-9',
-  md: 'w-9 *:size-4',
+  xs: 'w-6 [&>svg]:size-3.5 pointer-coarse:w-8',
+  sm: 'w-7 [&>svg]:size-4 pointer-coarse:w-9',
+  md: 'w-9 [&>svg]:size-4',
 };
 
 /** Right sections are wider on coarse pointers, for a clickable target. */
@@ -89,7 +99,8 @@ export type TextInputProps = InputChromeProps &
 /**
  * A single-line text input, with an optional label, help text and error.
  * Replaces Mantine's `TextInput`. The ref and any native props go to the
- * `<input>`.
+ * `<input>`. Date and time types (`type="date"`, `"time"`,
+ * `"datetime-local"`) use the browser's picker, styled to match.
  *
  * ```tsx
  * <TextInput
@@ -148,6 +159,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
           type={type}
           className={cn(
             'TextInput__input',
+            DATETIME_TYPES.has(type as string) && 'TextInput__input--datetime',
             INPUT_BASE_CLASSES,
             INPUT_SIZE_CLASSES[size],
             Boolean(leftSection) && INPUT_LEFT_PADDING_CLASSES[size],

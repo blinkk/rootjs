@@ -13,7 +13,14 @@ import {
   type BadgeVariant,
 } from './Badge.js';
 
-const TONES: BadgeTone[] = ['neutral', 'info', 'success', 'warning', 'danger'];
+const TONES: BadgeTone[] = [
+  'neutral',
+  'info',
+  'success',
+  'warning',
+  'danger',
+  'violet',
+];
 const VARIANTS: BadgeVariant[] = ['soft', 'filled', 'outline'];
 const GRADIENTS: Array<[BadgeGradient, string]> = [
   ['blue', 'Draft'],

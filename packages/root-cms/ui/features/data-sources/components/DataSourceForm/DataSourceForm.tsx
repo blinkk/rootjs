@@ -10,11 +10,7 @@ import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverl
 import {NumberInput} from '../../../../primitives/NumberInput/NumberInput.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
-import {
-  INPUT_BASE_CLASSES,
-  INPUT_SIZE_CLASSES,
-  TextInput,
-} from '../../../../primitives/TextInput/TextInput.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
@@ -426,15 +422,10 @@ export function DataSourceForm(props: DataSourceFormProps) {
             {cronSchedule === 'daily' && (
               <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span>Run every day at</span>
-                <input
+                <TextInput
+                  className="DataSourceForm__cron__time w-28"
                   type="time"
                   aria-label="Time"
-                  className={cn(
-                    'DataSourceForm__cron__time',
-                    INPUT_BASE_CLASSES,
-                    INPUT_SIZE_CLASSES.sm,
-                    'w-auto'
-                  )}
                   value={cronDailyTime}
                   onChange={(e) =>
                     setCronDailyTime((e.target as HTMLInputElement).value)
@@ -455,15 +446,10 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   size="sm"
                 />
                 <span>at</span>
-                <input
+                <TextInput
+                  className="DataSourceForm__cron__time w-28"
                   type="time"
                   aria-label="Time"
-                  className={cn(
-                    'DataSourceForm__cron__time',
-                    INPUT_BASE_CLASSES,
-                    INPUT_SIZE_CLASSES.sm,
-                    'w-auto'
-                  )}
                   value={cronWeeklyTime}
                   onChange={(e) =>
                     setCronWeeklyTime((e.target as HTMLInputElement).value)

@@ -62,14 +62,15 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   );
 }
 
-/**
- * A tooltip on a status badge. The badge doesn't forward its ref, so it's
- * wrapped in a span the tooltip can anchor to.
- */
+/** A tooltip on a status badge, which also gets the block class. */
 function StatusTooltip(props: {label: string; children: ComponentChildren}) {
   return (
-    <Tooltip label={props.label} contentClassName="max-w-60">
-      <span className="ReleaseStatusBadge inline-flex">{props.children}</span>
+    <Tooltip
+      label={props.label}
+      className="ReleaseStatusBadge"
+      contentClassName="max-w-60"
+    >
+      {props.children}
     </Tooltip>
   );
 }

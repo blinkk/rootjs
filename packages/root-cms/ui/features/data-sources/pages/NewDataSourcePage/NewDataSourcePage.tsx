@@ -8,7 +8,7 @@ export function NewDataSourcePage() {
   usePageTitle('New Data Source');
   return (
     <Layout>
-      <div className="NewDataSourcePage p-(--cms-page-padding-mobile) md:px-15 md:pb-15 md:pt-12">
+      <div className="NewDataSourcePage p-page md:px-15 md:pb-15 md:pt-12">
         <div className="NewDataSourcePage__header mb-5 max-w-150">
           <Breadcrumbs
             className="NewDataSourcePage__header__breadcrumbs mb-3"

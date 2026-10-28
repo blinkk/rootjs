@@ -755,7 +755,7 @@ export function SettingsPage() {
     !projectRoles.loading && isCurrentUserAdmin(projectRoles.roles);
   return (
     <Layout>
-      <div className="SettingsPage flex flex-col gap-16 bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="SettingsPage flex flex-col gap-16 bg-page p-page">
         <ShareSection />
         <div className={SECTION_CLASSES}>
           <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">

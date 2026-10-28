@@ -76,7 +76,7 @@ export function PinnedCommentThreads() {
   // They sit above the app and alongside popovers, below dialogs and toasts.
   return (
     <Portal container={document.body}>
-      <div className="PinnedCommentThreads pointer-events-none fixed inset-0 z-(--cms-z-dropdown)">
+      <div className="PinnedCommentThreads pointer-events-none fixed inset-0 z-(--cms-z-floating)">
         {ctx.pinned.map((item) => (
           <PinnedCommentWindow
             key={pinnedThreadKey(item.docId, item.fieldKey)}

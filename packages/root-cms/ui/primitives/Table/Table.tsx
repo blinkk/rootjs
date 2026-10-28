@@ -8,6 +8,7 @@ interface TableOptions {
   striped: boolean;
   hover: boolean;
   stickyFirstColumn: boolean;
+  withColumnBorders: boolean;
 }
 
 const TableContext = createContext<TableOptions>({
@@ -15,6 +16,7 @@ const TableContext = createContext<TableOptions>({
   striped: false,
   hover: false,
   stickyFirstColumn: false,
+  withColumnBorders: false,
 });
 
 /** Whether rows are in the `<thead>` or `<tbody>`. */
@@ -32,6 +34,11 @@ export interface TableProps extends JSX.HTMLAttributes<HTMLTableElement> {
    * stays identifiable on narrow screens.
    */
   stickyFirstColumn?: boolean;
+  /**
+   * Draws a vertical divider between columns. Off by default, like
+   * Mantine's: rows are divided, columns aren't.
+   */
+  withColumnBorders?: boolean;
   /**
    * Names the scrolling region for screen readers, e.g. "Assets". Useful
    * when there are several tables on a page.
@@ -74,6 +81,7 @@ export function Table(props: TableProps) {
     striped = false,
     hover = false,
     stickyFirstColumn = false,
+    withColumnBorders = false,
     label,
     className,
     tableClassName,
@@ -82,7 +90,9 @@ export function Table(props: TableProps) {
   } = props;
 
   return (
-    <TableContext.Provider value={{dense, striped, hover, stickyFirstColumn}}>
+    <TableContext.Provider
+      value={{dense, striped, hover, stickyFirstColumn, withColumnBorders}}
+    >
       <div
         role={label ? 'region' : undefined}
         aria-label={label}
@@ -94,6 +104,7 @@ export function Table(props: TableProps) {
           striped && 'Table--striped',
           hover && 'Table--hover',
           stickyFirstColumn && 'Table--stickyFirstColumn',
+          withColumnBorders && 'Table--withColumnBorders',
           'w-full max-w-full overflow-x-auto rounded-md border border-solid border-border bg-surface',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
           className
@@ -168,9 +179,11 @@ export function TableRow(props: TableRowProps) {
 
 /** Cell classes shared by header and body cells. */
 function useCellClasses() {
-  const {dense, stickyFirstColumn} = useContext(TableContext);
+  const {dense, stickyFirstColumn, withColumnBorders} =
+    useContext(TableContext);
   return cn(
-    'border-0 border-b border-solid border-border text-left align-middle not-last:border-r',
+    'border-0 border-b border-solid border-border text-left align-middle',
+    withColumnBorders && 'not-last:border-r',
     dense ? 'px-2 py-1.5' : 'px-2.5 py-2.5',
     stickyFirstColumn &&
       'first:sticky first:left-0 first:z-(--cms-z-sticky) first:bg-inherit'

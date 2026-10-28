@@ -36,6 +36,18 @@ export const BreadcrumbsGallery = defineGallery({
         ]}
       />
     ),
+    'Buttons (in-place navigation)': () => (
+      <Breadcrumbs
+        aria-label="Folder"
+        current="location"
+        separator={<IconChevronRight size={14} className="block" />}
+        items={[
+          {label: 'Assets', onClick: () => {}},
+          {label: 'images', onClick: () => {}},
+          {label: 'heroes'},
+        ]}
+      />
+    ),
     'Custom separator': () => (
       <Breadcrumbs
         separator={<IconChevronRight size={12} className="block" />}

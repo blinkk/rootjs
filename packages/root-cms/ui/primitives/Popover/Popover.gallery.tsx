@@ -44,6 +44,23 @@ export const PopoverGallery = defineGallery({
         </Popover>
       </div>
     )),
+    'With arrow': inStory(() => (
+      <div className="flex min-h-48 justify-center">
+        <Popover
+          label="Releases"
+          trigger={<Button>2 releases</Button>}
+          placement="bottom"
+          width={220}
+          withArrow
+          defaultOpen
+        >
+          <p className="m-0 text-sm text-muted">
+            The arrow points at the trigger, whichever side the popover ends up
+            on.
+          </p>
+        </Popover>
+      </div>
+    )),
     'Wider than the screen': inStory(() => (
       <div className="flex min-h-64 justify-end">
         <Popover

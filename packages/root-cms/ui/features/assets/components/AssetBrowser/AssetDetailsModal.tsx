@@ -548,9 +548,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
 function DetailsRow(props: {label: string; children?: ComponentChildren}) {
   return (
     <TableRow>
-      <TableCell className="w-25 font-bold not-last:border-r-0">
-        {props.label}
-      </TableCell>
+      <TableCell className="w-25 font-bold">{props.label}</TableCell>
       <TableCell>{props.children}</TableCell>
     </TableRow>
   );

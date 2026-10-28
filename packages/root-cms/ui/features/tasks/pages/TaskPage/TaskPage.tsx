@@ -234,7 +234,7 @@ export function TaskPage(props: {id: string}) {
         className={cn(
           'TaskPage',
           monoText && 'TaskPage--mono',
-          'bg-page p-(--cms-page-padding-mobile) text-strong md:p-(--cms-page-padding)'
+          'bg-page p-page text-strong'
         )}
       >
         <header className="TaskPage__header mb-6 max-w-350 border-0 border-b border-solid border-border pb-5">
@@ -1081,6 +1081,7 @@ function TaskMetadataPanel(props: {task: Task}) {
         }
       >
         <Popover
+          withArrow
           label="Assignee"
           open={assigneePopoverOpen}
           onOpenChange={setAssigneePopoverOpen}
@@ -1164,6 +1165,7 @@ function TaskMetadataPanel(props: {task: Task}) {
 
       <TaskDetail label="Target launch">
         <Popover
+          withArrow
           label="Target launch"
           open={datePopoverOpen}
           onOpenChange={(open) =>
@@ -1265,6 +1267,7 @@ function TaskMetadataPanel(props: {task: Task}) {
           </div>
         )}
         <Popover
+          withArrow
           label="Add people to cc"
           open={ccPopoverOpen}
           onOpenChange={setCcPopoverOpen}

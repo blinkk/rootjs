@@ -8,7 +8,7 @@ export function LogsPage() {
   usePageTitle('Action Logs');
   return (
     <Layout>
-      <div className="LogsPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="LogsPage bg-page p-page">
         <div className="LogsPage__header mb-8 flex flex-wrap items-center justify-between gap-4">
           <Heading size="h1">Action Logs</Heading>
           <Button href="/cms/logs/errors" variant="default" size="sm">

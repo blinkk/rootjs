@@ -273,7 +273,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
           )}
         </div>
 
-        <div className="DocTranslationsPage__footer flex h-15 shrink-0 items-center justify-end border-0 border-t border-solid border-border bg-surface px-4 md:px-8">
+        <div className="DocTranslationsPage__footer flex h-15 shrink-0 items-center justify-end border-0 border-t border-solid border-border bg-surface px-page">
           <div className="DocTranslationsPage__footerButtons flex items-center gap-2.5">
             <Button
               variant="primary"
@@ -376,7 +376,6 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
                 )}
               >
                 <Tooltip
-                  className="DocTranslationsPage__tableHeaderTooltip w-full"
                   placement="top-start"
                   label={
                     props.locales.length === allLocales.length

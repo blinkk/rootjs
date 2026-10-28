@@ -151,6 +151,21 @@
   /* Archived. */
   --cms-gradient-gray: linear-gradient(45deg, #868e96, #25262b);
 
+  /* --- Color: AI (violet) --------------------------------------------- *
+   * Marks AI features and AI-generated content: AI badges, the shimmer on a
+   * field being generated, and similar accents (e.g. reordered items in a
+   * diff). Mantine's violet, which the CMS used for these before.
+   */
+
+  /* Text, icons, borders and filled badges. */
+  --cms-color-violet: #7950f2;
+  /* Soft backgrounds behind violet text. */
+  --cms-color-violet-soft: #f3f0ff;
+  /* Violet text on the soft background, dark enough for 4.5:1 contrast
+   * (Mantine's violet is just under it there).
+   */
+  --cms-color-violet-strong: #6741d9;
+
   /* --- Type ------------------------------------------------------------ */
 
   --cms-font-sans: 'Inter', sans-serif;
@@ -236,6 +251,10 @@
 :root {
   --cms-z-sticky: 10;
   --cms-z-dropdown: 100;
+  /* Floating windows that stay open beside the page, e.g. pinned comment
+   * threads: above dropdowns, below modals.
+   */
+  --cms-z-floating: 150;
   --cms-z-modal: 200;
   --cms-z-toast: 300;
   --cms-z-tooltip: 400;

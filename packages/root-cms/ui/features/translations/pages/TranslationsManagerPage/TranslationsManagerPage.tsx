@@ -95,7 +95,7 @@ export function TranslationsManagerPage() {
     <Layout>
       <div className="TranslationsManagerPage bg-page">
         <div className="TranslationsManagerPage__layout flex min-h-full flex-col md:flex-row">
-          <div className="TranslationsManagerPage__side shrink-0 px-(--cms-page-padding-mobile) pt-(--cms-page-padding-mobile) md:w-70 md:py-(--cms-page-padding) md:pl-(--cms-page-padding) md:pr-0">
+          <div className="TranslationsManagerPage__side shrink-0 px-page pt-page md:w-70 md:pb-page md:pr-0">
             <div className="TranslationsManagerPage__sideTitle mb-3 text-base font-semibold leading-tight">
               Translations
             </div>
@@ -125,7 +125,7 @@ export function TranslationsManagerPage() {
               ))}
             </div>
           </div>
-          <div className="TranslationsManagerPage__main min-w-0 flex-1 p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+          <div className="TranslationsManagerPage__main min-w-0 flex-1 p-page">
             <div className="TranslationsManagerPage__mainHeader mb-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
               <Heading size="h1" className="min-w-0 break-words">
                 {selectedGroup

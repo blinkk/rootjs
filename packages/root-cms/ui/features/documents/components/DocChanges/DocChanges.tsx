@@ -40,7 +40,7 @@ const CHANGE_TONES: Record<DocChangeType, BadgeTone> = {
   added: 'success',
   removed: 'danger',
   modified: 'info',
-  reordered: 'neutral',
+  reordered: 'violet',
 };
 
 /** The accent on the left edge of each change card. */
@@ -48,7 +48,7 @@ const CHANGE_BORDER_CLASSES: Record<DocChangeType, string> = {
   added: 'border-l-success',
   removed: 'border-l-danger',
   modified: 'border-l-info',
-  reordered: 'border-l-border-strong',
+  reordered: 'border-l-violet',
 };
 
 const ROOT_CLASSES =

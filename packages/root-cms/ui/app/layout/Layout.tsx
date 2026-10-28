@@ -528,7 +528,7 @@ Layout.SideToggleButton = () => {
       {expanded ? (
         button
       ) : (
-        <Tooltip className="flex w-full" label={label} placement="right">
+        <Tooltip label={label} placement="right">
           {button}
         </Tooltip>
       )}
@@ -581,11 +581,7 @@ Layout.SideButton = (props: SideButtonProps) => {
       {expanded ? (
         link
       ) : (
-        <Tooltip
-          className="flex size-full"
-          label={props.label}
-          placement="right"
-        >
+        <Tooltip label={props.label} placement="right">
           {link}
         </Tooltip>
       )}

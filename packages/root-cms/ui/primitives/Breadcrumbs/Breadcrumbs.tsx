@@ -6,7 +6,17 @@ export interface BreadcrumbItem {
   label: ComponentChildren;
   /** Where it links. Leave unset on the last item (the current page). */
   href?: string;
+  /**
+   * Makes the crumb a button instead of a link, for trails that navigate
+   * in place (e.g. folders in an asset browser). Ignored when `href` is set
+   * and on the last item.
+   */
+  onClick?: (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => void;
 }
+
+/** Link (and button) crumbs: underlined, so they read as links. */
+const LINK_CLASSES =
+  'Breadcrumbs__link truncate font-medium text-fg underline underline-offset-4 hover:text-strong focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 export interface BreadcrumbsProps extends Omit<
   JSX.HTMLAttributes<HTMLElement>,
@@ -18,12 +28,18 @@ export interface BreadcrumbsProps extends Omit<
   separator?: ComponentChildren;
   /** Names the landmark for screen readers. Default "Breadcrumb". */
   'aria-label'?: string;
+  /**
+   * The last item's `aria-current`: `page` (default) for a trail of pages,
+   * or `location` for one inside a page (e.g. the open folder).
+   */
+  current?: 'page' | 'location';
   className?: string;
 }
 
 /**
  * The trail of pages above the current one. The last item is the current
- * page (`aria-current="page"`). Below `sm`, trails longer than two items
+ * page (`aria-current="page"`). Items link with `href`, or are buttons with
+ * `onClick`. Below `sm`, trails longer than two items
  * collapse their middle into "…" (still read by screen readers), and long
  * labels truncate. Replaces Mantine's `Breadcrumbs`.
  *
@@ -35,6 +51,14 @@ export interface BreadcrumbsProps extends Omit<
  *     {label: 'Edit'},
  *   ]}
  * />
+ * <Breadcrumbs
+ *   aria-label="Folder"
+ *   current="location"
+ *   items={[
+ *     {label: 'Assets', onClick: () => setFolder('')},
+ *     {label: 'images'},
+ *   ]}
+ * />
  * ```
  */
 export function Breadcrumbs(props: BreadcrumbsProps) {
@@ -42,6 +66,7 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
     items,
     separator = '/',
     'aria-label': ariaLabel = 'Breadcrumb',
+    current: currentValue = 'page',
     className,
     ...rest
   } = props;
@@ -88,20 +113,29 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
               )}
             >
               {i > 0 && sep}
-              {current || !item.href ? (
+              {current || (!item.href && !item.onClick) ? (
                 <span
                   className="Breadcrumbs__current truncate text-fg"
-                  aria-current={current ? 'page' : undefined}
+                  aria-current={current ? currentValue : undefined}
                 >
                   {item.label}
                 </span>
-              ) : (
-                <a
-                  className="Breadcrumbs__link truncate font-medium text-fg underline underline-offset-4 hover:text-strong focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                  href={item.href}
-                >
+              ) : item.href ? (
+                <a className={LINK_CLASSES} href={item.href}>
                   {item.label}
                 </a>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'Breadcrumbs__button',
+                    'm-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-left font-sans text-sm',
+                    LINK_CLASSES
+                  )}
+                  onClick={item.onClick}
+                >
+                  {item.label}
+                </button>
               )}
             </li>,
           ];

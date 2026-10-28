@@ -1,4 +1,4 @@
-import {IconTrash} from '@tabler/icons-preact';
+import {IconSend2, IconTrash} from '@tabler/icons-preact';
 import type {ComponentChildren} from 'preact';
 import {defineGallery} from '../../dev/gallery/types.js';
 import {Button} from '../Button/Button.js';
@@ -44,6 +44,28 @@ export const TooltipGallery = defineGallery({
         >
           <IconButton label="Roll back" variant="default">
             <IconTrash />
+          </IconButton>
+        </Tooltip>
+      </div>
+    )),
+    'Without arrow': inStory(() => (
+      <div className="flex min-h-24 items-end">
+        <Tooltip label="No arrow" withArrow={false} defaultOpen>
+          <Button>Hover me</Button>
+        </Tooltip>
+      </div>
+    )),
+    'Positioned trigger': inStory(() => (
+      // The trigger keeps its own `absolute` positioning: no wrapper.
+      <div className="relative h-24 rounded-md border border-border">
+        <Tooltip label="Send" defaultOpen>
+          <IconButton
+            label="Send message"
+            variant="primary"
+            round
+            className="absolute right-2 bottom-2"
+          >
+            <IconSend2 />
           </IconButton>
         </Tooltip>
       </div>

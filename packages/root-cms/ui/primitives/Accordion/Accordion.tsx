@@ -107,8 +107,22 @@ export interface AccordionItemProps extends Omit<
 > {
   /** Identifies the item in the accordion's `value`. */
   value: string;
-  /** The header's content: text, or richer markup (no buttons or links). */
+  /**
+   * The header's content: text, or richer markup (no buttons or links; use
+   * `href` to make the label a link).
+   */
   label: ComponentChildren;
+  /**
+   * Makes the label a link to this URL, e.g. a folder's own page. The
+   * chevron becomes a separate toggle button next to it (named by the
+   * label), so the header stays valid HTML: no link inside a button.
+   */
+  href?: string;
+  /**
+   * Extra props for the label's link (with `href`), e.g. `aria-current` or
+   * `target`.
+   */
+  linkProps?: Omit<JSX.HTMLAttributes<HTMLAnchorElement>, 'href'>;
   /**
    * Keeps the content rendered (just hidden) while the item is closed,
    * preserving its state. By default it's unmounted.
@@ -120,11 +134,22 @@ export interface AccordionItemProps extends Omit<
   children?: ComponentChildren;
 }
 
-/** One collapsible section of an `Accordion`. */
+/**
+ * One collapsible section of an `Accordion`. With `href`, the label is a
+ * link and the chevron toggles the section on its own.
+ *
+ * ```tsx
+ * <AccordionItem value="blog" label="Blog" href="/cms/content/blog">
+ *   …
+ * </AccordionItem>
+ * ```
+ */
 export function AccordionItem(props: AccordionItemProps) {
   const {
     value,
     label,
+    href,
+    linkProps,
     keepMounted = false,
     disabled = false,
     className,
@@ -141,6 +166,37 @@ export function AccordionItem(props: AccordionItemProps) {
   const visible = useCollapse(panelRef, open);
   const chevronLeft = ctx.chevronPosition === 'left';
   const Chevron = chevronLeft ? IconChevronRight : IconChevronDown;
+  // Tree-style (left) chevrons point right, and down when open.
+  const chevron = (
+    <Chevron
+      className={cn(
+        'Accordion__chevron size-4 shrink-0 text-muted transition-transform',
+        open && (chevronLeft ? 'rotate-90' : 'rotate-180')
+      )}
+      aria-hidden="true"
+    />
+  );
+
+  // The separate toggle, when the label is a link.
+  const toggle = href !== undefined && (
+    <button
+      type="button"
+      id={`${id}-control`}
+      aria-expanded={open}
+      aria-controls={`${id}-panel`}
+      aria-labelledby={`${id}-label`}
+      disabled={disabled}
+      onClick={() => ctx.toggle(value)}
+      className={cn(
+        'Accordion__control',
+        'mx-1 flex size-control-sm shrink-0 cursor-pointer appearance-none items-center justify-center rounded-sm border-0 bg-transparent p-0 transition-colors',
+        'hover:bg-surface-active focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+        'disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:size-10'
+      )}
+    >
+      {chevron}
+    </button>
+  );
 
   return (
     <div
@@ -151,33 +207,49 @@ export function AccordionItem(props: AccordionItemProps) {
         className
       )}
     >
-      <button
-        type="button"
-        id={`${id}-control`}
-        aria-expanded={open}
-        aria-controls={`${id}-panel`}
-        disabled={disabled}
-        onClick={() => ctx.toggle(value)}
-        className={cn(
-          'Accordion__control',
-          'flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent px-2 py-3 text-left font-sans text-base font-medium text-strong transition-colors',
-          'hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          chevronLeft && 'flex-row-reverse'
-        )}
-      >
-        <span className="Accordion__label min-w-0 flex-1 truncate">
-          {label}
-        </span>
-        {/* Tree-style (left) chevrons point right, and down when open. */}
-        <Chevron
+      {href === undefined ? (
+        <button
+          type="button"
+          id={`${id}-control`}
+          aria-expanded={open}
+          aria-controls={`${id}-panel`}
+          disabled={disabled}
+          onClick={() => ctx.toggle(value)}
           className={cn(
-            'Accordion__chevron size-4 shrink-0 text-muted transition-transform',
-            open && (chevronLeft ? 'rotate-90' : 'rotate-180')
+            'Accordion__control',
+            'flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent px-2 py-3 text-left font-sans text-base font-medium text-strong transition-colors',
+            'hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            chevronLeft && 'flex-row-reverse'
           )}
-          aria-hidden="true"
-        />
-      </button>
+        >
+          <span className="Accordion__label min-w-0 flex-1 truncate">
+            {label}
+          </span>
+          {chevron}
+        </button>
+      ) : (
+        // A link and a toggle side by side, in visual order. The toggle is
+        // named by the link.
+        <div className="Accordion__header flex items-center transition-colors hover:bg-surface-hover">
+          {chevronLeft && toggle}
+          <a
+            {...linkProps}
+            id={`${id}-label`}
+            href={href}
+            className={cn(
+              'Accordion__link',
+              'min-w-0 flex-1 truncate py-3 font-sans text-base font-medium text-strong no-underline',
+              'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
+              chevronLeft ? 'pr-2' : 'px-2',
+              linkProps?.className as string | undefined
+            )}
+          >
+            {label}
+          </a>
+          {!chevronLeft && toggle}
+        </div>
+      )}
       <div
         ref={panelRef}
         role="region"

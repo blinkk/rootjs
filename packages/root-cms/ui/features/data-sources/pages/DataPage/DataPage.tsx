@@ -39,7 +39,7 @@ export function DataPage() {
 
   return (
     <Layout>
-      <div className="DataPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="DataPage bg-page p-page">
         <div className="DataPage__header mb-10">
           <Heading size="h1">Data Sources</Heading>
           <Text as="p" className="mt-2 max-w-prose">
@@ -129,6 +129,7 @@ DataPage.DataSourcesTable = () => {
             striped
             hover
             stickyFirstColumn
+            withColumnBorders
             label="Data sources"
             className="rounded-none border-0"
           >

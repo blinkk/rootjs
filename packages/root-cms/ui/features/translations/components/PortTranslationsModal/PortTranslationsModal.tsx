@@ -667,6 +667,7 @@ export function PortTranslationsModal(
             </div>
             <Table
               dense
+              withColumnBorders
               label="Translations"
               tableClassName="PortTranslationsModal__table min-w-120"
             >
@@ -807,7 +808,7 @@ function RowBadges(props: {
         </Badge>
       )}
       {row.aiTransformed && (
-        <Badge size="xs" variant="outline" icon={<IconRobot />}>
+        <Badge size="xs" tone="violet" variant="outline" icon={<IconRobot />}>
           AI
         </Badge>
       )}

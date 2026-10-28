@@ -564,19 +564,14 @@ function ChatComposer(props: {
               tabIndex={-1}
               onChange={onFileChange}
             />
-            {/*
-             * Positioned on a wrapper, since the tooltip's own wrapper
-             * would otherwise sit in the flow and add a line box.
-             */}
-            <div className="AiEditModal__ChatPanel__composer__imageUpload absolute bottom-2 left-2 flex">
-              <IconButton
-                round
-                label="Upload file"
-                onClick={() => fileRef.current?.click()}
-              >
-                <IconPaperclip />
-              </IconButton>
-            </div>
+            <IconButton
+              className="AiEditModal__ChatPanel__composer__imageUpload absolute bottom-2 left-2"
+              round
+              label="Upload file"
+              onClick={() => fileRef.current?.click()}
+            >
+              <IconPaperclip />
+            </IconButton>
           </>
         )}
         <textarea
@@ -636,28 +631,28 @@ function ChatComposer(props: {
             ))}
           </div>
         )}
-        <div className="AiEditModal__ChatPanel__composer__submit absolute right-2 bottom-2 flex">
-          {props.isStreaming ? (
-            <IconButton
-              variant="primary"
-              round
-              label="Stop"
-              onClick={props.onStop}
-            >
-              <IconX />
-            </IconButton>
-          ) : (
-            <IconButton
-              variant="primary"
-              round
-              label="Send"
-              disabled={uploading || (!text && attachments.length === 0)}
-              onClick={submit}
-            >
-              <IconSend2 />
-            </IconButton>
-          )}
-        </div>
+        {props.isStreaming ? (
+          <IconButton
+            className="AiEditModal__ChatPanel__composer__submit absolute right-2 bottom-2"
+            variant="primary"
+            round
+            label="Stop"
+            onClick={props.onStop}
+          >
+            <IconX />
+          </IconButton>
+        ) : (
+          <IconButton
+            className="AiEditModal__ChatPanel__composer__submit absolute right-2 bottom-2"
+            variant="primary"
+            round
+            label="Send"
+            disabled={uploading || (!text && attachments.length === 0)}
+            onClick={submit}
+          >
+            <IconSend2 />
+          </IconButton>
+        )}
       </div>
       <div className="AiEditModal__ChatPanel__composer__disclaimer mt-3 px-5 text-center text-sm text-balance text-muted">
         Root AI is experimental and makes mistakes. Check all info.

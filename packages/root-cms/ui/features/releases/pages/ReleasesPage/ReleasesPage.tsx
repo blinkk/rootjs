@@ -38,7 +38,7 @@ export function ReleasesPage() {
 
   return (
     <Layout>
-      <div className="ReleasesPage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="ReleasesPage bg-page p-page">
         <div className="ReleasesPage__header mb-8 flex max-w-7xl flex-wrap items-start gap-4">
           <div className="ReleasesPage__headerText min-w-0 grow basis-100">
             <Heading size="h1">Releases</Heading>

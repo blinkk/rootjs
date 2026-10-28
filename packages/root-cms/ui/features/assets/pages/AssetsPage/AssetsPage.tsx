@@ -31,7 +31,7 @@ export function AssetsPage() {
   return (
     <Layout>
       <div
-        className="AssetsPage min-h-full bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)"
+        className="AssetsPage min-h-full bg-page p-page"
         data-testid="assets-page"
       >
         <div className="AssetsPage__header mb-8">

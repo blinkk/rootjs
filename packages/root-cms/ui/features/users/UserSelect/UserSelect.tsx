@@ -106,7 +106,7 @@ export function UserSelect(props: UserSelectProps) {
             // While the user list loads, `profile` is left undefined so the
             // avatar falls back to fetching the profile on its own.
             profile={selectedItem ? toProfile(selectedItem) : undefined}
-            size={16}
+            size={20}
             withTooltip={false}
           />
         ) : undefined

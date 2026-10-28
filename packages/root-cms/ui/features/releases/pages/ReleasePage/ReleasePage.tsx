@@ -175,7 +175,7 @@ export function ReleasePage(props: {id: string}) {
     <Layout>
       {/* Only the page and the AI panel scroll, not the layout around them. */}
       <div className="ReleasePage__layout relative flex overflow-hidden">
-        <div className="ReleasePage min-w-0 flex-1 overflow-auto bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+        <div className="ReleasePage min-w-0 flex-1 overflow-auto bg-page p-page">
           <div className="ReleasePage__header mb-5">
             <Breadcrumbs
               className="ReleasePage__breadcrumbs mb-3"

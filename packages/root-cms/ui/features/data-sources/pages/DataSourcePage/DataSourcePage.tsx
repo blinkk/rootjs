@@ -70,7 +70,7 @@ export function DataSourcePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="DataSourcePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="DataSourcePage bg-page p-page">
         <div className="DataSourcePage__header mb-8">
           <Breadcrumbs
             className="DataSourcePage__header__breadcrumbs mb-3"

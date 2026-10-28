@@ -50,7 +50,7 @@ export function ErrorLogsPage() {
 
   return (
     <Layout>
-      <div className="ErrorLogsPage flex flex-col gap-4 bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="ErrorLogsPage flex flex-col gap-4 bg-page p-page">
         <div className="ErrorLogsPage__header mb-3.5">
           <div className="ErrorLogsPage__header__title flex flex-wrap items-center justify-between gap-4">
             <Heading size="h1">Error Logs</Heading>

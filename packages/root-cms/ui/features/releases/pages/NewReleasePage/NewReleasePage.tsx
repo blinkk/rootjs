@@ -9,7 +9,7 @@ export function NewReleasePage() {
   usePageTitle('New release');
   return (
     <Layout>
-      <div className="NewReleasePage bg-page p-(--cms-page-padding-mobile) md:p-(--cms-page-padding)">
+      <div className="NewReleasePage bg-page p-page">
         <div className="NewReleasePage__header mb-5 max-w-150">
           <Breadcrumbs
             className="NewReleasePage__breadcrumbs mb-3"

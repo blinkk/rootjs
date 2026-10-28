@@ -1735,7 +1735,7 @@ function TranslationCell(props: TranslationCellProps) {
         !value && 'LocalizationModal__translationsCell--empty',
         !value && 'bg-danger-soft',
         isEdited && 'border-focus bg-info-soft',
-        props.isAiGenerating && 'border-accent bg-surface-hover'
+        props.isAiGenerating && 'border-violet bg-violet-soft'
       )}
     />
   );

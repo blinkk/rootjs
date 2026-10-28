@@ -308,7 +308,7 @@ export function TranslationsManagerEditPage(
   return (
     <Layout>
       <div className="TranslationsManagerEditPage relative flex flex-col bg-page">
-        <div className="TranslationsManagerEditPage__header px-(--cms-page-padding-mobile) pb-4 pt-(--cms-page-padding-mobile) md:px-(--cms-page-padding) md:pb-5 md:pt-(--cms-page-padding)">
+        <div className="TranslationsManagerEditPage__header px-page pb-4 pt-page md:pb-5">
           <Breadcrumbs
             className="TranslationsManagerEditPage__headerBreadcrumbs mb-3"
             items={[
@@ -352,7 +352,7 @@ export function TranslationsManagerEditPage(
 
         <div
           className={cn(
-            'TranslationsManagerEditPage__content min-h-0 flex-1 overflow-auto px-(--cms-page-padding-mobile) md:px-(--cms-page-padding)',
+            'TranslationsManagerEditPage__content min-h-0 flex-1 overflow-auto px-page',
             loading &&
               'TranslationsManagerEditPage__content--loading flex items-center justify-center'
           )}
@@ -374,7 +374,7 @@ export function TranslationsManagerEditPage(
           )}
         </div>
 
-        <div className="TranslationsManagerEditPage__footer flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-0 border-t border-solid border-border bg-surface px-(--cms-page-padding-mobile) py-4 md:px-(--cms-page-padding)">
+        <div className="TranslationsManagerEditPage__footer flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-0 border-t border-solid border-border bg-surface px-page py-4">
           {!isDocBacked && !loading && (
             <TranslationsManagerEditPage.AddStringInput
               onAdd={onAddSourceString}
@@ -451,19 +451,15 @@ TranslationsManagerEditPage.Table = (props: {
               >
                 <div className="TranslationsManagerEditPage__tableSourceCell max-w-100 whitespace-pre-wrap break-words px-3 py-2 text-sm leading-normal">
                   {!row.unused && (
-                    // The IconButton's tooltip wraps it in a span, so the
-                    // float goes on an outer span.
-                    <span className="float-right -mr-1.5 -mt-0.5 ml-2 flex">
-                      <IconButton
-                        className="TranslationsManagerEditPage__tablePortButton opacity-80 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-                        variant="default"
-                        size="xs"
-                        label="Port translations from another string"
-                        onClick={() => props.onPort(row)}
-                      >
-                        <IconStatusChange size={14} />
-                      </IconButton>
-                    </span>
+                    <IconButton
+                      className="TranslationsManagerEditPage__tablePortButton float-right -mr-1.5 -mt-0.5 ml-2 opacity-80 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                      variant="default"
+                      size="xs"
+                      label="Port translations from another string"
+                      onClick={() => props.onPort(row)}
+                    >
+                      <IconStatusChange size={14} />
+                    </IconButton>
                   )}
                   {row.source}
                   {row.unused && (

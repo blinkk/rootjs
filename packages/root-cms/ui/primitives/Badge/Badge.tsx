@@ -2,7 +2,8 @@ import type {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {cn} from '../../utils/classes.js';
 
-export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+export type BadgeTone =
+  'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'violet';
 export type BadgeVariant = 'soft' | 'filled' | 'outline' | 'gradient';
 export type BadgeGradient =
   'blue' | 'green' | 'pink' | 'orange' | 'yellow' | 'red' | 'violet' | 'gray';
@@ -18,6 +19,7 @@ const TONE_CLASSES: Record<
     success: 'bg-success-soft text-success',
     warning: 'bg-warning-soft text-warning',
     danger: 'bg-danger-soft text-danger',
+    violet: 'bg-violet-soft text-violet-strong',
   },
   filled: {
     neutral: 'bg-primary text-on-primary',
@@ -25,6 +27,7 @@ const TONE_CLASSES: Record<
     success: 'bg-success text-inverse',
     warning: 'bg-warning text-inverse',
     danger: 'bg-danger text-inverse',
+    violet: 'bg-violet text-inverse',
   },
   outline: {
     neutral: 'border-border-strong bg-surface text-muted',
@@ -32,6 +35,7 @@ const TONE_CLASSES: Record<
     success: 'border-success-line bg-surface text-success',
     warning: 'border-warning-line bg-surface text-warning',
     danger: 'border-danger-line bg-surface text-danger',
+    violet: 'border-violet/40 bg-surface text-violet',
   },
 };
 
@@ -55,8 +59,8 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
 interface BadgeOwnProps {
   /**
    * The status it conveys: `neutral`, `info`, `success`, `warning` or
-   * `danger`. Pair a status tone with a word or icon, not color alone.
-   * Default `neutral`.
+   * `danger`, or `violet` for AI features and AI-generated content. Pair a
+   * tone with a word or icon, not color alone. Default `neutral`.
    */
   tone?: BadgeTone;
   /**

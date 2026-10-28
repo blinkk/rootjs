@@ -86,5 +86,25 @@ export const AccordionGallery = defineGallery({
         </AccordionItem>
       </Accordion>
     ),
+    'Linked labels': () => (
+      <Accordion
+        chevronPosition="left"
+        multiple
+        defaultValue={['pages']}
+        className="max-w-xs"
+      >
+        <AccordionItem
+          value="pages"
+          href="#pages"
+          linkProps={{'aria-current': 'page'}}
+          label="Pages"
+        >
+          <span className="text-muted">index, about, pricing</span>
+        </AccordionItem>
+        <AccordionItem value="blog" href="#blog" label="Blog">
+          <span className="text-muted">hello-world</span>
+        </AccordionItem>
+      </Accordion>
+    ),
   },
 });
