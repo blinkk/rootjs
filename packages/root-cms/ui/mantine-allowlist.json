@@ -1,5 +1,4 @@
 [
-  "ui/app/layout/Layout.tsx",
   "ui/app/lazy-route.test.tsx",
   "ui/app/RouteLoadError/RouteLoadError.tsx",
   "ui/app/RouteLoading/RouteLoading.tsx",

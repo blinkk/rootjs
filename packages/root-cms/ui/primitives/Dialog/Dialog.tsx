@@ -61,6 +61,13 @@ interface DialogOwnProps {
   size?: DialogSize;
   /** Centers the dialog vertically from `md` up, instead of near the top. */
   centered?: boolean;
+  /**
+   * `center` (default): a centered panel from `md` up and a bottom sheet
+   * below. `left`: a full-height drawer along the left edge at every width,
+   * e.g. the app's navigation menu on mobile; `size` sets its width (capped
+   * so a strip of backdrop stays visible to tap).
+   */
+  position?: 'center' | 'left';
   /** Whether Escape closes the dialog. Default true. */
   closeOnEscape?: boolean;
   /** Whether clicking the backdrop closes the dialog. Default true. */
@@ -120,6 +127,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
       footer,
       size = 'md',
       centered = false,
+      position = 'center',
       closeOnEscape = true,
       closeOnClickOutside = true,
       withCloseButton = true,
@@ -266,6 +274,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
       pressedBackdropRef.current = false;
     }
 
+    const isDrawer = position === 'left';
     const sizeName =
       typeof size === 'string' && size in NAMED_SIZES ? size : 'custom';
 
@@ -283,15 +292,21 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(
           'Dialog',
           `Dialog--size-${sizeName}`,
           centered && 'Dialog--centered',
+          `Dialog--position-${position}`,
           'm-0 size-full max-h-none max-w-none overflow-hidden border-0 bg-transparent px-0 pb-0 font-sans text-fg backdrop:bg-overlay',
-          'open:flex items-end justify-center md:items-start md:px-4 md:py-16',
-          centered && 'md:items-center',
+          isDrawer
+            ? 'open:flex items-stretch justify-start'
+            : 'open:flex items-end justify-center md:items-start md:px-4 md:py-16',
+          !isDrawer && centered && 'md:items-center',
           className
         )}
       >
         <div
           className={cn(
-            'Dialog__panel flex max-h-full max-w-full flex-col rounded-t-xl bg-surface shadow-lg md:rounded-lg md:border md:border-border',
+            'Dialog__panel flex max-h-full max-w-full flex-col bg-surface shadow-lg',
+            isDrawer
+              ? 'border-r border-border'
+              : 'rounded-t-xl md:rounded-lg md:border md:border-border',
             panelClassName
           )}
           style={{'--Dialog-width': dialogWidth(size)}}

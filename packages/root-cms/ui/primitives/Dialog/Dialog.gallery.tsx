@@ -98,5 +98,23 @@ export const DialogGallery = defineGallery({
         </p>
       </DialogDemo>
     ),
+    'Drawer (position left)': () => (
+      <DialogDemo trigger="Menu" title="Root.js" position="left" size={280}>
+        <nav aria-label="Main">
+          <ul className="m-0 flex list-none flex-col gap-1 p-0">
+            {['Home', 'Content', 'Releases', 'Data', 'Settings'].map((item) => (
+              <li key={item}>
+                <a
+                  href="#"
+                  className="block rounded-md px-3 py-2 text-base text-fg no-underline hover:bg-surface-hover"
+                >
+                  {item}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </DialogDemo>
+    ),
   },
 });

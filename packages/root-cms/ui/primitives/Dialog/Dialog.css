@@ -22,4 +22,33 @@
       padding: 0;
     }
   }
+
+  /*
+   * `position="left"`: a full-height drawer that slides in from the left at
+   * every width. It keeps clear of the notch and home indicator, and leaves
+   * a strip of backdrop to tap.
+   */
+  .Dialog--position-left {
+    padding: 0;
+  }
+
+  .Dialog--position-left .Dialog__panel {
+    width: var(--Dialog-width, 280px);
+    max-width: calc(100% - 48px);
+    height: 100%;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .Dialog--position-left[open] .Dialog__panel {
+      animation: Dialog-slide-in-left 0.18s ease-out;
+    }
+  }
+
+  @keyframes Dialog-slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+  }
 }

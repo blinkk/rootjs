@@ -409,7 +409,15 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
         )}
         ref={layoutRef}
       >
-        <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
+        <SplitPanel
+          className="DocumentPage"
+          localStorageId="DocumentPage"
+          mobileTabs={
+            hasCollectionUrl && isPreviewVisible
+              ? ['Edit', 'Preview']
+              : undefined
+          }
+        >
           <SplitPanel.Item
             className={joinClassNames(
               'DocumentPage__side',

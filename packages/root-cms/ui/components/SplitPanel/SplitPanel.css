@@ -58,3 +58,48 @@
   pointer-events: none;
   user-select: none;
 }
+
+/*
+ * Mobile fallback. Below `md` there's no room side by side: with
+ * `mobileTabs` the panels become tabs (one at a time), otherwise they stack
+ * and scroll together.
+ */
+
+@media (width < 48rem) {
+  .SplitPanel {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+  }
+
+  .SplitPanel__divider {
+    display: none;
+  }
+
+  .SplitPanel .SplitPanel__item--mobile-hidden {
+    display: none;
+  }
+
+  .SplitPanel .SplitPanel__item {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+  }
+
+  .SplitPanel--mobile-stacked {
+    overflow-y: auto;
+  }
+
+  .SplitPanel--mobile-stacked .SplitPanel__item {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (width >= 48rem) {
+  .SplitPanel > .Tabs__listWrapper {
+    display: none;
+  }
+}

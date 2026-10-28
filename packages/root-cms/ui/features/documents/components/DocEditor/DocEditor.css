@@ -21,6 +21,25 @@
   justify-content: flex-end;
 }
 
+/*
+ * Below `md` the status bar sits over the app header, so it leaves the
+ * header's menu button uncovered and scrolls sideways when it doesn't fit.
+ */
+@media (width < 48rem) {
+  .DocEditor__statusBar {
+    top: env(safe-area-inset-top);
+    left: calc(16px + var(--cms-control-height-md) + env(safe-area-inset-left));
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: var(--cms-color-surface);
+  }
+
+  .DocEditor__statusBar > * {
+    flex-shrink: 0;
+  }
+}
+
 .DocEditor__statusBar__saveState {
   font-style: italic;
   font-weight: 500;

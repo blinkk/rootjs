@@ -418,8 +418,13 @@ for each primitive. Done; answers are rows 7–13 of the decisions log.
       has dozens). Escape inside a nested Mantine modal or open Mantine
       dropdown no longer also closes the dialog. Splitting `main.tsx` into
       `app/App.tsx` + `providers.tsx` is still to do.
-- [ ] 2.2 `Layout`: responsive header + drawer sidebar, safe-area insets,
-      `SplitPanel` mobile fallback.
+- [x] 2.2 `Layout`: responsive header + drawer sidebar, safe-area insets,
+      `SplitPanel` mobile fallback. The drawer is `Dialog` with the new
+      `position="left"`. `SplitPanel` takes `mobileTabs` (the doc page passes
+      Edit / Preview); without it the panels stack below `md`. The doc
+      editor's fixed status bar leaves the header's menu button uncovered
+      and scrolls sideways below `md`. The viewport meta gained
+      `viewport-fit=cover` so `env(safe-area-inset-*)` works.
 - [ ] 2.3 Shared bits: `Heading`, `Text`, `Surface`, `RouteLoading`,
       `RouteLoadError`, `DataLoadError`, `ErrorDetails`, `AppErrorBoundary`,
       `UserAvatar`, `UserTag`, `Viewers`.
