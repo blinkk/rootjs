@@ -1,5 +1,5 @@
-import {Avatar} from '@mantine/core';
 import {Fragment} from 'preact';
+import {Avatar} from '../../../../primitives/Avatar/Avatar.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {
   Viewer,
@@ -49,14 +49,12 @@ Viewers.Avatars = (props: ViewersProps) => {
     return null;
   }
 
-  // Use plain CSS instead of `AvatarsGroup` because that
-  // component doesn't support using Tooltips as children.
   const limit = props.max || 3;
   const visibleViewers = viewers.slice(0, limit);
   const overflow = viewers.length - limit;
 
   return (
-    <div className="Viewers">
+    <div className="Viewers flex flex-row">
       {visibleViewers.map((viewer) => {
         const focusedField = getViewerFocusedField(viewer);
         const avatar = (
@@ -77,7 +75,7 @@ Viewers.Avatars = (props: ViewersProps) => {
             <button
               key={viewer.email}
               type="button"
-              className="Viewers__button"
+              className="Viewers__button flex cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
               aria-label={`Go to the field ${viewer.email} is editing`}
               onClick={() => props.onViewerClick!(viewer, focusedField)}
             >
@@ -88,7 +86,11 @@ Viewers.Avatars = (props: ViewersProps) => {
         return <Fragment key={viewer.email}>{avatar}</Fragment>;
       })}
       {overflow > 0 && (
-        <Avatar className="Viewers__avatar" size={30} radius="xl">
+        <Avatar
+          className="Viewers__avatar"
+          alt={`${overflow} more viewers`}
+          style={{width: 30, height: 30}}
+        >
           +{overflow}
         </Avatar>
       )}

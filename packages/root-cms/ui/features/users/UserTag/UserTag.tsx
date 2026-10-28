@@ -1,9 +1,8 @@
 import './UserTag.css';
 
-import {Tooltip} from '@mantine/core';
 import {ComponentChildren} from 'preact';
-import {useEffect, useRef, useState} from 'preact/hooks';
-import {joinClassNames} from '../../../utils/classes.js';
+import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../utils/classes.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {useUserProfile} from '../useUserProfile.js';
 
@@ -32,62 +31,32 @@ export function UserTag(props: UserTagProps) {
   const {profile} = useUserProfile(email);
   const displayName = profile?.displayName || '';
   const shortName = email.split('@')[0] || email;
-  // Control the tooltip so it stays open while the cursor travels to (and
-  // interacts with) the popup, allowing the email to be selected/copied.
-  const [opened, setOpened] = useState(false);
-  const closeTimeoutRef = useRef<number | undefined>(undefined);
-
-  useEffect(() => {
-    return () => window.clearTimeout(closeTimeoutRef.current);
-  }, []);
-
-  function open() {
-    window.clearTimeout(closeTimeoutRef.current);
-    setOpened(true);
-  }
-
-  function scheduleClose() {
-    window.clearTimeout(closeTimeoutRef.current);
-    closeTimeoutRef.current = window.setTimeout(() => setOpened(false), 200);
-  }
-
   if (!email.includes('@')) {
     // Not an email (e.g. "unknown"); render as plain text without a tooltip.
     return (
-      <span className={joinClassNames('UserTag', props.className)}>
+      <span className={cn('UserTag', props.className)}>
         {props.children ?? email}
       </span>
     );
   }
 
+  // The tooltip is interactive, so the email can be selected and copied.
   const label = (
-    <div
-      className="UserTag__tooltip"
-      onPointerEnter={open}
-      onPointerLeave={scheduleClose}
-    >
+    <div className="UserTag__tooltip flex max-w-60 items-center gap-2">
       <UserAvatar email={email} size={20} withTooltip={false} />
-      <div className="UserTag__tooltip__text">
+      <div className="UserTag__tooltip__text flex min-w-0 flex-col">
         {displayName && (
-          <span className="UserTag__tooltip__name">{displayName}</span>
+          <span className="UserTag__tooltip__name font-semibold">
+            {displayName}
+          </span>
         )}
         <span className="UserTag__tooltip__email">{email}</span>
       </div>
     </div>
   );
   return (
-    <Tooltip
-      label={label}
-      position="bottom"
-      withArrow
-      transition="pop"
-      // Keep the tooltip interactive so the email can be selected/copied.
-      allowPointerEvents
-      opened={opened}
-      onPointerEnter={open}
-      onPointerLeave={scheduleClose}
-    >
-      <span className={joinClassNames('UserTag', props.className)}>
+    <Tooltip label={label} placement="bottom" interactive>
+      <span className={cn('UserTag', props.className)}>
         {props.children ?? (displayName || shortName)}
       </span>
     </Tooltip>

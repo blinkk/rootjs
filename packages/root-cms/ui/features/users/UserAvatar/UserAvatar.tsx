@@ -1,7 +1,7 @@
-import {Avatar, Tooltip} from '@mantine/core';
-import {ComponentChildren} from 'preact';
-import {useState} from 'preact/hooks';
-import {joinClassNames} from '../../../utils/classes.js';
+import {VNode} from 'preact';
+import {Avatar} from '../../../primitives/Avatar/Avatar.js';
+import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../utils/classes.js';
 import {UserProfile, getAvatarColor, getUserInitials} from '../user-profile.js';
 import {useUserProfile, useUserProfiles} from '../useUserProfile.js';
 import './UserAvatar.css';
@@ -47,34 +47,26 @@ export function UserAvatar(props: UserAvatarProps) {
   const email = profile?.email || props.email || '';
   const displayName = profile?.displayName || '';
   const photoURL = profile?.photoURL || '';
-  const [imgError, setImgError] = useState(false);
 
+  // The fallback (shown when there's no photo, or it fails to load) is the
+  // user's initials on a color hashed from their email.
   const avatar = (
     <Avatar
-      className={joinClassNames(
-        'UserAvatar',
-        props.inactive && 'UserAvatar--inactive',
+      className={cn(
+        'UserAvatar transition-opacity duration-200 text-on-primary',
+        props.inactive && 'UserAvatar--inactive opacity-50',
         props.className
       )}
-      src={!imgError && photoURL ? photoURL : undefined}
+      src={photoURL || undefined}
       alt={displayName || email}
-      size={size}
-      radius="xl"
-      style={
-        !photoURL || imgError
-          ? {
-              backgroundColor: getAvatarColor(email || displayName || '?'),
-              color: '#fff',
-              fontWeight: 600,
-              fontSize: Math.max(10, Math.round(size * 0.4)),
-            }
-          : undefined
-      }
-      imageProps={{
-        onError: () => setImgError(true),
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(10, Math.round(size * 0.4)),
+        backgroundColor: getAvatarColor(email || displayName || '?'),
       }}
     >
-      {!photoURL || imgError ? getUserInitials(email, displayName) : null}
+      {getUserInitials(email, displayName)}
     </Avatar>
   );
 
@@ -96,26 +88,30 @@ UserAvatar.Tooltip = function UserAvatarTooltip(props: {
   email: string;
   displayName?: string;
   note?: string;
-  children: ComponentChildren;
+  children: VNode<any>;
 }) {
   if (!props.email && !props.displayName) {
-    return <>{props.children}</>;
+    return props.children;
   }
   const label = (
-    <div className="UserAvatar__tooltip">
+    <div className="UserAvatar__tooltip flex flex-col gap-0.5 text-left">
       {props.displayName && (
-        <div className="UserAvatar__tooltip__name">{props.displayName}</div>
+        <div className="UserAvatar__tooltip__name font-semibold">
+          {props.displayName}
+        </div>
       )}
       {props.email && (
-        <div className="UserAvatar__tooltip__email">{props.email}</div>
+        <div className="UserAvatar__tooltip__email text-xs">{props.email}</div>
       )}
       {props.note && (
-        <div className="UserAvatar__tooltip__note">{props.note}</div>
+        <div className="UserAvatar__tooltip__note mt-0.5 text-xs font-medium">
+          {props.note}
+        </div>
       )}
     </div>
   );
   return (
-    <Tooltip label={label} position="bottom" withArrow transition="pop">
+    <Tooltip label={label} placement="bottom">
       {props.children}
     </Tooltip>
   );
@@ -156,7 +152,10 @@ export function UserAvatarGroup(props: UserAvatarGroupProps) {
 
   return (
     <div
-      className={joinClassNames('UserAvatarGroup', props.className)}
+      className={cn(
+        'UserAvatarGroup inline-flex flex-row items-center',
+        props.className
+      )}
       data-size={size}
     >
       {visible.map((email) => {
@@ -169,26 +168,23 @@ export function UserAvatarGroup(props: UserAvatarGroupProps) {
             profile={profile}
             size={size}
             inactive={isInactive}
-            className={joinClassNames(
-              'UserAvatarGroup__avatar',
-              props.avatarClassName
-            )}
+            className={cn('UserAvatarGroup__avatar', props.avatarClassName)}
           />
         );
       })}
       {overflow > 0 && (
         <Avatar
-          className={joinClassNames(
+          className={cn(
             'UserAvatar',
             'UserAvatarGroup__avatar',
             'UserAvatarGroup__overflow',
             props.avatarClassName
           )}
-          size={size}
-          radius="xl"
+          alt={`${overflow} more`}
           style={{
+            width: size,
+            height: size,
             fontSize: Math.max(10, Math.round(size * 0.4)),
-            fontWeight: 600,
           }}
         >
           +{overflow}

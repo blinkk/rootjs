@@ -1,31 +1,26 @@
-import './Tooltip.css';
+import type {Placement} from '../../primitives/floating/useFloating.js';
+import {
+  Tooltip as BaseTooltip,
+  type TooltipProps as BaseTooltipProps,
+} from '../../primitives/Tooltip/Tooltip.js';
 
-import {Tooltip as MantineTooltip, TooltipProps} from '@mantine/core';
-import {joinClassNames} from '../../utils/classes.js';
-
-export type {TooltipProps};
+export interface TooltipProps extends BaseTooltipProps {
+  /** Mantine's name for `placement`. */
+  position?: Placement;
+  /** Ignored (Mantine only). */
+  transition?: string;
+  /** Ignored: the tooltip always has an arrow. */
+  withArrow?: boolean;
+}
 
 /**
- * Drop-in replacement for Mantine's `<Tooltip>` that keeps the wrapper element
- * layout-neutral.
- *
- * Mantine wraps a tooltip's child in an `inline-block` div. That div
- * establishes a line box, so it ends up a few pixels taller than its child
- * (the line box reserves room for the font's descender). Whenever a
- * tooltip-wrapped element sits next to one without a tooltip, the extra space
- * knocks the two out of alignment. Making the wrapper a flex box removes the
- * line box so it shrink-wraps its child exactly.
- *
- * Example:
- *   <Tooltip label="Open doc">
- *     <Button>Open</Button>
- *   </Tooltip>
+ * The `Tooltip` primitive, accepting the Mantine props that call sites still
+ * pass (`position`, `transition`, `withArrow`). New code should import
+ * `primitives/Tooltip/Tooltip.js` directly.
  */
 export function Tooltip(props: TooltipProps) {
-  return (
-    <MantineTooltip
-      {...props}
-      className={joinClassNames(props.className, 'Tooltip')}
-    />
-  );
+  const {position, transition, withArrow, ...rest} = props;
+  void transition;
+  void withArrow;
+  return <BaseTooltip placement={position} {...rest} />;
 }

@@ -425,9 +425,14 @@ for each primitive. Done; answers are rows 7–13 of the decisions log.
       editor's fixed status bar leaves the header's menu button uncovered
       and scrolls sideways below `md`. The viewport meta gained
       `viewport-fit=cover` so `env(safe-area-inset-*)` works.
-- [ ] 2.3 Shared bits: `Heading`, `Text`, `Surface`, `RouteLoading`,
+- [x] 2.3 Shared bits: `Heading`, `Text`, `Surface`, `RouteLoading`,
       `RouteLoadError`, `DataLoadError`, `ErrorDetails`, `AppErrorBoundary`,
-      `UserAvatar`, `UserTag`, `Viewers`.
+      `UserAvatar`, `UserTag`, `Viewers`. `Heading`/`Text` keep their props
+      but render `Heading--size-*`/`Text--size-*` BEM classes + utilities
+      (headings snap 18px → 20px). `RouteLoadError` and `DataLoadError`
+      share `ErrorScreen`. `components/Tooltip` is a thin wrapper over the
+      primitive that accepts Mantine's `position`; `ConditionalTooltip`
+      uses the primitive.
 - [ ] 2.4 `GlobalSearch` absorbs `@mantine/spotlight`, and becomes full-screen
       on mobile.
 

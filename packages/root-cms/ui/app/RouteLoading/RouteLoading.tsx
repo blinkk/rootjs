@@ -1,7 +1,8 @@
-import {Loader} from '@mantine/core';
-import {joinClassNames} from '../../utils/classes.js';
-import {Layout} from '../layout/Layout.js';
 import './RouteLoading.css';
+
+import {Spinner} from '../../primitives/Spinner/Spinner.js';
+import {cn} from '../../utils/classes.js';
+import {Layout} from '../layout/Layout.js';
 
 export interface RouteLoadingProps {
   /**
@@ -18,14 +19,16 @@ export interface RouteLoadingProps {
  */
 export function RouteLoading(props: RouteLoadingProps) {
   const frame = props.frame ?? true;
+  // Within the frame, `.Layout__main > *:first-child` sizes it to the
+  // content area.
   const loader = (
     <div
-      className={joinClassNames(
-        'RouteLoading',
-        frame && 'RouteLoading--framed'
+      className={cn(
+        'RouteLoading flex h-screen w-full items-center justify-center text-muted',
+        frame && 'RouteLoading--framed bg-page'
       )}
     >
-      <Loader color="gray" size="xl" />
+      <Spinner size="lg" className="size-12" />
     </div>
   );
   if (!frame) {

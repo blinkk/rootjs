@@ -1,4 +1,3 @@
-import {Button} from '@mantine/core';
 import {IconCheck, IconCopy} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {
@@ -6,8 +5,8 @@ import {
   formatErrorReport,
   onErrorReportUpdate,
 } from '../../features/logs/error-reports.js';
-import {joinClassNames} from '../../utils/classes.js';
-import './ErrorDetails.css';
+import {Button} from '../../primitives/Button/Button.js';
+import {cn} from '../../utils/classes.js';
 
 export interface ErrorDetailsProps {
   className?: string;
@@ -34,29 +33,37 @@ export function ErrorDetails(props: ErrorDetailsProps) {
   }
 
   return (
-    <div className={joinClassNames('ErrorDetails', props.className)}>
-      <p className="ErrorDetails__help">
+    <div
+      className={cn(
+        'ErrorDetails mt-4 flex w-full max-w-160 flex-col items-center gap-3',
+        props.className
+      )}
+    >
+      <p className="ErrorDetails__help m-0 text-base text-muted">
         If this keeps happening, copy the error details and send them to your
         site's developer.
       </p>
-      <div className="ErrorDetails__actions">
-        <div className="ErrorDetails__id">
-          Error ID: <code>{report.id}</code>
+      <div className="ErrorDetails__actions flex flex-wrap items-center justify-center gap-3">
+        <div className="ErrorDetails__id text-base">
+          Error ID: <code className="select-all font-mono">{report.id}</code>
         </div>
         <Button
-          variant="default"
-          size="xs"
-          leftIcon={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+          size="sm"
+          icon={copied ? <IconCheck /> : <IconCopy />}
           onClick={copyDetails}
         >
           {copied ? 'Copied' : 'Copy error details'}
         </Button>
       </div>
-      <details className="ErrorDetails__details">
-        <summary>Technical details</summary>
-        <pre className="ErrorDetails__stack">{formatErrorReport(report)}</pre>
+      <details className="ErrorDetails__details w-full text-left text-sm">
+        <summary className="cursor-pointer text-center text-muted">
+          Technical details
+        </summary>
+        <pre className="ErrorDetails__stack mx-0 my-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-sm border border-solid border-border p-3 font-mono text-xs leading-normal">
+          {formatErrorReport(report)}
+        </pre>
         <a
-          className="ErrorDetails__link"
+          className="ErrorDetails__link text-inherit"
           href={`/cms/logs/errors?id=${encodeURIComponent(report.id)}`}
         >
           View in error logs

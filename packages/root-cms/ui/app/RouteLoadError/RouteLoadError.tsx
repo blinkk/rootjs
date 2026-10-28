@@ -1,6 +1,4 @@
-import {Button} from '@mantine/core';
-import {IconCloudOff, IconReload} from '@tabler/icons-preact';
-import './RouteLoadError.css';
+import {ErrorScreen} from '../../components/DataLoadError/DataLoadError.js';
 
 export interface RouteLoadErrorProps {
   /** The error that caused the route to fail to load. */
@@ -17,26 +15,12 @@ export function RouteLoadError(props: RouteLoadErrorProps) {
   const errorMessage =
     error instanceof Error ? error.message : String(error || '');
   return (
-    <div className="RouteLoadError">
-      <div className="RouteLoadError__icon">
-        <IconCloudOff size={60} />
-      </div>
-      <h2 className="RouteLoadError__title">Page failed to load</h2>
-      <p className="RouteLoadError__body">
-        The CMS may have been updated since this page was first opened. Reload
-        the page to fetch the latest version. If the problem persists, check
-        your network connection and try again.
-      </p>
-      <Button
-        color="dark"
-        leftIcon={<IconReload size={16} />}
-        onClick={() => window.location.reload()}
-      >
-        Reload page
-      </Button>
-      {errorMessage && (
-        <code className="RouteLoadError__error">{errorMessage}</code>
-      )}
-    </div>
+    <ErrorScreen
+      className="RouteLoadError min-h-screen"
+      block="RouteLoadError"
+      title="Page failed to load"
+      body="The CMS may have been updated since this page was first opened. Reload the page to fetch the latest version. If the problem persists, check your network connection and try again."
+      message={errorMessage}
+    />
   );
 }
