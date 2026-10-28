@@ -71,7 +71,6 @@
     "test": "pnpm build && firebase emulators:exec 'vitest run --exclude=**/*.visual.test.tsx'",
     "test:visual": "pnpm build:ui:css && vitest run --config=vitest.config.visual.ts",
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'",
-    "ui:progress": "node scripts/ui-progress.ts",
     "ui:snapshots": "node scripts/ui-snapshots.ts"
   },
   "dependencies": {
@@ -87,7 +86,6 @@
     "@ai-sdk/react": "4.0.116",
     "@google-cloud/firestore": "8.7.0",
     "@hello-pangea/dnd": "18.0.1",
-    "@mantine/spotlight": "4.2.12",
     "@types/cli-progress": "3.11.6",
     "ai": "7.0.113",
     "body-parser": "2.3.0",
@@ -110,11 +108,9 @@
     "yaml": "2.9.1",
     "zod": "4.6.5"
   },
-  "//": "NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12",
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@blinkk/root": "workspace:*",
-    "@emotion/react": "11.14.0",
     "@firebase/app-compat": "0.5.18",
     "@firebase/app-types": "0.9.6",
     "@firebase/rules-unit-testing": "5.0.2",
@@ -129,10 +125,6 @@
     "@lexical/selection": "0.51.0",
     "@lexical/table": "0.51.0",
     "@lexical/utils": "0.51.0",
-    "@mantine/core": "4.2.12",
-    "@mantine/hooks": "4.2.12",
-    "@mantine/modals": "4.2.12",
-    "@mantine/notifications": "4.2.12",
     "@preact/compat": "18.3.2",
     "@tabler/icons-preact": "3.48.0",
     "@tailwindcss/cli": "4.3.3",

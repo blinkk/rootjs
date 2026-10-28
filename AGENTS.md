@@ -122,8 +122,9 @@ and field builders) come from `packages/root-cms/core/schema.ts`.
   `ui/primitives/`; `react`/`react-dom` alias to `@preact/compat`. **Read
   `packages/root-cms/ui/README.md` before changing the UI.** It covers tokens,
   class naming (utilities plus BEM hooks), mobile and accessibility rules.
-- Mantine (pinned to 4.2.12) is being removed (see
-  `packages/root-cms/docs/ui-rewrite-plan.md`). Don't add new Mantine usage.
+- Mantine has been removed from the CMS UI (see
+  `packages/root-cms/docs/ui-rewrite-plan.md`); don't add it back. Build on
+  the primitives instead.
 - Components live at `<Name>/<Name>.tsx` (under `ui/components/`,
   `ui/primitives/`, or a feature's folder).
 - Use `cn`/`joinClassNames` from `ui/utils/classes.js`, icons from

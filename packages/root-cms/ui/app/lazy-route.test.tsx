@@ -7,17 +7,6 @@ import {
   lazyRoute,
 } from './lazy-route.js';
 
-vi.mock('@mantine/core', async () => {
-  const actual: any = await vi.importActual('@mantine/core');
-  return {
-    ...actual,
-    Button: ({children, onClick}: any) => (
-      <button onClick={onClick}>{children}</button>
-    ),
-    Loader: () => <div>loading...</div>,
-  };
-});
-
 // The app frame requires the router location context and the global firebase
 // objects, which aren't available in tests.
 vi.mock('./layout/Layout.js', () => {

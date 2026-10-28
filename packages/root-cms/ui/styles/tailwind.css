@@ -8,13 +8,13 @@
  *   base        Element defaults (global.css).
  *   components  Component-level rules that utilities can't express.
  *   utilities   Tailwind utility classes.
- *   (unlayered) Legacy component CSS, Mantine, project themes and custom CSS.
+ *   (unlayered) Legacy component CSS, project themes and custom CSS.
  *
  * Project themes load unlayered, so they win over every utility without
  * needing extra specificity.
  *
- * Preflight is intentionally not imported while Mantine is still in use; it
- * is enabled once Mantine is removed.
+ * Preflight isn't imported yet; it's enabled in Phase 5.2 of the rewrite
+ * plan, once the legacy CSS that relies on native defaults is reconciled.
  */
 
 @layer theme, base, components, utilities;

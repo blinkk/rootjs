@@ -31,7 +31,6 @@ import {ThemeLoader} from '../hooks/useTheme.js';
 import {UserPreferencesProvider} from '../hooks/useUserPreferences.js';
 import {ModalsProvider} from '../primitives/modals/ModalsProvider.js';
 import {Toaster} from '../primitives/Toast/Toast.js';
-import {MantineCompatProvider} from './MantineCompatProvider.js';
 
 /**
  * The app-wide providers (Firebase, data, routing, modals, search, toasts)
@@ -39,7 +38,7 @@ import {MantineCompatProvider} from './MantineCompatProvider.js';
  */
 export function AppProviders(props: {children: ComponentChildren}) {
   return (
-    <MantineCompatProvider>
+    <>
       <FirebaseContext.Provider value={window.firebase}>
         <SSEProvider>
           <SiteSettingsProvider>
@@ -93,6 +92,6 @@ export function AppProviders(props: {children: ComponentChildren}) {
         </SSEProvider>
       </FirebaseContext.Provider>
       <Toaster />
-    </MantineCompatProvider>
+    </>
   );
 }

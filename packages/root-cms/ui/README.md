@@ -50,11 +50,11 @@ Rules:
 ### Cascade layers
 
 Lowest to highest priority: `theme` → `base` (`global.css`) → `components` →
-`utilities` → **unlayered** (legacy component CSS, Mantine, project themes,
+`utilities` → **unlayered** (legacy component CSS, project themes,
 custom CSS).
 
-**No CSS reset yet:** Tailwind's preflight is off until Mantine is removed,
-so native defaults still apply. Reset them where you use them: `m-0 list-none
+**No CSS reset yet:** Tailwind's preflight is off (it's enabled in Phase 5.2
+of the rewrite plan), so native defaults still apply. Reset them where you use them: `m-0 list-none
 p-0` on lists, `m-0 border-0 p-0` on fieldsets, `appearance-none` and an
 explicit border/background on buttons and inputs. `global.css` also sets
 `img, svg, iframe {height: auto}`, which overrides `height` attributes, so
@@ -260,5 +260,3 @@ Where snapping visibly changes a screen, say so in the change summary.
 - Primitives: the gallery entry looks right at 375 / 768 / 1280, with and
   without the test theme, and the visual + axe test passes.
 - Pages: before/after snapshots at 375 / 768 / 1280 are reviewed.
-- No `@mantine/*` imports remain in files you migrated (the lint ratchet
-  enforces this).

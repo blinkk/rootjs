@@ -504,8 +504,10 @@ overflowing the mobile header, and array item headers sized without
 
 ### Phase 5: Removal & polish (serial)
 
-- [ ] 5.1 Remove `@mantine/*` deps, `mantine.css`,
-      `mantine-spotlight-internal.d.ts`, and the ratchet allowlist.
+- [x] 5.1 Remove `@mantine/*` deps, `mantine.css`,
+      `mantine-spotlight-internal.d.ts`, and the ratchet allowlist. (Also
+      `@emotion/react`, `MantineCompatProvider` and `scripts/ui-progress.ts`;
+      the UI typecheck went from 307 errors to 78, most were Mantine's types.)
 - [ ] 5.2 Enable Tailwind preflight, reconcile `global.css`, delete the legacy
       vars.
 - [ ] 5.3 Finalize `theme.css` + `docs/themes.md`, and generate the BEM hooks

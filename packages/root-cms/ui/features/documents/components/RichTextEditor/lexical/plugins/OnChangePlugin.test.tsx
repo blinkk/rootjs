@@ -35,8 +35,8 @@ interface TestEditorProps {
 
 /**
  * Minimal lexical setup with the OnChangePlugin under test. The full
- * <LexicalEditor> can't render in jsdom (its toolbar uses mantine), and the
- * value syncing being tested here lives entirely in the plugin.
+ * <LexicalEditor> needs the toolbar's floating UI and modals, and the value
+ * syncing being tested here lives entirely in the plugin.
  */
 function TestEditor(props: TestEditorProps) {
   return (
