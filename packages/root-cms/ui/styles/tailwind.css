@@ -77,6 +77,8 @@
   --font-mono: var(--cms-font-mono);
 
   --text-*: initial;
+  --text-2xs: var(--cms-text-2xs);
+  --text-2xs--line-height: 1.4;
   --text-xs: var(--cms-text-xs);
   --text-xs--line-height: 1.4;
   --text-sm: var(--cms-text-sm);

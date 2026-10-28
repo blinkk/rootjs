@@ -49,7 +49,7 @@ const GRADIENT_CLASSES: Record<BadgeGradient, string> = {
 
 const SIZE_CLASSES: Record<BadgeSize, string> = {
   xs: 'h-4 gap-1 px-2',
-  sm: 'h-5 gap-1 px-2.5',
+  sm: 'h-4.5 gap-1 px-2.5',
 };
 
 interface BadgeOwnProps {
@@ -70,7 +70,7 @@ interface BadgeOwnProps {
    * theme tokens. Default `blue`.
    */
   gradient?: BadgeGradient;
-  /** Height: `xs` 16px, `sm` 20px. Default `sm`. */
+  /** Height: `xs` 16px, `sm` 18px (10px text). Default `sm`. */
   size?: BadgeSize;
   /** Icon before the label, e.g. `<IconCheck />`. Sized by the badge. */
   icon?: ComponentChildren;
@@ -124,7 +124,7 @@ export const Badge = forwardRef<
     `Badge--variant-${variant}`,
     variant === 'gradient' && `Badge--gradient-${gradient}`,
     `Badge--size-${size}`,
-    'inline-flex max-w-full shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent align-middle font-sans text-xs font-bold uppercase leading-none tracking-wide no-underline',
+    'inline-flex max-w-full shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent align-middle font-sans text-2xs font-bold uppercase leading-none tracking-wide no-underline',
     variant === 'gradient'
       ? cn('text-inverse', GRADIENT_CLASSES[gradient])
       : TONE_CLASSES[variant][tone],
