@@ -372,22 +372,27 @@ Every primitive ships with: a BEM root and parts, token-driven utilities,
 keyboard and ARIA behavior, mobile behavior, a gallery entry, and a visual+axe
 test. Primitives are **not** wired into feature code yet.
 
-- [ ] 1A **Actions & display**: `Button`, `IconButton`, `Spinner`, `Badge`,
-      `Avatar`, `Divider`, `LoadingOverlay`, `Skeleton`, `Kbd`, `Image`.
-- [ ] 1B **Form controls**: `Field` (label/description/error; replaces
+- [x] 1A **Actions & display**: `Button`, `IconButton`, `Spinner`, `Badge`,
+      `Avatar`, `Divider`, `LoadingOverlay`, `Skeleton`, `Kbd`. (`Image` dropped:
+      use `<img>`.)
+- [x] 1B **Form controls**: `Field` (label/description/error; replaces
       `InputWrapper`), `TextInput`, `Textarea` (autosize), `NumberInput`,
       `PasswordInput`, `JsonInput`, `ColorInput`, `Checkbox`, `Switch`,
       `SegmentedControl`.
-- [ ] 1C **Floating layer**: `useFloating` wrapper, `Tooltip`, `Popover`,
+- [x] 1C **Floating layer**: `useFloating` wrapper, `Tooltip`, `Popover`,
       `Menu` (roving focus, typeahead, submenus if used). Rebuild
       `ConditionalTooltip`.
-- [ ] 1D **Dialogs & toasts**: `Dialog` (mobile sheet), the modal manager
+- [x] 1D **Dialogs & toasts**: `Dialog` (mobile sheet), the modal manager
       (`ModalsProvider`, `useModals`, `ContextModalProps`, `openConfirmModal`),
       and the toast store + `Toaster`.
-- [ ] 1E **Navigation & data**: `Tabs`, `Accordion`, `Breadcrumbs`,
+- [x] 1E **Navigation & data**: `Tabs`, `Accordion`, `Breadcrumbs`,
       `Pagination`, `Table` (responsive variant).
 - [ ] 1F **Combobox** (starts when 1C lands): `Select` (searchable),
       `MultiSelect` (creatable if used). Audit the current props in use first.
+
+Overlays (tooltips, menus, toasts, dropdowns) portal through
+`primitives/floating/Portal`, which targets the topmost open `<dialog>`
+(`useOverlayRoot()`), because a modal dialog makes the rest of the page inert.
 
 **Checkpoint 1:** you review the gallery at all three widths and the API docs
 for each primitive.
