@@ -9,10 +9,11 @@ export type ButtonSize = 'xs' | 'sm' | 'md';
 /**
  * Classes shared by `Button` and `IconButton`: layout, focus ring, disabled
  * state, and a touch target of at least 40px on coarse pointers (an
- * invisible `::after`, so dense layouts don't shift).
+ * invisible `::after`, so dense layouts don't shift). Resets the native
+ * button padding (there's no preflight); sizes set their own.
  */
 export const BUTTON_BASE_CLASSES =
-  'relative inline-flex shrink-0 cursor-pointer select-none appearance-none items-center justify-center whitespace-nowrap rounded-sm font-sans font-medium no-underline transition-colors ' +
+  'relative m-0 inline-flex shrink-0 cursor-pointer select-none appearance-none items-center justify-center whitespace-nowrap rounded-sm font-sans font-medium no-underline p-0 transition-colors ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ' +
   'disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ' +
   'pointer-coarse:after:absolute pointer-coarse:after:-inset-2';

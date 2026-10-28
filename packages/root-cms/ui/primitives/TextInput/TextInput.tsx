@@ -1,0 +1,188 @@
+import type {ComponentChildren, JSX} from 'preact';
+import {forwardRef} from 'preact/compat';
+import {cn} from '../../utils/classes.js';
+import {
+  Field,
+  type FieldLabelProps,
+  type FieldSize,
+  fieldControlProps,
+  needsField,
+  useFieldId,
+} from '../Field/Field.js';
+
+export type InputSize = FieldSize;
+
+/**
+ * The input box shared by every text-like control (`TextInput`, `Textarea`,
+ * `NumberInput`, and later `Select`): border, background, placeholder,
+ * focus ring, and the invalid, disabled and read-only states. Pair it with
+ * `INPUT_SIZE_CLASSES` (single-line) or your own padding (multi-line).
+ */
+export const INPUT_BASE_CLASSES =
+  'm-0 block w-full min-w-0 appearance-none rounded-sm border border-border-strong bg-surface font-sans text-fg shadow-none transition-colors ' +
+  'placeholder:text-subtle ' +
+  'focus-visible:border-focus focus-visible:outline-1 focus-visible:outline-focus ' +
+  'aria-invalid:border-danger aria-invalid:focus-visible:outline-danger ' +
+  'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-muted disabled:opacity-60';
+
+/**
+ * Height, horizontal padding and text size of single-line inputs. Text is
+ * 16px below `md` so iOS doesn't zoom on focus, and inputs grow to 40px on
+ * coarse pointers.
+ */
+export const INPUT_SIZE_CLASSES: Record<InputSize, string> = {
+  xs: 'h-control-xs px-2 text-lg md:text-sm pointer-coarse:h-10',
+  sm: 'h-control-sm px-2.5 text-lg md:text-sm pointer-coarse:h-10',
+  md: 'h-control-md px-3 text-lg md:text-base pointer-coarse:h-10',
+};
+
+/** Left padding that makes room for a left section, per size. */
+const LEFT_PADDING_CLASSES: Record<InputSize, string> = {
+  xs: 'pl-6 pointer-coarse:pl-8',
+  sm: 'pl-7 pointer-coarse:pl-9',
+  md: 'pl-9',
+};
+
+/** Right padding that makes room for a right section, per size. */
+const RIGHT_PADDING_CLASSES: Record<InputSize, string> = {
+  xs: 'pr-6 pointer-coarse:pr-10',
+  sm: 'pr-7 pointer-coarse:pr-10',
+  md: 'pr-9 pointer-coarse:pr-10',
+};
+
+/** Width of the left and right sections, per size (square with the input). */
+export const INPUT_SECTION_CLASSES: Record<InputSize, string> = {
+  xs: 'w-6 *:size-3.5 pointer-coarse:w-8',
+  sm: 'w-7 *:size-4 pointer-coarse:w-9',
+  md: 'w-9 *:size-4',
+};
+
+const RIGHT_SECTION_CLASSES: Record<InputSize, string> = {
+  xs: 'w-6 pointer-coarse:w-10',
+  sm: 'w-7 pointer-coarse:w-10',
+  md: 'w-9 pointer-coarse:w-10',
+};
+
+/** Props shared by `TextInput` and the controls built on it. */
+export interface InputChromeProps extends FieldLabelProps {
+  /** Height: `xs` 24px, `sm` 28px, `md` 36px. Default `sm`. */
+  size?: InputSize;
+  /**
+   * Content inside the input's left edge, usually an icon such as
+   * `<IconSearch />`. Sized and colored by the input, and not clickable.
+   */
+  leftSection?: ComponentChildren;
+  /**
+   * Content inside the input's right edge: an icon, a unit, or a small
+   * control like an `IconButton` (size `xs`). Clickable.
+   */
+  rightSection?: ComponentChildren;
+  /** Classes for the root (the `Field`, or the input box when bare). */
+  className?: string;
+  /** Classes for the native `<input>`. */
+  inputClassName?: string;
+}
+
+export type TextInputProps = InputChromeProps &
+  Omit<JSX.InputHTMLAttributes<HTMLInputElement>, keyof InputChromeProps>;
+
+/**
+ * A single-line text input, with an optional label, help text and error.
+ * Replaces Mantine's `TextInput`. The ref and any native props go to the
+ * `<input>`.
+ *
+ * ```tsx
+ * <TextInput
+ *   label="Slug"
+ *   description="Lowercase letters, numbers and dashes."
+ *   value={slug}
+ *   onInput={(e) => setSlug(e.currentTarget.value)}
+ *   error={slugError}
+ * />
+ * <TextInput aria-label="Search" leftSection={<IconSearch />} size="xs" />
+ * ```
+ */
+export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
+  (props, ref) => {
+    const {
+      label,
+      description,
+      error,
+      required,
+      size = 'sm',
+      leftSection,
+      rightSection,
+      className,
+      inputClassName,
+      id: idProp,
+      type = 'text',
+      ...inputProps
+    } = props;
+    const id = useFieldId(idProp as string | undefined);
+    const field = needsField(props);
+    const control = fieldControlProps(id, props);
+
+    const box = (
+      <div
+        className={cn(
+          'TextInput__box relative flex min-w-0 items-center',
+          !field && 'TextInput',
+          !field && className
+        )}
+      >
+        {leftSection && (
+          <span
+            className={cn(
+              'TextInput__leftSection pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center text-subtle',
+              INPUT_SECTION_CLASSES[size]
+            )}
+            aria-hidden="true"
+          >
+            {leftSection}
+          </span>
+        )}
+        <input
+          {...inputProps}
+          {...control}
+          ref={ref}
+          type={type}
+          className={cn(
+            'TextInput__input',
+            INPUT_BASE_CLASSES,
+            INPUT_SIZE_CLASSES[size],
+            Boolean(leftSection) && LEFT_PADDING_CLASSES[size],
+            Boolean(rightSection) && RIGHT_PADDING_CLASSES[size],
+            inputClassName
+          )}
+        />
+        {rightSection && (
+          <span
+            className={cn(
+              'TextInput__rightSection absolute inset-y-0 right-0 flex items-center justify-center text-muted',
+              RIGHT_SECTION_CLASSES[size]
+            )}
+          >
+            {rightSection}
+          </span>
+        )}
+      </div>
+    );
+
+    if (!field) {
+      return box;
+    }
+    return (
+      <Field
+        id={id}
+        label={label}
+        description={description}
+        error={error}
+        required={required}
+        size={size}
+        className={cn('TextInput', className)}
+      >
+        {box}
+      </Field>
+    );
+  }
+);
