@@ -16,6 +16,7 @@ import {Button} from '../Button/Button.js';
 import {Dialog} from '../Dialog/Dialog.js';
 import {PortalContainer} from '../floating/Portal.js';
 import {IconButton} from '../IconButton/IconButton.js';
+import {TextInput} from '../TextInput/TextInput.js';
 import {Menu, MenuDivider, MenuGroup, MenuItem} from './Menu.js';
 
 /**
@@ -55,6 +56,54 @@ function MenuInDialog() {
         </div>
       </Dialog>
     </>
+  );
+}
+
+const FRUITS = [
+  'Apple',
+  'Apricot',
+  'Banana',
+  'Blueberry',
+  'Cherry',
+  'Grape',
+  'Kiwi',
+  'Lemon',
+  'Mango',
+  'Orange',
+  'Peach',
+  'Pear',
+];
+
+/**
+ * A menu with a filter input that takes focus on open (`data-autofocus`),
+ * capped at 240px tall so the items scroll.
+ */
+function FilterMenu() {
+  const [query, setQuery] = useState('');
+  const items = FRUITS.filter((fruit) =>
+    fruit.toLowerCase().includes(query.trim().toLowerCase())
+  );
+  return (
+    <Menu
+      defaultOpen
+      maxHeight={240}
+      onOpenChange={(open) => !open && setQuery('')}
+      header={
+        <TextInput
+          data-autofocus
+          aria-label="Filter fruit"
+          placeholder="Filter…"
+          size="xs"
+          value={query}
+          onInput={(e) => setQuery(e.currentTarget.value)}
+        />
+      }
+      trigger={<Button iconRight={<IconChevronDown />}>Fruit</Button>}
+    >
+      {items.map((fruit) => (
+        <MenuItem key={fruit}>{fruit}</MenuItem>
+      ))}
+    </Menu>
   );
 }
 
@@ -107,6 +156,11 @@ export const MenuGallery = defineGallery({
             <MenuItem>Comfortable, with extra space between rows</MenuItem>
           </MenuGroup>
         </Menu>
+      </div>
+    )),
+    'Filter and max height': inStory(() => (
+      <div className="min-h-80">
+        <FilterMenu />
       </div>
     )),
     'Inside a dialog': inStory(() => <MenuInDialog />),

@@ -74,6 +74,7 @@ import {
   Menu,
   MenuGroup,
   MenuItem,
+  type MenuOpenChangeReason,
 } from '../../../../../../primitives/Menu/Menu.js';
 import {TextInput} from '../../../../../../primitives/TextInput/TextInput.js';
 import {cn} from '../../../../../../utils/classes.js';
@@ -121,9 +122,12 @@ const ACTIVE_ICON_CLASSES =
 const GROUP_CLASSES =
   'LexicalEditor__toolbar__group flex shrink-0 *:rounded-none *:first:rounded-l-sm *:last:rounded-r-sm *:not-first:border-l-0';
 
-/** Returns the menu item elements of the dropdown that contains `element`. */
+/**
+ * Returns the menu item elements of the dropdown that contains `element`
+ * (in its items or its header).
+ */
 function getMenuItems(element: HTMLElement): HTMLElement[] {
-  const menu = element.closest('[role="menu"]');
+  const menu = element.closest('.Menu');
   if (!menu) {
     return [];
   }
@@ -597,28 +601,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
   const [componentsMenuOpened, setComponentsMenuOpened] = useState(false);
   const [componentFilter, setComponentFilter] = useState('');
 
-  // Focus the filter as soon as it mounts, i.e. when the menu opens. The menu
-  // focuses its first item once it's positioned, a render later, so take focus
-  // back from that one move.
-  const componentFilterRef = useCallback((input: HTMLInputElement | null) => {
-    if (!input) {
-      return;
-    }
-    input.focus();
-    const menu = input.closest('[role="menu"]');
-    if (!menu) {
-      return;
-    }
-    const reclaimFocus = (e: Event) => {
-      menu.removeEventListener('focusin', reclaimFocus);
-      if (e.target !== input) {
-        input.focus({preventScroll: true});
-      }
-    };
-    menu.addEventListener('focusin', reclaimFocus);
-    window.setTimeout(() => menu.removeEventListener('focusin', reclaimFocus));
-  }, []);
-
   // Only offer the filter input once the list is long enough to be worth
   // searching.
   const showComponentFilter =
@@ -656,21 +638,18 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     }
   };
 
-  const onComponentsMenuOpenChange = (open: boolean) => {
+  const onComponentsMenuOpenChange = (
+    open: boolean,
+    reason: MenuOpenChangeReason
+  ) => {
     if (open) {
       setComponentFilter('');
       setComponentsMenuOpened(true);
       return;
     }
     // Escape clears the query first so that it doesn't discard a long search
-    // by accident; a second Escape closes the menu. The menu handles Escape
-    // before the input sees it, so check the event that's closing it.
-    const event = window.event;
-    if (
-      componentFilter &&
-      event instanceof KeyboardEvent &&
-      event.key === 'Escape'
-    ) {
+    // by accident; a second Escape closes the menu.
+    if (componentFilter && reason === 'escape') {
       setComponentFilter('');
       return;
     }
@@ -779,6 +758,23 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               className="LexicalEditor__toolbar__insertDropdown__body w-70"
               open={componentsMenuOpened}
               onOpenChange={onComponentsMenuOpenChange}
+              maxHeight={Math.min(480, window.innerHeight * 0.6)}
+              header={
+                showComponentFilter && (
+                  <TextInput
+                    className="LexicalEditor__toolbar__insertDropdown__filter"
+                    data-autofocus
+                    leftSection={<IconSearch />}
+                    placeholder="Search components"
+                    aria-label="Search components"
+                    value={componentFilter}
+                    onInput={(event) =>
+                      setComponentFilter(event.currentTarget.value)
+                    }
+                    onKeyDown={onComponentFilterKeyDown}
+                  />
+                )
+              }
               trigger={
                 <Button
                   className={cn(
@@ -792,21 +788,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                 </Button>
               }
             >
-              {showComponentFilter && (
-                <div className="LexicalEditor__toolbar__insertDropdown__filter sticky -top-1 z-10 -mx-1 -mt-1 mb-1 border-0 border-b border-solid border-border bg-surface p-1.5">
-                  <TextInput
-                    ref={componentFilterRef}
-                    leftSection={<IconSearch />}
-                    placeholder="Search components"
-                    aria-label="Search components"
-                    value={componentFilter}
-                    onInput={(event) =>
-                      setComponentFilter(event.currentTarget.value)
-                    }
-                    onKeyDown={onComponentFilterKeyDown}
-                  />
-                </div>
-              )}
               {(showTableItem || showHorizontalRuleItem) && (
                 <MenuGroup label="Insert">
                   {showTableItem && (

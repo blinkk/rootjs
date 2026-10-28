@@ -33,6 +33,11 @@ export interface UseFloatingOptions {
    * Default `false`.
    */
   matchReferenceWidth?: false | 'min' | 'equal';
+  /**
+   * Caps the floating element's height, in px, below the space available.
+   * (A class can't do it: the available height is set inline.)
+   */
+  maxHeight?: number;
 }
 
 export interface UseFloatingResult {
@@ -99,6 +104,7 @@ export function useFloating(options: UseFloatingOptions): UseFloatingResult {
     offset: offsetPx = 4,
     padding = 8,
     matchReferenceWidth = false,
+    maxHeight,
   } = options;
   const [reference, setReferenceState] = useState<ReferenceElement | null>(
     null
@@ -135,7 +141,8 @@ export function useFloating(options: UseFloatingOptions): UseFloatingResult {
         apply({availableWidth, availableHeight, rects, elements}) {
           const style = elements.floating.style;
           style.maxWidth = `${Math.max(0, availableWidth)}px`;
-          style.maxHeight = `${Math.max(0, availableHeight)}px`;
+          const height = Math.max(0, availableHeight);
+          style.maxHeight = `${maxHeight === undefined ? height : Math.min(height, maxHeight)}px`;
           if (matchReferenceWidth === 'min') {
             style.minWidth = `${rects.reference.width}px`;
           } else if (matchReferenceWidth === 'equal') {
@@ -179,6 +186,7 @@ export function useFloating(options: UseFloatingOptions): UseFloatingResult {
     offsetPx,
     padding,
     matchReferenceWidth,
+    maxHeight,
   ]);
 
   // A layout effect, so the first position is computed before the browser

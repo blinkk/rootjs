@@ -22,6 +22,10 @@ interface MenuContextValue {
 
 const MenuContext = createContext<MenuContextValue | null>(null);
 
+/** Why a menu opened or closed; see `MenuProps.onOpenChange`. */
+export type MenuOpenChangeReason =
+  'trigger' | 'select' | 'escape' | 'outside' | 'tab';
+
 export interface MenuProps extends Omit<
   JSX.HTMLAttributes<HTMLDivElement>,
   'label' | 'width'
@@ -42,8 +46,23 @@ export interface MenuProps extends Omit<
   open?: boolean;
   /** Initial visibility when uncontrolled. */
   defaultOpen?: boolean;
-  /** Called when the menu wants to open or close. */
-  onOpenChange?: (open: boolean) => void;
+  /**
+   * Called when the menu wants to open or close, with why: `trigger` (a
+   * click or key on the trigger), `select` (an item was chosen), `escape`,
+   * `outside` (a press outside the menu) or `tab`.
+   */
+  onOpenChange?: (open: boolean, reason: MenuOpenChangeReason) => void;
+  /**
+   * Caps the menu's height, in px (it's also capped by the space on screen).
+   * Taller menus scroll.
+   */
+  maxHeight?: number;
+  /**
+   * Content pinned above the items, outside the scrolling list, e.g. a
+   * filter input. (A menu may only contain items, so it can't go in
+   * `children`.) Mark a field in it `data-autofocus` to focus it on open.
+   */
+  header?: ComponentChildren;
   /**
    * Width in px. Default: sized to the items, at least 192px. It never
    * exceeds the screen.
@@ -60,8 +79,9 @@ export interface MenuProps extends Omit<
  * keyboard support: arrow keys move between items (wrapping), Home/End jump
  * to the ends, typing jumps to the next item starting with those letters,
  * Enter/Space choose, Escape closes, and Tab closes and moves on. Choosing
- * an item closes the menu and returns focus to the trigger. Replaces
- * Mantine's `Menu`.
+ * an item closes the menu and returns focus to the trigger. On open, focus
+ * goes to the first item, or to an element marked `data-autofocus` (such as
+ * a filter input). Replaces Mantine's `Menu`.
  *
  * ```tsx
  * <Menu
@@ -85,6 +105,8 @@ export function Menu(props: MenuProps) {
     open: openProp,
     defaultOpen = false,
     onOpenChange,
+    maxHeight,
+    header,
     width,
     label,
     className,
@@ -96,14 +118,21 @@ export function Menu(props: MenuProps) {
   const fallbackTriggerId = useId();
   const triggerProps = trigger.props as Record<string, unknown>;
   const triggerId = (triggerProps.id as string) || fallbackTriggerId;
-  const [open, setOpen] = useControllableState(
+  // The reason for the pending open change, passed to `onOpenChange`.
+  const reasonRef = useRef<MenuOpenChangeReason>('trigger');
+  const [open, setOpenState] = useControllableState(
     openProp,
     defaultOpen,
-    onOpenChange
+    (next: boolean) => onOpenChange?.(next, reasonRef.current)
   );
+  const setOpen = (next: boolean, reason: MenuOpenChangeReason) => {
+    reasonRef.current = reason;
+    setOpenState(next);
+  };
   const {setReference, setFloating, reference, floating} = useFloating({
     open,
     placement,
+    maxHeight,
   });
   const triggerRef = useMergedRef<Element>(
     getElementRef(trigger),
@@ -118,7 +147,7 @@ export function Menu(props: MenuProps) {
   useDismiss({
     open,
     elements: [reference, floating],
-    onDismiss: () => setOpen(false),
+    onDismiss: (reason) => setOpen(false, reason),
   });
 
   useOverlayFocus({
@@ -126,6 +155,12 @@ export function Menu(props: MenuProps) {
     reference,
     floating,
     initialFocus: (menu) => {
+      // An element marked `data-autofocus` (e.g. a filter input) wins.
+      const autofocus = menu.querySelector<HTMLElement>('[data-autofocus]');
+      if (autofocus) {
+        initialItemRef.current = 'first';
+        return autofocus;
+      }
       const items = getItems(menu);
       const item =
         initialItemRef.current === 'last' ? items[items.length - 1] : items[0];
@@ -136,7 +171,7 @@ export function Menu(props: MenuProps) {
 
   function openMenu(initialItem: 'first' | 'last') {
     initialItemRef.current = initialItem;
-    setOpen(true);
+    setOpen(true, 'trigger');
   }
 
   function onTriggerKeyDown(e: KeyboardEvent) {
@@ -179,7 +214,7 @@ export function Menu(props: MenuProps) {
       case 'Tab':
         // Focus the trigger without preventing the default, so the browser
         // moves focus on from the trigger, in page order.
-        setOpen(false);
+        setOpen(false, 'tab');
         if (reference instanceof HTMLElement) {
           reference.focus();
         }
@@ -226,14 +261,14 @@ export function Menu(props: MenuProps) {
   }
 
   return (
-    <MenuContext.Provider value={{close: () => setOpen(false)}}>
+    <MenuContext.Provider value={{close: () => setOpen(false, 'select')}}>
       {cloneTrigger(trigger, {
         ref: triggerRef,
         id: triggerId,
         'aria-haspopup': 'menu',
         'aria-expanded': open,
         'aria-controls': open ? menuId : undefined,
-        onClick: () => (open ? setOpen(false) : openMenu('first')),
+        onClick: () => (open ? setOpen(false, 'trigger') : openMenu('first')),
         onKeyDown: onTriggerKeyDown,
       })}
       {open && (
@@ -241,13 +276,9 @@ export function Menu(props: MenuProps) {
           <div
             {...rest}
             ref={setFloating}
-            id={menuId}
-            role="menu"
-            aria-label={label}
-            aria-labelledby={label ? undefined : triggerId}
             tabIndex={-1}
             className={cn(
-              'Menu z-(--cms-z-dropdown) w-max min-w-48 overflow-y-auto rounded-md border border-border bg-surface p-1 font-sans text-sm text-fg shadow-md focus:outline-none',
+              'Menu z-(--cms-z-dropdown) flex w-max min-w-48 flex-col overflow-hidden rounded-md border border-border bg-surface font-sans text-sm text-fg shadow-md focus:outline-none',
               className
             )}
             style={{
@@ -256,7 +287,20 @@ export function Menu(props: MenuProps) {
             }}
             onKeyDown={onMenuKeyDown}
           >
-            {children}
+            {header && (
+              <div className="Menu__header shrink-0 border-0 border-b border-solid border-border p-1.5">
+                {header}
+              </div>
+            )}
+            <div
+              id={menuId}
+              role="menu"
+              aria-label={label}
+              aria-labelledby={label ? undefined : triggerId}
+              className="Menu__list min-h-0 overflow-y-auto p-1"
+            >
+              {children}
+            </div>
           </div>
         </Portal>
       )}
