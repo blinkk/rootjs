@@ -118,12 +118,15 @@ and field builders) come from `packages/root-cms/core/schema.ts`.
 ### UI Development
 
 - Avoid manually importing custom element definitions (these are collected by Root.js during the build process).
-- The CMS UI is Preact + Mantine. **Mantine is pinned to 4.2.12** for Preact
-  compat; `react`/`react-dom` alias to `@preact/compat`. Don't upgrade it casually.
-- Components live at `<Name>/<Name>.tsx` (under `ui/components/` or a
-  feature's folder) with a colocated plain `<Name>.css` whose root class is
-  the component name.
-- Use `joinClassNames` from `ui/utils/classes.js`, icons from
+- The CMS UI is Preact + Tailwind, built from the primitives in
+  `ui/primitives/`; `react`/`react-dom` alias to `@preact/compat`. **Read
+  `packages/root-cms/ui/README.md` before changing the UI.** It covers tokens,
+  class naming (utilities plus BEM hooks), mobile and accessibility rules.
+- Mantine (pinned to 4.2.12) is being removed (see
+  `packages/root-cms/docs/ui-rewrite-plan.md`). Don't add new Mantine usage.
+- Components live at `<Name>/<Name>.tsx` (under `ui/components/`,
+  `ui/primitives/`, or a feature's folder).
+- Use `cn`/`joinClassNames` from `ui/utils/classes.js`, icons from
   `@tabler/icons-preact`, and notifications via `ui/utils/notifications.js`.
 
 ### Version Control & Contributions

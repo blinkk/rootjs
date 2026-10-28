@@ -1,3 +1,5 @@
+import {twMerge} from 'tailwind-merge';
+
 type MaybeString = string | false | null | undefined;
 
 /**
@@ -7,4 +9,17 @@ type MaybeString = string | false | null | undefined;
  */
 export function joinClassNames(...classNames: MaybeString[]) {
   return classNames.filter((c) => !!c).join(' ') || undefined;
+}
+
+/**
+ * Joins class names like `joinClassNames()`, and also resolves conflicting
+ * Tailwind utilities so the last one wins. Use it in components that accept
+ * a `className` prop, so callers can override the component's own utilities.
+ *
+ * ```tsx
+ * cn('Button px-3 text-sm', props.className); // 'px-4' from the caller wins.
+ * ```
+ */
+export function cn(...classNames: MaybeString[]) {
+  return twMerge(classNames) || undefined;
 }

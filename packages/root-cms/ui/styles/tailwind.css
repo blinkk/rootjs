@@ -22,7 +22,7 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities) source(none);
 
-@source '../';
+@source '../**/*.{ts,tsx}';
 
 /*
  * Design tokens. Tailwind's default palette, radii, fonts, type sizes and
