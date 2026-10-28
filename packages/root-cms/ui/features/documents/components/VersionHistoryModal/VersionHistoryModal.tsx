@@ -293,8 +293,12 @@ export function VersionHistoryModal(
                   <span className="sr-only">Select</span>
                 </TableHeaderCell>
                 <TableHeaderCell>modified at</TableHeaderCell>
-                <TableHeaderCell>modified by</TableHeaderCell>
-                <TableHeaderCell>actions</TableHeaderCell>
+                <TableHeaderCell className="hidden sm:table-cell">
+                  modified by
+                </TableHeaderCell>
+                <TableHeaderCell className="hidden sm:table-cell">
+                  actions
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -314,6 +318,24 @@ export function VersionHistoryModal(
                 );
                 const releaseId = releaseTag?.replace('release:', '');
 
+                const buttons = (
+                  <div className="VersionHistoryModal__versions__buttons flex flex-wrap gap-2">
+                    {!isDraft && (
+                      <>
+                        <Button size="xs" onClick={() => restore(version)}>
+                          restore
+                        </Button>
+                        <Button
+                          size="xs"
+                          onClick={() => copyToNewDoc(version)}
+                          icon={<IconCopy />}
+                        >
+                          copy to doc
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                );
                 return (
                   <TableRow key={version._versionId}>
                     <TableCell>
@@ -397,27 +419,19 @@ export function VersionHistoryModal(
                           </Popover>
                         )}
                       </div>
+                      {/* On phones the other columns fold into this cell. */}
+                      <div className="VersionHistoryModal__versions__mobileMeta mt-1 flex flex-col gap-2 sm:hidden">
+                        <Text size="body-sm" className="text-muted">
+                          {version.sys.modifiedBy}
+                        </Text>
+                        {!isDraft && buttons}
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Text size="body-sm">{version.sys.modifiedBy}</Text>
                     </TableCell>
-                    <TableCell>
-                      <div className="VersionHistoryModal__versions__buttons flex flex-wrap gap-2">
-                        {!isDraft && (
-                          <>
-                            <Button size="xs" onClick={() => restore(version)}>
-                              restore
-                            </Button>
-                            <Button
-                              size="xs"
-                              onClick={() => copyToNewDoc(version)}
-                              icon={<IconCopy />}
-                            >
-                              copy to doc
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                    <TableCell className="hidden sm:table-cell">
+                      {buttons}
                     </TableCell>
                   </TableRow>
                 );
