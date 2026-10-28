@@ -16,6 +16,17 @@ import {cloneTrigger, getElementRef} from '../floating/trigger.js';
 import {useControllableState} from '../floating/useControllableState.js';
 import {type Placement, useFloating} from '../floating/useFloating.js';
 
+/** How long the show and hide transitions take, in ms. */
+const TRANSITION_DURATION = 120;
+
+/** Where each side's tooltip slides in from, toward its trigger. */
+const ENTER_OFFSETS: Record<string, string> = {
+  top: 'translateY(4px)',
+  bottom: 'translateY(-4px)',
+  left: 'translateX(4px)',
+  right: 'translateX(-4px)',
+};
+
 /** How long the pointer has to rest on an interactive tooltip's gap, in ms. */
 const INTERACTIVE_CLOSE_DELAY = 150;
 
@@ -53,7 +64,7 @@ export interface TooltipProps {
    * be selected (e.g. an email address). Default `false`.
    */
   interactive?: boolean;
-  /** Shows the arrow pointing at the trigger. Default `true`. */
+  /** Shows an arrow pointing at the trigger. Default `false`. */
   withArrow?: boolean;
   /** Controls visibility. Leave unset to show on hover and focus. */
   open?: boolean;
@@ -73,6 +84,16 @@ export interface TooltipProps {
    * can itself be the trigger of a `Menu` or `Popover`.
    */
   [prop: string]: unknown;
+}
+
+/** Whether to animate: skipped for reduced motion and in jsdom. */
+function canAnimate(el: HTMLElement | null): el is HTMLElement {
+  return (
+    !!el &&
+    typeof el.animate === 'function' &&
+    typeof window.matchMedia === 'function' &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 }
 
 /**
@@ -121,7 +142,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     disabled = false,
     delay = 100,
     interactive = false,
-    withArrow = true,
+    withArrow = false,
     open: openProp,
     defaultOpen = false,
     onOpenChange,
@@ -137,11 +158,26 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   );
   const open = openState && !disabled;
   const timerRef = useRef<number | undefined>(undefined);
-  const {setReference, setFloating, setArrow} = useFloating({
-    open,
+  // Stays set while the hide transition plays, so the bubble stays shown.
+  const [closing, setClosing] = useState(false);
+  const floatingRef = useRef<HTMLDivElement | null>(null);
+  const {
+    setReference,
+    setFloating,
+    setArrow,
+    placement: side,
+  } = useFloating({
+    open: open || closing,
     placement,
-    offset: 8,
+    offset: withArrow ? 8 : 6,
   });
+  const setFloatingEl = useCallback(
+    (el: HTMLDivElement | null) => {
+      floatingRef.current = el;
+      setFloating(el);
+    },
+    [setFloating]
+  );
 
   const refable = canTakeRef(children);
   // Set when a "refable" child's ref didn't resolve to a DOM element after
@@ -177,6 +213,37 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   }, [anchor]);
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  // Fades and slides the bubble in and out (skipped for reduced motion).
+  const wasOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = open;
+    const el = floatingRef.current;
+    if (open === wasOpen || !canAnimate(el)) {
+      return undefined;
+    }
+    const offset = ENTER_OFFSETS[side.split('-')[0]] ?? 'none';
+    const keyframes = [
+      {opacity: 0, transform: offset},
+      {opacity: 1, transform: 'none'},
+    ];
+    if (open) {
+      setClosing(false);
+      el.animate(keyframes, {
+        duration: TRANSITION_DURATION,
+        easing: 'ease-out',
+      });
+      return undefined;
+    }
+    setClosing(true);
+    const anim = el.animate(keyframes.reverse(), {
+      duration: TRANSITION_DURATION,
+      easing: 'ease-in',
+    });
+    anim.onfinish = () => setClosing(false);
+    return () => anim.cancel();
+  }, [open]);
 
   // Escape hides the tooltip, without stopping the key from also closing a
   // dialog or menu it's in.
@@ -351,8 +418,8 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   const bubble = !disabled && (
     <Portal>
       <div
-        ref={setFloating}
-        hidden={!open}
+        ref={setFloatingEl}
+        hidden={!open && !closing}
         className={cn(
           'Tooltip__floating z-(--cms-z-tooltip) w-max',
           !interactive && 'pointer-events-none'

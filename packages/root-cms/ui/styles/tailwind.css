@@ -41,6 +41,7 @@
   --color-*: initial;
   --color-page: var(--cms-color-page);
   --color-surface: var(--cms-color-surface);
+  --color-surface-subtle: var(--cms-color-surface-subtle);
   --color-surface-hover: var(--cms-color-surface-hover);
   --color-surface-active: var(--cms-color-surface-active);
   --color-chip: var(--cms-color-chip);
@@ -89,6 +90,7 @@
 
   /* Control tracks (`SegmentedControl`). */
   --color-track: var(--cms-color-track);
+  --color-track-border: var(--cms-color-track-border);
 
   /* Task status tints (`features/tasks`). */
   --color-task-new: var(--cms-task-status-new);

@@ -22,16 +22,16 @@ export const TooltipGallery = defineGallery({
   stories: {
     Placements: inStory(() => (
       <div className="flex flex-col items-center gap-12 py-8">
-        <Tooltip label="Above" defaultOpen>
+        <Tooltip label="Above" withArrow defaultOpen>
           <Button>Top</Button>
         </Tooltip>
-        <Tooltip label="Below" placement="bottom" defaultOpen>
+        <Tooltip label="Below" placement="bottom" withArrow defaultOpen>
           <Button>Bottom</Button>
         </Tooltip>
-        <Tooltip label="To the right" placement="right" defaultOpen>
+        <Tooltip label="To the right" placement="right" withArrow defaultOpen>
           <Button>Right</Button>
         </Tooltip>
-        <Tooltip label="To the left" placement="left" defaultOpen>
+        <Tooltip label="To the left" placement="left" withArrow defaultOpen>
           <Button>Left</Button>
         </Tooltip>
       </div>
@@ -49,8 +49,9 @@ export const TooltipGallery = defineGallery({
       </div>
     )),
     'Without arrow': inStory(() => (
+      // The default, as in Mantine.
       <div className="flex min-h-24 items-end">
-        <Tooltip label="No arrow" withArrow={false} defaultOpen>
+        <Tooltip label="No arrow" defaultOpen>
           <Button>Hover me</Button>
         </Tooltip>
       </div>

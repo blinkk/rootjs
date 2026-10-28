@@ -9,7 +9,7 @@
 
   .FileField__Dropzone,
   .FileField__Canvas__Info {
-    background-color: var(--cms-color-surface-hover);
+    background-color: var(--cms-color-surface-subtle);
   }
 
   .FileField__Canvas {

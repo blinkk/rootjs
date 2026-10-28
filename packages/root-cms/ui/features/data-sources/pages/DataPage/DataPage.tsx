@@ -1,4 +1,4 @@
-import {IconTable} from '@tabler/icons-preact';
+import {IconPlus, IconTable} from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
@@ -40,22 +40,27 @@ export function DataPage() {
   return (
     <Layout>
       <div className="DataPage bg-page p-page">
-        <div className="DataPage__header mb-10">
-          <Heading size="h1">Data Sources</Heading>
-          <Text as="p" className="mt-2 max-w-prose">
-            Add data sources to sync data from external services, like Google
-            Sheets.
-          </Text>
-          <div className="DataPage__header__buttons mt-5">
-            <ConditionalTooltip
-              label="You don't have access to create new data sources"
-              condition={!canEdit}
-            >
-              <Button variant="blue" href="/cms/data/new" disabled={!canEdit}>
-                New data source
-              </Button>
-            </ConditionalTooltip>
+        <div className="DataPage__header mb-8 flex flex-wrap items-start gap-4">
+          <div className="DataPage__header__text min-w-0 grow basis-100">
+            <Heading size="h1">Data Sources</Heading>
+            <Text as="p" className="mb-0 mt-2 max-w-prose">
+              Add data sources to sync data from external services, like Google
+              Sheets.
+            </Text>
           </div>
+          <ConditionalTooltip
+            label="You don't have access to create new data sources"
+            condition={!canEdit}
+          >
+            <Button
+              variant="primary"
+              icon={<IconPlus />}
+              href="/cms/data/new"
+              disabled={!canEdit}
+            >
+              New data source
+            </Button>
+          </ConditionalTooltip>
         </div>
         <DataPage.DataSourcesTable />
       </div>

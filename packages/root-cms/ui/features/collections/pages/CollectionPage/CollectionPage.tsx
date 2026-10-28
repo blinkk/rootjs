@@ -12,9 +12,9 @@ import {
   IconCheck,
   IconChevronDown,
   IconChevronUp,
-  IconCirclePlus,
   IconFolder,
   IconGripVertical,
+  IconPlus,
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
@@ -257,7 +257,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
     <ConditionalTooltip label={NEW_DOC_TOOLTIP} condition={!canEdit}>
       <Button
         variant="primary"
-        icon={<IconCirclePlus />}
+        icon={<IconPlus />}
         onClick={() => setNewDocModalOpen(true)}
         disabled={!canEdit}
       >
@@ -285,6 +285,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                   size="md"
                   labelPosition="left"
                   label="Show archived:"
+                  classNames={{label: 'text-base font-medium'}}
                   checked={showArchived}
                   onChange={(e) =>
                     setShowArchived(Boolean(e.currentTarget.checked))

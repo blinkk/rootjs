@@ -72,11 +72,49 @@ function canAnimate(el: HTMLElement | null): el is HTMLElement {
   );
 }
 
-/** Toasts slide in from the right from `md` up, and up from the bottom below. */
+/**
+ * Toasts slide in from off-screen right from `md` up, and up from the bottom
+ * below, as in Mantine.
+ */
 function enterOffset() {
   return window.matchMedia('(width >= 48rem)').matches
-    ? 'translateX(24px)'
-    : 'translateY(16px)';
+    ? 'translateX(150%)'
+    : 'translateY(100%)';
+}
+
+/** How long a toast takes to slide in or out, in ms (Mantine's 250). */
+const TRANSITION_DURATION = 250;
+
+/**
+ * Keyframes for a toast slid out and collapsed to no height, so the toasts
+ * around it move over to make (or take back) its space, and for the toast
+ * at rest.
+ */
+function slideKeyframes(el: HTMLElement) {
+  const style = window.getComputedStyle(el);
+  // Also cancels (or restores) the list's gap next to the toast.
+  const gapSide = el.previousElementSibling ? 'marginTop' : 'marginBottom';
+  const hidden = {
+    opacity: 0,
+    transform: enterOffset(),
+    height: '0px',
+    paddingTop: '0px',
+    paddingBottom: '0px',
+    borderTopWidth: '0px',
+    borderBottomWidth: '0px',
+    [gapSide]: '-8px',
+  };
+  const shown = {
+    opacity: 1,
+    transform: 'none',
+    height: `${el.offsetHeight}px`,
+    paddingTop: style.paddingTop,
+    paddingBottom: style.paddingBottom,
+    borderTopWidth: style.borderTopWidth,
+    borderBottomWidth: style.borderBottomWidth,
+    [gapSide]: '0px',
+  };
+  return {hidden, shown};
 }
 
 /** Resolves a toast's auto-close delay, like Mantine's `getAutoClose`. */
@@ -141,19 +179,19 @@ export function Toast(props: ToastProps) {
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (canAnimate(el)) {
-      el.animate(
-        [
-          {opacity: 0, transform: enterOffset()},
-          {opacity: 1, transform: 'none'},
-        ],
-        {duration: 200, easing: 'ease-out'}
-      );
+    // A toast hidden as it's shown (it remounts to leave) skips straight to
+    // its exit.
+    if (!leaving && canAnimate(el)) {
+      const {hidden, shown} = slideKeyframes(el);
+      el.animate([hidden, shown], {
+        duration: TRANSITION_DURATION,
+        easing: 'ease',
+      });
     }
   }, []);
 
-  // Exit: fade and slide out, then collapse the space it took so the toasts
-  // around it slide into place.
+  // Exit: slide out while collapsing the space it took, so the toasts around
+  // it slide into place.
   useLayoutEffect(() => {
     if (!leaving) {
       return;
@@ -164,25 +202,14 @@ export function Toast(props: ToastProps) {
       onExited?.(toast.id);
       return;
     }
-    const height = `${el.offsetHeight}px`;
-    // Also cancels the list's gap next to the toast.
-    const gapSide = el.previousElementSibling ? 'marginTop' : 'marginBottom';
-    const anim = el.animate(
-      [
-        {opacity: 1, transform: 'none', height},
-        {opacity: 0, transform: enterOffset(), height, offset: 0.6},
-        {
-          opacity: 0,
-          transform: enterOffset(),
-          height: '0px',
-          paddingTop: '0px',
-          paddingBottom: '0px',
-          borderWidth: '0px',
-          [gapSide]: '-8px',
-        },
-      ],
-      {duration: 300, easing: 'ease-in-out', fill: 'forwards'}
-    );
+    // Measured at rest, not partway through the enter animation.
+    el.getAnimations().forEach((a) => a.cancel());
+    const {hidden, shown} = slideKeyframes(el);
+    const anim = el.animate([shown, hidden], {
+      duration: TRANSITION_DURATION,
+      easing: 'ease',
+      fill: 'forwards',
+    });
     anim.onfinish = () => onExited?.(toast.id);
     return () => anim.cancel();
   }, [leaving]);
@@ -213,7 +240,7 @@ export function Toast(props: ToastProps) {
         'Toast',
         `Toast--status-${status}`,
         leaving && 'Toast--leaving pointer-events-none',
-        'pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pl-4 pr-3 text-base text-fg shadow-lg',
+        'pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pl-5.5 pr-3 text-base text-fg shadow-lg',
         toast.className
       )}
       role={status === 'danger' ? 'alert' : undefined}
@@ -230,7 +257,7 @@ export function Toast(props: ToastProps) {
     >
       <span
         className={cn(
-          'Toast__accent absolute inset-y-0 left-0 w-1',
+          'Toast__accent absolute inset-y-1 left-1 w-1.5 rounded-full',
           ACCENT_CLASSES[status]
         )}
         aria-hidden="true"

@@ -89,7 +89,7 @@
   }
 
   .RootAIChat__textPart tr:nth-child(even) {
-    background: var(--cms-color-surface-hover);
+    background: var(--cms-color-surface-subtle);
   }
 
   /* Safari still draws the disclosure triangle without this. */

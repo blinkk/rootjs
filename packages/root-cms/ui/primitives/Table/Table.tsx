@@ -169,7 +169,7 @@ export function TableRow(props: TableRowProps) {
         // inherits it) hides what scrolls beneath.
         'bg-surface',
         body && 'last:*:border-b-0',
-        body && striped && 'odd:bg-surface-hover',
+        body && striped && 'odd:bg-surface-subtle',
         body && hover && 'hover:bg-surface-active',
         className
       )}

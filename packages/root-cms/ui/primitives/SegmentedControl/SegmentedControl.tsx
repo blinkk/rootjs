@@ -168,7 +168,7 @@ export const SegmentedControl = forwardRef<
         !field && 'SegmentedControl',
         `SegmentedControl--size-${size}`,
         fullWidth && 'SegmentedControl--fullWidth',
-        'relative max-w-full overflow-x-auto rounded-md bg-track p-1',
+        'relative max-w-full overflow-x-auto rounded-md border border-track-border bg-track p-0.75',
         'aria-invalid:outline-1 aria-invalid:outline-danger',
         fullWidth ? 'flex w-full' : 'inline-flex',
         'pointer-coarse:min-h-10',
@@ -179,7 +179,7 @@ export const SegmentedControl = forwardRef<
       <span
         className={cn(
           'SegmentedControl__indicator',
-          'pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface shadow-xs',
+          'pointer-events-none absolute inset-y-0.75 left-0 rounded-sm bg-surface shadow-xs',
           indicator.animate &&
             'motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out',
           !indicator.rect && 'hidden'

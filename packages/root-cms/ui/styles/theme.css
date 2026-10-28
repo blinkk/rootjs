@@ -27,6 +27,8 @@
   --cms-color-surface: #ffffff;
   /* A hovered row, menu item or quiet button. */
   --cms-color-surface-hover: #f5f5f3;
+  /* A faint fill: striped table rows, file dropzones. */
+  --cms-color-surface-subtle: #fafafa;
   /* A pressed or selected row, menu item or quiet button. */
   --cms-color-surface-active: #ececea;
   /* Chips, tags, inline code and other small filled shapes. */
@@ -130,10 +132,12 @@
   /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
   --cms-button-red-soft: #fff5f5;
 
-  /* --- Color: control tracks ------------------------------------------- *
-   * The grey well behind a `SegmentedControl`'s segments (Mantine gray 1).
-   */
-  --cms-color-track: #f1f3f5;
+  /* --- Color: control tracks ------------------------------------------- */
+
+  /* The well behind a `SegmentedControl`'s segments. */
+  --cms-color-track: var(--cms-color-surface-hover);
+  /* The well's border. */
+  --cms-color-track-border: var(--cms-color-border);
 
   /* --- Color: task statuses -------------------------------------------- *
    * Tints for the tasks page's list group headers and board columns, one

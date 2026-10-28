@@ -1,6 +1,6 @@
 import type {JSX} from 'preact';
 import {forwardRef} from 'preact/compat';
-import {cn} from '../../utils/classes.js';
+import {type ClassNames, cn} from '../../utils/classes.js';
 import {
   type CheckboxSize,
   TOGGLE_INPUT_CLASSES,
@@ -43,6 +43,8 @@ interface SwitchOwnProps extends FieldLabelProps {
   labelPosition?: 'left' | 'right';
   /** Classes for the root. */
   className?: string;
+  /** Classes for inner elements: `label`. */
+  classNames?: ClassNames<'label'>;
 }
 
 export type SwitchProps = SwitchOwnProps &
@@ -71,6 +73,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
       size = 'sm',
       labelPosition = 'right',
       className,
+      classNames,
       id: idProp,
       ...inputProps
     } = props;
@@ -130,7 +133,8 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
                   'Switch__label cursor-pointer leading-snug text-fg',
                   TOGGLE_LABEL_SIZE_CLASSES[size],
                   Boolean(inputProps.disabled) &&
-                    'cursor-not-allowed opacity-60'
+                    'cursor-not-allowed opacity-60',
+                  classNames?.label
                 )}
               >
                 {label}

@@ -661,7 +661,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
 
       {/* Pending Upload Warning */}
       {pendingUpload ? (
-        <div className="FileField__overwriteWarning flex flex-col gap-3 rounded-sm border border-solid border-input-border bg-surface-hover p-3 text-base">
+        <div className="FileField__overwriteWarning flex flex-col gap-3 rounded-sm border border-solid border-input-border bg-surface-subtle p-3 text-base">
           <div className="FileField__overwriteWarning__header flex items-center justify-between font-bold text-danger">
             File already exists
           </div>
