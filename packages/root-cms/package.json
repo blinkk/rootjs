@@ -71,7 +71,8 @@
     "test": "pnpm build && firebase emulators:exec 'vitest run --exclude=**/*.visual.test.tsx'",
     "test:visual": "pnpm build:ui:css && vitest run --config=vitest.config.visual.ts",
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'",
-    "ui:progress": "node scripts/ui-progress.ts"
+    "ui:progress": "node scripts/ui-progress.ts",
+    "ui:snapshots": "node scripts/ui-snapshots.ts"
   },
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "32.3.9",
