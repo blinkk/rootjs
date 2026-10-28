@@ -170,7 +170,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
         dataSource.httpOptions.headers = parseHttpHeaders(httpHeadersInput);
       }
       if (httpMethod === 'POST') {
-        const httpBody = getValue('httpBody');
+        const httpBody = getValue('httpRequestBody');
         if (httpBody) {
           dataSource.httpOptions.body = httpBody;
         }
