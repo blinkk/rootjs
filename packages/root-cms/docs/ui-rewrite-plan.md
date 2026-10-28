@@ -433,8 +433,11 @@ for each primitive. Done; answers are rows 7–13 of the decisions log.
       share `ErrorScreen`. `components/Tooltip` is a thin wrapper over the
       primitive that accepts Mantine's `position`; `ConditionalTooltip`
       uses the primitive.
-- [ ] 2.4 `GlobalSearch` absorbs `@mantine/spotlight`, and becomes full-screen
-      on mobile.
+- [x] 2.4 `GlobalSearch` absorbs `@mantine/spotlight`, and becomes full-screen
+      on mobile. It's a `Dialog` with an input (`role="combobox"`) driving a
+      listbox via `aria-activedescendant`; the combobox helpers in
+      `primitives/Select` are built around a floating dropdown, so they
+      weren't reused. The spotlight type shim is deleted.
 
 **Checkpoint 2:** the CMS shell works on a phone, and every page is still
 reachable.

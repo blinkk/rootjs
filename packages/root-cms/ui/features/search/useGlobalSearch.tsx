@@ -285,7 +285,7 @@ export function useDocSlugSearch(
           } catch (err) {
             // Some Firestore instances reject documentId range filters in
             // narrow contexts; swallow per-collection failures rather than
-            // taking down the whole spotlight.
+            // taking down the whole search.
             console.error(`docSlugSearch failed for ${collId}:`, err);
             return [];
           }

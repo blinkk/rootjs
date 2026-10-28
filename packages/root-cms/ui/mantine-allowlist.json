@@ -96,9 +96,6 @@
   "ui/features/releases/pages/NewReleasePage/NewReleasePage.tsx",
   "ui/features/releases/pages/ReleasePage/ReleasePage.tsx",
   "ui/features/releases/pages/ReleasesPage/ReleasesPage.tsx",
-  "ui/features/search/GlobalSearch/GlobalSearch.test.tsx",
-  "ui/features/search/GlobalSearch/GlobalSearch.tsx",
-  "ui/features/search/GlobalSearch/GlobalSearchAction.tsx",
   "ui/features/settings/components/PermissionGroupsBox/PermissionGroupsBox.tsx",
   "ui/features/settings/components/ShareBox/ShareBox.tsx",
   "ui/features/settings/pages/SettingsPage/SettingsPage.tsx",
@@ -130,6 +127,5 @@
   "ui/features/users/UserSelect/UserSelect.tsx",
   "ui/hooks/useSiteSettings.tsx",
   "ui/integrations/useGapiClient.ts",
-  "ui/main.tsx",
-  "ui/types/mantine-spotlight-internal.d.ts"
+  "ui/main.tsx"
 ]

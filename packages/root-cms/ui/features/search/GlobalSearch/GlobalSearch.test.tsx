@@ -1,5 +1,4 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
-import {Fragment} from 'preact';
 import {LocationProvider} from 'preact-iso';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {DocSlugHit, GlobalSearchHit} from '../useGlobalSearch.js';
@@ -7,58 +6,6 @@ import {GlobalSearch, openGlobalSearch} from './GlobalSearch.js';
 
 const fieldHits: GlobalSearchHit[] = [];
 const docSlugHits: DocSlugHit[] = [];
-
-// Mantine components can't render under jsdom here (their hooks run outside
-// the test's Preact instance), so the inner Spotlight is replaced with a
-// minimal stand-in that honors the same props contract: a controlled input,
-// the actions wrapper, group labels, and the action component.
-vi.mock('@mantine/spotlight/esm/Spotlight/Spotlight.js', () => ({
-  Spotlight: (props: any) => {
-    if (!props.opened) {
-      return null;
-    }
-    const Wrapper = props.actionsWrapperComponent;
-    const Action = props.actionComponent;
-    const actions = props
-      .filter(props.query, props.actions)
-      .slice(0, props.limit);
-    return (
-      <div className={props.classNames?.spotlight}>
-        <input
-          placeholder={props.searchPlaceholder}
-          value={props.query}
-          onInput={(e: any) => props.onQueryChange(e.currentTarget.value)}
-          onKeyDown={(e: any) => {
-            if (e.code === 'Escape') {
-              props.onClose();
-            }
-          }}
-        />
-        <Wrapper>
-          {actions.length > 0 ? (
-            actions.map((action: any, i: number) => (
-              <Fragment key={action.id}>
-                {action.group && action.group !== actions[i - 1]?.group && (
-                  <div className={props.classNames?.actionsGroup}>
-                    {action.group}
-                  </div>
-                )}
-                <Action
-                  action={action}
-                  query={props.query}
-                  hovered={false}
-                  onTrigger={() => action.onTrigger(action)}
-                />
-              </Fragment>
-            ))
-          ) : (
-            <div>{props.nothingFoundMessage}</div>
-          )}
-        </Wrapper>
-      </div>
-    );
-  },
-}));
 
 vi.mock('../useGlobalSearch.js', () => ({
   useGlobalSearch: () => ({

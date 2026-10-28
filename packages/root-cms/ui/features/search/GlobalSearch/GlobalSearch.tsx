@@ -1,17 +1,18 @@
 import './GlobalSearch.css';
-import {SpotlightAction} from '@mantine/spotlight';
-import {Spotlight} from '@mantine/spotlight/esm/Spotlight/Spotlight.js';
-import {IconSearch} from '@tabler/icons-preact';
-import {ComponentChildren, createContext} from 'preact';
+import {IconSearch, IconX} from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {
   useCallback,
-  useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
 } from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {Dialog} from '../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../primitives/IconButton/IconButton.js';
+import {Kbd} from '../../../primitives/Kbd/Kbd.js';
 import {isEditableTarget} from '../../../utils/keyboard.js';
 import {showErrorNotification} from '../../../utils/notifications.js';
 import {DataSource, listDataSources} from '../../data-sources/data-source.js';
@@ -32,6 +33,7 @@ import {
 import {
   GlobalSearchAction,
   GlobalSearchActionMeta,
+  GlobalSearchItem,
 } from './GlobalSearchAction.js';
 import {
   GlobalSearchCounts,
@@ -162,8 +164,8 @@ function filterStaticTargets(
 }
 
 /**
- * Result group labels. Mantine renders these as non-selectable headers above
- * each group, in the order the groups first appear in the actions list.
+ * Result group labels, rendered as headers above each group, in the order
+ * the groups first appear in the results.
  */
 const GROUP_RECENT = 'Recently viewed';
 const GROUP_STATIC = 'Jump to';
@@ -173,14 +175,11 @@ const GROUP_FIELDS = 'Field matches';
 function buildFieldHitAction(
   hit: GlobalSearchHit,
   onTrigger: () => void
-): SpotlightAction {
+): GlobalSearchItem {
   const meta: GlobalSearchActionMeta = {kind: 'field', hit};
   return {
     id: `field:${hit.id}`,
     group: GROUP_FIELDS,
-    title: hit.text || hit.fieldLabel,
-    description: `${hit.collection} · ${hit.slug} · ${hit.fieldLabel}`,
-    keywords: [hit.collection, hit.slug, hit.fieldLabel],
     onTrigger,
     meta,
   };
@@ -189,14 +188,11 @@ function buildFieldHitAction(
 function buildDocSlugAction(
   hit: DocSlugHit,
   onTrigger: () => void
-): SpotlightAction {
+): GlobalSearchItem {
   const meta: GlobalSearchActionMeta = {kind: 'doc', hit};
   return {
     id: `doc:${hit.docId}`,
     group: GROUP_DOCS,
-    title: hit.slug,
-    description: hit.collection,
-    keywords: [hit.collection, hit.slug, hit.docId],
     onTrigger,
     meta,
   };
@@ -205,14 +201,11 @@ function buildDocSlugAction(
 function buildStaticAction(
   target: StaticTarget,
   onTrigger: () => void
-): SpotlightAction {
+): GlobalSearchItem {
   const meta: GlobalSearchActionMeta = {kind: 'target', target};
   return {
     id: `${target.kind}:${target.id}`,
     group: GROUP_STATIC,
-    title: target.label,
-    description: target.description || target.id,
-    keywords: [target.id, target.label, target.description || ''],
     onTrigger,
     meta,
   };
@@ -221,14 +214,11 @@ function buildStaticAction(
 function buildRecentAction(
   view: RecentView,
   onTrigger: () => void
-): SpotlightAction {
+): GlobalSearchItem {
   const meta: GlobalSearchActionMeta = {kind: 'recent', view};
   return {
     id: `recent:${view.url}`,
     group: GROUP_RECENT,
-    title: view.label,
-    description: view.description || '',
-    keywords: [view.label, view.description || '', view.url],
     onTrigger,
     meta,
   };
@@ -237,8 +227,11 @@ function buildRecentAction(
 /** Custom event used by `openGlobalSearch()` to reach the provider. */
 const OPEN_EVENT = 'rootcms:open-global-search';
 
-/** Duration of the spotlight open/close transition. */
+/** Delay before the query is cleared after closing. */
 const TRANSITION_MS = 150;
+
+/** Maximum number of results listed. */
+const RESULTS_LIMIT = 50;
 
 /**
  * Debounce for mirroring the query into the URL. Safari throttles
@@ -283,21 +276,6 @@ function clearSearchUrlState() {
   }
 }
 
-interface BodyContextValue {
-  /** Whether the filter tabs should render (only when there's a query). */
-  filtersVisible: boolean;
-  filter: GlobalSearchFilter;
-  onFilterChange: (filter: GlobalSearchFilter) => void;
-  counts: GlobalSearchCounts;
-  onCopyLink: () => Promise<boolean>;
-  /** Whether the footer should render (only when there's a list above it). */
-  footerVisible: boolean;
-  /** Human-readable age of the search index, e.g. "4m ago". */
-  lastIndexed: string | null;
-}
-
-const BODY_CONTEXT = createContext<BodyContextValue | null>(null);
-
 /** Keyboard and search syntax hints shown in the footer. */
 const FOOTER_HINTS: Array<[string, string]> = [
   ['↑↓', 'navigate'],
@@ -306,48 +284,6 @@ const FOOTER_HINTS: Array<[string, string]> = [
   ['-word', 'exclude'],
   ['coll/slug', 'jump to doc'],
 ];
-
-/**
- * Wraps the spotlight's action list. Renders the filter tabs above the
- * results, makes the results scrollable so long lists no longer overflow the
- * viewport, and pins a hints footer below them. Passed to `Spotlight` as
- * `actionsWrapperComponent`, which is why it reads its state from context
- * rather than props.
- */
-function GlobalSearchBody(props: {children?: ComponentChildren}) {
-  const ctx = useContext(BODY_CONTEXT);
-  return (
-    <div className="GlobalSearch__body">
-      <kbd className="GlobalSearch__esc" aria-hidden="true">
-        esc
-      </kbd>
-      {ctx?.filtersVisible && (
-        <GlobalSearchFilters
-          value={ctx.filter}
-          onChange={ctx.onFilterChange}
-          counts={ctx.counts}
-          onCopyLink={ctx.onCopyLink}
-        />
-      )}
-      <div className="GlobalSearch__results">{props.children}</div>
-      {ctx?.footerVisible && (
-        <div className="GlobalSearch__footer">
-          {FOOTER_HINTS.map(([key, label]) => (
-            <span key={key} className="GlobalSearch__hint">
-              <kbd className="GlobalSearch__kbd">{key}</kbd>
-              {label}
-            </span>
-          ))}
-          {ctx.lastIndexed && (
-            <span className="GlobalSearch__indexed">
-              Indexed {ctx.lastIndexed}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * Copies a shareable deep link to the current search to the clipboard.
@@ -385,7 +321,7 @@ function GlobalSearchInner(props: {
 
   const recentViews = useRecentViews();
 
-  // Lazy-fetch data sources once when the spotlight provider mounts. Failures
+  // Lazy-fetch data sources once when the search mounts. Failures
   // just leave the data source list empty — they shouldn't break search.
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   useEffect(() => {
@@ -406,7 +342,7 @@ function GlobalSearchInner(props: {
 
   const {releases: pendingReleases} = usePendingReleases();
 
-  // Static spotlight targets: collections (always present), data sources, and
+  // Static search targets: collections (always present), data sources, and
   // active releases (pending = not published, not archived).
   const staticTargets = useMemo<StaticTarget[]>(() => {
     return [
@@ -417,7 +353,7 @@ function GlobalSearchInner(props: {
   }, [dataSources, pendingReleases]);
 
   // Track route changes and record CMS object views so they show up as
-  // recent results in the spotlight.
+  // recent results in the search.
   useEffect(() => {
     const view = recentViewFromUrl(location.url);
     if (view) {
@@ -453,7 +389,7 @@ function GlobalSearchInner(props: {
   // When the query is empty, surface recent views; when populated, compose
   // matches across static targets, doc slug lookups, and field text hits,
   // narrowed down to the active filter.
-  const actions: SpotlightAction[] = useMemo(() => {
+  const actions: GlobalSearchItem[] = useMemo(() => {
     if (!trimmedQuery) {
       if (recentViews.length === 0) {
         return [];
@@ -466,7 +402,7 @@ function GlobalSearchInner(props: {
     const show = (kind: Exclude<GlobalSearchFilter, 'all'>) =>
       filter === 'all' || filter === kind;
 
-    const result: SpotlightAction[] = [];
+    const result: GlobalSearchItem[] = [];
     const statics: StaticTarget[] = [
       ...(show('collections') ? matchedStatic.collections : []),
       ...(show('data-sources') ? matchedStatic.dataSources : []),
@@ -493,7 +429,7 @@ function GlobalSearchInner(props: {
         result.push(buildFieldHitAction(hit, () => navigate(url)));
       }
     }
-    return result;
+    return result.slice(0, RESULTS_LIMIT);
   }, [
     trimmedQuery,
     filter,
@@ -538,71 +474,174 @@ function GlobalSearchInner(props: {
     [trimmedQuery, filter]
   );
 
-  const bodyCtx = useMemo<BodyContextValue>(
-    () => ({
-      filtersVisible: !!trimmedQuery,
-      filter,
-      onFilterChange,
-      counts,
-      onCopyLink,
-      // Mantine renders the results area when there are actions or a
-      // "nothing found" message, i.e. whenever there's a query.
-      footerVisible: !!trimmedQuery || actions.length > 0,
-      lastIndexed: trimmedQuery ? lastIndexed : null,
-    }),
-    [
-      trimmedQuery,
-      filter,
-      onFilterChange,
-      counts,
-      onCopyLink,
-      actions,
-      lastIndexed,
-    ]
-  );
+  const footerVisible = !!trimmedQuery || actions.length > 0;
+  const showLastIndexed = trimmedQuery ? lastIndexed : null;
 
-  // Pass-through filter: server already ranks/filters and our static-target
-  // filter is computed above; we don't want Spotlight's built-in title/
-  // description filter to drop our results.
-  const filterAll = (_q: string, list: SpotlightAction[]) => list;
+  // Keyboard navigation: the input keeps focus and the active option is
+  // tracked here (`aria-activedescendant`), as in a combobox.
+  const [activeIndex, setActiveIndex] = useState(0);
+  useEffect(() => setActiveIndex(0), [actions]);
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const optionId = (index: number) => `${baseId}-option-${index}`;
+
+  const trigger = (item: GlobalSearchItem) => {
+    props.onClose();
+    item.onTrigger();
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.isComposing) {
+      return;
+    }
+    const count = actions.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (count > 0) {
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setActiveIndex((i) => (i + step + count) % count);
+      }
+    } else if (e.key === 'Enter') {
+      const item = actions[activeIndex];
+      if (item) {
+        e.preventDefault();
+        trigger(item);
+      }
+    } else if (e.key === 'Escape') {
+      // Handled here rather than by the dialog's `cancel` event, which the
+      // prevented keydown suppresses.
+      e.preventDefault();
+      props.onClose();
+    }
+  };
+
+  const showList = !!trimmedQuery || actions.length > 0;
 
   return (
-    <BODY_CONTEXT.Provider value={bodyCtx}>
-      <Spotlight
-        opened={opened}
-        onClose={props.onClose}
-        query={query}
-        onQueryChange={onQueryChange}
-        actions={actions}
-        transitionDuration={TRANSITION_MS}
-        classNames={{
-          spotlight: 'GlobalSearch__spotlight',
-          searchInput: 'GlobalSearch__input',
-          actions: 'GlobalSearch__actions',
-          actionsGroup: 'GlobalSearch__group',
-          nothingFound: 'GlobalSearch__nothingFound',
-        }}
-        radius="md"
-        shadow="xl"
-        overlayOpacity={0.28}
-        overlayBlur={2}
-        maxWidth={640}
-        searchPlaceholder="Search docs, collections, releases…"
-        searchIcon={<IconSearch size={18} />}
-        nothingFoundMessage={nothingFoundMessage}
-        filter={filterAll}
-        actionComponent={GlobalSearchAction}
-        actionsWrapperComponent={GlobalSearchBody}
-        limit={50}
-        withinPortal
-      />
+    <>
+      {opened && (
+        <Dialog
+          open
+          onClose={props.onClose}
+          aria-label="Search"
+          size={640}
+          withCloseButton={false}
+          className="GlobalSearch max-md:pt-0"
+          panelClassName="GlobalSearch__panel max-md:h-full max-md:rounded-none"
+          bodyClassName="GlobalSearch__body flex flex-col overflow-hidden p-0"
+        >
+          <div className="GlobalSearch__header flex shrink-0 items-center gap-2 pl-4 pr-2 md:pr-4">
+            <IconSearch
+              className="GlobalSearch__icon shrink-0 text-muted"
+              size={18}
+            />
+            <input
+              className="GlobalSearch__input h-13 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-sans text-base text-fg outline-none placeholder:text-muted"
+              type="text"
+              role="combobox"
+              aria-label="Search"
+              aria-expanded={showList}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              aria-activedescendant={
+                actions[activeIndex] ? optionId(activeIndex) : undefined
+              }
+              autoComplete="off"
+              spellcheck={false}
+              data-autofocus
+              placeholder="Search docs, collections, releases…"
+              value={query}
+              onInput={(e) => onQueryChange(e.currentTarget.value)}
+              onKeyDown={onKeyDown}
+            />
+            <Kbd
+              className="GlobalSearch__esc hidden text-muted md:inline-flex"
+              aria-hidden="true"
+            >
+              esc
+            </Kbd>
+            <IconButton
+              className="GlobalSearch__close md:hidden"
+              label="Close search"
+              size="md"
+              tooltip={false}
+              onClick={props.onClose}
+            >
+              <IconX />
+            </IconButton>
+          </div>
+          {trimmedQuery && (
+            <GlobalSearchFilters
+              value={filter}
+              onChange={onFilterChange}
+              counts={counts}
+              onCopyLink={onCopyLink}
+            />
+          )}
+          {showList && (
+            <div
+              className="GlobalSearch__results min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              id={listboxId}
+              role="listbox"
+              aria-label="Results"
+            >
+              {actions.length > 0 ? (
+                <div className="GlobalSearch__actions pb-1.5 pt-1">
+                  {actions.map((item, i) => (
+                    <div key={item.id} role="presentation">
+                      {item.group !== actions[i - 1]?.group && (
+                        <div
+                          className="GlobalSearch__group px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted"
+                          role="presentation"
+                        >
+                          {item.group}
+                        </div>
+                      )}
+                      <GlobalSearchAction
+                        item={item}
+                        id={optionId(i)}
+                        active={i === activeIndex}
+                        onTrigger={() => trigger(item)}
+                        onHover={() => setActiveIndex(i)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="GlobalSearch__nothingFound px-4 py-5 text-sm text-muted">
+                  {nothingFoundMessage}
+                </div>
+              )}
+            </div>
+          )}
+          {footerVisible && (
+            <div className="GlobalSearch__footer hidden min-h-8 shrink-0 items-center gap-3.5 overflow-hidden whitespace-nowrap border-0 border-t border-solid border-border bg-page px-4 py-1.5 text-xs text-muted md:flex">
+              {FOOTER_HINTS.map(([key, label]) => (
+                <span
+                  key={key}
+                  className="GlobalSearch__hint inline-flex items-center gap-1"
+                >
+                  <Kbd className="GlobalSearch__kbd">{key}</Kbd>
+                  {label}
+                </span>
+              ))}
+              {showLastIndexed && (
+                <span className="GlobalSearch__indexed ml-auto text-subtle">
+                  Indexed {showLastIndexed}
+                </span>
+              )}
+            </div>
+          )}
+        </Dialog>
+      )}
       {props.children}
-    </BODY_CONTEXT.Provider>
+    </>
   );
 }
 
 /**
- * Wraps children in a Mantine Spotlight bound to `mod + K`. Surfaces:
+ * Wraps children in a command palette bound to `mod + K`, in a `Dialog`
+ * (full screen on mobile). Surfaces:
  *  - Recently viewed CMS objects (when the query is empty)
  *  - Collections, data sources, and active releases by name
  *  - Documents by slug or `<collection>/<slug>` id
@@ -611,9 +650,6 @@ function GlobalSearchInner(props: {
  * Results can be narrowed by type with the filter tabs, and the open state,
  * query, and filter are mirrored into the URL so a search can be deep linked
  * and shared, e.g. `/cms/?modal=search&q=foo&type=docs`.
- *
- * The inner `Spotlight` component is rendered directly (rather than through
- * `SpotlightProvider`) so the query state lives here and can be prefilled.
  */
 export function GlobalSearch(props: {children: ComponentChildren}) {
   const [opened, setOpened] = useState(false);
@@ -653,11 +689,9 @@ export function GlobalSearch(props: {children: ComponentChildren}) {
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, [open]);
 
-  // Custom Cmd/Ctrl+K handler. We can't use Mantine's built-in `shortcut`
-  // prop because its `useHotkeys` only ignores INPUT/TEXTAREA/SELECT — not
-  // `contenteditable` rich text fields. Lexical binds Cmd+K to "insert link",
-  // so opening the global search at the same time clobbers that. Skip the
-  // shortcut whenever focus is inside any editable field.
+  // Cmd/Ctrl+K handler. Lexical binds Cmd+K to "insert link", so opening the
+  // global search at the same time would clobber that: skip the shortcut
+  // whenever focus is inside any editable field.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isModK =
@@ -719,7 +753,7 @@ export function GlobalSearch(props: {children: ComponentChildren}) {
     }
     const handle = window.requestAnimationFrame(() => {
       const input = document.querySelector<HTMLInputElement>(
-        '.GlobalSearch__spotlight input'
+        '.GlobalSearch__input'
       );
       if (input && document.activeElement === input) {
         input.setSelectionRange(input.value.length, input.value.length);

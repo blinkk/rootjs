@@ -1,4 +1,3 @@
-import {SpotlightActionProps} from '@mantine/spotlight';
 import {
   IconAlignLeft,
   IconCornerDownLeft,
@@ -45,9 +44,8 @@ type StaticTargetMeta =
   CollectionTargetMeta | DataSourceTargetMeta | ReleaseTargetMeta;
 
 /**
- * Discriminated payload attached to each SpotlightAction. The Mantine
- * SpotlightAction type is open-ended, so we stash everything we need on a
- * single `meta` field and let this component render the appropriate row.
+ * Discriminated payload attached to each result, which `GlobalSearchAction`
+ * renders as the appropriate row.
  */
 export type GlobalSearchActionMeta =
   | {kind: 'field'; hit: GlobalSearchHit}
@@ -75,9 +73,33 @@ function kindLabel(kind: RecentViewKind): string {
   return 'Doc';
 }
 
+/** One result in the global search list. */
+export interface GlobalSearchItem {
+  /** Unique id, also used for the option's DOM id. */
+  id: string;
+  /** The heading the result is listed under. */
+  group: string;
+  meta: GlobalSearchActionMeta;
+  /** Opens the result. */
+  onTrigger: () => void;
+}
+
+export interface GlobalSearchActionProps {
+  item: GlobalSearchItem;
+  /** The option's DOM id, for `aria-activedescendant`. */
+  id: string;
+  /** Whether the option is the active (keyboard-highlighted) one. */
+  active: boolean;
+  onTrigger: () => void;
+  /** Called when the pointer moves onto the option. */
+  onHover: () => void;
+}
+
 interface RowProps {
+  id: string;
   hovered: boolean;
   onTrigger: () => void;
+  onHover: () => void;
   icon: ComponentChild;
   title: ComponentChild;
   /** Secondary line shown below the title. */
@@ -93,7 +115,7 @@ interface RowProps {
  * Every result type shares this layout so the list reads as one surface.
  */
 function Row(props: RowProps) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   // Keep the keyboard-selected row visible now that long result lists
   // scroll. `nearest` makes this a no-op for rows already in view (e.g.
   // ones hovered with the mouse).
@@ -103,18 +125,25 @@ function Row(props: RowProps) {
     }
   }, [props.hovered]);
   return (
-    <button
+    <div
       ref={ref}
-      type="button"
+      id={props.id}
+      role="option"
+      aria-selected={props.hovered}
       className={joinClassNames(
         'GlobalSearchAction',
         props.multiline && 'GlobalSearchAction--multiline',
         props.hovered && 'GlobalSearchAction--hovered'
       )}
       onMouseDown={(e) => {
-        // mousedown so the click registers before Spotlight closes the modal.
+        // Keep focus in the search input.
         e.preventDefault();
-        props.onTrigger();
+      }}
+      onClick={() => props.onTrigger()}
+      onPointerMove={() => {
+        if (!props.hovered) {
+          props.onHover();
+        }
       }}
     >
       <div className="GlobalSearchAction__icon">{props.icon}</div>
@@ -133,24 +162,26 @@ function Row(props: RowProps) {
           <div className="GlobalSearchAction__kind">{props.kind}</div>
         )
       )}
-    </button>
+    </div>
   );
 }
 
-export function GlobalSearchAction(props: SpotlightActionProps) {
-  const meta = (props.action as any)?.meta as
-    GlobalSearchActionMeta | undefined;
-  if (!meta) {
-    return null;
-  }
+/** Renders a result as an option row, according to its kind. */
+export function GlobalSearchAction(props: GlobalSearchActionProps) {
+  const meta = props.item.meta;
+  const rowProps = {
+    id: props.id,
+    hovered: props.active,
+    onTrigger: props.onTrigger,
+    onHover: props.onHover,
+  };
 
   if (meta.kind === 'field') {
     const hit = meta.hit;
     const segments = buildSnippet(hit);
     return (
       <Row
-        hovered={props.hovered}
-        onTrigger={props.onTrigger}
+        {...rowProps}
         multiline
         icon={<IconAlignLeft size={16} />}
         title={
@@ -183,8 +214,7 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
     const hit = meta.hit;
     return (
       <Row
-        hovered={props.hovered}
-        onTrigger={props.onTrigger}
+        {...rowProps}
         icon={<IconFile size={16} />}
         title={hit.slug}
         subtitle={hit.collection}
@@ -196,8 +226,7 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
     const t = meta.target;
     return (
       <Row
-        hovered={props.hovered}
-        onTrigger={props.onTrigger}
+        {...rowProps}
         icon={kindIcon(t.kind)}
         title={t.label}
         subtitle={t.description}
@@ -210,8 +239,7 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
     const view = meta.view;
     return (
       <Row
-        hovered={props.hovered}
-        onTrigger={props.onTrigger}
+        {...rowProps}
         icon={kindIcon(view.kind)}
         title={view.label}
         subtitle={view.description}
