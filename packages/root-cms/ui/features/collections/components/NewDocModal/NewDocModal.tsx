@@ -1,13 +1,13 @@
-import {Button, Modal, useMantineTheme} from '@mantine/core';
-import {useState} from 'preact/hooks';
+import {useId, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {renderAutoSlug} from '../../../../../shared/auto-slug.js';
 import {getSlugError, normalizeSlug} from '../../../../../shared/slug.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
 import {cmsCreateDoc} from '../../../documents/doc.js';
 import {getDefaultFieldValue} from '../../../documents/fields.js';
 import {useCollectionSchema} from '../../useCollectionSchema.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
-import './NewDocModal.css';
 
 interface NewDocModalProps {
   collection: string;
@@ -19,7 +19,7 @@ interface NewDocModalProps {
 
 export function NewDocModal(props: NewDocModalProps) {
   const {route} = useLocation();
-  const theme = useMantineTheme();
+  const formId = useId();
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
   if (!rootCollection) {
@@ -82,59 +82,60 @@ export function NewDocModal(props: NewDocModalProps) {
   }
 
   return (
-    <Modal
+    <Dialog
       className="NewDocModal"
-      opened={props.opened || false}
+      open={props.opened || false}
       onClose={() => onClose()}
       title="New"
       size="500px"
-      overlayColor={
-        theme.colorScheme === 'dark'
-          ? theme.colors.dark[9]
-          : theme.colors.gray[2]
-      }
-    >
-      <div className="NewDocModal__body">
-        Enter a slug for the new doc. The slug is the ID of the page and is
-        what's used in the URL. Use only lowercase letters, numbers, and dashes.
-      </div>
-
-      <form onSubmit={(e) => onSubmit(e)}>
-        <SlugInput
-          className="NewDocModal__slug"
-          collectionId={collectionId}
-          initialSlug={initialSlug}
-          onChange={(newValue: {collectionId: string; slug: string}) => {
-            setSlug(newValue.slug);
-            setSlugError(validateSlug(newValue.slug));
-            setError('');
-          }}
-        />
-
-        {error && <div className="NewDocModal__slugError">{error}</div>}
-
-        <div className="NewDocModal__buttons">
-          <Button
-            variant="outline"
-            onClick={() => onClose()}
-            type="button"
-            size="xs"
-            color="dark"
-          >
+      footer={
+        <>
+          <Button onClick={() => onClose()} type="button">
             Cancel
           </Button>
           <Button
-            variant="filled"
+            variant="primary"
             type="submit"
-            size="xs"
-            color="dark"
+            form={formId}
             loading={collection.loading || rpcLoading}
             disabled={!!slugError || !!error}
           >
             Submit
           </Button>
-        </div>
-      </form>
-    </Modal>
+        </>
+      }
+    >
+      {props.opened && (
+        <>
+          <div className="NewDocModal__body text-sm font-medium leading-normal">
+            Enter a slug for the new doc. The slug is the ID of the page and is
+            what's used in the URL. Use only lowercase letters, numbers, and
+            dashes.
+          </div>
+
+          <form id={formId} onSubmit={(e) => onSubmit(e)}>
+            <SlugInput
+              className="NewDocModal__slug mt-4"
+              collectionId={collectionId}
+              initialSlug={initialSlug}
+              onChange={(newValue: {collectionId: string; slug: string}) => {
+                setSlug(newValue.slug);
+                setSlugError(validateSlug(newValue.slug));
+                setError('');
+              }}
+            />
+
+            {error && (
+              <div
+                className="NewDocModal__slugError mt-3 rounded-sm border border-danger-line bg-danger-soft px-3 py-2 text-sm font-medium leading-normal text-danger"
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
+          </form>
+        </>
+      )}
+    </Dialog>
   );
 }

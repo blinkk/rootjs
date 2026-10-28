@@ -1,16 +1,17 @@
-import './DocPickerModal.css';
-
-import {Button, Loader, Select, TextInput} from '@mantine/core';
 import {IconSearch} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../utils/classes.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {DocStatusBadges} from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
 import {useDensity} from '../../useDensity.js';
@@ -19,6 +20,9 @@ import {useFilteredDocs} from '../../useFilteredDocs.js';
 import {NewDocModal} from '../NewDocModal/NewDocModal.js';
 
 const MODAL_ID = 'DocPickerModal';
+
+const EMPTY_CLASSES =
+  'DocPickerModal__DocsList__empty px-5 py-10 text-center text-base text-muted';
 
 export interface DocPickerModalProps {
   [key: string]: unknown;
@@ -123,7 +127,7 @@ export function DocPickerModal(
   return (
     <div className="DocPickerModal">
       {collections.length === 0 && (
-        <div className="DocPickerModal__noCollections">
+        <div className="DocPickerModal__noCollections p-5 text-center text-base text-muted">
           No collections matching schema field definition.
         </div>
       )}
@@ -200,77 +204,68 @@ DocPickerModal.DocsList = (props: {
   const options = props.options || {};
 
   return (
-    <div className="DocPickerModal__DocsList">
-      <div className="DocPickerModal__DocsList__stickyHeader">
+    <div className="DocPickerModal__DocsList flex h-full flex-col">
+      <div className="DocPickerModal__DocsList__stickyHeader sticky top-0 z-(--cms-z-sticky) mb-2 border-b border-border bg-surface">
         {options.showCollectionSelect && (
-          <div className="DocPickerModal__collection__select">
-            <div className="DocPickerModal__collection__select__label">
+          <div className="DocPickerModal__collection__select mb-5 flex flex-wrap items-center gap-2">
+            <div className="DocPickerModal__collection__select__label text-base font-semibold">
               Content Type:
             </div>
             <Select
+              className="min-w-0 flex-1 sm:flex-none"
+              aria-label="Content type"
               data={options.collectionSelectOptions || []}
               value={options.collectionSelectValue}
               placeholder={'Select'}
-              onChange={(e: string) => {
-                props.onCollectionChange?.(e || '');
+              onValueChange={(value) => {
+                props.onCollectionChange?.(value || '');
               }}
-              size="xs"
-              radius={0}
               searchable
               autoFocus
-              // Due to issues with preact/compat, use a div for the dropdown el.
-              dropdownComponent="div"
             />
             {options.collectionSelectValue && (
-              <Button
-                variant="outline"
-                color="dark"
-                size="xs"
-                onClick={() => setNewDocModalOpen(true)}
-              >
-                New
-              </Button>
+              <Button onClick={() => setNewDocModalOpen(true)}>New</Button>
             )}
           </div>
         )}
         {options.enableSearch && options.collectionSelectValue && (
-          <div className="DocPickerModal__DocsList__controls">
+          <div className="DocPickerModal__DocsList__controls mb-3 flex flex-wrap items-center gap-3 border-b border-border pb-3 last:mb-0 last:border-b-0">
             <TextInput
+              aria-label="Search documents"
               placeholder="Search documents..."
               value={searchQuery}
-              onChange={(e: any) => setSearchQuery(e.target.value)}
-              icon={<IconSearch size={16} />}
-              size="xs"
-              className="DocPickerModal__DocsList__controls__search"
+              onInput={(e) => setSearchQuery(e.currentTarget.value)}
+              leftSection={<IconSearch />}
+              className="DocPickerModal__DocsList__controls__search min-w-50 flex-1"
             />
             {options.enableSort && (
               <Select
+                aria-label="Sort"
                 data={sortOptions}
                 value={sortBy}
-                onChange={(value: string) => setSortBy(value || 'modifiedAt')}
-                size="xs"
-                className="DocPickerModal__DocsList__controls__sort"
+                onValueChange={(value) => setSortBy(value || 'modifiedAt')}
+                className="DocPickerModal__DocsList__controls__sort min-w-35"
               />
             )}
           </div>
         )}
         {!loading && docs.length > 0 && (
-          <div className="DocPickerModal__DocsList__count">
+          <div className="DocPickerModal__DocsList__count mb-3 px-1 text-sm text-muted">
             Showing {filteredDocs.length} of {docs.length} documents
           </div>
         )}
       </div>
-      <div className="DocPickerModal__DocsList__docsContainer">
+      <div className="DocPickerModal__DocsList__docsContainer min-h-0 flex-1 overflow-y-auto">
         {!props.collection ? (
-          <div className="DocPickerModal__DocsList__empty">
+          <div className={EMPTY_CLASSES}>
             Select a content type to view documents
           </div>
         ) : loading ? (
-          <div className="DocPickerModal__DocsList__loading">
-            <Loader color="gray" size="xl" />
+          <div className="DocPickerModal__DocsList__loading flex justify-center py-10">
+            <Spinner size="lg" />
           </div>
         ) : filteredDocs.length === 0 ? (
-          <div className="DocPickerModal__DocsList__empty">
+          <div className={EMPTY_CLASSES}>
             {docs.length === 0
               ? 'Collection is empty.'
               : 'No documents match your search.'}
@@ -337,13 +332,18 @@ DocPickerModal.DocCard = (props: {
     rootCollection.preview?.defaultImage;
   return (
     <div
-      className={joinClassNames(
+      className={cn(
         'DocPickerModal__DocCard',
-        compact && 'DocPickerModal__DocCard--compact'
+        compact && 'DocPickerModal__DocCard--compact',
+        'flex items-center overflow-hidden border-t border-border pr-2 first:border-t-0',
+        compact ? 'gap-3 py-1' : 'py-2'
       )}
     >
       <div
-        className="DocPickerModal__DocCard__image"
+        className={cn(
+          'DocPickerModal__DocCard__image shrink-0 cursor-pointer border border-border',
+          !compact && 'hidden sm:block'
+        )}
         onClick={() => window.open(cmsUrl, '_blank')}
       >
         <FilePreview
@@ -353,38 +353,63 @@ DocPickerModal.DocCard = (props: {
           withPlaceholder={!previewImage?.src}
         />
       </div>
-      <div className="DocPickerModal__DocCard__content">
-        <div className="DocPickerModal__DocCard__content__header">
+      <div
+        className={cn(
+          'DocPickerModal__DocCard__content flex min-w-0 flex-1',
+          compact ? 'flex-row items-center gap-3 px-1' : 'flex-col sm:px-3'
+        )}
+      >
+        <div
+          className={cn(
+            'DocPickerModal__DocCard__content__header flex items-center gap-2',
+            compact ? 'min-w-0 max-w-2/5 flex-initial' : 'flex-wrap'
+          )}
+        >
           <div
-            className="DocPickerModal__DocCard__content__header__docId"
+            className={cn(
+              'DocPickerModal__DocCard__content__header__docId cursor-pointer font-medium',
+              compact ? 'truncate text-sm text-muted' : 'text-base'
+            )}
             onClick={() => window.open(cmsUrl, '_blank')}
           >
             {doc.id}
           </div>
         </div>
-        <div className="DocPickerModal__DocCard__content__title">
+        <div
+          className={cn(
+            'DocPickerModal__DocCard__content__title cursor-pointer font-semibold',
+            compact
+              ? 'min-w-0 flex-1 text-base leading-5'
+              : 'line-clamp-1 text-xl leading-normal sm:text-2xl sm:leading-9'
+          )}
+        >
           <div
-            className="DocPickerModal__DocCard__content__link"
+            className={cn(
+              'DocPickerModal__DocCard__content__link cursor-pointer',
+              compact ? 'truncate' : 'inline-block'
+            )}
             onClick={() => window.open(cmsUrl, '_blank')}
           >
             {previewTitle || '[UNTITLED]'}
           </div>
         </div>
         {props.enableStatusBadges && (
-          <div className="DocPickerModal__DocCard__content__badges">
+          <div
+            className={cn(
+              'DocPickerModal__DocCard__content__badges flex items-center gap-1',
+              compact ? 'flex-none flex-nowrap' : 'mt-1 flex-wrap'
+            )}
+          >
             <DocStatusBadges doc={doc} />
           </div>
         )}
       </div>
-      <div className="DocPickerModal__DocCard__controls">
-        <div className="DocPickerModal__DocCard__controls__buttons">
+      <div className="DocPickerModal__DocCard__controls flex flex-col items-center gap-2">
+        <div className="DocPickerModal__DocCard__controls__buttons flex items-center gap-2">
           {props.multiSelect ? (
             selected ? (
               <Button
-                variant="light"
-                color="blue"
-                size="xs"
-                compact={compact}
+                size={compact ? 'xs' : 'sm'}
                 onClick={() => {
                   setSelected(false);
                   props.onDocUnselected(props.doc);
@@ -394,10 +419,8 @@ DocPickerModal.DocCard = (props: {
               </Button>
             ) : (
               <Button
-                variant="filled"
-                color="blue"
-                size="xs"
-                compact={compact}
+                variant="primary"
+                size={compact ? 'xs' : 'sm'}
                 onClick={() => {
                   setSelected(true);
                   props.onDocSelected(props.doc);
@@ -408,9 +431,8 @@ DocPickerModal.DocCard = (props: {
             )
           ) : (
             <Button
-              color="blue"
-              size="xs"
-              compact={compact}
+              variant="primary"
+              size={compact ? 'xs' : 'sm'}
               onClick={() => props.onDocSelected(props.doc)}
             >
               Select

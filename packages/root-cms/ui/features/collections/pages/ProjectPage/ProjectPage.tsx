@@ -1,11 +1,9 @@
-import './ProjectPage.css';
-
-import {Button} from '@mantine/core';
 import {ComponentChildren} from 'preact';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useBooleanParam} from '../../../../hooks/useQueryParam.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {ActionLogs} from '../../../logs/components/ActionLogs/ActionLogs.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 
@@ -14,9 +12,13 @@ export function ProjectPage() {
   usePageTitle('Home');
   return (
     <Layout>
-      <div className="ProjectPage">
-        <div className="ProjectPage__main">
-          <div className="ProjectPage__section">
+      <div className="ProjectPage bg-page p-4 md:p-8">
+        <div className="ProjectPage__main flex max-w-320 flex-col gap-7">
+          {/*
+           * The collections column matches the collection list on the
+           * collection page; the action logs take the rest.
+           */}
+          <div className="ProjectPage__section flex flex-col gap-6 lg:flex-row">
             <ProjectPage.Collections />
             <ProjectPage.ActionLogs />
           </div>
@@ -32,7 +34,11 @@ interface SectionTitleProps {
 }
 
 ProjectPage.SectionTitle = (props: SectionTitleProps) => {
-  return <div className="ProjectPage__sectionTitle">{props.children}</div>;
+  return (
+    <div className="ProjectPage__sectionTitle inline-block text-base font-semibold leading-tight">
+      {props.children}
+    </div>
+  );
 };
 
 ProjectPage.Collections = () => {
@@ -40,7 +46,7 @@ ProjectPage.Collections = () => {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
 
   return (
-    <div className="ProjectPage__collections">
+    <div className="ProjectPage__collections min-w-0 lg:w-92 lg:shrink-0">
       {/* <ProjectPage.SectionTitle>Content</ProjectPage.SectionTitle> */}
       <CollectionTree collections={collections} projectId={projectId} />
     </div>
@@ -52,16 +58,10 @@ ProjectPage.ActionLogs = () => {
   // when linking new users to the CMS.
   const [showOnboarding] = useBooleanParam('welcome');
   return (
-    <div className="ProjectPage__actionLogs">
-      <div className="ProjectPage__actionLogs__header">
+    <div className="ProjectPage__actionLogs min-w-0 flex-1">
+      <div className="ProjectPage__actionLogs__header mb-3 flex items-center justify-between gap-3">
         <ProjectPage.SectionTitle>Recent actions</ProjectPage.SectionTitle>
-        <Button
-          component="a"
-          variant="default"
-          size="xs"
-          compact
-          href="/cms/logs"
-        >
+        <Button size="xs" href="/cms/logs">
           Show all
         </Button>
       </div>

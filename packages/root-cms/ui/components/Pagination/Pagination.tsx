@@ -1,7 +1,5 @@
-import './Pagination.css';
-
-import {Pagination as MantinePagination} from '@mantine/core';
-import {joinClassNames} from '../../utils/classes.js';
+import {Pagination as PaginationPrimitive} from '../../primitives/Pagination/Pagination.js';
+import {cn} from '../../utils/classes.js';
 
 export interface PaginationProps {
   className?: string;
@@ -14,20 +12,22 @@ export interface PaginationProps {
 }
 
 /**
- * Shared pagination control used across CMS list views (e.g. the action logs
- * and the asset library). Renders nothing when there is a single page or none.
+ * The `Pagination` primitive, centered below a list view (e.g. the action
+ * logs and the asset library). Renders nothing when there is a single page
+ * or none.
  */
 export function Pagination(props: PaginationProps) {
   if (props.total <= 1) {
     return null;
   }
   return (
-    <div className={joinClassNames(props.className, 'Pagination')}>
-      <MantinePagination
+    <div
+      className={cn('PaginationBar flex justify-center py-4', props.className)}
+    >
+      <PaginationPrimitive
         total={props.total}
-        value={props.page}
+        page={props.page}
         onChange={props.onChange}
-        size="sm"
       />
     </div>
   );
@@ -59,10 +59,12 @@ export function PaginationSummary(props: PaginationSummaryProps) {
   } else if (start === end) {
     text = `Showing ${start} of ${total} ${nounLabel}`;
   } else {
-    text = `Showing ${start}\u2013${end} of ${total} ${nounLabel}`;
+    text = `Showing ${start}–${end} of ${total} ${nounLabel}`;
   }
   return (
-    <div className={joinClassNames(props.className, 'Pagination__summary')}>
+    <div
+      className={cn('PaginationSummary text-sm text-muted', props.className)}
+    >
       {text}
       {note ? ` (${note})` : ''}
     </div>

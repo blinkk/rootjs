@@ -1,6 +1,6 @@
-import {Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
+import {Tooltip} from '../../primitives/Tooltip/Tooltip.js';
 import {getTimeAgo} from '../../utils/time.js';
 
 export interface TimeSinceTooltipActionProps {
@@ -17,23 +17,25 @@ export function TimeSinceActionTooltip(props: TimeSinceTooltipActionProps) {
     millis > 0 ? getTimeAgo(millis, {style: 'short'}) : 'never'
   );
 
-  if (!millis) {
-    return <div>{label}</div>;
-  }
-
   useEffect(() => {
+    if (!millis) {
+      return undefined;
+    }
     const interval = window.setInterval(() => {
       setLabel(getTimeAgo(millis, {style: 'short'}));
     }, 60000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [millis]);
+
+  if (!millis) {
+    return <div className="TimeSinceActionTooltip">{label}</div>;
+  }
 
   return (
-    <Tooltip
-      transition="pop"
-      label={`${formatDateTime(millis)} by ${props.email}`}
-    >
-      {getTimeAgo(millis, {style: 'short'})}
+    <Tooltip label={`${formatDateTime(millis)} by ${props.email}`}>
+      <span className="TimeSinceActionTooltip">
+        {getTimeAgo(millis, {style: 'short'})}
+      </span>
     </Tooltip>
   );
 }

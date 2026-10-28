@@ -1,9 +1,13 @@
 import './DocStatusBadges.css';
 
-import {Badge, Popover, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
-import {ComponentChildren} from 'preact';
+import {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
+import {forwardRef} from 'preact/compat';
 import {useState} from 'preact/hooks';
+import {Badge, type BadgeGradient} from '../../../../primitives/Badge/Badge.js';
+import {Popover} from '../../../../primitives/Popover/Popover.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../../../utils/classes.js';
 import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
 import {Release} from '../../../releases/release.js';
 import {usePendingReleases} from '../../../releases/usePendingReleases.js';
@@ -17,63 +21,95 @@ export type StatusTone =
   'draft' | 'published' | 'scheduled' | 'locked' | 'archived' | 'release';
 
 /**
- * Per-tone Mantine gradient (matches the original badge colors exactly).
+ * The `Badge` gradient for each tone (the `--cms-gradient-*` theme tokens,
+ * which match the original Mantine badge colors).
  */
-export const TONE_GRADIENTS: Record<
-  StatusTone,
-  {from: string; to: string; deg?: number}
-> = {
-  draft: {from: 'indigo', to: 'cyan'},
-  published: {from: 'teal', to: 'lime', deg: 105},
-  scheduled: {from: 'grape', to: 'pink', deg: 35},
-  locked: {from: 'orange', to: 'red'},
-  archived: {from: 'gray', to: 'dark'},
-  release: {from: 'violet', to: 'grape'},
+export const TONE_GRADIENTS: Record<StatusTone, BadgeGradient> = {
+  draft: 'blue',
+  published: 'green',
+  scheduled: 'pink',
+  locked: 'orange',
+  archived: 'gray',
+  release: 'violet',
 };
 
-/**
- * Renders a compact status pill using the original Mantine gradient colors,
- * with the updated font styling/sizing applied via CSS.
- */
-export function StatusBadge(props: {
+/** Hover and focus styles for badges that open something when clicked. */
+const CLICKABLE_CLASSES =
+  'DocStatusBadges__badge--clickable cursor-pointer transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+
+export interface StatusBadgeProps {
   tone: StatusTone;
   children: ComponentChildren;
+  /** Icon before the label. */
   leftSection?: ComponentChildren;
   className?: string;
-  style?: Record<string, any>;
-  component?: any;
+  style?: JSX.CSSProperties;
+  /** Ignored: the badge renders a link when `href` is set. */
+  component?: unknown;
   href?: string;
   role?: string;
   tabIndex?: number;
   'aria-label'?: string;
   onClick?: (e: any) => void;
   onKeyDown?: (e: any) => void;
-}) {
-  const {tone, children, className, leftSection, ...rest} = props;
+}
+
+/**
+ * A compact gradient status pill (e.g. "Draft", "Published"). It shrinks
+ * and truncates its label when the column is squeezed.
+ */
+export const StatusBadge = forwardRef<
+  HTMLSpanElement | HTMLAnchorElement,
+  StatusBadgeProps
+>((props, ref) => {
+  const {tone, children, className, leftSection, component, ...rest} = props;
+  void component;
   return (
     <Badge
-      size="sm"
+      {...(rest as any)}
+      ref={ref}
+      size="xs"
       variant="gradient"
       gradient={TONE_GRADIENTS[tone]}
-      leftSection={leftSection}
-      classNames={{
-        root: joinClassNames(
-          'DocStatusBadges__badge',
-          `DocStatusBadges__badge--${tone}`,
-          className
-        ),
-        inner: 'DocStatusBadges__badge__inner',
-        leftSection: 'DocStatusBadges__badge__leftSection',
-      }}
-      {...rest}
+      icon={leftSection}
+      className={cn(
+        'DocStatusBadges__badge',
+        `DocStatusBadges__badge--${tone}`,
+        'min-w-0 shrink',
+        className
+      )}
     >
       {children}
     </Badge>
   );
-}
+}) as unknown as FunctionComponent<
+  StatusBadgeProps & {ref?: Ref<HTMLSpanElement | HTMLAnchorElement>}
+>;
 
-function joinClassNames(...names: Array<string | undefined>): string {
-  return names.filter(Boolean).join(' ');
+/**
+ * Props that make a badge act as a button which calls `onActivate` on click,
+ * Enter or Space, without triggering a row link it sits inside.
+ */
+function clickableProps(onActivate?: () => void) {
+  if (!onActivate) {
+    return {};
+  }
+  return {
+    className: CLICKABLE_CLASSES,
+    role: 'button',
+    tabIndex: 0,
+    onClick: (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onActivate();
+    },
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  };
 }
 
 interface DocStatusBadgesProps {
@@ -90,10 +126,6 @@ interface DocStatusBadgesProps {
 }
 
 export function DocStatusBadges(props: DocStatusBadgesProps) {
-  const tooltipProps = {
-    // position: props.tooltipPosition || 'bottom',
-    transition: 'pop',
-  };
   const doc = props.doc;
   const sys = doc.sys;
   const versionHistoryModal = useVersionHistoryModal({
@@ -115,7 +147,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       ? () => compareDraftModal.open()
       : onShowVersionHistory;
   return (
-    <div className="DocStatusBadges">
+    <div className="DocStatusBadges flex min-w-0 items-center gap-1">
       {(!sys.publishedAt ||
         !sys.modifiedAt ||
         sys.modifiedAt > sys.publishedAt) && (
@@ -125,34 +157,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           message={`Modified ${timeDiff(sys.modifiedAt)}`}
           user={sys.modifiedBy}
         >
-          <StatusBadge
-            tone="draft"
-            className={
-              onDraftClick ? 'DocStatusBadges__badge--clickable' : undefined
-            }
-            style={onDraftClick ? {cursor: 'pointer'} : undefined}
-            role={onDraftClick ? 'button' : undefined}
-            tabIndex={onDraftClick ? 0 : undefined}
-            onClick={
-              onDraftClick
-                ? (e: MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDraftClick();
-                  }
-                : undefined
-            }
-            onKeyDown={
-              onDraftClick
-                ? (e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onDraftClick();
-                    }
-                  }
-                : undefined
-            }
-          >
+          <StatusBadge tone="draft" {...clickableProps(onDraftClick)}>
             Draft
           </StatusBadge>
         </UserActionTooltip>
@@ -165,33 +170,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         >
           <StatusBadge
             tone="published"
-            className={
-              onShowVersionHistory
-                ? 'DocStatusBadges__badge--clickable'
-                : undefined
-            }
-            style={onShowVersionHistory ? {cursor: 'pointer'} : undefined}
-            role={onShowVersionHistory ? 'button' : undefined}
-            tabIndex={onShowVersionHistory ? 0 : undefined}
-            onClick={
-              onShowVersionHistory
-                ? (e: MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onShowVersionHistory();
-                  }
-                : undefined
-            }
-            onKeyDown={
-              onShowVersionHistory
-                ? (e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onShowVersionHistory();
-                    }
-                  }
-                : undefined
-            }
+            {...clickableProps(onShowVersionHistory)}
           >
             Published
           </StatusBadge>
@@ -209,42 +188,18 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       {!props.hideReleases && (
         <ReleaseBadges
           docId={props.docId || doc.id}
-          tooltipProps={tooltipProps}
+          tooltipPosition={props.tooltipPosition}
         />
       )}
       {testPublishingLocked(doc) && (
         <Tooltip
-          position={props.tooltipPosition}
-          transition="pop"
-          withArrow
-          width={260}
-          wrapLines
+          placement={props.tooltipPosition}
           label={<PublishingLockTooltip doc={doc} />}
         >
           <StatusBadge
             tone="locked"
-            className={
-              props.onPublishingLockClick
-                ? 'DocStatusBadges__badge--clickable'
-                : undefined
-            }
-            style={
-              props.onPublishingLockClick ? {cursor: 'pointer'} : undefined
-            }
-            role={props.onPublishingLockClick ? 'button' : undefined}
-            tabIndex={props.onPublishingLockClick ? 0 : undefined}
             aria-label="Locked"
-            onClick={props.onPublishingLockClick}
-            onKeyDown={
-              props.onPublishingLockClick
-                ? (e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      props.onPublishingLockClick!();
-                    }
-                  }
-                : undefined
-            }
+            {...clickableProps(props.onPublishingLockClick)}
           >
             Locked
           </StatusBadge>
@@ -277,17 +232,22 @@ function PublishingLockTooltip(props: {doc: CMSDoc}) {
     return null;
   }
   return (
-    <div className="DocStatusBadges__lockTooltip">
-      <div className="DocStatusBadges__lockTooltip__top">
+    <div className="DocStatusBadges__lockTooltip flex flex-col gap-0.5 text-left">
+      <div className="DocStatusBadges__lockTooltip__top flex items-center gap-2">
         {lock.lockedBy && (
-          <UserAvatar email={lock.lockedBy} size={20} withTooltip={false} />
+          <UserAvatar
+            className="shrink-0 border border-inverse/35"
+            email={lock.lockedBy}
+            size={20}
+            withTooltip={false}
+          />
         )}
-        <div className="DocStatusBadges__lockTooltip__topText">
-          <div className="DocStatusBadges__lockTooltip__line">
+        <div className="DocStatusBadges__lockTooltip__topText flex min-w-0 flex-col gap-0.5">
+          <div className="DocStatusBadges__lockTooltip__line leading-snug">
             Locked by {lock.lockedBy}
           </div>
           {lock.until && (
-            <div className="DocStatusBadges__lockTooltip__line">
+            <div className="DocStatusBadges__lockTooltip__line leading-snug">
               Until {formatDateTime(lock.until)}
             </div>
           )}
@@ -295,9 +255,11 @@ function PublishingLockTooltip(props: {doc: CMSDoc}) {
       </div>
       {lock.reason && (
         <>
-          <div className="DocStatusBadges__lockTooltip__divider" />
-          <div className="DocStatusBadges__lockTooltip__line">Reason:</div>
-          <div className="DocStatusBadges__lockTooltip__reason">
+          <div className="DocStatusBadges__lockTooltip__divider my-1 h-px bg-inverse opacity-30" />
+          <div className="DocStatusBadges__lockTooltip__line leading-snug">
+            Reason:
+          </div>
+          <div className="DocStatusBadges__lockTooltip__reason whitespace-pre-line leading-snug">
             {lock.reason}
           </div>
         </>
@@ -321,9 +283,13 @@ export function getPublishingLockedLabel(docData: CMSDoc): string {
   return `Locked by ${lock.lockedBy}: "${lock.reason}"`;
 }
 
+/** Classes for the badge(s) showing which releases a doc is in. */
+const RELEASE_BADGE_CLASSES =
+  'DocStatusBadges__releaseBadge cursor-pointer font-mono tracking-normal';
+
 function ReleaseBadges(props: {
   docId: string;
-  tooltipProps: Record<string, any>;
+  tooltipPosition?: 'bottom' | 'top';
 }) {
   const {getReleasesForDoc} = usePendingReleases();
   const releases = getReleasesForDoc(props.docId);
@@ -337,22 +303,17 @@ function ReleaseBadges(props: {
   }
   const release = releases[0];
   return (
-    <Tooltip {...props.tooltipProps} label={`In release: ${release.id}`}>
-      <Badge
-        component="a"
+    <Tooltip
+      placement={props.tooltipPosition}
+      label={`In release: ${release.id}`}
+    >
+      <StatusBadge
+        tone="release"
         href={`/cms/releases/${release.id}`}
-        size="sm"
-        variant="gradient"
-        gradient={TONE_GRADIENTS.release}
-        classNames={{
-          root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
-          inner:
-            'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
-        }}
-        style={{cursor: 'pointer'}}
+        className={RELEASE_BADGE_CLASSES}
       >
         {release.id}
-      </Badge>
+      </StatusBadge>
     </Tooltip>
   );
 }
@@ -367,32 +328,24 @@ function MultiReleaseBadge(props: {releases: Release[]}) {
   const releases = props.releases;
   return (
     <Popover
-      opened={opened}
-      onClose={() => setOpened(false)}
-      withArrow
-      withCloseButton={false}
-      position="bottom"
-      placement="center"
-      spacing={4}
+      open={opened}
+      onOpenChange={setOpened}
+      placement="bottom"
       width={220}
-      target={
-        <Badge
-          size="sm"
-          variant="gradient"
-          gradient={TONE_GRADIENTS.release}
-          classNames={{
-            root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge DocStatusBadges__badge--clickable',
-            inner:
-              'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
-          }}
-          style={{cursor: 'pointer'}}
+      label="In releases"
+      className="DocStatusBadges__releaseList flex flex-col p-1"
+      trigger={
+        <StatusBadge
+          tone="release"
+          className={cn(RELEASE_BADGE_CLASSES, CLICKABLE_CLASSES)}
           role="button"
           tabIndex={0}
           aria-label={`${releases.length} releases`}
           onClick={(e: MouseEvent) => {
+            // Keep the click from following a row link the badge sits in;
+            // the popover toggles itself.
             e.preventDefault();
             e.stopPropagation();
-            setOpened((value) => !value);
           }}
           onKeyDown={(e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -402,21 +355,21 @@ function MultiReleaseBadge(props: {releases: Release[]}) {
           }}
         >
           {releases.length} releases
-        </Badge>
+        </StatusBadge>
       }
     >
-      <div className="DocStatusBadges__releaseList">
-        <div className="DocStatusBadges__releaseList__title">In releases</div>
-        {releases.map((release) => (
-          <a
-            key={release.id}
-            className="DocStatusBadges__releaseList__item"
-            href={`/cms/releases/${release.id}`}
-          >
-            {release.id}
-          </a>
-        ))}
+      <div className="DocStatusBadges__releaseList__title px-2 pb-1 pt-0.5 text-xs font-semibold text-muted">
+        In releases
       </div>
+      {releases.map((release) => (
+        <a
+          key={release.id}
+          className="DocStatusBadges__releaseList__item block truncate rounded-sm px-2 py-1 font-mono text-sm text-inherit no-underline hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+          href={`/cms/releases/${release.id}`}
+        >
+          {release.id}
+        </a>
+      ))}
     </Popover>
   );
 }

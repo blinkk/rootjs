@@ -1,4 +1,3 @@
-import {ActionIcon, Menu} from '@mantine/core';
 import {
   IconAlarmOff,
   IconArchive,
@@ -17,6 +16,8 @@ import {
   IconTrash,
 } from '@tabler/icons-preact';
 import {Text} from '../../../../components/Text/Text.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   showNotification,
@@ -43,8 +44,6 @@ import {
 } from '../../doc.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
-
-import './DocActionsMenu.css';
 
 export interface DocActionEvent {
   action:
@@ -123,7 +122,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="DocActionsMenu__confirmText"
+            className="DocActionsMenu__confirmText text-pretty"
           >
             Are you sure you want to discard draft changes for the following
             doc? The doc data will revert to the published version. There is no
@@ -172,7 +171,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="DocActionsMenu__confirmText"
+            className="DocActionsMenu__confirmText text-pretty"
           >
             Are you sure you want to unpublish the following doc? There is no
             undo.
@@ -240,7 +239,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="DocActionsMenu__confirmText"
+            className="DocActionsMenu__confirmText text-pretty"
           >
             Are you sure you want to unschedule the following doc?
           </Text>
@@ -287,7 +286,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="DocActionsMenu__confirmText"
+            className="DocActionsMenu__confirmText text-pretty"
           >
             Are you sure you want to archive the following doc? Archived docs
             are hidden from the collection list by default but can be restored
@@ -356,7 +355,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Text
             size="body-sm"
             weight="semi-bold"
-            className="DocActionsMenu__confirmText"
+            className="DocActionsMenu__confirmText text-pretty"
           >
             Are you sure you want to delete the following doc? There is no undo.
           </Text>
@@ -397,35 +396,38 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
 
   return (
     <Menu
-      className="CollectionPage__collection__docsList__doc__controls__menu"
-      position="bottom"
-      control={
-        <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-          <IconDotsVertical size={16} />
-        </ActionIcon>
+      className="DocActionsMenu__menu"
+      placement="bottom-end"
+      trigger={
+        <IconButton
+          className="DocActionsMenu__trigger text-strong"
+          label="Doc actions"
+        >
+          <IconDotsVertical />
+        </IconButton>
       }
     >
       {props.onMoveTo && (
-        <Menu.Item
-          icon={<IconArrowBarToUp size={20} />}
+        <MenuItem
+          icon={<IconArrowBarToUp />}
           onClick={() => props.onMoveTo!('top')}
           disabled={!canEdit}
         >
           Move to top
-        </Menu.Item>
+        </MenuItem>
       )}
       {props.onMoveTo && (
-        <Menu.Item
-          icon={<IconArrowBarToDown size={20} />}
+        <MenuItem
+          icon={<IconArrowBarToDown />}
           onClick={() => props.onMoveTo!('bottom')}
           disabled={!canEdit}
         >
           Move to bottom
-        </Menu.Item>
+        </MenuItem>
       )}
       {props.showPublish && !isArchived && (
-        <Menu.Item
-          icon={<IconRocket size={20} />}
+        <MenuItem
+          icon={<IconRocket />}
           onClick={() => publishDocModal.open()}
           // A doc with a pending scheduled publish or a publishing lock can't
           // be published until it's unscheduled or unlocked.
@@ -434,45 +436,45 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           }
         >
           Publish
-        </Menu.Item>
+        </MenuItem>
       )}
       {!isArchived && (
-        <Menu.Item
-          icon={<IconPackage size={20} />}
+        <MenuItem
+          icon={<IconPackage />}
           onClick={() => addToReleaseModal.open()}
           disabled={!canPublish}
         >
           Add to release
-        </Menu.Item>
+        </MenuItem>
       )}
-      <Menu.Item
-        icon={<IconHistory size={20} />}
+      <MenuItem
+        icon={<IconHistory />}
         onClick={() => versionHistoryModal.open()}
       >
         Version history
-      </Menu.Item>
-      <Menu.Item
-        icon={<IconCopy size={20} />}
+      </MenuItem>
+      <MenuItem
+        icon={<IconCopy />}
         onClick={() => copyDocModal.open()}
         disabled={!canEdit}
       >
         Copy
-      </Menu.Item>
+      </MenuItem>
       {!isArchived &&
         sys.modifiedAt &&
         sys.publishedAt &&
         sys.modifiedAt > sys.publishedAt && (
-          <Menu.Item
-            icon={<IconArrowBack size={20} />}
+          <MenuItem
+            icon={<IconArrowBack />}
             onClick={() => onRevertDraft()}
             disabled={!canEdit}
           >
             Discard draft edits
-          </Menu.Item>
+          </MenuItem>
         )}
       {!isArchived && sys.firstPublishedAt && (
-        <Menu.Item
-          icon={<IconCloudOff size={20} />}
+        <MenuItem
+          icon={<IconCloudOff />}
           onClick={() => onUnpublishDoc()}
           // A doc with a pending scheduled publish needs to be unscheduled
           // before it can be unpublished.
@@ -480,35 +482,35 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         >
           Unpublish
           {testIsScheduled(data) && (
-            <div className="DocActionsMenu__itemNote">
+            <div className="DocActionsMenu__itemNote mt-0.5 text-xs text-muted">
               Unschedule the upcoming publish first.
             </div>
           )}
-        </Menu.Item>
+        </MenuItem>
       )}
       {!isArchived && sys.scheduledAt && (
-        <Menu.Item
-          icon={<IconAlarmOff size={20} />}
+        <MenuItem
+          icon={<IconAlarmOff />}
           onClick={() => onUnscheduleDoc()}
           disabled={!canPublish}
         >
           Unschedule
-        </Menu.Item>
+        </MenuItem>
       )}
       {!isArchived &&
         (testPublishingLocked(data) ? (
-          <Menu.Item
-            icon={<IconLockOpen size={20} />}
+          <MenuItem
+            icon={<IconLockOpen />}
             onClick={() =>
               lockPublishingModal.open({unlock: true, onChange: onLockChanged})
             }
             disabled={!canEdit}
           >
             Unlock publishing
-          </Menu.Item>
+          </MenuItem>
         ) : (
-          <Menu.Item
-            icon={<IconLock size={20} />}
+          <MenuItem
+            icon={<IconLock />}
             onClick={() =>
               lockPublishingModal.open({unlock: false, onChange: onLockChanged})
             }
@@ -517,34 +519,34 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
             disabled={!canEdit || testIsScheduled(data)}
           >
             Lock publishing
-          </Menu.Item>
+          </MenuItem>
         ))}
       {isArchived ? (
-        <Menu.Item
-          icon={<IconArchiveOff size={20} />}
+        <MenuItem
+          icon={<IconArchiveOff />}
           onClick={() => onUnarchiveDoc()}
           disabled={!canEdit}
         >
           Unarchive
-        </Menu.Item>
+        </MenuItem>
       ) : (
         !sys.publishedAt && (
-          <Menu.Item
-            icon={<IconArchive size={20} />}
+          <MenuItem
+            icon={<IconArchive />}
             onClick={() => onArchiveDoc()}
             disabled={!canEdit}
           >
             Archive
-          </Menu.Item>
+          </MenuItem>
         )
       )}
-      <Menu.Item
-        icon={<IconTrash size={20} />}
+      <MenuItem
+        icon={<IconTrash />}
         onClick={() => onDeleteDoc()}
         disabled={!canEdit}
       >
         Delete
-      </Menu.Item>
+      </MenuItem>
     </Menu>
   );
 }

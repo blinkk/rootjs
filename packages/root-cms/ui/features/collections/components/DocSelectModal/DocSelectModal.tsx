@@ -1,12 +1,12 @@
-import './DocSelectModal.css';
-
-import {Button, Loader, Select} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {getDocServingUrl} from '../../../documents/doc-urls.js';
 import {useDocsList} from '../../useDocsList.js';
@@ -74,26 +74,23 @@ export function DocSelectModal(
   return (
     <div className="DocSelectModal">
       {collections.length === 0 && (
-        <div className="DocSelectModal__noCollections">
+        <div className="DocSelectModal__noCollections p-5 text-center text-base text-muted">
           No collections matching schema field definition.
         </div>
       )}
       {collections.length > 1 && (
-        <div className="DocSelectModal__collection__select">
-          <div className="DocSelectModal__collection__select__label">
+        <div className="DocSelectModal__collection__select mb-5 flex flex-wrap items-center gap-2">
+          <div className="DocSelectModal__collection__select__label text-base font-semibold">
             Content Type:
           </div>
           <Select
+            aria-label="Content type"
             data={dropdownValues}
             value={selectedCollectionId}
             placeholder={'Select'}
-            onChange={(e: string) => {
-              setSelectedCollectionId(e || '');
+            onValueChange={(value) => {
+              setSelectedCollectionId(value || '');
             }}
-            size="xs"
-            radius={0}
-            // Due to issues with preact/compat, use a div for the dropdown el.
-            dropdownComponent="div"
           />
         </div>
       )}
@@ -122,11 +119,11 @@ DocSelectModal.DocsList = (props: {
   return (
     <div className="DocSelectModal__DocsList">
       {loading ? (
-        <div className="DocSelectModal__DocsList__loading">
-          <Loader color="gray" size="xl" />
+        <div className="DocSelectModal__DocsList__loading flex justify-center py-10">
+          <Spinner size="lg" />
         </div>
       ) : docs.length === 0 ? (
-        <div className="DocSelectModal__DocsList__empty">
+        <div className="DocSelectModal__DocsList__empty px-5 py-10 text-center text-base text-muted">
           Collection is empty.
         </div>
       ) : (
@@ -173,8 +170,8 @@ DocSelectModal.DocCard = (props: {
     getNestedValue(fields, rootCollection.preview?.image || 'meta.image') ||
     rootCollection.preview?.defaultImage;
   return (
-    <div className="DocSelectModal__DocCard">
-      <div className="DocSelectModal__DocCard__image">
+    <div className="DocSelectModal__DocCard flex items-center overflow-hidden border-t border-border py-2 pr-2 first:border-t-0">
+      <div className="DocSelectModal__DocCard__image hidden shrink-0 border border-border sm:block">
         <FilePreview
           file={previewImage}
           width={120}
@@ -182,25 +179,24 @@ DocSelectModal.DocCard = (props: {
           withPlaceholder={!previewImage?.src}
         />
       </div>
-      <div className="DocSelectModal__DocCard__content">
-        <div className="DocSelectModal__DocCard__content__header">
-          <div className="DocSelectModal__DocCard__content__header__docId">
+      <div className="DocSelectModal__DocCard__content min-w-0 flex-1 sm:px-3">
+        <div className="DocSelectModal__DocCard__content__header flex items-center gap-3">
+          <div className="DocSelectModal__DocCard__content__header__docId text-base font-medium">
             {doc.id}
           </div>
         </div>
-        <div className="DocSelectModal__DocCard__content__title">
+        <div className="DocSelectModal__DocCard__content__title line-clamp-1 text-xl font-semibold leading-normal sm:text-2xl sm:leading-9">
           {previewTitle || '[UNTITLED]'}
         </div>
         {hasCollectionUrl && liveUrl && (
-          <div className="DocSelectModal__DocCard__content__url">{liveUrl}</div>
+          <div className="DocSelectModal__DocCard__content__url truncate text-sm font-medium text-muted">
+            {liveUrl}
+          </div>
         )}
       </div>
-      <div className="DocSelectModal__DocCard__controls">
+      <div className="DocSelectModal__DocCard__controls flex items-center gap-2">
         {selected ? (
           <Button
-            variant="light"
-            color="blue"
-            size="xs"
             onClick={() => {
               setSelected(false);
               props.onDocUnselected(props.doc);
@@ -210,9 +206,7 @@ DocSelectModal.DocCard = (props: {
           </Button>
         ) : (
           <Button
-            variant="filled"
-            color="blue"
-            size="xs"
+            variant="primary"
             onClick={() => {
               setSelected(true);
               props.onDocSelected(props.doc);

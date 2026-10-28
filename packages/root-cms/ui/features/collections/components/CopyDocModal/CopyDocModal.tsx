@@ -1,8 +1,8 @@
-import {Button} from '@mantine/core';
 import {useState, useEffect} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {getSlugError, normalizeSlug} from '../../../../../shared/slug.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {
   type ContextModalProps,
   useModals,
@@ -11,7 +11,6 @@ import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../../documents/doc.js';
 import {batchUpdateTags, loadTranslations} from '../../../translations/l10n.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
-import './CopyDocModal.css';
 
 const MODAL_ID = 'CopyDocModal';
 
@@ -110,12 +109,9 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
           <div>
             <div>{`Successfully copied ${sourceLabel} to ${toDocId}.`}</div>
             <Button
-              className="CopyDocModal__notificationButton"
-              component="a"
+              className="CopyDocModal__notificationButton mt-2"
               href={docUrl}
               size="xs"
-              compact
-              variant="default"
             >
               Open doc
             </Button>
@@ -147,16 +143,24 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
     <div className="CopyDocModal">
       <form onSubmit={(e) => onSubmit(e)}>
         <div className="CopyDocModal__from">
-          <Text className="CopyDocModal__from__label" size="body" weight="bold">
+          <Text
+            className="CopyDocModal__from__label mb-2"
+            size="body"
+            weight="bold"
+          >
             From:
           </Text>
-          <Text className="CopyDocModal__from__value" size="body-sm">
+          <Text className="CopyDocModal__from__value break-all" size="body-sm">
             <code>{sourceLabel}</code>
           </Text>
         </div>
 
-        <div className="CopyDocModal__to">
-          <Text className="CopyDocModal__to__label" size="body" weight="bold">
+        <div className="CopyDocModal__to mt-4">
+          <Text
+            className="CopyDocModal__to__label mb-2"
+            size="body"
+            weight="bold"
+          >
             To:
           </Text>
           <SlugInput
@@ -172,23 +176,22 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
           />
         </div>
 
-        {error && <div className="CopyDocModal__error">{error}</div>}
-
-        <div className="CopyDocModal__buttons">
-          <Button
-            variant="outline"
-            onClick={() => context.closeModal(id)}
-            type="button"
-            size="xs"
-            color="dark"
+        {error && (
+          <div
+            className="CopyDocModal__error mt-3 rounded-sm border border-danger-line bg-danger-soft px-3 py-2 text-sm font-medium leading-normal text-danger"
+            role="alert"
           >
+            {error}
+          </div>
+        )}
+
+        <div className="CopyDocModal__buttons mt-6 flex justify-end gap-3">
+          <Button onClick={() => context.closeModal(id)} type="button">
             Cancel
           </Button>
           <Button
-            variant="filled"
+            variant="primary"
             type="submit"
-            size="xs"
-            color="dark"
             loading={loading}
             disabled={!!slugError || (!!error && !confirmOverwrite)}
           >

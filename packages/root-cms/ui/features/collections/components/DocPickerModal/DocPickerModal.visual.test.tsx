@@ -1,10 +1,7 @@
+import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
-import '../../../../styles/mantine.css';
 import '../../../../styles/theme.css';
-import '../../pages/CollectionPage/CollectionPage.css';
-import './DocPickerModal.css';
 
-import {MantineProvider} from '@mantine/core';
 import {render, cleanup} from '@testing-library/preact';
 import {Timestamp} from 'firebase/firestore';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
@@ -167,11 +164,9 @@ vi.mock('../NewDocModal/NewDocModal.js', () => ({
 
 function TestWrapper({children}: {children: any}) {
   return (
-    <MantineProvider>
-      <div data-testid="wrapper" style={{padding: '20px'}}>
-        {children}
-      </div>
-    </MantineProvider>
+    <div data-testid="wrapper" className="bg-surface p-5 text-fg">
+      {children}
+    </div>
   );
 }
 

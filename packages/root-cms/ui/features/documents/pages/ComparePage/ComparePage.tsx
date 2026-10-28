@@ -1,5 +1,3 @@
-import './ComparePage.css';
-
 import {useMemo} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {Layout} from '../../../../app/layout/Layout.js';
@@ -24,15 +22,15 @@ export function ComparePage() {
 
   return (
     <Layout>
-      <div className="ComparePage">
+      <div className="ComparePage p-4 md:p-15">
         {leftVersionId && rightVersionId ? (
           <DocDiffViewer
-            className="ComparePage__diff"
+            className="ComparePage__diff border border-t-0 border-border"
             left={leftVersionId}
             right={rightVersionId}
           />
         ) : (
-          <div className="ComparePage__error">
+          <div className="ComparePage__error text-base">
             Invalid params, double check query params.
           </div>
         )}

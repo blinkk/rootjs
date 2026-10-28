@@ -1,5 +1,3 @@
-import './CompareDraftModal.css';
-
 import {
   type ContextModalProps,
   useModals,
@@ -49,7 +47,7 @@ export function CompareDraftModal(
   return (
     <div className="CompareDraftModal">
       <DocDiffViewer
-        className="CompareDraftModal__diff"
+        className="CompareDraftModal__diff mt-1"
         left={{docId, versionId: 'published'}}
         right={{docId, versionId: 'draft'}}
         showExpandButton={true}

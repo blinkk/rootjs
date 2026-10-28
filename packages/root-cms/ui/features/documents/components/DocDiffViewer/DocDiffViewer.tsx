@@ -1,12 +1,12 @@
-import './DocDiffViewer.css';
-
-import {Button, Loader, SegmentedControl} from '@mantine/core';
 import {IconCircleCheckFilled} from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {stableJsonStringify} from '../../../../utils/objects.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
@@ -25,6 +25,9 @@ import {DocChanges} from '../DocChanges/DocChanges.js';
 export type DocDiffView = 'changes' | 'json';
 
 const VIEW_STORAGE_KEY = 'root::DocDiffViewer::view';
+
+const NO_FIELD_CHANGES_CLASSES =
+  'DocDiffViewer__noFieldChanges px-2 py-3 font-sans text-sm text-muted';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -134,8 +137,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   if (loading) {
     return (
-      <div className="DocDiffViewer DocDiffViewer--loading">
-        <Loader size="md" color="gray" />
+      <div className="DocDiffViewer DocDiffViewer--loading p-6">
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -144,36 +147,35 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
     <>
       {showAiSummary && (
         <AiSummary
-          className="DocDiffViewer__aiSummary"
+          className="DocDiffViewer__aiSummary mb-2"
           docId={left.docId}
           beforeVersion={String(left.versionId)}
           afterVersion={String(right.versionId)}
         />
       )}
-      <div className={joinClassNames(props.className, 'DocDiffViewer')}>
-        <div className="DocDiffViewer__toolbar">
+      <div className={cn('DocDiffViewer min-w-0 font-mono', props.className)}>
+        <div className="DocDiffViewer__toolbar flex flex-wrap items-center gap-3 px-2 pb-2 pt-1 font-sans">
           <SegmentedControl
             className="DocDiffViewer__toolbar__views"
             size="xs"
+            aria-label="Diff view"
             value={view}
-            onChange={(value: string) => setStoredView(value as DocDiffView)}
+            onValueChange={(value) => setStoredView(value)}
             data={[
-              {value: 'changes', label: 'Changes'},
-              {value: 'json', label: 'JSON'},
+              {value: 'changes' as DocDiffView, label: 'Changes'},
+              {value: 'json' as DocDiffView, label: 'JSON'},
             ]}
           />
           {view === 'changes' && !isIdentical && (
-            <div className="DocDiffViewer__toolbar__count">
+            <div className="DocDiffViewer__toolbar__count text-sm text-muted">
               {changes.length === 1 ? '1 change' : `${changes.length} changes`}
             </div>
           )}
           {props.showExpandButton && (
             <Button
-              className="DocDiffViewer__toolbar__expand"
-              component="a"
+              className="DocDiffViewer__toolbar__expand ml-auto"
               variant="default"
               size="xs"
-              compact
               href={expandUrl}
               target="_blank"
             >
@@ -181,27 +183,27 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
             </Button>
           )}
         </div>
-        <div className="DocDiffViewer__header">
-          <div className="DocDiffViewer__header__label">
-            <div className="DocDiffViewer__header__label__title">
+        <div className="DocDiffViewer__header grid grid-cols-1 border-y border-border bg-surface-hover sm:grid-cols-2">
+          <div className="DocDiffViewer__header__label min-w-0 p-2">
+            <div className="DocDiffViewer__header__label__title mb-1 break-all text-xs font-bold">
               {props.left.docId}@{props.left.versionId}
             </div>
-            <div className="DocDiffViewer__header__label__meta">
+            <div className="DocDiffViewer__header__label__meta text-xs text-muted">
               {getMetaString(leftDoc)}
             </div>
           </div>
-          <div className="DocDiffViewer__header__label">
-            <div className="DocDiffViewer__header__label__title">
+          <div className="DocDiffViewer__header__label min-w-0 border-t border-border p-2 sm:border-l sm:border-t-0">
+            <div className="DocDiffViewer__header__label__title mb-1 break-all text-xs font-bold">
               {props.right.docId}@{props.right.versionId}
             </div>
-            <div className="DocDiffViewer__header__label__meta">
+            <div className="DocDiffViewer__header__label__meta text-xs text-muted">
               {getMetaString(rightDoc)}
             </div>
           </div>
         </div>
-        <div className="DocDiffViewer__diff">
+        <div className="DocDiffViewer__diff min-h-70">
           {isIdentical ? (
-            <div className="DocDiffViewer__identical">
+            <div className="DocDiffViewer__identical flex items-center justify-center gap-2 px-5 py-10 font-sans text-sm text-muted">
               <IconCircleCheckFilled size={20} />
               <span>No changes. Both versions are identical.</span>
             </div>
@@ -209,14 +211,14 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
             <>
               {localesDiff && <LocalesDiffRow diff={localesDiff} />}
               {fieldsIdentical ? (
-                <div className="DocDiffViewer__noFieldChanges">
+                <div className={NO_FIELD_CHANGES_CLASSES}>
                   No field changes.
                 </div>
               ) : view === 'changes' ? (
                 changes.length > 0 ? (
                   <DocChanges changes={changes} />
                 ) : (
-                  <div className="DocDiffViewer__noFieldChanges">
+                  <div className={NO_FIELD_CHANGES_CLASSES}>
                     No content changes. Only hidden data changed, such as field
                     settings or editor metadata. Switch to the JSON view to see
                     it.
@@ -237,13 +239,15 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 function LocalesDiffRow(props: {diff: LocalesDiff}) {
   const {added, removed, unchanged} = props.diff;
   return (
-    <div className="DocDiffViewer__sys">
-      <div className="DocDiffViewer__sys__label">Locales</div>
-      <div className="DocDiffViewer__sys__locales">
+    <div className="DocDiffViewer__sys flex items-baseline gap-3 border-b border-border p-2 text-sm">
+      <div className="DocDiffViewer__sys__label shrink-0 font-bold">
+        Locales
+      </div>
+      <div className="DocDiffViewer__sys__locales flex flex-wrap items-baseline gap-1.5">
         {added.map((locale) => (
           <span
             key={`added-${locale}`}
-            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--added"
+            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--added rounded-sm bg-success-soft px-1.5 py-px"
             title="Added"
           >
             + {locale}
@@ -252,14 +256,14 @@ function LocalesDiffRow(props: {diff: LocalesDiff}) {
         {removed.map((locale) => (
           <span
             key={`removed-${locale}`}
-            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--removed"
+            className="DocDiffViewer__sys__locale DocDiffViewer__sys__locale--removed rounded-sm bg-danger-soft px-1.5 py-px"
             title="Removed"
           >
             − {locale}
           </span>
         ))}
         {unchanged.length > 0 && (
-          <span className="DocDiffViewer__sys__unchanged">
+          <span className="DocDiffViewer__sys__unchanged text-muted">
             ({unchanged.join(', ')} unchanged)
           </span>
         )}

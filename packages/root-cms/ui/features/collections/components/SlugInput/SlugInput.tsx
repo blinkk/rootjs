@@ -1,5 +1,3 @@
-import {Select, TextInput} from '@mantine/core';
-import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
 import {
   getSlugError,
@@ -7,9 +5,10 @@ import {
   normalizeSlug,
 } from '../../../../../shared/slug.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
+import {cn} from '../../../../utils/classes.js';
 import {getDocServingUrl} from '../../../documents/doc-urls.js';
-import './SlugInput.css';
 
 export interface SlugInputProps {
   className?: string;
@@ -91,38 +90,38 @@ export function SlugInput(props: SlugInputProps) {
   }
 
   return (
-    <div className={joinClassNames(props.className, 'SlugInput')}>
-      <div className="SlugInput__inputs">
+    <div className={cn('SlugInput', props.className)}>
+      <div className="SlugInput__inputs flex items-center gap-2">
         <Select
-          className="SlugInput__collection"
+          className="SlugInput__collection w-2/5 shrink-0"
+          aria-label="Collection"
           placeholder="Collection"
-          size="xs"
           data={collectionOptions}
-          onChange={(newValue: string) => onCollectionChange(newValue)}
+          onValueChange={(newValue) => onCollectionChange(newValue || '')}
           value={collectionId}
           disabled={!!props.collectionDisabled}
         />
-        <div className="SlugInput__divider">/</div>
+        <div className="SlugInput__divider text-base text-muted">/</div>
         <TextInput
-          className="SlugInput__slug"
+          className="SlugInput__slug min-w-0 flex-1"
+          aria-label="Slug"
           name="slug"
           ref={slugRef}
           value={slug}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+          onInput={(event) => {
             onSlugChange(event.currentTarget.value);
           }}
           placeholder="slug"
           autoComplete="off"
-          size="xs"
         />
       </div>
       {urlHelp && (
-        <Text className="SlugInput__urlHelp" size="body-sm">
-          {urlHelp}
+        <Text className="SlugInput__urlHelp mt-2 break-all" size="body-sm">
+          URL: {urlHelp}
         </Text>
       )}
       {slugError && (
-        <Text className="SlugInput__slugError" size="body-sm">
+        <Text className="SlugInput__slugError mt-2 text-danger" size="body-sm">
           {slugError}
         </Text>
       )}

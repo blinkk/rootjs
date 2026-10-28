@@ -7,26 +7,18 @@ import {
   DropResult,
 } from '@hello-pangea/dnd';
 import {
-  ActionIcon,
-  Button,
-  Loader,
-  Menu,
-  Select,
-  Switch,
-  Tooltip,
-} from '@mantine/core';
-import {
   IconBaselineDensityMedium,
   IconBaselineDensitySmall,
   IconCheck,
-  IconChevronUp,
   IconChevronDown,
+  IconChevronUp,
   IconCirclePlus,
+  IconFolder,
   IconGripVertical,
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useId, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {
   generateKeyBetween,
@@ -38,8 +30,14 @@ import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuGroup, MenuItem} from '../../../../primitives/Menu/Menu.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Switch} from '../../../../primitives/Switch/Switch.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
-import {joinClassNames} from '../../../../utils/classes.js';
+import {cn} from '../../../../utils/classes.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
 import {DocActionsMenu} from '../../../documents/components/DocActionsMenu/DocActionsMenu.js';
@@ -69,14 +67,23 @@ const DENSITY_OPTIONS: Array<{
   {value: 'compact', label: 'Compact', Icon: IconBaselineDensitySmall},
 ];
 
+/** Explains why the "New" doc buttons are disabled. */
+const NEW_DOC_TOOLTIP = "You don't have access to create new documents";
+
 interface CollectionPageProps {
   collection?: string;
 }
 
+/**
+ * The content page: the collection tree beside the selected collection's
+ * docs. Below `lg` the tree collapses behind a toggle above the docs.
+ */
 export function CollectionPage(props: CollectionPageProps) {
   const {route} = useLocation();
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   usePageTitle(props.collection ? props.collection : 'Content');
+  const [treeOpen, setTreeOpen] = useState(false);
+  const treeId = useId();
 
   // If no collection is selected, select one by default.
   useEffect(() => {
@@ -107,28 +114,54 @@ export function CollectionPage(props: CollectionPageProps) {
     }
   }, [props.collection, projectId]);
 
+  // Collapse the (mobile) tree after picking a collection.
+  useEffect(() => setTreeOpen(false), [props.collection]);
+
   const collections = window.__ROOT_CTX.collections;
 
   return (
     <Layout>
-      <div className="CollectionPage">
-        <div className="CollectionPage__layout">
-          <div className="CollectionPage__side">
-            {/* <div className="CollectionPage__side__title">Content</div> */}
+      <div className="CollectionPage bg-page lg:flex">
+        <div className="CollectionPage__side px-4 pt-4 md:px-8 md:pt-8 lg:h-full lg:w-70 lg:shrink-0 lg:overflow-y-auto lg:pb-8 lg:pr-0 2xl:w-100">
+          <button
+            type="button"
+            className="CollectionPage__side__toggle m-0 flex w-full cursor-pointer appearance-none items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left font-sans text-base font-medium text-fg hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:hidden"
+            aria-expanded={treeOpen}
+            aria-controls={treeId}
+            onClick={() => setTreeOpen(!treeOpen)}
+          >
+            <IconFolder size={16} strokeWidth="1.75" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate">Collections</span>
+            <IconChevronDown
+              size={16}
+              aria-hidden="true"
+              className={cn(
+                'shrink-0 text-muted transition-transform',
+                treeOpen && 'rotate-180'
+              )}
+            />
+          </button>
+          <div
+            id={treeId}
+            className={cn(
+              'CollectionPage__side__tree mt-2 lg:mt-0 lg:block',
+              !treeOpen && 'hidden'
+            )}
+          >
             <CollectionTree
               collections={collections}
               activeCollectionId={props.collection}
               projectId={projectId}
             />
           </div>
-          <div className="CollectionPage__main">
-            {props.collection && (
-              <CollectionPage.Collection
-                key={props.collection}
-                collection={props.collection}
-              />
-            )}
-          </div>
+        </div>
+        <div className="CollectionPage__main min-w-0 flex-1 px-4 pt-4 md:px-8 md:pt-8 lg:h-full lg:overflow-y-auto">
+          {props.collection && (
+            <CollectionPage.Collection
+              key={props.collection}
+              collection={props.collection}
+            />
+          )}
         </div>
       </div>
     </Layout>
@@ -209,6 +242,19 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const showInitialLoader = loading && docs.length === 0;
   const showEmpty = !loading && docs.length === 0;
 
+  const renderNewDocButton = () => (
+    <ConditionalTooltip label={NEW_DOC_TOOLTIP} condition={!canEdit}>
+      <Button
+        variant="primary"
+        icon={<IconCirclePlus />}
+        onClick={() => setNewDocModalOpen(true)}
+        disabled={!canEdit}
+      >
+        New
+      </Button>
+    </ConditionalTooltip>
+  );
+
   return (
     <>
       <NewDocModal
@@ -217,31 +263,35 @@ CollectionPage.Collection = (props: CollectionProps) => {
         onClose={() => setNewDocModalOpen(false)}
       />
       <div className="CollectionPage__collection">
-        <div className="CollectionPage__collection__docsTab">
-          <div className="CollectionPage__collection__docsTab__header">
-            <div className="CollectionPage__collection__docsTab__header__title">
+        <div className="CollectionPage__collection__docsTab pb-30">
+          <div className="CollectionPage__collection__docsTab__header mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <h1 className="CollectionPage__collection__docsTab__header__title m-0 min-w-0 flex-1 break-words text-xl font-semibold tracking-tight">
               {collection.name || props.collection}
-            </div>
-            <div className="CollectionPage__collection__docsTab__controls">
+            </h1>
+            <div className="CollectionPage__collection__docsTab__controls flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
               <div className="CollectionPage__collection__docsTab__controls__showArchived">
                 <Switch
-                  size="sm"
-                  color="dark"
+                  size="md"
+                  labelPosition="left"
                   label="Show archived:"
                   checked={showArchived}
-                  onChange={(e: any) =>
+                  onChange={(e) =>
                     setShowArchived(Boolean(e.currentTarget.checked))
                   }
                 />
               </div>
-              <div className="CollectionPage__collection__docsTab__controls__sort">
-                <div className="CollectionPage__collection__docsTab__controls__sort__label">
+              <div className="CollectionPage__collection__docsTab__controls__sort flex items-center gap-2">
+                <div
+                  className="CollectionPage__collection__docsTab__controls__sort__label font-medium"
+                  aria-hidden="true"
+                >
                   Sort:
                 </div>
                 <Select
-                  size="xs"
+                  className="w-45"
+                  aria-label="Sort"
                   value={effectiveOrderBy}
-                  onChange={(value: any) => setOrderBy(value || 'modifiedAt')}
+                  onValueChange={(value) => setOrderBy(value || 'modifiedAt')}
                   data={sortOptions}
                 />
               </div>
@@ -251,20 +301,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                 onChange={setDensity}
               />
               <div className="CollectionPage__collection__docsTab__controls__newDoc">
-                <ConditionalTooltip
-                  label="You don't have access to create new documents"
-                  condition={!canEdit}
-                >
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconCirclePlus size={16} />}
-                    onClick={() => setNewDocModalOpen(true)}
-                    disabled={!canEdit}
-                  >
-                    New
-                  </Button>
-                </ConditionalTooltip>
+                {renderNewDocButton()}
               </div>
             </div>
           </div>
@@ -278,43 +315,32 @@ CollectionPage.Collection = (props: CollectionProps) => {
           )}
           <Surface className="CollectionPage__collection__docsTab__content">
             {showInitialLoader ? (
-              <div className="CollectionPage__collection__docsTab__content__loading">
-                <Loader color="gray" size="xl" />
+              <div className="CollectionPage__collection__docsTab__content__loading my-22 flex justify-center">
+                <Spinner size="lg" />
               </div>
             ) : showEmpty ? (
-              <div class="CollectionPage__collection__docsEmpty">
-                <div class="CollectionPage__collection__docsEmpty__title">
+              <div className="CollectionPage__collection__docsEmpty flex flex-col items-center gap-3 px-10 py-20 text-center">
+                <div className="CollectionPage__collection__docsEmpty__title text-base font-medium">
                   Collection is empty.
                 </div>
-                <div class="CollectionPage__collection__docsEmpty__button">
-                  <ConditionalTooltip
-                    label="You don't have access to create new documents"
-                    condition={!canEdit}
-                  >
-                    <Button
-                      color="dark"
-                      size="xs"
-                      leftIcon={<IconCirclePlus size={16} />}
-                      onClick={() => setNewDocModalOpen(true)}
-                      disabled={!canEdit}
-                    >
-                      New
-                    </Button>
-                  </ConditionalTooltip>
+                <div className="CollectionPage__collection__docsEmpty__button">
+                  {renderNewDocButton()}
                 </div>
               </div>
             ) : (
-              <div className="CollectionPage__collection__docsTab__content__list">
+              <div className="CollectionPage__collection__docsTab__content__list relative">
                 {loading && (
-                  <div className="CollectionPage__collection__docsTab__content__reloading">
-                    <Loader color="gray" size="md" />
+                  // Zero-height and sticky, so the spinner stays at the top
+                  // of the viewport over the (dimmed) list without shifting it.
+                  <div className="CollectionPage__collection__docsTab__content__reloading pointer-events-none sticky top-0 z-(--cms-z-sticky) flex h-0 justify-center">
+                    <Spinner size="lg" className="mt-6" />
                   </div>
                 )}
                 <div
-                  className={joinClassNames(
+                  className={cn(
                     'CollectionPage__collection__docsTab__content__items',
                     loading &&
-                      'CollectionPage__collection__docsTab__content__items--loading'
+                      'CollectionPage__collection__docsTab__content__items--loading pointer-events-none opacity-50 transition-opacity'
                   )}
                 >
                   <CollectionPage.DocsList
@@ -353,49 +379,52 @@ function DensityControl(props: {
     DENSITY_OPTIONS.find((option) => option.value === props.density) ||
     DENSITY_OPTIONS[0];
   const ActiveIcon = active.Icon;
-  const control = (
-    <ActionIcon
-      variant="default"
-      color="gray"
-      size={30}
-      disabled={props.locked}
-      aria-label="Change view density"
-    >
-      <ActiveIcon size={16} />
-    </ActionIcon>
-  );
   return (
-    <div className="CollectionPage__collection__docsTab__controls__density">
-      <div className="CollectionPage__collection__docsTab__controls__density__label">
+    <div className="CollectionPage__collection__docsTab__controls__density flex items-center gap-2">
+      <div
+        className="CollectionPage__collection__docsTab__controls__density__label font-medium"
+        aria-hidden="true"
+      >
         View:
       </div>
       {props.locked ? (
-        <Tooltip
-          label="This collection is locked to the compact view"
-          transition="pop"
-          withArrow
+        <IconButton
+          variant="default"
+          label="Change view density"
+          tooltip="This collection is locked to the compact view"
+          disabled
         >
-          {control}
-        </Tooltip>
+          <ActiveIcon />
+        </IconButton>
       ) : (
-        <Menu position="bottom" placement="end" control={control}>
-          <Menu.Label>View density</Menu.Label>
-          {DENSITY_OPTIONS.map((option) => {
-            const OptionIcon = option.Icon;
-            const isActive = option.value === props.density;
-            return (
-              <Menu.Item
-                key={option.value}
-                icon={<OptionIcon size={18} />}
-                rightSection={
-                  isActive ? <IconCheck size={14} stroke={2.5} /> : undefined
-                }
-                onClick={() => props.onChange(option.value)}
-              >
-                {option.label}
-              </Menu.Item>
-            );
-          })}
+        <Menu
+          placement="bottom-end"
+          trigger={
+            <IconButton variant="default" label="Change view density">
+              <ActiveIcon />
+            </IconButton>
+          }
+        >
+          <MenuGroup label="View density">
+            {DENSITY_OPTIONS.map((option) => {
+              const OptionIcon = option.Icon;
+              const isActive = option.value === props.density;
+              return (
+                <MenuItem
+                  key={option.value}
+                  icon={<OptionIcon />}
+                  hint={
+                    isActive ? (
+                      <IconCheck stroke={2.5} aria-label="Selected" />
+                    ) : undefined
+                  }
+                  onClick={() => props.onChange(option.value)}
+                >
+                  {option.label}
+                </MenuItem>
+              );
+            })}
+          </MenuGroup>
         </Menu>
       )}
     </div>
@@ -435,6 +464,9 @@ function getColumnSortDir(
   return null;
 }
 
+const HEADER_CELL_CLASSES =
+  'CollectionPage__collection__docsList__header__cell text-xs font-semibold uppercase tracking-wide text-muted';
+
 /** A clickable compact-table header cell that toggles the sort order. */
 function SortableHeaderCell(props: {
   column: string;
@@ -464,10 +496,12 @@ function SortableHeaderCell(props: {
   return (
     <button
       type="button"
-      className={joinClassNames(
-        'CollectionPage__collection__docsList__header__cell',
+      className={cn(
+        HEADER_CELL_CLASSES,
         'CollectionPage__collection__docsList__header__cell--sortable',
-        active && 'CollectionPage__collection__docsList__header__cell--active'
+        'm-0 flex cursor-pointer appearance-none items-center gap-1 border-0 bg-transparent p-0 text-left font-sans hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+        active &&
+          'CollectionPage__collection__docsList__header__cell--active text-fg'
       )}
       onClick={onClick}
       aria-label={`Sort by ${props.label}`}
@@ -565,8 +599,8 @@ function AssignPositionsBanner(props: {
   }
 
   return (
-    <div className="CollectionPage__collection__assignPositions">
-      <div className="CollectionPage__collection__assignPositions__text">
+    <div className="CollectionPage__collection__assignPositions mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-l-3 border-border border-l-warning bg-surface px-3 py-2">
+      <div className="CollectionPage__collection__assignPositions__text min-w-0 flex-1 text-sm">
         <b>
           {props.keylessCount === 1
             ? '1 doc has no position in the custom order.'
@@ -576,8 +610,7 @@ function AssignPositionsBanner(props: {
         API results ordered by <code>sys.sortKey</code>.
       </div>
       <Button
-        size="xs"
-        color="dark"
+        variant="primary"
         loading={loading}
         onClick={() => assignPositions()}
       >
@@ -643,11 +676,19 @@ function ReorderableList(props: {
  */
 function ReorderableRow(props: {
   enabled?: boolean;
+  /** Renders a compact (grid) row instead of a comfortable (flex) one. */
+  compact?: boolean;
   draggableId: string;
   index: number;
   children: ComponentChildren;
 }) {
-  const className = 'CollectionPage__collection__docsList__doc';
+  const className = cn(
+    'CollectionPage__collection__docsList__doc',
+    'border-t border-border first:border-t-0',
+    props.compact
+      ? 'grid items-center gap-3.5 px-3 py-1'
+      : 'flex items-center overflow-hidden p-3'
+  );
   if (!props.enabled) {
     return <div className={className}>{props.children}</div>;
   }
@@ -657,14 +698,17 @@ function ReorderableRow(props: {
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={joinClassNames(
+          className={cn(
             className,
             snapshot.isDragging &&
-              'CollectionPage__collection__docsList__doc--dragging'
+              'CollectionPage__collection__docsList__doc--dragging rounded-sm border border-border bg-surface-hover shadow-md'
           )}
         >
           <div
-            className="CollectionPage__collection__docsList__doc__handle"
+            className={cn(
+              'CollectionPage__collection__docsList__doc__handle flex shrink-0 cursor-grab items-center leading-none text-subtle active:cursor-grabbing',
+              !props.compact && 'self-stretch pr-3'
+            )}
             {...provided.dragHandleProps}
             aria-label="Reorder doc"
           >
@@ -825,123 +869,125 @@ CollectionPage.DocsList = (props: {
 
   if (compact) {
     return (
-      <ReorderableList
-        enabled={reorderable}
-        onReorder={handleReorder}
-        className={joinClassNames(
-          'CollectionPage__collection__docsList',
-          'CollectionPage__collection__docsList--compact',
-          reorderable && 'CollectionPage__collection__docsList--reorderable'
-        )}
-        style={{['--docs-status-width' as any]: `${statusColumnWidth}px`}}
-      >
-        <div className="CollectionPage__collection__docsList__header">
-          {reorderable && (
-            <div className="CollectionPage__collection__docsList__header__handle" />
+      // The table's columns don't fit a phone, so it scrolls sideways there.
+      <div className="CollectionPage__collection__docsList__scroll overflow-x-auto">
+        <ReorderableList
+          enabled={reorderable}
+          onReorder={handleReorder}
+          className={cn(
+            'CollectionPage__collection__docsList',
+            'CollectionPage__collection__docsList--compact min-w-170',
+            reorderable && 'CollectionPage__collection__docsList--reorderable'
           )}
-          <div className="CollectionPage__collection__docsList__header__image" />
-          <SortableHeaderCell
-            column="slug"
-            label="Slug"
-            orderBy={props.orderBy}
-            onSort={props.onSort}
-          />
-          <SortableHeaderCell
-            column="title"
-            label="Title"
-            orderBy={props.orderBy}
-            onSort={props.onSort}
-          />
-          <div className="CollectionPage__collection__docsList__header__cell">
-            Status
+          style={{['--docs-status-width' as any]: `${statusColumnWidth}px`}}
+        >
+          <div className="CollectionPage__collection__docsList__header grid items-center gap-3.5 border-b border-border px-3 py-1">
+            {reorderable && (
+              <div className="CollectionPage__collection__docsList__header__handle" />
+            )}
+            <div className="CollectionPage__collection__docsList__header__image" />
+            <SortableHeaderCell
+              column="slug"
+              label="Slug"
+              orderBy={props.orderBy}
+              onSort={props.onSort}
+            />
+            <SortableHeaderCell
+              column="title"
+              label="Title"
+              orderBy={props.orderBy}
+              onSort={props.onSort}
+            />
+            <div className={HEADER_CELL_CLASSES}>Status</div>
+            <SortableHeaderCell
+              column="created"
+              label="Created"
+              orderBy={props.orderBy}
+              onSort={props.onSort}
+            />
+            <SortableHeaderCell
+              column="modified"
+              label="Modified"
+              orderBy={props.orderBy}
+              onSort={props.onSort}
+            />
+            <div className="CollectionPage__collection__docsList__header__controls" />
           </div>
-          <SortableHeaderCell
-            column="created"
-            label="Created"
-            orderBy={props.orderBy}
-            onSort={props.onSort}
-          />
-          <SortableHeaderCell
-            column="modified"
-            label="Modified"
-            orderBy={props.orderBy}
-            onSort={props.onSort}
-          />
-          <div className="CollectionPage__collection__docsList__header__controls" />
-        </div>
-        {docs.map((doc, index) => {
-          const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
-          const fields = doc.fields || {};
-          const previewTitle = getNestedValue(
-            fields,
-            rootCollection.preview?.title || 'meta.title'
-          );
-          const previewImage =
-            getNestedValue(
+          {docs.map((doc, index) => {
+            const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
+            const fields = doc.fields || {};
+            const previewTitle = getNestedValue(
               fields,
-              rootCollection.preview?.image || 'meta.image'
-            ) || rootCollection.preview?.defaultImage;
-          return (
-            <ReorderableRow
-              key={doc.id}
-              enabled={reorderable}
-              draggableId={doc.id}
-              index={index}
-            >
-              <a
-                className="CollectionPage__collection__docsList__doc__image"
-                href={cmsUrl}
+              rootCollection.preview?.title || 'meta.title'
+            );
+            const previewImage =
+              getNestedValue(
+                fields,
+                rootCollection.preview?.image || 'meta.image'
+              ) || rootCollection.preview?.defaultImage;
+            return (
+              <ReorderableRow
+                key={doc.id}
+                enabled={reorderable}
+                compact
+                draggableId={doc.id}
+                index={index}
               >
-                <FilePreview
-                  file={previewImage}
-                  width={40}
-                  height={30}
-                  fit={rootCollection.preview?.fit}
-                  withPlaceholder={!previewImage?.src}
-                />
-              </a>
-              <a
-                className="CollectionPage__collection__docsList__doc__docId"
-                href={cmsUrl}
-              >
-                {doc.slug}
-              </a>
-              <a
-                className="CollectionPage__collection__docsList__doc__title"
-                href={cmsUrl}
-              >
-                {previewTitle || '[UNTITLED]'}
-              </a>
-              <div className="CollectionPage__collection__docsList__doc__badges">
-                <DocStatusBadges doc={doc} />
-              </div>
-              <div className="CollectionPage__collection__docsList__doc__timestamp">
-                {renderTimestamp(doc?.sys?.createdAt, doc?.sys?.createdBy)}
-              </div>
-              <div className="CollectionPage__collection__docsList__doc__timestamp">
-                {renderTimestamp(doc?.sys?.modifiedAt, doc?.sys?.modifiedBy)}
-              </div>
-              <div className="CollectionPage__collection__docsList__doc__controls">
-                <DocActionsMenu
-                  docId={doc.id}
-                  data={doc}
-                  onAction={onDocAction}
-                  onMoveTo={
-                    reorderable
-                      ? (position) =>
-                          handleReorder(
-                            index,
-                            position === 'top' ? 0 : docs.length - 1
-                          )
-                      : undefined
-                  }
-                  showPublish
-                />
-              </div>
-            </ReorderableRow>
-          );
-        })}
-      </ReorderableList>
+                <a
+                  className="CollectionPage__collection__docsList__doc__image box-content block w-10 shrink-0 border border-border leading-none"
+                  href={cmsUrl}
+                >
+                  <FilePreview
+                    file={previewImage}
+                    width={40}
+                    height={30}
+                    fit={rootCollection.preview?.fit}
+                    withPlaceholder={!previewImage?.src}
+                  />
+                </a>
+                <a
+                  className="CollectionPage__collection__docsList__doc__docId truncate text-sm font-medium text-fg no-underline hover:underline"
+                  href={cmsUrl}
+                >
+                  {doc.slug}
+                </a>
+                <a
+                  className="CollectionPage__collection__docsList__doc__title truncate text-sm font-semibold text-fg no-underline hover:underline"
+                  href={cmsUrl}
+                >
+                  {previewTitle || '[UNTITLED]'}
+                </a>
+                <div className="CollectionPage__collection__docsList__doc__badges flex min-w-0 items-center gap-2.5">
+                  <DocStatusBadges doc={doc} />
+                </div>
+                <div className={TIMESTAMP_CLASSES}>
+                  {renderTimestamp(doc?.sys?.createdAt, doc?.sys?.createdBy)}
+                </div>
+                <div className={TIMESTAMP_CLASSES}>
+                  {renderTimestamp(doc?.sys?.modifiedAt, doc?.sys?.modifiedBy)}
+                </div>
+                <div className="CollectionPage__collection__docsList__doc__controls flex">
+                  <DocActionsMenu
+                    docId={doc.id}
+                    data={doc}
+                    onAction={onDocAction}
+                    onMoveTo={
+                      reorderable
+                        ? (position) =>
+                            handleReorder(
+                              index,
+                              position === 'top' ? 0 : docs.length - 1
+                            )
+                        : undefined
+                    }
+                    showPublish
+                  />
+                </div>
+              </ReorderableRow>
+            );
+          })}
+        </ReorderableList>
+      </div>
     );
   }
 
@@ -971,8 +1017,8 @@ CollectionPage.DocsList = (props: {
             draggableId={doc.id}
             index={index}
           >
-            <div className="CollectionPage__collection__docsList__doc__image">
-              <a href={cmsUrl}>
+            <div className="CollectionPage__collection__docsList__doc__image hidden shrink-0 border border-border sm:block">
+              <a className="block leading-none" href={cmsUrl}>
                 <FilePreview
                   file={previewImage}
                   width={120}
@@ -983,25 +1029,25 @@ CollectionPage.DocsList = (props: {
               </a>
             </div>
             <a
-              className="CollectionPage__collection__docsList__doc__content"
+              className="CollectionPage__collection__docsList__doc__content block min-w-0 flex-1 pr-3 text-fg no-underline sm:pl-3"
               href={cmsUrl}
             >
-              <div className="CollectionPage__collection__docsList__doc__content__header">
-                <div className="CollectionPage__collection__docsList__doc__content__header__docId">
+              <div className="CollectionPage__collection__docsList__doc__content__header flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div className="CollectionPage__collection__docsList__doc__content__header__docId break-all text-base font-medium">
                   {doc.id}
                 </div>
                 <DocStatusBadges doc={doc} />
               </div>
-              <div className="CollectionPage__collection__docsList__doc__content__title">
+              <div className="CollectionPage__collection__docsList__doc__content__title line-clamp-1 text-xl font-semibold leading-normal sm:text-2xl sm:leading-9">
                 {previewTitle || '[UNTITLED]'}
               </div>
               {hasCollectionUrl && liveUrl && (
-                <div className="CollectionPage__collection__docsList__doc__content__url">
+                <div className="CollectionPage__collection__docsList__doc__content__url truncate text-sm font-medium text-muted">
                   {liveUrl}
                 </div>
               )}
             </a>
-            <div className="CollectionPage__collection__docsList__doc__controls">
+            <div className="CollectionPage__collection__docsList__doc__controls shrink-0">
               <DocActionsMenu
                 docId={doc.id}
                 data={doc}
@@ -1025,6 +1071,12 @@ CollectionPage.DocsList = (props: {
   );
 };
 
+const TIMESTAMP_CLASSES =
+  'CollectionPage__collection__docsList__doc__timestamp flex min-w-0 items-center text-sm leading-snug';
+
+const TIMESTAMP_VALUE_CLASSES =
+  'CollectionPage__collection__docsList__doc__timestamp__value block cursor-default truncate font-medium text-fg';
+
 /**
  * Renders a relative timestamp (e.g. "3d ago") for the compact docs list.
  * Returns an em dash when the timestamp is missing. A tooltip shows the full
@@ -1033,15 +1085,11 @@ CollectionPage.DocsList = (props: {
  */
 function renderTimestamp(ts: any, by?: string) {
   if (!ts || typeof ts.toMillis !== 'function') {
-    return (
-      <span className="CollectionPage__collection__docsList__doc__timestamp__value">
-        —
-      </span>
-    );
+    return <span className={TIMESTAMP_VALUE_CLASSES}>—</span>;
   }
   return (
     <UserActionTooltip message={formatDateTime(ts)} user={by}>
-      <span className="CollectionPage__collection__docsList__doc__timestamp__value">
+      <span className={TIMESTAMP_VALUE_CLASSES}>
         {getTimeAgo(ts.toMillis())}
       </span>
     </UserActionTooltip>

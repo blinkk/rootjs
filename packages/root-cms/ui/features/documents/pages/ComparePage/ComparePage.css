@@ -1,8 +1,0 @@
-.ComparePage {
-  padding: 60px;
-}
-
-.ComparePage__diff {
-  border: 1px solid var(--color-border);
-  border-top: 0; /** Added by header. */
-}

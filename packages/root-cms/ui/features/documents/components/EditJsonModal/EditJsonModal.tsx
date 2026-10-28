@@ -1,15 +1,15 @@
-import {Button, JsonInput} from '@mantine/core';
 import {
   IconArrowBackUp,
   IconClipboard,
   IconDeviceFloppy,
 } from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
 import {
   type ContextModalProps,
   useModals,
 } from '../../../../primitives/modals/ModalsProvider.js';
-import './EditJsonModal.css';
 import {deserializeDocJson} from '../../doc.js';
 
 const MODAL_ID = 'EditJsonModal';
@@ -75,28 +75,21 @@ export function EditJsonModal(
   return (
     <div className="EditJsonModal">
       <JsonInput
+        aria-label="JSON"
         value={value}
-        onChange={onChange}
+        onValueChange={onChange}
         formatOnBlur
         autosize
         minRows={4}
         maxRows={25}
       />
-      <div className="EditJsonModal__buttons">
-        <Button
-          variant="default"
-          size="xs"
-          color="dark"
-          type="button"
-          onClick={() => context.closeModal(id)}
-        >
+      <div className="EditJsonModal__buttons mt-6 flex flex-wrap justify-end gap-3">
+        <Button type="button" onClick={() => context.closeModal(id)}>
           Cancel
         </Button>
         <Button
-          leftIcon={<IconClipboard size={16} />}
-          variant="filled"
-          size="xs"
-          color="dark"
+          icon={<IconClipboard />}
+          variant="primary"
           disabled={!valid}
           type="button"
           onClick={copyToClipboard}
@@ -104,10 +97,8 @@ export function EditJsonModal(
           {copied ? 'Copied!' : 'Copy'}
         </Button>
         <Button
-          variant="default"
-          size="xs"
           type="button"
-          leftIcon={<IconArrowBackUp size={16} />}
+          icon={<IconArrowBackUp />}
           disabled={!changed}
           onClick={() => {
             setValue(initialValue);
@@ -118,10 +109,8 @@ export function EditJsonModal(
           Reset
         </Button>
         <Button
-          leftIcon={<IconDeviceFloppy size={16} />}
-          variant="filled"
-          size="xs"
-          color="blue"
+          icon={<IconDeviceFloppy />}
+          variant="primary"
           disabled={!valid || !changed}
           onClick={onSave}
         >

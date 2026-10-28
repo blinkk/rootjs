@@ -1,8 +1,8 @@
-import './SearchPanel.css';
-
-import {ActionIcon} from '@mantine/core';
 import {IconSearch, IconX} from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {debounce} from '../../../../utils/debounce.js';
 import {useCollectionSchema} from '../../../collections/useCollectionSchema.js';
 import {
@@ -14,6 +14,9 @@ import {
   searchDocFields,
 } from '../../doc-search.js';
 import {useDraftDoc, useDraftDocData} from '../../useDraftDoc.js';
+
+const EMPTY_CLASSES =
+  'SearchPanel__empty px-3 py-4 text-sm leading-normal text-muted';
 
 export interface SearchPanelProps {
   docId: string;
@@ -108,23 +111,24 @@ export function SearchPanel(props: SearchPanelProps) {
   };
 
   return (
-    <div className="SearchPanel">
-      <div className="SearchPanel__header">
-        <div className="SearchPanel__header__title">Search</div>
+    <div className="SearchPanel flex h-full flex-col overflow-hidden bg-surface">
+      <div className="SearchPanel__header flex h-control-md shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <div className="SearchPanel__header__title text-sm font-semibold">
+          Search
+        </div>
         {props.onClose && (
-          <ActionIcon size="xs" onClick={props.onClose} title="Close search">
-            <IconX size={14} />
-          </ActionIcon>
+          <IconButton size="xs" label="Close search" onClick={props.onClose}>
+            <IconX />
+          </IconButton>
         )}
       </div>
-      <div className="SearchPanel__searchInput">
-        <span className="SearchPanel__searchInput__icon">
-          <IconSearch size={14} />
-        </span>
-        <input
+      <div className="SearchPanel__searchInput shrink-0 border-b border-border px-3 py-2.5">
+        <TextInput
           ref={inputRef}
           type="text"
+          aria-label="Search field values"
           className="SearchPanel__searchInput__input"
+          leftSection={<IconSearch />}
           value={query}
           onInput={(e: any) => setQuery(e.currentTarget.value)}
           onKeyDown={(e: KeyboardEvent) => {
@@ -138,23 +142,23 @@ export function SearchPanel(props: SearchPanelProps) {
           spellcheck={false}
         />
       </div>
-      <div className="SearchPanel__body">
+      <div className="SearchPanel__body flex-1 overflow-auto py-2">
         {!searched && !query.trim() && (
-          <div className="SearchPanel__empty">
+          <div className={EMPTY_CLASSES}>
             Type a query above to search field values in this document.
           </div>
         )}
         {searched && results.length === 0 && (
-          <div className="SearchPanel__empty">
+          <div className={EMPTY_CLASSES}>
             No matches for <strong>{query}</strong>.
           </div>
         )}
         {results.length > 0 && (
           <>
-            <div className="SearchPanel__resultsCount">
+            <div className="SearchPanel__resultsCount px-3 pb-2 pt-1 text-xs uppercase tracking-wide text-muted">
               {results.length} {results.length === 1 ? 'match' : 'matches'}
             </div>
-            <ul className="SearchPanel__results">
+            <ul className="SearchPanel__results m-0 flex list-none flex-col p-0">
               {results.map((result, i) => (
                 <SearchResultItem
                   key={`${result.deepKey}:${i}`}
@@ -178,23 +182,31 @@ interface SearchResultItemProps {
 function SearchResultItem(props: SearchResultItemProps) {
   const {result} = props;
   return (
-    <li className="SearchPanel__result">
+    <li className="SearchPanel__result border-b border-border">
       <button
         type="button"
-        className="SearchPanel__result__button"
+        className="SearchPanel__result__button m-0 block w-full cursor-pointer appearance-none border-0 bg-transparent px-3 py-2.5 text-left font-sans text-sm text-inherit hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
         onClick={props.onClick}
       >
-        <div className="SearchPanel__result__label">{result.label}</div>
-        <div className="SearchPanel__result__snippet">
+        <div className="SearchPanel__result__label mb-1 break-words text-sm font-semibold text-fg">
+          {result.label}
+        </div>
+        <div className="SearchPanel__result__snippet mb-1 break-words text-sm leading-snug text-muted">
           {renderHighlightedSnippet(result.snippet, result.matches)}
         </div>
-        <div className="SearchPanel__result__meta">
-          <span className="SearchPanel__result__type">{result.fieldType}</span>
+        <div className="SearchPanel__result__meta flex items-center gap-1.5 text-xs text-muted">
+          <span className="SearchPanel__result__type font-semibold uppercase tracking-wide">
+            {result.fieldType}
+          </span>
           {result.richTextBlock && (
-            <span className="SearchPanel__result__badge">in block</span>
+            <Badge className="SearchPanel__result__badge" tone="info" size="xs">
+              in block
+            </Badge>
           )}
           {result.richTextInline && (
-            <span className="SearchPanel__result__badge">inline</span>
+            <Badge className="SearchPanel__result__badge" tone="info" size="xs">
+              inline
+            </Badge>
           )}
         </div>
       </button>
@@ -222,7 +234,13 @@ function renderHighlightedSnippet(
     parts.push({text: snippet.slice(cursor), match: false});
   }
   return parts.map((p, i) =>
-    p.match ? <mark key={i}>{p.text}</mark> : <span key={i}>{p.text}</span>
+    p.match ? (
+      <mark key={i} className="rounded-sm bg-warning-soft px-px text-inherit">
+        {p.text}
+      </mark>
+    ) : (
+      <span key={i}>{p.text}</span>
+    )
   );
 }
 
