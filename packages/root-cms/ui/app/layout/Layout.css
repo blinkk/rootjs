@@ -43,8 +43,13 @@
 
   .Layout__top {
     grid-area: top;
+    /*
+     * Content-box so the safe-area padding adds to the height. The bottom
+     * border counts towards `--cms-header-height`, so pages sized against it
+     * fit the screen exactly.
+     */
     box-sizing: content-box;
-    height: var(--cms-header-height);
+    height: calc(var(--cms-header-height) - 1px);
     padding-top: env(safe-area-inset-top);
     padding-left: max(8px, env(safe-area-inset-left));
     padding-right: max(8px, env(safe-area-inset-right));
