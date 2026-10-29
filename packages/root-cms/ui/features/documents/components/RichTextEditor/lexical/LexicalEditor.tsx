@@ -276,6 +276,11 @@ function Editor(props: EditorProps) {
   const [isLinkEditMode, setIsLinkEditMode] = useState(false);
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLElement | null>(null);
+  // Picked once, so the visible text and `aria-placeholder` match.
+  const placeholder = useMemo(
+    () => props.placeholder || getRandPlaceholder(),
+    []
+  );
   const blockComponentsMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
     if (props.variant !== 'comment') {
@@ -628,7 +633,8 @@ function Editor(props: EditorProps) {
               <div className="LexicalEditor__root" ref={onRef}>
                 <ContentEditable
                   className="LexicalEditor__editor Prose"
-                  placeholder={<Placeholder placeholder={props.placeholder} />}
+                  aria-placeholder={placeholder}
+                  placeholder={<Placeholder placeholder={placeholder} />}
                 />
               </div>
             </div>
@@ -712,13 +718,9 @@ function getRandPlaceholder() {
 }
 
 interface PlaceholderProps {
-  placeholder?: string;
+  placeholder: string;
 }
 
 function Placeholder(props: PlaceholderProps) {
-  const placeholder = useMemo(
-    () => props.placeholder || getRandPlaceholder(),
-    []
-  );
-  return <div className="LexicalEditor__placeholder">{placeholder}</div>;
+  return <div className="LexicalEditor__placeholder">{props.placeholder}</div>;
 }

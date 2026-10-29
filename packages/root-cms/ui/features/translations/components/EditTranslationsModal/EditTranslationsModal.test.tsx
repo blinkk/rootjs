@@ -1,6 +1,10 @@
 import {render, fireEvent, screen, cleanup} from '@testing-library/preact';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import {EditTranslationsModal} from './EditTranslationsModal.js';
+import type {ModalsContextProps} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  EditTranslationsModal,
+  type EditTranslationsModalProps,
+} from './EditTranslationsModal.js';
 
 const mockCloseModal = vi.fn();
 const mockLoadTranslations = vi.fn();
@@ -60,9 +64,9 @@ describe('EditTranslationsModal', () => {
       docId: 'Pages/test',
       strings: ['Hello World', 'Goodbye'],
       field: {id: 'title', deepKey: 'fields.title'},
-      draft: mockDraft,
+      draft: mockDraft as unknown as EditTranslationsModalProps['draft'],
     },
-    context: {closeModal: mockCloseModal},
+    context: {closeModal: mockCloseModal} as unknown as ModalsContextProps,
     id: 'modal-id',
   };
 

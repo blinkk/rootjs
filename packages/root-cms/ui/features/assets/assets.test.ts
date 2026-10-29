@@ -259,7 +259,7 @@ describe('buildSyncedFieldValue', () => {
     const previousFile = {
       src: 'https://example.com/old.png',
       alt: 'Old alt',
-      canvasBgColor: 'light',
+      canvasBgColor: 'light' as const,
     };
     const value = buildSyncedFieldValue(testAsset(), existing, previousFile);
     expect(value.canvasBgColor).toEqual('dark');

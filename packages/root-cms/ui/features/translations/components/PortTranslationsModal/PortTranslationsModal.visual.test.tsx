@@ -10,6 +10,7 @@ import {
   ModalsProvider,
 } from '../../../../primitives/modals/ModalsProvider.js';
 import {
+  PortTranslationsCandidate,
   PortTranslationsModal,
   PortTranslationsModalProps,
 } from './PortTranslationsModal.js';
@@ -55,7 +56,7 @@ function renderModal(overrides?: Partial<PortTranslationsModalProps>) {
       targetSource: NEW_SOURCE,
       targetTranslations: {fr: '© 2026 Google LLC. Tous droits réservés.'},
       languages: ['de', 'es', 'fr', 'ja'],
-      loadCandidates: async () => [
+      loadCandidates: async (): Promise<PortTranslationsCandidate[]> => [
         {source: 'Contact us', translations: {de: 'Kontakt'}},
         {
           source: OLD_SOURCE,

@@ -153,7 +153,7 @@ describe('paragraph sizes', () => {
       {discrete: true}
     );
 
-    let result: RichTextData | null = null;
+    let result = null as RichTextData | null;
     editor.read(() => {
       result = convertToRichTextData();
     });
@@ -179,7 +179,7 @@ describe('paragraph sizes', () => {
     const json = JSON.parse(JSON.stringify(editor.getEditorState().toJSON()));
     editor.setEditorState(editor.parseEditorState(json));
 
-    let result: RichTextData | null = null;
+    let result = null as RichTextData | null;
     editor.read(() => {
       result = convertToRichTextData();
     });

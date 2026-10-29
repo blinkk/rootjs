@@ -427,14 +427,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const localeTranslations = useMemo(() => {
     if (!selectedLocale) return {};
     const result: Record<string, string> = {};
-    Object.values(translationsMap).forEach(
-      (translation: Record<string, string>) => {
-        result[translation.source] = getTranslationForLanguage(
-          translation,
-          selectedLocale
-        );
-      }
-    );
+    Object.values(translationsMap).forEach((translation) => {
+      result[translation.source] = getTranslationForLanguage(
+        translation,
+        selectedLocale
+      );
+    });
     return result;
   }, [selectedLocale, translationsMap]);
   const gapiClient = useGapiClient();
@@ -733,8 +731,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
-    Object.values(translationsMap).forEach((row: Record<string, string>) => {
-      results[row.source] = row;
+    Object.values(translationsMap).forEach((row) => {
+      results[row.source] = row as Record<string, string>;
     });
     return results;
   }, [translationsMap]);

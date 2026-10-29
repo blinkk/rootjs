@@ -191,9 +191,11 @@ export function emailNotifications<T = any>(
 
       // Build the template data from the action log data object, optionally
       // transformed via `transformData()`.
-      const data = options.transformData
-        ? await options.transformData(action, ctx)
-        : action;
+      const data = (
+        options.transformData
+          ? await options.transformData(action, ctx)
+          : action
+      ) as T;
 
       // Render the email content.
       let email: EmailNotificationTemplate;

@@ -224,7 +224,12 @@ describe('extract', () => {
       const field: schema.Field = {
         type: 'array',
         id: 'items',
-        of: {type: 'string', translate: true},
+        // Arrays of strings aren't in the schema types, but extraction
+        // handles them.
+        of: {
+          type: 'string',
+          translate: true,
+        } as unknown as schema.ObjectLikeField,
       };
       const value = {_array: ['id1', 'id2'], id1: 'Item 1', id2: 'Item 2'};
       const stringsWithMeta = new Map<string, {description?: string}>();

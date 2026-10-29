@@ -48,6 +48,7 @@ import {
   isLocaleExcludedFromTranslations,
   loadTranslations,
   toTranslationLanguages,
+  type TranslationsMap,
 } from '../../l10n.js';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
@@ -61,9 +62,7 @@ interface TableRowData {
 
 export function TranslationsTable() {
   const [rowData, setRowData] = useState<TableRowData[]>([]);
-  const [translationsMap, setTranslationsMap] = useState<
-    Record<string, Record<string, string>>
-  >({});
+  const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
 
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   // Columns are "translation languages", which may be shared by multiple
@@ -557,7 +556,6 @@ export function TranslationsTable() {
         </div>
       ) : (
         <div className="TranslationsTable__grid TranslationsTable__viewport ag-theme-alpine w-full">
-          {/* @ts-expect-error - AgGridReact not compatible with Preact types. */}
           <AgGridReact
             rowData={rowData}
             columnDefs={columnDefs}

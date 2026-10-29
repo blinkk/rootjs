@@ -4,7 +4,7 @@ import '../../../../../../styles/global.css';
 import '../../../../../../styles/theme.css';
 
 import {cleanup, render, screen} from '@testing-library/preact';
-import userEvent from '@testing-library/user-event';
+import {userEvent} from '@testing-library/user-event';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {DeeplinkProvider} from '../../../../useDeeplink.js';
 import {LexicalEditor} from '../LexicalEditor.js';

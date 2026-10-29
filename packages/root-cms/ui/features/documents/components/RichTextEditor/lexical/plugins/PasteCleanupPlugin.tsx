@@ -22,8 +22,10 @@ export function PasteCleanupPlugin() {
   useEffect(() => {
     return editor.registerCommand(
       PASTE_COMMAND,
-      (event: ClipboardEvent) => {
-        const {clipboardData} = event;
+      (event) => {
+        // `PASTE_COMMAND` can also carry an `InputEvent` or `KeyboardEvent`.
+        const clipboardData =
+          'clipboardData' in event ? event.clipboardData : null;
         if (!clipboardData) {
           return false;
         }

@@ -10,6 +10,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "pretty": true,
+    "skipLibCheck": true,
     "sourceMap": false,
     "strict": true,
     "target": "es2020",
@@ -28,7 +29,13 @@
     "resolveJsonModule": true,
     "moduleResolution": "nodenext",
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "paths": {
+      "react": ["../node_modules/preact/compat/src/index.d.ts"],
+      "react/jsx-runtime": ["../node_modules/preact/jsx-runtime/src/index.d.ts"],
+      "react-dom": ["../node_modules/preact/compat/src/index.d.ts"],
+      "react-dom/*": ["../node_modules/preact/compat/*"]
+    }
   },
   "include": [
     "*.ts",

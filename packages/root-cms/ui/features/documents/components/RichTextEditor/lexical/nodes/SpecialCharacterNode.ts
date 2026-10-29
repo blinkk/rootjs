@@ -47,11 +47,7 @@ export class SpecialCharacterNode extends TextNode {
     return dom;
   }
 
-  updateDOM(
-    prevNode: SpecialCharacterNode,
-    dom: HTMLElement,
-    config: EditorConfig
-  ): boolean {
+  updateDOM(prevNode: this, dom: HTMLElement, config: EditorConfig): boolean {
     const updated = super.updateDOM(prevNode, dom, config);
     addClassNamesToElement(dom, 'SpecialCharacterNode');
     return updated;

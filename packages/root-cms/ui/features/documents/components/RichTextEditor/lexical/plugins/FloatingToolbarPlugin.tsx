@@ -116,6 +116,7 @@ function FloatingToolbar(props: FloatingToolbarProps) {
         document.removeEventListener('mouseup', mouseUpListener);
       };
     }
+    return undefined;
   }, [popupCharStylesEditorRef]);
 
   const $updateTextFormatFloatingToolbar = useCallback(() => {

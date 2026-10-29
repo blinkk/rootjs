@@ -1,8 +1,8 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 const {updateDocMock, onSnapshotMock} = vi.hoisted(() => ({
-  updateDocMock: vi.fn(async () => {}),
-  onSnapshotMock: vi.fn(() => () => {}),
+  updateDocMock: vi.fn<(...args: unknown[]) => Promise<void>>(async () => {}),
+  onSnapshotMock: vi.fn<(...args: unknown[]) => () => void>(() => () => {}),
 }));
 
 vi.mock('firebase/firestore', () => {

@@ -83,7 +83,8 @@ export function testFieldEmpty(
         return true;
       }
       let sub: schema.Schema | undefined;
-      const fieldTypes = field.types || [];
+      // `schema.glob()` patterns are resolved to schemas at project load.
+      const fieldTypes = Array.isArray(field.types) ? field.types : [];
       if (typeof fieldTypes[0] === 'string') {
         if ((fieldTypes as string[]).includes(value._type)) {
           sub = types[value._type];

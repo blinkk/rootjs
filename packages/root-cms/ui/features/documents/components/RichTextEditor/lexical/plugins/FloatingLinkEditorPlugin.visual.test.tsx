@@ -5,7 +5,7 @@ import '../../../../../../styles/theme.css';
 import {cleanup, render} from '@testing-library/preact';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
-import {RichTextData} from '../../../../shared/richtext.js';
+import {RichTextData} from '../../../../../../../shared/richtext.js';
 import {LexicalEditor} from '../LexicalEditor.js';
 
 // Mock the context.

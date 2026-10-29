@@ -3,7 +3,7 @@ import '../../../styles/global.css';
 import '../../../styles/theme.css';
 
 import {cleanup, render, screen, waitFor} from '@testing-library/preact';
-import userEvent from '@testing-library/user-event';
+import {userEvent} from '@testing-library/user-event';
 import {
   afterAll,
   afterEach,

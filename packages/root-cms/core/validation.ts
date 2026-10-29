@@ -335,7 +335,9 @@ export function validateValue(
       const typeMap = new Map<string, Schema>();
       const typeNames: string[] = [];
 
-      for (const type of oneOfField.types) {
+      // `schema.glob()` patterns are resolved to schemas at project load.
+      const types = Array.isArray(oneOfField.types) ? oneOfField.types : [];
+      for (const type of types) {
         if (typeof type === 'string') {
           // Type references are not fully supported for validation here without lookup.
           // Instead, just store the name.

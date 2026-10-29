@@ -152,7 +152,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
         autoClose: false,
         disallowClose: true,
       });
-      const changes: CsvTranslation[] = Object.values(changesMap);
+      const changes = Object.values(changesMap) as CsvTranslation[];
       console.log(changes);
       await cmsDocImportTranslations(docId, changes);
       updateNotification({
@@ -333,11 +333,9 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
   );
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
-    Object.values(props.translationsMap).forEach(
-      (row: Record<string, string>) => {
-        results[row.source] = row;
-      }
-    );
+    Object.values(props.translationsMap).forEach((row) => {
+      results[row.source] = row as Record<string, string>;
+    });
     return results;
   }, [props.translationsMap]);
 

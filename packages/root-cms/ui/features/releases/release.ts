@@ -158,7 +158,7 @@ function updateReleaseInCache(id: string, updates: Partial<Release>) {
       const updated: Release = {...release, ...updates};
       for (const key of Object.keys(updates)) {
         if (updates[key as keyof Release] === undefined) {
-          delete (updated as Record<string, unknown>)[key];
+          delete (updated as Partial<Release>)[key as keyof Release];
         }
       }
       return updated;
@@ -199,7 +199,7 @@ export async function addRelease(id: string, release: Partial<Release>) {
     ...release,
     id: id,
     createdAt: Timestamp.now(),
-    createdBy: window.firebase.user.email,
+    createdBy: window.firebase.user.email ?? undefined,
   });
   logAction('release.create', {metadata: {releaseId: id}});
 }
@@ -265,7 +265,7 @@ export async function archiveRelease(id: string) {
   });
   updateReleaseInCache(id, {
     archivedAt: Timestamp.now(),
-    archivedBy: window.firebase.user.email,
+    archivedBy: window.firebase.user.email ?? undefined,
     scheduledAt: undefined,
     scheduledBy: undefined,
   });
@@ -346,7 +346,7 @@ export async function publishRelease(
   await batch.commit();
   updateReleaseInCache(id, {
     publishedAt: Timestamp.now(),
-    publishedBy: window.firebase.user.email,
+    publishedBy: window.firebase.user.email ?? undefined,
     scheduledAt: undefined,
     scheduledBy: undefined,
     rolledBackAt: undefined,
@@ -419,7 +419,7 @@ export async function rollbackRelease(id: string, options?: {force?: boolean}) {
     publishedAt: undefined,
     publishedBy: undefined,
     rolledBackAt: Timestamp.now(),
-    rolledBackBy: window.firebase.user.email,
+    rolledBackBy: window.firebase.user.email ?? undefined,
   });
   console.log(`rolled back release: ${id}`);
 
@@ -471,7 +471,7 @@ export async function scheduleRelease(
   });
   updateReleaseInCache(id, {
     scheduledAt: timestamp,
-    scheduledBy: window.firebase.user.email,
+    scheduledBy: window.firebase.user.email ?? undefined,
   });
   const metadata: Record<string, unknown> = {
     releaseId: id,

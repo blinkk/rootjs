@@ -65,7 +65,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function fromBase64(str: string): Uint8Array {
+function fromBase64(str: string): Uint8Array<ArrayBuffer> {
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -76,7 +76,7 @@ function fromBase64(str: string): Uint8Array {
 
 async function pbkdf2Sha256(
   password: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number
 ): Promise<Uint8Array> {
   const subtle = getSubtleCrypto();
@@ -179,7 +179,7 @@ export async function verifyPassword(
   if (!Number.isInteger(stored.iterations) || stored.iterations < 1) {
     return false;
   }
-  let salt: Uint8Array;
+  let salt: Uint8Array<ArrayBuffer>;
   let expected: Uint8Array;
   try {
     salt = fromBase64(stored.salt);

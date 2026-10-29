@@ -1637,7 +1637,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // stylesheet behind the same login as the page that links it.
       server.get(
         `${THEMES_URL_PREFIX}:file`,
-        async (req: Request, res: Response) => {
+        async (expressReq, expressRes) => {
+          // Root only types `server.use()` handlers with its own request and
+          // response types, so `get()` handlers cast to them.
+          const req = expressReq as unknown as Request;
+          const res = expressRes as unknown as Response;
           if (!req.user) {
             redirectToLogin(req, res);
             return;

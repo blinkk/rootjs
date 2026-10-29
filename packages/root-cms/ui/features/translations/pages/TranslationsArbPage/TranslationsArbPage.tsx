@@ -88,8 +88,8 @@ TranslationsArbPage.RequestForm = () => {
           meta = {
             context: docId,
           };
-          if (metadata.notes) {
-            meta.description = metadata.notes;
+          if (metadata.description) {
+            meta.description = metadata.description;
           }
         }
         arb.add(hash, source, meta);

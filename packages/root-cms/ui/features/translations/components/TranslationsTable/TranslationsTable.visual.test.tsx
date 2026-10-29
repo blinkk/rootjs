@@ -203,7 +203,7 @@ describe('TranslationsTable', () => {
       .toBeVisible();
 
     // Enable "Exact Matches Only".
-    const menuButton = element.locator('button[aria-haspopup="menu"]');
+    const menuButton = element.getByRole('button', {name: 'Table options'});
     await menuButton.click();
 
     await expect.element(page.getByText('Exact Matches Only')).toBeVisible();

@@ -36,7 +36,11 @@
       border-color: var(--cms-color-violet);
     }
     50% {
-      border-color: color-mix(in srgb, var(--cms-color-violet) 40%, var(--cms-color-surface));
+      border-color: color-mix(
+        in srgb,
+        var(--cms-color-violet) 40%,
+        var(--cms-color-surface)
+      );
     }
   }
 }

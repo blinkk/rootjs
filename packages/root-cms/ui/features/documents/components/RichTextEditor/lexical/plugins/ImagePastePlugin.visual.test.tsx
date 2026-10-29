@@ -3,7 +3,7 @@ import '../../../../../../styles/global.css';
 import '../../../../../../styles/theme.css';
 
 import {render, screen} from '@testing-library/preact';
-import userEvent from '@testing-library/user-event';
+import {userEvent} from '@testing-library/user-event';
 import {describe, it, expect, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {LexicalEditor} from '../LexicalEditor.js';
