@@ -74,6 +74,12 @@ const CODE_CLASSES = 'rounded-sm bg-chip px-1 py-px font-mono text-sm';
 const CELL_CLASSES =
   'min-w-48 border border-solid border-border p-0 align-top md:min-w-60';
 
+/**
+ * Sizes the source column (rather than capping its contents), so the port
+ * button sits at the column's right edge.
+ */
+const SOURCE_CELL_WIDTH_CLASSES = 'md:w-100 md:max-w-100';
+
 function toMillis(ts?: Timestamp) {
   return ts?.toMillis ? ts.toMillis() : 0;
 }
@@ -383,7 +389,7 @@ export function TranslationsManagerEditPage(
           <div className="TranslationsManagerEditPage__footerButtons ml-auto flex items-center gap-2.5">
             <Button
               variant="primary"
-              size="md"
+              size="sm"
               disabled={!hasChanges}
               loading={saving}
               onClick={() => onSave()}
@@ -391,7 +397,7 @@ export function TranslationsManagerEditPage(
               Save
             </Button>
             <Button
-              size="md"
+              size="sm"
               icon={<IconRocket size={16} />}
               disabled={loading || !docData || hasChanges || !status}
               loading={publishing}
@@ -421,7 +427,8 @@ TranslationsManagerEditPage.Table = (props: {
             <th
               className={cn(
                 'TranslationsManagerEditPage__tableSourceCellHeader',
-                CELL_CLASSES
+                CELL_CLASSES,
+                SOURCE_CELL_WIDTH_CLASSES
               )}
             >
               <div className="TranslationsManagerEditPage__tableHeaderLabel px-3 py-2 text-left text-sm font-semibold">
@@ -446,10 +453,11 @@ TranslationsManagerEditPage.Table = (props: {
                 className={cn(
                   'TranslationsManagerEditPage__tableSourceCellWrap',
                   CELL_CLASSES,
+                  SOURCE_CELL_WIDTH_CLASSES,
                   'h-px bg-surface-hover'
                 )}
               >
-                <div className="TranslationsManagerEditPage__tableSourceCell max-w-100 whitespace-pre-wrap break-words px-3 py-2 text-sm leading-normal">
+                <div className="TranslationsManagerEditPage__tableSourceCell whitespace-pre-wrap break-words px-3 py-2 text-sm leading-normal">
                   {!row.unused && (
                     <IconButton
                       className="TranslationsManagerEditPage__tablePortButton float-right -mr-1.5 -mt-0.5 ml-2 opacity-80 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
