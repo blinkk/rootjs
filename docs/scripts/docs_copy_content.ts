@@ -253,7 +253,7 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Lists theming the CMS among the things an agent can do with the installed skills.',
+  note: 'Lists theming the CMS and setting up email notifications among the things an agent can do with the installed skills.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
@@ -508,7 +508,8 @@ pnpm exec root secrets sync`
                 'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
                 `Theme the CMS to match your brand (see ${a('/docs/cms/customization/#branding', 'Branding and themes')}).`,
-                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`
+                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`,
+                `Set up email notifications, including the email service they're sent with (see ${a('/docs/cms/notifications/#email-delivery', 'Delivering email')}).`
               ),
               p(
                 `The skills install to an existing agent skills folder, such as ${c('.claude/skills')}, or to ${c('.agent/skills')} if there isn't one. Re-run the command with ${c('--force')} after upgrading ${c('@blinkk/root-cms')} to pick up new versions.`
