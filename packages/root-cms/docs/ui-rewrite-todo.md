@@ -9,6 +9,10 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
       Sheet" and "Export to Sheet" buttons (shown when a doc has a linked
       sheet) have no click handlers. Needs the import/export flow wired up, or
       the buttons removed.
+- [ ] `features/releases/pages/ReleasesPage`: at tablet widths (768px) the
+      Release column gets squeezed by Contents, so titles wrap word by word
+      and ids break mid-word. Give the release cell a minimum width (or cap
+      Contents) from `md` up.
 
 ## Phase 4 (document editor)
 

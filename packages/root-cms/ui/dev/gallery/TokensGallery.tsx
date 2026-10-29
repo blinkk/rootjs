@@ -12,7 +12,7 @@ const SURFACES = [
 const TEXT = ['fg', 'strong', 'muted', 'subtle', 'link'];
 const ACTIONS = ['primary', 'primary-hover', 'accent', 'focus'];
 const STATUSES = ['info', 'success', 'warning', 'danger'];
-const TYPE_SIZES = ['xs', 'sm', 'base', 'lg', 'xl', '2xl'];
+const TYPE_SIZES = ['xs', 'sm', 'md', 'base', 'lg', 'xl', '2xl'];
 const RADII = ['sm', 'md', 'lg', 'xl', 'full'];
 const SHADOWS = ['sm', 'md', 'lg'];
 
@@ -45,6 +45,7 @@ const STATUS: Record<string, string> = {
 const TYPE: Record<string, string> = {
   xs: 'text-xs',
   sm: 'text-sm',
+  md: 'text-md',
   base: 'text-base',
   lg: 'text-lg',
   xl: 'text-xl',

@@ -527,9 +527,17 @@ overflowing the mobile header, and array item headers sized without
       defined and read, and render as intended. Uploading the re-rendered
       screenshots (`pnpm screenshots:publish`) and publishing the docs that
       use them is left for a maintainer, since it writes to the live CMS.
-- [ ] 5.5 Report bundle size before/after, and do a full snapshot sweep at all
+- [x] 5.5 Report bundle size before/after, and do a full snapshot sweep at all
       widths. Changeset (patch, per repo rules, or flag this as the headline of
       a minor).
+      Done: `dist/ui` against `main`, raw / gzip. Initial JS (`ui.js` and its
+      static imports) 4,029 / 1,121 KB → 3,900 / 1,104 KB (−1.5% gzip); all
+      JS 5,312 / 1,489 KB → 5,242 / 1,492 KB (+0.2%); `ui.css` 437 / 72 KB →
+      318 / 56 KB (−22%), and Mantine's runtime CSS-in-JS (emotion) is gone.
+      Every route in `ui-snapshots.routes.json` was captured at 375, 768 and
+      1280 (`--label final`, compared with `baseline`): no horizontal page
+      scroll or page errors at 375 or 768, and no regressions found. The
+      changeset is a patch, per repo rules.
 
 ## How subagents are used
 
