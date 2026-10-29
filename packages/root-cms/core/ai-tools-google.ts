@@ -9,14 +9,14 @@
  * Like the CMS read tools in `ai-tools.ts`, the tools carry an `execute` that
  * delegates to a pluggable backend. The browser supplies one that calls the
  * Drive/Sheets REST APIs with the signed-in user's own OAuth token (see
- * `ui/components/RootAIChat/clientGoogleTools.ts`), so a user can only read
+ * `ui/features/ai/components/RootAIChat/clientGoogleTools.ts`), so a user can only read
  * files they personally have access to.
  *
  * The read tools carry an `execute`. The write tools (`createGoogleWriteTools`)
  * are schema-only, like the CMS write tools: they surface to the chat's
  * `onToolCall` handler, which previews the change and asks the user to approve
  * it before anything is written (see
- * `ui/components/RootAIChat/googleToolHandlers.ts`). Nothing here creates,
+ * `ui/features/ai/components/RootAIChat/googleToolHandlers.ts`). Nothing here creates,
  * deletes or shares Google files.
  *
  * Browser-import safety: this module is imported by the browser bundle, so it

@@ -1,0 +1,6 @@
+@layer components {
+  /* Stops opening a <details> from pushing the editor's content upwards. */
+  .EmbeddedDocumentPage__editor {
+    overflow-anchor: none;
+  }
+}

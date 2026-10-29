@@ -1,0 +1,197 @@
+/*
+ * Tailwind entry point, compiled by `pnpm build:ui:css` into
+ * `tailwind.out.css` (imported first by `main.tsx`, so the layer order below
+ * is declared before any other CSS).
+ *
+ * Cascade, lowest to highest priority:
+ *   theme       Tailwind's design tokens, mapped onto `--cms-*` (theme.css).
+ *   base        Element defaults (global.css).
+ *   components  Component-level rules that utilities can't express.
+ *   utilities   Tailwind utility classes.
+ *   (unlayered) Legacy component CSS, project themes and custom CSS.
+ *
+ * Project themes load unlayered, so they win over every utility without
+ * needing extra specificity.
+ *
+ * Preflight (Tailwind's reset) is in the `base` layer, under global.css's
+ * element defaults: margins are 0, borders are `0 solid` (so `border` alone
+ * draws one), lists and headings are unstyled, and buttons and inputs
+ * inherit their font. Rich text that needs native defaults restores them in
+ * its own CSS.
+ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source '../**/*.{ts,tsx}';
+
+/*
+ * Design tokens. Tailwind's default palette, radii, fonts, type sizes and
+ * shadows are cleared, so only the CMS's tokens exist as utilities (e.g.
+ * `bg-surface`, `text-muted`, `border-border`, `rounded-md`, `text-sm`,
+ * `shadow-md`). `inline` makes each utility read the `--cms-*` property
+ * directly, so a theme that changes one of them restyles every utility
+ * that uses it. Spacing keeps Tailwind's 4px scale (`p-2` = 8px), and the
+ * breakpoints keep Tailwind's defaults (`sm` 640, `md` 768, `lg` 1024).
+ */
+@theme inline {
+  --color-*: initial;
+  --color-page: var(--cms-color-page);
+  --color-surface: var(--cms-color-surface);
+  --color-surface-subtle: var(--cms-color-surface-subtle);
+  --color-surface-hover: var(--cms-color-surface-hover);
+  --color-surface-active: var(--cms-color-surface-active);
+  --color-chip: var(--cms-color-chip);
+  --color-overlay: var(--cms-color-overlay);
+  --color-media: var(--cms-color-media);
+  --color-border: var(--cms-color-border);
+  --color-border-strong: var(--cms-color-border-strong);
+  --color-fg: var(--cms-color-text);
+  --color-strong: var(--cms-color-text-strong);
+  --color-muted: var(--cms-color-text-muted);
+  --color-subtle: var(--cms-color-text-subtle);
+  --color-inverse: var(--cms-color-text-inverse);
+  --color-link: var(--cms-color-link);
+  --color-primary: var(--cms-color-primary);
+  --color-primary-hover: var(--cms-color-primary-hover);
+  --color-on-primary: var(--cms-color-on-primary);
+  --color-accent: var(--cms-accent);
+  --color-focus: var(--cms-color-focus);
+  --color-input-border: var(--cms-input-border);
+  --color-input-fg: var(--cms-input-text);
+  --color-input-placeholder: var(--cms-input-placeholder);
+  --color-input-chip: var(--cms-input-chip);
+  --color-input-chip-fg: var(--cms-input-chip-text);
+  --color-info: var(--cms-color-info);
+  --color-info-soft: var(--cms-color-info-soft);
+  --color-info-line: var(--cms-color-info-line);
+  --color-success: var(--cms-color-success);
+  --color-success-soft: var(--cms-color-success-soft);
+  --color-success-line: var(--cms-color-success-line);
+  --color-warning: var(--cms-color-warning);
+  --color-warning-soft: var(--cms-color-warning-soft);
+  --color-warning-line: var(--cms-color-warning-line);
+  --color-danger: var(--cms-color-danger);
+  --color-danger-soft: var(--cms-color-danger-soft);
+  --color-danger-line: var(--cms-color-danger-line);
+
+  /* Colored buttons (`Button` and `IconButton` variants only). */
+  --color-button-blue: var(--cms-button-blue);
+  --color-button-blue-hover: var(--cms-button-blue-hover);
+  --color-button-blue-soft: var(--cms-button-blue-soft);
+  --color-button-blue-soft-hover: var(--cms-button-blue-soft-hover);
+  --color-button-green: var(--cms-button-green);
+  --color-button-green-hover: var(--cms-button-green-hover);
+  --color-button-red: var(--cms-button-red);
+  --color-button-red-hover: var(--cms-button-red-hover);
+  --color-button-red-soft: var(--cms-button-red-soft);
+
+  /* Control tracks (`SegmentedControl`). */
+  --color-track: var(--cms-color-track);
+  --color-track-border: var(--cms-color-track-border);
+
+  /* Task status tints (`features/tasks`). */
+  --color-task-new: var(--cms-task-status-new);
+  --color-task-in-progress: var(--cms-task-status-in-progress);
+  --color-task-in-review: var(--cms-task-status-in-review);
+  --color-task-closed: var(--cms-task-status-closed);
+
+  --font-*: initial;
+  --font-sans: var(--cms-font-sans);
+  --font-mono: var(--cms-font-mono);
+  /* Preflight's fonts (the page, and `code`/`pre`/`kbd`). */
+  --default-font-family: var(--cms-font-sans);
+  --default-mono-font-family: var(--cms-font-mono);
+
+  --text-*: initial;
+  --text-2xs: var(--cms-text-2xs);
+  --text-2xs--line-height: 1.4;
+  --text-xs: var(--cms-text-xs);
+  --text-xs--line-height: 1.4;
+  --text-sm: var(--cms-text-sm);
+  --text-sm--line-height: 1.5;
+  --text-md: var(--cms-text-md);
+  --text-md--line-height: 1.5;
+  --text-base: var(--cms-text-base);
+  --text-base--line-height: 1.5;
+  --text-lg: var(--cms-text-lg);
+  --text-lg--line-height: 1.4;
+  --text-xl: var(--cms-text-xl);
+  --text-xl--line-height: 1.3;
+  --text-2xl: var(--cms-text-2xl);
+  --text-2xl--line-height: 1.2;
+
+  --radius-*: initial;
+  --radius-sm: var(--cms-radius-sm);
+  --radius-md: var(--cms-radius-md);
+  --radius-lg: var(--cms-radius-lg);
+  --radius-xl: var(--cms-radius-xl);
+
+  --spacing-control-xs: var(--cms-control-height-xs);
+  --spacing-control-sm: var(--cms-control-height-sm);
+  --spacing-control-md: var(--cms-control-height-md);
+
+  --shadow-*: initial;
+  --shadow-xs: var(--cms-shadow-xs);
+  --shadow-sm: var(--cms-shadow-sm);
+  --shadow-md: var(--cms-shadow-md);
+  --shadow-lg: var(--cms-shadow-lg);
+}
+
+/*
+ * AI (violet): `text-violet`, `bg-violet`, `bg-violet-soft`,
+ * `border-violet`, … for AI features and AI-generated content, and
+ * `text-violet-strong` for violet text on `bg-violet-soft`.
+ */
+@theme inline {
+  --color-violet: var(--cms-color-violet);
+  --color-violet-soft: var(--cms-color-violet-soft);
+  --color-violet-strong: var(--cms-color-violet-strong);
+}
+
+/*
+ * Page padding: `p-page` is the space around a page's content, 16px below
+ * `md` and 32px from `md` up (`--cms-page-padding-mobile` and
+ * `--cms-page-padding`). `px-page`, `py-page`, `pt-page` and `pb-page` set
+ * one axis or side.
+ */
+@utility p-page {
+  padding: var(--cms-page-padding-mobile);
+  @variant md {
+    padding: var(--cms-page-padding);
+  }
+}
+@utility px-page {
+  padding-inline: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-inline: var(--cms-page-padding);
+  }
+}
+@utility py-page {
+  padding-block: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-block: var(--cms-page-padding);
+  }
+}
+@utility pt-page {
+  padding-top: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-top: var(--cms-page-padding);
+  }
+}
+@utility pb-page {
+  padding-bottom: var(--cms-page-padding-mobile);
+  @variant md {
+    padding-bottom: var(--cms-page-padding);
+  }
+}
+
+/*
+ * `current:` styles the current item in a nav, tree or list: an element
+ * with `aria-current` set to anything but `false` (`page`, `true`, `step`,
+ * …), e.g. `current:bg-surface-active`.
+ */
+@custom-variant current (&[aria-current]:not([aria-current='false']));

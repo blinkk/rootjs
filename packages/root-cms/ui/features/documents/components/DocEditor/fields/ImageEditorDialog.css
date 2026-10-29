@@ -1,0 +1,200 @@
+/*
+ * The crop box, its handles and the shade around it draw over the photo
+ * being edited, not over the UI, so they stay white and black whatever the
+ * theme.
+ */
+@layer components {
+  /* Darkens the area outside of the crop box. */
+  .ImageEditorDialog__Shade__Window {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  }
+
+  .ImageEditorDialog__Crop {
+    outline: 1px solid rgba(255, 255, 255, 0.9);
+  }
+
+  .ImageEditorDialog__Crop:focus-visible {
+    outline: 2px solid var(--cms-color-focus);
+  }
+
+  /* Rule-of-thirds grid, shown while dragging. */
+  .ImageEditorDialog__Crop__Grid {
+    background-image:
+      linear-gradient(
+        to right,
+        transparent calc(33.333% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(33.333% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(33.333% + 0.5px),
+        transparent calc(33.333% + 0.5px),
+        transparent calc(66.666% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(66.666% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(66.666% + 0.5px),
+        transparent calc(66.666% + 0.5px)
+      ),
+      linear-gradient(
+        to bottom,
+        transparent calc(33.333% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(33.333% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(33.333% + 0.5px),
+        transparent calc(33.333% + 0.5px),
+        transparent calc(66.666% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(66.666% - 0.5px),
+        rgba(255, 255, 255, 0.5) calc(66.666% + 0.5px),
+        transparent calc(66.666% + 0.5px)
+      );
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .ImageEditorDialog__Crop--dragging .ImageEditorDialog__Crop__Grid {
+    opacity: 1;
+  }
+
+  .ImageEditorDialog__Crop__Handle {
+    --handle-hit-size: 16px;
+    --handle-corner-size: 20px;
+    --handle-thickness: 4px;
+  }
+
+  /* Bigger hit areas on touch screens. */
+  @media (pointer: coarse) {
+    .ImageEditorDialog__Crop__Handle {
+      --handle-hit-size: 32px;
+      --handle-corner-size: 32px;
+    }
+  }
+
+  /* Edge handles span the full edge of the crop box. */
+  .ImageEditorDialog__Crop__Handle--n,
+  .ImageEditorDialog__Crop__Handle--s {
+    cursor: ns-resize;
+    height: var(--handle-hit-size);
+    left: 0;
+    right: 0;
+  }
+
+  .ImageEditorDialog__Crop__Handle--n {
+    top: calc(var(--handle-hit-size) / -2);
+  }
+
+  .ImageEditorDialog__Crop__Handle--s {
+    bottom: calc(var(--handle-hit-size) / -2);
+  }
+
+  .ImageEditorDialog__Crop__Handle--e,
+  .ImageEditorDialog__Crop__Handle--w {
+    bottom: 0;
+    cursor: ew-resize;
+    top: 0;
+    width: var(--handle-hit-size);
+  }
+
+  .ImageEditorDialog__Crop__Handle--e {
+    right: calc(var(--handle-hit-size) / -2);
+  }
+
+  .ImageEditorDialog__Crop__Handle--w {
+    left: calc(var(--handle-hit-size) / -2);
+  }
+
+  /* Short bars in the middle of each edge. */
+  .ImageEditorDialog__Crop__Handle--n::before,
+  .ImageEditorDialog__Crop__Handle--s::before,
+  .ImageEditorDialog__Crop__Handle--e::before,
+  .ImageEditorDialog__Crop__Handle--w::before {
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    content: '';
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .ImageEditorDialog__Crop__Handle--n::before,
+  .ImageEditorDialog__Crop__Handle--s::before {
+    height: var(--handle-thickness);
+    width: 24px;
+  }
+
+  .ImageEditorDialog__Crop__Handle--e::before,
+  .ImageEditorDialog__Crop__Handle--w::before {
+    height: 24px;
+    width: var(--handle-thickness);
+  }
+
+  /* Corner handles are drawn as L-shaped brackets. */
+  .ImageEditorDialog__Crop__Handle--nw,
+  .ImageEditorDialog__Crop__Handle--ne,
+  .ImageEditorDialog__Crop__Handle--sw,
+  .ImageEditorDialog__Crop__Handle--se {
+    height: var(--handle-corner-size);
+    width: var(--handle-corner-size);
+    z-index: 1;
+  }
+
+  .ImageEditorDialog__Crop__Handle--nw::before,
+  .ImageEditorDialog__Crop__Handle--ne::before,
+  .ImageEditorDialog__Crop__Handle--sw::before,
+  .ImageEditorDialog__Crop__Handle--se::before {
+    border: 0 solid #fff;
+    content: '';
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+    height: 20px;
+    position: absolute;
+    width: 20px;
+  }
+
+  .ImageEditorDialog__Crop__Handle--nw {
+    cursor: nwse-resize;
+    left: calc(var(--handle-thickness) * -1);
+    top: calc(var(--handle-thickness) * -1);
+  }
+
+  .ImageEditorDialog__Crop__Handle--nw::before {
+    border-left-width: var(--handle-thickness);
+    border-top-width: var(--handle-thickness);
+    left: 0;
+    top: 0;
+  }
+
+  .ImageEditorDialog__Crop__Handle--ne {
+    cursor: nesw-resize;
+    right: calc(var(--handle-thickness) * -1);
+    top: calc(var(--handle-thickness) * -1);
+  }
+
+  .ImageEditorDialog__Crop__Handle--ne::before {
+    border-right-width: var(--handle-thickness);
+    border-top-width: var(--handle-thickness);
+    right: 0;
+    top: 0;
+  }
+
+  .ImageEditorDialog__Crop__Handle--sw {
+    bottom: calc(var(--handle-thickness) * -1);
+    cursor: nesw-resize;
+    left: calc(var(--handle-thickness) * -1);
+  }
+
+  .ImageEditorDialog__Crop__Handle--sw::before {
+    border-bottom-width: var(--handle-thickness);
+    border-left-width: var(--handle-thickness);
+    bottom: 0;
+    left: 0;
+  }
+
+  .ImageEditorDialog__Crop__Handle--se {
+    bottom: calc(var(--handle-thickness) * -1);
+    cursor: nwse-resize;
+    right: calc(var(--handle-thickness) * -1);
+  }
+
+  .ImageEditorDialog__Crop__Handle--se::before {
+    border-bottom-width: var(--handle-thickness);
+    border-right-width: var(--handle-thickness);
+    bottom: 0;
+    right: 0;
+  }
+}

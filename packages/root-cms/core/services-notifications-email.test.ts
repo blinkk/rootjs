@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
-import type {Action} from './client.js';
+import type {Action, RootCMSClient} from './client.js';
 import {
   emailNotifications,
   renderEmailTemplate,
@@ -24,7 +24,7 @@ function testAction(overrides?: Partial<Action>): Action {
 }
 
 function testContext() {
-  const sendEmail = vi.fn(async () => 'email-id-1');
+  const sendEmail = vi.fn<RootCMSClient['sendEmail']>(async () => 'email-id-1');
   const ctx = {
     rootConfig: {} as any,
     cmsClient: {sendEmail} as any,

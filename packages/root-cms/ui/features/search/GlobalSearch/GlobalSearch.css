@@ -1,0 +1,261 @@
+@layer components {
+  /*
+   * The palette fills the screen below `md`. From `md` up it's a 640px panel
+   * capped to the viewport, whose results scroll.
+   */
+  .GlobalSearch .GlobalSearch__panel {
+    height: 100%;
+  }
+
+  @media (width >= 48rem) {
+    .GlobalSearch .GlobalSearch__panel {
+      height: auto;
+      max-height: calc(100vh - 128px);
+    }
+  }
+
+  .GlobalSearch__header {
+    border-bottom: 1px solid transparent;
+  }
+
+  .GlobalSearch__results {
+    border-top: 1px solid var(--cms-color-border);
+  }
+
+  /* The filter tabs already draw a rule between the input and the results. */
+  .GlobalSearchFilters + .GlobalSearch__results {
+    border-top: 0;
+  }
+
+  .GlobalSearch__resetFilter {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: var(--cms-color-text);
+    text-decoration: underline;
+    text-decoration-color: var(--cms-accent);
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  /* Filter tabs. */
+
+  .GlobalSearchFilters {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px 0 16px;
+    border-top: 1px solid var(--cms-color-border);
+    border-bottom: 1px solid var(--cms-color-border);
+  }
+
+  .GlobalSearchFilters__tabs {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    gap: 16px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .GlobalSearchFilters__tab {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--cms-text-sm);
+    font-weight: 500;
+    color: var(--cms-color-text-muted);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .GlobalSearchFilters__tab:hover {
+    color: var(--cms-color-text);
+  }
+
+  .GlobalSearchFilters__tab--empty {
+    color: var(--cms-color-text-subtle);
+  }
+
+  .GlobalSearchFilters__tab--active,
+  .GlobalSearchFilters__tab--active:hover {
+    font-weight: 600;
+    color: var(--cms-color-text);
+  }
+
+  .GlobalSearchFilters__tab--active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--cms-accent);
+  }
+
+  .GlobalSearchFilters__tab:focus-visible,
+  .GlobalSearchFilters__copy:focus-visible {
+    outline: 2px solid var(--cms-color-focus);
+    outline-offset: -2px;
+  }
+
+  .GlobalSearchFilters__count {
+    font-size: var(--cms-text-xs);
+    font-weight: 500;
+    color: var(--cms-color-text-subtle);
+  }
+
+  .GlobalSearchFilters__tab--active .GlobalSearchFilters__count {
+    color: var(--cms-color-text-muted);
+  }
+
+  .GlobalSearchFilters__copy {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-self: center;
+    align-items: center;
+    gap: 4px;
+    height: var(--cms-control-height-sm);
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--cms-radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--cms-text-sm);
+    color: var(--cms-color-text-muted);
+    cursor: pointer;
+  }
+
+  .GlobalSearchFilters__copy:hover {
+    background: var(--cms-color-surface-hover);
+    color: var(--cms-color-text);
+  }
+
+  .GlobalSearchFilters__copy--copied {
+    color: var(--cms-color-success);
+  }
+
+  /* Result rows. */
+
+  .GlobalSearchAction {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 16px;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .GlobalSearchAction--multiline {
+    align-items: flex-start;
+  }
+
+  .GlobalSearchAction--hovered {
+    background: var(--cms-color-surface-hover);
+  }
+
+  /* Marks the selected row like the active sidebar item. */
+  .GlobalSearchAction--hovered::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: var(--cms-accent);
+  }
+
+  .GlobalSearchAction__icon {
+    display: flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    border: 1px solid var(--cms-color-border);
+    border-radius: var(--cms-radius-md);
+    background: var(--cms-color-surface);
+    color: var(--cms-color-text);
+  }
+
+  .GlobalSearchAction__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .GlobalSearchAction__title {
+    overflow: hidden;
+    font-size: var(--cms-text-sm);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--cms-color-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .GlobalSearchAction__field {
+    font-weight: 400;
+    color: var(--cms-color-text-muted);
+  }
+
+  .GlobalSearchAction__subtitle {
+    overflow: hidden;
+    font-size: var(--cms-text-sm);
+    line-height: 1.4;
+    color: var(--cms-color-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .GlobalSearchAction__snippet {
+    display: -webkit-box;
+    margin-top: 2px;
+    overflow: hidden;
+    font-size: var(--cms-text-sm);
+    line-height: 1.45;
+    color: var(--cms-color-text-muted);
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .GlobalSearchAction__mark {
+    padding: 0 2px;
+    border-radius: var(--cms-radius-sm);
+    background: var(--cms-color-chip);
+    font-weight: 600;
+    color: var(--cms-color-text);
+  }
+
+  .GlobalSearchAction__kind,
+  .GlobalSearchAction__enter {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--cms-text-xs);
+    color: var(--cms-color-text-subtle);
+    white-space: nowrap;
+  }
+
+  .GlobalSearchAction--multiline .GlobalSearchAction__kind,
+  .GlobalSearchAction--multiline .GlobalSearchAction__enter {
+    align-self: center;
+  }
+
+  .GlobalSearchAction__enter {
+    color: var(--cms-color-text-muted);
+  }
+}

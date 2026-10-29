@@ -1,0 +1,6 @@
+@layer components {
+  /* The results scroll, so the buttons below them stay in view. */
+  .PublishChecksModal__results {
+    max-height: 50dvh;
+  }
+}

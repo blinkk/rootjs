@@ -1,0 +1,72 @@
+/*
+ * The field's border and backgrounds live here rather than in utilities, so
+ * the dragging rules below (same layer, more specific) can override them.
+ */
+@layer components {
+  .FileField {
+    border-color: var(--cms-input-border);
+  }
+
+  .FileField__Dropzone,
+  .FileField__Canvas__Info {
+    background-color: var(--cms-color-surface-subtle);
+  }
+
+  .FileField__Canvas {
+    background-color: var(--cms-color-surface);
+  }
+
+  /* Tints the whole field while a file is dragged over any part of it. */
+  .FileField:has(
+    .FileField__Dropzone--dragging,
+    .FileField__Canvas--dragging,
+    .FileField__InvisibleDropzone--dragging
+  ) {
+    --file-field-dragging-bg-color: color-mix(
+      in srgb,
+      var(--cms-accent) 20%,
+      var(--cms-color-surface)
+    );
+    border-color: var(--cms-accent);
+  }
+
+  .FileField:has(
+      .FileField__Dropzone--dragging,
+      .FileField__Canvas--dragging,
+      .FileField__InvisibleDropzone--dragging
+    )
+    :is(.FileField__Dropzone, .FileField__Canvas, .FileField__Canvas__Info) {
+    background-color: var(--file-field-dragging-bg-color);
+  }
+
+  /*
+   * The standalone `FileUploader` (e.g. on the assets page) also rings the
+   * field and uses a stronger tint.
+   */
+  .FileUploader:has(
+    .FileField__Dropzone--dragging,
+    .FileField__Canvas--dragging,
+    .FileField__InvisibleDropzone--dragging
+  ) {
+    --file-field-dragging-bg-color: color-mix(
+      in srgb,
+      var(--cms-accent) 35%,
+      var(--cms-color-surface)
+    );
+    outline: 2px solid var(--cms-accent);
+    outline-offset: 2px;
+  }
+
+  .FileUploader
+    .FileField:has(
+      .FileField__Dropzone--dragging,
+      .FileField__Canvas--dragging,
+      .FileField__InvisibleDropzone--dragging
+    ) {
+    --file-field-dragging-bg-color: color-mix(
+      in srgb,
+      var(--cms-accent) 35%,
+      var(--cms-color-surface)
+    );
+  }
+}

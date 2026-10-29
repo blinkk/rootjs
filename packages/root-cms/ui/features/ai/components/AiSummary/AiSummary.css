@@ -1,0 +1,32 @@
+@layer components {
+  .AiSummary + .AiSummary {
+    margin-top: 12px;
+  }
+
+  /* Markdown rendered from the AI response. */
+  .AiSummaryResult p {
+    margin: 0 0 8px;
+  }
+
+  .AiSummaryResult ul {
+    margin: 8px 0;
+    padding: 0 20px;
+  }
+
+  .AiSummaryResult > :first-child {
+    margin-top: 0;
+  }
+
+  .AiSummaryResult > :last-child {
+    margin-bottom: 0;
+  }
+
+  .AiSummaryResult code {
+    font-family: var(--cms-font-mono);
+    background: var(--cms-color-surface-hover);
+    padding: 2px;
+    border: 1px solid var(--cms-color-border);
+    border-radius: var(--cms-radius-sm);
+    margin: 0 4px;
+  }
+}

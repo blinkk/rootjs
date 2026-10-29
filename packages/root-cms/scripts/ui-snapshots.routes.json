@@ -1,0 +1,22 @@
+[
+  {"name": "project", "path": "/cms"},
+  {"name": "collection-docs", "path": "/cms/content/Docs"},
+  {"name": "collection-pages", "path": "/cms/content/Pages"},
+  {"name": "document-pages-index", "path": "/cms/content/Pages/index"},
+  {"name": "document-pages-about", "path": "/cms/content/Pages/about"},
+  {"name": "doc-translations", "path": "/cms/translations/Pages/index"},
+  {"name": "translations", "path": "/cms/translations"},
+  {"name": "releases", "path": "/cms/releases"},
+  {"name": "releases-new", "path": "/cms/releases/new"},
+  {"name": "data", "path": "/cms/data"},
+  {"name": "data-new", "path": "/cms/data/new"},
+  {"name": "assets", "path": "/cms/assets"},
+  {"name": "tasks", "path": "/cms/tasks"},
+  {"name": "ai", "path": "/cms/ai"},
+  {"name": "logs", "path": "/cms/logs"},
+  {"name": "logs-errors", "path": "/cms/logs/errors"},
+  {"name": "settings", "path": "/cms/settings"},
+  {"name": "compare", "path": "/cms/compare"},
+  {"name": "not-found", "path": "/cms/does-not-exist"},
+  {"name": "gallery-tokens", "path": "/cms/_ui/tokens"}
+]

@@ -18,7 +18,7 @@
   --cms-drawer-header-bg: transparent;
   /* Indent a group's fields and draw a rule down the gap to show nesting. */
   --cms-drawer-indent: 12px;
-  --cms-drawer-rule: 2px solid var(--color-border);
+  --cms-drawer-rule: 2px solid var(--cms-color-border);
   --cms-accent: #12b886;
 
   /* --- Type and rhythm ------------------------------------------------- */
@@ -26,6 +26,6 @@
   --cms-font-size: 11px;
   --cms-label-size: 11px;
   --cms-help-size: 11px;
-  --cms-help-color: var(--color-text-gray);
+  --cms-help-color: var(--cms-color-text-muted);
   --cms-field-gap: 10px;
 }

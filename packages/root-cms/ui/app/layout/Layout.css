@@ -1,0 +1,128 @@
+@layer components {
+  /*
+   * Mobile first: a header above the page, with the navigation in a drawer
+   * (`Layout__drawer`). From `md` up the navigation is a rail on the left.
+   */
+  .Layout {
+    --side-button-icon-size: 22px;
+    /* No rail below `md`; pages size themselves with this. */
+    --sidebar-width: 0px;
+    --sidebar-border-width: 1px;
+    /**
+     * Distance from the left edge of the rail to its icons. When collapsed,
+     * the icons are centered within the rail's content box, which excludes
+     * its right border. Expanded rows indent by the same amount so the icons
+     * stay put when the rail is toggled.
+     */
+    --side-icon-offset: calc(
+      (
+          var(--cms-sidebar-width-collapsed) - var(--sidebar-border-width) -
+            var(--side-button-icon-size)
+        ) /
+        2
+    );
+    display: grid;
+    grid-template-areas:
+      'top'
+      'main';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (width >= 48rem) {
+    .Layout {
+      --sidebar-width: var(--cms-sidebar-width-collapsed);
+      grid-template-areas:
+        'top top'
+        'side main';
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    }
+
+    .Layout--sidebar-expanded {
+      --sidebar-width: var(--cms-sidebar-width-expanded);
+    }
+  }
+
+  .Layout__top {
+    grid-area: top;
+    /*
+     * Content-box so the safe-area padding adds to the height. The bottom
+     * border counts towards `--cms-header-height`, so pages sized against it
+     * fit the screen exactly.
+     */
+    box-sizing: content-box;
+    height: calc(var(--cms-header-height) - 1px);
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .Layout__side {
+    grid-area: side;
+    border-right-width: var(--sidebar-border-width);
+    height: calc(100vh - var(--cms-header-height));
+  }
+
+  .Layout__side__icon {
+    display: flex;
+    flex: 0 0 var(--side-button-icon-size);
+    align-items: center;
+    justify-content: center;
+    width: var(--side-button-icon-size);
+    height: var(--side-button-icon-size);
+  }
+
+  .Layout__side__icon > img,
+  .Layout__side__icon > svg {
+    display: block;
+    width: var(--side-button-icon-size);
+    height: var(--side-button-icon-size);
+    object-fit: contain;
+  }
+
+  /* Expanded rows (and the drawer's) line their icons up with the rail's. */
+  .Layout__side__row.justify-start {
+    padding: 0 12px 0 var(--side-icon-offset);
+  }
+
+  /* The accent bar beside the current page's link. */
+  .Layout__side__button__link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 3px;
+    background-color: transparent;
+  }
+
+  .Layout__side__button__link[aria-current='page']::after {
+    background-color: var(--cms-accent);
+  }
+
+  .Layout__main {
+    grid-area: main;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /*
+   * The page fills the space beside the rail and below the header, and
+   * scrolls on its own. A page can override it with utilities, e.g.
+   * `overflow-hidden` when it scrolls in panes of its own. Unlayered page CSS
+   * also beats it, so pages mustn't size their root there.
+   */
+  .Layout__main > *:first-child {
+    width: calc(100vw - var(--sidebar-width, 48px));
+    height: calc(100vh - var(--cms-header-height));
+    overflow: auto;
+  }
+
+  @media (width < 48rem) {
+    .Layout__main > *:first-child {
+      width: 100%;
+      height: calc(
+        100dvh - var(--cms-header-height) - env(safe-area-inset-top)
+      );
+    }
+  }
+}

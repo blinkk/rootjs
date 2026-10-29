@@ -1,0 +1,20 @@
+@layer components {
+  .UserTag {
+    cursor: default;
+  }
+
+  /* The tooltip's text can be selected, e.g. to copy the email. */
+  .UserTag__tooltip,
+  .UserTag__tooltip__text span {
+    cursor: text;
+    user-select: text;
+  }
+
+  .UserTag__tooltip__text span {
+    overflow-wrap: anywhere;
+  }
+
+  .UserTag__tooltip .UserAvatar {
+    border: 1px solid rgb(255 255 255 / 0.35);
+  }
+}

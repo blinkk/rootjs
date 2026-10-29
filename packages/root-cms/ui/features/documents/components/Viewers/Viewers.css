@@ -1,0 +1,11 @@
+@layer components {
+  /* Overlapping avatars, with a ring so the overlaps stay legible. */
+  .Viewers > * + * {
+    margin-left: -10px;
+  }
+
+  .Viewers__avatar {
+    border: 2px solid var(--cms-color-surface);
+    box-sizing: content-box;
+  }
+}

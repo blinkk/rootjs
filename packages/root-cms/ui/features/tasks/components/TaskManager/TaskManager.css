@@ -1,0 +1,83 @@
+@layer components {
+  /*
+   * The description drawer sits after the title in the DOM so it follows the
+   * title in the tab order; grid areas place it below the top row. On phones
+   * the controls and the submit button move to their own row.
+   */
+  .TaskManager__composer {
+    grid-template-areas:
+      'icon title title'
+      'drawer drawer drawer'
+      'controls controls submit';
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  @media (width >= 48rem) {
+    .TaskManager__composer {
+      grid-template-areas:
+        'icon title controls submit'
+        'drawer drawer drawer drawer';
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+    }
+  }
+
+  .TaskManager__composer__icon {
+    grid-area: icon;
+  }
+
+  .TaskManager__composer__title {
+    grid-area: title;
+  }
+
+  .TaskManager__composer__controls {
+    grid-area: controls;
+  }
+
+  .TaskManager__composer__submit {
+    grid-area: submit;
+  }
+
+  /* The drawer animates open by transitioning its single grid row. */
+  .TaskManager__composer__drawer {
+    grid-area: drawer;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease;
+  }
+
+  .TaskManager__composer__drawer--open {
+    grid-template-rows: 1fr;
+  }
+
+  /* Cap columns at the width they have in the 3-up (open) layout. */
+  .TaskManager__board {
+    grid-auto-columns: minmax(250px, calc((100% - 32px) / 3));
+  }
+
+  .TaskManager__statusRing {
+    border: 1.5px solid var(--cms-color-text-subtle);
+  }
+
+  .TaskManager__statusRing--new {
+    border-style: dashed;
+  }
+
+  .TaskManager__statusRing--in-progress {
+    background: conic-gradient(var(--cms-color-info) 0 50%, transparent 0)
+      content-box;
+    border-color: var(--cms-color-info);
+    padding: 2px;
+  }
+
+  .TaskManager__statusRing--in-review {
+    background: conic-gradient(var(--cms-color-warning) 0 75%, transparent 0)
+      content-box;
+    border-color: var(--cms-color-warning);
+    padding: 2px;
+  }
+
+  .TaskManager__statusRing--closed {
+    background: var(--cms-color-success) content-box;
+    border-color: var(--cms-color-success);
+    padding: 2px;
+  }
+}

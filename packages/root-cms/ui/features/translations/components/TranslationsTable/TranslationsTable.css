@@ -1,0 +1,25 @@
+/*
+ * Styles for ag-grid's DOM, which utilities can't reach. ag-grid's own CSS
+ * is unlayered, so overrides of its rules need `!important` to win from
+ * inside a layer.
+ */
+@layer components {
+  .TranslationsTable .no-border-header .ag-header-cell-resize::after {
+    display: none !important;
+  }
+
+  .TranslationsTable .no-border-header {
+    border-right: none !important;
+  }
+
+  .TranslationsTable .ag-theme-alpine {
+    --ag-border-color: var(--cms-color-border) !important;
+    --ag-row-border-color: var(--cms-color-border) !important;
+    --ag-header-column-separator-color: var(--cms-color-border) !important;
+  }
+
+  /* Fills the screen below the page header and the toolbar. */
+  .TranslationsTable__viewport {
+    height: max(400px, calc(100dvh - 250px));
+  }
+}

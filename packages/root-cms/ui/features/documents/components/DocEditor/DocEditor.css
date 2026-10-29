@@ -1,0 +1,240 @@
+/*
+ * DocEditor styles that utilities can't express: theme tokens read by the
+ * field chrome (`--cms-font-size`, `--cms-field-gap`, `--cms-label-size`,
+ * `--cms-help-*`, `--cms-drawer-*`), the open/closed state of nested
+ * `<details>` (child combinators, so a closed drawer inside an open one isn't
+ * styled as open), and the sticky, nested array item headers.
+ */
+@layer components {
+  .DocEditor {
+    font-size: var(--cms-font-size);
+  }
+
+  /*
+   * The status bar sits in the app header. Below `md` it leaves the header's
+   * menu button uncovered and scrolls sideways when it doesn't fit.
+   */
+  .DocEditor__statusBar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: var(--cms-header-height);
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  @media (width < 48rem) {
+    .DocEditor__statusBar {
+      top: env(safe-area-inset-top);
+      left: calc(
+        16px + var(--cms-control-height-md) + env(safe-area-inset-left)
+      );
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: var(--cms-color-surface);
+    }
+
+    .DocEditor__statusBar > * {
+      flex-shrink: 0;
+    }
+  }
+
+  /* --- Field layout ---------------------------------------------------- */
+
+  .DocEditor__fields,
+  .DocEditor__ObjectField__fields,
+  .DocEditor__ObjectFieldDrawer__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cms-field-gap);
+  }
+
+  .DocEditor__scheduledNotice {
+    margin-bottom: var(--cms-field-gap);
+  }
+
+  .DocEditor__FieldHeader__label {
+    font-size: var(--cms-label-size);
+  }
+
+  .DocEditor__FieldHeader__help {
+    font-size: var(--cms-help-size);
+    color: var(--cms-help-color);
+  }
+
+  /*
+   * The field comments popover: the thread's entries (a `CommentThread`
+   * element, see `features/comments/CommentThread`) scroll on their own, and
+   * bleed through the popover's 12px padding so the scrollbar sits at the
+   * popover's edge.
+   */
+  .DocEditor__FieldHeader__comments__popover .CommentThread__entries {
+    margin: 0 -12px;
+    max-height: 320px;
+    overflow: auto;
+    padding: 0 12px;
+  }
+
+  /* --- Field groups ("drawers") ---------------------------------------- */
+
+  .DocEditor__ObjectFieldDrawer {
+    margin-left: var(--cms-drawer-bleed);
+    margin-right: var(--cms-drawer-bleed);
+    border: var(--cms-drawer-border);
+    border-radius: var(--cms-drawer-radius);
+    background: var(--cms-drawer-bg);
+  }
+
+  /* The <details> sits between the box and its header; pass the radius
+   * through so a themed header's background follows the box's corners. */
+  .DocEditor__ObjectFieldDrawer__drawer {
+    border-radius: inherit;
+  }
+
+  .DocEditor__ObjectFieldDrawer__drawer__toggle {
+    border-radius: inherit;
+    background: var(--cms-drawer-header-bg);
+  }
+
+  .DocEditor__ObjectFieldDrawer__drawer__toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .DocEditor__ObjectFieldDrawer__drawer__content {
+    margin-left: var(--cms-drawer-indent);
+    border-left: var(--cms-drawer-rule);
+  }
+
+  .DocEditor__ObjectFieldDrawer__drawer[open]
+    > summary
+    > .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
+    transform: rotate(90deg);
+  }
+
+  /* --- Array items ----------------------------------------------------- */
+
+  .DocEditor__ArrayField__item {
+    /* Keep an opening item from pushing the page's content upwards. */
+    overflow-anchor: none;
+  }
+
+  /* Hide the drag handle while the item is open. */
+  .DocEditor__ArrayField__item__wrapper:has(
+      > .DocEditor__ArrayField__item[open]
+    )
+    > .DocEditor__ArrayField__item__handle {
+    visibility: hidden;
+  }
+
+  .DocEditor__ArrayField__item__header {
+    position: sticky;
+    top: var(--top-bar-height);
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: var(--cms-color-surface);
+  }
+
+  .DocEditor__ArrayField__item__header::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Nested item headers stick below their ancestors' headers. */
+  .DocEditor__ArrayField .DocEditor__ArrayField {
+    --array-field-header-offset: 30px;
+  }
+
+  .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField {
+    --array-field-header-offset: 60px;
+  }
+
+  .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField {
+    --array-field-header-offset: 90px;
+  }
+
+  .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField__item__header {
+    top: calc(var(--top-bar-height) + var(--array-field-header-offset));
+    z-index: 8;
+  }
+
+  .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField__item__header {
+    z-index: 7;
+  }
+
+  .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField__item__header {
+    z-index: 6;
+  }
+
+  /* Arrays nested more than three levels deep don't stick. */
+  .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField
+    .DocEditor__ArrayField__item__header {
+    border-bottom: unset;
+    position: static;
+  }
+
+  .DocEditor__ArrayField__item:not([open])
+    > .DocEditor__ArrayField__item__header {
+    border-left: 2px solid var(--cms-color-border);
+    padding-left: 8px;
+  }
+
+  .DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
+    border-bottom: 2px solid var(--cms-color-border);
+    border-radius: 0;
+  }
+
+  .DocEditor__ArrayField__item__header:focus {
+    outline: none;
+    background-color: var(--cms-color-surface-hover);
+    border-radius: 2px;
+  }
+
+  .DocEditor__ArrayField__item[open]
+    > .DocEditor__ArrayField__item__header:focus {
+    padding-left: 10px;
+  }
+
+  .DocEditor__ArrayField__item__header__icon {
+    flex-shrink: 0;
+    margin-right: 8px;
+    transform: rotate(90deg);
+  }
+
+  .DocEditor__ArrayField__item[open]
+    > summary
+    > .DocEditor__ArrayField__item__header__icon {
+    transform: rotate(180deg);
+    margin-top: -2px;
+  }
+
+  /* The preview is drawn as generated content, so it isn't picked up by
+   * find-in-page or text selection. */
+  .DocEditor__ArrayField__item__header__preview__title::before {
+    content: attr(data-preview);
+  }
+}

@@ -1,0 +1,200 @@
+import {useEffect, useState} from 'preact/hooks';
+import {useLocalStorage} from '../hooks/useLocalStorage.js';
+
+const SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/spreadsheets',
+];
+
+const DISCOVERY_DOCS = [
+  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+  'https://sheets.googleapis.com/$discovery/rest?version=v4',
+];
+
+export interface GapiClient {
+  enabled: boolean;
+  loading: boolean;
+  hasScope: (scope: string) => boolean;
+  isLoggedIn: () => boolean;
+  login: (options?: {scopes?: string[]}) => Promise<void>;
+}
+
+interface GapiUserConsent {
+  clientId?: string;
+  scopes?: string[];
+  at?: number;
+}
+
+export function useGapiClient(): GapiClient {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const enabled = Boolean(
+    window.__ROOT_CTX.gapi?.apiKey && window.__ROOT_CTX.gapi?.clientId
+  );
+  const [loading, setLoading] = useState(enabled);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState(0);
+  const [userConsent, setUserConsent] = useLocalStorage<GapiUserConsent>(
+    `root-cms::${projectId}::gapi-user-consent`,
+    {}
+  );
+
+  async function initGapi() {
+    try {
+      await Promise.all([loadGapiScript(), loadGisScript()]);
+    } catch (err) {
+      console.error('failed to init gapi:', err);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (enabled) {
+      initGapi();
+    }
+  }, []);
+
+  function login(options?: {scopes?: string[]}) {
+    return new Promise<void>((resolve) => {
+      const clientId = window.__ROOT_CTX.gapi!.clientId!;
+      const uniqueScopes = Array.from(
+        new Set([...SCOPES, ...(options?.scopes || [])])
+      );
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: uniqueScopes.join(' '),
+        callback: async (token) => {
+          // console.log('logged in');
+          // console.log(token);
+          const expiresAt = timestamp() + parseInt(token.expires_in);
+          setTokenExpiresAt(expiresAt);
+          // setCachedToken({token, expiresAt});
+          setUserConsent({
+            at: timestamp(),
+            clientId: clientId,
+            scopes: uniqueScopes,
+          });
+          resolve();
+        },
+      });
+
+      // if (gapi.client.getToken() === null) {
+      if (userConsent && verifyUserConsent(userConsent, uniqueScopes)) {
+        // Skip display of account chooser and consent dialog when user has
+        // previously consented.
+        console.log('requesting token without prompt');
+        tokenClient.requestAccessToken({prompt: ''});
+      } else {
+        // Prompt the user to select a Google Account and ask for consent to share their data
+        // when establishing a new session.
+        console.log('requesting token with prompt');
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      }
+    });
+  }
+
+  function isLoggedIn() {
+    return timestamp() < tokenExpiresAt;
+  }
+
+  function hasScope(scope: string) {
+    return userConsent?.scopes?.includes(scope) || false;
+  }
+
+  return {enabled, loading, isLoggedIn, login, hasScope};
+}
+
+function verifyUserConsent(userConsent: GapiUserConsent, scopes: string[]) {
+  if (!userConsent) {
+    return false;
+  }
+
+  if (!userConsent.at) {
+    return false;
+  }
+
+  // Verify client id matches.
+  const clientId = window.__ROOT_CTX.gapi?.clientId;
+  if (userConsent.clientId !== clientId) {
+    return false;
+  }
+
+  // Verify all scopes.
+  const consentedScopes = userConsent.scopes || [];
+  return scopes.every((scope) => consentedScopes.includes(scope));
+}
+
+function timestamp() {
+  return Math.floor(new Date().getTime() / 1000);
+}
+
+let loadGapiScriptPromise: Promise<void> | null = null;
+
+async function loadGapiScript() {
+  if (!loadGapiScriptPromise) {
+    loadGapiScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+
+      script.onload = () => {
+        gapi.load('client', async () => {
+          try {
+            await gapi.client.init({});
+            await Promise.all(
+              DISCOVERY_DOCS.map((discoveryDoc) =>
+                gapi.client.load(discoveryDoc)
+              )
+            );
+            console.log('gapi loaded');
+            resolve();
+          } catch (error) {
+            console.error('Error initializing gapi:', error);
+            reject(error);
+          }
+        });
+      };
+
+      script.onerror = () => {
+        console.error('gapi script failed to load');
+        reject(new Error('gapi script failed to load'));
+      };
+
+      document.head.appendChild(script);
+    });
+    // Don't cache failures; the next caller retries the script load.
+    loadGapiScriptPromise.catch(() => {
+      loadGapiScriptPromise = null;
+    });
+  }
+  return loadGapiScriptPromise;
+}
+
+let loadGisScriptPromise: Promise<void> | null = null;
+
+/**
+ * Loads the Google Identity Services script (used for OAuth token flows).
+ * Exported for non-hook consumers (e.g. the Google Drive asset sync
+ * provider in `ui/utils/asset-sync/gdrive.ts`).
+ */
+export async function loadGisScript() {
+  if (!loadGisScriptPromise) {
+    loadGisScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+
+      script.onload = () => {
+        resolve();
+      };
+
+      script.onerror = () => {
+        console.error('gis script failed to load');
+        reject(new Error('gis script failed to load'));
+      };
+
+      document.head.appendChild(script);
+    });
+    // Don't cache failures; the next caller retries the script load.
+    loadGisScriptPromise.catch(() => {
+      loadGisScriptPromise = null;
+    });
+  }
+  return loadGisScriptPromise;
+}

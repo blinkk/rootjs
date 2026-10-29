@@ -1,0 +1,24 @@
+@layer components {
+  /*
+   * The header button stays faint until its field header is hovered or
+   * focused, the picker is open, or the field has localized values.
+   */
+  .LocalizedValuesButton {
+    opacity: 0.35;
+    transition:
+      opacity 0.2s ease,
+      background-color 0.15s ease;
+  }
+
+  .DocEditor__FieldHeader:hover .LocalizedValuesButton,
+  .DocEditor__FieldHeader:focus-within .LocalizedValuesButton,
+  .LocalizedValuesButton:focus-visible,
+  .LocalizedValuesButton--hasValues,
+  .LocalizedValuesButton[aria-expanded='true'] {
+    opacity: 1;
+  }
+
+  .LocalizedValues {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+  }
+}

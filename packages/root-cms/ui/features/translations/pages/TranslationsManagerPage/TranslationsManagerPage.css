@@ -1,0 +1,14 @@
+@layer components {
+  /*
+   * The docs list is a grid with fixed columns. Below its minimum width it
+   * scrolls sideways inside `TranslationsManagerPage__docsList`.
+   */
+  .TranslationsManagerPage__docsListHeader,
+  .TranslationsManagerPage__docsListDoc {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) 88px 168px 140px 140px 44px;
+    align-items: center;
+    gap: 12px;
+    min-width: 880px;
+  }
+}

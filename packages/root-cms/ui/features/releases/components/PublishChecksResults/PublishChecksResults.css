@@ -1,0 +1,24 @@
+@layer components {
+  /* The check's message is rendered Markdown, so its elements are styled here. */
+  .PublishChecksResults__message .Markdown p,
+  .PublishChecksResults__message .Markdown ul,
+  .PublishChecksResults__message .Markdown ol {
+    margin: 0 0 6px;
+  }
+
+  .PublishChecksResults__message .Markdown ul,
+  .PublishChecksResults__message .Markdown ol {
+    padding-left: 16px;
+  }
+
+  .PublishChecksResults__message .Markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .PublishChecksResults__message .Markdown code {
+    padding: 2px 4px;
+    border-radius: var(--cms-radius-sm);
+    background-color: var(--cms-color-chip);
+    font-size: var(--cms-text-xs);
+  }
+}

@@ -1,0 +1,35 @@
+@layer components {
+  .ActionLogsCompactItemPreview {
+    display: grid;
+    /**
+     * Each accordion row is its own grid. The timestamp renders in a
+     * fixed-width format (e.g. "Jun 12, 10:21 AM") so its column can be
+     * `auto`; the action column uses a fixed width to keep columns aligned
+     * across rows.
+     */
+    grid-template-columns: auto auto 170px minmax(0, 1fr) auto;
+  }
+
+  /* Phones drop the id column; it's still listed in the expanded details. */
+  @media (width < 768px) {
+    .ActionLogsCompactItemPreview {
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+    }
+
+    .ActionLogsCompactItemPreview__actionMetaId {
+      display: none;
+    }
+  }
+
+  .ActionLogsCompact__item .Accordion__content {
+    padding-top: 12px;
+    background: var(--cms-color-page);
+    border-top: 1px dashed var(--cms-color-border);
+  }
+
+  .ActionLogsOnboarding__logo {
+    /* The sprite is 11 columns by 16 rows once cropped. */
+    width: 33px;
+    height: 48px;
+  }
+}

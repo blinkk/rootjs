@@ -1,9 +1,9 @@
 import {
   IconBaselineDensitySmall,
   IconChevronDown,
-  IconCirclePlus,
   IconDots,
   IconFolder,
+  IconPlus,
 } from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {Avatar, Badge, CmsFrame} from '../ui/cms.js';
@@ -266,7 +266,7 @@ export default function ContentList() {
               </span>
             </span>
             <span className="cms-button cms-button--dark">
-              <IconCirclePlus />
+              <IconPlus />
               New
             </span>
           </div>

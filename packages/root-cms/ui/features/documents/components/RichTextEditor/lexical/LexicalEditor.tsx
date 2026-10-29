@@ -1,0 +1,726 @@
+import './LexicalEditor.css';
+
+import {AutoLinkNode, LinkNode} from '@lexical/link';
+import {ListItemNode, ListNode} from '@lexical/list';
+import {AutoFocusPlugin} from '@lexical/react/LexicalAutoFocusPlugin';
+import {
+  InitialConfigType,
+  LexicalComposer,
+} from '@lexical/react/LexicalComposer';
+import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
+import {ContentEditable} from '@lexical/react/LexicalContentEditable';
+import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
+import {HistoryPlugin} from '@lexical/react/LexicalHistoryPlugin';
+import {HorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
+import {HorizontalRulePlugin} from '@lexical/react/LexicalHorizontalRulePlugin';
+import {LinkPlugin} from '@lexical/react/LexicalLinkPlugin';
+import {ListPlugin} from '@lexical/react/LexicalListPlugin';
+import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
+import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
+import {TablePlugin} from '@lexical/react/LexicalTablePlugin';
+import {HeadingNode, QuoteNode} from '@lexical/rich-text';
+import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
+import {$dfs} from '@lexical/utils';
+import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
+import {useEffect, useMemo, useState} from 'preact/hooks';
+import * as schema from '../../../../../../core/schema.js';
+import {
+  getRichTextParagraphEditorStyles,
+  RichTextData,
+  RichTextParagraphSizeOption,
+} from '../../../../../../shared/richtext.js';
+import {joinClassNames} from '../../../../../utils/classes.js';
+import {showErrorNotification} from '../../../../../utils/notifications.js';
+import {cloneData} from '../../../../../utils/objects.js';
+import {autokey} from '../../../../../utils/rand.js';
+import {
+  OPEN_RICHTEXT_BLOCK_EVENT,
+  OPEN_RICHTEXT_INLINE_EVENT,
+  OpenRichTextBlockEventDetail,
+  OpenRichTextInlineEventDetail,
+} from '../../../doc-search.js';
+import {getDefaultFieldValue} from '../../../fields.js';
+import {BlockComponentsProvider} from './hooks/useBlockComponents.js';
+import {InlineComponentsProvider} from './hooks/useInlineComponents.js';
+import {
+  SharedHistoryProvider,
+  useSharedHistory,
+} from './hooks/useSharedHistory.js';
+import {ToolbarProvider} from './hooks/useToolbar.js';
+import {LexicalTheme} from './LexicalTheme.js';
+import {BlockComponentModal} from './nodes/BlockComponentModal.js';
+import {
+  $createBlockComponentNode,
+  $isBlockComponentNode,
+  BlockComponentNode,
+} from './nodes/BlockComponentNode.js';
+import {InlineComponentModal} from './nodes/InlineComponentModal.js';
+import {
+  $createInlineComponentNode,
+  $isInlineComponentNode,
+  InlineComponentNode,
+} from './nodes/InlineComponentNode.js';
+import {MentionNode} from './nodes/MentionNode.js';
+import {SizedParagraphNode} from './nodes/SizedParagraphNode.js';
+import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
+import {AutoLinkPlugin} from './plugins/AutoLinkPlugin.js';
+import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
+import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
+import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
+import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
+import {MentionsPlugin} from './plugins/MentionsPlugin.js';
+import {OnChangePlugin} from './plugins/OnChangePlugin.js';
+import {PasteCleanupPlugin} from './plugins/PasteCleanupPlugin.js';
+import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
+import {SpecialCharacterPlugin} from './plugins/SpecialCharacterPlugin.js';
+import {TableActionMenuPlugin} from './plugins/TableActionMenuPlugin.js';
+import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
+import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
+
+const INITIAL_CONFIG: InitialConfigType = {
+  namespace: 'RootCMS',
+  nodes: [
+    AutoLinkNode,
+    HeadingNode,
+    QuoteNode,
+    LinkNode,
+    ListNode,
+    ListItemNode,
+    HorizontalRuleNode,
+    TableNode,
+    TableCellNode,
+    TableRowNode,
+    BlockComponentNode,
+    InlineComponentNode,
+    SizedParagraphNode,
+    SpecialCharacterNode,
+    MentionNode,
+  ],
+  // Lexical routes errors it catches while updating, reconciling, or parsing
+  // here. Report them instead of rethrowing: rethrowing from this callback
+  // aborts lexical's own recovery (which restores the last good editor state to
+  // the DOM) and turns a recoverable error into an uncaught one.
+  onError: (err: Error) => {
+    showErrorNotification(err, {title: 'Rich text editor error'});
+  },
+};
+
+interface BlockComponentModalState {
+  schema: schema.Schema;
+  mode: 'create' | 'edit';
+  initialValue: Record<string, any>;
+  nodeKey?: NodeKey;
+}
+
+interface InlineComponentModalState {
+  schema: schema.Schema;
+  componentName: string;
+  componentId: string;
+  mode: 'create' | 'edit';
+  initialValue: Record<string, any>;
+  nodeKey?: NodeKey;
+}
+
+export interface LexicalEditorProps {
+  className?: string;
+  /** The deep key of the rich text field, used for cross-component targeting. */
+  deepKey?: string;
+  placeholder?: string;
+  value?: RichTextData | null;
+  onChange?: (value: RichTextData | null) => void;
+  onFocus?: (e: FocusEvent) => void;
+  onBlur?: (e: FocusEvent) => void;
+  autosize?: boolean;
+  variant?: 'document' | 'comment';
+  autoFocus?: boolean;
+  /**
+   * Hides the toolbar above the editor. Formatting is still available via
+   * the floating toolbar that appears when text is selected.
+   */
+  hideToolbar?: boolean;
+  /** Enables `@mention` autocomplete of project users. */
+  mentions?: boolean;
+  blockComponents?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
+}
+
+export function LexicalEditor(props: LexicalEditorProps) {
+  // This component sets up the context providers and shell for lexical, and
+  // then renders the <Editor> component which can use the shared context states
+  // to render the rich text editor.
+
+  // The theme carries each size's preview font size, which is per field, so it
+  // is built here rather than shared at module scope. `LexicalComposer` reads
+  // `initialConfig` once on mount; schemas don't change at runtime.
+  const initialConfig = useMemo(
+    () => ({
+      ...INITIAL_CONFIG,
+      theme: {
+        ...LexicalTheme,
+        paragraphSizeStyles: getRichTextParagraphEditorStyles(
+          props.paragraphSizes
+        ),
+      },
+    }),
+    [props.paragraphSizes]
+  );
+
+  return (
+    <LexicalComposer initialConfig={initialConfig}>
+      <SharedHistoryProvider>
+        <ToolbarProvider>
+          <div
+            className={joinClassNames(
+              props.className,
+              'LexicalEditor',
+              props.variant === 'comment' && 'LexicalEditor--comment',
+              props.hideToolbar && 'LexicalEditor--noToolbar',
+              !props.autosize && 'LexicalEditor--withMaxHeight'
+            )}
+          >
+            <Editor
+              deepKey={props.deepKey}
+              placeholder={props.placeholder}
+              value={props.value}
+              onChange={props.onChange}
+              onFocus={props.onFocus}
+              onBlur={props.onBlur}
+              variant={props.variant}
+              autoFocus={props.autoFocus}
+              hideToolbar={props.hideToolbar}
+              mentions={props.mentions}
+              blockComponents={props.blockComponents}
+              inlineComponents={props.inlineComponents}
+              paragraphSizes={props.paragraphSizes}
+            />
+          </div>
+        </ToolbarProvider>
+      </SharedHistoryProvider>
+    </LexicalComposer>
+  );
+}
+
+const INSERT_IMAGE_BLOCK = schema.define({
+  name: 'image',
+  label: 'Image Embed',
+  preview: {
+    title: '{file.alt}',
+    image: '{file.src}',
+  },
+  fields: [
+    schema.image({
+      id: 'file',
+      label: 'Image',
+    }),
+    // Provides backwards compatibility with EditorJS caption field.
+    schema.string({
+      id: 'caption',
+      label: 'Caption',
+      variant: 'textarea',
+      translate: true,
+      deprecated: true,
+    }),
+  ],
+});
+
+const INSERT_HTML_BLOCK = schema.define({
+  name: 'html',
+  label: 'HTML Code',
+  preview: {
+    title: '{html}',
+  },
+  fields: [
+    schema.string({
+      id: 'html',
+      label: 'HTML',
+      help: 'HTML code to embed. Please use caution when inserting HTML.',
+      variant: 'textarea',
+      autosize: true,
+      // Allow the textarea to grow without limit. Useful for huge blocks of HTML.
+      // In this scenario, the modal itself scrolls (if needed).
+      maxRows: 50,
+    }),
+  ],
+});
+
+const BUILT_IN_BLOCKS = [INSERT_IMAGE_BLOCK, INSERT_HTML_BLOCK];
+
+interface EditorProps {
+  /** The deep key of the rich text field, used for cross-component targeting. */
+  deepKey?: string;
+  placeholder?: string;
+  value?: RichTextData | null;
+  onChange?: (value: RichTextData | null) => void;
+  /** Focus handler (currently unimplemented.) */
+  onFocus?: (e: FocusEvent) => void;
+  /** Blur handler (currently unimplemented.) */
+  onBlur?: (e: FocusEvent) => void;
+  variant?: 'document' | 'comment';
+  autoFocus?: boolean;
+  /** Hides the toolbar above the editor (the floating toolbar remains). */
+  hideToolbar?: boolean;
+  /** Enables `@mention` autocomplete of project users. */
+  mentions?: boolean;
+  blockComponents?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
+  /** Paragraph size variants offered in the block type dropdown. */
+  paragraphSizes?: Array<RichTextParagraphSizeOption | string>;
+}
+
+function Editor(props: EditorProps) {
+  const {historyState} = useSharedHistory();
+  const [editor] = useLexicalComposerContext();
+  const [activeEditor, setActiveEditor] = useState(editor);
+  const [isLinkEditMode, setIsLinkEditMode] = useState(false);
+  const [floatingAnchorElem, setFloatingAnchorElem] =
+    useState<HTMLElement | null>(null);
+  // Picked once, so the visible text and `aria-placeholder` match.
+  const placeholder = useMemo(
+    () => props.placeholder || getRandPlaceholder(),
+    []
+  );
+  const blockComponentsMap = useMemo(() => {
+    const map = new Map<string, schema.Schema>();
+    if (props.variant !== 'comment') {
+      BUILT_IN_BLOCKS.forEach((block) => {
+        map.set(block.name, block);
+      });
+    }
+    props.blockComponents?.forEach((block) => {
+      map.set(block.name, block);
+    });
+    return map;
+  }, [props.blockComponents]);
+  const blockComponents = Array.from(blockComponentsMap.values());
+  const [blockComponentModalState, setBlockComponentModalState] =
+    useState<BlockComponentModalState | null>(null);
+  const inlineComponentsMap = useMemo(() => {
+    const map = new Map<string, schema.Schema>();
+    props.inlineComponents?.forEach((component) => {
+      map.set(component.name, component);
+    });
+    return map;
+  }, [props.inlineComponents]);
+  const inlineComponents = Array.from(inlineComponentsMap.values());
+  const [inlineComponentModalState, setInlineComponentModalState] =
+    useState<InlineComponentModalState | null>(null);
+
+  // The "onRef" var is used as a callback, so it's typed to `any` here to avoid
+  // type warnings.
+  const onRef: any = (el: HTMLDivElement) => {
+    if (el) {
+      setFloatingAnchorElem(el);
+    }
+  };
+
+  const openBlockComponentModal = (
+    blockName: string,
+    options?: {
+      mode?: 'create' | 'edit';
+      initialValue?: Record<string, any>;
+      nodeKey?: NodeKey;
+    }
+  ) => {
+    const schemaDef = blockComponentsMap.get(blockName);
+    if (!schemaDef) {
+      return;
+    }
+    const initialValue = options?.initialValue
+      ? cloneData(options.initialValue)
+      : getDefaultFieldValue(schemaDef);
+    setBlockComponentModalState({
+      schema: schemaDef,
+      mode: options?.mode ?? 'create',
+      initialValue,
+      nodeKey: options?.nodeKey,
+    });
+  };
+
+  const insertBlockComponent = (
+    blockName: string,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $createBlockComponentNode(blockName, data);
+      $insertNodes([node]);
+      node.selectNext();
+    });
+  };
+
+  const updateBlockComponent = (
+    nodeKey: NodeKey,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isBlockComponentNode(node)) {
+        node.setBlockData(data);
+      }
+    });
+  };
+
+  const closeBlockComponentModal = () => {
+    setBlockComponentModalState(null);
+  };
+
+  // Listen for external requests to open a block component modal (e.g. from
+  // the document SearchPanel). Targeted by the rich text field's `deepKey`.
+  useEffect(() => {
+    if (!props.deepKey) {
+      return;
+    }
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenRichTextBlockEventDetail>)
+        .detail;
+      if (!detail || detail.richTextDeepKey !== props.deepKey) {
+        return;
+      }
+      const schemaDef = blockComponentsMap.get(detail.blockName);
+      if (!schemaDef) {
+        return;
+      }
+      // Walk the editor's root children to find the Nth BlockComponentNode that
+      // matches the requested block name. Block ordering in Lexical mirrors the
+      // serialized `RichTextData.blocks` array, so we can map by index.
+      let targetNodeKey: NodeKey | null = null;
+      let targetData: Record<string, any> | null = null;
+      editor.getEditorState().read(
+        () => {
+          const root = $getRoot();
+          let blockIdx = -1;
+          for (const child of root.getChildren()) {
+            if ($isBlockComponentNode(child)) {
+              blockIdx += 1;
+              const childBlockName = (
+                child as BlockComponentNode
+              ).getBlockName();
+              if (
+                blockIdx === detail.blockIndex &&
+                childBlockName === detail.blockName
+              ) {
+                targetNodeKey = child.getKey();
+                targetData = (child as BlockComponentNode).getBlockData();
+                break;
+              }
+            }
+          }
+          // Fallback: if the absolute index didn't match (e.g. document
+          // mutated), pick the first block with the same blockName.
+          if (!targetNodeKey) {
+            for (const child of root.getChildren()) {
+              if (
+                $isBlockComponentNode(child) &&
+                (child as BlockComponentNode).getBlockName() ===
+                  detail.blockName
+              ) {
+                targetNodeKey = child.getKey();
+                targetData = (child as BlockComponentNode).getBlockData();
+                break;
+              }
+            }
+          }
+        },
+        {editor}
+      );
+      if (!targetNodeKey) {
+        return;
+      }
+      setBlockComponentModalState({
+        schema: schemaDef,
+        mode: 'edit',
+        initialValue: targetData ? cloneData(targetData) : {},
+        nodeKey: targetNodeKey,
+      });
+    };
+    window.addEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
+    return () => window.removeEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
+  }, [editor, props.deepKey, blockComponentsMap]);
+
+  // Listen for external requests to open an inline component modal. Looks up
+  // the InlineComponentNode by its stable `componentId`.
+  useEffect(() => {
+    if (!props.deepKey) {
+      return;
+    }
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenRichTextInlineEventDetail>)
+        .detail;
+      if (!detail || detail.richTextDeepKey !== props.deepKey) {
+        return;
+      }
+      const schemaDef = inlineComponentsMap.get(detail.componentName);
+      if (!schemaDef) {
+        return;
+      }
+      let targetNodeKey: NodeKey | null = null;
+      let targetData: Record<string, any> | null = null;
+      let targetComponentName: string | null = null;
+      editor.getEditorState().read(
+        () => {
+          for (const {node} of $dfs()) {
+            if (
+              $isInlineComponentNode(node) &&
+              (node as InlineComponentNode).getComponentId() ===
+                detail.componentId
+            ) {
+              targetNodeKey = node.getKey();
+              targetData = (node as InlineComponentNode).getComponentData();
+              targetComponentName = (
+                node as InlineComponentNode
+              ).getComponentName();
+              break;
+            }
+          }
+        },
+        {editor}
+      );
+      if (!targetNodeKey) {
+        return;
+      }
+      setInlineComponentModalState({
+        schema: schemaDef,
+        componentName: targetComponentName || detail.componentName,
+        componentId: detail.componentId,
+        mode: 'edit',
+        initialValue: targetData ? cloneData(targetData) : {},
+        nodeKey: targetNodeKey,
+      });
+    };
+    window.addEventListener(OPEN_RICHTEXT_INLINE_EVENT, handler);
+    return () =>
+      window.removeEventListener(OPEN_RICHTEXT_INLINE_EVENT, handler);
+  }, [editor, props.deepKey, inlineComponentsMap]);
+
+  const onBlockComponentSubmit = (data: Record<string, any>) => {
+    if (!blockComponentModalState) {
+      return;
+    }
+    if (
+      blockComponentModalState.mode === 'edit' &&
+      blockComponentModalState.nodeKey
+    ) {
+      updateBlockComponent(blockComponentModalState.nodeKey, data);
+    } else {
+      insertBlockComponent(blockComponentModalState.schema.name, data);
+    }
+    closeBlockComponentModal();
+  };
+
+  const openInlineComponentModal = (
+    componentName: string,
+    options?: {
+      mode?: 'create' | 'edit';
+      initialValue?: Record<string, any>;
+      componentId?: string;
+      nodeKey?: NodeKey;
+    }
+  ) => {
+    const schemaDef = inlineComponentsMap.get(componentName);
+    if (!schemaDef) {
+      return;
+    }
+    const initialValue = options?.initialValue
+      ? cloneData(options.initialValue)
+      : getDefaultFieldValue(schemaDef);
+    setInlineComponentModalState({
+      schema: schemaDef,
+      componentName,
+      componentId: options?.componentId || autokey(),
+      mode: options?.mode ?? 'create',
+      initialValue,
+      nodeKey: options?.nodeKey,
+    });
+  };
+
+  const insertInlineComponent = (
+    componentName: string,
+    componentId: string,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $createInlineComponentNode(componentName, componentId, data);
+      $insertNodes([node]);
+      node.selectNext();
+    });
+  };
+
+  const updateInlineComponent = (
+    nodeKey: NodeKey,
+    componentName: string,
+    componentId: string,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isInlineComponentNode(node)) {
+        node.setComponentName(componentName);
+        node.setComponentId(componentId);
+        node.setComponentData(data);
+      }
+    });
+  };
+
+  const closeInlineComponentModal = () => {
+    setInlineComponentModalState(null);
+  };
+
+  const onInlineComponentSubmit = (value: {
+    componentId: string;
+    data: Record<string, any>;
+  }) => {
+    if (!inlineComponentModalState) {
+      return;
+    }
+    const {componentName, mode, nodeKey} = inlineComponentModalState;
+    if (mode === 'edit' && nodeKey) {
+      updateInlineComponent(
+        nodeKey,
+        componentName,
+        value.componentId,
+        value.data
+      );
+    } else {
+      insertInlineComponent(componentName, value.componentId, value.data);
+    }
+    closeInlineComponentModal();
+  };
+
+  return (
+    <InlineComponentsProvider
+      components={inlineComponentsMap}
+      onEditComponent={(componentName, options) =>
+        openInlineComponentModal(componentName, {
+          mode: options?.mode ?? 'edit',
+          initialValue: options?.initialValue,
+          componentId: options?.componentId,
+          nodeKey: options?.nodeKey,
+        })
+      }
+    >
+      <BlockComponentsProvider
+        blocks={blockComponentsMap}
+        onEditBlock={openBlockComponentModal}
+      >
+        <OnChangePlugin value={props.value} onChange={props.onChange} />
+        {!props.hideToolbar && (
+          <ToolbarPlugin
+            editor={editor}
+            activeEditor={activeEditor}
+            setActiveEditor={setActiveEditor}
+            setIsLinkEditMode={setIsLinkEditMode}
+            variant={props.variant}
+            blockComponents={blockComponents}
+            inlineComponents={inlineComponents}
+            paragraphSizes={props.paragraphSizes}
+            onInsertBlockComponent={(blockName) =>
+              openBlockComponentModal(blockName, {mode: 'create'})
+            }
+            onInsertInlineComponent={(componentName) =>
+              openInlineComponentModal(componentName, {mode: 'create'})
+            }
+          />
+        )}
+        <ShortcutsPlugin
+          editor={activeEditor}
+          setIsLinkEditMode={setIsLinkEditMode}
+        />
+        <HistoryPlugin externalHistoryState={historyState} />
+        <RichTextPlugin
+          contentEditable={
+            <div className="LexicalEditor__scroller">
+              <div className="LexicalEditor__root" ref={onRef}>
+                <ContentEditable
+                  className="LexicalEditor__editor Prose"
+                  aria-placeholder={placeholder}
+                  placeholder={<Placeholder placeholder={placeholder} />}
+                />
+              </div>
+            </div>
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+        <LinkPlugin />
+        <AutoLinkPlugin />
+        <ListPlugin />
+        {props.variant !== 'comment' && (
+          <>
+            <HorizontalRulePlugin />
+            <TablePlugin />
+            <TableActionMenuPlugin editor={activeEditor} />
+            <TabIndentationPlugin maxIndent={7} />
+          </>
+        )}
+        <MarkdownTransformPlugin />
+        {props.autoFocus && <AutoFocusPlugin />}
+        <TrailingParagraphPlugin />
+        <SpecialCharacterPlugin />
+        <PasteCleanupPlugin />
+        {props.mentions && <MentionsPlugin />}
+        {props.variant !== 'comment' && <ImagePastePlugin />}
+        {floatingAnchorElem && (
+          <>
+            <FloatingToolbarPlugin
+              anchorElem={floatingAnchorElem}
+              setIsLinkEditMode={setIsLinkEditMode}
+            />
+            <FloatingLinkEditorPlugin
+              anchorElem={floatingAnchorElem}
+              isLinkEditMode={isLinkEditMode}
+              setIsLinkEditMode={setIsLinkEditMode}
+            />
+          </>
+        )}
+        {blockComponentModalState && (
+          <BlockComponentModal
+            schema={blockComponentModalState.schema}
+            opened={true}
+            initialValue={blockComponentModalState.initialValue}
+            mode={blockComponentModalState.mode}
+            onClose={closeBlockComponentModal}
+            onSubmit={onBlockComponentSubmit}
+          />
+        )}
+        {inlineComponentModalState && (
+          <InlineComponentModal
+            schema={inlineComponentModalState.schema}
+            opened={true}
+            componentId={inlineComponentModalState.componentId}
+            initialValue={inlineComponentModalState.initialValue}
+            mode={inlineComponentModalState.mode}
+            onClose={closeInlineComponentModal}
+            onSubmit={onInlineComponentSubmit}
+          />
+        )}
+      </BlockComponentsProvider>
+    </InlineComponentsProvider>
+  );
+}
+
+const PLACEHOLDERS = [
+  'Once upon a placeholder...',
+  'Start writing something legendary...',
+  'Words go here. Preferably brilliant ones...',
+  'Compose like nobody’s watching...',
+  'Add text that makes Hemingway jealous...',
+  'Here lies your unwritten brilliance...',
+  'This is where the magic happens...',
+  'Let the words flow...',
+  'In the beginning, there was a blank page...',
+  'To write, or not to write, that is the question...',
+];
+
+function getRandPlaceholder() {
+  const rand = Math.floor(Math.random() * PLACEHOLDERS.length);
+  const placeholder = PLACEHOLDERS[rand];
+  return placeholder;
+}
+
+interface PlaceholderProps {
+  placeholder: string;
+}
+
+function Placeholder(props: PlaceholderProps) {
+  return <div className="LexicalEditor__placeholder">{props.placeholder}</div>;
+}

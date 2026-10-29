@@ -1,0 +1,552 @@
+import {
+  IconAlarmOff,
+  IconArchive,
+  IconArchiveOff,
+  IconArrowBack,
+  IconArrowBarToDown,
+  IconArrowBarToUp,
+  IconCloudOff,
+  IconCopy,
+  IconDotsVertical,
+  IconHistory,
+  IconLock,
+  IconLockOpen,
+  IconPackage,
+  IconRocket,
+  IconTrash,
+} from '@tabler/icons-preact';
+import {Text} from '../../../../components/Text/Text.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {
+  showNotification,
+  updateNotification,
+} from '../../../../primitives/Toast/toastStore.js';
+import {errorMessage} from '../../../../utils/notifications.js';
+import {useCopyDocModal} from '../../../collections/components/CopyDocModal/CopyDocModal.js';
+import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/AddToReleaseModal.js';
+import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/LockPublishingModal.js';
+import {usePublishDocModal} from '../../../releases/components/PublishDocModal/PublishDocModal.js';
+import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
+import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {
+  CMSDoc,
+  cmsArchiveDoc,
+  cmsDeleteDoc,
+  cmsRevertDraft,
+  cmsUnarchiveDoc,
+  cmsUnpublishDoc,
+  cmsUnscheduleDoc,
+  testIsArchived,
+  testIsScheduled,
+  testPublishingLocked,
+} from '../../doc.js';
+import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
+import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
+
+export interface DocActionEvent {
+  action:
+    | 'archive'
+    | 'copy'
+    | 'delete'
+    | 'publish'
+    | 'revert-draft'
+    | 'schedule'
+    | 'unarchive'
+    | 'unpublish'
+    | 'unschedule'
+    | 'locked'
+    | 'unlocked';
+  newDocId?: string;
+}
+
+export interface DocActionsMenuProps {
+  docId: string;
+  data?: CMSDoc;
+  onDelete?: () => void;
+  onAction?: (event: DocActionEvent) => void;
+  /**
+   * When provided (i.e. the docs list is in "Custom order" mode), renders
+   * "Move to top" / "Move to bottom" menu items that call back with the
+   * requested position.
+   */
+  onMoveTo?: (position: 'top' | 'bottom') => void;
+  /**
+   * Renders a "Publish" menu item. Enabled in contexts that have no dedicated
+   * publish button of their own (e.g. the collection list); the doc editor has
+   * its own publish button in the status bar.
+   */
+  showPublish?: boolean;
+}
+
+export function DocActionsMenu(props: DocActionsMenuProps) {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
+  const docId = props.docId;
+  const data = (props.data || {}) as CMSDoc;
+  const sys = data.sys || {};
+  const isArchived = testIsArchived(data);
+  const modals = useModals();
+  const copyDocModal = useCopyDocModal({
+    fromDocId: docId,
+    onSuccess: (newDocId: string) => {
+      if (props.onAction) {
+        props.onAction({action: 'copy', newDocId});
+      }
+    },
+  });
+  const versionHistoryModal = useVersionHistoryModal({docId});
+  const lockPublishingModal = useLockPublishingModal({docId});
+  const addToReleaseModal = useAddToReleaseModal({docIds: [docId]});
+  const publishDocModal = usePublishDocModal({
+    docId,
+    onSuccess: (event) => {
+      if (props.onAction) {
+        props.onAction({
+          action: event.publishType === 'scheduled' ? 'schedule' : 'publish',
+        });
+      }
+    },
+  });
+
+  const onRevertDraft = () => {
+    const notificationId = `revert-draft-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: `Discard draft edits for ${docId}`,
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText text-pretty"
+          >
+            Are you sure you want to discard draft changes for the following
+            doc? The doc data will revert to the published version. There is no
+            undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Discard draft edits', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Discarding draft edits',
+          message: `Discarding draft edits of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsRevertDraft(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Discarded draft edits',
+          message: `Successfully reverted ${docId} back to its published version`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'revert-draft',
+          });
+        }
+      },
+    });
+  };
+
+  const onUnpublishDoc = () => {
+    const notificationId = `unpublish-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: `Unpublish ${docId}`,
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText text-pretty"
+          >
+            Are you sure you want to unpublish the following doc? There is no
+            undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Unpublish', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unpublishing doc',
+          message: `Requesting unpublish of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        try {
+          await cmsUnpublishDoc(docId);
+        } catch (err) {
+          console.error(err);
+          updateNotification({
+            id: notificationId,
+            title: 'Unpublish failed',
+            message: `Failed to unpublish ${docId}: ${errorMessage(err)}`,
+            color: 'red',
+            loading: false,
+            autoClose: false,
+          });
+          modals.closeModal(modalId);
+          return;
+        }
+        updateNotification({
+          id: notificationId,
+          title: 'Unpublished!',
+          message: `Successfully unpublished ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'unpublish',
+          });
+        }
+      },
+    });
+  };
+
+  const onLockChanged = (state: 'locked' | 'unlocked') => {
+    if (props.onAction) {
+      props.onAction({action: state});
+    }
+  };
+
+  const onUnscheduleDoc = () => {
+    const notificationId = `unschedule-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: `Unschedule ${docId}`,
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText text-pretty"
+          >
+            Are you sure you want to unschedule the following doc?
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Unschedule', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unschedule doc',
+          message: `Requesting unschedule of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsUnscheduleDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Unscheduled!',
+          message: `Successfully unscheduled ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'unschedule',
+          });
+        }
+      },
+    });
+  };
+
+  const onArchiveDoc = () => {
+    const notificationId = `archive-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: `Archive ${docId}`,
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText text-pretty"
+          >
+            Are you sure you want to archive the following doc? Archived docs
+            are hidden from the collection list by default but can be restored
+            later.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Archive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Archiving doc',
+          message: `Requesting archive of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsArchiveDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Archived!',
+          message: `Successfully archived ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({action: 'archive'});
+        }
+      },
+    });
+  };
+
+  const onUnarchiveDoc = async () => {
+    const notificationId = `unarchive-doc-${docId}`;
+    showNotification({
+      id: notificationId,
+      title: 'Unarchiving doc',
+      message: `Requesting unarchive of ${docId}...`,
+      loading: true,
+      autoClose: false,
+    });
+    await cmsUnarchiveDoc(docId);
+    updateNotification({
+      id: notificationId,
+      title: 'Unarchived!',
+      message: `Successfully unarchived ${docId}!`,
+      loading: false,
+      autoClose: 5000,
+    });
+    if (props.onAction) {
+      props.onAction({action: 'unarchive'});
+    }
+  };
+
+  const onDeleteDoc = () => {
+    const notificationId = `delete-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: 'Delete doc',
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText text-pretty"
+          >
+            Are you sure you want to delete the following doc? There is no undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Delete', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Deleting doc',
+          message: `Requesting deletion of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsDeleteDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Deleted!',
+          message: `Successfully deleted ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onDelete) {
+          props.onDelete();
+        }
+        if (props.onAction) {
+          props.onAction({action: 'delete'});
+        }
+      },
+    });
+  };
+
+  return (
+    <Menu
+      className="DocActionsMenu__menu"
+      placement="bottom-end"
+      trigger={
+        <IconButton
+          className="DocActionsMenu__trigger text-strong"
+          label="Doc actions"
+        >
+          <IconDotsVertical />
+        </IconButton>
+      }
+    >
+      {props.onMoveTo && (
+        <MenuItem
+          icon={<IconArrowBarToUp />}
+          onClick={() => props.onMoveTo!('top')}
+          disabled={!canEdit}
+        >
+          Move to top
+        </MenuItem>
+      )}
+      {props.onMoveTo && (
+        <MenuItem
+          icon={<IconArrowBarToDown />}
+          onClick={() => props.onMoveTo!('bottom')}
+          disabled={!canEdit}
+        >
+          Move to bottom
+        </MenuItem>
+      )}
+      {props.showPublish && !isArchived && (
+        <MenuItem
+          icon={<IconRocket />}
+          onClick={() => publishDocModal.open()}
+          // A doc with a pending scheduled publish or a publishing lock can't
+          // be published until it's unscheduled or unlocked.
+          disabled={
+            !canPublish || testIsScheduled(data) || testPublishingLocked(data)
+          }
+        >
+          Publish
+        </MenuItem>
+      )}
+      {!isArchived && (
+        <MenuItem
+          icon={<IconPackage />}
+          onClick={() => addToReleaseModal.open()}
+          disabled={!canPublish}
+        >
+          Add to release
+        </MenuItem>
+      )}
+      <MenuItem
+        icon={<IconHistory />}
+        onClick={() => versionHistoryModal.open()}
+      >
+        Version history
+      </MenuItem>
+      <MenuItem
+        icon={<IconCopy />}
+        onClick={() => copyDocModal.open()}
+        disabled={!canEdit}
+      >
+        Copy
+      </MenuItem>
+      {!isArchived &&
+        sys.modifiedAt &&
+        sys.publishedAt &&
+        sys.modifiedAt > sys.publishedAt && (
+          <MenuItem
+            icon={<IconArrowBack />}
+            onClick={() => onRevertDraft()}
+            disabled={!canEdit}
+          >
+            Discard draft edits
+          </MenuItem>
+        )}
+      {!isArchived && sys.firstPublishedAt && (
+        <MenuItem
+          icon={<IconCloudOff />}
+          onClick={() => onUnpublishDoc()}
+          // A doc with a pending scheduled publish needs to be unscheduled
+          // before it can be unpublished.
+          disabled={!canPublish || testIsScheduled(data)}
+        >
+          Unpublish
+          {testIsScheduled(data) && (
+            <div className="DocActionsMenu__itemNote mt-0.5 text-xs text-muted">
+              Unschedule the upcoming publish first.
+            </div>
+          )}
+        </MenuItem>
+      )}
+      {!isArchived && sys.scheduledAt && (
+        <MenuItem
+          icon={<IconAlarmOff />}
+          onClick={() => onUnscheduleDoc()}
+          disabled={!canPublish}
+        >
+          Unschedule
+        </MenuItem>
+      )}
+      {!isArchived &&
+        (testPublishingLocked(data) ? (
+          <MenuItem
+            icon={<IconLockOpen />}
+            onClick={() =>
+              lockPublishingModal.open({unlock: true, onChange: onLockChanged})
+            }
+            disabled={!canEdit}
+          >
+            Unlock publishing
+          </MenuItem>
+        ) : (
+          <MenuItem
+            icon={<IconLock />}
+            onClick={() =>
+              lockPublishingModal.open({unlock: false, onChange: onLockChanged})
+            }
+            // Prevent "publishing lock" if the doc has an existing scheduled
+            // publish.
+            disabled={!canEdit || testIsScheduled(data)}
+          >
+            Lock publishing
+          </MenuItem>
+        ))}
+      {isArchived ? (
+        <MenuItem
+          icon={<IconArchiveOff />}
+          onClick={() => onUnarchiveDoc()}
+          disabled={!canEdit}
+        >
+          Unarchive
+        </MenuItem>
+      ) : (
+        !sys.publishedAt && (
+          <MenuItem
+            icon={<IconArchive />}
+            onClick={() => onArchiveDoc()}
+            disabled={!canEdit}
+          >
+            Archive
+          </MenuItem>
+        )
+      )}
+      <MenuItem
+        icon={<IconTrash />}
+        onClick={() => onDeleteDoc()}
+        disabled={!canEdit}
+      >
+        Delete
+      </MenuItem>
+    </Menu>
+  );
+}

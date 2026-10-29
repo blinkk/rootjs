@@ -1,0 +1,17 @@
+@layer components {
+  /* Fade the spinner in after a short delay so it doesn't flash when the
+     import resolves quickly. */
+  .RouteLoading > * {
+    opacity: 0;
+    animation: RouteLoading-fade-in 150ms ease 150ms forwards;
+  }
+
+  @keyframes RouteLoading-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

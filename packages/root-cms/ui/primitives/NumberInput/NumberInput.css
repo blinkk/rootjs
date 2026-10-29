@@ -1,0 +1,14 @@
+/*
+ * Hides the browser's own spin buttons; `NumberInput` draws its own.
+ */
+@layer components {
+  .NumberInput__input {
+    -moz-appearance: textfield;
+  }
+
+  .NumberInput__input::-webkit-inner-spin-button,
+  .NumberInput__input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

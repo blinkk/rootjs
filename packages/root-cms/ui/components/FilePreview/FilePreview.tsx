@@ -1,4 +1,6 @@
-import {Image} from '@mantine/core';
+import {IconPhoto} from '@tabler/icons-preact';
+import {useEffect, useRef, useState} from 'preact/hooks';
+import {cn} from '../../utils/classes.js';
 
 export interface FilePreviewFile {
   src?: string;
@@ -10,6 +12,10 @@ export interface FilePreviewProps {
   file?: FilePreviewFile | string | null;
   width: number;
   height: number;
+  /**
+   * Shows a placeholder (an image icon on a grey box) while the image is
+   * missing, loading or failed to load.
+   */
   withPlaceholder?: boolean;
   className?: string;
   alt?: string;
@@ -17,6 +23,9 @@ export interface FilePreviewProps {
   fit?: 'cover' | 'contain';
 }
 
+/**
+ * Renders a fixed-size preview of an image or mp4 file.
+ */
 export function FilePreview(props: FilePreviewProps) {
   const {file, width, height, withPlaceholder, className, alt} = props;
   const fit = props.fit || 'cover';
@@ -35,7 +44,7 @@ export function FilePreview(props: FilePreviewProps) {
   }
 
   return (
-    <Image
+    <ImagePreview
       className={className}
       src={src}
       width={width}
@@ -44,6 +53,63 @@ export function FilePreview(props: FilePreviewProps) {
       withPlaceholder={withPlaceholder}
       alt={alt}
     />
+  );
+}
+
+function ImagePreview(props: {
+  className?: string;
+  src?: string;
+  width: number;
+  height: number;
+  fit: 'cover' | 'contain';
+  withPlaceholder?: boolean;
+  alt?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(!props.src);
+
+  // Reset when the source changes (not on mount, where a cached image may
+  // already have loaded).
+  const prevSrc = useRef(props.src);
+  useEffect(() => {
+    if (prevSrc.current === props.src) {
+      return;
+    }
+    prevSrc.current = props.src;
+    setLoaded(false);
+    setError(!props.src);
+  }, [props.src]);
+
+  const showPlaceholder = props.withPlaceholder && (!loaded || error);
+  const iconSize = Math.min(
+    40,
+    Math.round(Math.min(props.width, props.height) * 0.6)
+  );
+
+  return (
+    <div
+      className={cn('FilePreview', 'relative', props.className)}
+      style={{width: `${props.width}px`, height: `${props.height}px`}}
+    >
+      {props.src && (
+        <img
+          className="FilePreview__image block size-full border-0"
+          src={props.src}
+          alt={props.alt}
+          style={{objectFit: props.fit}}
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+        />
+      )}
+      {showPlaceholder && (
+        <div
+          className="FilePreview__placeholder absolute inset-0 flex items-center justify-center bg-surface-hover text-muted"
+          title={props.alt}
+        >
+          <IconPhoto size={iconSize} stroke={1.5} aria-hidden="true" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -76,7 +142,10 @@ function VideoPreview(props: {
 }) {
   return (
     <video
-      className={props.className}
+      className={cn(
+        'FilePreview FilePreview--video block bg-chip',
+        props.className
+      )}
       src={props.src}
       width={props.width}
       height={props.height}
@@ -86,9 +155,7 @@ function VideoPreview(props: {
       style={{
         width: `${props.width}px`,
         height: `${props.height}px`,
-        backgroundColor: '#f1f3f5',
         objectFit: props.fit || 'cover',
-        display: 'block',
       }}
     />
   );

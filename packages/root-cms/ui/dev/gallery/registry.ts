@@ -1,0 +1,74 @@
+import {AccordionGallery} from '../../primitives/Accordion/Accordion.gallery.js';
+import {AvatarGallery} from '../../primitives/Avatar/Avatar.gallery.js';
+import {BadgeGallery} from '../../primitives/Badge/Badge.gallery.js';
+import {BreadcrumbsGallery} from '../../primitives/Breadcrumbs/Breadcrumbs.gallery.js';
+import {ButtonGallery} from '../../primitives/Button/Button.gallery.js';
+import {CheckboxGallery} from '../../primitives/Checkbox/Checkbox.gallery.js';
+import {ColorInputGallery} from '../../primitives/ColorInput/ColorInput.gallery.js';
+import {DialogGallery} from '../../primitives/Dialog/Dialog.gallery.js';
+import {DividerGallery} from '../../primitives/Divider/Divider.gallery.js';
+import {FieldGallery} from '../../primitives/Field/Field.gallery.js';
+import {IconButtonGallery} from '../../primitives/IconButton/IconButton.gallery.js';
+import {JsonInputGallery} from '../../primitives/JsonInput/JsonInput.gallery.js';
+import {KbdGallery} from '../../primitives/Kbd/Kbd.gallery.js';
+import {LoadingOverlayGallery} from '../../primitives/LoadingOverlay/LoadingOverlay.gallery.js';
+import {MenuGallery} from '../../primitives/Menu/Menu.gallery.js';
+import {ModalsGallery} from '../../primitives/modals/ModalsProvider.gallery.js';
+import {MultiSelectGallery} from '../../primitives/MultiSelect/MultiSelect.gallery.js';
+import {NumberInputGallery} from '../../primitives/NumberInput/NumberInput.gallery.js';
+import {PaginationGallery} from '../../primitives/Pagination/Pagination.gallery.js';
+import {PasswordInputGallery} from '../../primitives/PasswordInput/PasswordInput.gallery.js';
+import {PopoverGallery} from '../../primitives/Popover/Popover.gallery.js';
+import {SegmentedControlGallery} from '../../primitives/SegmentedControl/SegmentedControl.gallery.js';
+import {SelectGallery} from '../../primitives/Select/Select.gallery.js';
+import {SkeletonGallery} from '../../primitives/Skeleton/Skeleton.gallery.js';
+import {SpinnerGallery} from '../../primitives/Spinner/Spinner.gallery.js';
+import {SwitchGallery} from '../../primitives/Switch/Switch.gallery.js';
+import {TableGallery} from '../../primitives/Table/Table.gallery.js';
+import {TabsGallery} from '../../primitives/Tabs/Tabs.gallery.js';
+import {TextareaGallery} from '../../primitives/Textarea/Textarea.gallery.js';
+import {TextInputGallery} from '../../primitives/TextInput/TextInput.gallery.js';
+import {ToastGallery} from '../../primitives/Toast/Toast.gallery.js';
+import {TooltipGallery} from '../../primitives/Tooltip/Tooltip.gallery.js';
+import {TokensGallery} from './TokensGallery.js';
+import type {GalleryEntry} from './types.js';
+
+/**
+ * Every gallery entry, in sidebar order within each group. Each primitive
+ * defines its entry in a colocated `<Name>.gallery.tsx` and is added here.
+ */
+export const GALLERY_ENTRIES: GalleryEntry[] = [
+  TokensGallery,
+  AccordionGallery,
+  AvatarGallery,
+  BadgeGallery,
+  BreadcrumbsGallery,
+  ButtonGallery,
+  CheckboxGallery,
+  ColorInputGallery,
+  DialogGallery,
+  DividerGallery,
+  FieldGallery,
+  IconButtonGallery,
+  JsonInputGallery,
+  KbdGallery,
+  LoadingOverlayGallery,
+  MenuGallery,
+  ModalsGallery,
+  MultiSelectGallery,
+  NumberInputGallery,
+  PaginationGallery,
+  PasswordInputGallery,
+  PopoverGallery,
+  SegmentedControlGallery,
+  SelectGallery,
+  SkeletonGallery,
+  SpinnerGallery,
+  SwitchGallery,
+  TableGallery,
+  TabsGallery,
+  TextareaGallery,
+  TextInputGallery,
+  ToastGallery,
+  TooltipGallery,
+];

@@ -4360,7 +4360,7 @@
                 {
                   "name": "assetId",
                   "signature": "assetId?: string;",
-                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/utils/assets.ts` and `core/assets.ts`).",
+                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/features/assets/assets.ts` and `core/assets.ts`).",
                   "examples": []
                 }
               ],
@@ -6866,7 +6866,7 @@
                 {
                   "name": "assetId",
                   "signature": "assetId?: string;",
-                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/utils/assets.ts` and `core/assets.ts`).",
+                  "doc": "When the file was selected from the asset library, the id of the asset at\n`Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to\ndocs that embed it (see `ui/features/assets/assets.ts` and `core/assets.ts`).",
                   "examples": []
                 }
               ],

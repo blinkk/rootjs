@@ -1,0 +1,6 @@
+@layer components {
+  /* Safari still draws the disclosure triangle without this. */
+  .ErrorLogsPage__item__summary::-webkit-details-marker {
+    display: none;
+  }
+}

@@ -10,15 +10,13 @@ const ResponsiveImage = schema.define({
     }),
     schema.select({
       id: 'breakpoint',
-      options: {
-        values: [
-          {label: 'mobile only', value: 'mobile'},
-          {label: 'mobile and tablet', value: 'tablet-lt'},
-          {label: 'tablet only', value: 'tablet'},
-          {label: 'tablet and desktop', value: 'tablet-gt'},
-          {label: 'desktop only', value: 'laptop-gt'},
-        ],
-      },
+      options: [
+        {label: 'mobile only', value: 'mobile'},
+        {label: 'mobile and tablet', value: 'tablet-lt'},
+        {label: 'tablet only', value: 'tablet'},
+        {label: 'tablet and desktop', value: 'tablet-gt'},
+        {label: 'desktop only', value: 'laptop-gt'},
+      ],
     }),
   ],
 });
@@ -104,25 +102,21 @@ test('define schema', () => {
               id: 'category',
               label: 'category',
               help: 'select a category for the blog post.',
-              options: {
-                values: [
-                  {label: 'engineering', value: 'engineering'},
-                  {label: 'event', value: 'event'},
-                  {label: 'update', value: 'update'},
-                ],
-              },
+              options: [
+                {label: 'engineering', value: 'engineering'},
+                {label: 'event', value: 'event'},
+                {label: 'update', value: 'update'},
+              ],
             }),
             schema.multiselect({
               id: 'tags',
               label: 'tags',
               help: 'select one or more tags for the blog post.',
-              options: {
-                values: [
-                  {label: 'engineering', value: 'engineering'},
-                  {label: 'event', value: 'event'},
-                  {label: 'update', value: 'update'},
-                ],
-              },
+              options: [
+                {label: 'engineering', value: 'engineering'},
+                {label: 'event', value: 'event'},
+                {label: 'update', value: 'update'},
+              ],
             }),
           ],
         }),
@@ -185,44 +179,40 @@ test('define schema', () => {
               "help": "select a category for the blog post.",
               "id": "category",
               "label": "category",
-              "options": {
-                "values": [
-                  {
-                    "label": "engineering",
-                    "value": "engineering",
-                  },
-                  {
-                    "label": "event",
-                    "value": "event",
-                  },
-                  {
-                    "label": "update",
-                    "value": "update",
-                  },
-                ],
-              },
+              "options": [
+                {
+                  "label": "engineering",
+                  "value": "engineering",
+                },
+                {
+                  "label": "event",
+                  "value": "event",
+                },
+                {
+                  "label": "update",
+                  "value": "update",
+                },
+              ],
               "type": "select",
             },
             {
               "help": "select one or more tags for the blog post.",
               "id": "tags",
               "label": "tags",
-              "options": {
-                "values": [
-                  {
-                    "label": "engineering",
-                    "value": "engineering",
-                  },
-                  {
-                    "label": "event",
-                    "value": "event",
-                  },
-                  {
-                    "label": "update",
-                    "value": "update",
-                  },
-                ],
-              },
+              "options": [
+                {
+                  "label": "engineering",
+                  "value": "engineering",
+                },
+                {
+                  "label": "event",
+                  "value": "event",
+                },
+                {
+                  "label": "update",
+                  "value": "update",
+                },
+              ],
               "type": "multiselect",
             },
           ],
@@ -247,30 +237,28 @@ test('define schema', () => {
                           },
                           {
                             "id": "breakpoint",
-                            "options": {
-                              "values": [
-                                {
-                                  "label": "mobile only",
-                                  "value": "mobile",
-                                },
-                                {
-                                  "label": "mobile and tablet",
-                                  "value": "tablet-lt",
-                                },
-                                {
-                                  "label": "tablet only",
-                                  "value": "tablet",
-                                },
-                                {
-                                  "label": "tablet and desktop",
-                                  "value": "tablet-gt",
-                                },
-                                {
-                                  "label": "desktop only",
-                                  "value": "laptop-gt",
-                                },
-                              ],
-                            },
+                            "options": [
+                              {
+                                "label": "mobile only",
+                                "value": "mobile",
+                              },
+                              {
+                                "label": "mobile and tablet",
+                                "value": "tablet-lt",
+                              },
+                              {
+                                "label": "tablet only",
+                                "value": "tablet",
+                              },
+                              {
+                                "label": "tablet and desktop",
+                                "value": "tablet-gt",
+                              },
+                              {
+                                "label": "desktop only",
+                                "value": "laptop-gt",
+                              },
+                            ],
                             "type": "select",
                           },
                         ],
@@ -341,30 +329,28 @@ test('define schema', () => {
                             },
                             {
                               "id": "breakpoint",
-                              "options": {
-                                "values": [
-                                  {
-                                    "label": "mobile only",
-                                    "value": "mobile",
-                                  },
-                                  {
-                                    "label": "mobile and tablet",
-                                    "value": "tablet-lt",
-                                  },
-                                  {
-                                    "label": "tablet only",
-                                    "value": "tablet",
-                                  },
-                                  {
-                                    "label": "tablet and desktop",
-                                    "value": "tablet-gt",
-                                  },
-                                  {
-                                    "label": "desktop only",
-                                    "value": "laptop-gt",
-                                  },
-                                ],
-                              },
+                              "options": [
+                                {
+                                  "label": "mobile only",
+                                  "value": "mobile",
+                                },
+                                {
+                                  "label": "mobile and tablet",
+                                  "value": "tablet-lt",
+                                },
+                                {
+                                  "label": "tablet only",
+                                  "value": "tablet",
+                                },
+                                {
+                                  "label": "tablet and desktop",
+                                  "value": "tablet-gt",
+                                },
+                                {
+                                  "label": "desktop only",
+                                  "value": "laptop-gt",
+                                },
+                              ],
                               "type": "select",
                             },
                           ],

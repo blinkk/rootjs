@@ -1,0 +1,253 @@
+/*
+ * The editor chrome around Lexical's DOM: the toolbar box, the contenteditable
+ * root and its placeholder, and the decorator nodes (block and inline
+ * components). The toolbar's controls are styled with utilities.
+ */
+@layer components {
+  .LexicalEditor__root {
+    position: relative;
+  }
+
+  /* Sticks below the doc editor's header, and below array item headers. */
+  .DocEditor__ArrayField .LexicalEditor__toolbar {
+    --lexical-toolbar-offset: calc(
+      var(--array-field-header-offset, 0px) + 30px
+    );
+  }
+
+  /*
+   * One row of controls. On narrow screens it scrolls sideways inside itself
+   * rather than overflowing the page; the menus it opens float above it.
+   */
+  .LexicalEditor__toolbar {
+    align-items: center;
+    background: var(--cms-color-surface);
+    border: 1px solid var(--cms-input-border);
+    display: flex;
+    gap: 4px;
+    margin-bottom: -1px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 10px;
+    position: sticky;
+    scrollbar-width: thin;
+    top: calc(36px + var(--lexical-toolbar-offset, 0px));
+    z-index: 1;
+  }
+
+  .LexicalEditor--comment .LexicalEditor__toolbar {
+    border-radius: var(--cms-radius-md) var(--cms-radius-md) 0 0;
+    gap: 6px;
+    padding: 6px;
+    position: static;
+  }
+
+  .LexicalEditor--comment .LexicalEditor__toolbar--comment {
+    flex-wrap: wrap;
+  }
+
+  .LexicalEditor:has(.LexicalEditor__editor:focus) .LexicalEditor__toolbar {
+    border-bottom-color: var(--cms-color-focus);
+  }
+
+  .LexicalEditor__editor {
+    background: var(--cms-color-surface);
+    border: 1px solid var(--cms-input-border);
+    font-family: var(--cms-font-sans);
+    font-size: var(--cms-text-sm);
+    min-height: 140px;
+    padding: 10px 10px 30px;
+    position: relative;
+  }
+
+  .LexicalEditor__editor > *:first-child {
+    margin-top: 0;
+  }
+
+  .LexicalEditor__editor:focus {
+    border-color: var(--cms-color-focus);
+    outline: none;
+  }
+
+  .LexicalEditor--withMaxHeight .LexicalEditor__editor {
+    max-height: max(30vh, 280px);
+    overflow: auto;
+  }
+
+  .LexicalEditor--noToolbar .LexicalEditor__editor {
+    border-radius: var(--cms-radius-md);
+  }
+
+  /* Comments: body copy size, in a rounded box. */
+  .LexicalEditor--comment .LexicalEditor__editor {
+    border-radius: 0 0 var(--cms-radius-md) var(--cms-radius-md);
+    font-size: var(--cms-text-base);
+    line-height: 1.5;
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  .LexicalEditor--comment.LexicalEditor--withMaxHeight .LexicalEditor__editor {
+    max-height: 220px;
+  }
+
+  .LexicalEditor--noToolbar.LexicalEditor--comment .LexicalEditor__editor {
+    border-radius: var(--cms-radius-md);
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+
+  .LexicalEditor__placeholder {
+    color: var(--cms-color-text-muted);
+    left: 10px;
+    pointer-events: none;
+    position: absolute;
+    top: 10px;
+  }
+
+  /* Sits over the comment editor's padding, at its text size. */
+  .LexicalEditor--comment .LexicalEditor__placeholder {
+    font-size: var(--cms-text-base);
+    left: 12px;
+    line-height: 1.5;
+    top: 12px;
+  }
+
+  .LexicalEditor--noToolbar.LexicalEditor--comment .LexicalEditor__placeholder {
+    top: 10px;
+  }
+
+  /* Block components. */
+  .LexicalEditor__customBlockWrapper {
+    margin: 12px 0;
+  }
+
+  .LexicalEditor__customBlock {
+    background: var(--cms-color-surface-hover);
+    border: 1px solid var(--cms-color-border);
+    border-radius: var(--cms-radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: calc(100% - 8px);
+    padding: 12px;
+  }
+
+  .LexicalEditor__customBlock--selected {
+    border-color: var(--cms-color-text-muted);
+  }
+
+  .LexicalEditor__customBlock__header {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .LexicalEditor__customBlock__header__title {
+    align-items: center;
+    display: flex;
+    font-weight: 600;
+  }
+
+  .LexicalEditor__customBlock__previewImage {
+    position: relative;
+  }
+
+  .LexicalEditor__customBlock__previewImage img {
+    max-height: 150px;
+    max-width: 100%;
+    object-fit: contain;
+    transition: opacity 0.2s ease;
+  }
+
+  .LexicalEditor__customBlock__previewImage:has(
+      .LexicalEditor__customBlock__previewImage__loading
+    )
+    img {
+    opacity: 0.5;
+  }
+
+  .LexicalEditor__customBlock__previewImage__loading {
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+
+  .LexicalEditor__customBlock__preview {
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    font-size: var(--cms-text-sm);
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+  }
+
+  .LexicalEditor__customBlock__preview--html {
+    font-family: var(--cms-font-mono);
+  }
+
+  .LexicalEditor__customBlock__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Inline components: a pill that opens the component's editor. */
+  .LexicalEditor__inlineComponentWrapper,
+  .LexicalEditor__inlineComponent {
+    display: inline-block;
+  }
+
+  .LexicalEditor__inlineComponent__button {
+    align-items: center;
+    background-color: var(--cms-color-surface-active);
+    border: 1px solid var(--cms-color-border);
+    border-radius: var(--cms-radius-xl);
+    color: var(--cms-color-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: var(--cms-text-sm);
+    gap: 4px;
+    line-height: 1.2;
+    padding: 2px 6px;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .LexicalEditor__inlineComponent__button:hover {
+    background-color: var(--cms-color-chip);
+    border-color: var(--cms-color-border-strong);
+  }
+
+  .LexicalEditor__inlineComponent__button--disabled {
+    cursor: default;
+  }
+
+  .LexicalEditor__inlineComponent__button--disabled:hover {
+    background-color: var(--cms-color-surface-active);
+    border-color: var(--cms-color-border);
+  }
+
+  .LexicalEditor__inlineComponent__label {
+    font-weight: 600;
+  }
+
+  .LexicalEditor__inlineComponent__id {
+    color: var(--cms-color-text-muted);
+  }
+
+  /* Highlights invisible and special characters (e.g. non-breaking spaces). */
+  .SpecialCharacterNode {
+    background-color: rgba(255, 220, 0, 0.25);
+    border-radius: 2px;
+    outline: 1px solid rgba(200, 180, 0, 0.4);
+  }
+
+  .MentionNode {
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}

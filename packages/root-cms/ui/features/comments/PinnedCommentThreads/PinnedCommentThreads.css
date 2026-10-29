@@ -1,0 +1,22 @@
+@layer components {
+  .PinnedCommentThreads__window--flash {
+    animation: PinnedCommentThreads__flash 0.8s ease;
+  }
+
+  @keyframes PinnedCommentThreads__flash {
+    0%,
+    60% {
+      box-shadow: 0 0 0 3px
+        color-mix(in srgb, var(--cms-color-focus) 45%, transparent);
+    }
+  }
+
+  /* Bleed through the window's 12px inner padding so the scrollbar sits at
+   * the window edge rather than inset from it. */
+  .PinnedCommentThreads__window__body .CommentThread__entries {
+    margin: 0 -12px;
+    max-height: min(320px, calc(100dvh - 220px));
+    overflow: auto;
+    padding: 0 12px;
+  }
+}

@@ -1,0 +1,39 @@
+/*
+ * Date and time inputs (`type="date"`, `"time"`, `"datetime-local"`): keep
+ * the value left-aligned and on one line at every input height, and tone the
+ * native picker button down to match the inputs' other icons.
+ */
+@layer components {
+  .TextInput__input--datetime {
+    /* Safari otherwise centers the value and gives it a minimum height. */
+    text-align: left;
+  }
+
+  .TextInput__input--datetime::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: left;
+  }
+
+  .TextInput__input--datetime::-webkit-datetime-edit,
+  .TextInput__input--datetime::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  .TextInput__input--datetime::-webkit-calendar-picker-indicator {
+    margin: 0 0 0 4px;
+    padding: 2px;
+    border-radius: var(--cms-radius-sm);
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  .TextInput__input--datetime::-webkit-calendar-picker-indicator:hover {
+    background-color: var(--cms-color-surface-hover);
+    opacity: 0.9;
+  }
+
+  .TextInput__input--datetime:disabled::-webkit-calendar-picker-indicator {
+    cursor: not-allowed;
+    opacity: 0.3;
+  }
+}

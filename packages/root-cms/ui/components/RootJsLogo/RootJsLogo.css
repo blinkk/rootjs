@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--color-text-default);
+  color: var(--cms-color-text);
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.03em;

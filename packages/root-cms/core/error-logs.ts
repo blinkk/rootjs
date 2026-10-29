@@ -87,7 +87,7 @@ function str(value: unknown, maxLength: number): string {
  * Usage:
  * ```
  * resolveStack('at a (https://example.com/cms/static/ui.js:1:4567)', dir);
- * // => 'at a (ui/components/DocEditor/DocEditor.tsx:120:9)'
+ * // => 'at a (ui/features/documents/components/DocEditor/DocEditor.tsx:120:9)'
  * ```
  */
 export function resolveStack(stack: string, staticDir: string): string {
@@ -131,7 +131,7 @@ function loadSourceMap(filePath: string): SourceMap | null {
 
 /**
  * Shortens a source path from a source map, which is relative to the bundle's
- * output dir, e.g. `../../ui/ui.tsx` becomes `ui/ui.tsx` and
+ * output dir, e.g. `../../ui/main.tsx` becomes `ui/main.tsx` and
  * `../../../../node_modules/.pnpm/preact@10/node_modules/preact/src/diff.js`
  * becomes `node_modules/preact/src/diff.js`.
  */

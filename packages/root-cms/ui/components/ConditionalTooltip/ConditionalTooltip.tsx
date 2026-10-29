@@ -1,8 +1,6 @@
-import './ConditionalTooltip.css';
-
-import {Tooltip} from '@mantine/core';
 import {ComponentChildren} from 'preact';
-import {joinClassNames} from '../../utils/classes.js';
+import {Tooltip} from '../../primitives/Tooltip/Tooltip.js';
+import {cn} from '../../utils/classes.js';
 
 interface ConditionalTooltipProps {
   label: string;
@@ -13,10 +11,9 @@ interface ConditionalTooltipProps {
 }
 
 /**
- * Wraps a component in a Tooltip if it meets a certain condition (e.g. disabled).
- *
- * This helps showing tooltips on disabled buttons, which usually have
- * `pointer-events: none`.
+ * Wraps a component in a Tooltip if it meets a certain condition (e.g.
+ * disabled), explaining why. The child is wrapped in an element that takes
+ * the hover, since disabled buttons usually have `pointer-events: none`.
  */
 export function ConditionalTooltip(props: ConditionalTooltipProps) {
   if (!props.condition) {
@@ -25,10 +22,15 @@ export function ConditionalTooltip(props: ConditionalTooltipProps) {
   return (
     <Tooltip label={props.label}>
       <div
-        className={joinClassNames(props.className, 'ConditionalTooltip')}
+        className={cn(
+          'ConditionalTooltip inline-block cursor-not-allowed',
+          props.className
+        )}
         style={props.style}
       >
-        <div className="ConditionalTooltip__content">{props.children}</div>
+        <div className="ConditionalTooltip__content pointer-events-none">
+          {props.children}
+        </div>
       </div>
     </Tooltip>
   );

@@ -1,9 +1,9 @@
-import {Button} from '@mantine/core';
 import {IconExternalLink} from '@tabler/icons-preact';
 import {doc, onSnapshot, updateDoc, FieldPath} from 'firebase/firestore';
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useCallback, useState} from 'preact/hooks';
-import {buildGoogleDriveFolderUrl} from '../utils/gsheets.js';
+import {buildGoogleDriveFolderUrl} from '../integrations/gsheets.js';
+import {Button} from '../primitives/Button/Button.js';
 import {useFirebase} from './useFirebase.js';
 
 /** Project level settings. Keys are stored in the database. */
@@ -42,10 +42,8 @@ export const SITE_SETTINGS: Setting[] = [
       return (
         <Button
           disabled={!value}
-          variant="default"
           size="xs"
-          compact
-          rightIcon={<IconExternalLink size={14} />}
+          iconRight={<IconExternalLink />}
           onClick={() => {
             if (value) {
               window.open(value, buildGoogleDriveFolderUrl(value));

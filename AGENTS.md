@@ -73,6 +73,20 @@ regression would be costly or hard to notice.
 
 Never import node-only `core/` code into `ui/`; put shared logic in `shared/`.
 
+### root-cms `ui/` layout
+
+- `main.tsx` — entry point (bundled as `dist/ui/ui.js`).
+- `app/` — app shell: layout, route loading/errors, global error handling.
+- `features/<name>/` — one folder per product area (`documents`, `releases`,
+  `translations`, `assets`, …). Each holds its UI (`pages/`, `components/`,
+  or flat when small) next to its hooks and data modules (e.g.
+  `features/releases/release.ts`). Features may import from each other.
+- `components/` — generic components shared across features.
+- `hooks/`, `utils/` — cross-feature hooks and pure helpers only.
+- `integrations/` — Google auth, GCS, Drive, Sheets.
+- `styles/` — global CSS and the theme contract (`theme.css`).
+- `types/` — ambient `.d.ts` shims.
+
 ### Virtual modules
 
 `virtual:root/routes`, `virtual:root/schemas`, and `virtual:root/translations`
@@ -104,11 +118,15 @@ and field builders) come from `packages/root-cms/core/schema.ts`.
 ### UI Development
 
 - Avoid manually importing custom element definitions (these are collected by Root.js during the build process).
-- The CMS UI is Preact + Mantine. **Mantine is pinned to 4.2.12** for Preact
-  compat; `react`/`react-dom` alias to `@preact/compat`. Don't upgrade it casually.
-- Components live at `ui/components/<Name>/<Name>.tsx` with a colocated plain
-  `<Name>.css` whose root class is the component name.
-- Use `joinClassNames` from `ui/utils/classes.js`, icons from
+- The CMS UI is Preact + Tailwind, built from the primitives in
+  `ui/primitives/`; `react`/`react-dom` alias to `@preact/compat`. **Read
+  `packages/root-cms/ui/README.md` before changing the UI.** It covers tokens,
+  class naming (utilities plus BEM hooks), mobile and accessibility rules.
+- Mantine has been removed from the CMS UI; don't add it back. Build on the
+  primitives instead.
+- Components live at `<Name>/<Name>.tsx` (under `ui/components/`,
+  `ui/primitives/`, or a feature's folder).
+- Use `cn`/`joinClassNames` from `ui/utils/classes.js`, icons from
   `@tabler/icons-preact`, and notifications via `ui/utils/notifications.js`.
 
 ### Version Control & Contributions

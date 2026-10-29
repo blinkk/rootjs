@@ -23,7 +23,10 @@ export class FakeGcp implements GcpClient {
   adcQuotaProject?: string;
   private routes: Array<[string, Handler]> = [];
 
-  on(prefix: string, handler: Handler | unknown): this {
+  /** Routes calls to `handler`, or always responds with `response`. */
+  on(prefix: string, handler: Handler): this;
+  on(prefix: string, response: unknown): this;
+  on(prefix: string, handler: unknown): this {
     this.routes.push([
       prefix,
       typeof handler === 'function' ? (handler as Handler) : () => handler,

@@ -79,6 +79,7 @@ export function SplitPanel(props: SplitPanelProps) {
   const style: CSSProperties = {
     '--panel-size': `${panelSize}px`,
   };
+  // Below `md` the panels stack and scroll together (see SplitPanel.css).
   return (
     <SplitPanelContext.Provider value={contextValue}>
       <div

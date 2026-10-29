@@ -1,0 +1,15 @@
+@layer components {
+  /* The description is rendered Markdown; trim its outer margins. */
+  .ReleasePage__description > :first-child {
+    margin-top: 0;
+  }
+
+  .ReleasePage__description > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Labels take what they need; values fill the rest and wrap. */
+  .ReleasePage__details {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,35 @@
+@layer components {
+  /* In the asset picker, the listing scrolls inside the modal. */
+  .AssetBrowser--mode-pick .AssetBrowser__listing {
+    max-height: 50vh;
+  }
+
+  /*
+   * While enumerating there is no item count yet, so sweep a partial bar
+   * instead of showing a misleading percentage.
+   */
+  .AssetBrowser__syncProgress__bar--indeterminate
+    .AssetBrowser__syncProgress__barFill {
+    width: 35%;
+    animation: AssetBrowser__syncSweep 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .AssetBrowser__syncProgress__bar--indeterminate
+      .AssetBrowser__syncProgress__barFill {
+      width: 100%;
+      animation: none;
+      opacity: 0.35;
+    }
+  }
+}
+
+/* 286% of the fill's own width == the full track width (100 / 35). */
+@keyframes AssetBrowser__syncSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(286%);
+  }
+}

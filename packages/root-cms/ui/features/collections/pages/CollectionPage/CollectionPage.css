@@ -1,0 +1,29 @@
+@layer components {
+  /*
+   * Compact docs list. Deterministic column widths (no content-based
+   * `auto`/`min-content`) make every row resolve to identical tracks, so the
+   * columns line up into a table. The Title column gets the largest share of
+   * the flexible space and the Slug column is kept snug. The Status column
+   * fits the busiest row's badges (`--docs-status-width`, set inline).
+   */
+  .CollectionPage__collection__docsList--compact
+    .CollectionPage__collection__docsList__doc,
+  .CollectionPage__collection__docsList--compact
+    .CollectionPage__collection__docsList__header {
+    grid-template-columns:
+      40px minmax(0, 0.8fr) minmax(0, 2.5fr)
+      minmax(0, var(--docs-status-width, 80px)) 110px
+      110px 28px;
+  }
+
+  /* With reordering enabled, a narrow first track holds the drag handle. */
+  .CollectionPage__collection__docsList--compact.CollectionPage__collection__docsList--reorderable
+    .CollectionPage__collection__docsList__doc,
+  .CollectionPage__collection__docsList--compact.CollectionPage__collection__docsList--reorderable
+    .CollectionPage__collection__docsList__header {
+    grid-template-columns:
+      16px 40px minmax(0, 0.8fr) minmax(0, 2.5fr)
+      minmax(0, var(--docs-status-width, 80px)) 110px
+      110px 28px;
+  }
+}

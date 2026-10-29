@@ -1,0 +1,17 @@
+@layer components {
+  /* A check's message is rendered Markdown, kept to the row's line height. */
+  .PublishDocModal__markdown p {
+    margin: 0;
+  }
+
+  .PublishDocModal__markdown p + p,
+  .PublishDocModal__markdown ul,
+  .PublishDocModal__markdown ol {
+    margin: 4px 0 0;
+  }
+
+  .PublishDocModal__markdown ul,
+  .PublishDocModal__markdown ol {
+    padding-left: 16px;
+  }
+}

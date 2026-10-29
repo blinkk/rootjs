@@ -1,0 +1,59 @@
+@layer components {
+  /* Stops opening a <details> from pushing the editor's content upwards. */
+  .DocumentPage__side {
+    overflow-anchor: none;
+  }
+
+  /*
+   * Without the preview, the editor takes the whole width. `SplitPanel.css`
+   * is unlayered, so its divider is hidden with `!important`.
+   */
+  .DocumentPage__side--expanded + .SplitPanel__divider {
+    display: none !important;
+  }
+
+  /*
+   * Device previews: the iframe renders at the device's resolution
+   * (`--iframe-width` and `--iframe-height`) and is scaled down by
+   * `--iframe-scale` to fit. The wrapper takes the scaled size, so the
+   * layout around it matches what's visible.
+   */
+  .DocumentPage__main__previewFrame__iframeWrap {
+    position: relative;
+    width: calc(var(--iframe-width, 100%) * var(--iframe-scale, 1));
+    height: calc(var(--iframe-height, 100%) * var(--iframe-scale, 1));
+    transform: scale(var(--iframe-scale, 1));
+    transform-origin: 0 0;
+  }
+
+  .DocumentPage__main__previewFrame iframe {
+    box-sizing: content-box;
+    width: var(--iframe-width, 100%);
+    height: var(--iframe-height, 100%);
+    max-width: none;
+    border: 1px solid var(--cms-color-border);
+    box-shadow: var(--cms-shadow-md);
+    background: var(--cms-color-surface);
+    transform-origin: 0 0;
+  }
+
+  .DocumentPage__main__previewFrame[data-device='full']
+    .DocumentPage__main__previewFrame__iframeWrap {
+    width: 100%;
+    height: 100%;
+    transform: none;
+  }
+
+  .DocumentPage__main__previewFrame[data-device='full'] iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Keeps the preview iframes from swallowing the mouse while resizing. */
+  .DocumentPage__layout--dragging * {
+    pointer-events: none;
+    user-select: none;
+  }
+}

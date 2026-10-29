@@ -1,0 +1,21 @@
+@layer components {
+  /* Side by side from `md` up, leaving room for the dialog's header and buttons. */
+  @media (width >= 48rem) {
+    .AiEditModal__SplitPanel {
+      max-height: calc(100dvh - 280px);
+    }
+  }
+
+  /* Markdown and paragraphs inside the chat panel. */
+  .AiEditModal__ChatPanel__welcome__body p {
+    margin: 0 0 8px;
+  }
+
+  .AiEditModal__ChatPanel__textPart p {
+    margin: 0 0 6px;
+  }
+
+  .AiEditModal__ChatPanel__textPart p:last-child {
+    margin-bottom: 0;
+  }
+}

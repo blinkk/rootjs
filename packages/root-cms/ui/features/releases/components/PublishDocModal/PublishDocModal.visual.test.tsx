@@ -1,0 +1,417 @@
+import '../../../../styles/tailwind.out.css';
+import '../../../../styles/global.css';
+import '../../../../styles/theme.css';
+import './PublishDocModal.css';
+
+import {cleanup, render} from '@testing-library/preact';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import {page} from 'vitest/browser';
+import {
+  ModalsProvider,
+  type ContextModalProps,
+} from '../../../../primitives/modals/ModalsProvider.js';
+import {cmsGetDocDiffSummary} from '../../../documents/doc.js';
+import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
+
+// Mock firebase/firestore.
+vi.mock('firebase/firestore', async (importOriginal) => {
+  return {
+    ...((await importOriginal()) as any),
+    getFirestore: vi.fn(),
+    doc: vi.fn(() => ({id: 'mock-doc-id', path: 'mock/path'})),
+    collection: vi.fn(() => ({id: 'mock-collection-id', path: 'mock/path'})),
+    getDoc: vi.fn(() =>
+      Promise.resolve({
+        exists: () => true,
+        data: () => ({roles: {'test@example.com': 'ADMIN'}, fields: {}}),
+      })
+    ),
+    getDocs: vi.fn(() =>
+      Promise.resolve({
+        forEach: (cb: any) => {
+          // mock one doc
+          cb({id: 'mock-doc', data: () => ({sys: {}, fields: {}})});
+        },
+        empty: false,
+        size: 1,
+      })
+    ),
+    query: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
+    documentId: vi.fn(),
+    writeBatch: vi.fn(() => ({
+      set: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      commit: vi.fn(),
+    })),
+    setDoc: vi.fn(),
+    updateDoc: vi.fn(),
+    arrayUnion: vi.fn(),
+    runTransaction: vi.fn(),
+    serverTimestamp: vi.fn(),
+    deleteField: vi.fn(),
+    Timestamp: {
+      now: vi.fn(() => ({toMillis: () => Date.now()})),
+      fromMillis: vi.fn((m) => ({toMillis: () => m})),
+    },
+  };
+});
+
+// Mock the doc utilities. Every export is listed: a factory mock without one
+// fails to link any module that imports it, which crashes the runner.
+vi.mock('../../../documents/doc.js', () => ({
+  cmsPublishDoc: vi.fn(),
+  cmsScheduleDoc: vi.fn(),
+  cmsGetDocDiffSummary: vi.fn(() =>
+    Promise.resolve(
+      '- Updated the hero title to "Dig into the spring harvest".\n- Added a new CTA linking to `/garden`.'
+    )
+  ),
+  cmsReadDocVersion: vi.fn((docId: string, versionId: string) =>
+    Promise.resolve({
+      id: docId,
+      sys: {},
+      fields:
+        versionId === 'published'
+          ? {title: 'Spring harvest', cta: {label: 'Shop now'}}
+          : {
+              title: 'Dig into the spring harvest',
+              cta: {label: 'Shop now', href: '/garden'},
+            },
+    })
+  ),
+  unmarshalData: vi.fn((data) => data),
+  // Unused by the modal, but imported by its dependencies.
+  cmsDeleteDoc: vi.fn(),
+  cmsPublishDocs: vi.fn(),
+  cmsSyncDependencyGraph: vi.fn(),
+  cmsUnpublishDoc: vi.fn(),
+  cmsRevertDraft: vi.fn(),
+  cmsUnscheduleDoc: vi.fn(),
+  cmsLockPublishing: vi.fn(),
+  cmsUnlockPublishing: vi.fn(),
+  cmsArchiveDoc: vi.fn(),
+  cmsUnarchiveDoc: vi.fn(),
+  cmsSetDocSortKey: vi.fn(),
+  cmsAssignSortKeys: vi.fn(),
+  fetchMaxSortKey: vi.fn(),
+  testIsArchived: vi.fn(),
+  testIsScheduled: vi.fn(),
+  testPublishingLocked: vi.fn(),
+  testPublishingLockedAt: vi.fn(),
+  cmsCopyDoc: vi.fn(),
+  cmsCreateDoc: vi.fn(),
+  cmsDocImportTranslations: vi.fn(),
+  getDraftDocRef: vi.fn(),
+  getPublishedDocRef: vi.fn(),
+  getVersionDocRef: vi.fn(),
+  getDraftDocs: vi.fn(),
+  getPublishedDocs: vi.fn(),
+  cmsListVersions: vi.fn(),
+  cmsRestoreVersion: vi.fn(),
+  cmsLinkGoogleSheetL10n: vi.fn(),
+  cmsUnlinkGoogleSheetL10n: vi.fn(),
+  cmsGetLinkedGoogleSheetL10n: vi.fn(),
+  marshalArray: vi.fn(),
+  unmarshalArray: vi.fn(),
+  parseDocId: vi.fn(),
+  deserializeDocJson: vi.fn(),
+}));
+
+// Mock the collection schema used to label the diff.
+vi.mock('../../../collections/collection.js', () => ({
+  fetchCollectionSchema: vi.fn(() =>
+    Promise.resolve({
+      id: 'Pages',
+      name: 'Pages',
+      fields: [
+        {type: 'string', id: 'title', label: 'Title'},
+        {
+          type: 'object',
+          id: 'cta',
+          label: 'Call to action',
+          fields: [
+            {type: 'string', id: 'label', label: 'Label'},
+            {type: 'string', id: 'href', label: 'Link'},
+          ],
+        },
+      ],
+    })
+  ),
+}));
+
+// Mock the doc cache used to look up referenced docs.
+vi.mock('../../../documents/doc-cache.js', () => ({
+  getDocFromCache: vi.fn(),
+  getDocFromCacheOrFetch: vi.fn(() => Promise.resolve({sys: {}, fields: {}})),
+  setDocToCache: vi.fn(),
+  removeDocFromCache: vi.fn(),
+  removeDocsFromCache: vi.fn(),
+}));
+
+// Mock the pending releases shown in doc status badges.
+vi.mock('../../usePendingReleases.js', () => ({
+  usePendingReleases: () => ({
+    releases: [],
+    loading: false,
+    getReleasesForDoc: () => [],
+  }),
+}));
+
+// Mock the releases API.
+vi.mock('../../release.js', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
+  generateReleaseId: vi.fn(() => '2027-03-03-spring-launch'),
+  listReleases: vi.fn(() =>
+    Promise.resolve([
+      {
+        id: 'spring-harvest-launch',
+        description: 'Spring harvest landing pages and promos.',
+        docIds: ['Pages/spring-harvest', 'Pages/index', 'Pages/garden'],
+      },
+      {
+        id: 'seed-catalog-refresh',
+        description: 'New seed catalog pages.',
+        docIds: ['Pages/seeds'],
+      },
+    ])
+  ),
+  addRelease: vi.fn(() => Promise.resolve()),
+  updateRelease: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock the publishing checks API.
+vi.mock('../../publish-checks.js', async (importOriginal) => {
+  const original: any = await importOriginal();
+  return {
+    ...original,
+    runPublishChecks: vi.fn(() =>
+      Promise.resolve([
+        {
+          docId: 'Pages/spring-harvest',
+          checkId: 'translations',
+          label: 'Translations',
+          level: 'required',
+          status: 'success',
+          message: 'All 6 locales complete.',
+        },
+        {
+          docId: 'Pages/spring-harvest',
+          checkId: 'alt-text',
+          label: 'Image alt text',
+          level: 'warning',
+          status: 'warning',
+          message: '2 images are missing alt text.',
+        },
+      ])
+    ),
+  };
+});
+
+// Mock the useProjectRoles hook
+vi.mock('../../../users/useProjectRoles.js', () => ({
+  useProjectRoles: () => ({
+    roles: {},
+    loading: false,
+  }),
+}));
+
+// Mock permissions
+vi.mock('../../../users/permissions.js', () => ({
+  testCanPublish: vi.fn(() => true),
+  testIsAdmin: vi.fn(() => true),
+}));
+
+// Mock time utilities
+vi.mock('../../../../utils/time.js', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
+  getLocalISOString: vi.fn(() => '2026-01-29T12:00'),
+}));
+const ROOT_CTX = {
+  experiments: {ai: true},
+  rootConfig: {projectId: 'test-project'},
+  collections: {
+    Pages: {
+      publishing: {
+        checks: ['translations', {id: 'alt-text', level: 'warning'}],
+      },
+    },
+  },
+  checks: [
+    {id: 'translations', label: 'Translations'},
+    {id: 'alt-text', label: 'Image alt text'},
+  ],
+};
+
+function renderModal(docId: string, size: {width: number; height: number}) {
+  const props: ContextModalProps<PublishDocModalProps> = {
+    context: {
+      closeModal: () => {},
+      closeAll: () => {},
+      openModal: () => {},
+      openConfirmModal: () => {},
+      openContextModal: () => {},
+    } as any,
+    id: 'test-modal',
+    innerProps: {docId},
+  };
+  render(
+    <ModalsProvider>
+      <div
+        data-testid="wrapper"
+        style={{
+          width: size.width,
+          minHeight: size.height,
+          padding: 20,
+          background: '#fff',
+        }}
+      >
+        <PublishDocModal {...props} />
+      </div>
+    </ModalsProvider>
+  );
+}
+
+describe('PublishDocModal', () => {
+  beforeAll(() => {
+    window.firebase = {
+      db: {},
+      storage: {
+        app: {
+          options: {
+            storageBucket: 'test-bucket',
+          },
+        },
+      },
+      user: {
+        email: 'test@example.com',
+      },
+    } as any;
+  });
+
+  beforeEach(() => {
+    (window as any).__ROOT_CTX = ROOT_CTX;
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders default state with AI enabled', async () => {
+    await page.viewport(680, 600);
+    renderModal('Pages/spring-harvest', {width: 640, height: 560});
+    await expect
+      .element(page.getByText('Publishing checks', {exact: true}))
+      .toBeVisible();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-default.png');
+  });
+
+  it('renders scheduled state with check results', async () => {
+    await page.viewport(680, 760);
+    renderModal('Pages/spring-harvest', {width: 640, height: 720});
+
+    await page.getByRole('radio', {name: 'Schedule'}).click();
+    await expect.element(page.getByLabelText('Publish at')).toBeVisible();
+    await page.getByRole('button', {name: 'Run checks'}).click();
+    await expect
+      .element(page.getByText('2 images are missing alt text.'))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('button', {name: 'Run again'}))
+      .toBeVisible();
+    await page
+      .getByRole('button', {name: 'Suggest a publish message with Root AI'})
+      .hover();
+    await expect
+      .element(page.getByRole('button', {name: 'Schedule publish'}))
+      .toBeVisible();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-scheduled.png');
+  });
+
+  it('switches to the add to release tab and back', async () => {
+    await page.viewport(680, 760);
+    renderModal('Pages/spring-harvest', {width: 640, height: 720});
+
+    await page
+      .getByLabelText('Publish message', {exact: true})
+      .fill('Spring launch copy.');
+    await page.getByRole('radio', {name: 'Add to release'}).click();
+    await page.getByText('spring-harvest-launch').click();
+
+    // The publish type tabs stay visible.
+    await expect
+      .element(page.getByRole('radio', {name: 'Publish now'}))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('button', {name: 'Add to release'}))
+      .toBeEnabled();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-release.png');
+
+    await page.getByText('New release', {exact: true}).click();
+    await expect
+      .element(page.getByRole('button', {name: 'Create release'}))
+      .toBeEnabled();
+    await expect
+      .element(page.getByTestId('wrapper'))
+      .toMatchScreenshot('publish-doc-modal-new-release.png');
+
+    // Switching back keeps the publish message.
+    await page.getByRole('radio', {name: 'Publish now'}).click();
+    await expect
+      .element(page.getByLabelText('Publish message', {exact: true}))
+      .toHaveValue('Spring launch copy.');
+    await expect
+      .element(page.getByRole('button', {name: 'Publish', exact: true}))
+      .toBeVisible();
+  });
+
+  it('opens the diff in a modal', async () => {
+    await page.viewport(1000, 640);
+    renderModal('Pages/spring-harvest', {width: 640, height: 560});
+
+    await page.getByRole('button', {name: 'View diff'}).click();
+    const dialog = page.getByRole('dialog');
+    await expect.element(dialog.getByText('/garden').first()).toBeVisible();
+    await expect
+      .element(dialog)
+      .toMatchScreenshot('publish-doc-modal-diff.png');
+  });
+
+  it('opens the ai summary in a modal', async () => {
+    await page.viewport(800, 640);
+    renderModal('Pages/spring-harvest', {width: 640, height: 560});
+
+    await page.getByRole('button', {name: 'Summarize'}).click();
+    const dialog = page.getByRole('dialog');
+    await expect.element(dialog.getByText('/garden')).toBeVisible();
+    await expect
+      .element(dialog)
+      .toMatchScreenshot('publish-doc-modal-ai-summary.png');
+
+    // Closing and reopening shows the same summary without running Root AI
+    // again.
+    await dialog.getByRole('button', {name: 'Done'}).click();
+    await page.getByRole('button', {name: 'View summary'}).click();
+    await expect
+      .element(page.getByRole('dialog').getByText('/garden'))
+      .toBeVisible();
+    expect(cmsGetDocDiffSummary).toHaveBeenCalledTimes(1);
+  });
+});

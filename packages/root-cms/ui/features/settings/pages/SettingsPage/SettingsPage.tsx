@@ -1,0 +1,809 @@
+import {IconCheck} from '@tabler/icons-preact';
+import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {UserRole} from '../../../../../core/client.js';
+import {Layout} from '../../../../app/layout/Layout.js';
+import {Heading} from '../../../../components/Heading/Heading.js';
+import {Surface} from '../../../../components/Surface/Surface.js';
+import {Text} from '../../../../components/Text/Text.js';
+import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {
+  SITE_SETTINGS,
+  useSiteSettings,
+} from '../../../../hooks/useSiteSettings.js';
+import {
+  CUSTOM_CSS_PREFERENCE_KEY,
+  NO_THEME,
+  THEME_PREFERENCE_KEY,
+  getThemeConfig,
+} from '../../../../hooks/useTheme.js';
+import {useUnsavedChangesWarning} from '../../../../hooks/useUnsavedChangesWarning.js';
+import {useUserPreferences} from '../../../../hooks/useUserPreferences.js';
+import {Button} from '../../../../primitives/Button/Button.js';
+import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Select} from '../../../../primitives/Select/Select.js';
+import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
+import {notifyErrors} from '../../../../utils/notifications.js';
+import {withTimeout} from '../../../../utils/with-timeout.js';
+import {logAction} from '../../../logs/actions.js';
+import {useSearchIndexStatus} from '../../../search/useGlobalSearch.js';
+import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {resetUserSignIn} from '../../../users/users.js';
+import {UserSelect} from '../../../users/UserSelect/UserSelect.js';
+import {useSignInStatuses} from '../../../users/useSignInStatus.js';
+import {PermissionGroupsBox} from '../../components/PermissionGroupsBox/PermissionGroupsBox.js';
+import {ShareBox} from '../../components/ShareBox/ShareBox.js';
+import {
+  PermissionGroup,
+  derivedRolesFromGroups,
+} from '../../permissionGroups.js';
+
+/** Classes for each two-column section (description left, card right). */
+const SECTION_CLASSES =
+  'SettingsPage__section grid max-w-7xl grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-16';
+
+/** Classes for a single setting inside a section's card. */
+const SETTING_CLASSES = 'SettingsPage__section__setting flex flex-col gap-2';
+
+function formatRelative(ts: number | null): string {
+  if (!ts) {
+    return 'never';
+  }
+  const ms = Date.now() - ts;
+  if (ms < 60_000) {
+    return 'just now';
+  }
+  if (ms < 60 * 60_000) {
+    return `${Math.floor(ms / 60_000)} min ago`;
+  }
+  if (ms < 24 * 60 * 60_000) {
+    return `${Math.floor(ms / (60 * 60_000))} hr ago`;
+  }
+  return new Date(ts).toLocaleString();
+}
+
+function isCurrentUserAdmin(roles: Record<string, string>): boolean {
+  const email = window.firebase?.user?.email;
+  if (!email) {
+    return false;
+  }
+  if (roles[email] === 'ADMIN') {
+    return true;
+  }
+  const domain = email.split('@').at(-1);
+  if (domain && roles[`*@${domain}`] === 'ADMIN') {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Admin control for clearing a user's stale Google sign-in link.
+ *
+ * Unlinks the Google account from the user's sign-in record so their next
+ * sign-in links it again. Used to recover accounts that fail sign-in with an
+ * error about the Google account no longer being linked. The user's role and
+ * content are untouched.
+ */
+function ResetSignInSetting() {
+  const modals = useModals();
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const emails = useMemo(() => (email ? [email] : []), [email]);
+  const {statuses, loading} = useSignInStatuses(emails, {enabled: !!email});
+  const status = email ? statuses.get(email) : undefined;
+  // The lookup can fail (leaving `status` undefined), in which case the reset
+  // stays available rather than being blocked by a status we couldn't read.
+  const nothingToReset = !!status && !status.hasGoogleLink;
+
+  function statusHint() {
+    if (!email) {
+      return 'Pick a user to check whether their sign-in can be reset.';
+    }
+    if (loading) {
+      return 'Checking sign-in status…';
+    }
+    if (!status) {
+      return "Couldn't check this user's sign-in status.";
+    }
+    if (!status.exists) {
+      return `${email} has never signed in, so there's nothing to reset.`;
+    }
+    if (!status.hasGoogleLink) {
+      return `${email} has no Google sign-in link to reset. They may be signing in with a different address.`;
+    }
+    return `${email} has a Google sign-in link that can be reset.`;
+  }
+
+  function confirmReset() {
+    if (!email || submitting) {
+      return;
+    }
+    const modalId = modals.openConfirmModal({
+      title: 'Reset sign-in',
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          <p>
+            Use this when {email} can't sign in and sees an error about their
+            Google account no longer being linked. It unlinks the Google account
+            from their sign-in record so the next sign-in links it again.
+          </p>
+          <p>
+            Their role and content are not affected, and they stay signed in
+            wherever they already are.
+          </p>
+        </Text>
+      ),
+      labels: {confirm: 'Reset sign-in', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        setSubmitting(true);
+        await notifyErrors(async () => {
+          const reset = await resetUserSignIn(email);
+          showNotification({
+            title: reset ? 'Sign-in reset' : 'Nothing to reset',
+            message: reset
+              ? `${email} can sign in again.`
+              : `${email} has no Google sign-in link to reset. They may be signing in with a different address.`,
+            color: reset ? 'green' : 'yellow',
+            autoClose: 5000,
+          });
+          if (reset) {
+            setEmail('');
+          }
+        });
+        setSubmitting(false);
+        modals.closeModal(modalId);
+      },
+    });
+  }
+
+  return (
+    <div className={SETTING_CLASSES}>
+      <Text size="body" weight="semi-bold">
+        Reset sign-in
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>
+          Unlinks a user's Google account from their sign-in record so the next
+          sign-in links it again. Use this when someone is blocked at sign-in
+          with an error about their Google account no longer being linked. Their
+          role and content are not affected.
+        </p>
+      </Text>
+      <div className="SettingsPage__siteAdmin__resetSignIn mt-1 flex flex-wrap items-center gap-2">
+        <UserSelect
+          className="SettingsPage__siteAdmin__resetSignIn__user min-w-0 max-w-90 flex-1 basis-48"
+          value={email}
+          onChange={(value: string) => setEmail(value.trim().toLowerCase())}
+          placeholder="Search or enter an email"
+          disabled={submitting}
+        />
+        <Button
+          size="xs"
+          loading={submitting}
+          disabled={!email || loading || nothingToReset}
+          onClick={confirmReset}
+        >
+          Reset sign-in
+        </Button>
+      </div>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        {statusHint()}
+      </Text>
+    </div>
+  );
+}
+
+function SiteAdminSection() {
+  const indexStatus = useSearchIndexStatus();
+  const [submitting, setSubmitting] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [sawRunning, setSawRunning] = useState(false);
+  const pollRef = useRef<number | null>(null);
+
+  function stopPolling() {
+    if (pollRef.current !== null) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setPolling(false);
+    setSawRunning(false);
+  }
+
+  useEffect(() => {
+    return stopPolling;
+  }, []);
+
+  // Track whether we've ever observed `running: true` since polling began.
+  useEffect(() => {
+    if (polling && indexStatus.running) {
+      setSawRunning(true);
+    }
+  }, [polling, indexStatus.running]);
+
+  async function rebuild(force: boolean) {
+    if (submitting || polling) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/cms/api/search.rebuild', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({force}),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${body || 'rebuild failed'}`);
+      }
+      showNotification({
+        title: 'Search index',
+        message: force
+          ? 'Full rebuild started.'
+          : 'Incremental rebuild started.',
+        color: 'blue',
+        autoClose: 4000,
+      });
+      setPolling(true);
+      pollRef.current = window.setInterval(() => {
+        indexStatus.refresh();
+      }, 2000);
+      // Watchdog: stop polling after 10 minutes.
+      window.setTimeout(stopPolling, 10 * 60_000);
+    } catch (err: any) {
+      showNotification({
+        title: 'Error',
+        message: err?.message || String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Stop polling + notify once the server reports !running, but only after
+  // we've observed running:true at least once (avoids spurious "complete"
+  // toasts on the initial poll cycle before the server-side flag flips).
+  useEffect(() => {
+    if (polling && sawRunning && !indexStatus.running) {
+      stopPolling();
+      showNotification({
+        title: 'Search index',
+        message: 'Rebuild complete.',
+        color: 'green',
+        autoClose: 3000,
+      });
+    }
+  }, [polling, sawRunning, indexStatus.running]);
+
+  const last = indexStatus.status.lastRun;
+  const docCount = indexStatus.status.docCount;
+  const fieldCount = indexStatus.status.fieldCount;
+  const shardCount = indexStatus.status.shardCount;
+  const running = indexStatus.running || submitting;
+
+  return (
+    <div className={SECTION_CLASSES}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
+          Site Admin
+        </Heading>
+        <Text
+          className="SettingsPage__section__body"
+          size="body-sm"
+          weight="semi-bold"
+          color="gray"
+        >
+          <p>
+            Project-wide administrative actions. Only admins see this section.
+          </p>
+        </Text>
+      </div>
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+        <div className={SETTING_CLASSES}>
+          <Text size="body" weight="semi-bold">
+            Search index
+          </Text>
+          <Text size="body-sm" weight="semi-bold" color="gray">
+            <p>
+              Powers the Cmd+K global search. Rebuilds run automatically on a
+              schedule; trigger a manual rebuild here if you want immediate
+              results (e.g. after a schema change).
+            </p>
+          </Text>
+          <div className="SettingsPage__siteAdmin__searchStats mt-1 grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm text-muted sm:grid-cols-2">
+            <div>
+              <strong>Last indexed:</strong> {formatRelative(last)}
+            </div>
+            <div>
+              <strong>Indexed docs:</strong> {docCount.toLocaleString()}
+            </div>
+            <div>
+              <strong>Indexed fields:</strong> {fieldCount.toLocaleString()}
+            </div>
+            <div>
+              <strong>Shards:</strong> {shardCount}
+            </div>
+          </div>
+          <div className="SettingsPage__siteAdmin__searchButtons mt-3 flex flex-wrap gap-2">
+            <Button size="xs" loading={running} onClick={() => rebuild(false)}>
+              Rebuild incremental
+            </Button>
+            <Button
+              size="xs"
+              loading={running}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Force a full rebuild? This wipes the existing index and ' +
+                      'reindexes every doc from scratch.'
+                  )
+                ) {
+                  rebuild(true);
+                }
+              }}
+            >
+              Force full rebuild
+            </Button>
+          </div>
+        </div>
+        <ResetSignInSetting />
+      </Surface>
+    </div>
+  );
+}
+
+interface ShareDoc {
+  globalRoles: Record<string, UserRole>;
+  permissionGroups: PermissionGroup[];
+}
+
+function shareDocsEqual(a: ShareDoc, b: ShareDoc): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function ShareSection() {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
+  const collections = window.__ROOT_CTX.collections || {};
+  const collectionIds = useMemo(
+    () => Object.keys(collections).sort(),
+    [collections]
+  );
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  // Derived effective project roles (groups + globalRoles merged). Read-only
+  // mirror of the Project doc's `roles` field; used for the admin check.
+  const [savedRoles, setSavedRoles] = useState<Record<string, UserRole>>({});
+  // Snapshot of the saved/server state. Used to compute the dirty flag and to
+  // diff per-collection role writes on save.
+  const [savedState, setSavedState] = useState<ShareDoc>({
+    globalRoles: {},
+    permissionGroups: [],
+  });
+  const [draft, setDraft] = useState<ShareDoc>({
+    globalRoles: {},
+    permissionGroups: [],
+  });
+
+  useEffect(() => {
+    const init = async () => {
+      await notifyErrors(async () => {
+        const snapshot = await withTimeout(
+          getDoc(docRef),
+          undefined,
+          'loading sharing settings'
+        );
+        const data = snapshot.data() || {};
+        const rolesField = (data.roles || {}) as Record<string, UserRole>;
+        // Back-compat: projects saved before `globalRoles` existed only have the
+        // derived `roles` field. Seed `globalRoles` from it so the admin sees the
+        // same list; users that exist only via collection-scoped groups will be
+        // dropped from the global section on the next save.
+        const globalRoles = (data.globalRoles || rolesField) as Record<
+          string,
+          UserRole
+        >;
+        const initial: ShareDoc = {
+          globalRoles,
+          permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
+        };
+        setSavedRoles(rolesField);
+        setSavedState(initial);
+        setDraft({
+          globalRoles: {...initial.globalRoles},
+          permissionGroups: initial.permissionGroups.map((g) => ({...g})),
+        });
+      });
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  const currentUserIsAdmin = isCurrentUserAdmin(savedRoles);
+  const dirty = !shareDocsEqual(savedState, draft);
+  useUnsavedChangesWarning(dirty);
+
+  function setRoles(globalRoles: Record<string, UserRole>) {
+    setDraft((prev) => ({...prev, globalRoles}));
+  }
+
+  function setGroups(permissionGroups: PermissionGroup[]) {
+    setDraft((prev) => ({...prev, permissionGroups}));
+  }
+
+  function discard() {
+    setDraft({
+      globalRoles: {...savedState.globalRoles},
+      permissionGroups: savedState.permissionGroups.map((g) => ({...g})),
+    });
+  }
+
+  async function save() {
+    if (saving || !dirty) {
+      return;
+    }
+    setSaving(true);
+    await notifyErrors(async () => {
+      // Derive the effective project + per-collection roles by merging the
+      // direct ShareBox entries with the permission groups.
+      const {projectRoles: derivedProjectRoles, collectionRoles} =
+        derivedRolesFromGroups(draft.permissionGroups, draft.globalRoles);
+
+      await updateDoc(docRef, {
+        globalRoles: draft.globalRoles,
+        roles: derivedProjectRoles,
+        permissionGroups: draft.permissionGroups,
+      });
+
+      // Compute the union of touched collection ids (newly assigned + any
+      // previously assigned that may need clearing) so groups removed from
+      // collections also clear their role entries.
+      const previousCollectionGroups = savedState.permissionGroups.flatMap(
+        (g) => g.collections || []
+      );
+      const touchedCollections = new Set<string>([
+        ...Object.keys(collectionRoles),
+        ...previousCollectionGroups,
+      ]);
+      for (const collectionId of touchedCollections) {
+        const collectionDocRef = doc(
+          db,
+          'Projects',
+          projectId,
+          'Collections',
+          collectionId
+        );
+        await setDoc(
+          collectionDocRef,
+          {roles: collectionRoles[collectionId] || {}},
+          {merge: true}
+        );
+      }
+
+      const nextSavedState: ShareDoc = {
+        globalRoles: draft.globalRoles,
+        permissionGroups: draft.permissionGroups,
+      };
+      setSavedRoles(derivedProjectRoles);
+      setSavedState(nextSavedState);
+      setDraft({
+        globalRoles: {...nextSavedState.globalRoles},
+        permissionGroups: nextSavedState.permissionGroups.map((g) => ({...g})),
+      });
+      logAction('acls.save_groups', {
+        metadata: {
+          groupCount: draft.permissionGroups.length,
+          userCount: Object.keys(derivedProjectRoles).length,
+          collections: Array.from(touchedCollections),
+        },
+      });
+      showNotification({
+        title: 'Saved',
+        message: 'Sharing settings updated.',
+        color: 'green',
+        autoClose: 3000,
+      });
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div className={cn(SECTION_CLASSES, 'SettingsPage__section__users')}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
+          Share
+        </Heading>
+        <Text
+          className="SettingsPage__section__body Prose"
+          size="body-sm"
+          weight="semi-bold"
+          color="gray"
+        >
+          <p>
+            Share access to the CMS. To share with everyone in a domain, use
+            *@example.com.
+          </p>
+          <ul>
+            <li>VIEWER: view docs but not edit</li>
+            <li>CONTRIBUTOR: view and edit docs, but not publish</li>
+            <li>EDITOR: view, edit, and publish docs</li>
+            <li>ADMIN: all of the above and change sharing settings</li>
+          </ul>
+          <p>
+            Use <strong>groups</strong> to manage many users at once and
+            optionally scope a role to specific collections.
+          </p>
+          <p>
+            If a user is blocked at sign-in because their Google account is no
+            longer linked, use <strong>Reset sign-in</strong> in the{' '}
+            <strong>Site Admin</strong> section.
+          </p>
+        </Text>
+      </div>
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+        <div className="SettingsPage__share relative flex min-h-30 flex-col gap-6">
+          <LoadingOverlay visible={loading} />
+          <div className="SettingsPage__share__subsection flex flex-col gap-2">
+            <Heading className="SettingsPage__section__right__title" size="h3">
+              Users
+            </Heading>
+            <ShareBox
+              className="SettingsPage__section__users__sharebox"
+              roles={draft.globalRoles}
+              onChange={setRoles}
+              currentUserIsAdmin={currentUserIsAdmin}
+            />
+          </div>
+          <div className="SettingsPage__share__subsection flex flex-col gap-2">
+            <Heading className="SettingsPage__section__right__title" size="h3">
+              Groups
+            </Heading>
+            <PermissionGroupsBox
+              groups={draft.permissionGroups}
+              onChange={setGroups}
+              collections={collectionIds}
+              disabled={!currentUserIsAdmin}
+            />
+          </div>
+          <div className="SettingsPage__share__saveBar flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+            <Text size="body-sm" weight="semi-bold" color="gray">
+              {dirty ? 'You have unsaved changes.' : 'All changes saved.'}
+            </Text>
+            <div className="SettingsPage__share__saveBar__actions flex gap-2">
+              <Button disabled={!dirty || saving} onClick={discard}>
+                Discard
+              </Button>
+              <Button
+                variant={dirty ? 'green' : 'primary'}
+                icon={<IconCheck />}
+                loading={saving}
+                disabled={!dirty || !currentUserIsAdmin}
+                onClick={save}
+              >
+                Save changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Surface>
+    </div>
+  );
+}
+
+/**
+ * Free-form CSS for the CMS, for the whole project (site scope, admins) or
+ * for this user alone. Saved on blur rather than per keystroke.
+ */
+function CustomCssSetting(props: {scope: 'site' | 'user'}) {
+  const siteSettings = useSiteSettings();
+  const userPrefs = useUserPreferences();
+  const saved =
+    props.scope === 'site'
+      ? siteSettings.settings.customCss
+      : userPrefs.preferences[CUSTOM_CSS_PREFERENCE_KEY];
+  const [value, setValue] = useState<string>(
+    typeof saved === 'string' ? saved : ''
+  );
+  // Take updates from elsewhere (another tab, another admin) unless the
+  // field is being edited.
+  const editing = useRef(false);
+  useEffect(() => {
+    if (!editing.current) {
+      setValue(typeof saved === 'string' ? saved : '');
+    }
+  }, [saved]);
+  const save = () => {
+    editing.current = false;
+    const next = value.trim();
+    if (next === (typeof saved === 'string' ? saved : '')) {
+      return;
+    }
+    if (props.scope === 'site') {
+      siteSettings.setSettings('customCss', next);
+    } else {
+      userPrefs.setPreference(CUSTOM_CSS_PREFERENCE_KEY, next || null);
+    }
+  };
+  return (
+    <div className={SETTING_CLASSES}>
+      <Text size="body" weight="semi-bold">
+        {props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>
+          {props.scope === 'site'
+            ? 'Applies to everyone on this project, on top of the theme. Only admins can change it. '
+            : 'Applies to you only, on top of the theme and the project CSS. '}
+          Paste CSS, or pull in a hosted file with{' '}
+          <code>@import url("https://…");</code>.
+        </p>
+      </Text>
+      <Textarea
+        autosize
+        minRows={3}
+        maxRows={16}
+        placeholder={':root {\n  --cms-drawer-indent: 16px;\n}'}
+        className="SettingsPage__customCss"
+        classNames={{input: 'font-mono text-sm'}}
+        aria-label={props.scope === 'site' ? 'Project CSS' : 'Personal CSS'}
+        value={value}
+        onFocus={() => {
+          editing.current = true;
+        }}
+        onInput={(e) => setValue(e.currentTarget.value)}
+        onBlur={save}
+      />
+    </div>
+  );
+}
+
+/**
+ * The user's theme, chosen from the ones the project registered. "Default"
+ * is the CMS's own look; the theme the project made its default is marked
+ * as such. Picking the project's default clears the preference, so the user
+ * follows the default if it changes. Rendered only when there are themes.
+ */
+function ThemePreference() {
+  const userPrefs = useUserPreferences();
+  const {defaultTheme, themes} = getThemeConfig();
+  if (themes.length === 0) {
+    return null;
+  }
+  const projectDefault = defaultTheme ?? NO_THEME;
+  const options = [
+    {value: NO_THEME, label: 'Default'},
+    ...themes.map((theme) => ({
+      value: theme.id,
+      label: theme.id === defaultTheme ? `${theme.name} (default)` : theme.name,
+    })),
+  ];
+  const current = userPrefs.preferences[THEME_PREFERENCE_KEY];
+  const value =
+    typeof current === 'string' &&
+    options.some((option) => option.value === current)
+      ? current
+      : projectDefault;
+  return (
+    <div className={SETTING_CLASSES}>
+      <Text size="body" weight="semi-bold">
+        Theme
+      </Text>
+      <Text size="body-sm" weight="semi-bold" color="gray">
+        <p>How the CMS looks for you.</p>
+      </Text>
+      <Select
+        className="SettingsPage__theme__select max-w-90"
+        aria-label="Theme"
+        data={options}
+        value={value}
+        onValueChange={(next) => {
+          userPrefs.setPreference(
+            THEME_PREFERENCE_KEY,
+            !next || next === projectDefault ? null : next
+          );
+        }}
+      />
+    </div>
+  );
+}
+
+/** Theme and custom CSS: how the CMS looks, per user and per project. */
+function ThemeSection() {
+  return (
+    <div className={SECTION_CLASSES}>
+      <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+        <Heading className="SettingsPage__section__left__title mb-2">
+          Theme
+        </Heading>
+        <Text
+          className="SettingsPage__section__body"
+          size="body-sm"
+          weight="semi-bold"
+          color="gray"
+        >
+          <p>
+            Experimental. The CMS changes between versions, so CSS written
+            against its class names can stop working; the <code>--cms-*</code>{' '}
+            custom properties are the part meant to last.
+          </p>
+        </Text>
+      </div>
+      <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+        <ThemePreference />
+        <CustomCssSetting scope="site" />
+        <CustomCssSetting scope="user" />
+      </Surface>
+    </div>
+  );
+}
+
+export function SettingsPage() {
+  usePageTitle('Settings');
+  const siteSettings = useSiteSettings();
+  const projectRoles = useProjectRoles();
+  const isAdmin =
+    !projectRoles.loading && isCurrentUserAdmin(projectRoles.roles);
+  return (
+    <Layout>
+      <div className="SettingsPage flex flex-col gap-16 bg-page p-page">
+        <ShareSection />
+        <div className={SECTION_CLASSES}>
+          <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
+            <Heading className="SettingsPage__section__left__title mb-2">
+              Site Settings
+            </Heading>
+            <Text
+              className="SettingsPage__section__body"
+              size="body-sm"
+              weight="semi-bold"
+              color="gray"
+            >
+              <p>
+                These settings apply to the project. Only admins can change
+                them.
+              </p>
+            </Text>
+          </div>
+          <Surface className="SettingsPage__section__right flex min-w-0 flex-col gap-6 p-4 md:p-5">
+            {SITE_SETTINGS.map((setting) => (
+              <div className={SETTING_CLASSES} key={setting.key}>
+                <Text size="body" weight="semi-bold">
+                  {setting.name}
+                </Text>
+                <Text size="body-sm" weight="semi-bold" color="gray">
+                  <p>{setting.description}</p>
+                </Text>
+                <Textarea
+                  autosize
+                  minRows={2}
+                  maxRows={4}
+                  aria-label={setting.name}
+                  value={siteSettings.settings[setting.key] || ''}
+                  placeholder={setting.placeholder}
+                  onInput={(e) =>
+                    siteSettings.setSettings(setting.key, e.currentTarget.value)
+                  }
+                />
+                {setting.ui && (
+                  <div>{setting.ui(siteSettings.settings[setting.key])}</div>
+                )}
+              </div>
+            ))}
+          </Surface>
+        </div>
+        {isAdmin && <SiteAdminSection />}
+        <ThemeSection />
+      </div>
+    </Layout>
+  );
+}

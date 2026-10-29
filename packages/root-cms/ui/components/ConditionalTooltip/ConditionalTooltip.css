@@ -1,8 +1,0 @@
-.ConditionalTooltip {
-  display: inline-block;
-  cursor: not-allowed;
-}
-
-.ConditionalTooltip__content {
-  pointer-events: none;
-}
