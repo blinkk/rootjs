@@ -11,10 +11,15 @@ import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
+import {
+  Pagination,
+  PaginationSummary,
+} from '../../../../components/Pagination/Pagination.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {usePagination} from '../../../../hooks/usePagination.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
@@ -75,6 +80,9 @@ const FILTER_OPTIONS: Array<{label: string; value: ReleaseListFilter}> = [
   {label: 'Archived', value: 'archived'},
 ];
 
+/** Number of releases to display per page. */
+const PAGE_SIZE = 25;
+
 function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
   const isArchived = Boolean(release.archivedAt);
   const isPublished = Boolean(release.publishedAt);
@@ -124,6 +132,13 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   const filteredReleases = useMemo(() => {
     return tableData.filter((release) => testMatchesFilter(release, filter));
   }, [tableData, filter]);
+
+  // Paginate filtered releases, resetting to the first page when the filter
+  // changes.
+  const pagination = usePagination(filteredReleases, {
+    pageSize: PAGE_SIZE,
+    resetDeps: [filter],
+  });
 
   const filterCounts = useMemo(() => {
     const counts: Partial<Record<ReleaseListFilter, number>> = {};
@@ -188,7 +203,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                   </tr>
                 </thead>
                 <tbody className="max-md:block">
-                  {filteredReleases.map((release) => (
+                  {pagination.pageItems.map((release) => (
                     <tr
                       key={release.id}
                       className="ReleasesPage__row group/row max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-2 max-md:border-0 max-md:border-b max-md:border-solid max-md:border-surface-active max-md:p-4 max-md:last:border-b-0"
@@ -235,6 +250,22 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                 </tbody>
               </table>
             </Surface>
+          )}
+          {pagination.totalPages > 1 && (
+            <div className="ReleasesPage__footer mt-4 flex flex-wrap items-center justify-between gap-3">
+              <PaginationSummary
+                start={pagination.start}
+                end={pagination.end}
+                total={pagination.totalItems}
+                noun="release"
+              />
+              <Pagination
+                className="py-0"
+                total={pagination.totalPages}
+                page={pagination.page}
+                onChange={pagination.setPage}
+              />
+            </div>
           )}
           {filteredReleases.length === 0 && (
             <Surface>
