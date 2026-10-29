@@ -809,10 +809,7 @@ ReleasePage.Overview = (props: {
           )}
         </Surface>
         <div className="ReleasePage__contentsFooter mt-4 flex">
-          <Button
-            icon={<IconPlus />}
-            href={`/cms/releases/${release.id}/edit`}
-          >
+          <Button icon={<IconPlus />} href={`/cms/releases/${release.id}/edit`}>
             Add or edit
           </Button>
         </div>
