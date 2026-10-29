@@ -28,9 +28,6 @@ import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
-import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
-import {UserTag} from '../../../users/UserTag/UserTag.js';
-import {useUserProfile} from '../../../users/useUserProfile.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Release, listReleases} from '../../release.js';
 
@@ -54,19 +51,6 @@ export function ReleasesPage() {
               you're ready.
             </Text>
           </div>
-          <ConditionalTooltip
-            label="You don't have access to create new releases"
-            condition={!canPublish}
-          >
-            <Button
-              variant="primary"
-              icon={<IconPlus />}
-              href="/cms/releases/new"
-              disabled={!canPublish}
-            >
-              New release
-            </Button>
-          </ConditionalTooltip>
         </div>
         <ReleasesPage.ReleasesTable canPublish={canPublish} />
       </div>
@@ -163,7 +147,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
       )}
       {!loading && tableData.length > 0 && (
         <>
-          <div className="ReleasesPage__filters mb-4">
+          <div className="ReleasesPage__filters mb-4 flex flex-wrap items-center gap-3">
             <SegmentedControl
               aria-label="Release filters"
               size="md"
@@ -181,26 +165,27 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                 ),
               }))}
             />
+            <div className="ReleasesPage__newRelease ml-auto">
+              <ReleasesPage.NewReleaseButton canPublish={props.canPublish} />
+            </div>
           </div>
           {filteredReleases.length > 0 && (
             <Surface className="ReleasesPage__tableSurface rounded-xl">
               {/*
-               * Below `md` the table collapses into stacked rows: the release,
-               * its status and author, then its contents.
+               * Below `md` the table collapses into stacked rows: the status,
+               * the release, then its contents.
                */}
               <table className="ReleasesPage__table w-full border-collapse text-sm text-fg max-md:block">
                 <thead className="max-md:hidden">
                   <tr>
-                    {['Release', 'Contents', 'Created by', 'Status'].map(
-                      (label) => (
-                        <th
-                          key={label}
-                          className="ReleasesPage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
-                        >
-                          {label}
-                        </th>
-                      )
-                    )}
+                    {['Status', 'Release', 'Contents'].map((label) => (
+                      <th
+                        key={label}
+                        className="ReleasesPage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
+                      >
+                        {label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="max-md:block">
@@ -209,6 +194,11 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                       key={release.id}
                       className="ReleasesPage__row group/row max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-2 max-md:border-0 max-md:border-b max-md:border-solid max-md:border-surface-active max-md:p-4 max-md:last:border-b-0"
                     >
+                      <td className={cn(CELL_CLASSES, 'md:w-0')}>
+                        <div className="ReleasesPage__publishStatus flex items-center gap-1.5">
+                          <ReleaseStatusBadge release={release} />
+                        </div>
+                      </td>
                       <td
                         className={cn(
                           CELL_CLASSES,
@@ -224,25 +214,6 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                         )}
                       >
                         <ReleasesPage.ContentsCell release={release} />
-                      </td>
-                      <td
-                        className={cn(
-                          CELL_CLASSES,
-                          'max-md:min-w-0 max-md:flex-1'
-                        )}
-                      >
-                        {release.createdBy ? (
-                          <ReleasesPage.CreatedBy email={release.createdBy} />
-                        ) : (
-                          <span className="ReleasesPage__empty text-muted">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td className={CELL_CLASSES}>
-                        <div className="ReleasesPage__publishStatus flex items-center gap-1.5">
-                          <ReleaseStatusBadge release={release} />
-                        </div>
                       </td>
                     </tr>
                   ))}
@@ -283,27 +254,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
   );
 };
 
-/**
- * The release's author: avatar and name, or just the avatar at tablet widths
- * (`md` to `lg`), where the table is tight. The name tooltip covers both.
- */
-ReleasesPage.CreatedBy = (props: {email: string}) => {
-  const {profile} = useUserProfile(props.email);
-  const name = profile?.displayName || props.email.split('@')[0];
-  return (
-    <UserTag
-      className="ReleasesPage__createdBy flex min-w-0 items-center gap-2 whitespace-nowrap"
-      email={props.email}
-    >
-      <UserAvatar email={props.email} size={24} withTooltip={false} />
-      <span className="ReleasesPage__createdByName md:max-lg:sr-only">
-        {name}
-      </span>
-    </UserTag>
-  );
-};
-
-/** The release's description (or id) and id, linking to the release page. */
+/** The release's id and description, linking to the release page. */
 ReleasesPage.ReleaseCell = (props: {release: Release}) => {
   const release = props.release;
   return (
@@ -311,12 +262,12 @@ ReleasesPage.ReleaseCell = (props: {release: Release}) => {
       className="ReleasesPage__release group block min-w-0 text-fg no-underline"
       href={`/cms/releases/${release.id}`}
     >
-      <div className="ReleasesPage__releaseTitle text-base font-semibold text-strong wrap-anywhere underline-offset-3 group-hover:underline">
-        {release.description || release.id}
+      <div className="ReleasesPage__releaseId text-base font-semibold text-strong wrap-anywhere underline-offset-3 group-hover:underline">
+        {release.id}
       </div>
       {release.description && (
-        <div className="ReleasesPage__releaseId mt-0.5 font-mono text-sm text-muted wrap-anywhere">
-          {release.id}
+        <div className="ReleasesPage__releaseDescription mt-0.5 max-w-150 text-base text-muted wrap-anywhere">
+          {release.description}
         </div>
       )}
     </a>
@@ -325,13 +276,13 @@ ReleasesPage.ReleaseCell = (props: {release: Release}) => {
 
 /** Classes shared by the doc, data source and "more" chips. */
 const CHIP_CLASSES =
-  'inline-flex h-6 max-w-60 items-center gap-1 whitespace-nowrap rounded-md px-2 text-sm';
+  'inline-flex h-6 max-w-full items-center gap-1 whitespace-nowrap rounded-md px-2 text-sm';
 
 /** Max number of chips to show before collapsing the rest. */
 const CONTENTS_CHIP_LIMIT = 6;
 
 /**
- * Lists a release's data sources and docs as chips. Long lists collapse to the
+ * Lists a release's data sources and docs as chips, one per line. Long lists collapse to the
  * first few chips plus a "+N more" chip that expands the rest.
  */
 ReleasesPage.ContentsCell = (props: {release: Release}) => {
@@ -356,7 +307,7 @@ ReleasesPage.ContentsCell = (props: {release: Release}) => {
     ? items.slice(0, CONTENTS_CHIP_LIMIT - 1)
     : items;
   return (
-    <div className="ReleasesPage__contents flex max-w-105 flex-wrap gap-1">
+    <div className="ReleasesPage__contents flex max-w-105 flex-col items-start gap-1">
       {visibleItems.map((item) => (
         <a
           className={cn(
@@ -399,6 +350,25 @@ ReleasesPage.ContentsCell = (props: {release: Release}) => {
         </button>
       )}
     </div>
+  );
+};
+
+/** Links to the new release page, disabled for users who can't publish. */
+ReleasesPage.NewReleaseButton = (props: {canPublish: boolean}) => {
+  return (
+    <ConditionalTooltip
+      label="You don't have access to create new releases"
+      condition={!props.canPublish}
+    >
+      <Button
+        variant="primary"
+        icon={<IconPlus />}
+        href="/cms/releases/new"
+        disabled={!props.canPublish}
+      >
+        New release
+      </Button>
+    </ConditionalTooltip>
   );
 };
 
