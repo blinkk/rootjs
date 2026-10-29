@@ -7,6 +7,9 @@
  * The reference sits between the `<!-- reference:start -->` and
  * `<!-- reference:end -->` markers; the rest of the doc is hand-written.
  *
+ * It also copies `ui/styles/theme.css` into the `root-cms-theme` agent skill,
+ * which ships it as the list of properties a theme can set.
+ *
  * Usage (from packages/root-cms):
  *   node scripts/ui-theme-reference.ts          # rewrite the reference
  *   node scripts/ui-theme-reference.ts --check  # fail if it's out of date
@@ -21,6 +24,10 @@ const PACKAGE_DIR = path.resolve(import.meta.dirname, '..');
 const UI_DIR = path.join(PACKAGE_DIR, 'ui');
 const THEME_PATH = path.join(UI_DIR, 'styles/theme.css');
 const DOC_PATH = path.join(PACKAGE_DIR, 'docs/themes.md');
+const SKILL_THEME_PATH = path.join(
+  PACKAGE_DIR,
+  'skills/root-cms-theme/theme.css'
+);
 const START = '<!-- reference:start -->';
 const END = '<!-- reference:end -->';
 
@@ -279,10 +286,14 @@ async function main() {
     doc.slice(0, start) + renderReference() + doc.slice(end + END.length),
     {...(await prettier.resolveConfig(DOC_PATH)), filepath: DOC_PATH}
   );
+  const theme = fs.readFileSync(THEME_PATH, 'utf8');
   if (values.check) {
-    if (next !== doc) {
+    const skillTheme = fs.existsSync(SKILL_THEME_PATH)
+      ? fs.readFileSync(SKILL_THEME_PATH, 'utf8')
+      : '';
+    if (next !== doc || skillTheme !== theme) {
       console.error(
-        'docs/themes.md is out of date; run `node scripts/ui-theme-reference.ts`.'
+        'docs/themes.md or skills/root-cms-theme/theme.css is out of date; run `node scripts/ui-theme-reference.ts`.'
       );
       process.exit(1);
     }
@@ -290,7 +301,8 @@ async function main() {
     return;
   }
   fs.writeFileSync(DOC_PATH, next);
-  console.log('Updated docs/themes.md.');
+  fs.writeFileSync(SKILL_THEME_PATH, theme);
+  console.log('Updated docs/themes.md and skills/root-cms-theme/theme.css.');
 }
 
 await main();
