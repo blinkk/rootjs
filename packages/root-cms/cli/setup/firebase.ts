@@ -60,7 +60,7 @@ export async function setupFirebase(ctx: SetupContext) {
   const apps = (list.apps || []).filter((app) => app.state !== 'DELETED');
   // The web app config is project-wide, so any existing web app works, even
   // one another site on this project created.
-  let appId =
+  let appId: string | undefined =
     apps.find((app) => app.displayName === WEB_APP_NAME)?.appId ||
     apps[0]?.appId;
   if (appId) {

@@ -455,7 +455,8 @@ describe('root-cms setup', () => {
     });
     await run(gcp, prompt, {project: PROJECT});
     const patch = gcp.calls.find((c) => c.key.startsWith('PATCH'))!;
-    expect(patch.req!.body.fields.roles.mapValue.fields).toEqual({
+    const body = patch.req!.body as any;
+    expect(body.fields.roles.mapValue.fields).toEqual({
       'other@example.com': {stringValue: 'EDITOR'},
       [USER]: {stringValue: 'ADMIN'},
     });

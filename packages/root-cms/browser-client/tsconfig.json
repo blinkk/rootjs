@@ -4,5 +4,6 @@
     "lib": ["esnext", "dom", "dom.iterable"],
     "types": []
   },
-  "include": ["*.ts", "**/*.ts", "../shared/*.ts"]
+  "include": ["*.ts", "**/*.ts", "../shared/*.ts"],
+  "exclude": ["../shared/*.test.ts"]
 }

@@ -31,5 +31,6 @@
     "*.tsx",
     "**/*.tsx",
     "../shared/*.ts"
-  ]
+  ],
+  "exclude": ["../shared/*.test.ts"]
 }

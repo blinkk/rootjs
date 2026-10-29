@@ -10,9 +10,11 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "pretty": true,
+    "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "target": "es2020",
+    "rootDir": "..",
     "outDir": "dist",
     "types": [
       "node",
