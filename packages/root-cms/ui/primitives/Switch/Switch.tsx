@@ -26,8 +26,8 @@ const TRACK_SIZE_CLASSES: Record<SwitchSize, string> = {
 };
 
 const THUMB_SIZE_CLASSES: Record<SwitchSize, string> = {
-  sm: 'left-0.75 top-0.75 size-2.5 peer-checked:translate-x-3.5',
-  md: 'left-1 top-1 size-3 peer-checked:translate-x-4.5',
+  sm: 'left-0.5 top-0.5 size-3 peer-checked:translate-x-3.5',
+  md: 'left-0.75 top-0.75 size-3.5 peer-checked:translate-x-4.5',
 };
 
 /** Offsets the track so it centers on the label's first line. */
