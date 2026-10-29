@@ -81,7 +81,7 @@ const FILTER_OPTIONS: Array<{label: string; value: ReleaseListFilter}> = [
 ];
 
 /** Number of releases to display per page. */
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function testMatchesFilter(release: Release, filter: ReleaseListFilter) {
   const isArchived = Boolean(release.archivedAt);
