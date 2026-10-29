@@ -114,7 +114,6 @@ interface DocStatusBadgesProps {
   doc: CMSDoc;
   /** Doc ID used for release lookup. Falls back to doc.id if not provided. */
   docId?: string;
-  tooltipPosition?: 'bottom' | 'top';
   hideReleases?: boolean;
   /**
    * Optional click handler for the "Locked" publishing-lock badge. When set,
@@ -150,7 +149,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         !sys.modifiedAt ||
         sys.modifiedAt > sys.publishedAt) && (
         <UserActionTooltip
-          position={props.tooltipPosition}
           heading={hasUnpublishedChanges ? 'Unpublished changes' : undefined}
           message={`Modified ${timeDiff(sys.modifiedAt)}`}
           user={sys.modifiedBy}
@@ -162,7 +160,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
       {!!sys.publishedAt && (
         <UserActionTooltip
-          position={props.tooltipPosition}
           message={`Published ${timeDiff(sys.publishedAt ?? null)}`}
           user={sys.publishedBy}
         >
@@ -176,24 +173,15 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
       {!!sys.scheduledAt && (
         <UserActionTooltip
-          position={props.tooltipPosition}
           message={`Scheduled ${formatDateTime(sys.scheduledAt)}`}
           user={sys.scheduledBy}
         >
           <StatusBadge tone="scheduled">Scheduled</StatusBadge>
         </UserActionTooltip>
       )}
-      {!props.hideReleases && (
-        <ReleaseBadges
-          docId={props.docId || doc.id}
-          tooltipPosition={props.tooltipPosition}
-        />
-      )}
+      {!props.hideReleases && <ReleaseBadges docId={props.docId || doc.id} />}
       {testPublishingLocked(doc) && (
-        <Tooltip
-          placement={props.tooltipPosition}
-          label={<PublishingLockTooltip doc={doc} />}
-        >
+        <Tooltip label={<PublishingLockTooltip doc={doc} />}>
           <StatusBadge
             tone="locked"
             aria-label="Locked"
@@ -205,7 +193,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
       {!!sys.archivedAt && (
         <UserActionTooltip
-          position={props.tooltipPosition}
           message={`Archived ${timeDiff(sys.archivedAt)}`}
           user={sys.archivedBy}
         >
@@ -285,10 +272,7 @@ export function getPublishingLockedLabel(docData: CMSDoc): string {
 const RELEASE_BADGE_CLASSES =
   'DocStatusBadges__releaseBadge cursor-pointer font-mono tracking-normal';
 
-function ReleaseBadges(props: {
-  docId: string;
-  tooltipPosition?: 'bottom' | 'top';
-}) {
+function ReleaseBadges(props: {docId: string}) {
   const {getReleasesForDoc} = usePendingReleases();
   const releases = getReleasesForDoc(props.docId);
   if (releases.length === 0) {
@@ -301,10 +285,7 @@ function ReleaseBadges(props: {
   }
   const release = releases[0];
   return (
-    <Tooltip
-      placement={props.tooltipPosition}
-      label={`In release: ${release.id}`}
-    >
+    <Tooltip label={`In release: ${release.id}`}>
       <StatusBadge
         tone="release"
         href={`/cms/releases/${release.id}`}

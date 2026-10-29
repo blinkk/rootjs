@@ -1,4 +1,5 @@
 import {ComponentChildren} from 'preact';
+import type {Placement} from '../../../primitives/floating/useFloating.js';
 import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 
@@ -25,10 +26,8 @@ export interface UserActionTooltipProps {
   user?: string | null;
   /** The element the tooltip is attached to. */
   children: ComponentChildren;
-  /** Tooltip position. */
-  position?: 'top' | 'bottom' | 'left' | 'right';
-  /** Ignored; kept for compatibility with the Mantine-based version. */
-  transition?: string;
+  /** Where the tooltip opens relative to the trigger. Default `top`. */
+  placement?: Placement;
   /** Shows the tooltip's arrow. Default `true`. */
   withArrow?: boolean;
 }
@@ -66,11 +65,11 @@ export function UserActionTooltip(props: UserActionTooltipProps) {
     </div>
   );
   // The trigger is wrapped so any children work, whether or not they forward
-  // a ref (Mantine's tooltip also wrapped its target).
+  // a ref.
   return (
     <Tooltip
       label={label}
-      placement={props.position}
+      placement={props.placement}
       withArrow={props.withArrow}
     >
       <span className="UserActionTooltip__trigger inline-flex max-w-full">
