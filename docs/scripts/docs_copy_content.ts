@@ -253,7 +253,7 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Lists setting up email notifications among the things an agent can do with the installed skills.',
+  note: 'Lists theming the CMS and setting up email notifications among the things an agent can do with the installed skills.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
