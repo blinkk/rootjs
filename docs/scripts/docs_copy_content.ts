@@ -507,6 +507,7 @@ pnpm exec root secrets sync`
               ul(
                 'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
+                `Theme the CMS to match your brand (see ${a('/docs/cms/customization/#branding', 'Branding and themes')}).`,
                 `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`,
                 `Set up email notifications, including the email service they're sent with (see ${a('/docs/cms/notifications/#email-delivery', 'Delivering email')}).`
               ),

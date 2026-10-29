@@ -3,7 +3,7 @@
 - **id:** `2026-10-29-cms-email-setup-skill`
 - **version:** 1
 - **author:** scripts/propose_docs_copy.ts
-- **generated:** 2026-10-29T23:13:26.003Z
+- **generated:** 2026-10-29T23:34:33.375Z
 
 ## Summary
 
@@ -35,7 +35,7 @@ Lists setting up email notifications among the things an agent can do with the i
      time: 1790907822269
      version: "2.28.2"
    blocks: []
-   _arrayKey: "5bc0bu"
+   _arrayKey: "Z4T41X"
  - id: "requirements"
    title: "Requirements"
    body:
@@ -58,8 +58,8 @@ Lists setting up email notifications among the things an agent can do with the i
        code: |-
          node --version  # v24 or later
          corepack enable
-       _arrayKey: "mLs31W"
-   _arrayKey: "240Poj"
+       _arrayKey: "NTIful"
+   _arrayKey: "Yfgmgj"
  - id: "ai-setup"
    title: "Set up with an AI agent"
    body:
@@ -74,7 +74,7 @@ Lists setting up email notifications among the things an agent can do with the i
        code: |-
          Set up a new Root.js site. Follow the instructions at
          https://rootjs.dev/skills/root-cms-setup.md
-       _arrayKey: "NTEkwZ"
+       _arrayKey: "crqET7"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -89,8 +89,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "If you'd rather do it yourself, the rest of this page covers the same steps."
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "IbVRzp"
-   _arrayKey: "h4spqt"
+       _arrayKey: "RQzYmq"
+   _arrayKey: "GrjZEn"
  - id: "existing-project"
    title: "Set up an existing project"
    body:
@@ -105,7 +105,7 @@ Lists setting up email notifications among the things an agent can do with the i
        code: |-
          Set up this Root.js project on my machine. Follow the instructions at
          https://rootjs.dev/skills/root-dev-setup.md
-       _arrayKey: "Q882Pg"
+       _arrayKey: "JHhzci"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -117,7 +117,7 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "To do it yourself:"
          time: 1792904944718
          version: "2.28.2"
-       _arrayKey: "P7GBEk"
+       _arrayKey: "rswzJV"
      - _type: "CodeBlock"
        language: "bash"
        code: |-
@@ -129,7 +129,7 @@ Lists setting up email notifications among the things an agent can do with the i
 
          # Downloads the shared secrets into .env, then starts the server.
          pnpm dev
-       _arrayKey: "xmoKPP"
+       _arrayKey: "C675ju"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -138,8 +138,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "To use the CMS, you need access to the site's Google Cloud project (for Firestore and Secret Manager) and a role in the CMS, which an admin adds under <b>Settings</b>. If Firestore returns <code>PERMISSION_DENIED</code> locally, run <code>gcloud auth application-default set-quota-project &lt;project-id&gt;</code>."
          time: 1792904944718
          version: "2.28.2"
-       _arrayKey: "doS3Za"
-   _arrayKey: "3CAuEO"
+       _arrayKey: "BNxcfZ"
+   _arrayKey: "9ZsmMh"
  - id: "create-project"
    title: "Create a project"
    body:
@@ -153,7 +153,7 @@ Lists setting up email notifications among the things an agent can do with the i
      - _type: "CodeBlock"
        language: "bash"
        code: "pnpm create @blinkk/root my-site"
-       _arrayKey: "JkiEcA"
+       _arrayKey: "4vXTJ3"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -162,14 +162,14 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "It offers to install the dependencies and set up Google Cloud for the CMS right away. Say yes to run the setup wizard described <a href=\"#set-up-cms\">below</a>, or say no and run it later. Either way, start the dev server from the new folder:"
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "FGHNae"
+       _arrayKey: "yyZoL2"
      - _type: "CodeBlock"
        language: "bash"
        code: |-
          cd my-site
          pnpm install
          pnpm dev
-       _arrayKey: "bqbBRb"
+       _arrayKey: "jrxWg3"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -204,12 +204,12 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "<b>Just the framework?</b> The <a href=\"https://github.com/blinkk/rootjs/tree/main/examples/minimal\">minimal</a> template is a plain Root.js project with a single \"Hello, Root.js\" page at <code>routes/index.tsx</code>, and no CMS. It's a good fit for static sites. To add the CMS to it later, install <code>@blinkk/root-cms</code> and <code>firebase-admin</code>, and add <code>cmsPlugin()</code> as described in <a href=\"/docs/cms/\">CMS configuration</a>:"
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "FIDu3g"
+       _arrayKey: "MIfORU"
      - _type: "CodeBlock"
        language: "bash"
        code: "pnpm create @blinkk/root --template=minimal my-site"
-       _arrayKey: "E0Ccab"
-   _arrayKey: "TUHmOV"
+       _arrayKey: "muhRqu"
+   _arrayKey: "Ji7R7v"
  - id: "set-up-cms"
    title: "Connect the CMS to Google Cloud"
    body:
@@ -223,7 +223,7 @@ Lists setting up email notifications among the things an agent can do with the i
      - _type: "CodeBlock"
        language: "bash"
        code: "pnpm exec root-cms setup"
-       _arrayKey: "znWhJ5"
+       _arrayKey: "wH2tnZ"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -263,8 +263,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "To set up Firebase without the wizard, or to see every option the CMS supports, see <a href=\"/docs/cms/\">CMS configuration</a>."
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "BrgBPT"
-   _arrayKey: "1foRiF"
+       _arrayKey: "FZZbMA"
+   _arrayKey: "KxHVmy"
  - id: "templates"
    title: "Build pages from templates"
    body:
@@ -288,7 +288,7 @@ Lists setting up email notifications among the things an agent can do with the i
              types: schema.glob('/templates/*/*.schema.ts'),
            }),
          }),
-       _arrayKey: "R1MOHI"
+       _arrayKey: "TlPQCQ"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -300,7 +300,7 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "To add a template, create a folder in <code>templates/</code> with a schema and a component of the same name. For example, here's the starter's <code>TemplateHero</code> template:"
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "KBzijp"
+       _arrayKey: "PclkNJ"
      - _type: "CodeBlock"
        language: "ts"
        code: |-
@@ -329,7 +329,7 @@ Lists setting up email notifications among the things an agent can do with the i
              }),
            ],
          });
-       _arrayKey: "FGDu9r"
+       _arrayKey: "aINDaY"
      - _type: "CodeBlock"
        language: "tsx"
        code: |-
@@ -357,7 +357,7 @@ Lists setting up email notifications among the things an agent can do with the i
              </section>
            );
          }
-       _arrayKey: "rZ8TNH"
+       _arrayKey: "p4oib1"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -366,11 +366,11 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "Then regenerate the TypeScript types for your schemas. The new template shows up in the CMS the next time you open it:"
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "Q3UOGL"
+       _arrayKey: "9ceYhW"
      - _type: "CodeBlock"
        language: "bash"
        code: "pnpm exec root-cms generate-types"
-       _arrayKey: "oEEpHe"
+       _arrayKey: "8tJr24"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -379,8 +379,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "Learn more in <a href=\"/docs/cms/schemas/\">Schemas</a> and <a href=\"/docs/cms/data-fetching/\">Data fetching</a>."
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "zpXbee"
-   _arrayKey: "jYv124"
+       _arrayKey: "6Jeg5t"
+   _arrayKey: "2YLdZ0"
  - id: "secrets"
    title: "Share environment variables"
    body:
@@ -402,7 +402,7 @@ Lists setting up email notifications among the things an agent can do with the i
 
          # Teammates download them into their own .env.
          pnpm exec root secrets sync
-       _arrayKey: "s8u0nz"
+       _arrayKey: "iRPlQA"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -411,8 +411,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "Once a project has a manifest, <code>root dev</code> syncs the secrets when it starts. See the <a href=\"/docs/cli/#root-secrets\">CLI reference</a> for every command."
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "0wyg3V"
-   _arrayKey: "A9WBm4"
+       _arrayKey: "uhfWW8"
+   _arrayKey: "UsCavR"
  - id: "ai-agents"
    title: "Work with AI agents"
    body:
@@ -426,7 +426,7 @@ Lists setting up email notifications among the things an agent can do with the i
      - _type: "CodeBlock"
        language: "bash"
        code: "pnpm exec root-cms skill.install"
-       _arrayKey: "xCHfql"
+       _arrayKey: "vf2LY4"
      - _type: "CopyBlock"
        body:
          blocks:
@@ -441,6 +441,8 @@ Lists setting up email notifications among the things an agent can do with the i
                    items: []
                  - content: "Propose content changes as a YAML file that your team reviews in a pull request, then applies with <code>root-cms proposal.apply</code>."
                    items: []
+                 - content: "Theme the CMS to match your brand (see <a href=\"/docs/cms/customization/#branding\">Branding and themes</a>)."
+                   items: []
                  - content: "Set up a fresh clone of the project on a teammate's machine: tools, <code>gcloud</code> sign-in, shared secrets and CMS access (see <a href=\"#existing-project\">Set up an existing project</a>)."
                    items: []
 +                - content: "Set up email notifications, including the email service they're sent with (see <a href=\"/docs/cms/notifications/#email-delivery\">Delivering email</a>)."
@@ -450,8 +452,8 @@ Lists setting up email notifications among the things an agent can do with the i
                text: "The skills install to an existing agent skills folder, such as <code>.claude/skills</code>, or to <code>.agent/skills</code> if there isn't one. Re-run the command with <code>--force</code> after upgrading <code>@blinkk/root-cms</code> to pick up new versions."
          time: 1790907822269
          version: "2.28.2"
-       _arrayKey: "yxZT81"
-   _arrayKey: "rvvEsR"
+       _arrayKey: "9CNxM3"
+   _arrayKey: "DnCZsE"
  - id: "next-steps"
    title: "Next steps"
    body:
@@ -473,7 +475,7 @@ Lists setting up email notifications among the things an agent can do with the i
      time: 1790907822269
      version: "2.28.2"
    blocks: []
-   _arrayKey: "cmZGFm"
+   _arrayKey: "hC7hdy"
 ```
 
 ## Edit `Docs/cms--notifications`
@@ -645,7 +647,7 @@ Adds the Mail API limits, the scheduled job, and a prompt for the root-cms-email
 +          - type: "paragraph"
 +            data:
 +              text: "The agent asks who should get which emails, then deploys the email service to App Engine, creates the Firestore index and the scheduled job it needs, and adds ready-made emails for releases, publishes, publishing locks and comments to <code>cms/emails.ts</code>. It asks before creating or deploying anything, and ends by sending you a test email. <code>root-cms skill.install</code> also installs the skill, as <code>root-cms-email-setup</code>."
-+        time: 1793315605104
++        time: 1793316872401
 +        version: "2.28.2"
    _arrayKey: "ISJEqJ"
  - id: "translation-services"
