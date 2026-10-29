@@ -26,8 +26,8 @@ const TRACK_SIZE_CLASSES: Record<SwitchSize, string> = {
 };
 
 const THUMB_SIZE_CLASSES: Record<SwitchSize, string> = {
-  sm: 'left-0.5 top-0.5 size-3 peer-checked:translate-x-3.5',
-  md: 'left-0.75 top-0.75 size-3.5 peer-checked:translate-x-4.5',
+  sm: 'left-0.75 top-0.75 size-2.5 peer-checked:translate-x-3.5',
+  md: 'left-1 top-1 size-3 peer-checked:translate-x-4.5',
 };
 
 /** Offsets the track so it centers on the label's first line. */
@@ -118,7 +118,8 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           />
           <span
             className={cn(
-              'Switch__thumb pointer-events-none absolute rounded-full bg-surface shadow-sm transition-transform',
+              'Switch__thumb pointer-events-none absolute rounded-full border border-border-strong bg-surface shadow-sm transition-[translate,border-color]',
+              'peer-checked:border-primary peer-checked:peer-disabled:border-primary/50',
               THUMB_SIZE_CLASSES[size]
             )}
             aria-hidden="true"
