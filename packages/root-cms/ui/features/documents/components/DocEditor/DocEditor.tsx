@@ -1608,7 +1608,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
       >
         <summary
           className={cn(
-            'DocEditor__ObjectFieldDrawer__drawer__toggle flex cursor-pointer select-none items-center gap-2 px-4 py-2 transition-colors duration-300 hover:bg-surface-hover',
+            'DocEditor__ObjectFieldDrawer__drawer__toggle flex cursor-pointer select-none items-center gap-2 px-4 py-1.25 transition-colors duration-300 hover:bg-surface-hover',
             inline ? 'border-0' : 'border-0 border-y border-solid border-border'
           )}
         >
