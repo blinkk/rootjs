@@ -49,8 +49,13 @@ function modulesField(variant: 'dropdown' | 'picker'): schema.ArrayField {
   }) as schema.ArrayField;
 }
 
-function renderArrayField(field: schema.ArrayField) {
-  const controller = new InMemoryDraftDocController({}, 'test');
+function renderArrayField(
+  field: schema.ArrayField,
+  initialValue?: Record<string, any>
+) {
+  const controller = initialValue
+    ? new InMemoryDraftDocController(initialValue, 'modules')
+    : new InMemoryDraftDocController({}, 'test');
   const draftContext = {
     loading: false,
     controller: controller as unknown as DraftDocContext['controller'],
@@ -132,5 +137,49 @@ describe('DocEditor.ArrayField', () => {
     expect(
       document.body.querySelector('.ComponentPickerModal__Card')
     ).toBeNull();
+  });
+
+  it('removes an item via the menu and supports undo', async () => {
+    // Regression test for https://github.com/blinkk/rootjs/issues/1561,
+    // where removing an item threw because the in-memory controller used by
+    // rich text block modals had no edit history.
+    const controller = renderArrayField(modulesField('dropdown'), {
+      _array: ['a', 'b'],
+      a: {_type: 'Text', body: 'first'},
+      b: {_type: 'Text', body: 'second'},
+    });
+    const getRenderedItems = () =>
+      document.body.querySelectorAll('.DocEditor__ArrayField__item');
+    await vi.waitFor(() => expect(getRenderedItems().length).toBe(2));
+
+    const dots = document.body.querySelectorAll<HTMLButtonElement>(
+      '.DocEditor__ArrayField__item__header__controls__dots'
+    );
+    fireEvent.click(dots[1]);
+    let removeItem: HTMLElement | undefined;
+    await vi.waitFor(() => {
+      removeItem = Array.from(
+        document.body.querySelectorAll<HTMLElement>(
+          '.DocEditor__ArrayField__menu__item'
+        )
+      ).find((item) => item.textContent?.includes('Remove'));
+      expect(removeItem).toBeTruthy();
+    });
+    fireEvent.click(removeItem!);
+
+    await vi.waitFor(() => expect(getRenderedItems().length).toBe(1));
+    // The removed item's key is deleted rather than set to `undefined`.
+    expect(controller.getValue('modules')).toEqual({
+      _array: ['a'],
+      a: {_type: 'Text', body: 'first'},
+    });
+    expect(controller.history.peekUndo()?.label).toBe('Removed item');
+
+    expect(controller.undo().status).toBe('applied');
+    await vi.waitFor(() => expect(getRenderedItems().length).toBe(2));
+    expect(getItems(controller)).toEqual([
+      {_type: 'Text', body: 'first'},
+      {_type: 'Text', body: 'second'},
+    ]);
   });
 });
