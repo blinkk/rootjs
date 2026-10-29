@@ -380,7 +380,7 @@ export function TranslationsManagerEditPage(
           )}
         </div>
 
-        <div className="TranslationsManagerEditPage__footer flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-0 border-t border-solid border-border bg-surface px-page py-4">
+        <div className="TranslationsManagerEditPage__footer flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-0 border-t border-solid border-border bg-surface px-page py-3">
           {!isDocBacked && !loading && (
             <TranslationsManagerEditPage.AddStringInput
               onAdd={onAddSourceString}
