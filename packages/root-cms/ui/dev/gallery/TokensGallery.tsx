@@ -8,6 +8,7 @@ const SURFACES = [
   'surface-active',
   'chip',
   'overlay',
+  'media',
 ];
 const TEXT = ['fg', 'strong', 'muted', 'subtle', 'link'];
 const ACTIONS = ['primary', 'primary-hover', 'accent', 'focus'];
@@ -24,6 +25,7 @@ const BG: Record<string, string> = {
   'surface-active': 'bg-surface-active',
   chip: 'bg-chip',
   overlay: 'bg-overlay',
+  media: 'bg-media',
   primary: 'bg-primary',
   'primary-hover': 'bg-primary-hover',
   accent: 'bg-accent',

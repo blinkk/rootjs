@@ -537,7 +537,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
         )}
 
         <div
-          className="ImageEditorDialog__Stage relative flex h-115 w-full select-none items-center justify-center overflow-hidden bg-fg max-md:h-80"
+          className="ImageEditorDialog__Stage relative flex h-115 w-full select-none items-center justify-center overflow-hidden bg-media max-md:h-80"
           ref={setStageEl}
         >
           <div

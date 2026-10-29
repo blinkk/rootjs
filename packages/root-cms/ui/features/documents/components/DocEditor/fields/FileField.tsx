@@ -871,7 +871,7 @@ FileField.Preview = () => {
   const canvasStyle = canvasPreviewInlineStyles(ctx.value, infoOpened);
   if (showsVideo && !canvasStyle.backgroundColor) {
     // Videos letterbox on black.
-    canvasStyle.backgroundColor = '#000';
+    canvasStyle.backgroundColor = 'var(--cms-color-media)';
   }
   if (dragging) {
     // Let the dragging tint from `FileField.css` show.
@@ -1691,7 +1691,7 @@ function canvasPreviewInlineStyles(
 
   if (uploadedFile.canvasBgColor === 'dark') {
     // The canvas shows the file itself, so it's black whatever the theme.
-    inlineStyles.backgroundColor = '#000';
+    inlineStyles.backgroundColor = 'var(--cms-color-media)';
   }
   return inlineStyles;
 }

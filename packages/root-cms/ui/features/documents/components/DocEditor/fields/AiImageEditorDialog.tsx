@@ -139,7 +139,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="AiImageEditorDialog__Canvas relative flex h-100 w-full items-center justify-center bg-fg max-md:h-75">
+        <div className="AiImageEditorDialog__Canvas relative flex h-100 w-full items-center justify-center bg-media max-md:h-75">
           <LoadingOverlay visible={generating} />
           <img
             className="AiImageEditorDialog__Canvas__Image block max-h-full max-w-full object-contain"
@@ -159,7 +159,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
                 <button
                   type="button"
                   className={cn(
-                    'AiImageEditorDialog__Versions__Item relative m-0 size-16 flex-none cursor-pointer appearance-none rounded-sm border-2 border-solid border-transparent bg-fg p-0 disabled:cursor-default',
+                    'AiImageEditorDialog__Versions__Item relative m-0 size-16 flex-none cursor-pointer appearance-none rounded-sm border-2 border-solid border-transparent bg-media p-0 disabled:cursor-default',
                     index === selectedIndex &&
                       'AiImageEditorDialog__Versions__Item--selected border-focus'
                   )}

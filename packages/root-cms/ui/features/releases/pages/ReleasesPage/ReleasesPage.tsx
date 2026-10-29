@@ -30,6 +30,7 @@ import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../../users/UserTag/UserTag.js';
+import {useUserProfile} from '../../../users/useUserProfile.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Release, listReleases} from '../../release.js';
 
@@ -208,7 +209,12 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                       key={release.id}
                       className="ReleasesPage__row group/row max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-2 max-md:border-0 max-md:border-b max-md:border-solid max-md:border-surface-active max-md:p-4 max-md:last:border-b-0"
                     >
-                      <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
+                      <td
+                        className={cn(
+                          CELL_CLASSES,
+                          'max-md:w-full md:min-w-48'
+                        )}
+                      >
                         <ReleasesPage.ReleaseCell release={release} />
                       </td>
                       <td
@@ -226,14 +232,7 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                         )}
                       >
                         {release.createdBy ? (
-                          <div className="ReleasesPage__createdBy flex min-w-0 items-center gap-2 whitespace-nowrap">
-                            <UserAvatar
-                              email={release.createdBy}
-                              size={24}
-                              withTooltip={false}
-                            />
-                            <UserTag email={release.createdBy} />
-                          </div>
+                          <ReleasesPage.CreatedBy email={release.createdBy} />
                         ) : (
                           <span className="ReleasesPage__empty text-muted">
                             —
@@ -281,6 +280,26 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
         </>
       )}
     </div>
+  );
+};
+
+/**
+ * The release's author: avatar and name, or just the avatar at tablet widths
+ * (`md` to `lg`), where the table is tight. The name tooltip covers both.
+ */
+ReleasesPage.CreatedBy = (props: {email: string}) => {
+  const {profile} = useUserProfile(props.email);
+  const name = profile?.displayName || props.email.split('@')[0];
+  return (
+    <UserTag
+      className="ReleasesPage__createdBy flex min-w-0 items-center gap-2 whitespace-nowrap"
+      email={props.email}
+    >
+      <UserAvatar email={props.email} size={24} withTooltip={false} />
+      <span className="ReleasesPage__createdByName md:max-lg:sr-only">
+        {name}
+      </span>
+    </UserTag>
   );
 };
 

@@ -301,7 +301,11 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
               className="block max-h-80 max-w-full object-contain"
               src={getAssetPreviewUrl(file, 800)}
               alt={file.alt || ''}
-              style={file.canvasBgColor === 'dark' ? {background: '#000'} : {}}
+              style={
+                file.canvasBgColor === 'dark'
+                  ? {background: 'var(--cms-color-media)'}
+                  : {}
+              }
             />
           ) : isVideo ? (
             <video

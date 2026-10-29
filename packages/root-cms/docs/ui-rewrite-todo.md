@@ -9,10 +9,10 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
       Sheet" and "Export to Sheet" buttons (shown when a doc has a linked
       sheet) have no click handlers. Needs the import/export flow wired up, or
       the buttons removed.
-- [ ] `features/releases/pages/ReleasesPage`: at tablet widths (768px) the
+- [x] `features/releases/pages/ReleasesPage`: at tablet widths (768px) the
       Release column gets squeezed by Contents, so titles wrap word by word
-      and ids break mid-word. Give the release cell a minimum width (or cap
-      Contents) from `md` up.
+      and ids break mid-word. (The release cell has a minimum width from `md`
+      up, and Created by shows just the avatar from `md` to `lg`.)
 
 ## Phase 4 (document editor)
 
@@ -31,11 +31,12 @@ weren't fixed on the spot. Tick items off, or delete them, as they land.
 - [ ] Rich text: typing fast right after select-all + delete can come out
       scrambled (also before the rewrite). Possibly a race between
       `RichTextField`'s value sync and `OnChangePlugin`.
-- [ ] `IconButton` can't be shrunk with a `size-*` className: tailwind-merge
+- [x] `IconButton` can't be shrunk with a `size-*` className: tailwind-merge
       doesn't group the custom `size-control-*` utilities with `size-*`.
-      Teach `cn` about them (extend the tailwind-merge config).
-- [ ] No token for a dark media background (video, image editor canvas);
+      (`cn` now knows the `*-control-*` sizes and the `*-page` padding.)
+- [x] No token for a dark media background (video, image editor canvas);
       `FileField`/`ImageEditorDialog` use `bg-fg` and an inline `#000`.
+      (Added `--cms-color-media` / `bg-media`.)
 
 ## Phase 5 (polish)
 

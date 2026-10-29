@@ -1,4 +1,4 @@
-import {twMerge} from 'tailwind-merge';
+import {extendTailwindMerge} from 'tailwind-merge';
 
 type MaybeString = string | false | null | undefined;
 
@@ -10,6 +10,27 @@ type MaybeString = string | false | null | undefined;
 export function joinClassNames(...classNames: MaybeString[]) {
   return classNames.filter((c) => !!c).join(' ') || undefined;
 }
+
+/**
+ * tailwind-merge, taught the CMS's custom utilities (see `tailwind.css`) so
+ * they conflict with the built-in ones: the control sizes (`size-control-sm`
+ * vs `size-6`, `h-control-md` vs `h-8`, …) and the page padding (`p-page` vs
+ * `p-0`, `px-page` vs `px-4`, …).
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      spacing: ['control-xs', 'control-sm', 'control-md'],
+    },
+    classGroups: {
+      p: [{p: ['page']}],
+      px: [{px: ['page']}],
+      py: [{py: ['page']}],
+      pt: [{pt: ['page']}],
+      pb: [{pb: ['page']}],
+    },
+  },
+});
 
 /**
  * Joins class names like `joinClassNames()`, and also resolves conflicting

@@ -35,6 +35,8 @@
   --cms-color-chip: #ececea;
   /* The dimmed backdrop behind a modal. */
   --cms-color-overlay: rgba(20, 20, 18, 0.4);
+  /* Behind images and video: image editor stages, dark file previews. */
+  --cms-color-media: #000;
 
   /* --- Color: lines ---------------------------------------------------- */
 

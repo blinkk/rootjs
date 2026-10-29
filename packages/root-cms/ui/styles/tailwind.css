@@ -46,6 +46,7 @@
   --color-surface-active: var(--cms-color-surface-active);
   --color-chip: var(--cms-color-chip);
   --color-overlay: var(--cms-color-overlay);
+  --color-media: var(--cms-color-media);
   --color-border: var(--cms-color-border);
   --color-border-strong: var(--cms-color-border-strong);
   --color-fg: var(--cms-color-text);
