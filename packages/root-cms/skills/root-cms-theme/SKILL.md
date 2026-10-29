@@ -32,6 +32,24 @@ Two files ship next to this one:
 The script `scripts/check-theme.mjs` checks a theme for contrast problems and
 typos. Run it on every theme before handing it over.
 
+If you're reading this from rootjs.dev rather than from an installed copy,
+download the three files into `.root/theme/` (and make sure `.root/` is
+ignored by git), then use that folder wherever this skill says "this skill's
+directory":
+
+```bash
+mkdir -p .root/theme/scripts .root/theme/examples
+base=https://rootjs.dev/skills/root-cms-theme
+curl -fsSL "$base/theme.css" -o .root/theme/theme.css
+curl -fsSL "$base/scripts/check-theme.mjs" -o .root/theme/scripts/check-theme.mjs
+curl -fsSL "$base/examples/acme.css" -o .root/theme/examples/acme.css
+grep -qxF '.root/' .gitignore || echo '.root/' >> .gitignore
+```
+
+These match the latest release of the CMS. If the project is on an older
+version, install the skill from the project's own package instead:
+`pnpm exec root-cms skill.install --skill root-cms-theme`.
+
 ## Step 1 — Agree on the look and where it goes
 
 Ask these together, once. A link to the brand's website, a logo or a

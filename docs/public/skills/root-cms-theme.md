@@ -1,0 +1,1 @@
+../../../packages/root-cms/skills/root-cms-theme/SKILL.md
