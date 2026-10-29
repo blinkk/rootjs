@@ -203,6 +203,15 @@ emails when it ends.
 ## Step 7 — Add the templates
 
 Copy `templates/emails.ts` from this skill to `cms/emails.ts` in the project.
+If you're reading this from rootjs.dev rather than from an installed copy,
+download it instead:
+
+```bash
+mkdir -p cms
+curl -fsSL https://rootjs.dev/skills/root-cms-email-setup/templates/emails.ts \
+  -o cms/emails.ts
+```
+
 It exports `cmsEmails()`, which returns the notification services for the
 options it's given, and each service on its own (`releaseEmails()`,
 `publishEmails()`, `lockEmails()` and `commentEmails()`) for projects that want
