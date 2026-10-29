@@ -1,6 +1,11 @@
 import {EventListener} from '../../../../../../utils/events.js';
-import {cloneData} from '../../../../../../utils/objects.js';
+import {cloneData, deepEqual} from '../../../../../../utils/objects.js';
 import {getNestedValue} from '../../../../../../utils/objects.js';
+import {
+  EditHistory,
+  EditHistoryApplyResult,
+  EditHistoryChange,
+} from '../../../../edit-history.js';
 import {DraftDocEventType} from '../../../../useDraftDoc.js';
 
 export type Listener = (value: any) => void;
@@ -29,6 +34,14 @@ export class InMemoryDraftDocController extends EventListener {
   private data: Record<string, any>;
   private listeners = new Map<string, Set<Listener>>();
   private parent: ParentDraftDocController | null;
+  /** Set while an undo/redo is being applied, to suppress history capture. */
+  private isApplyingHistory = false;
+
+  /**
+   * In-memory undo/redo history. Mirrors `DraftDocController.history`, which
+   * `DocEditor` uses for destructive actions (e.g. removing an array item).
+   */
+  readonly history = new EditHistory();
 
   docId: string;
   collectionId: string;
@@ -45,6 +58,9 @@ export class InMemoryDraftDocController extends EventListener {
     this.docId = this.parent?.docId || 'custom-block';
     this.collectionId = this.parent?.collectionId || 'custom-block';
     this.slug = this.parent?.slug || 'custom-block';
+    this.history.onChange(() => {
+      this.dispatch(DraftDocEventType.HISTORY_CHANGE);
+    });
   }
 
   getValue(key: string): any {
@@ -56,20 +72,27 @@ export class InMemoryDraftDocController extends EventListener {
   }
 
   async updateKey(key: string, value: any) {
-    setNestedValue(this.data, key, value);
-    this.notify(key);
+    this.applyUpdates({[key]: value});
   }
 
   async updateKeys(updates: Record<string, any>) {
-    for (const [key, value] of Object.entries(updates)) {
-      setNestedValue(this.data, key, value);
-      this.notify(key);
-    }
+    this.applyUpdates(updates);
   }
 
   async removeKey(key: string) {
-    deleteNestedValue(this.data, key);
-    this.notify(key);
+    this.applyUpdates({[key]: undefined});
+  }
+
+  /**
+   * Reverts the most recent edit. Mirrors `DraftDocController.undo()`.
+   */
+  undo(options?: {onlyEntryId?: string}): EditHistoryApplyResult {
+    return this.applyHistory('undo', options);
+  }
+
+  /** Re-applies the most recently undone edit. */
+  redo(): EditHistoryApplyResult {
+    return this.applyHistory('redo');
   }
 
   subscribe(key: string, cb: Listener) {
@@ -89,7 +112,7 @@ export class InMemoryDraftDocController extends EventListener {
    * `DocEditor.ArrayFieldPreview` (which expect this method) work when
    * rendered inside a `DocEditor` driven by this in-memory controller.
    *
-   * Since `notify()` already walks the key hierarchy and fires every ancestor
+   * Since `applyUpdates()` already walks the key hierarchy and fires every ancestor
    * listener whenever any descendant changes, plain `subscribe` provides the
    * same subtree-change semantics here.
    */
@@ -117,9 +140,46 @@ export class InMemoryDraftDocController extends EventListener {
    */
   async flush() {}
 
-  private notify(key: string) {
-    this.dispatch(DraftDocEventType.VALUE_CHANGE, key, this.getValue(key));
-    for (const target of getKeyHierarchy(key)) {
+  /**
+   * Writes all updates before notifying listeners, so that listeners never
+   * observe a partially-applied batch (e.g. an array's `_array` order that
+   * references an item key that hasn't been written yet). An `undefined` value
+   * deletes the key, matching `DraftDocController`.
+   */
+  private applyUpdates(updates: Record<string, any>) {
+    this.captureHistory(updates);
+    const keys = Object.keys(updates);
+    // Snapshot descendant listeners' values before mutating, so that only the
+    // ones whose values actually change are notified.
+    const descendantValues = new Map<string, any>();
+    for (const listenerKey of this.listeners.keys()) {
+      if (keys.some((key) => listenerKey.startsWith(`${key}.`))) {
+        descendantValues.set(listenerKey, this.getValue(listenerKey));
+      }
+    }
+    for (const key of keys) {
+      const value = updates[key];
+      if (value === undefined) {
+        deleteNestedValue(this.data, key);
+      } else {
+        setNestedValue(this.data, key, value);
+      }
+    }
+    for (const key of keys) {
+      this.dispatch(DraftDocEventType.VALUE_CHANGE, key, this.getValue(key));
+    }
+
+    const targets = new Set<string>();
+    for (const key of keys) {
+      getKeyHierarchy(key).forEach((target) => targets.add(target));
+    }
+    // A parent object being replaced or cleared changes its descendants too.
+    for (const [listenerKey, oldValue] of descendantValues) {
+      if (!deepEqual(oldValue, this.getValue(listenerKey))) {
+        targets.add(listenerKey);
+      }
+    }
+    for (const target of targets) {
       const listeners = this.listeners.get(target);
       if (!listeners) {
         continue;
@@ -127,6 +187,60 @@ export class InMemoryDraftDocController extends EventListener {
       const value = this.getValue(target);
       listeners.forEach((cb) => cb(value));
     }
+  }
+
+  /**
+   * Records the before/after transition of a write in the undo history.
+   * Unlike `DraftDocController`, content lives under the root key (e.g.
+   * `block` or `component`) rather than `fields`, so every non-`sys` key is
+   * captured.
+   */
+  private captureHistory(updates: Record<string, any>) {
+    if (this.isApplyingHistory) {
+      return;
+    }
+    const changes: Record<string, EditHistoryChange> = {};
+    for (const key in updates) {
+      if (key !== 'sys' && !key.startsWith('sys.')) {
+        changes[key] = {before: this.getValue(key), after: updates[key]};
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      this.history.capture(changes);
+    }
+  }
+
+  private applyHistory(
+    direction: 'undo' | 'redo',
+    options?: {onlyEntryId?: string}
+  ): EditHistoryApplyResult {
+    if (options?.onlyEntryId) {
+      const top =
+        direction === 'undo'
+          ? this.history.peekUndo()
+          : this.history.peekRedo();
+      if (!top || top.id !== options.onlyEntryId) {
+        return {status: 'empty'};
+      }
+    }
+    const getValue = (key: string) => this.getValue(key);
+    const result =
+      direction === 'undo'
+        ? this.history.undo(getValue)
+        : this.history.redo(getValue);
+    if (result.status === 'applied') {
+      this.isApplyingHistory = true;
+      try {
+        this.applyUpdates(result.updates);
+      } finally {
+        this.isApplyingHistory = false;
+      }
+      this.dispatch(
+        DraftDocEventType.HISTORY_APPLIED,
+        Object.keys(result.updates)
+      );
+    }
+    return result;
   }
 }
 

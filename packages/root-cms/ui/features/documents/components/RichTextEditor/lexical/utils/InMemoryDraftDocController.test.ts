@@ -62,4 +62,88 @@ describe('InMemoryDraftDocController', () => {
     expect(controller.docId).toBe('custom-block');
     expect(controller.getData()).toEqual({block: {}});
   });
+
+  it('should support grouped history and undo of an array item removal', () => {
+    const controller = new InMemoryDraftDocController({
+      images: {_array: ['a', 'b'], a: {caption: 'A'}, b: {caption: 'B'}},
+    });
+    const appliedKeys: string[][] = [];
+    controller.on(DraftDocEventType.HISTORY_APPLIED, (keys: string[]) => {
+      appliedKeys.push(keys);
+    });
+
+    controller.history.group('Removed item', () => {
+      controller.updateKeys({
+        'block.images._array': ['a'],
+        'block.images.b': undefined,
+      });
+    });
+    expect(controller.history.peekUndo()?.label).toBe('Removed item');
+    // Removed keys are deleted rather than set to `undefined`.
+    expect(controller.getValue('block.images')).toEqual({
+      _array: ['a'],
+      a: {caption: 'A'},
+    });
+    expect('b' in controller.getValue('block.images')).toBe(false);
+
+    const entryId = controller.history.peekUndo()!.id;
+    const result = controller.undo({onlyEntryId: entryId});
+    expect(result.status).toBe('applied');
+    expect(controller.getValue('block.images')).toEqual({
+      _array: ['a', 'b'],
+      a: {caption: 'A'},
+      b: {caption: 'B'},
+    });
+    expect(appliedKeys).toEqual([['block.images._array', 'block.images.b']]);
+
+    expect(controller.redo().status).toBe('applied');
+    expect(controller.getValue('block.images')).toEqual({
+      _array: ['a'],
+      a: {caption: 'A'},
+    });
+  });
+
+  it('should not capture sys keys in history', () => {
+    const controller = new InMemoryDraftDocController({});
+    controller.updateKey('sys.foo', 'bar');
+    expect(controller.history.canUndo()).toBe(false);
+  });
+
+  it('should notify listeners after all keys in a batch are written', () => {
+    const controller = new InMemoryDraftDocController({
+      images: {_array: ['a'], a: {caption: 'A'}},
+    });
+    const seen: any[] = [];
+    controller.subscribe('block.images', (value) => {
+      seen.push({...value});
+    });
+    seen.length = 0;
+    controller.updateKeys({
+      'block.images._array': ['a', 'b'],
+      'block.images.b': {caption: 'B'},
+    });
+    expect(seen).toEqual([
+      {_array: ['a', 'b'], a: {caption: 'A'}, b: {caption: 'B'}},
+    ]);
+  });
+
+  it('should notify descendant listeners when a parent is replaced', () => {
+    const controller = new InMemoryDraftDocController({
+      meta: {title: 'Foo', description: 'Bar'},
+    });
+    const titles: any[] = [];
+    const descriptions: any[] = [];
+    controller.subscribe('block.meta.title', (value) => titles.push(value));
+    controller.subscribe('block.meta.description', (value) =>
+      descriptions.push(value)
+    );
+    controller.updateKey('block.meta', {title: 'Baz', description: 'Bar'});
+    expect(titles).toEqual(['Foo', 'Baz']);
+    // Unchanged descendants are not notified.
+    expect(descriptions).toEqual(['Bar']);
+
+    controller.removeKey('block.meta');
+    expect(titles).toEqual(['Foo', 'Baz', undefined]);
+    expect(descriptions).toEqual(['Bar', undefined]);
+  });
 });
