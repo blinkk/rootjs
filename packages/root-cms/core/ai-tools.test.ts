@@ -12,6 +12,7 @@ import {Collection} from './schema.js';
 
 describe('validateValueAtPath', () => {
   const collection: Collection = {
+    id: 'BlogPosts',
     name: 'BlogPosts',
     fields: [
       {id: 'title', type: 'string'} as any,
