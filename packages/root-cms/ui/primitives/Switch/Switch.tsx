@@ -79,13 +79,16 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
     } = props;
     const id = useFieldId(idProp as string | undefined);
     const control = fieldControlProps(id, props);
+    // The space next to the track is padding on the label (and the text under
+    // it), not a gap, so clicking it toggles the switch.
+    const bodyPadding = labelPosition === 'left' ? 'pr-3' : 'pl-3';
 
     return (
       <div
         className={cn(
           'Switch',
           `Switch--size-${size}`,
-          'flex min-w-0 items-start gap-3',
+          'flex min-w-0 items-start',
           labelPosition === 'left' && 'Switch--labelLeft flex-row-reverse',
           labelPosition === 'left' && Boolean(label) && 'justify-end',
           className
@@ -132,6 +135,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
                 htmlFor={id}
                 className={cn(
                   'Switch__label cursor-pointer leading-snug text-fg',
+                  bodyPadding,
                   TOGGLE_LABEL_SIZE_CLASSES[size],
                   Boolean(inputProps.disabled) &&
                     'cursor-not-allowed opacity-60',
@@ -143,12 +147,17 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
               </label>
             )}
             {description && (
-              <FieldDescription id={fieldDescriptionId(id)}>
+              <FieldDescription
+                className={bodyPadding}
+                id={fieldDescriptionId(id)}
+              >
                 {description}
               </FieldDescription>
             )}
             {hasErrorMessage(error) && (
-              <FieldError id={fieldErrorId(id)}>{error}</FieldError>
+              <FieldError className={bodyPadding} id={fieldErrorId(id)}>
+                {error}
+              </FieldError>
             )}
           </div>
         )}

@@ -27,13 +27,12 @@ export const CheckboxGallery = defineGallery({
     ),
     Colors: () => (
       <div className="flex flex-col gap-3">
-        <Checkbox label="Primary (default)" defaultChecked />
+        <Checkbox label="Default" defaultChecked />
+        <Checkbox label="Default, indeterminate" indeterminate />
+        <Checkbox color="black" label="Black" defaultChecked />
+        <Checkbox color="black" label="Black, indeterminate" indeterminate />
         <Checkbox color="blue" label="Blue" defaultChecked />
-        <Checkbox color="blue" label="Blue, indeterminate" indeterminate />
         <Checkbox color="blue" label="Blue, disabled" disabled defaultChecked />
-        <Checkbox color="subtle" label="Subtle, unchecked" />
-        <Checkbox color="subtle" label="Subtle" defaultChecked />
-        <Checkbox color="subtle" label="Subtle, indeterminate" indeterminate />
       </div>
     ),
     'Help text and error': () => (

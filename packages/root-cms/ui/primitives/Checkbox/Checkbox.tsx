@@ -38,23 +38,23 @@ const BOX_SIZE_CLASSES: Record<CheckboxSize, string> = {
 };
 
 /**
- * Checked colors. `blue` is Mantine's (the `--cms-button-blue` token).
- * `subtle` fills with the `SegmentedControl` well and a dark check.
+ * Checked colors. `default` keeps the white box and draws a dark check;
+ * `black` fills with the primary color; `blue` is Mantine's (the
+ * `--cms-button-blue` token).
  */
-export type CheckboxColor = 'primary' | 'blue' | 'subtle';
+export type CheckboxColor = 'default' | 'black' | 'blue';
 
 const BOX_COLOR_CLASSES: Record<CheckboxColor, string> = {
-  primary:
+  default: 'border-border-strong peer-hover:border-muted',
+  black:
     'border-border-strong peer-hover:border-muted peer-checked:border-primary peer-checked:bg-primary peer-indeterminate:border-primary peer-indeterminate:bg-primary',
   blue: 'border-border-strong peer-hover:border-muted peer-checked:border-button-blue peer-checked:bg-button-blue peer-indeterminate:border-button-blue peer-indeterminate:bg-button-blue',
-  subtle:
-    'border-track-border peer-hover:border-border-strong peer-checked:bg-track peer-indeterminate:bg-track',
 };
 
 const ICON_COLOR_CLASSES: Record<CheckboxColor, string> = {
-  primary: 'text-on-primary',
+  default: 'text-strong',
+  black: 'text-on-primary',
   blue: 'text-on-primary',
-  subtle: 'text-strong',
 };
 
 /** Offsets the control so it centers on the label's first line. */
@@ -67,8 +67,8 @@ interface CheckboxOwnProps extends FieldLabelProps {
   /** Box and label size: `sm` 16px, `md` 20px. Default `sm`. */
   size?: CheckboxSize;
   /**
-   * Fill when checked: `primary` (black, default), `blue` (Mantine's) or
-   * `subtle` (the `SegmentedControl` well, with a dark check).
+   * Checked style: `default` (white box, dark check), `black` (filled) or
+   * `blue` (filled, Mantine's). Default `default`.
    */
   color?: CheckboxColor;
   /** Shows a dash instead of a check, for a partly selected group. */
@@ -103,7 +103,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       error,
       required,
       size = 'sm',
-      color = 'primary',
+      color = 'default',
       indeterminate = false,
       className,
       id: idProp,
@@ -127,7 +127,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           'Checkbox',
           `Checkbox--size-${size}`,
           `Checkbox--color-${color}`,
-          'flex min-w-0 items-start gap-2',
+          'flex min-w-0 items-start',
           className
         )}
       >
@@ -175,13 +175,17 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             />
           )}
         </span>
+        {/*
+         * The space next to the box is padding on the label (and the text
+         * under it), not a gap, so clicking it toggles the checkbox.
+         */}
         {(label || description || hasErrorMessage(error)) && (
           <div className="Checkbox__body flex min-w-0 flex-col gap-0.5">
             {label && (
               <label
                 htmlFor={id}
                 className={cn(
-                  'Checkbox__label cursor-pointer leading-snug text-fg',
+                  'Checkbox__label cursor-pointer pl-2 leading-snug text-fg',
                   TOGGLE_LABEL_SIZE_CLASSES[size],
                   Boolean(inputProps.disabled) &&
                     'cursor-not-allowed opacity-60'
@@ -192,12 +196,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               </label>
             )}
             {description && (
-              <FieldDescription id={fieldDescriptionId(id)}>
+              <FieldDescription className="pl-2" id={fieldDescriptionId(id)}>
                 {description}
               </FieldDescription>
             )}
             {hasErrorMessage(error) && (
-              <FieldError id={fieldErrorId(id)}>{error}</FieldError>
+              <FieldError className="pl-2" id={fieldErrorId(id)}>
+                {error}
+              </FieldError>
             )}
           </div>
         )}

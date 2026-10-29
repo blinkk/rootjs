@@ -59,7 +59,7 @@ const VERSIONS: Array<{
 const PUBLISH_MESSAGE =
   'Swap “peppery” for “crisp” and note we pick on market Saturdays. Updated de and fr strings.';
 
-/** A Mantine-style checkbox. */
+/** A checkbox: a white box with a dark check. */
 function Checkbox(props: {checked?: boolean}) {
   return (
     <span
@@ -70,9 +70,9 @@ function Checkbox(props: {checked?: boolean}) {
         width: '16px',
         height: '16px',
         borderRadius: '4px',
-        border: `1px solid ${props.checked ? '#228be6' : '#ced4da'}`,
-        background: props.checked ? '#228be6' : '#fff',
-        color: '#fff',
+        border: '1px solid #cfcfcb',
+        background: '#fff',
+        color: '#1f1f1f',
       }}
     >
       {props.checked && <IconCheck size={12} stroke={3} />}
