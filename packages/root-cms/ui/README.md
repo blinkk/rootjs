@@ -1,8 +1,8 @@
 # CMS UI conventions
 
 How the CMS UI (`packages/root-cms/ui/`) is built and styled. The folder
-layout is described in the repo's `AGENTS.md`. The Mantine → Tailwind rewrite
-plan, and where it stands, is in `../docs/ui-rewrite-plan.md`.
+layout is described in the repo's `AGENTS.md`. Known bugs and loose ends are
+tracked in `../docs/todo.md`.
 
 ## Styling
 
