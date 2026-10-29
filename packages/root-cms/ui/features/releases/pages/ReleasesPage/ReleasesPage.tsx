@@ -23,11 +23,16 @@ import {usePagination} from '../../../../hooks/usePagination.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
+import {getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
+import {testTimestamp, toMillis} from '../../../documents/doc-changes.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
+import {UserTag} from '../../../users/UserTag/UserTag.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Release, listReleases} from '../../release.js';
 
@@ -173,19 +178,21 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
             <Surface className="ReleasesPage__tableSurface rounded-xl">
               {/*
                * Below `md` the table collapses into stacked rows: the status,
-               * the release, then its contents.
+               * the release, then its contents and last activity.
                */}
               <table className="ReleasesPage__table w-full border-collapse text-sm text-fg max-md:block">
                 <thead className="max-md:hidden">
                   <tr>
-                    {['Status', 'Release', 'Contents'].map((label) => (
-                      <th
-                        key={label}
-                        className="ReleasesPage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
-                      >
-                        {label}
-                      </th>
-                    ))}
+                    {['Status', 'Release', 'Contents', 'Last activity'].map(
+                      (label) => (
+                        <th
+                          key={label}
+                          className="ReleasesPage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
+                        >
+                          {label}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
                 <tbody className="max-md:block">
@@ -214,6 +221,14 @@ ReleasesPage.ReleasesTable = (props: {canPublish: boolean}) => {
                         )}
                       >
                         <ReleasesPage.ContentsCell release={release} />
+                      </td>
+                      <td
+                        className={cn(
+                          CELL_CLASSES,
+                          'max-md:order-last max-md:w-full'
+                        )}
+                      >
+                        <ReleasesPage.LastActivityCell release={release} />
                       </td>
                     </tr>
                   ))}
@@ -271,6 +286,94 @@ ReleasesPage.ReleaseCell = (props: {release: Release}) => {
         </div>
       )}
     </a>
+  );
+};
+
+/** The most recent action taken on a release. */
+interface ReleaseActivity {
+  label: string;
+  at: unknown;
+  by?: string;
+  /** Whether `at` is a future time, e.g. when a release is scheduled for. */
+  upcoming?: boolean;
+}
+
+/**
+ * Returns the release's most recent action. Archiving and scheduling win since
+ * they reflect the release's current state; otherwise it's whichever of
+ * created, published or rolled back happened last.
+ */
+function getLastActivity(release: Release): ReleaseActivity | null {
+  if (testTimestamp(release.archivedAt)) {
+    return {label: 'Archived', at: release.archivedAt, by: release.archivedBy};
+  }
+  if (testTimestamp(release.scheduledAt)) {
+    return {
+      label: 'Scheduled',
+      at: release.scheduledAt,
+      by: release.scheduledBy,
+      upcoming: true,
+    };
+  }
+  const activities: ReleaseActivity[] = [
+    {label: 'Created', at: release.createdAt, by: release.createdBy},
+    {label: 'Published', at: release.publishedAt, by: release.publishedBy},
+    {label: 'Rolled back', at: release.rolledBackAt, by: release.rolledBackBy},
+  ].filter((activity) => testTimestamp(activity.at));
+  if (activities.length === 0) {
+    return null;
+  }
+  return activities.reduce((latest, activity) =>
+    toMillis(activity.at) > toMillis(latest.at) ? activity : latest
+  );
+}
+
+/** Formats a timestamp as e.g. "Oct 26, 2026, 1:30 PM". */
+function formatFullDate(ts: unknown): string {
+  return new Date(toMillis(ts)).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Shows who last acted on the release and when, e.g. "<avatar> Jane" over
+ * "Published · 2 days ago".
+ */
+ReleasesPage.LastActivityCell = (props: {release: Release}) => {
+  const activity = getLastActivity(props.release);
+  if (!activity) {
+    return <span className="ReleasesPage__empty text-muted">—</span>;
+  }
+  const when = activity.upcoming
+    ? `for ${formatFullDate(activity.at)}`
+    : getTimeAgo(toMillis(activity.at));
+  return (
+    <div className="ReleasesPage__activity flex min-w-0 items-center gap-2.5">
+      {activity.by && (
+        <UserAvatar email={activity.by} size={28} withTooltip={false} />
+      )}
+      <div className="ReleasesPage__activityText min-w-0">
+        {activity.by && (
+          <UserTag
+            className="ReleasesPage__activityUser block truncate font-medium text-fg"
+            email={activity.by}
+          />
+        )}
+        <div className="ReleasesPage__activityAction whitespace-nowrap text-sm text-muted">
+          {activity.label}
+          {activity.upcoming ? ' ' : ' · '}
+          <Tooltip label={formatFullDate(activity.at)}>
+            <span className="cursor-default underline decoration-dotted underline-offset-3">
+              {when}
+            </span>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
   );
 };
 
