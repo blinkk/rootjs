@@ -253,7 +253,7 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Adds a section on setting up a cloned project on a new machine, with a prompt for the root-dev-setup agent skill, and points the AI agents section at that skill instead of `root-cms setup`.',
+  note: 'Lists theming the CMS and setting up email notifications among the things an agent can do with the installed skills.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
@@ -507,7 +507,9 @@ pnpm exec root secrets sync`
               ul(
                 'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
-                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`
+                `Theme the CMS to match your brand (see ${a('/docs/cms/customization/#branding', 'Branding and themes')}).`,
+                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`,
+                `Set up email notifications, including the email service they're sent with (see ${a('/docs/cms/notifications/#email-delivery', 'Delivering email')}).`
               ),
               p(
                 `The skills install to an existing agent skills folder, such as ${c('.claude/skills')}, or to ${c('.agent/skills')} if there isn't one. Re-run the command with ${c('--force')} after upgrading ${c('@blinkk/root-cms')} to pick up new versions.`
@@ -2730,7 +2732,7 @@ cmsPlugin({
 
 const CUSTOMIZATION: DocCopy = {
   slug: 'cms--customization',
-  note: 'New page on customizing the CMS: sidebar tools, branding and themes, access control, embedding, live preview messages, image serving, search, the dependency graph and other plugin options.',
+  note: 'Adds a prompt for the root-cms-theme agent skill to the branding and themes section.',
   fields: {
     meta: {
       title: 'Customizing the CMS – Root.js',
@@ -2818,6 +2820,19 @@ cmsPlugin({
               ),
               p(
                 `To write a theme, copy ${c('packages/root-cms/ui/styles/theme.css')} from the Root.js repo and change its values. Its ${c('--cms-*')} custom properties are kept stable across releases. Rules that target the CMS's class names work, but may break with any release.`
+              ),
+              p(
+                `Or have a coding agent write one from your brand's colors, a logo or a link to your site. Paste this prompt in your project:`
+              )
+            ),
+            plain(
+              `
+Make a CMS theme that matches our brand. Follow the instructions at
+https://rootjs.dev/skills/root-cms-theme.md`
+            ),
+            copy(
+              p(
+                `The agent asks how the theme should look and whether it should be a shared theme or CSS to paste under <b>Settings → Theme</b>. It sets only ${c('--cms-*')} properties, checks the text contrast in light and dark mode, and then registers the theme in ${c('themes')} or gives you the CSS. ${c('root-cms skill.install')} also installs the skill, as ${c('root-cms-theme')}.`
               )
             ),
           ]

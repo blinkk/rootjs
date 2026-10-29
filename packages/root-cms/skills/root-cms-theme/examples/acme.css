@@ -1,0 +1,75 @@
+/*
+ * Acme: the brand's indigo for actions and accents, Inter Tight for type,
+ * slightly rounder corners. Follows the OS's dark mode.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap');
+
+:root {
+  --cms-accent: #6366f1;
+  --cms-color-primary: #4338ca;
+  --cms-color-primary-hover: #3730a3;
+  --cms-color-link: #4338ca;
+  --cms-color-focus: #6366f1;
+  --cms-color-page: #f7f7fb;
+  --cms-font-sans: 'Inter Tight', 'Inter', sans-serif;
+  --cms-radius-md: 8px;
+  --cms-radius-lg: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --cms-color-page: #111118;
+    --cms-color-surface: #1a1a23;
+    --cms-color-surface-hover: #23232e;
+    --cms-color-surface-subtle: #16161e;
+    --cms-color-surface-active: #2c2c39;
+    --cms-color-chip: #2c2c39;
+    --cms-color-overlay: rgba(0, 0, 0, 0.6);
+    --cms-color-border: #2e2e3a;
+    --cms-color-border-strong: #3d3d4c;
+
+    --cms-color-text: #d9d9e3;
+    --cms-color-text-strong: #f4f4f8;
+    --cms-color-text-muted: #9a9aab;
+    --cms-color-text-subtle: #6b6b7b;
+    --cms-color-link: #a5b4fc;
+
+    --cms-color-primary: #818cf8;
+    --cms-color-primary-hover: #a5b4fc;
+    --cms-color-on-primary: #111118;
+    --cms-color-focus: #a5b4fc;
+
+    --cms-input-border: #3d3d4c;
+    --cms-input-text: #f4f4f8;
+    --cms-input-placeholder: #6b6b7b;
+    --cms-input-chip: #2c2c39;
+    --cms-input-chip-text: #d9d9e3;
+
+    --cms-color-info: #74c0fc;
+    --cms-color-info-soft: #13283b;
+    --cms-color-info-line: #1c4a6e;
+    --cms-color-success: #69db7c;
+    --cms-color-success-soft: #132b19;
+    --cms-color-success-line: #1f5a2b;
+    --cms-color-warning: #ffd43b;
+    --cms-color-warning-soft: #2f2610;
+    --cms-color-warning-line: #5c4a12;
+    --cms-color-danger: #ff8787;
+    --cms-color-danger-soft: #3a1717;
+    --cms-color-danger-line: #6e2626;
+    --cms-color-violet: #b197fc;
+    --cms-color-violet-soft: #241d3d;
+    --cms-color-violet-strong: #d0bfff;
+
+    --cms-button-blue-soft: #13283b;
+    --cms-button-blue-soft-hover: #1c4a6e;
+    --cms-button-red-soft: #3a1717;
+
+    --cms-task-status-new: #23232e;
+    --cms-task-status-in-progress: #1a2340;
+    --cms-task-status-in-review: #33251a;
+    --cms-task-status-closed: #182a1f;
+  }
+}
