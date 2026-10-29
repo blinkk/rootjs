@@ -2,10 +2,9 @@ import './ReleasePage.css';
 
 import {
   IconDatabase,
-  IconFile,
   IconListSearch,
   IconRobot,
-  IconSettings,
+  IconPlus,
   IconSparkles,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
@@ -13,6 +12,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
@@ -23,7 +23,6 @@ import {useStringParam} from '../../../../hooks/useQueryParam.js';
 import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
-import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
@@ -53,6 +52,9 @@ import {CMSDoc} from '../../../documents/doc.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
+import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
+import {UserTag} from '../../../users/UserTag/UserTag.js';
+import {useUserProfile} from '../../../users/useUserProfile.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {testHasPublishChecks} from '../../publish-checks.js';
@@ -186,31 +188,6 @@ export function ReleasePage(props: {id: string}) {
                 {id}
               </Heading>
               {release && <ReleaseStatusBadge release={release} />}
-              <div className="ReleasePage__headerActions flex flex-wrap items-start gap-2 md:ml-auto">
-                <IconButton
-                  className="ReleasePage__configure"
-                  label="Configure"
-                  variant="default"
-                  href={`/cms/releases/${props.id}/edit`}
-                >
-                  <IconSettings stroke="1.5" />
-                </IconButton>
-                {aiEnabled && (
-                  <Button
-                    className="ReleasePage__aiToggle aria-pressed:bg-surface-active"
-                    icon={<IconRobot />}
-                    aria-pressed={aiVisible}
-                    onClick={() =>
-                      aiVisible ? closeAi() : setAiVisible(() => true)
-                    }
-                  >
-                    Root AI
-                  </Button>
-                )}
-                {release && (
-                  <ReleasePage.Actions release={release} onAction={onAction} />
-                )}
-              </div>
             </div>
             {release?.description && (
               <Markdown
@@ -218,15 +195,7 @@ export function ReleasePage(props: {id: string}) {
                 code={release.description}
               />
             )}
-            {release && (
-              <Text
-                className="ReleasePage__meta mt-2"
-                size="body-sm"
-                color="gray"
-              >
-                {getReleaseMeta(release)}
-              </Text>
-            )}
+            {release && <ReleasePage.Meta release={release} />}
           </div>
           <SegmentedControl
             className="ReleasePage__tabs mb-5"
@@ -258,6 +227,26 @@ export function ReleasePage(props: {id: string}) {
             tab === 'overview' ? (
               <ReleasePage.Overview
                 release={release}
+                actions={
+                  <div className="ReleasePage__headerActions flex flex-wrap items-start gap-2">
+                    {aiEnabled && (
+                      <Button
+                        className="ReleasePage__aiToggle aria-pressed:bg-surface-active"
+                        icon={<IconRobot />}
+                        aria-pressed={aiVisible}
+                        onClick={() =>
+                          aiVisible ? closeAi() : setAiVisible(() => true)
+                        }
+                      >
+                        Root AI
+                      </Button>
+                    )}
+                    <ReleasePage.Actions
+                      release={release}
+                      onAction={onAction}
+                    />
+                  </div>
+                }
                 diff={diff}
                 diffLoading={diffLoading}
                 onSummarize={
@@ -286,26 +275,69 @@ export function ReleasePage(props: {id: string}) {
   );
 }
 
-/** Returns e.g. "Created by jane@example.com 2 days ago · 5 docs". */
-function getReleaseMeta(release: Release): string {
-  const parts: string[] = [];
-  if (release.createdBy) {
-    let created = `Created by ${release.createdBy}`;
-    if (testTimestamp(release.createdAt)) {
-      created += ` ${formatTimeAgo(release.createdAt)}`;
-    }
-    parts.push(created);
-  }
+/**
+ * The line under the release's title, e.g. "Created by <avatar> Jane · 2 days
+ * ago · 5 docs".
+ */
+ReleasePage.Meta = (props: {release: Release}) => {
+  const release = props.release;
   const numDocs = release.docIds?.length || 0;
-  parts.push(numDocs === 1 ? '1 doc' : `${numDocs} docs`);
   const numDataSources = release.dataSourceIds?.length || 0;
+  const counts = [numDocs === 1 ? '1 doc' : `${numDocs} docs`];
   if (numDataSources > 0) {
-    parts.push(
+    counts.push(
       numDataSources === 1 ? '1 data source' : `${numDataSources} data sources`
     );
   }
-  return parts.join(' · ');
-}
+  return (
+    <div className="ReleasePage__meta mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted">
+      {release.createdBy && (
+        <>
+          <span>Created by</span>
+          <ReleasePage.User email={release.createdBy} />
+          {testTimestamp(release.createdAt) && (
+            <>
+              <span aria-hidden="true">·</span>
+              <ReleasePage.TimeAgo ts={release.createdAt} />
+            </>
+          )}
+          <span aria-hidden="true">·</span>
+        </>
+      )}
+      <span>{counts.join(' · ')}</span>
+    </div>
+  );
+};
+
+/** A user's avatar and display name, with their email in a tooltip. */
+ReleasePage.User = (props: {email: string}) => {
+  return (
+    <UserTag
+      className="ReleasePage__user inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap"
+      email={props.email}
+    >
+      <UserAvatar email={props.email} size={20} withTooltip={false} />
+      <ReleasePage.UserName email={props.email} />
+    </UserTag>
+  );
+};
+
+/** A user's display name, falling back to the local part of their email. */
+ReleasePage.UserName = (props: {email: string}) => {
+  const {profile} = useUserProfile(props.email);
+  return <span>{profile?.displayName || props.email.split('@')[0]}</span>;
+};
+
+/** A relative date, e.g. "2 days ago", with the full date in a tooltip. */
+ReleasePage.TimeAgo = (props: {ts: unknown}) => {
+  return (
+    <Tooltip label={formatDate(props.ts)}>
+      <span className="ReleasePage__timeAgo cursor-default underline decoration-dotted underline-offset-3">
+        {formatTimeAgo(props.ts)}
+      </span>
+    </Tooltip>
+  );
+};
 
 interface ReleasePageAiPanelProps {
   releaseId: string;
@@ -694,6 +726,8 @@ const DOC_DIFF_STATUS_LABELS: Record<ReleaseDocDiffStatus, string> = {
  */
 ReleasePage.Overview = (props: {
   release: Release;
+  /** The release's actions, shown at the right of the contents header. */
+  actions?: ComponentChildren;
   diff: ReleaseDiff | null;
   diffLoading: boolean;
   onSummarize?: () => void;
@@ -712,55 +746,77 @@ ReleasePage.Overview = (props: {
   return (
     <div className="ReleasePage__overview flex flex-wrap items-start gap-7">
       <div className="ReleasePage__overviewMain min-w-0 max-w-250 shrink grow-999 basis-140">
-        <div className="ReleasePage__sectionHeader mb-4 flex h-8 items-center gap-4">
-          <Heading size="h2">Contents</Heading>
-          <Button size="xs" href={`/cms/releases/${release.id}/edit`}>
-            Edit
+        <div className="ReleasePage__sectionHeader mb-4 flex flex-wrap items-start gap-4">
+          <div className="ReleasePage__sectionTitle flex h-8 items-center gap-4">
+            <Heading size="h2">Contents</Heading>
+            <Button size="xs" href={`/cms/releases/${release.id}/edit`}>
+              Edit
+            </Button>
+          </div>
+          {props.actions && (
+            <div className="ReleasePage__sectionActions ml-auto">
+              {props.actions}
+            </div>
+          )}
+        </div>
+        <Surface className="ReleasePage__contents overflow-hidden">
+          {isEmpty ? (
+            <Text
+              className="ReleasePage__contentsEmpty px-4 py-6 text-center"
+              size="body-sm"
+              color="gray"
+            >
+              Nothing has been added to this release yet.
+            </Text>
+          ) : (
+            <>
+              {/*
+               * Below `md` the table collapses into stacked rows: the item, then
+               * its status and when it was last modified.
+               */}
+              <table className="ReleasePage__contentsTable w-full border-collapse text-sm text-fg max-md:block">
+                <thead className="max-md:hidden">
+                  <tr>
+                    {['Item', 'Status', 'Last modified'].map((label) => (
+                      <th
+                        key={label}
+                        className="ReleasePage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="max-md:block">
+                  {docIds.map((docId) => (
+                    <ReleasePage.ContentsDocRow
+                      key={docId}
+                      docId={docId}
+                      docDiff={docDiffs[docId]}
+                      loading={props.diffLoading}
+                    />
+                  ))}
+                  {dataSourceIds.map((id) => (
+                    <ReleasePage.ContentsDataSourceRow
+                      key={id}
+                      id={id}
+                      dataSource={dataSources[id]}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </Surface>
+        <div className="ReleasePage__contentsFooter mt-3 flex">
+          <Button
+            size="xs"
+            icon={<IconPlus />}
+            href={`/cms/releases/${release.id}/edit`}
+          >
+            Add or edit
           </Button>
         </div>
-        {isEmpty ? (
-          <Text size="body-sm" color="gray">
-            Nothing has been added to this release yet.
-          </Text>
-        ) : (
-          <Surface className="ReleasePage__contents">
-            {/*
-             * Below `md` the table collapses into stacked rows: the item, then
-             * its status and when it was last modified.
-             */}
-            <table className="ReleasePage__contentsTable w-full border-collapse text-sm text-fg max-md:block">
-              <thead className="max-md:hidden">
-                <tr>
-                  {['Item', 'Status', 'Last modified'].map((label) => (
-                    <th
-                      key={label}
-                      className="ReleasePage__th whitespace-nowrap border-0 border-b border-solid border-border bg-surface-hover px-4 py-2.5 text-left text-sm font-medium text-muted"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="max-md:block">
-                {docIds.map((docId) => (
-                  <ReleasePage.ContentsDocRow
-                    key={docId}
-                    docId={docId}
-                    docDiff={docDiffs[docId]}
-                    loading={props.diffLoading}
-                  />
-                ))}
-                {dataSourceIds.map((id) => (
-                  <ReleasePage.ContentsDataSourceRow
-                    key={id}
-                    id={id}
-                    dataSource={dataSources[id]}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </Surface>
-        )}
       </div>
       {/* The sidebar is hidden until something is added to the release. */}
       {!isEmpty && (
@@ -868,36 +924,31 @@ const ROW_CLASSES =
 const CELL_CLASSES =
   'ReleasePage__cell block p-0 md:table-cell md:border-0 md:border-b md:border-solid md:border-surface-active md:px-4 md:py-2.5 md:align-middle md:group-last/row:border-b-0';
 
-/** The icon, title and subtitle of an item in the contents table. */
+/**
+ * The thumbnail, eyebrow and title of an item in the contents table.
+ */
 function ContentsItemLink(props: {
   href: string;
-  icon: ComponentChildren;
-  iconClassName: string;
+  thumbnail: ComponentChildren;
+  /** Small text above the title, e.g. the doc or data source id. */
+  eyebrow?: string;
   title: string;
-  subtitle?: string;
 }) {
   return (
     <a
       className="ReleasePage__item group flex items-center gap-3 text-fg no-underline"
       href={props.href}
     >
-      <div
-        className={cn(
-          'ReleasePage__itemIcon flex size-8 shrink-0 items-center justify-center rounded-md',
-          props.iconClassName
-        )}
-      >
-        {props.icon}
-      </div>
+      {props.thumbnail}
       <div className="ReleasePage__itemText min-w-0">
-        <div className="ReleasePage__itemTitle font-semibold wrap-anywhere underline-offset-3 group-hover:underline">
-          {props.title}
-        </div>
-        {props.subtitle && (
-          <div className="ReleasePage__itemSubtitle mt-0.5 text-sm text-muted wrap-anywhere">
-            {props.subtitle}
+        {props.eyebrow && (
+          <div className="ReleasePage__itemEyebrow mb-0.5 text-sm text-muted wrap-anywhere">
+            {props.eyebrow}
           </div>
         )}
+        <div className="ReleasePage__itemTitle text-lg font-semibold wrap-anywhere underline-offset-3 group-hover:underline">
+          {props.title}
+        </div>
       </div>
     </a>
   );
@@ -913,16 +964,26 @@ ReleasePage.ContentsDocRow = (props: {
   // the draft.
   const doc = props.docDiff?.after || props.docDiff?.before || null;
   const title = doc ? getDocTitle(docId, doc) : '';
+  const image = doc ? getDocImage(docId, doc) : null;
   const sys: any = doc?.sys;
   return (
     <tr className={ROW_CLASSES}>
       <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
         <ContentsItemLink
           href={`/cms/content/${docId}`}
-          icon={<IconFile size={16} stroke={1.5} />}
-          iconClassName="ReleasePage__itemIcon--doc bg-info-soft text-info"
+          thumbnail={
+            <div className="ReleasePage__itemImage box-content w-10 shrink-0 overflow-hidden rounded-sm border border-solid border-border leading-none">
+              <FilePreview
+                file={image}
+                width={40}
+                height={30}
+                fit={getDocCollection(docId)?.preview?.fit}
+                withPlaceholder={!image?.src}
+              />
+            </div>
+          }
+          eyebrow={title ? docId : undefined}
           title={title || docId}
-          subtitle={title ? docId : undefined}
         />
       </td>
       <td className={CELL_CLASSES}>
@@ -955,10 +1016,13 @@ ReleasePage.ContentsDataSourceRow = (props: {
       <td className={cn(CELL_CLASSES, 'max-md:w-full')}>
         <ContentsItemLink
           href={`/cms/data/${props.id}`}
-          icon={<IconDatabase size={16} stroke={1.5} />}
-          iconClassName="ReleasePage__itemIcon--dataSource bg-success-soft text-success"
-          title={props.id}
-          subtitle={ds?.description || 'Data source'}
+          thumbnail={
+            <div className="ReleasePage__itemIcon ReleasePage__itemIcon--dataSource box-content flex h-7.5 w-10 shrink-0 items-center justify-center rounded-sm border border-solid border-border bg-success-soft text-success">
+              <IconDatabase size={16} stroke={1.5} />
+            </div>
+          }
+          eyebrow={ds?.description ? props.id : undefined}
+          title={ds?.description || props.id}
         />
       </td>
       <td className={CELL_CLASSES}>
@@ -974,7 +1038,7 @@ ReleasePage.ContentsDataSourceRow = (props: {
 };
 
 /**
- * Renders e.g. "2 days ago by jane@example.com", with the date and time in a
+ * Renders e.g. "<avatar> Jane · 2 days ago", with the date and time in a
  * tooltip.
  */
 ReleasePage.ModifiedBy = (props: {at?: unknown; by?: string}) => {
@@ -983,17 +1047,11 @@ ReleasePage.ModifiedBy = (props: {at?: unknown; by?: string}) => {
     return null;
   }
   return (
-    <>
-      {hasDate && (
-        <Tooltip label={formatDate(props.at)}>
-          <span className="ReleasePage__modifiedDate cursor-default underline decoration-dotted underline-offset-3">
-            {formatTimeAgo(props.at)}
-          </span>
-        </Tooltip>
-      )}
-      {hasDate && props.by && ' by '}
-      {props.by}
-    </>
+    <div className="ReleasePage__modifiedBy flex flex-wrap items-center gap-x-2 gap-y-1">
+      {props.by && <ReleasePage.User email={props.by} />}
+      {props.by && hasDate && <span aria-hidden="true">·</span>}
+      {hasDate && <ReleasePage.TimeAgo ts={props.at} />}
+    </div>
   );
 };
 
@@ -1008,7 +1066,7 @@ ReleasePage.DataSourceStatusBadges = (props: {dataSource: DataSource}) => {
   const hasUnpublishedSync =
     synced && (!published || toMillis(ds.syncedAt) > toMillis(ds.publishedAt));
   return (
-    <div className="DocStatusBadges">
+    <div className="DocStatusBadges flex min-w-0 items-center gap-1">
       {(hasUnpublishedSync || !synced) && (
         <UserActionTooltip
           heading={published ? 'Unpublished changes' : undefined}
@@ -1191,15 +1249,34 @@ function useDataSources(ids: string[]): Record<string, DataSource> {
   return dataSources;
 }
 
+/** Returns the collection config for a doc id. */
+function getDocCollection(docId: string) {
+  const collectionId = docId.split('/')[0];
+  return window.__ROOT_CTX.collections[collectionId];
+}
+
 /** Returns a doc's title, using the collection's preview config. */
 function getDocTitle(docId: string, doc: CMSDoc): string {
-  const collectionId = docId.split('/')[0];
-  const collection = window.__ROOT_CTX.collections[collectionId];
+  const collection = getDocCollection(docId);
   const title = getNestedValue(
     doc.fields || {},
     collection?.preview?.title || 'meta.title'
   );
   return typeof title === 'string' ? title : '';
+}
+
+/**
+ * Returns a doc's preview image (e.g. its meta image), using the collection's
+ * preview config.
+ */
+function getDocImage(docId: string, doc: CMSDoc) {
+  const collection = getDocCollection(docId);
+  return (
+    getNestedValue(
+      doc.fields || {},
+      collection?.preview?.image || 'meta.image'
+    ) || collection?.preview?.defaultImage
+  );
 }
 
 /**

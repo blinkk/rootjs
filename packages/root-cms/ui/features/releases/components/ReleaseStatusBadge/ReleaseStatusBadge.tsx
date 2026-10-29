@@ -51,7 +51,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
           release.rolledBackBy
         }`}
       >
-        <StatusBadge tone="draft">Rolled back</StatusBadge>
+        <StatusBadge tone="rolledBack">Rolled back</StatusBadge>
       </StatusTooltip>
     );
   }

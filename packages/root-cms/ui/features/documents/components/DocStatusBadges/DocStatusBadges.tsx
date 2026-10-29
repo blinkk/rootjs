@@ -16,7 +16,13 @@ import {useCompareDraftModal} from '../CompareDraftModal/CompareDraftModal.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
 export type StatusTone =
-  'draft' | 'published' | 'scheduled' | 'locked' | 'archived' | 'release';
+  | 'draft'
+  | 'published'
+  | 'scheduled'
+  | 'locked'
+  | 'archived'
+  | 'release'
+  | 'rolledBack';
 
 /**
  * The `Badge` gradient for each tone (the `--cms-gradient-*` theme tokens,
@@ -29,6 +35,7 @@ export const TONE_GRADIENTS: Record<StatusTone, BadgeGradient> = {
   locked: 'orange',
   archived: 'gray',
   release: 'violet',
+  rolledBack: 'yellow',
 };
 
 /** Hover and focus styles for badges that open something when clicked. */
