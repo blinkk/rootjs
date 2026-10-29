@@ -10,11 +10,15 @@ import {isObject} from '../../utils/objects.js';
 /**
  * Returns the default field values for a collection or object field. Used for
  * initializing a new doc or when adding a new array item.
+ *
+ * Deprecated fields are skipped so new content doesn't start with values in
+ * fields that editors are meant to stop using (which would also keep them
+ * visible in the editor, since deprecated fields are hidden only when empty).
  */
 export function getDefaultFieldValue(field: Collection | ObjectField | Schema) {
   const defaultValue: Record<string, unknown> = {};
   field.fields.forEach((child) => {
-    if (!child.id) {
+    if (!child.id || child.deprecated) {
       return;
     }
     if (

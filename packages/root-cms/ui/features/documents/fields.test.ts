@@ -143,4 +143,35 @@ describe('getDefaultFieldValue', () => {
     });
     expect(getDefaultFieldValue(Hero)).toEqual({title: 'Default title'});
   });
+
+  it('skips deprecated fields, including nested ones', () => {
+    const Card = schema.define({
+      name: 'Card',
+      fields: [
+        schema.string({id: 'title', default: 'Default title'}),
+        schema.object({
+          id: 'badge',
+          deprecated: true,
+          fields: [
+            schema.select({
+              id: 'color',
+              options: ['yellow', 'blue'],
+              default: 'yellow',
+            }),
+          ],
+        }),
+        schema.object({
+          id: 'cta',
+          fields: [
+            schema.string({id: 'label', default: 'Learn more'}),
+            schema.string({id: 'oldLabel', default: 'Old', deprecated: true}),
+          ],
+        }),
+      ],
+    });
+    expect(getDefaultFieldValue(Card)).toEqual({
+      title: 'Default title',
+      cta: {label: 'Learn more'},
+    });
+  });
 });
