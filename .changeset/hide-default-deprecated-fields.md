@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-fix: hide deprecated fields whose values only contain schema defaults (#1560)
+fix: skip deprecated fields when generating default values for new docs, oneOf types and rich text blocks (#1560)

@@ -1,15 +1,6 @@
 import * as schema from '../../../core/schema.js';
 import {testValidRichTextData} from '../../../shared/richtext.js';
-import {deepEqual, isObject} from '../../utils/objects.js';
-
-export interface TestFieldEmptyOptions {
-  /**
-   * Treat values that match the field's schema `default` as empty. Defaults are
-   * written into the doc when it (or an array item, or a oneOf type) is
-   * created, so a value equal to the default doesn't mean anyone entered data.
-   */
-  ignoreDefaults?: boolean;
-}
+import {isObject} from '../../utils/objects.js';
 
 /**
  * Returns whether a field's value should be considered empty.
@@ -21,17 +12,9 @@ export interface TestFieldEmptyOptions {
 export function testFieldEmpty(
   field: schema.Field,
   value: any,
-  types: Record<string, schema.Schema> = {},
-  options: TestFieldEmptyOptions = {}
+  types: Record<string, schema.Schema> = {}
 ): boolean {
   if (value === undefined || value === null) {
-    return true;
-  }
-  if (
-    options.ignoreDefaults &&
-    field.default !== undefined &&
-    deepEqual(toPlainValue(field, value), field.default)
-  ) {
     return true;
   }
 
@@ -65,7 +48,7 @@ export function testFieldEmpty(
         if (!child.id) {
           continue;
         }
-        if (!testFieldEmpty(child, value[child.id], types, options)) {
+        if (!testFieldEmpty(child, value[child.id], types)) {
           return false;
         }
       }
@@ -76,7 +59,7 @@ export function testFieldEmpty(
           return true;
         }
         for (const item of value) {
-          if (!testFieldEmpty(field.of, item, types, options)) {
+          if (!testFieldEmpty(field.of, item, types)) {
             return false;
           }
         }
@@ -90,7 +73,7 @@ export function testFieldEmpty(
         return true;
       }
       for (const key of value._array) {
-        if (!testFieldEmpty(field.of, value[key], types, options)) {
+        if (!testFieldEmpty(field.of, value[key], types)) {
           return false;
         }
       }
@@ -116,7 +99,7 @@ export function testFieldEmpty(
         if (!child.id) {
           continue;
         }
-        if (!testFieldEmpty(child, value[child.id], types, options)) {
+        if (!testFieldEmpty(child, value[child.id], types)) {
           return false;
         }
       }
@@ -125,19 +108,4 @@ export function testFieldEmpty(
     default:
       return false;
   }
-}
-
-/**
- * Converts array fields stored as an "array map" (`{_array: ['k1'], k1: ...}`)
- * back to a plain array so they can be compared against a schema default.
- */
-function toPlainValue(field: schema.Field, value: any) {
-  if (
-    field.type === 'array' &&
-    isObject(value) &&
-    Array.isArray(value._array)
-  ) {
-    return value._array.map((key: string) => value[key]);
-  }
-  return value;
 }

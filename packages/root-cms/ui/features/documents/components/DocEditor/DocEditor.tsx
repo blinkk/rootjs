@@ -954,9 +954,7 @@ DocEditor.DeprecatedField = (props: FieldProps) => {
   const types = useCollectionSchemaTypes();
 
   useDraftDocField(props.deepKey, (newValue: any) => {
-    setFieldValueEmpty(
-      testFieldEmpty(props.field, newValue, types, {ignoreDefaults: true})
-    );
+    setFieldValueEmpty(testFieldEmpty(props.field, newValue, types));
   });
 
   if (fieldValueEmpty) {
