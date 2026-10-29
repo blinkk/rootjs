@@ -87,9 +87,9 @@ function Checkbox(props: {checked: boolean; label: string}) {
           width: '16px',
           height: '16px',
           borderRadius: '4px',
-          border: props.checked ? '1px solid #228be6' : '1px solid #ced4da',
-          background: props.checked ? '#228be6' : '#fff',
-          color: '#fff',
+          border: '1px solid #e4e4e1',
+          background: props.checked ? '#f5f5f3' : '#fff',
+          color: '#1f1f1f',
         }}
       >
         {props.checked && <IconCheck size={11} stroke={3} />}

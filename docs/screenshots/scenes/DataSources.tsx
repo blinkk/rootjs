@@ -1,4 +1,4 @@
-import {IconTable, IconWorld} from '@tabler/icons-preact';
+import {IconPlus, IconTable, IconWorld} from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
 import {CmsFrame} from '../ui/cms.js';
 
@@ -133,14 +133,14 @@ function StatusButton(props: {label: string; action: 'sync' | 'publish'}) {
   );
 }
 
-/** A dark Mantine tooltip, pointing up at the element above it. */
+/** A dark tooltip, just below the element above it. */
 function Tooltip(props: {children: string}) {
   return (
     <div
       style={{
         position: 'absolute',
         left: '4px',
-        top: 'calc(100% + 2px)',
+        top: 'calc(100% + 4px)',
         padding: '5px 10px',
         borderRadius: '4px',
         background: '#212529',
@@ -151,16 +151,6 @@ function Tooltip(props: {children: string}) {
       }}
     >
       {props.children}
-      <span
-        style={{
-          position: 'absolute',
-          left: '18px',
-          bottom: '100%',
-          borderWidth: '5px',
-          borderStyle: 'solid',
-          borderColor: 'transparent transparent #212529 transparent',
-        }}
-      />
     </div>
   );
 }
@@ -172,12 +162,23 @@ export default function DataSources() {
   return (
     <CmsFrame active="data">
       <div style={{padding: '24px 28px', fontSize: '12px'}}>
-        <h1 className="cms-h1">Data Sources</h1>
-        <p className="cms-muted" style={{margin: '6px 0 16px'}}>
-          Sync data from external services, like Google Sheets and JSON APIs, on
-          demand or on a schedule. Publish it on its own or with a release.
-        </p>
-        <span className="cms-button cms-button--blue">New data source</span>
+        <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
+          <div>
+            <h1 className="cms-h1">Data Sources</h1>
+            <p className="cms-muted" style={{margin: '6px 0 16px'}}>
+              Sync data from external services, like Google Sheets and JSON
+              APIs, on demand or on a schedule. Publish it on its own or with a
+              release.
+            </p>
+          </div>
+          <span
+            className="cms-button cms-button--dark"
+            style={{marginLeft: 'auto'}}
+          >
+            <IconPlus />
+            New data source
+          </span>
+        </div>
         <div
           style={{
             display: 'flex',

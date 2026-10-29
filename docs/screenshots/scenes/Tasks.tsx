@@ -35,9 +35,10 @@ const TASKS_CSS = `
 .tm__actions { display: flex; align-items: center; gap: 8px; }
 .tm__segmented {
   display: flex;
-  padding: 3px;
+  padding: 2px;
+  border: 1px solid #e4e4e1;
   border-radius: 6px;
-  background: #f1f3f5;
+  background: #f5f5f3;
   font-size: 11.5px;
   font-weight: 500;
 }

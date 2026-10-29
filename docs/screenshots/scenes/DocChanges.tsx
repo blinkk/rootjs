@@ -106,9 +106,10 @@ const DOC_CHANGES_CSS = `
 }
 .dc__segmented {
   display: inline-flex;
-  padding: 2px;
+  padding: 1px;
+  border: 1px solid #e4e4e1;
   border-radius: 6px;
-  background: #f1f3f5;
+  background: #f5f5f3;
   font-size: 11.5px;
   font-weight: 500;
 }

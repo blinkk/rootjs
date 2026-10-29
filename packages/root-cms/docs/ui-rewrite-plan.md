@@ -516,10 +516,17 @@ overflowing the mobile header, and array item headers sized without
       second-level bullets are circles everywhere.
 - [x] 5.3 Finalize `theme.css` + `docs/themes.md`, and generate the BEM hooks
       reference.
-- [ ] 5.4 Update the `docs/screenshots` scenes if they mirror Mantine markup,
+- [x] 5.4 Update the `docs/screenshots` scenes if they mirror Mantine markup,
       then re-render. Port the docs site's own themes
       (`docs/cms/themes/clarity.css`, `compact.css`) to the new tokens and hooks,
       since they double as the real-world test of the theme contract.
+      Done: the scenes are standalone recreations (no Mantine markup), so
+      only the ones that drifted were updated (Releases, Data Sources, the
+      content list's New button, the localization modal's checkboxes, and the
+      segmented controls). The themes only set `--cms-*` properties, all still
+      defined and read, and render as intended. Uploading the re-rendered
+      screenshots (`pnpm screenshots:publish`) and publishing the docs that
+      use them is left for a maintainer, since it writes to the live CMS.
 - [ ] 5.5 Report bundle size before/after, and do a full snapshot sweep at all
       widths. Changeset (patch, per repo rules, or flag this as the headline of
       a minor).
