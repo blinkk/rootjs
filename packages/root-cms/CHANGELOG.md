@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 4.2.3
+
+### Patch Changes
+
+- 9b920b7: feat: rewrite the cms ui without mantine
+- 4f98483: feat: redesign the create and edit data source pages
+- a8c0ab0: feat: refresh the data source page with synced, published and changes views
+- 815dfba: feat: show data sources as cards with a diff of unpublished changes
+- d8cb42d: fix: removing array items (and paste, clear, undo) inside rich text block and inline component modals no longer throws "Cannot read properties of undefined (reading 'group')" (#1561)
+- a0b6d5c: fix: skip deprecated fields when generating default values for new docs, oneOf types and rich text blocks (#1560)
+  - @blinkk/root@4.2.3
+
 ## 4.2.2
 
 ### Patch Changes
