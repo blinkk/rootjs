@@ -15,6 +15,7 @@ import {
   Pagination,
   PaginationSummary,
 } from '../../../../components/Pagination/Pagination.js';
+import {RelativeTime} from '../../../../components/RelativeTime/RelativeTime.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
@@ -23,10 +24,9 @@ import {usePagination} from '../../../../hooks/usePagination.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
-import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
-import {getTimeAgo} from '../../../../utils/time.js';
+import {formatDateTime} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testTimestamp, toMillis} from '../../../documents/doc-changes.js';
 import {testCanPublish} from '../../../users/permissions.js';
@@ -328,17 +328,6 @@ function getLastActivity(release: Release): ReleaseActivity | null {
   );
 }
 
-/** Formats a timestamp as e.g. "Oct 26, 2026, 1:30 PM". */
-function formatFullDate(ts: unknown): string {
-  return new Date(toMillis(ts)).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 /**
  * Shows who last acted on the release and when, e.g. "<avatar> Jane" over
  * "Published · 2 days ago".
@@ -348,9 +337,6 @@ ReleasesPage.LastActivityCell = (props: {release: Release}) => {
   if (!activity) {
     return <span className="ReleasesPage__empty text-muted">—</span>;
   }
-  const when = activity.upcoming
-    ? `for ${formatFullDate(activity.at)}`
-    : getTimeAgo(toMillis(activity.at));
   return (
     <div className="ReleasesPage__activity flex min-w-0 items-center gap-2.5">
       {activity.by && (
@@ -365,12 +351,14 @@ ReleasesPage.LastActivityCell = (props: {release: Release}) => {
         )}
         <div className="ReleasesPage__activityAction whitespace-nowrap text-sm text-muted">
           {activity.label}
-          {activity.upcoming ? ' ' : ' · '}
-          <Tooltip label={formatFullDate(activity.at)}>
-            <span className="cursor-default underline decoration-dotted underline-offset-3">
-              {when}
-            </span>
-          </Tooltip>
+          {activity.upcoming ? (
+            ` for ${formatDateTime(activity.at)}`
+          ) : (
+            <>
+              {' · '}
+              <RelativeTime ts={activity.at} />
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -15,14 +15,13 @@ import {
   isOpenThread,
 } from '../../../../shared/comments.js';
 import {RichTextData} from '../../../../shared/richtext.js';
+import {RelativeTime} from '../../../components/RelativeTime/RelativeTime.js';
 import {Badge} from '../../../primitives/Badge/Badge.js';
 import {Button} from '../../../primitives/Button/Button.js';
 import {IconButton} from '../../../primitives/IconButton/IconButton.js';
 import {showNotification} from '../../../primitives/Toast/toastStore.js';
-import {Tooltip} from '../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../utils/classes.js';
 import {errorMessage} from '../../../utils/notifications.js';
-import {formatDateTime, getTimeAgo} from '../../../utils/time.js';
 import {UserAvatar} from '../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../users/UserTag/UserTag.js';
 import {CommentBody} from '../CommentBody/CommentBody.js';
@@ -508,13 +507,5 @@ function CommentTime(props: {
   timestamp?: CommentTimestamp;
   className?: string;
 }) {
-  const millis = props.timestamp?.toMillis?.();
-  if (!millis) {
-    return null;
-  }
-  return (
-    <Tooltip label={formatDateTime(props.timestamp as any)}>
-      <span className={props.className}>{getTimeAgo(millis)}</span>
-    </Tooltip>
-  );
+  return <RelativeTime className={props.className} ts={props.timestamp} />;
 }

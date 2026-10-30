@@ -1,19 +1,23 @@
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {ComponentChildren} from 'preact';
+import {useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isValidCronExpression} from '../../../../../core/cron-schedule.js';
 import {isSlugValid} from '../../../../../shared/slug.js';
+import {Heading} from '../../../../components/Heading/Heading.js';
+import {Text} from '../../../../components/Text/Text.js';
 import {parseSpreadsheetUrl} from '../../../../integrations/gsheets.js';
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
-import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
+import {Field, fieldLabelId} from '../../../../primitives/Field/Field.js';
 import {NumberInput} from '../../../../primitives/NumberInput/NumberInput.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Select} from '../../../../primitives/Select/Select.js';
+import {Switch} from '../../../../primitives/Switch/Switch.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cn} from '../../../../utils/classes.js';
-import {notifyErrors} from '../../../../utils/notifications.js';
 import {
   CronScheduleType,
   CronUnit,
@@ -23,98 +27,74 @@ import {
   GsheetDataFormat,
   HttpMethod,
   addDataSource,
-  getDataSource,
   updateDataSource,
 } from '../../data-source.js';
+import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
 
-const HTTP_URL_HELP = 'Enter the URL to make the HTTP request.';
+const HTTP_URL_HELP = 'The URL to request when the data source syncs.';
 const GSHEET_URL_HELP =
-  'Enter the URL of the Google Sheet, e.g. https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=SHEET_ID';
+  'Open the tab you want to sync and copy its URL from the address bar.';
+
+const SCHEDULE_OPTIONS: Array<{value: CronScheduleType; label: string}> = [
+  {value: 'interval', label: 'Interval'},
+  {value: 'daily', label: 'Daily'},
+  {value: 'weekly', label: 'Weekly'},
+  {value: 'custom', label: 'Custom'},
+];
 
 export interface DataSourceFormProps {
   className?: string;
-  dataSourceId?: string;
-  buttonLabel?: string;
+  /** The data source to edit. Omit to create a new one. */
+  dataSource?: DataSource | null;
 }
 
+/**
+ * The form for creating or editing a data source, as a column of section
+ * cards with a sticky footer holding the cancel and submit buttons.
+ */
 export function DataSourceForm(props: DataSourceFormProps) {
   const {route} = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const gapiClient = useGapiClient();
+  // The form's initial values. Text fields are uncontrolled (their values are
+  // read from the form on submit), so re-renders don't reset what's typed.
+  const initial = props.dataSource;
+  const isEdit = Boolean(initial);
+  const cron = initial?.cron;
+  const schedule = cron?.schedule || 'interval';
   const [submitting, setSubmitting] = useState(false);
   const [dataSourceType, setDataSourceType] = useState<DataSourceType>(
-    gapiClient.enabled ? 'gsheet' : 'http'
+    initial?.type || (gapiClient.enabled ? 'gsheet' : 'http')
   );
-  const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
-  const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
-  const [cronEnabled, setCronEnabled] = useState(false);
-  const [cronSchedule, setCronSchedule] =
-    useState<CronScheduleType>('interval');
-  const [cronInterval, setCronInterval] = useState<number>(1);
-  const [cronUnit, setCronUnit] = useState<CronUnit>('hours');
-  const [cronDailyTime, setCronDailyTime] = useState('09:00');
-  const [cronWeeklyDay, setCronWeeklyDay] = useState('1');
-  const [cronWeeklyTime, setCronWeeklyTime] = useState('09:00');
-  const [cronExpression, setCronExpression] = useState('');
-  const [cronTimezone, setCronTimezone] = useState(getDefaultTimezone());
-  const [cronAutoPublish, setCronAutoPublish] = useState(false);
+  const [dataFormat, setDataFormat] = useState<GsheetDataFormat>(
+    initial?.dataFormat || 'map'
+  );
+  const [httpMethod, setHttpMethod] = useState<HttpMethod>(
+    initial?.httpOptions?.method || 'GET'
+  );
+  const [cronEnabled, setCronEnabled] = useState(cron?.enabled || false);
+  const [cronSchedule, setCronSchedule] = useState<CronScheduleType>(schedule);
+  const [cronInterval, setCronInterval] = useState<number>(cron?.interval || 1);
+  const [cronUnit, setCronUnit] = useState<CronUnit>(cron?.unit || 'hours');
+  const [cronDailyTime, setCronDailyTime] = useState(
+    schedule === 'daily' ? cronToTime(cron?.expression) : '09:00'
+  );
+  const [cronWeeklyDay, setCronWeeklyDay] = useState(
+    schedule === 'weekly' ? cronToWeekday(cron?.expression) : '1'
+  );
+  const [cronWeeklyTime, setCronWeeklyTime] = useState(
+    schedule === 'weekly' ? cronToTime(cron?.expression) : '09:00'
+  );
+  const [cronExpression, setCronExpression] = useState(
+    schedule === 'custom' ? cron?.expression || '' : ''
+  );
+  const [cronTimezone, setCronTimezone] = useState(
+    cron?.timezone || getDefaultTimezone()
+  );
+  const [cronAutoPublish, setCronAutoPublish] = useState(
+    cron?.autoPublish || false
+  );
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(!!props.dataSourceId);
-  const [dataSource, setDataSource] = useState<DataSource | null>(null);
-
-  let urlHelp = '';
-  if (dataSourceType === 'http') {
-    urlHelp = HTTP_URL_HELP;
-  } else if (dataSourceType === 'gsheet') {
-    urlHelp = GSHEET_URL_HELP;
-  }
-
-  async function fetchDataSource(id: string) {
-    await notifyErrors(async () => {
-      const dataSource = await getDataSource(id);
-      setDataSource(dataSource);
-      setDataSourceType(dataSource?.type || 'http');
-      setDataFormat(dataSource?.dataFormat || 'map');
-      if (dataSource?.cron) {
-        const cron = dataSource.cron;
-        const schedule = cron.schedule || 'interval';
-        setCronEnabled(cron.enabled || false);
-        setCronSchedule(schedule);
-        setCronInterval(cron.interval || 1);
-        setCronUnit(cron.unit || 'hours');
-        setCronTimezone(cron.timezone || getDefaultTimezone());
-        if (schedule === 'daily') {
-          setCronDailyTime(cronToTime(cron.expression));
-        } else if (schedule === 'weekly') {
-          setCronWeeklyTime(cronToTime(cron.expression));
-          setCronWeeklyDay(cronToWeekday(cron.expression));
-        } else if (schedule === 'custom') {
-          setCronExpression(cron.expression || '');
-        }
-        setCronAutoPublish(cron.autoPublish || false);
-      } else {
-        setCronEnabled(false);
-        setCronSchedule('interval');
-        setCronInterval(1);
-        setCronUnit('hours');
-        setCronDailyTime('09:00');
-        setCronWeeklyDay('1');
-        setCronWeeklyTime('09:00');
-        setCronExpression('');
-        setCronTimezone(getDefaultTimezone());
-        setCronAutoPublish(false);
-      }
-    });
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    if (!props.dataSourceId) {
-      return;
-    }
-    setLoading(true);
-    fetchDataSource(props.dataSourceId);
-  }, [props.dataSourceId]);
 
   async function onSubmit() {
     setError('');
@@ -128,7 +108,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
       return '';
     }
 
-    const dataSourceId = props.dataSourceId || getValue('id');
+    const dataSourceId = initial?.id || getValue('id');
     if (!dataSourceId) {
       setError('missing id');
       return;
@@ -212,10 +192,9 @@ export function DataSourceForm(props: DataSourceFormProps) {
     dataSource.cron = cron;
 
     try {
-      setDataSource(dataSource as DataSource);
       setSubmitting(true);
-      if (props.dataSourceId) {
-        await updateDataSource(props.dataSourceId, dataSource);
+      if (isEdit) {
+        await updateDataSource(dataSourceId, dataSource);
         showNotification({
           title: 'Saved data source',
           message: `Successfully updated ${dataSourceId}`,
@@ -245,159 +224,176 @@ export function DataSourceForm(props: DataSourceFormProps) {
   }
 
   // Only show the "gsheet" option if gapi is enabled.
-  const typeSelectOptions = [{value: 'http', label: 'HTTP'}];
-  if (gapiClient.enabled || dataSourceType === 'gsheet') {
-    typeSelectOptions.push({value: 'gsheet', label: 'Google Sheet'});
-  }
+  const showGsheet = gapiClient.enabled || dataSourceType === 'gsheet';
 
   return (
     <form
-      className={cn(
-        'DataSourceForm relative max-w-162 text-base',
-        props.className
-      )}
+      className={cn('DataSourceForm flex flex-col gap-4', props.className)}
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <LoadingOverlay visible={loading} />
-      <div className="DataSourceForm__input mt-4">
-        <Select
-          name="type"
-          label="Type"
-          data={typeSelectOptions}
-          value={dataSourceType}
-          onValueChange={(e) => setDataSourceType(e as DataSourceType)}
-          size="sm"
+      <DataSourceForm.Section title="Details">
+        <TextInput
+          className="DataSourceForm__id"
+          classNames={{input: 'font-mono'}}
+          name="id"
+          label="ID"
+          description={
+            isEdit
+              ? 'IDs can’t be changed because code references them.'
+              : 'Used to reference the data source in code. Letters, numbers, and dashes only, e.g. homepage-promos. Can’t be changed later.'
+          }
+          defaultValue={initial?.id}
+          disabled={isEdit}
         />
-      </div>
-      <TextInput
-        className="DataSourceForm__input mt-4"
-        name="id"
-        label="ID"
-        description="Unique identifier for the data source. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
-        size="sm"
-        value={props.dataSourceId}
-        disabled={!!props.dataSourceId}
-      />
-      <Textarea
-        className="DataSourceForm__input mt-4"
-        name="description"
-        label="Description"
-        description="Optional."
-        size="sm"
-        value={dataSource?.description}
-      />
-      <TextInput
-        className="DataSourceForm__input mt-4"
-        name="url"
-        label="URL"
-        description={<span className="break-words">{urlHelp}</span>}
-        size="sm"
-        value={dataSource?.url}
-      />
-      {dataSourceType === 'http' && (
-        <>
-          <div className="DataSourceForm__input mt-4">
-            <Select
-              name="httpMethod"
-              label="HTTP Request Method"
-              data={[
-                {value: 'GET', label: 'GET'},
-                {value: 'POST', label: 'POST'},
-              ]}
-              value={httpMethod}
-              onValueChange={(e) => setHttpMethod(e as HttpMethod)}
-              size="sm"
-            />
-          </div>
-          <Textarea
-            className="DataSourceForm__input mt-4"
-            name="httpHeaders"
-            label="HTTP Request Headers"
-            description="Format as `HeaderName: Value`, each value on its own line."
-            size="sm"
-            value={headersToString(dataSource?.httpOptions?.headers || {})}
-          />
-          {httpMethod === 'POST' && (
-            <Textarea
-              className="DataSourceForm__input mt-4"
-              name="httpRequestBody"
-              label="HTTP Request Body"
-              size="sm"
-              value={dataSource?.httpOptions?.body}
-            />
-          )}
-        </>
-      )}
-      {dataSourceType === 'gsheet' && (
-        <div className="DataSourceForm__input mt-4">
-          <Select
-            name="dataFormat"
-            label="Data Format"
-            data={[
-              {value: 'map', label: 'map'},
-              {value: 'grid', label: 'grid'},
-            ]}
-            value={dataFormat}
-            onValueChange={(e) => setDataFormat(e as GsheetDataFormat)}
-            size="sm"
-          />
-          {dataFormat === 'grid' && (
-            <div className="DataSourceForm__input__example mt-3 text-sm">
-              Data is stored as an array of arrays, including the header row,
-              e.g.
-              <code className="ml-1 bg-chip p-1 font-medium">
-                [[header1, header2], [foo, bar]]
-              </code>
-            </div>
-          )}
-          {dataFormat === 'map' && (
-            <div className="DataSourceForm__input__example mt-3 text-sm">
-              Data is stored as an array of maps, e.g.
-              <code className="ml-1 bg-chip p-1 font-medium">
-                [{'{'}header1: foo, header2: bar{'}'}]
-              </code>
-            </div>
-          )}
-        </div>
-      )}
+        <Textarea
+          className="DataSourceForm__description"
+          name="description"
+          label="Description (optional)"
+          defaultValue={initial?.description}
+        />
+        <TextInput
+          className="DataSourceForm__previewUrl"
+          name="previewUrl"
+          label="Preview URL (optional)"
+          description="A page where editors can see the synced data before publishing."
+          placeholder="/preview/home"
+          defaultValue={initial?.previewUrl}
+        />
+      </DataSourceForm.Section>
 
-      <div className="DataSourceForm__section mt-6">
-        <div className="DataSourceForm__section__label mb-2 text-base font-semibold">
-          Sync Schedule
-        </div>
-        <Checkbox
-          className="DataSourceForm__input mt-4"
-          label="Enable scheduled sync"
-          checked={cronEnabled}
-          onChange={(e) => setCronEnabled(e.currentTarget.checked)}
-          size="sm"
-        />
-        {cronEnabled && (
-          <div className="DataSourceForm__cron mt-3">
-            <div className="DataSourceForm__input mt-4">
-              <Select
-                label="Schedule"
-                data={[
-                  {value: 'interval', label: 'Interval'},
-                  {value: 'daily', label: 'Daily'},
-                  {value: 'weekly', label: 'Weekly'},
-                  {value: 'custom', label: 'Custom (cron expression)'},
-                ]}
-                value={cronSchedule}
-                onValueChange={(e) => setCronSchedule(e as CronScheduleType)}
-                size="sm"
+      <DataSourceForm.Section
+        title="Source"
+        description="Where the data is fetched from when the data source syncs."
+      >
+        <DataSourceForm.Choices label="Type">
+          {showGsheet && (
+            <DataSourceForm.Choice
+              name="type"
+              checked={dataSourceType === 'gsheet'}
+              onSelect={() => setDataSourceType('gsheet')}
+              icon={<DataSourceIcon type="gsheet" size={32} />}
+              title="Google Sheet"
+              description="Sync the rows of a spreadsheet tab."
+            />
+          )}
+          <DataSourceForm.Choice
+            name="type"
+            checked={dataSourceType === 'http'}
+            onSelect={() => setDataSourceType('http')}
+            icon={<DataSourceIcon type="http" size={32} />}
+            title="HTTP"
+            description="Fetch JSON or text from a URL."
+          />
+        </DataSourceForm.Choices>
+        <Field
+          className="DataSourceForm__url"
+          label={dataSourceType === 'gsheet' ? 'Spreadsheet URL' : 'URL'}
+          description={
+            dataSourceType === 'gsheet' ? GSHEET_URL_HELP : HTTP_URL_HELP
+          }
+        >
+          {(control) => (
+            <div className="flex items-center gap-2">
+              {dataSourceType === 'http' && (
+                <SegmentedControl
+                  className="DataSourceForm__httpMethod shrink-0"
+                  aria-label="Request method"
+                  data={['GET', 'POST'] as HttpMethod[]}
+                  value={httpMethod}
+                  onValueChange={setHttpMethod}
+                  size="xs"
+                />
+              )}
+              <TextInput
+                {...control}
+                className="min-w-0 grow"
+                name="url"
+                type="url"
+                defaultValue={initial?.url}
               />
             </div>
+          )}
+        </Field>
+        {dataSourceType === 'http' && (
+          <>
+            <Textarea
+              className="DataSourceForm__httpHeaders"
+              classNames={{input: 'font-mono'}}
+              name="httpHeaders"
+              label="Headers (optional)"
+              description="One per line, as “Name: value”."
+              defaultValue={headersToString(
+                initial?.httpOptions?.headers || {}
+              )}
+            />
+            {httpMethod === 'POST' && (
+              <Textarea
+                className="DataSourceForm__httpBody"
+                classNames={{input: 'font-mono'}}
+                name="httpRequestBody"
+                label="Body"
+                defaultValue={initial?.httpOptions?.body}
+              />
+            )}
+          </>
+        )}
+        {dataSourceType === 'gsheet' && (
+          <DataSourceForm.Choices label="Data format">
+            <DataSourceForm.Choice
+              name="dataFormat"
+              checked={dataFormat === 'map'}
+              onSelect={() => setDataFormat('map')}
+              title="Rows as objects"
+              tag="map"
+              description="Each row is keyed by the header row."
+              example='[{"header1": "foo", "header2": "bar"}]'
+            />
+            <DataSourceForm.Choice
+              name="dataFormat"
+              checked={dataFormat === 'grid'}
+              onSelect={() => setDataFormat('grid')}
+              title="Rows as arrays"
+              tag="grid"
+              description="Mirrors the sheet, header row included."
+              example='[["header1", "header2"], ["foo", "bar"]]'
+            />
+          </DataSourceForm.Choices>
+        )}
+      </DataSourceForm.Section>
+
+      <DataSourceForm.Section
+        title="Scheduled sync"
+        description="Sync automatically instead of only when someone clicks Sync."
+        action={
+          <Switch
+            className="DataSourceForm__cronEnabled"
+            aria-label="Scheduled sync"
+            checked={cronEnabled}
+            onChange={(e) => setCronEnabled(e.currentTarget.checked)}
+            size="md"
+          />
+        }
+      >
+        {cronEnabled && (
+          <>
+            <SegmentedControl
+              className="DataSourceForm__cronSchedule self-start"
+              label="Frequency"
+              data={SCHEDULE_OPTIONS}
+              value={cronSchedule}
+              onValueChange={setCronSchedule}
+              size="xs"
+            />
 
             {cronSchedule === 'interval' && (
-              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <span>Run every</span>
+              <DataSourceForm.Sentence>
+                <span>Every</span>
                 <NumberInput
-                  className="DataSourceForm__cron__interval w-20"
+                  className="DataSourceForm__cronInterval w-20"
                   aria-label="Interval"
                   value={cronInterval}
                   onValueChange={(val) => setCronInterval(Number(val) || 1)}
@@ -405,7 +401,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   size="sm"
                 />
                 <Select
-                  className="DataSourceForm__cron__unit w-30"
+                  className="DataSourceForm__cronUnit w-30"
                   aria-label="Interval unit"
                   data={[
                     {value: 'minutes', label: 'minutes'},
@@ -416,29 +412,28 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   onValueChange={(e) => setCronUnit(e as CronUnit)}
                   size="sm"
                 />
-              </div>
+              </DataSourceForm.Sentence>
             )}
 
             {cronSchedule === 'daily' && (
-              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <span>Run every day at</span>
-                <TextInput
-                  className="DataSourceForm__cron__time w-28"
-                  type="time"
-                  aria-label="Time"
+              <DataSourceForm.Sentence>
+                <span>Every day at</span>
+                <DataSourceForm.TimeInput
                   value={cronDailyTime}
-                  onChange={(e) =>
-                    setCronDailyTime((e.target as HTMLInputElement).value)
-                  }
+                  onChange={setCronDailyTime}
                 />
-              </div>
+                <DataSourceForm.Timezone
+                  value={cronTimezone}
+                  onChange={setCronTimezone}
+                />
+              </DataSourceForm.Sentence>
             )}
 
             {cronSchedule === 'weekly' && (
-              <div className="DataSourceForm__cron__row mb-3 mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <span>Run every</span>
+              <DataSourceForm.Sentence>
+                <span>Every</span>
                 <Select
-                  className="DataSourceForm__cron__weekday w-35"
+                  className="DataSourceForm__cronWeekday w-35"
                   aria-label="Day of week"
                   data={WEEKDAYS}
                   value={cronWeeklyDay}
@@ -446,82 +441,227 @@ export function DataSourceForm(props: DataSourceFormProps) {
                   size="sm"
                 />
                 <span>at</span>
-                <TextInput
-                  className="DataSourceForm__cron__time w-28"
-                  type="time"
-                  aria-label="Time"
+                <DataSourceForm.TimeInput
                   value={cronWeeklyTime}
-                  onChange={(e) =>
-                    setCronWeeklyTime((e.target as HTMLInputElement).value)
-                  }
+                  onChange={setCronWeeklyTime}
                 />
-              </div>
+                <DataSourceForm.Timezone
+                  value={cronTimezone}
+                  onChange={setCronTimezone}
+                />
+              </DataSourceForm.Sentence>
             )}
 
             {cronSchedule === 'custom' && (
-              <div className="DataSourceForm__input mt-4">
+              <>
                 <TextInput
+                  className="DataSourceForm__cronExpression"
+                  classNames={{input: 'font-mono'}}
                   label="Cron expression"
-                  description='Standard 5-field cron, e.g. "0 19 * * *" runs every day at 7pm, "0 17 * * 5" runs every Friday at 5pm.'
+                  description='Standard 5-field cron, e.g. "0 19 * * *" runs every day at 7 PM, "0 17 * * 5" runs every Friday at 5 PM.'
                   placeholder="0 19 * * *"
                   value={cronExpression}
                   onChange={(e: any) =>
                     setCronExpression((e.target as HTMLInputElement).value)
                   }
-                  size="sm"
                 />
-              </div>
-            )}
-
-            {cronSchedule !== 'interval' && (
-              <div className="DataSourceForm__input mt-4">
-                <Select
-                  label="Timezone"
-                  data={TIMEZONE_OPTIONS}
-                  value={cronTimezone}
-                  onValueChange={(val) => val && setCronTimezone(val)}
-                  searchable
-                  size="sm"
-                />
-              </div>
+                <DataSourceForm.Sentence>
+                  <DataSourceForm.Timezone
+                    value={cronTimezone}
+                    onChange={setCronTimezone}
+                  />
+                </DataSourceForm.Sentence>
+              </>
             )}
 
             <Checkbox
-              className="DataSourceForm__input mt-4"
-              label="Auto-publish after sync"
+              className="DataSourceForm__cronAutoPublish"
+              label="Publish after each sync"
+              description="Synced data goes live without a review step."
               checked={cronAutoPublish}
               onChange={(e) => setCronAutoPublish(e.currentTarget.checked)}
-              size="sm"
             />
+          </>
+        )}
+      </DataSourceForm.Section>
+
+      <div className="DataSourceForm__footer sticky bottom-0 z-(--cms-z-sticky) flex flex-wrap items-center justify-end gap-2 border-0 border-t border-solid border-border bg-page py-3">
+        {error && (
+          <div
+            className="DataSourceForm__error mr-auto text-sm font-medium text-danger"
+            role="alert"
+          >
+            Error: {error}
           </div>
         )}
+        <Button href={isEdit ? `/cms/data/${initial!.id}` : '/cms/data'}>
+          Cancel
+        </Button>
+        <Button variant="blue" type="submit" loading={submitting}>
+          {isEdit ? 'Save changes' : 'Create data source'}
+        </Button>
       </div>
-
-      <TextInput
-        className="DataSourceForm__input mt-4"
-        name="previewUrl"
-        label="Preview URL"
-        description="URL where users can preview the data source."
-        size="sm"
-        value={dataSource?.previewUrl}
-      />
-      <Button
-        className="DataSourceForm__submit mt-8"
-        variant="blue"
-        size="sm"
-        type="submit"
-        loading={submitting}
-      >
-        {props.buttonLabel || 'Save'}
-      </Button>
-      {error && (
-        <div className="DataSourceForm__error mt-8 text-base font-medium text-danger">
-          Error: {error}
-        </div>
-      )}
     </form>
   );
 }
+
+/** A card holding one group of the form's fields. */
+DataSourceForm.Section = (props: {
+  title: string;
+  description?: string;
+  /** A control beside the title, e.g. a switch that enables the section. */
+  action?: ComponentChildren;
+  children?: ComponentChildren;
+}) => {
+  const children = Array.isArray(props.children)
+    ? props.children.filter(Boolean)
+    : props.children;
+  const hasChildren = Array.isArray(children)
+    ? children.length > 0
+    : !!children;
+  return (
+    <section className="DataSourceForm__section rounded-xl border border-solid border-border bg-surface p-4 shadow-sm md:px-6 md:py-5">
+      <div className="DataSourceForm__section__header flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <Heading size="h3" weight="semi-bold">
+            {props.title}
+          </Heading>
+          {props.description && (
+            <Text as="p" size="body-sm" color="gray" className="mb-0 mt-1">
+              {props.description}
+            </Text>
+          )}
+        </div>
+        {props.action}
+      </div>
+      {hasChildren && (
+        <div className="DataSourceForm__section__fields mt-5 flex flex-col gap-4">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+};
+
+/** A labeled group of `DataSourceForm.Choice` radio cards. */
+DataSourceForm.Choices = (props: {
+  label: string;
+  children: ComponentChildren;
+}) => {
+  return (
+    <Field label={props.label} labelAs="div">
+      {(control) => (
+        <div
+          className="DataSourceForm__choices grid gap-2.5 sm:grid-cols-2"
+          role="radiogroup"
+          aria-labelledby={fieldLabelId(control.id)}
+        >
+          {props.children}
+        </div>
+      )}
+    </Field>
+  );
+};
+
+/** A radio option shown as a card, with a title, description, and example. */
+DataSourceForm.Choice = (props: {
+  name: string;
+  checked: boolean;
+  onSelect: () => void;
+  icon?: ComponentChildren;
+  title: string;
+  /** A short code label shown beside the title. */
+  tag?: string;
+  description: string;
+  /** A code sample shown beneath the description. */
+  example?: string;
+}) => {
+  return (
+    <label
+      className={cn(
+        'DataSourceForm__choice',
+        props.checked && 'DataSourceForm__choice--selected',
+        'flex min-w-0 cursor-pointer items-start gap-3 rounded-lg border border-solid p-3.5 transition-colors',
+        'has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-focus',
+        props.checked
+          ? 'border-info bg-info-soft'
+          : 'border-border bg-surface hover:bg-surface-hover'
+      )}
+    >
+      <input
+        className="sr-only"
+        type="radio"
+        name={props.name}
+        checked={props.checked}
+        onChange={() => props.onSelect()}
+      />
+      {props.icon}
+      <span className="min-w-0 grow">
+        <span className="block text-sm font-semibold text-fg">
+          {props.title}
+          {props.tag && (
+            <span className="ml-1.5 font-mono text-xs font-normal text-muted">
+              {props.tag}
+            </span>
+          )}
+        </span>
+        <span className="mt-0.5 block text-sm text-muted">
+          {props.description}
+        </span>
+        {props.example && (
+          <code className="mt-2 block truncate rounded-sm bg-chip px-2 py-1.5 font-mono text-xs text-fg">
+            {props.example}
+          </code>
+        )}
+      </span>
+    </label>
+  );
+};
+
+/** A row of inline controls that reads as a sentence, e.g. "Every 6 hours". */
+DataSourceForm.Sentence = (props: {children: ComponentChildren}) => {
+  return (
+    <div className="DataSourceForm__sentence flex flex-wrap items-center gap-2 text-sm">
+      {props.children}
+    </div>
+  );
+};
+
+DataSourceForm.TimeInput = (props: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  return (
+    <TextInput
+      className="DataSourceForm__cronTime w-28"
+      type="time"
+      aria-label="Time"
+      value={props.value}
+      onChange={(e) => props.onChange((e.target as HTMLInputElement).value)}
+      size="sm"
+    />
+  );
+};
+
+DataSourceForm.Timezone = (props: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  return (
+    <>
+      <span>in</span>
+      <Select
+        className="DataSourceForm__cronTimezone w-56"
+        aria-label="Timezone"
+        data={TIMEZONE_OPTIONS}
+        value={props.value}
+        onValueChange={(val) => val && props.onChange(val)}
+        searchable
+        size="sm"
+      />
+    </>
+  );
+};
 
 function testValidUrl(str: string) {
   let url;

@@ -1,7 +1,6 @@
 import {Timestamp} from 'firebase/firestore';
-import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
+import {RelativeTime} from '../../../../components/RelativeTime/RelativeTime.js';
 import {cn} from '../../../../utils/classes.js';
-import {getTimeAgo} from '../../../../utils/time.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../../users/UserTag/UserTag.js';
 import {NewerSyncDot} from '../NewerSyncDot/NewerSyncDot.js';
@@ -29,27 +28,27 @@ export function DataSourceActivity(props: DataSourceActivityProps) {
       </span>
     );
   }
-  const fullDate = new Date(millis).toLocaleString();
   return (
     <span
       className={cn(
-        'DataSourceActivity inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap',
+        // Raised above the listing card's stretched link, so the time and
+        // user tooltips can be hovered.
+        'DataSourceActivity relative z-1 inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap',
         props.className
       )}
     >
       {props.newer && <NewerSyncDot />}
-      <Tooltip
-        label={props.newer ? `${fullDate}, after the last publish` : fullDate}
-      >
-        <span
-          className={cn(
-            'DataSourceActivity__time cursor-default',
-            props.newer && 'font-medium text-warning'
-          )}
-        >
-          {getTimeAgo(millis)}
-        </span>
-      </Tooltip>
+      {/* Opens below to match the user tooltip. */}
+      <RelativeTime
+        placement="bottom"
+        underline={false}
+        className={cn(
+          'DataSourceActivity__time',
+          props.newer && 'font-medium text-warning'
+        )}
+        ts={props.at}
+        tooltipSuffix={props.newer ? 'after the last publish' : undefined}
+      />
       {props.by && (
         <>
           <span className="DataSourceActivity__sep text-muted">·</span>
