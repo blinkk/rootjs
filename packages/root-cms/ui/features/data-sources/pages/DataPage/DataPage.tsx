@@ -1,4 +1,5 @@
-import {IconPlus, IconTable} from '@tabler/icons-preact';
+import {IconArrowUp, IconPlus, IconRefresh} from '@tabler/icons-preact';
+import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
@@ -7,76 +8,69 @@ import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
-import {Switch} from '../../../../primitives/Switch/Switch.js';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '../../../../primitives/Table/Table.js';
-import {cn} from '../../../../utils/classes.js';
+import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
+import {getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanEdit} from '../../../users/permissions.js';
+import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {UserTag} from '../../../users/UserTag/UserTag.js';
+import {useDataSourceChangesModal} from '../../components/DataSourceChangesModal/DataSourceChangesModal.js';
+import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
 import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
-import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
-import {DataSource, listDataSources} from '../../data-source.js';
+import {
+  DataSource,
+  formatCronSchedule,
+  listDataSources,
+  testHasUnpublishedChanges,
+} from '../../data-source.js';
+import {useDataSourceAction} from '../../useDataSourceAction.js';
 
-/** Cells cap their width and truncate, like the old table. */
-const CELL_CLASSES = 'max-w-88 overflow-hidden text-ellipsis';
+type DataSourceListFilter = 'active' | 'archived';
+
+const FILTER_OPTIONS: Array<{label: string; value: DataSourceListFilter}> = [
+  {label: 'Active', value: 'active'},
+  {label: 'Archived', value: 'archived'},
+];
 
 export function DataPage() {
   usePageTitle('Data Sources');
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canEdit = testCanEdit(roles, currentUserEmail);
+  const canPublish = testCanPublish(roles, currentUserEmail);
 
   return (
     <Layout>
       <div className="DataPage bg-page p-page">
-        <div className="DataPage__header mb-8 flex flex-wrap items-start gap-4">
-          <div className="DataPage__header__text min-w-0 grow basis-100">
-            <Heading size="h1">Data Sources</Heading>
-            <Text as="p" className="mb-0 mt-2 max-w-prose">
-              Add data sources to sync data from external services, like Google
-              Sheets.
-            </Text>
-          </div>
-          <ConditionalTooltip
-            label="You don't have access to create new data sources"
-            condition={!canEdit}
-          >
-            <Button
-              variant="primary"
-              icon={<IconPlus />}
-              href="/cms/data/new"
-              disabled={!canEdit}
-            >
-              New data source
-            </Button>
-          </ConditionalTooltip>
+        <div className="DataPage__header mb-8 max-w-7xl">
+          <Heading size="h1">Data Sources</Heading>
+          <Text as="p" className="mb-0 mt-2 max-w-prose">
+            Sync data from external services like Google Sheets or an HTTP
+            endpoint for use on the site.
+          </Text>
         </div>
-        <DataPage.DataSourcesTable />
+        <DataPage.DataSourcesGrid canEdit={canEdit} canPublish={canPublish} />
       </div>
     </Layout>
   );
 }
 
-DataPage.DataSourcesTable = () => {
+DataPage.DataSourcesGrid = (props: {canEdit: boolean; canPublish: boolean}) => {
   const [loading, setLoading] = useState(true);
-  const [tableData, setTableData] = useState<DataSource[]>([]);
-  const [showArchived, setShowArchived] = useLocalStorage<boolean>(
-    'root::DataPage:showArchived',
-    false
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [storedFilter, setFilter] = useLocalStorage<DataSourceListFilter>(
+    'root-cms-data-sources-filter',
+    'active'
   );
-  const isGoogleSheetUrl = (url?: string | null) =>
-    !!url && url.startsWith('https://docs.google.com/spreadsheets/');
+  // Fall back to the default if the stored value is no longer a valid filter.
+  const filter = FILTER_OPTIONS.some((option) => option.value === storedFilter)
+    ? storedFilter
+    : 'active';
 
   async function init() {
     await notifyErrors(async () => {
@@ -85,135 +79,276 @@ DataPage.DataSourcesTable = () => {
         undefined,
         'loading data sources'
       );
-      setTableData(dataSources);
+      setDataSources(dataSources);
     });
     setLoading(false);
   }
-
-  const hasArchived = useMemo(
-    () => tableData.some((dataSource) => Boolean(dataSource.archivedAt)),
-    [tableData]
-  );
-
-  const filteredDataSources = useMemo(() => {
-    return tableData.filter((dataSource) => {
-      const isArchived = Boolean(dataSource.archivedAt);
-      if (!showArchived) {
-        return !isArchived;
-      }
-      return true;
-    });
-  }, [tableData, showArchived]);
 
   useEffect(() => {
     init();
   }, []);
 
+  const filterCounts = useMemo(() => {
+    const archived = dataSources.filter((ds) => Boolean(ds.archivedAt)).length;
+    return {active: dataSources.length - archived, archived};
+  }, [dataSources]);
+
+  const filteredDataSources = useMemo(
+    () =>
+      dataSources.filter(
+        (ds) => Boolean(ds.archivedAt) === (filter === 'archived')
+      ),
+    [dataSources, filter]
+  );
+
+  if (loading) {
+    return <Spinner size="lg" className="text-muted" />;
+  }
+
   return (
-    <div className="DataPage__DataSourcesTable">
-      {!loading && hasArchived && (
-        <div className="DataPage__DataSourcesTable__filters mb-5 flex justify-end">
-          <Switch
-            size="md"
-            label="Show archived"
-            checked={showArchived}
-            onChange={(e: any) =>
-              setShowArchived(Boolean(e.currentTarget.checked))
-            }
-          />
-        </div>
-      )}
-      <Surface>
-        {loading && (
-          <div className="DataPage__loading flex justify-center p-5 text-muted">
-            <Spinner size="lg" />
-          </div>
-        )}
-        {!loading && filteredDataSources.length > 0 && (
-          <Table
-            dense
-            striped
-            hover
-            stickyFirstColumn
-            withColumnBorders
-            label="Data sources"
-            className="rounded-none border-0"
+    <div className="DataPage__dataSources max-w-7xl">
+      <div className="DataPage__filters mb-4 flex flex-wrap items-center gap-3">
+        <SegmentedControl
+          aria-label="Data source filters"
+          size="md"
+          value={filter}
+          onValueChange={(value) => setFilter(value)}
+          data={FILTER_OPTIONS.map((option) => ({
+            value: option.value,
+            label: (
+              <span className="DataPage__filter flex items-center justify-center gap-1.5 whitespace-nowrap">
+                {option.label}
+                <span className="DataPage__filterCount rounded-full bg-chip px-1.5 text-xs leading-4 text-muted">
+                  {filterCounts[option.value]}
+                </span>
+              </span>
+            ),
+          }))}
+        />
+        <div className="DataPage__newDataSource ml-auto">
+          <ConditionalTooltip
+            label="You don't have access to create new data sources"
+            condition={!props.canEdit}
           >
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>id</TableHeaderCell>
-                <TableHeaderCell>description</TableHeaderCell>
-                <TableHeaderCell>type</TableHeaderCell>
-                <TableHeaderCell>url</TableHeaderCell>
-                <TableHeaderCell>status</TableHeaderCell>
-                <TableHeaderCell>last synced</TableHeaderCell>
-                <TableHeaderCell>last published</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredDataSources.map((dataSource) => (
-                <TableRow key={dataSource.id}>
-                  <TableCell className={cn(CELL_CLASSES, 'whitespace-nowrap')}>
-                    <a href={`/cms/data/${dataSource.id}`}>{dataSource.id}</a>
-                  </TableCell>
-                  <TableCell className={cn(CELL_CLASSES, 'min-w-40')}>
-                    {dataSource.description || ''}
-                  </TableCell>
-                  <TableCell className={CELL_CLASSES}>
-                    {dataSource.type}
-                  </TableCell>
-                  <TableCell className={CELL_CLASSES}>
-                    {isGoogleSheetUrl(dataSource.url) ? (
-                      <div className="DataPage__DataSourcesTable__url flex items-center gap-1.5">
-                        <IconButton
-                          href={dataSource.url!}
-                          target="_blank"
-                          rel="noreferrer"
-                          size="xs"
-                          label="Open spreadsheet"
-                          variant="green"
-                        >
-                          <IconTable stroke="2.25" />
-                        </IconButton>
-                        <a
-                          className="DataPage__DataSourcesTable__url__text inline-block truncate"
-                          href={dataSource.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {dataSource.url}
-                        </a>
-                      </div>
-                    ) : (
-                      dataSource.url || ''
-                    )}
-                  </TableCell>
-                  <TableCell className={CELL_CLASSES}>
-                    <DataSourceStatusBadge dataSource={dataSource} />
-                  </TableCell>
-                  <TableCell className={CELL_CLASSES}>
-                    <DataSourceStatusButton
-                      dataSource={dataSource}
-                      action="sync"
-                    />
-                  </TableCell>
-                  <TableCell className={CELL_CLASSES}>
-                    <DataSourceStatusButton
-                      dataSource={dataSource}
-                      action="publish"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-        {!loading && filteredDataSources.length === 0 && (
-          <Text className="DataPage__emptyText p-5">
-            No data sources found.
+            <Button
+              variant="primary"
+              icon={<IconPlus />}
+              href="/cms/data/new"
+              disabled={!props.canEdit}
+            >
+              New data source
+            </Button>
+          </ConditionalTooltip>
+        </div>
+      </div>
+      {filteredDataSources.length > 0 ? (
+        <div className="DataPage__grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredDataSources.map((dataSource) => (
+            <DataPage.Card
+              key={dataSource.id}
+              dataSource={dataSource}
+              canPublish={props.canPublish}
+              onChange={() => init()}
+            />
+          ))}
+        </div>
+      ) : (
+        <Surface>
+          <Text
+            className="DataPage__noResults px-5 py-10 text-center"
+            size="body-sm"
+            color="gray"
+          >
+            {filter === 'archived'
+              ? 'No archived data sources.'
+              : 'No data sources yet.'}
           </Text>
-        )}
-      </Surface>
+        </Surface>
+      )}
     </div>
   );
 };
+
+interface DataSourceCardProps {
+  dataSource: DataSource;
+  canPublish: boolean;
+  /** Called after the data source is synced or published. */
+  onChange: () => void;
+}
+
+/**
+ * A data source's card. The whole card links to the data source's page, while
+ * the spreadsheet icon, badges and action buttons sit above that link.
+ */
+DataPage.Card = (props: DataSourceCardProps) => {
+  const dataSource = props.dataSource;
+  const isArchived = Boolean(dataSource.archivedAt);
+  const hasChanges = !isArchived && testHasUnpublishedChanges(dataSource);
+  const sync = useDataSourceAction(dataSource, 'sync', props.onChange);
+  const publish = useDataSourceAction(dataSource, 'publish', props.onChange);
+  const changesModal = useDataSourceChangesModal();
+
+  function openChanges(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    changesModal.open(dataSource, {onPublish: props.onChange});
+  }
+
+  return (
+    <article className="DataPage__card relative flex flex-col rounded-xl border border-border bg-surface shadow-sm hover:border-border-strong">
+      <div className="DataPage__cardBody flex flex-1 flex-col gap-3 p-4">
+        <div className="DataPage__cardHeader flex items-start gap-3">
+          {dataSource.type === 'gsheet' && dataSource.url ? (
+            <Tooltip label="Open spreadsheet">
+              <a
+                className="DataPage__sheetLink relative z-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                href={dataSource.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open spreadsheet for ${dataSource.id}`}
+              >
+                <DataSourceIcon
+                  type="gsheet"
+                  className="bg-success-soft text-success hover:brightness-95"
+                />
+              </a>
+            </Tooltip>
+          ) : (
+            <DataSourceIcon type={dataSource.type} />
+          )}
+          <div className="DataPage__cardTitle min-w-0 flex-1">
+            <a
+              className="DataPage__cardLink block truncate font-mono text-base font-semibold text-strong no-underline underline-offset-3 after:absolute after:inset-0 after:rounded-xl hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-focus"
+              href={`/cms/data/${dataSource.id}`}
+            >
+              {dataSource.id}
+            </a>
+            <div className="DataPage__cardSource mt-0.5 truncate text-sm text-muted">
+              {getSourceLabel(dataSource)}
+            </div>
+          </div>
+          <div className="DataPage__cardBadges relative z-1 flex flex-col items-end gap-1">
+            <DataSourceStatusBadge dataSource={dataSource} />
+            {hasChanges && (
+              <Badge
+                className="DataPage__hasChanges cursor-pointer transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                size="xs"
+                variant="gradient"
+                gradient="orange"
+                role="button"
+                tabIndex={0}
+                aria-haspopup="dialog"
+                onClick={openChanges}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    openChanges(e);
+                  }
+                }}
+              >
+                Has changes
+              </Badge>
+            )}
+          </div>
+        </div>
+        {dataSource.description && (
+          <p className="DataPage__cardDescription m-0 text-md leading-snug text-fg">
+            {dataSource.description}
+          </p>
+        )}
+        <dl className="DataPage__cardStats m-0 mt-auto flex flex-col gap-1.5 border-t border-surface-active pt-3 text-sm">
+          <DataPage.Stat
+            label="Synced"
+            at={dataSource.syncedAt}
+            by={dataSource.syncedBy}
+          />
+          <DataPage.Stat
+            label="Published"
+            at={dataSource.publishedAt}
+            by={dataSource.publishedBy}
+          />
+          <div className="DataPage__cardStat flex justify-between gap-3">
+            <dt className="text-muted">Schedule</dt>
+            <dd className="m-0 truncate text-right">
+              {formatCronSchedule(dataSource.cron)}
+              {dataSource.cron?.enabled && dataSource.cron.autoPublish
+                ? ', auto-publish'
+                : ''}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div className="DataPage__cardActions relative z-1 grid grid-cols-2 gap-2 border-t border-surface-active px-4 py-2.5">
+        <Tooltip label="Data source is archived" disabled={!isArchived}>
+          <Button
+            className="w-full"
+            icon={<IconRefresh />}
+            loading={sync.loading}
+            disabled={isArchived}
+            onClick={() => sync.run()}
+          >
+            Sync
+          </Button>
+        </Tooltip>
+        <Tooltip
+          label={
+            isArchived
+              ? 'Data source is archived'
+              : "You don't have access to publish this data source"
+          }
+          disabled={!isArchived && props.canPublish}
+        >
+          <Button
+            className="w-full"
+            variant="blue"
+            icon={<IconArrowUp />}
+            loading={publish.loading}
+            disabled={isArchived || !props.canPublish}
+            onClick={() => publish.run()}
+          >
+            Publish
+          </Button>
+        </Tooltip>
+      </div>
+    </article>
+  );
+};
+
+/** A "Synced" or "Published" row, e.g. "12 minutes ago · Jane". */
+DataPage.Stat = (props: {label: string; at?: Timestamp; by?: string}) => {
+  const millis = props.at?.toMillis?.();
+  return (
+    <div className="DataPage__cardStat flex justify-between gap-3">
+      <dt className="text-muted">{props.label}</dt>
+      <dd className="m-0 flex min-w-0 justify-end gap-1 whitespace-nowrap text-right">
+        {millis ? (
+          <>
+            <Tooltip label={new Date(millis).toLocaleString()}>
+              <span className="cursor-default">{getTimeAgo(millis)}</span>
+            </Tooltip>
+            {props.by && (
+              <>
+                <span className="text-muted">·</span>
+                <UserTag className="truncate" email={props.by} />
+              </>
+            )}
+          </>
+        ) : (
+          <span className="text-muted">Never</span>
+        )}
+      </dd>
+    </div>
+  );
+};
+
+/**
+ * Describes where a data source reads from: "Google Sheet", or the request
+ * method and url for HTTP.
+ */
+function getSourceLabel(dataSource: DataSource): string {
+  if (dataSource.type === 'gsheet') {
+    return 'Google Sheet';
+  }
+  const method = dataSource.httpOptions?.method || 'GET';
+  const url = (dataSource.url || '').replace(/^https?:\/\//, '');
+  return `${method} ${url}`;
+}

@@ -576,3 +576,54 @@ async function fetchHttpData(dataSource: DataSource) {
 function isRelativeUrl(url: string) {
   return url && url.startsWith('/');
 }
+
+/**
+ * Returns true if the data source was synced after it was last published, so
+ * its draft data may differ from what's live.
+ */
+export function testHasUnpublishedChanges(dataSource: DataSource): boolean {
+  const syncedAt = dataSource.syncedAt?.toMillis?.();
+  const publishedAt = dataSource.publishedAt?.toMillis?.();
+  if (!syncedAt || !publishedAt) {
+    return false;
+  }
+  return syncedAt > publishedAt;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Describes a data source's sync schedule, e.g. "Every 6 hours", "Daily at
+ * 7:00 PM" or "Manual" when scheduled sync is off.
+ */
+export function formatCronSchedule(cron?: DataSourceCron): string {
+  if (!cron?.enabled) {
+    return 'Manual';
+  }
+  const schedule = cron.schedule || 'interval';
+  if (schedule === 'interval') {
+    const interval = cron.interval || 1;
+    const unit = (cron.unit || 'hours').replace(/s$/, '');
+    return interval === 1 ? `Every ${unit}` : `Every ${interval} ${unit}s`;
+  }
+  const fields = (cron.expression || '').trim().split(/\s+/);
+  const minute = parseInt(fields[0], 10);
+  const hour = parseInt(fields[1], 10);
+  const time =
+    Number.isNaN(minute) || Number.isNaN(hour)
+      ? ''
+      : new Date(2000, 0, 1, hour, minute).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+  if (schedule === 'daily' && time) {
+    return `Daily at ${time}`;
+  }
+  if (schedule === 'weekly' && time) {
+    const weekday = WEEKDAYS[parseInt(fields[4], 10) % 7];
+    if (weekday) {
+      return `Weekly on ${weekday} at ${time}`;
+    }
+  }
+  return cron.expression ? `Cron: ${cron.expression}` : 'Scheduled';
+}
