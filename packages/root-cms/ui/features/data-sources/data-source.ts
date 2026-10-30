@@ -590,6 +590,41 @@ export function testHasUnpublishedChanges(dataSource: DataSource): boolean {
   return syncedAt > publishedAt;
 }
 
+/**
+ * Returns true if the data source has synced data that isn't live yet: it has
+ * been synced and either never published or synced since it was published.
+ */
+export function testHasDataToPublish(dataSource: DataSource): boolean {
+  const syncedAt = dataSource.syncedAt?.toMillis?.();
+  if (!syncedAt) {
+    return false;
+  }
+  const publishedAt = dataSource.publishedAt?.toMillis?.();
+  return !publishedAt || syncedAt > publishedAt;
+}
+
+/**
+ * Returns why the data source can't be published right now, or an empty
+ * string if it can.
+ */
+export function getPublishDisabledReason(
+  dataSource: DataSource,
+  canPublish: boolean
+): string {
+  if (dataSource.archivedAt) {
+    return 'Data source is archived';
+  }
+  if (!canPublish) {
+    return "You don't have access to publish this data source";
+  }
+  if (!testHasDataToPublish(dataSource)) {
+    return dataSource.syncedAt
+      ? 'The latest sync is already published'
+      : 'Sync the data source before publishing';
+  }
+  return '';
+}
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /**
