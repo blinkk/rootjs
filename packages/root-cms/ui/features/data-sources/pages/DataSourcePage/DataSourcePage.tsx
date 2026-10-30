@@ -23,6 +23,7 @@ import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
+import {toDataTable} from '../../data-source-diff.js';
 import {
   DataSourceData,
   DataSource,
@@ -177,32 +178,11 @@ DataSourcePage.DataSection = (props: {
   }
 
   if (dataSource.type === 'gsheet') {
-    let headers: string[] | undefined = storedHeaders;
-    let rows: any[] = [];
-    if (dataSource.dataFormat === 'grid') {
-      // The first row of a grid contains the column headers.
-      const grid = (data as string[][]) || [];
-      headers = storedHeaders || grid[0] || [];
-      rows = grid.slice(1);
-    } else {
-      const items = data as any[];
-      if (!headers) {
-        // Reformat Array<Record<string, string>> to string[][]. Preserve key order
-        // by iterating through object keys as encountered.
-        const headersSet = new Set<string>();
-        items.forEach((item) => {
-          for (const key in item) {
-            if (key) {
-              headersSet.add(key);
-            }
-          }
-        });
-        headers = Array.from(headersSet);
-      }
-      items.forEach((item) => {
-        rows.push(headers!.map((header) => item[header] || ''));
-      });
-    }
+    const {headers, rows} = toDataTable(
+      dataSource.dataFormat,
+      data,
+      storedHeaders
+    );
     return (
       <DataSourcePage.DataSectionWrap dataSource={dataSource}>
         <DataSourcePage.DataTable headers={headers} rows={rows} />
