@@ -14,7 +14,7 @@ export interface DataTableDiffCell {
   oldValue?: string;
 }
 
-/** A row that was added, removed or changed between two tables. */
+/** A row that was added, removed, or changed between two tables. */
 export interface DataTableDiffRow {
   type: 'added' | 'removed' | 'changed';
   /**

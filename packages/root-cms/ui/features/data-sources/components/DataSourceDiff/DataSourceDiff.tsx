@@ -67,17 +67,20 @@ DataSourceDiff.TableDiff = (props: {diff: DataTableDiff}) => {
         <span className="text-warning">{diff.changed} changed</span>
         <span className="text-danger">{diff.removed} removed</span>
       </div>
-      <div className="DataSourceDiff__tableWrap overflow-x-auto rounded-lg border border-border">
+      <div className="DataSourceDiff__tableWrap overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
         <table className="DataSourceDiff__table w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="DataSourceDiff__th whitespace-nowrap border-b border-border bg-surface-hover px-2.5 py-2 text-left font-medium text-muted">
-                Row
+              <th
+                className="DataSourceDiff__th whitespace-nowrap border-b border-border bg-surface-hover px-3 py-2 text-left font-medium text-muted"
+                aria-label="Row"
+              >
+                #
               </th>
               {diff.headers.map((header) => (
                 <th
                   key={header}
-                  className="DataSourceDiff__th whitespace-nowrap border-b border-border bg-surface-hover px-2.5 py-2 text-left font-medium text-muted"
+                  className="DataSourceDiff__th whitespace-nowrap border-b border-border bg-surface-hover px-3 py-2 text-left font-medium text-muted"
                 >
                   {header}
                 </th>
@@ -89,13 +92,13 @@ DataSourceDiff.TableDiff = (props: {diff: DataTableDiff}) => {
               <tr
                 key={`${row.type}-${row.index}`}
                 className={cn(
-                  'DataSourceDiff__row',
+                  'DataSourceDiff__row last:*:border-b-0',
                   `DataSourceDiff__row--${row.type}`,
                   row.type === 'added' && 'bg-success-soft',
                   row.type === 'removed' && 'bg-danger-soft text-danger'
                 )}
               >
-                <td className="DataSourceDiff__rowNumber whitespace-nowrap border-b border-surface-active px-2.5 py-2 align-top text-muted">
+                <td className="DataSourceDiff__rowNumber whitespace-nowrap border-b border-surface-active px-3 py-2 align-top text-muted">
                   {row.type === 'added'
                     ? '+'
                     : row.type === 'removed'
@@ -108,7 +111,7 @@ DataSourceDiff.TableDiff = (props: {diff: DataTableDiff}) => {
                   <td
                     key={i}
                     className={cn(
-                      'DataSourceDiff__cell max-w-60 border-b border-surface-active px-2.5 py-2 align-top wrap-anywhere',
+                      'DataSourceDiff__cell max-w-60 border-b border-surface-active px-3 py-2 align-top wrap-anywhere',
                       row.type === 'removed' && 'line-through'
                     )}
                   >

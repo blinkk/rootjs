@@ -178,7 +178,7 @@ interface DataSourceCardProps {
 
 /**
  * A data source's card. The whole card links to the data source's page, while
- * the spreadsheet icon, badges and action buttons sit above that link.
+ * the spreadsheet icon, badges, and action buttons sit above that link.
  */
 DataPage.Card = (props: DataSourceCardProps) => {
   const dataSource = props.dataSource;

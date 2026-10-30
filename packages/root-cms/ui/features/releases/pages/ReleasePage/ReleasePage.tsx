@@ -15,6 +15,7 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
+import {RelativeTime} from '../../../../components/RelativeTime/RelativeTime.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
@@ -34,7 +35,7 @@ import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../utils/objects.js';
-import {getTimeAgo} from '../../../../utils/time.js';
+import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {
@@ -330,13 +331,7 @@ ReleasePage.UserName = (props: {email: string}) => {
 
 /** A relative date, e.g. "2 days ago", with the full date in a tooltip. */
 ReleasePage.TimeAgo = (props: {ts: unknown}) => {
-  return (
-    <Tooltip label={formatDate(props.ts)}>
-      <span className="ReleasePage__timeAgo cursor-default underline decoration-dotted underline-offset-3">
-        {formatTimeAgo(props.ts)}
-      </span>
-    </Tooltip>
-  );
+  return <RelativeTime className="ReleasePage__timeAgo" ts={props.ts} />;
 };
 
 interface ReleasePageAiPanelProps {
@@ -902,7 +897,7 @@ ReleasePage.DetailsRow = (props: {
     <>
       <dt className="ReleasePage__detailsLabel text-muted">{props.label}</dt>
       <dd className="ReleasePage__detailsValue m-0 text-right text-fg wrap-anywhere">
-        {hasDate ? formatDetailsDate(props.at) : '—'}
+        {hasDate ? formatDateTime(props.at) : '—'}
         {hasDate && props.by && ` by ${props.by}`}
       </dd>
     </>
@@ -1281,31 +1276,6 @@ function getDocImage(docId: string, doc: CMSDoc) {
  */
 function formatTimeAgo(ts: unknown): string {
   return getTimeAgo(toMillis(ts));
-}
-
-/**
- * Formats a Firestore timestamp as e.g. "2026-10-24 01:30 PM" in local time.
- */
-function formatDate(ts: unknown): string {
-  const date = new Date(toMillis(ts));
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const hours = date.getHours();
-  const ampm = hours < 12 ? 'AM' : 'PM';
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(hours % 12 || 12)}:${pad(date.getMinutes())} ${ampm}`
-  );
-}
-
-/** Formats a Firestore timestamp as e.g. "Oct 26, 2026, 1:30 PM". */
-function formatDetailsDate(ts: unknown): string {
-  return new Date(toMillis(ts)).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 function rollbackConflictLabel(conflict: ReleaseRollbackConflict) {

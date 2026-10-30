@@ -1,26 +1,30 @@
 import {
   IconArchive,
   IconCloudOff,
+  IconDotsVertical,
   IconRestore,
-  IconTrashFilled,
+  IconTrash,
 } from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
-import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {Menu, MenuDivider, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
+import {notifyErrors} from '../../../../utils/notifications.js';
 import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
+import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
 import {
   DataSource,
   archiveDataSource,
@@ -33,6 +37,7 @@ import {
 export function EditDataSourcePage(props: {id: string}) {
   usePageTitle(`Edit Data Source: ${props.id}`);
   const {route} = useLocation();
+  const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
   const modals = useModals();
   const {roles} = useProjectRoles();
@@ -40,9 +45,10 @@ export function EditDataSourcePage(props: {id: string}) {
   const canPublish = testCanPublish(roles, currentUserEmail);
 
   useEffect(() => {
-    getDataSource(props.id).then((ds) => {
-      setDataSource(ds);
-    });
+    setLoading(true);
+    notifyErrors(async () => {
+      setDataSource(await getDataSource(props.id));
+    }).finally(() => setLoading(false));
   }, [props.id]);
 
   function onDeleteClicked() {
@@ -212,74 +218,89 @@ export function EditDataSourcePage(props: {id: string}) {
 
   return (
     <Layout>
-      <div className="EditDataSourcePage bg-page p-page">
-        <div className="EditDataSourcePage__header mb-5 max-w-150">
+      <div className="EditDataSourcePage bg-page px-page pt-page">
+        <div className="EditDataSourcePage__content max-w-180">
           <Breadcrumbs
-            className="EditDataSourcePage__header__breadcrumbs mb-3"
+            className="EditDataSourcePage__breadcrumbs mb-3"
             items={[
               {label: 'Data Sources', href: '/cms/data'},
               {label: props.id, href: `/cms/data/${props.id}`},
               {label: 'Edit'},
             ]}
           />
-          <div className="EditDataSourcePage__header__titleWrap flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Heading size="h1" className="min-w-0 break-words">
-              Edit Data Source: {props.id}
-            </Heading>
-            <div className="EditDataSourcePage__header__controls flex items-center">
-              {isPublished && !isArchived && (
-                <IconButton
-                  label="Unpublish"
-                  tooltip={
-                    canPublish
-                      ? true
-                      : "You don't have access to unpublish data sources"
+          {loading ? (
+            <Spinner size="lg" className="text-muted" />
+          ) : dataSource ? (
+            <>
+              <div className="EditDataSourcePage__header mb-7 flex items-start gap-4">
+                <div className="EditDataSourcePage__header__text min-w-0 grow">
+                  <div className="EditDataSourcePage__title flex flex-wrap items-center gap-2.5">
+                    <Heading
+                      size="h1"
+                      weight="semi-bold"
+                      className="min-w-0 wrap-anywhere"
+                    >
+                      {props.id}
+                    </Heading>
+                    <DataSourceStatusBadge dataSource={dataSource} />
+                  </div>
+                  <Text as="p" color="gray" className="mb-0 mt-2 max-w-prose">
+                    Changes apply from the next sync. Data that’s already
+                    published stays live until you publish again.
+                  </Text>
+                </div>
+                <Menu
+                  placement="bottom-end"
+                  trigger={
+                    <IconButton label="More actions" variant="default">
+                      <IconDotsVertical stroke="1.5" />
+                    </IconButton>
                   }
-                  onClick={onUnpublishClicked}
-                  loading={!roles}
-                  disabled={!canPublish}
                 >
-                  <IconCloudOff stroke="1.5" />
-                </IconButton>
-              )}
-              {isArchived ? (
-                <IconButton
-                  label="Unarchive"
-                  tooltip={
-                    canPublish
-                      ? true
-                      : "You don't have access to archive data sources"
-                  }
-                  onClick={onUnarchiveClicked}
-                  loading={!roles}
-                  disabled={!canPublish}
-                >
-                  <IconRestore stroke="1.5" />
-                </IconButton>
-              ) : (
-                <IconButton
-                  label="Archive"
-                  tooltip={
-                    canPublish
-                      ? true
-                      : "You don't have access to archive data sources"
-                  }
-                  onClick={onArchiveClicked}
-                  loading={!roles}
-                  disabled={!canPublish}
-                >
-                  <IconArchive stroke="1.5" />
-                </IconButton>
-              )}
-              <IconButton label="Delete" onClick={onDeleteClicked}>
-                <IconTrashFilled stroke="1.5" />
-              </IconButton>
-            </div>
-          </div>
+                  {isPublished && !isArchived && (
+                    <MenuItem
+                      icon={<IconCloudOff stroke="1.5" />}
+                      disabled={!canPublish}
+                      onClick={onUnpublishClicked}
+                    >
+                      Unpublish
+                    </MenuItem>
+                  )}
+                  {isArchived ? (
+                    <MenuItem
+                      icon={<IconRestore stroke="1.5" />}
+                      disabled={!canPublish}
+                      onClick={onUnarchiveClicked}
+                    >
+                      Unarchive
+                    </MenuItem>
+                  ) : (
+                    <MenuItem
+                      icon={<IconArchive stroke="1.5" />}
+                      disabled={!canPublish}
+                      onClick={onArchiveClicked}
+                    >
+                      Archive
+                    </MenuItem>
+                  )}
+                  <MenuDivider />
+                  <MenuItem
+                    icon={<IconTrash stroke="1.5" />}
+                    danger
+                    onClick={onDeleteClicked}
+                  >
+                    Delete data source
+                  </MenuItem>
+                </Menu>
+              </div>
+              <DataSourceForm dataSource={dataSource} />
+            </>
+          ) : (
+            <Text className="EditDataSourcePage__notFound">
+              Data source not found.
+            </Text>
+          )}
         </div>
-        <Surface className="EditDataSourcePage__form max-w-172 p-4 md:p-5">
-          <DataSourceForm dataSourceId={props.id} />
-        </Surface>
       </div>
     </Layout>
   );

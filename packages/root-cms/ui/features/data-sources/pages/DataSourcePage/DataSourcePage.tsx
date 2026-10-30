@@ -17,14 +17,6 @@ import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '../../../../primitives/Table/Table.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
@@ -124,7 +116,7 @@ export function DataSourcePage(props: {id: string}) {
   );
 }
 
-/** The data source's id, status, description and actions. */
+/** The data source's id, status, description, and actions. */
 DataSourcePage.Header = (props: {
   dataSource: DataSource;
   /** Called after the data source is synced or published. */
@@ -205,7 +197,7 @@ DataSourcePage.Header = (props: {
   );
 };
 
-/** A strip of the data source's source, sync and publish info. */
+/** A strip of the data source's source, sync, and publish info. */
 DataSourcePage.Stats = (props: {dataSource: DataSource}) => {
   const dataSource = props.dataSource;
   const hasChanges =
@@ -403,7 +395,7 @@ DataSourcePage.Data = (props: {
       props.data.headers
     );
     return (
-      <Surface className="DataSourcePage__dataContent rounded-xl">
+      <Surface className="DataSourcePage__dataContent rounded-xl shadow-sm">
         <DataSourcePage.DataTable headers={headers} rows={rows} />
       </Surface>
     );
@@ -421,44 +413,47 @@ DataSourcePage.Empty = (props: {children: ComponentChildren}) => {
   );
 };
 
+/**
+ * The synced or published rows of a sheet, in the same style as the changes
+ * view.
+ */
 DataSourcePage.DataTable = (props: {headers?: string[]; rows?: string[][]}) => {
   const headers = props.headers || [];
   const rows = props.rows || [];
-
   return (
-    <div className="DataSourcePage__DataTable">
-      <Table
-        className="rounded-none border-0"
-        classNames={{table: 'DataSourcePage__DataTable__table'}}
-        dense
-        striped
-        hover
-        label="Data"
-      >
-        {headers.length > 0 && (
-          <TableHead>
-            <TableRow>
-              {headers.map((header) => (
-                <TableHeaderCell key={header}>{header}</TableHeaderCell>
-              ))}
-            </TableRow>
-          </TableHead>
-        )}
-        <TableBody>
+    <div className="DataSourcePage__dataTable overflow-x-auto">
+      <table className="DataSourcePage__dataTableTable w-full border-collapse text-sm text-fg">
+        <thead>
+          <tr>
+            {headers.map((header) => (
+              <th
+                key={header}
+                className="DataSourcePage__dataTableTh whitespace-nowrap border-b border-border bg-surface-hover px-3 py-2 text-left font-medium text-muted"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
           {rows.map((row, rowIndex) => (
-            <TableRow key={rowIndex}>
+            <tr
+              key={rowIndex}
+              className="DataSourcePage__dataTableRow hover:bg-surface-hover last:*:border-b-0"
+            >
               {row.map((cell, i) => (
-                <TableCell
+                <td
                   key={i}
-                  className="max-w-100 overflow-hidden text-ellipsis"
+                  className="DataSourcePage__dataTableCell max-w-100 truncate border-b border-surface-active px-3 py-2"
+                  title={cell}
                 >
                   {cell}
-                </TableCell>
+                </td>
               ))}
-            </TableRow>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 };

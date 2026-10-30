@@ -48,13 +48,44 @@ export function timestamp(): number {
   return Math.floor(new Date().getTime());
 }
 
-export function formatDateTime(ts: Timestamp) {
-  const date = new Date(ts.toMillis());
-  return date.toLocaleDateString('en', {
-    year: 'numeric',
+/**
+ * A Firestore timestamp, a serialized one (`{seconds, nanoseconds}` or
+ * `{_seconds, _nanoseconds}`), a `Date`, or epoch millis.
+ */
+export type TimestampLike =
+  | Timestamp
+  | Date
+  | number
+  | {seconds: number; nanoseconds?: number}
+  | {_seconds: number; _nanoseconds?: number};
+
+/** Converts a timestamp-like value to epoch millis, or 0 if it isn't one. */
+export function timestampToMillis(ts: unknown): number {
+  if (typeof ts === 'number') {
+    return ts;
+  }
+  if (ts instanceof Date) {
+    return ts.getTime();
+  }
+  const value = ts as any;
+  if (typeof value?.toMillis === 'function') {
+    return value.toMillis();
+  }
+  const seconds = value?.seconds ?? value?._seconds ?? 0;
+  const nanos = value?.nanoseconds ?? value?._nanoseconds ?? 0;
+  return seconds * 1000 + Math.floor(nanos / 1e6);
+}
+
+/**
+ * Formats a timestamp as a full local date and time, e.g. "Oct 26, 2026,
+ * 1:30 PM". This is the format for date/time tooltips across the CMS.
+ */
+export function formatDateTime(ts: TimestampLike | unknown): string {
+  return new Date(timestampToMillis(ts)).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
-    hour: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
     minute: '2-digit',
   });
 }
