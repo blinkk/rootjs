@@ -8,23 +8,23 @@ import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
-import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
-import {getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
-import {UserTag} from '../../../users/UserTag/UserTag.js';
+import {DataSourceActivity} from '../../components/DataSourceActivity/DataSourceActivity.js';
 import {useDataSourceChangesModal} from '../../components/DataSourceChangesModal/DataSourceChangesModal.js';
 import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
 import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
+import {HasChangesBadge} from '../../components/HasChangesBadge/HasChangesBadge.js';
 import {
   DataSource,
   formatCronSchedule,
+  getPublishDisabledReason,
   listDataSources,
   testHasUnpublishedChanges,
 } from '../../data-source.js';
@@ -184,15 +184,13 @@ DataPage.Card = (props: DataSourceCardProps) => {
   const dataSource = props.dataSource;
   const isArchived = Boolean(dataSource.archivedAt);
   const hasChanges = !isArchived && testHasUnpublishedChanges(dataSource);
+  const publishDisabledReason = getPublishDisabledReason(
+    dataSource,
+    props.canPublish
+  );
   const sync = useDataSourceAction(dataSource, 'sync', props.onChange);
   const publish = useDataSourceAction(dataSource, 'publish', props.onChange);
   const changesModal = useDataSourceChangesModal();
-
-  function openChanges(e: Event) {
-    e.preventDefault();
-    e.stopPropagation();
-    changesModal.open(dataSource, {onPublish: props.onChange});
-  }
 
   return (
     <article className="DataPage__card relative flex flex-col rounded-xl border border-border bg-surface shadow-sm hover:border-border-strong">
@@ -230,23 +228,12 @@ DataPage.Card = (props: DataSourceCardProps) => {
           <div className="DataPage__cardBadges relative z-1 flex flex-col items-end gap-1">
             <DataSourceStatusBadge dataSource={dataSource} />
             {hasChanges && (
-              <Badge
-                className="DataPage__hasChanges cursor-pointer transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                size="xs"
-                variant="gradient"
-                gradient="orange"
-                role="button"
-                tabIndex={0}
-                aria-haspopup="dialog"
-                onClick={openChanges}
-                onKeyDown={(e: KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    openChanges(e);
-                  }
-                }}
-              >
-                Has changes
-              </Badge>
+              <HasChangesBadge
+                className="DataPage__hasChanges"
+                onActivate={() =>
+                  changesModal.open(dataSource, {onPublish: props.onChange})
+                }
+              />
             )}
           </div>
         </div>
@@ -260,6 +247,7 @@ DataPage.Card = (props: DataSourceCardProps) => {
             label="Synced"
             at={dataSource.syncedAt}
             by={dataSource.syncedBy}
+            newer={hasChanges}
           />
           <DataPage.Stat
             label="Published"
@@ -290,19 +278,15 @@ DataPage.Card = (props: DataSourceCardProps) => {
           </Button>
         </Tooltip>
         <Tooltip
-          label={
-            isArchived
-              ? 'Data source is archived'
-              : "You don't have access to publish this data source"
-          }
-          disabled={!isArchived && props.canPublish}
+          label={publishDisabledReason}
+          disabled={!publishDisabledReason}
         >
           <Button
             className="w-full"
             variant="blue"
             icon={<IconArrowUp />}
             loading={publish.loading}
-            disabled={isArchived || !props.canPublish}
+            disabled={Boolean(publishDisabledReason)}
             onClick={() => publish.run()}
           >
             Publish
@@ -314,27 +298,18 @@ DataPage.Card = (props: DataSourceCardProps) => {
 };
 
 /** A "Synced" or "Published" row, e.g. "12 minutes ago · Jane". */
-DataPage.Stat = (props: {label: string; at?: Timestamp; by?: string}) => {
-  const millis = props.at?.toMillis?.();
+DataPage.Stat = (props: {
+  label: string;
+  at?: Timestamp;
+  by?: string;
+  /** Marks the time as newer than the last publish. */
+  newer?: boolean;
+}) => {
   return (
     <div className="DataPage__cardStat flex justify-between gap-3">
       <dt className="text-muted">{props.label}</dt>
-      <dd className="m-0 flex min-w-0 justify-end gap-1 whitespace-nowrap text-right">
-        {millis ? (
-          <>
-            <Tooltip label={new Date(millis).toLocaleString()}>
-              <span className="cursor-default">{getTimeAgo(millis)}</span>
-            </Tooltip>
-            {props.by && (
-              <>
-                <span className="text-muted">·</span>
-                <UserTag className="truncate" email={props.by} />
-              </>
-            )}
-          </>
-        ) : (
-          <span className="text-muted">Never</span>
-        )}
+      <dd className="m-0 flex min-w-0 justify-end">
+        <DataSourceActivity at={props.at} by={props.by} newer={props.newer} />
       </dd>
     </div>
   );
