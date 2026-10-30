@@ -253,7 +253,7 @@ const STARTER_TREE = `my-site/
 
 const GETTING_STARTED: DocCopy = {
   slug: 'index',
-  note: 'Adds a section on setting up a cloned project on a new machine, with a prompt for the root-dev-setup agent skill, and points the AI agents section at that skill instead of `root-cms setup`.',
+  note: 'Lists theming the CMS and setting up email notifications among the things an agent can do with the installed skills.',
   fields: {
     meta: {
       title: 'Getting started – Root.js',
@@ -507,7 +507,9 @@ pnpm exec root secrets sync`
               ul(
                 'Look up or update content, e.g. "list the pages that don\'t have a meta description".',
                 `Propose content changes as a YAML file that your team reviews in a pull request, then applies with ${c('root-cms proposal.apply')}.`,
-                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`
+                `Theme the CMS to match your brand (see ${a('/docs/cms/customization/#branding', 'Branding and themes')}).`,
+                `Set up a fresh clone of the project on a teammate's machine: tools, ${c('gcloud')} sign-in, shared secrets and CMS access (see ${a('#existing-project', 'Set up an existing project')}).`,
+                `Set up email notifications, including the email service they're sent with (see ${a('/docs/cms/notifications/#email-delivery', 'Delivering email')}).`
               ),
               p(
                 `The skills install to an existing agent skills folder, such as ${c('.claude/skills')}, or to ${c('.agent/skills')} if there isn't one. Re-run the command with ${c('--force')} after upgrading ${c('@blinkk/root-cms')} to pick up new versions.`
@@ -2529,7 +2531,7 @@ export default schema.collection({
 
 const NOTIFICATIONS: DocCopy = {
   slug: 'cms--notifications',
-  note: 'New page on CMS actions, the onAction hook, notification services (email and comment emails), email delivery and translation services.',
+  note: 'Adds the Mail API limits, the scheduled job, and a prompt for the root-cms-email-setup agent skill to the email delivery section.',
   fields: {
     meta: {
       title: 'Notifications and integrations – Root.js',
@@ -2666,17 +2668,39 @@ cmsPlugin({
             ),
           ]
         ),
-        section('email-delivery', 'Delivering email', [
-          p(
-            `Emails are queued in Firestore at ${c('Projects/&lt;id&gt;/Emails')} and sent by the Root.js email service, a small App Engine app (${c('apps/root-services')} in the Root.js repo) that reads the queue and sends with the App Engine Mail API. Deploy it to App Engine in the Google Cloud project that has your Firestore database, and set ${c('emailService')} to its URL so new emails are sent right away.`
-          ),
-          p(
-            `Emails are sent from ${c('noreply@&lt;project-id&gt;.appspotmail.com')} by default. A different ${c('from')} address must be an authorized sender for the Mail API. Set ${c('expireAfterMinutes')} to skip emails that couldn't be sent in time instead of sending them late.`
-          ),
-          p(
-            `Your own server code can send email through the same queue with ${c('cmsClient.sendEmail({to, subject, body, htmlBody})')}.`
-          ),
-        ]),
+        section(
+          'email-delivery',
+          'Delivering email',
+          [
+            p(
+              `Emails are queued in Firestore at ${c('Projects/&lt;id&gt;/Emails')} and sent by the Root.js email service, a small App Engine app (${c('apps/root-services')} in the Root.js repo) that reads the queue and sends with the App Engine Mail API. It only reads the queue of the Google Cloud project it runs in, so deploy it to the project that has your Firestore database. Set ${c('emailService')} to its URL so new emails are sent right away, and have a scheduled job call its ${c('/_/send_emails?projectId=&lt;id&gt;')} endpoint every few minutes to send anything that was missed.`
+            ),
+            p(
+              `The Mail API sends to at most 100 recipients a day, 8 a minute, and each recipient of an email counts. Emails over the limit are marked as failed and aren't retried, so send alerts to a Google Group address (which counts once) rather than to each person. For more volume, send through a provider like SendGrid with a ${a('#notification-services', 'custom notification service')}.`
+            ),
+            p(
+              `Emails are sent from ${c('noreply@&lt;project-id&gt;.appspotmail.com')} by default. A different ${c('from')} address must be an authorized sender for the Mail API. Set ${c('expireAfterMinutes')} to skip emails that couldn't be sent in time instead of sending them late.`
+            ),
+            p(
+              `Your own server code can send email through the same queue with ${c('cmsClient.sendEmail({to, subject, body, htmlBody})')}.`
+            ),
+            p(
+              'A coding agent can set all of this up for you. Paste this prompt in your project:'
+            ),
+          ],
+          [
+            plain(
+              `
+Set up email notifications for our CMS. Follow the instructions at
+https://rootjs.dev/skills/root-cms-email-setup.md`
+            ),
+            copy(
+              p(
+                `The agent asks who should get which emails, then deploys the email service to App Engine, creates the Firestore index and the scheduled job it needs, and adds ready-made emails for releases, publishes, publishing locks and comments to ${c('cms/emails.ts')}. It asks before creating or deploying anything, and ends by sending you a test email. ${c('root-cms skill.install')} also installs the skill, as ${c('root-cms-email-setup')}.`
+              )
+            ),
+          ]
+        ),
         section(
           'translation-services',
           'Translation services',
