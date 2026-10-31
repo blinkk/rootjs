@@ -193,7 +193,7 @@ export async function generateChatTitle(
     return fallback;
   }
   try {
-    const languageModel = resolveLanguageModel(withBrowserHeaders(model));
+    const languageModel = await resolveLanguageModel(withBrowserHeaders(model));
     const result = await generateText({
       model: languageModel,
       instructions: TITLE_GENERATION_SYSTEM_PROMPT,

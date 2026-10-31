@@ -326,7 +326,7 @@ export function buildSystemPrompt(
  * empty result.
  */
 export async function generateChatTitle(
-  model: ReturnType<typeof resolveLanguageModel>,
+  model: Awaited<ReturnType<typeof resolveLanguageModel>>,
   messages: Parameters<typeof deriveChatTitle>[0]
 ): Promise<string> {
   const fallback = deriveChatTitle(messages);
@@ -730,7 +730,7 @@ export async function summarizeDiff(
   options: SummarizeDiffOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(
+  const languageModel = await resolveLanguageModel(
     await resolveVertexCredentials(rootConfig, model)
   );
 
@@ -772,7 +772,7 @@ export async function generatePublishMessage(
   options: SummarizeDiffOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(
+  const languageModel = await resolveLanguageModel(
     await resolveVertexCredentials(rootConfig, model)
   );
 
@@ -826,7 +826,7 @@ export async function translateString(
   options: TranslateStringOptions
 ): Promise<Record<string, string>> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(
+  const languageModel = await resolveLanguageModel(
     await resolveVertexCredentials(rootConfig, model)
   );
 
@@ -915,7 +915,7 @@ export async function transformTranslations(
   options: TransformTranslationsOptions
 ): Promise<Record<string, string>> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(
+  const languageModel = await resolveLanguageModel(
     await resolveVertexCredentials(rootConfig, model)
   );
 
@@ -1007,7 +1007,7 @@ export async function generateAltText(
   options: GenerateAltTextOptions
 ): Promise<string> {
   const {model} = requireDefaultModel(rootConfig);
-  const languageModel = resolveLanguageModel(
+  const languageModel = await resolveLanguageModel(
     await resolveVertexCredentials(rootConfig, model)
   );
 

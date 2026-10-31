@@ -24,6 +24,17 @@ const BANNED_PACKAGES = [
   'zod',
 ];
 
+/**
+ * AI provider SDKs. A project usually uses just one, so `shared/ai/models.ts`
+ * imports them on demand, and no chunk may statically load more than one.
+ */
+const AI_PROVIDER_PACKAGES = [
+  '@ai-sdk/anthropic',
+  '@ai-sdk/google',
+  '@ai-sdk/openai',
+  '@ai-sdk/openai-compatible',
+];
+
 /** Max uncompressed size of `ui.js` and everything it statically imports. */
 const MAX_STARTUP_BYTES = 1000 * 1024;
 
@@ -100,6 +111,26 @@ if (startupBytes > MAX_STARTUP_BYTES) {
       MAX_STARTUP_BYTES / 1024
     } KB limit`
   );
+}
+
+for (const output of Object.keys(meta.outputs)) {
+  const providers = new Set<string>();
+  for (const file of getStaticClosure(meta, output)) {
+    for (const input of Object.keys(meta.outputs[file].inputs)) {
+      const name = getPackageName(input);
+      if (name && AI_PROVIDER_PACKAGES.includes(name)) {
+        providers.add(name);
+      }
+    }
+  }
+  if (providers.size > 1) {
+    errors.push(
+      `${path.basename(output)} statically imports multiple ai providers: ${[
+        ...providers,
+      ].join(', ')}`
+    );
+    break;
+  }
 }
 
 if (errors.length > 0) {

@@ -15,12 +15,11 @@
  * Vertex provider uses internally, pointed at the Vertex endpoint and
  * authenticated with a bearer token minted server-side (see
  * `core/ai-vertex.ts`) or an express-mode API key.
+ *
+ * Provider SDKs are imported on demand because a project usually uses just one
+ * of them, and each adds a lot to the browser bundle. `pnpm build:ui` fails if
+ * a chunk statically imports more than one.
  */
-import {createAnthropic} from '@ai-sdk/anthropic';
-import {createGoogleGenerativeAI} from '@ai-sdk/google';
-import {GoogleLanguageModel} from '@ai-sdk/google/internal';
-import {createOpenAI} from '@ai-sdk/openai';
-import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {generateId, ImageModel, LanguageModel} from 'ai';
 
 export type AiExecutionMode = 'read' | 'approve' | 'auto';
@@ -207,10 +206,10 @@ function getVertexHost(location: string): string {
  * reaches this function — see `resolveVertexCredentials` in
  * `core/ai-vertex.ts`).
  */
-function createVertexLanguageModel(
+async function createVertexLanguageModel(
   model: AiModelConfig,
   modelId: string
-): LanguageModel {
+): Promise<LanguageModel> {
   let baseURL: string;
   let headers: Record<string, string> | undefined;
   if (model.apiKey) {
@@ -233,6 +232,7 @@ function createVertexLanguageModel(
       `https://${getVertexHost(location)}/v1beta1/projects/${model.project}/locations/${location}/publishers/google`;
     headers = model.headers;
   }
+  const {GoogleLanguageModel} = await import('@ai-sdk/google/internal');
   return new GoogleLanguageModel(modelId, {
     provider: 'google.vertex.chat',
     baseURL: baseURL.replace(/\/$/, ''),
@@ -274,10 +274,13 @@ export function withBrowserHeaders(model: AiModelConfig): AiModelConfig {
 }
 
 /** Resolves an `AiModelConfig` to an AI SDK `LanguageModel` instance. */
-export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
+export async function resolveLanguageModel(
+  model: AiModelConfig
+): Promise<LanguageModel> {
   const modelId = model.modelId || model.id;
   switch (model.provider) {
     case 'openai': {
+      const {createOpenAI} = await import('@ai-sdk/openai');
       const provider = createOpenAI({
         apiKey: model.apiKey,
         baseURL: model.baseURL,
@@ -291,6 +294,8 @@ export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
           `model "${model.id}" requires a baseURL for provider "openai-compatible"`
         );
       }
+      const {createOpenAICompatible} =
+        await import('@ai-sdk/openai-compatible');
       const provider = createOpenAICompatible({
         name: model.id,
         baseURL: model.baseURL,
@@ -300,6 +305,7 @@ export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
       return provider(modelId);
     }
     case 'anthropic': {
+      const {createAnthropic} = await import('@ai-sdk/anthropic');
       const provider = createAnthropic({
         apiKey: model.apiKey,
         baseURL: model.baseURL,
@@ -308,6 +314,7 @@ export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
       return provider(modelId);
     }
     case 'google': {
+      const {createGoogleGenerativeAI} = await import('@ai-sdk/google');
       const provider = createGoogleGenerativeAI({
         apiKey: model.apiKey,
         baseURL: model.baseURL,
@@ -362,11 +369,14 @@ export function assertSupportsImageGeneration(model: AiModelConfig) {
 }
 
 /** Resolves an `AiModelConfig` to an AI SDK `ImageModel` instance. */
-export function resolveImageModel(model: AiModelConfig): ImageModel {
+export async function resolveImageModel(
+  model: AiModelConfig
+): Promise<ImageModel> {
   assertSupportsImageGeneration(model);
   const modelId = model.modelId || model.id;
   switch (model.provider) {
     case 'openai': {
+      const {createOpenAI} = await import('@ai-sdk/openai');
       const provider = createOpenAI({
         apiKey: model.apiKey,
         baseURL: model.baseURL,
@@ -375,6 +385,7 @@ export function resolveImageModel(model: AiModelConfig): ImageModel {
       return provider.image(modelId);
     }
     case 'google': {
+      const {createGoogleGenerativeAI} = await import('@ai-sdk/google');
       const provider = createGoogleGenerativeAI({
         apiKey: model.apiKey,
         baseURL: model.baseURL,
