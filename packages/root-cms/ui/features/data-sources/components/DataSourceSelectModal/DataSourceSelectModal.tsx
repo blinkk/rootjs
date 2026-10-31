@@ -1,36 +1,17 @@
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {DataSource, listDataSources} from '../../data-source.js';
 import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
-
-const MODAL_ID = 'DataSourceSelectModal';
+import {DATA_SOURCE_SELECT_MODAL_ID} from './useDataSourceSelectModal.js';
 
 export interface DataSourceSelectModalProps {
   [key: string]: unknown;
   onChange?: (id: string, selected: boolean) => void | Promise<void>;
   selectedDataSourceIds?: string[];
-}
-
-export function useDataSourceSelectModal() {
-  const modals = useModals();
-  return {
-    open: (props: DataSourceSelectModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        innerProps: props,
-        size: '600px',
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function DataSourceSelectModal(
@@ -121,4 +102,4 @@ export function DataSourceSelectModal(
   );
 }
 
-DataSourceSelectModal.id = MODAL_ID;
+DataSourceSelectModal.id = DATA_SOURCE_SELECT_MODAL_ID;

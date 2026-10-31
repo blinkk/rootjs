@@ -1,0 +1,7 @@
+/*
+ * ag-grid's styles, built as a separate stylesheet (`aggrid.css`) because
+ * esbuild folds the CSS of lazy-loaded chunks into `ui.css`, which would make
+ * every page load them. Loaded on demand by `TranslationsTable`.
+ */
+@import '@ag-grid-community/styles/ag-grid.css';
+@import '@ag-grid-community/styles/ag-theme-alpine.css';

@@ -90,7 +90,7 @@ import {deepMerge} from '../../../../utils/objects.js';
 import {autokey} from '../../../../utils/rand.js';
 import {formatDateTime} from '../../../../utils/time.js';
 import {testAiEnabled} from '../../../ai/ai.js';
-import {useAiEditModal} from '../../../ai/components/AiEditModal/AiEditModal.js';
+import {useAiEditModal} from '../../../ai/components/AiEditModal/useAiEditModal.js';
 import {IconRootAI} from '../../../ai/components/IconRootAI/IconRootAI.js';
 import {useCollectionSchema} from '../../../collections/useCollectionSchema.js';
 import {CommentThread} from '../../../comments/CommentThread/CommentThread.js';
@@ -104,10 +104,10 @@ import {
   useFieldResolvedThreads,
 } from '../../../comments/useFieldComments.js';
 import {usePinnedCommentThreads} from '../../../comments/usePinnedCommentThreads.js';
-import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/LockPublishingModal.js';
-import {usePublishDocModal} from '../../../releases/components/PublishDocModal/PublishDocModal.js';
-import {useEditTranslationsModal} from '../../../translations/components/EditTranslationsModal/EditTranslationsModal.js';
-import {useLocalizationModal} from '../../../translations/components/LocalizationModal/LocalizationModal.js';
+import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/useLockPublishingModal.js';
+import {usePublishDocModal} from '../../../releases/components/PublishDocModal/usePublishDocModal.js';
+import {useEditTranslationsModal} from '../../../translations/components/EditTranslationsModal/useEditTranslationsModal.js';
+import {useLocalizationModal} from '../../../translations/components/LocalizationModal/useLocalizationModal.js';
 import {
   LocalizedValues,
   LocalizedValuesButton,
@@ -148,10 +148,8 @@ import {
   useViewersController,
 } from '../../useViewers.js';
 import {ClipboardData, useVirtualClipboard} from '../../useVirtualClipboard.js';
-import {
-  ComponentPickerOption,
-  useComponentPickerModal,
-} from '../ComponentPickerModal/ComponentPickerModal.js';
+import type {ComponentPickerOption} from '../ComponentPickerModal/ComponentPickerModal.js';
+import {useComponentPickerModal} from '../ComponentPickerModal/useComponentPickerModal.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -160,7 +158,7 @@ import {
   DocStatusBadges,
   getPublishingLockedLabel,
 } from '../DocStatusBadges/DocStatusBadges.js';
-import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
+import {useEditJsonModal} from '../EditJsonModal/useEditJsonModal.js';
 import {FieldErrorBoundary} from '../FieldErrorBoundary/FieldErrorBoundary.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';

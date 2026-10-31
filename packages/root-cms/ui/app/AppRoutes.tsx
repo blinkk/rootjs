@@ -1,5 +1,6 @@
 import {Route, Router} from 'preact-iso';
-import {lazyRoute} from './lazy-route.js';
+import {exec} from 'preact-iso/router';
+import {LazyRoute, lazyRoute} from './lazy-route.js';
 
 const AIPage = lazyRoute(() =>
   import('../features/ai/pages/AIPage/AIPage.js').then((m) => m.AIPage)
@@ -152,81 +153,88 @@ const TranslationsPage = lazyRoute(() =>
  */
 const IS_DEV_SERVER = !window.__ROOT_CTX.build;
 
-/** The CMS's routes. */
-export function AppRoutes() {
+interface AppRoute {
+  path: string;
+  component: LazyRoute<any>;
+}
+
+/**
+ * Returns the CMS's routes, in match order. The v2 translations manager
+ * experiment replaces the translations routes.
+ */
+function getRoutes(): AppRoute[] {
   const v2TranslationsEnabled = Boolean(
     window.__ROOT_CTX.experiments?.v2TranslationsManager
   );
-  // NOTE: conditional route children must be arrays (not fragments) —
-  // preact-iso's Router only flattens arrays.
-  const translationsRoutes = v2TranslationsEnabled
+  const translationsRoutes: AppRoute[] = v2TranslationsEnabled
     ? [
-        <Route
-          key="translations"
-          path="/cms/translations"
-          component={TranslationsManagerPage}
-        />,
-        <Route
-          key="translations-edit"
-          path="/cms/translations/:translationsId*"
-          component={TranslationsManagerEditPage}
-        />,
+        {path: '/cms/translations', component: TranslationsManagerPage},
+        {
+          path: '/cms/translations/:translationsId*',
+          component: TranslationsManagerEditPage,
+        },
       ]
     : [
-        <Route
-          key="translations"
-          path="/cms/translations"
-          component={TranslationsPage}
-        />,
-        <Route
-          key="translations-arb"
-          path="/cms/translations/arb"
-          component={TranslationsArbPage}
-        />,
-        <Route
-          key="translations-hash"
-          path="/cms/translations/:hash"
-          component={TranslationsEditPage}
-        />,
-        <Route
-          key="translations-doc"
-          path="/cms/translations/:collection/:slug"
-          component={DocTranslationsPage}
-        />,
+        {path: '/cms/translations', component: TranslationsPage},
+        {path: '/cms/translations/arb', component: TranslationsArbPage},
+        {path: '/cms/translations/:hash', component: TranslationsEditPage},
+        {
+          path: '/cms/translations/:collection/:slug',
+          component: DocTranslationsPage,
+        },
       ];
+  return [
+    {path: '/cms', component: ProjectPage},
+    {path: '/cms/ai', component: AIPage},
+    {path: '/cms/ai/chat/:chatId', component: AIPage},
+    {path: '/cms/assets', component: AssetsPage},
+    {path: '/cms/compare', component: ComparePage},
+    {path: '/cms/content/:collection?', component: CollectionPage},
+    {path: '/cms/content/:collection/:slug', component: DocumentPage},
+    {
+      path: '/cms/embed/content/:collection/:slug',
+      component: EmbeddedDocumentPage,
+    },
+    {path: '/cms/embed/ai', component: EmbeddedAIPage},
+    {path: '/cms/data', component: DataPage},
+    {path: '/cms/data/new', component: NewDataSourcePage},
+    {path: '/cms/data/:id', component: DataSourcePage},
+    {path: '/cms/data/:id/edit', component: EditDataSourcePage},
+    {path: '/cms/logs', component: LogsPage},
+    {path: '/cms/logs/errors', component: ErrorLogsPage},
+    {path: '/cms/releases', component: ReleasesPage},
+    {path: '/cms/releases/new', component: NewReleasePage},
+    {path: '/cms/releases/:id', component: ReleasePage},
+    {path: '/cms/releases/:id/edit', component: EditReleasePage},
+    {path: '/cms/settings', component: SettingsPage},
+    {path: '/cms/tasks', component: TasksPage},
+    {path: '/cms/tasks/:id', component: TaskPage},
+    {path: '/cms/tools/:id/:rest*', component: SidebarToolsPage},
+    ...translationsRoutes,
+    {
+      path: '/cms/_ui/:entryId?',
+      component: IS_DEV_SERVER ? GalleryPage : NotFoundPage,
+    },
+  ];
+}
+
+/**
+ * Starts loading the chunk for a route. The router only renders once Firebase
+ * Auth reports the user, so calling this at startup keeps the chunk from
+ * waiting on that network request.
+ */
+export function preloadRoute(pathname: string) {
+  const route = getRoutes().find((r) => exec(pathname, r.path));
+  (route?.component ?? NotFoundPage).preload();
+}
+
+/** The CMS's routes. */
+export function AppRoutes() {
   return (
     <Router>
-      <Route path="/cms" component={ProjectPage} />
-      <Route path="/cms/ai" component={AIPage} />
-      <Route path="/cms/ai/chat/:chatId" component={AIPage} />
-      <Route path="/cms/assets" component={AssetsPage} />
-      <Route path="/cms/compare" component={ComparePage} />
-      <Route path="/cms/content/:collection?" component={CollectionPage} />
-      <Route path="/cms/content/:collection/:slug" component={DocumentPage} />
-      <Route
-        path="/cms/embed/content/:collection/:slug"
-        component={EmbeddedDocumentPage}
-      />
-      <Route path="/cms/embed/ai" component={EmbeddedAIPage} />
-      <Route path="/cms/data" component={DataPage} />
-      <Route path="/cms/data/new" component={NewDataSourcePage} />
-      <Route path="/cms/data/:id" component={DataSourcePage} />
-      <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
-      <Route path="/cms/logs" component={LogsPage} />
-      <Route path="/cms/logs/errors" component={ErrorLogsPage} />
-      <Route path="/cms/releases" component={ReleasesPage} />
-      <Route path="/cms/releases/new" component={NewReleasePage} />
-      <Route path="/cms/releases/:id" component={ReleasePage} />
-      <Route path="/cms/releases/:id/edit" component={EditReleasePage} />
-      <Route path="/cms/settings" component={SettingsPage} />
-      <Route path="/cms/tasks" component={TasksPage} />
-      <Route path="/cms/tasks/:id" component={TaskPage} />
-      <Route path="/cms/tools/:id/:rest*" component={SidebarToolsPage} />
-      {translationsRoutes}
-      <Route
-        path="/cms/_ui/:entryId?"
-        component={IS_DEV_SERVER ? GalleryPage : NotFoundPage}
-      />
+      {getRoutes().map((route) => (
+        <Route key={route.path} path={route.path} component={route.component} />
+      ))}
       <Route default component={NotFoundPage} />
     </Router>
   );

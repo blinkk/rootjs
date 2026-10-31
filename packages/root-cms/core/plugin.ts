@@ -41,6 +41,7 @@ import {
 } from './dev-session.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+import {getStaticCacheControl} from './static-cache.js';
 import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
 
@@ -1563,7 +1564,21 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
       server.use(
         '/cms/static',
-        sirv(staticDir, {dev: process.env.NODE_ENV === 'development'})
+        sirv(
+          staticDir,
+          process.env.NODE_ENV === 'development'
+            ? {dev: true}
+            : {
+                brotli: true,
+                etag: true,
+                setHeaders: (res, pathname) => {
+                  res.setHeader(
+                    'cache-control',
+                    getStaticCacheControl(pathname)
+                  );
+                },
+              }
+        )
       );
 
       // Inject the current user into the req object and check if login is

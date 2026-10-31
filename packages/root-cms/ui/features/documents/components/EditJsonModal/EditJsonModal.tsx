@@ -6,36 +6,15 @@ import {
 import {useState} from 'preact/hooks';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {deserializeDocJson} from '../../doc.js';
-
-const MODAL_ID = 'EditJsonModal';
+import {EDIT_JSON_MODAL_ID} from './useEditJsonModal.js';
 
 export interface EditJsonModalProps {
   [key: string]: unknown;
   title?: string;
   data?: any;
   onSave: (data: any) => void;
-}
-
-export function useEditJsonModal() {
-  const modals = useModals();
-  return {
-    open: (props: EditJsonModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        title: props.title || 'Edit JSON',
-        innerProps: props,
-        size: '680px',
-        centered: true,
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function EditJsonModal(
@@ -121,4 +100,4 @@ export function EditJsonModal(
   );
 }
 
-EditJsonModal.id = MODAL_ID;
+EditJsonModal.id = EDIT_JSON_MODAL_ID;

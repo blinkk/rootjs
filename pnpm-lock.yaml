@@ -488,9 +488,6 @@ importers:
       dts-dom:
         specifier: 3.7.0
         version: 3.7.0
-      fnv-plus:
-        specifier: 1.3.1
-        version: 1.3.1
       google-auth-library:
         specifier: 10.6.2
         version: 10.6.2(supports-color@10.2.2)
@@ -585,9 +582,6 @@ importers:
       '@types/body-parser':
         specifier: 1.19.6
         version: 1.19.6
-      '@types/fnv-plus':
-        specifier: 1.3.2
-        version: 1.3.2
       '@types/gapi':
         specifier: 0.0.47
         version: 0.0.47
@@ -2622,9 +2616,6 @@ packages:
   '@types/express@5.0.6':
     resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
 
-  '@types/fnv-plus@1.3.2':
-    resolution: {integrity: sha512-Bgr5yn2dph2q8HZKDS002Pob6vaRTRfhqN9E+TOhjKsJvnfZXULPR3ihH8dL5ZjgxbNhqhTn9hijpbAMPtKZzw==}
-
   '@types/fs-extra@11.0.4':
     resolution: {integrity: sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ==}
 
@@ -4340,9 +4331,6 @@ packages:
 
   fn.name@1.1.0:
     resolution: {integrity: sha512-GRnmB5gPyJpAhTQdSZTSp9uaPSvl09KoYcMQtsB9rQoOmzs9dH6ffeccH+Z+cv6P68Hu5bC6JjRh4Ah/mHSNRw==}
-
-  fnv-plus@1.3.1:
-    resolution: {integrity: sha512-Gz1EvfOneuFfk4yG458dJ3TLJ7gV19q3OM/vVvvHf7eT02Hm1DleB4edsia6ahbKgAYxO9gvyQ1ioWZR+a00Yw==}
 
   for-each@0.3.5:
     resolution: {integrity: sha512-dKx12eRCVIzqCxFGplyFKJMPvLEWgmNtUrpTiJIR5u97zEhRG8ySrtboPHZXx7daLxQVrl643cTzbab2tkQjxg==}
@@ -9509,8 +9497,6 @@ snapshots:
       '@types/express-serve-static-core': 5.1.1
       '@types/serve-static': 2.2.0
 
-  '@types/fnv-plus@1.3.2': {}
-
   '@types/fs-extra@11.0.4':
     dependencies:
       '@types/jsonfile': 6.1.4
@@ -11518,8 +11504,6 @@ snapshots:
   flatted@3.4.2: {}
 
   fn.name@1.1.0: {}
-
-  fnv-plus@1.3.1: {}
 
   for-each@0.3.5:
     dependencies:

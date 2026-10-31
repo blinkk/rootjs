@@ -9,6 +9,7 @@ import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {clearAutoSignInAttempt, setLastSignIn} from '../shared/auth-hints.js';
 import {App} from './app/App.js';
+import {preloadRoute} from './app/AppRoutes.js';
 import {installGlobalErrorHandlers} from './app/global-errors.js';
 import {installNavigationGuards} from './app/navigation-guard.js';
 import {loginRedirect, saveUserProfile, updateSession} from './app/session.js';
@@ -86,6 +87,9 @@ function showStartupError(err: any) {
   container.append(title, message, reloadButton);
   root.append(container);
 }
+
+// Load the page's chunk alongside auth, rather than after it.
+preloadRoute(window.location.pathname);
 
 try {
   const app = initializeApp(window.__ROOT_CTX.firebaseConfig);

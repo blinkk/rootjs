@@ -12,8 +12,8 @@ import {usePendingReleases} from '../../../releases/usePendingReleases.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {CMSDoc, testPublishingLocked} from '../../doc.js';
-import {useCompareDraftModal} from '../CompareDraftModal/CompareDraftModal.js';
-import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
+import {useCompareDraftModal} from '../CompareDraftModal/useCompareDraftModal.js';
+import {useVersionHistoryModal} from '../VersionHistoryModal/useVersionHistoryModal.js';
 
 export type StatusTone =
   | 'draft'

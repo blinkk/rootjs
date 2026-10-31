@@ -11,6 +11,14 @@ describe('hashStr', () => {
     expect(hash1).toEqual(hash2);
   });
 
+  it('keeps hashes stable, since they are stored in the database', () => {
+    expect(hashStr('a')).toEqual('3dc4c8601e67a');
+    expect(hashStr('Página de inicio')).toEqual('e4329783d7185');
+    expect(hashStr('日本語のテキスト')).toEqual('5b07ebf2cfeb5');
+    expect(hashStr('emoji 😀 text')).toEqual('2fc3e22f97484');
+    expect(hashStr('line one\nline two')).toEqual('67175b16e91ad');
+  });
+
   it('generates the same hash for strings with leading and trailing whitespace', () => {
     const input1 = 'hello test';
     const input2 = 'hello test ';

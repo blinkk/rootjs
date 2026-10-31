@@ -77,7 +77,7 @@ import {
   buildAssetFieldValue,
   resolveAssetPickerFolder,
 } from '../../../../assets/assets.js';
-import {useAssetPickerModal} from '../../../../assets/components/AssetPickerModal/AssetPickerModal.js';
+import {useAssetPickerModal} from '../../../../assets/components/AssetPickerModal/useAssetPickerModal.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';

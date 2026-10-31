@@ -10,10 +10,7 @@ import {Text} from '../../../../components/Text/Text.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Popover} from '../../../../primitives/Popover/Popover.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
@@ -27,60 +24,25 @@ import {
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {useCopyDocModal} from '../../../collections/components/CopyDocModal/CopyDocModal.js';
+import {useCopyDocModal} from '../../../collections/components/CopyDocModal/useCopyDocModal.js';
 import {
   Version,
   cmsListVersions,
   cmsReadDocVersion,
   cmsRestoreVersion,
 } from '../../doc.js';
+import {
+  VERSION_HISTORY_MODAL_ID,
+  DOC_RESTORED_EVENT,
+  type DocRestoredEventDetail,
+} from './useVersionHistoryModal.js';
 
-const MODAL_ID = 'VersionHistoryModal';
 const PAGE_SIZE = 50;
-
-/**
- * Dispatched on `window` after a doc is restored to an earlier version. The
- * event detail is a {@link DocRestoredEventDetail}.
- */
-export const DOC_RESTORED_EVENT = 'root:doc-restored';
-
-export interface DocRestoredEventDetail {
-  /** The id of the restored doc, e.g. `Pages/foo`. */
-  docId: string;
-}
 
 export interface VersionHistoryModalProps {
   [key: string]: unknown;
   docId: string;
   onRestore?: (data: {version: Version}) => any;
-}
-
-export function useVersionHistoryModal(props: VersionHistoryModalProps) {
-  // Degrade gracefully when rendered outside a `ModalsProvider` (e.g. visual
-  // tests that render badges in isolation).
-  let modals: ReturnType<typeof useModals> | null = null;
-  try {
-    modals = useModals();
-  } catch {
-    modals = null;
-  }
-  return {
-    enabled: modals !== null,
-    open: () => {
-      if (!modals) {
-        console.warn(
-          'useVersionHistoryModal() requires a <ModalsProvider> context.'
-        );
-        return;
-      }
-      modals.openContextModal(MODAL_ID, {
-        title: `Version history: ${props.docId}`,
-        innerProps: props,
-        overflow: 'inside',
-        size: 'min(calc(100% - 32px), 720px)',
-      });
-    },
-  };
 }
 
 export function VersionHistoryModal(
@@ -466,4 +428,4 @@ function formatIsoDate(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-VersionHistoryModal.id = MODAL_ID;
+VersionHistoryModal.id = VERSION_HISTORY_MODAL_ID;

@@ -23,10 +23,7 @@ import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
 import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
@@ -45,8 +42,7 @@ import {cn} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {logAction} from '../../../logs/actions.js';
 import {getTranslationForLanguage, getTranslationLanguage} from '../../l10n.js';
-
-const MODAL_ID = 'PortTranslationsModal';
+import {PORT_TRANSLATIONS_MODAL_ID} from './usePortTranslationsModal.js';
 
 /**
  * Candidates scoring at least this similarity are preselected when the modal
@@ -85,20 +81,6 @@ export interface PortTranslationsModalProps {
   lookupSource: (source: string) => Promise<Record<string, string> | null>;
   /** Saves the ported translations, keyed by translation language. */
   onSave: (translations: Record<string, string>) => Promise<void>;
-}
-
-/** Hook that returns an `open()` function for launching the port modal. */
-export function usePortTranslationsModal() {
-  const modals = useModals();
-  return {
-    open: (innerProps: PortTranslationsModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        title: 'Port translations',
-        innerProps,
-        size: 'clamp(70%, 880px, 1040px)',
-      });
-    },
-  };
 }
 
 /**
@@ -771,7 +753,7 @@ export function PortTranslationsModal(
   );
 }
 
-PortTranslationsModal.id = MODAL_ID;
+PortTranslationsModal.id = PORT_TRANSLATIONS_MODAL_ID;
 
 /** Classes for the boxes that show a source string. */
 const SOURCE_CLASSES =

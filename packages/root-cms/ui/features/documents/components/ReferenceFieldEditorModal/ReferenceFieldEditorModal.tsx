@@ -1,34 +1,14 @@
 import {IconArrowUpRight} from '@tabler/icons-preact';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {DraftDocProvider, useDraftDoc} from '../../useDraftDoc.js';
 import {DocEditor} from '../DocEditor/DocEditor.js';
-
-const MODAL_ID = 'ReferenceFieldEditorModal';
+import {REFERENCE_FIELD_EDITOR_MODAL_ID} from './useReferenceFieldEditorModal.js';
 
 export interface ReferenceFieldEditorModalProps {
   [key: string]: unknown;
   docId: string;
-}
-
-export function useReferenceFieldEditorModal() {
-  const modals = useModals();
-  return {
-    open: (props: ReferenceFieldEditorModalProps) => {
-      modals.openContextModal<ReferenceFieldEditorModalProps>(MODAL_ID, {
-        className: 'ReferenceFieldEditorModalWrap',
-        innerProps: props,
-        title: `Edit ${props.docId}`,
-        size: 'xl',
-        closeOnClickOutside: false,
-        closeOnEscape: false,
-      });
-    },
-  };
 }
 
 /**
@@ -94,4 +74,4 @@ ReferenceFieldEditorModal.Footer = (props: {
   );
 };
 
-ReferenceFieldEditorModal.id = MODAL_ID;
+ReferenceFieldEditorModal.id = REFERENCE_FIELD_EDITOR_MODAL_ID;

@@ -11,10 +11,7 @@ import {
 import {useGapiClient} from '../../../../integrations/useGapiClient.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {
@@ -24,8 +21,7 @@ import {
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {cmsLinkGoogleSheetL10n} from '../../../documents/doc.js';
-
-const MODAL_ID = 'ExportSheetModal';
+import {EXPORT_SHEET_MODAL_ID} from './useExportSheetModal.js';
 
 export type Action = 'new-sheet' | 'add-tab' | 'link-sheet';
 
@@ -34,19 +30,6 @@ export interface ExportSheetModalProps {
   docId: string;
   csvData: {headers: string[]; rows: Record<string, string>[]};
   locales: string[];
-}
-
-export function useExportSheetModal() {
-  const modals = useModals();
-  return {
-    open: (props: ExportSheetModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        title: 'Export to Google Sheet',
-        innerProps: props,
-        size: '650px',
-      });
-    },
-  };
 }
 
 export function ExportSheetModal(
@@ -483,4 +466,4 @@ export function ExportSheetModal(
   );
 }
 
-ExportSheetModal.id = MODAL_ID;
+ExportSheetModal.id = EXPORT_SHEET_MODAL_ID;

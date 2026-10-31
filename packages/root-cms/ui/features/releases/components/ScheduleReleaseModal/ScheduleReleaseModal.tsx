@@ -11,8 +11,7 @@ import {notifyErrors} from '../../../../utils/notifications.js';
 import {getLocalISOString} from '../../../../utils/time.js';
 import {scheduleRelease} from '../../release.js';
 import {usePublishChecks} from '../../usePublishChecks.js';
-
-const MODAL_ID = 'ScheduleReleaseModal';
+import {SCHEDULE_RELEASE_MODAL_ID} from './useScheduleReleaseModal.js';
 
 export type PublishType = 'now' | 'scheduled' | '';
 
@@ -27,18 +26,6 @@ export interface ScheduleReleaseModalProps {
   /** Whether an admin opted to skip the publishing checks. */
   skipChecks?: boolean;
   onScheduled?: (scheduledAt: Timestamp) => void;
-}
-
-export function useScheduleReleaseModal(props: ScheduleReleaseModalProps) {
-  const modals = useModals();
-  return {
-    open: () => {
-      modals.openContextModal(MODAL_ID, {
-        title: `Schedule release: ${props.releaseId}`,
-        innerProps: props,
-      });
-    },
-  };
 }
 
 export function ScheduleReleaseModal(
@@ -127,4 +114,4 @@ export function ScheduleReleaseModal(
   );
 }
 
-ScheduleReleaseModal.id = MODAL_ID;
+ScheduleReleaseModal.id = SCHEDULE_RELEASE_MODAL_ID;

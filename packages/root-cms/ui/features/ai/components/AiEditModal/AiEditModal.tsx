@@ -11,10 +11,7 @@ import {useMemo, useCallback} from 'preact/hooks';
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   Tab,
   TabList,
@@ -23,31 +20,13 @@ import {
 } from '../../../../primitives/Tabs/Tabs.js';
 import {deserializeDocJson} from '../../../documents/doc.js';
 import {AiResponse, ChatPanel} from './ChatPanel.js';
-
-const MODAL_ID = 'AiEditModal';
+import {AI_EDIT_MODAL_ID} from './useAiEditModal.js';
 
 export interface AiEditModalProps {
   [key: string]: unknown;
   title?: string;
   data?: any;
   onSave: (data: any) => void;
-}
-
-export function useAiEditModal() {
-  const modals = useModals();
-  return {
-    open: (props: AiEditModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        title: props.title || 'Edit with AI (Experimental)',
-        innerProps: props,
-        size: 'calc(min(1920px, calc(100% - 96px)))',
-        centered: true,
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
@@ -192,4 +171,4 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   );
 }
 
-AiEditModal.id = MODAL_ID;
+AiEditModal.id = AI_EDIT_MODAL_ID;

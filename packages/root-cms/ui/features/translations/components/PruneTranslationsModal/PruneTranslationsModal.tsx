@@ -2,15 +2,11 @@ import {IconScissors} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Text} from '../../../../components/Text/Text.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {batchUpdateTags, loadTranslations, sourceHash} from '../../l10n.js';
-
-const MODAL_ID = 'PruneTranslationsModal';
+import {PRUNE_TRANSLATIONS_MODAL_ID} from './usePruneTranslationsModal.js';
 
 export interface PruneTranslationsModalProps {
   [key: string]: unknown;
@@ -18,20 +14,6 @@ export interface PruneTranslationsModalProps {
   sourceStrings: string[];
   /** Called after pruning completes with the hashes that were removed. */
   onPruned?: (prunedHashes: string[]) => void;
-}
-
-/** Hook that returns an `open()` function for launching the prune modal. */
-export function usePruneTranslationsModal() {
-  const modals = useModals();
-  return {
-    open: (innerProps: PruneTranslationsModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        title: `Prune unused strings from ${innerProps.docId}`,
-        innerProps,
-        size: 600,
-      });
-    },
-  };
 }
 
 interface UnusedEntry {
@@ -180,4 +162,4 @@ export function PruneTranslationsModal(
   );
 }
 
-PruneTranslationsModal.id = MODAL_ID;
+PruneTranslationsModal.id = PRUNE_TRANSLATIONS_MODAL_ID;

@@ -3,16 +3,12 @@ import {useLocation} from 'preact-iso';
 import {getSlugError, normalizeSlug} from '../../../../../shared/slug.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../../documents/doc.js';
 import {batchUpdateTags, loadTranslations} from '../../../translations/l10n.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
-
-const MODAL_ID = 'CopyDocModal';
+import {COPY_DOC_MODAL_ID} from './useCopyDocModal.js';
 
 export interface CopyDocModalProps {
   [key: string]: unknown;
@@ -20,17 +16,6 @@ export interface CopyDocModalProps {
   fields?: Record<string, any>;
   fromLabel?: string;
   onSuccess?: (newDocId: string) => void;
-}
-
-export function useCopyDocModal(props: CopyDocModalProps) {
-  const modals = useModals();
-  return {
-    open: (overrideProps?: Partial<CopyDocModalProps>) => {
-      modals.openContextModal(MODAL_ID, {
-        innerProps: {...props, ...overrideProps},
-      });
-    },
-  };
 }
 
 export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
@@ -203,4 +188,4 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   );
 }
 
-CopyDocModal.id = MODAL_ID;
+CopyDocModal.id = COPY_DOC_MODAL_ID;

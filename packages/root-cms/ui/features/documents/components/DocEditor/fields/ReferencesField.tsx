@@ -10,10 +10,10 @@ import * as schema from '../../../../../../core/schema.js';
 import {Button} from '../../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
 import {cn} from '../../../../../utils/classes.js';
-import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/DocPickerModal.js';
+import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/useDocPickerModal.js';
 import {DocPreviewCard} from '../../../../collections/components/DocPreviewCard/DocPreviewCard.js';
 import {useDraftDoc, useDraftDocField} from '../../../useDraftDoc.js';
-import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
+import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/useReferenceFieldEditorModal.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
 

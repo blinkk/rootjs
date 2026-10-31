@@ -8,9 +8,8 @@ import {
 import {Text} from '../../../../components/Text/Text.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {type ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
+import {PUBLISH_CHECKS_MODAL_ID} from '../../usePublishChecks.js';
 import {PublishChecksResults} from '../PublishChecksResults/PublishChecksResults.js';
-
-const MODAL_ID = 'PublishChecksModal';
 
 /**
  * Which outcome the modal is reporting.
@@ -104,4 +103,4 @@ export function PublishChecksModal(
   );
 }
 
-PublishChecksModal.id = MODAL_ID;
+PublishChecksModal.id = PUBLISH_CHECKS_MODAL_ID;

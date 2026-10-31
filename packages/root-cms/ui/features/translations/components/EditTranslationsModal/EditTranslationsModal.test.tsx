@@ -24,7 +24,7 @@ vi.mock('../../../documents/doc.js', () => ({
     mockCmsDocImportTranslations(...args),
 }));
 
-vi.mock('../PortTranslationsModal/PortTranslationsModal.js', () => ({
+vi.mock('../PortTranslationsModal/usePortTranslationsModal.js', () => ({
   usePortTranslationsModal: () => ({open: vi.fn()}),
 }));
 
