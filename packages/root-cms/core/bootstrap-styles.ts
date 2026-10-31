@@ -46,10 +46,8 @@ body {
 }
 
 .bootstrap__loading {
-  color: var(--cms-color-text-muted, #646b77);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
+  font-size: 36px;
+  font-weight: 900;
 }
 
 .bootstrap-error {
