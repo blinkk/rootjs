@@ -20,4 +20,19 @@ describe('renderSignIn', () => {
       html.indexOf('/cms/static/signin.css')
     );
   });
+
+  it('shows a beetloader with only its own styles', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const res: any = {setHeader: vi.fn(), status: vi.fn(), send: vi.fn()};
+    const req: any = {get: () => 'example.com', headers: {}};
+    await renderSignIn(req, res, {
+      rootConfig: {server: {sessionCookieSecret: 'secret'}} as any,
+      cmsConfig: {id: 'test'} as any,
+    });
+    const html: string = res.send.mock.calls[0][0];
+    expect(html).toContain('class="beetloader beetloader--hop"');
+    expect(html).toContain('.beetloader--hop .beetloader__beet');
+    expect(html).not.toContain('.beetloader--stroll');
+    vi.restoreAllMocks();
+  });
 });

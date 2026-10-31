@@ -28,7 +28,7 @@ body {
   align-items: center;
   text-align: center;
   padding: 40px;
-  gap: 36px;
+  gap: 8px;
   position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -43,6 +43,13 @@ body {
 .bootstrap h1,
 .bootstrap p {
   margin: 0;
+}
+
+.bootstrap__loading {
+  color: var(--cms-color-text-muted, #646b77);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
 }
 
 .bootstrap-error {

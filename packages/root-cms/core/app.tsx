@@ -5,6 +5,7 @@ import {renderJsxToString} from '@blinkk/root/jsx';
 import {beetMarkDataUri} from '../shared/beet.js';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
+import {Beetloader, pickBeetloader} from './beetloader.js';
 import {BOOTSTRAP_CSS} from './bootstrap-styles.js';
 import {getBuildInfo} from './build-info.js';
 import {resolveDependencyGraphConfig} from './dependency-graph.js';
@@ -22,9 +23,23 @@ const DEFAULT_FAVICON_URL = beetMarkDataUri();
  * stylesheet fails to load. Rendered before the external stylesheets so they
  * can still override it.
  */
-function BootstrapStyles() {
+function BootstrapStyles(props: {beetloader: Beetloader}) {
+  const css = BOOTSTRAP_CSS + props.beetloader.css;
+  return <style dangerouslySetInnerHTML={{__html: css}} nonce="{NONCE}" />;
+}
+
+/** The screen shown until the CMS UI renders over it. */
+function BootstrapScreen(props: {beetloader: Beetloader}) {
+  const {Component} = props.beetloader;
   return (
-    <style dangerouslySetInnerHTML={{__html: BOOTSTRAP_CSS}} nonce="{NONCE}" />
+    <div className="bootstrap">
+      <Component />
+      <h1 className="bootstrap__loading">Loading...</h1>
+      <div className="bootstrap-error">
+        If this page fails to load, try a force refresh by holding the shift key
+        while refreshing the page.
+      </div>
+    </div>
   );
 }
 
@@ -48,6 +63,7 @@ interface AppProps {
 }
 
 function App(props: AppProps) {
+  const beetloader = pickBeetloader();
   return (
     <html>
       <head>
@@ -77,7 +93,7 @@ function App(props: AppProps) {
           nonce="{NONCE}"
         />
         <Favicon url={props.favicon} />
-        <BootstrapStyles />
+        <BootstrapStyles beetloader={beetloader} />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
@@ -98,13 +114,7 @@ function App(props: AppProps) {
       </head>
       <body>
         <div id="root">
-          <div className="bootstrap">
-            <h1 className="bootstrap__loading">Loading...</h1>
-            <div className="bootstrap-error">
-              If this page fails to load, try a force refresh by holding the
-              shift key while refreshing the page.
-            </div>
-          </div>
+          <BootstrapScreen beetloader={beetloader} />
         </div>
         <script
           dangerouslySetInnerHTML={{
@@ -261,6 +271,7 @@ interface SignInProps {
 }
 
 function SignIn(props: SignInProps) {
+  const beetloader = pickBeetloader();
   return (
     <html>
       <head>
@@ -285,18 +296,12 @@ function SignIn(props: SignInProps) {
           nonce="{NONCE}"
         />
         <Favicon url={props.favicon} />
-        <BootstrapStyles />
+        <BootstrapStyles beetloader={beetloader} />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
       </head>
       <body>
         <div id="root">
-          <div className="bootstrap">
-            <h1 className="bootstrap__loading">Loading...</h1>
-            <div className="bootstrap-error">
-              If this page fails to load, try a force refresh by holding the
-              shift key while refreshing the page.
-            </div>
-          </div>
+          <BootstrapScreen beetloader={beetloader} />
         </div>
         <script
           dangerouslySetInnerHTML={{
