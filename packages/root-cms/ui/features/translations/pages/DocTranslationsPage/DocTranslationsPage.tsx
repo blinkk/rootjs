@@ -33,7 +33,7 @@ import {
   cmsDocImportTranslations,
   cmsGetLinkedGoogleSheetL10n,
 } from '../../../documents/doc.js';
-import {usePruneTranslationsModal} from '../../components/PruneTranslationsModal/PruneTranslationsModal.js';
+import {usePruneTranslationsModal} from '../../components/PruneTranslationsModal/usePruneTranslationsModal.js';
 import {extractStringsForDoc} from '../../extract.js';
 import {
   Translation,

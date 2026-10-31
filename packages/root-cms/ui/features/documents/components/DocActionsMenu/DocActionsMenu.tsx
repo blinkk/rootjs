@@ -24,10 +24,10 @@ import {
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
 import {errorMessage} from '../../../../utils/notifications.js';
-import {useCopyDocModal} from '../../../collections/components/CopyDocModal/CopyDocModal.js';
-import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/AddToReleaseModal.js';
-import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/LockPublishingModal.js';
-import {usePublishDocModal} from '../../../releases/components/PublishDocModal/PublishDocModal.js';
+import {useCopyDocModal} from '../../../collections/components/CopyDocModal/useCopyDocModal.js';
+import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/useAddToReleaseModal.js';
+import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/useLockPublishingModal.js';
+import {usePublishDocModal} from '../../../releases/components/PublishDocModal/usePublishDocModal.js';
 import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {
@@ -43,7 +43,7 @@ import {
   testPublishingLocked,
 } from '../../doc.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
-import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
+import {useVersionHistoryModal} from '../VersionHistoryModal/useVersionHistoryModal.js';
 
 export interface DocActionEvent {
   action:

@@ -1,6 +1,7 @@
 import '../../../../styles/tailwind.out.css';
 import '../../../../styles/global.css';
 import '../../../../styles/theme.css';
+import '../../../../styles/aggrid.css';
 
 import {render} from '@testing-library/preact';
 import {LocationProvider} from 'preact-iso';

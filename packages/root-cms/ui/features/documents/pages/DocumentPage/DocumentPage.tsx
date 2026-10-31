@@ -13,6 +13,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isNavigateToDocMessage} from '../../../../../shared/embed-protocol.js';
 import {Layout} from '../../../../app/layout/Layout.js';
+import {lazyComponent} from '../../../../app/lazy-component.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {SplitPanel} from '../../../../components/SplitPanel/SplitPanel.js';
 import {Text} from '../../../../components/Text/Text.js';
@@ -26,7 +27,6 @@ import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {cn} from '../../../../utils/classes.js';
 import {testAiEnabled} from '../../../ai/ai.js';
-import {RootAIChat} from '../../../ai/components/RootAIChat/RootAIChat.js';
 import {CommentsPanel} from '../../../comments/CommentsPanel/CommentsPanel.js';
 import {
   COMMENTS_VISIBLE_EVENT,
@@ -44,12 +44,12 @@ import {
   DocumentPagePreviewBar,
   type DeviceType,
 } from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
-import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
+import {useEditJsonModal} from '../../components/EditJsonModal/useEditJsonModal.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {
   DOC_RESTORED_EVENT,
   DocRestoredEventDetail,
-} from '../../components/VersionHistoryModal/VersionHistoryModal.js';
+} from '../../components/VersionHistoryModal/useVersionHistoryModal.js';
 import {getDocPreviewPath, getDocServingPath} from '../../doc-urls.js';
 import {isAllowedOrigin} from '../../embed-bridge.js';
 import {testEnableChannelFromPreview} from '../../iframe-preview.js';
@@ -690,6 +690,13 @@ interface DocumentPageAiPanelProps {
   docId: string;
   onClose: () => void;
 }
+
+/** The AI SDKs are large, so they load when the panel first opens. */
+const RootAIChat = lazyComponent(() =>
+  import('../../../ai/components/RootAIChat/RootAIChat.js').then(
+    (m) => m.RootAIChat
+  )
+);
 
 /**
  * Renders the Root AI panel. Memoizes the chat so drag-resizing the panel

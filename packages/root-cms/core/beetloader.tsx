@@ -1,3 +1,4 @@
+import type {JSX} from 'preact';
 import {
   BEET_BODY_PATHS,
   BEET_LEAF_PATHS,

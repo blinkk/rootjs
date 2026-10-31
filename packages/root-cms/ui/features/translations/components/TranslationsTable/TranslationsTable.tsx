@@ -10,8 +10,6 @@ import {
   ValueFormatterParams,
 } from '@ag-grid-community/core';
 import {AgGridReact} from '@ag-grid-community/react';
-import '@ag-grid-community/styles/ag-grid.css';
-import '@ag-grid-community/styles/ag-theme-alpine.css';
 import {
   IconCheck,
   IconDots,
@@ -27,6 +25,7 @@ import {
   useArrayParam,
   useStringParam,
 } from '../../../../hooks/useQueryParam.js';
+import {useStylesheet} from '../../../../hooks/useStylesheet.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
@@ -60,7 +59,23 @@ interface TableRowData {
   [locale: string]: string | string[];
 }
 
+/** The ag-grid stylesheet; see `styles/aggrid.css`. */
+const AG_GRID_CSS_URL = '/cms/static/aggrid.css';
+
+/** Renders the translations table once ag-grid's stylesheet has loaded. */
 export function TranslationsTable() {
+  const stylesLoaded = useStylesheet(AG_GRID_CSS_URL);
+  if (!stylesLoaded) {
+    return (
+      <div className="TranslationsTable__loading flex justify-center p-10">
+        <Spinner />
+      </div>
+    );
+  }
+  return <TranslationsGrid />;
+}
+
+function TranslationsGrid() {
   const [rowData, setRowData] = useState<TableRowData[]>([]);
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
 

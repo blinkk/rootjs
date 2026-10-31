@@ -11,15 +11,12 @@ import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {cn} from '../../../../utils/classes.js';
+import {COMPONENT_PICKER_MODAL_ID} from './useComponentPickerModal.js';
 
-const MODAL_ID = 'ComponentPickerModal';
 const LAYOUT_STORAGE_KEY = 'root::ComponentPickerModal:layout';
 
 export type ComponentPickerLayout = 'list' | 'grid';
@@ -49,22 +46,6 @@ export interface ComponentPickerModalProps {
    * The caller is responsible for closing the modal.
    */
   onRemove?: () => void;
-}
-
-export function useComponentPickerModal() {
-  const modals = useModals();
-  return {
-    open: (props: ComponentPickerModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        innerProps: props,
-        size: '720px',
-        title: 'Select a component',
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function ComponentPickerModal(
@@ -330,4 +311,4 @@ ComponentPickerModal.Card = (props: {
   );
 };
 
-ComponentPickerModal.id = MODAL_ID;
+ComponentPickerModal.id = COMPONENT_PICKER_MODAL_ID;

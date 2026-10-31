@@ -14,10 +14,7 @@ import {Button} from '../../../../primitives/Button/Button.js';
 import {Checkbox} from '../../../../primitives/Checkbox/Checkbox.js';
 import {DialogFooter} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {
   Tab,
@@ -51,9 +48,8 @@ import {
   toTranslationLanguages,
 } from '../../l10n.js';
 import {FieldHistory} from '../FieldHistory/FieldHistory.js';
-import {usePortTranslationsModal} from '../PortTranslationsModal/PortTranslationsModal.js';
-
-const MODAL_ID = 'EditTranslationsModal';
+import {usePortTranslationsModal} from '../PortTranslationsModal/usePortTranslationsModal.js';
+import {EDIT_TRANSLATIONS_MODAL_ID} from './useEditTranslationsModal.js';
 
 export interface EditTranslationsModalProps {
   [key: string]: unknown;
@@ -67,24 +63,6 @@ export interface EditTranslationsModalProps {
   field?: {id: string; deepKey: string};
   /** Draft controller for saving field metadata. */
   draft?: DraftDocContext;
-}
-
-export function useEditTranslationsModal() {
-  const modals = useModals();
-  return {
-    open: (props: EditTranslationsModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        innerProps: props,
-        size: '900px',
-        title: 'Edit translations',
-        overflow: 'inside',
-        className: 'EditTranslationsModalWrap',
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function EditTranslationsModal(
@@ -624,7 +602,7 @@ EditTranslationsModal.StringsEditor = (props: {
     </div>
   );
 };
-EditTranslationsModal.id = MODAL_ID;
+EditTranslationsModal.id = EDIT_TRANSLATIONS_MODAL_ID;
 
 function getMetadataKey(key: string) {
   const parts = key.split('.');

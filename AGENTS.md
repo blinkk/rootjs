@@ -126,6 +126,11 @@ and field builders) come from `packages/root-cms/core/schema.ts`.
   primitives instead.
 - Components live at `<Name>/<Name>.tsx` (under `ui/components/`,
   `ui/primitives/`, or a feature's folder).
+- Keep the startup bundle small: everything `ui/main.tsx` statically imports
+  loads on every page, and `pnpm build:ui` fails if heavy packages reach it. Load
+  heavy code with `lazyComponent()` (`ui/app/lazy-component.tsx`). Register
+  context modals in `ui/app/app-modals.ts`, and import a modal's `useXModal`
+  hook rather than the file with its component.
 - Use `cn`/`joinClassNames` from `ui/utils/classes.js`, icons from
   `@tabler/icons-preact`, and notifications via `ui/utils/notifications.js`.
 

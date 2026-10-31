@@ -94,11 +94,6 @@ function App(props: AppProps) {
         />
         <Favicon url={props.favicon} />
         <BootstrapStyles beetloader={beetloader} />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
-          nonce="{NONCE}"
-        />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
         {/* The default theme (`cmsPlugin({themes, defaultTheme})`), after
             ui.css so it wins the cascade. The id lets the client swap in

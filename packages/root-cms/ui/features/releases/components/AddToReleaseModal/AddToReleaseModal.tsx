@@ -20,8 +20,7 @@ import {
   listReleases,
   updateRelease,
 } from '../../release.js';
-
-const MODAL_ID = 'AddToReleaseModal';
+import {ADD_TO_RELEASE_MODAL_ID} from './useAddToReleaseModal.js';
 
 type Mode = 'new' | 'existing' | '';
 
@@ -29,19 +28,6 @@ export interface AddToReleaseModalProps {
   [key: string]: unknown;
   /** Doc IDs to add to the release. */
   docIds: string[];
-}
-
-export function useAddToReleaseModal(props: AddToReleaseModalProps) {
-  const modals = useModals();
-  return {
-    open: () => {
-      modals.openContextModal(MODAL_ID, {
-        title: 'Add docs to a release',
-        innerProps: props,
-        size: '600px',
-      });
-    },
-  };
 }
 
 /**
@@ -385,4 +371,4 @@ function ModeOption(props: {
   );
 }
 
-AddToReleaseModal.id = MODAL_ID;
+AddToReleaseModal.id = ADD_TO_RELEASE_MODAL_ID;

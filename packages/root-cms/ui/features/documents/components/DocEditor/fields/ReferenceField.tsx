@@ -7,11 +7,11 @@ import {IconButton} from '../../../../../primitives/IconButton/IconButton.js';
 import {Spinner} from '../../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../../utils/notifications.js';
 import {getNestedValue} from '../../../../../utils/objects.js';
-import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/DocPickerModal.js';
+import {useDocPickerModal} from '../../../../collections/components/DocPickerModal/useDocPickerModal.js';
 import {getDocFromCacheOrFetch} from '../../../doc-cache.js';
 import {parseDocId} from '../../../doc.js';
 import {useDraftDocValue} from '../../../useDraftDoc.js';
-import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
+import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/useReferenceFieldEditorModal.js';
 import {FieldProps} from './FieldProps.js';
 
 export interface ReferenceFieldValue {

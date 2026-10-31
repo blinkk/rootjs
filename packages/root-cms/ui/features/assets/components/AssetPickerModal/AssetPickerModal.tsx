@@ -1,11 +1,7 @@
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {AssetFile, setAssetPickerLastFolder} from '../../assets.js';
 import {AssetBrowser} from '../AssetBrowser/AssetBrowser.js';
-
-const MODAL_ID = 'AssetPickerModal';
+import {ASSET_PICKER_MODAL_ID} from './useAssetPickerModal.js';
 
 export interface AssetPickerModalProps {
   [key: string]: unknown;
@@ -15,41 +11,6 @@ export interface AssetPickerModalProps {
   accept?: string[];
   /** Folder path the picker opens to. Defaults to the project root. */
   initialFolder?: string;
-}
-
-/**
- * Hook for opening the asset picker modal, which allows users to select a
- * file from the project's asset library (e.g. for image/file fields).
- */
-export function useAssetPickerModal() {
-  // Degrade gracefully when used outside a `ModalsProvider` (e.g. the
-  // standalone `FileUploader` component rendered in a non-CMS context).
-  let modals: ReturnType<typeof useModals> | null = null;
-  try {
-    modals = useModals();
-  } catch {
-    modals = null;
-  }
-  return {
-    enabled: modals !== null,
-    open: (props: AssetPickerModalProps) => {
-      if (!modals) {
-        console.warn(
-          'useAssetPickerModal() requires a <ModalsProvider> context.'
-        );
-        return;
-      }
-      modals.openContextModal(MODAL_ID, {
-        title: 'Select from asset library',
-        innerProps: props,
-        size: '800px',
-        overflow: 'inside',
-      });
-    },
-    close: () => {
-      modals?.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function AssetPickerModal(
@@ -77,4 +38,4 @@ export function AssetPickerModal(
   );
 }
 
-AssetPickerModal.id = MODAL_ID;
+AssetPickerModal.id = ASSET_PICKER_MODAL_ID;

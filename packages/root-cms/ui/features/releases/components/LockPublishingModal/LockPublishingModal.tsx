@@ -16,8 +16,7 @@ import {
   cmsLockPublishing,
   cmsUnlockPublishing,
 } from '../../../documents/doc.js';
-
-const MODAL_ID = 'LockPublishingModal';
+import {LOCK_PUBLISHING_MODAL_ID} from './useLockPublishingModal.js';
 
 export interface ExistingLockInfo {
   reason: string;
@@ -35,28 +34,6 @@ export interface LockPublishingModalProps {
    */
   existingLock?: ExistingLockInfo;
   onChange?: (state: 'locked' | 'unlocked') => void;
-}
-
-export function useLockPublishingModal(props: LockPublishingModalProps) {
-  const modals = useModals();
-  return {
-    open: (options?: Partial<LockPublishingModalProps>) => {
-      const modalProps = {...props, ...options};
-      let title: string;
-      if (modalProps.unlock) {
-        title = `Unlock publishing for ${props.docId}`;
-      } else if (modalProps.existingLock) {
-        title = `Edit publishing lock for ${props.docId}`;
-      } else {
-        title = `Lock publishing for ${props.docId}`;
-      }
-      modals.openContextModal(MODAL_ID, {
-        title,
-        innerProps: {...props, ...options},
-        size: '600px',
-      });
-    },
-  };
 }
 
 /**
@@ -252,4 +229,4 @@ LockPublishingModal.Unlock = (
   );
 };
 
-LockPublishingModal.id = MODAL_ID;
+LockPublishingModal.id = LOCK_PUBLISHING_MODAL_ID;

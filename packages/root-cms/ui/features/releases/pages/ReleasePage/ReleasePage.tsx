@@ -11,6 +11,7 @@ import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
 import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
+import {lazyComponent} from '../../../../app/lazy-component.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
@@ -38,10 +39,7 @@ import {getNestedValue} from '../../../../utils/objects.js';
 import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testAiEnabled} from '../../../ai/ai.js';
-import {
-  RootAIChat,
-  RootAIChatPrompt,
-} from '../../../ai/components/RootAIChat/RootAIChat.js';
+import type {RootAIChatPrompt} from '../../../ai/components/RootAIChat/RootAIChat.js';
 import {DataSource, getDataSource} from '../../../data-sources/data-source.js';
 import {DocDiffViewer} from '../../../documents/components/DocDiffViewer/DocDiffViewer.js';
 import {
@@ -57,7 +55,7 @@ import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../../users/UserTag/UserTag.js';
 import {useUserProfile} from '../../../users/useUserProfile.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
-import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
+import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/useScheduleReleaseModal.js';
 import {testHasPublishChecks} from '../../publish-checks.js';
 import {
   ReleaseDiff,
@@ -99,6 +97,13 @@ const SUGGESTED_PROMPTS = [
   'Does this release have any unintentional changes?',
   'Who modified the docs in this release?',
 ];
+
+/** The AI SDKs are large, so they load when the panel first opens. */
+const RootAIChat = lazyComponent(() =>
+  import('../../../ai/components/RootAIChat/RootAIChat.js').then(
+    (m) => m.RootAIChat
+  )
+);
 
 export function ReleasePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);

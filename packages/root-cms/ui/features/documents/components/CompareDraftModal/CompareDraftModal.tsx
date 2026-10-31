@@ -1,42 +1,10 @@
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
-
-const MODAL_ID = 'CompareDraftModal';
+import {COMPARE_DRAFT_MODAL_ID} from './useCompareDraftModal.js';
 
 export interface CompareDraftModalProps {
   [key: string]: unknown;
   docId: string;
-}
-
-export function useCompareDraftModal(props: CompareDraftModalProps) {
-  // Degrade gracefully when rendered outside a `ModalsProvider` (e.g. visual
-  // tests that render badges in isolation).
-  let modals: ReturnType<typeof useModals> | null = null;
-  try {
-    modals = useModals();
-  } catch {
-    modals = null;
-  }
-  return {
-    enabled: modals !== null,
-    open: () => {
-      if (!modals) {
-        console.warn(
-          'useCompareDraftModal() requires a <ModalsProvider> context.'
-        );
-        return;
-      }
-      modals.openContextModal(MODAL_ID, {
-        title: `Unpublished changes: ${props.docId}`,
-        innerProps: props,
-        overflow: 'inside',
-        size: 'min(calc(100% - 32px), 900px)',
-      });
-    },
-  };
 }
 
 export function CompareDraftModal(
@@ -57,4 +25,4 @@ export function CompareDraftModal(
   );
 }
 
-CompareDraftModal.id = MODAL_ID;
+CompareDraftModal.id = COMPARE_DRAFT_MODAL_ID;

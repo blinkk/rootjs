@@ -45,10 +45,7 @@ import {
   MenuGroup,
   MenuItem,
 } from '../../../../primitives/Menu/Menu.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
@@ -89,13 +86,12 @@ import {
   toTranslationLanguages,
 } from '../../l10n.js';
 import {testV2TranslationsEnabled} from '../../translations-manager.js';
-import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
-import {usePortTranslationsModal} from '../PortTranslationsModal/PortTranslationsModal.js';
+import {useExportSheetModal} from '../ExportSheetModal/useExportSheetModal.js';
+import {usePortTranslationsModal} from '../PortTranslationsModal/usePortTranslationsModal.js';
 import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
-import {usePruneTranslationsModal} from '../PruneTranslationsModal/PruneTranslationsModal.js';
+import {usePruneTranslationsModal} from '../PruneTranslationsModal/usePruneTranslationsModal.js';
 import './LocalizationModal.css';
-
-const MODAL_ID = 'LocalizationModal';
+import {LOCALIZATION_MODAL_ID} from './useLocalizationModal.js';
 
 enum MenuAction {
   EXPORT_DOWNLOAD_CSV = 'EXPORT_DOWNLOAD_CSV',
@@ -114,42 +110,6 @@ export interface LocalizationModalProps {
   collection: schema.Collection;
   docId: string;
   locale?: string;
-}
-
-export function useLocalizationModal() {
-  const modals = useModals();
-  return {
-    open: (innerProps: LocalizationModalProps) => {
-      // Add modal param to URL.
-      const params = new URLSearchParams(window.location.search);
-      params.set('modal', 'localization');
-      window.history.replaceState(
-        null,
-        '',
-        `${window.location.pathname}?${params}`
-      );
-
-      modals.openContextModal(MODAL_ID, {
-        innerProps: innerProps,
-        size: 'clamp(80%, 1024px, 1280px)',
-        // The panes run to the bottom of the body, and from `md` up each
-        // scrolls on its own.
-        classNames: {body: 'pb-0'},
-        onClose: () => {
-          // Flush any pending draft changes (e.g. locale toggles) without
-          // triggering the iframe reload that normally follows a flush.
-          innerProps.draft?.flush({quiet: true});
-          // Remove modal param from URL.
-          const params = new URLSearchParams(window.location.search);
-          params.delete('modal');
-          const newUrl = params.toString()
-            ? `${window.location.pathname}?${params}`
-            : window.location.pathname;
-          window.history.replaceState(null, '', newUrl);
-        },
-      });
-    },
-  };
 }
 
 export function LocalizationModal(
@@ -180,7 +140,7 @@ export function LocalizationModal(
   );
 }
 
-LocalizationModal.id = MODAL_ID;
+LocalizationModal.id = LOCALIZATION_MODAL_ID;
 
 LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
   const [enabledLocales, setEnabledLocales] = useState(() => {

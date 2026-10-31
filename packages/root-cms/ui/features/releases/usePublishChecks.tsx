@@ -6,13 +6,14 @@ import {
 import {useModals} from '../../primitives/modals/ModalsProvider.js';
 import {testIsAdmin} from '../users/permissions.js';
 import {useProjectRoles} from '../users/useProjectRoles.js';
-import {PublishChecksModal} from './components/PublishChecksModal/PublishChecksModal.js';
 import {
   buildPublishChecksAudit,
   runPublishChecks,
   testHasPublishChecks,
   type PublishChecksAuditMetadata,
 } from './publish-checks.js';
+
+export const PUBLISH_CHECKS_MODAL_ID = 'PublishChecksModal';
 
 /** The outcome of gating a publish action on the configured checks. */
 export interface PublishChecksDecision {
@@ -114,7 +115,7 @@ export function usePublishChecks() {
       // Required checks failed. Show what failed and let admins override.
       return await new Promise<PublishChecksDecision>((resolve) => {
         let bypassed = false;
-        modals.openContextModal(PublishChecksModal.id, {
+        modals.openContextModal(PUBLISH_CHECKS_MODAL_ID, {
           title: `${options.actionLabel} blocked by checks`,
           size: '700px',
           innerProps: {
@@ -150,7 +151,7 @@ export function usePublishChecks() {
       if (summary.warnings.length === 0) {
         return;
       }
-      modals.openContextModal(PublishChecksModal.id, {
+      modals.openContextModal(PUBLISH_CHECKS_MODAL_ID, {
         title: 'Published with warnings',
         size: '700px',
         innerProps: {

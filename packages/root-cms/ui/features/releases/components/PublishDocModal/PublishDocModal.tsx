@@ -57,8 +57,7 @@ import {
   type PublishChecksDecision,
 } from '../../usePublishChecks.js';
 import {useAddToRelease} from '../AddToReleaseModal/AddToReleaseModal.js';
-
-const MODAL_ID = 'PublishDocModal';
+import {ModalTitle, PUBLISH_DOC_MODAL_ID} from './usePublishDocModal.js';
 
 export type PublishType = 'now' | 'scheduled' | 'release';
 
@@ -67,23 +66,6 @@ export interface PublishDocModalProps {
   docId: string;
   /** Called after the doc is successfully published or scheduled. */
   onSuccess?: (event: {publishType: 'now' | 'scheduled'}) => void;
-}
-
-export function usePublishDocModal(props: PublishDocModalProps) {
-  const modals = useModals();
-  return {
-    open: () => {
-      modals.openContextModal(MODAL_ID, {
-        title: (
-          <ModalTitle icon={<IconRocket size={18} stroke={1.75} />}>
-            Publish {props.docId}
-          </ModalTitle>
-        ),
-        innerProps: props,
-        size: '640px',
-      });
-    },
-  };
 }
 
 export function PublishDocModal(
@@ -569,23 +551,6 @@ export function PublishDocModal(
         </div>
       </form>
     </div>
-  );
-}
-
-/** A modal title with a leading icon. */
-function ModalTitle(props: {
-  icon: ComponentChildren;
-  children: ComponentChildren;
-}) {
-  return (
-    <span className="PublishDocModal__title flex min-w-0 items-center gap-2">
-      <span className="PublishDocModal__titleIcon flex shrink-0">
-        {props.icon}
-      </span>
-      <span className="PublishDocModal__titleText wrap-anywhere">
-        {props.children}
-      </span>
-    </span>
   );
 }
 
@@ -1165,4 +1130,4 @@ function ReleaseOption(props: {
   );
 }
 
-PublishDocModal.id = MODAL_ID;
+PublishDocModal.id = PUBLISH_DOC_MODAL_ID;

@@ -21,7 +21,7 @@ import {
 } from '../../../../primitives/Toast/toastStore.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
-import {usePortTranslationsModal} from '../../components/PortTranslationsModal/PortTranslationsModal.js';
+import {usePortTranslationsModal} from '../../components/PortTranslationsModal/usePortTranslationsModal.js';
 import {extractStringsForDoc} from '../../extract.js';
 import {
   getTranslationForLanguage,

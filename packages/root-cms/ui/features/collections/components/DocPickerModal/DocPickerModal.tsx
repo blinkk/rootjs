@@ -4,10 +4,7 @@ import {useState} from 'preact/hooks';
 import {FilePreview} from '../../../../components/FilePreview/FilePreview.js';
 import {useLocalStorage} from '../../../../hooks/useLocalStorage.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {
-  type ContextModalProps,
-  useModals,
-} from '../../../../primitives/modals/ModalsProvider.js';
+import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
@@ -18,8 +15,7 @@ import {useDensity} from '../../useDensity.js';
 import {useDocsList} from '../../useDocsList.js';
 import {useFilteredDocs} from '../../useFilteredDocs.js';
 import {NewDocModal} from '../NewDocModal/NewDocModal.js';
-
-const MODAL_ID = 'DocPickerModal';
+import {DOC_PICKER_MODAL_ID} from './useDocPickerModal.js';
 
 const EMPTY_CLASSES =
   'DocPickerModal__DocsList__empty px-5 py-10 text-center text-base text-muted';
@@ -47,22 +43,6 @@ export interface DocPickerModalProps {
 
   /** Enable status badges display. */
   enableStatusBadges?: boolean;
-}
-
-export function useDocPickerModal() {
-  const modals = useModals();
-  return {
-    open: (props: DocPickerModalProps) => {
-      modals.openContextModal(MODAL_ID, {
-        innerProps: props,
-        size: '700px',
-        overflow: 'inside',
-      });
-    },
-    close: () => {
-      modals.closeModal(MODAL_ID);
-    },
-  };
 }
 
 export function DocPickerModal(
@@ -445,4 +425,4 @@ DocPickerModal.DocCard = (props: {
   );
 };
 
-DocPickerModal.id = MODAL_ID;
+DocPickerModal.id = DOC_PICKER_MODAL_ID;

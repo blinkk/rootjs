@@ -33,13 +33,16 @@ const ROUTE_IMPORT_RELOAD_INTERVAL_MS = 60 * 1000;
  */
 const ROUTE_IMPORT_RELOAD_GRACE_MS = 10 * 1000;
 
-export interface ImportRouteComponentOptions {
+export interface ImportWithRetryOptions {
   /** Number of times to attempt the import before giving up. */
   attempts?: number;
   /** Base delay between retries (multiplied by the attempt number). */
   retryDelayMs?: number;
   /** Max time to wait for each import attempt before treating it as failed. */
   importTimeoutMs?: number;
+}
+
+export interface ImportRouteComponentOptions extends ImportWithRetryOptions {
   /** Reloads the page. Overridable in tests. */
   reload?: () => void;
 }
@@ -126,6 +129,32 @@ function reloadOnRouteImportError(reload: () => void): boolean {
 }
 
 /**
+ * Runs a dynamic import, retrying a few times on failure and treating an
+ * import whose network request stalls as failed after a timeout. Rejects with
+ * the last error if every attempt fails.
+ */
+export async function importWithRetry<T>(
+  factory: () => Promise<T>,
+  options?: ImportWithRetryOptions
+): Promise<T> {
+  const attempts = options?.attempts ?? ROUTE_IMPORT_ATTEMPTS;
+  const retryDelayMs = options?.retryDelayMs ?? ROUTE_IMPORT_RETRY_DELAY_MS;
+  const importTimeoutMs = options?.importTimeoutMs ?? ROUTE_IMPORT_TIMEOUT_MS;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await withTimeout(factory(), importTimeoutMs);
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts) {
+        await sleep(retryDelayMs * attempt);
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Imports a route component, retrying a few times on failure. Dynamic imports
  * can fail when the server rebuilds or redeploys (the hashed chunk files
  * change), when the login session expires, or due to flaky network requests.
@@ -143,20 +172,12 @@ export async function importRouteComponent<P>(
   factory: () => Promise<FunctionComponent<P>>,
   options?: ImportRouteComponentOptions
 ): Promise<FunctionComponent<P>> {
-  const attempts = options?.attempts ?? ROUTE_IMPORT_ATTEMPTS;
-  const retryDelayMs = options?.retryDelayMs ?? ROUTE_IMPORT_RETRY_DELAY_MS;
-  const importTimeoutMs = options?.importTimeoutMs ?? ROUTE_IMPORT_TIMEOUT_MS;
   const reload = options?.reload ?? (() => window.location.reload());
   let lastError: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      return await withTimeout(factory(), importTimeoutMs);
-    } catch (err) {
-      lastError = err;
-      if (attempt < attempts) {
-        await sleep(retryDelayMs * attempt);
-      }
-    }
+  try {
+    return await importWithRetry(factory, options);
+  } catch (err) {
+    lastError = err;
   }
   console.error('failed to import route component:', lastError);
   if (reloadOnRouteImportError(reload)) {
@@ -173,6 +194,11 @@ export async function importRouteComponent<P>(
   return routeLoadErrorComponent<P>(lastError);
 }
 
+/** A lazy-loaded route that can start loading before it's rendered. */
+export interface LazyRoute<P> extends FunctionComponent<P> {
+  preload: () => void;
+}
+
 /**
  * Lazy-loads a named component export for use as a route component. While the
  * import is pending a loading screen is rendered, and once it resolves the
@@ -184,7 +210,7 @@ export async function importRouteComponent<P>(
 export function lazyRoute<P>(
   factory: () => Promise<FunctionComponent<P>>,
   options?: LazyRouteOptions
-): FunctionComponent<P> {
+): LazyRoute<P> {
   let component: FunctionComponent<P> | null = null;
   let promise: Promise<FunctionComponent<P>> | null = null;
 
@@ -206,7 +232,7 @@ export function lazyRoute<P>(
     return promise;
   }
 
-  return function LazyRoute(props: P) {
+  function Lazy(props: P) {
     // NOTE: functions passed to `useState` are treated as lazy initializers,
     // so the component must be wrapped.
     const [resolved, setResolved] = useState<FunctionComponent<P> | null>(
@@ -234,5 +260,10 @@ export function lazyRoute<P>(
     }
     const Component = resolved;
     return <Component {...(props as any)} />;
+  }
+
+  Lazy.preload = () => {
+    load();
   };
+  return Lazy;
 }
