@@ -6,8 +6,9 @@ import {
 } from '../shared/beet.js';
 
 /**
- * The animated beets shown on the "bootstrap" screen. One is picked at random
- * for each page load, on the server, so only its css is inlined.
+ * A "beetloader" is an animated beet shown on the "bootstrap" screen. One is
+ * picked at random for each page load, on the server, so only its css is
+ * inlined.
  *
  * The screen is up while the js bundle is parsed, so the animations must not
  * need the main thread: they're css-only and animate just `transform` and
@@ -16,38 +17,38 @@ import {
  * pixel grid. The base styles are each animation's still frame, which is what
  * `prefers-reduced-motion` shows.
  */
-export interface BootstrapLoader {
+export interface Beetloader {
   id: string;
-  /** Styles for this loader, including the shared `BASE_CSS`. */
+  /** Styles for this beetloader, including the shared `BASE_CSS`. */
   css: string;
-  Loader: () => JSX.Element;
+  Component: () => JSX.Element;
 }
 
-/** Styles shared by every loader. */
+/** Styles shared by every beetloader. */
 const BASE_CSS = `
-.bootstrap-beet {
+.beetloader {
   position: relative;
   flex: none;
   width: 24em;
   height: 24em;
   font-size: 8px;
   opacity: 0;
-  animation: bootstrap-beet-fade-in 150ms ease 150ms forwards;
+  animation: beetloader-fade-in 150ms ease 150ms forwards;
 }
 
-.bootstrap-beet > *,
-.bootstrap-beet__beet > * {
+.beetloader > *,
+.beetloader__beet > * {
   position: absolute;
 }
 
-.bootstrap-beet__beet {
+.beetloader__beet {
   left: 4.5em;
   top: 4em;
   width: 16em;
   height: 18em;
 }
 
-.bootstrap-beet svg {
+.beetloader svg {
   position: absolute;
   left: 0;
   top: 0;
@@ -55,61 +56,61 @@ const BASE_CSS = `
   height: 18em;
 }
 
-.bootstrap-beet__layer {
+.beetloader__layer {
   will-change: transform, opacity;
 }
 
-.bootstrap-beet__group {
+.beetloader__group {
   inset: 0;
 }
 
-.bootstrap-beet__ground {
+.beetloader__ground {
   height: 1em;
   background: var(--cms-color-border-strong, #cfcfcb);
 }
 
-@keyframes bootstrap-beet-fade-in {
+@keyframes beetloader-fade-in {
   to {
     opacity: 1;
   }
 }
 
 @media (max-width: 480px) {
-  .bootstrap-beet {
+  .beetloader {
     font-size: 6px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bootstrap-beet {
+  .beetloader {
     opacity: 1;
   }
 
-  .bootstrap-beet,
-  .bootstrap-beet * {
+  .beetloader,
+  .beetloader * {
     animation: none !important;
   }
 }
 `;
 
 const HOP_CSS = `
-.bootstrap-beet--hop .bootstrap-beet__beet {
+.beetloader--hop .beetloader__beet {
   top: 5em;
-  animation: bootstrap-beet-hop 1s step-end infinite;
+  animation: beetloader-hop 1s step-end infinite;
 }
 
-.bootstrap-beet--hop .bootstrap-beet__leaves {
-  animation: bootstrap-beet-hop-leaves 1s step-end infinite;
+.beetloader--hop .beetloader__leaves {
+  animation: beetloader-hop-leaves 1s step-end infinite;
 }
 
-.bootstrap-beet--hop .bootstrap-beet__ground {
+.beetloader--hop .beetloader__ground {
   left: 7em;
   top: 21em;
   width: 10em;
-  animation: bootstrap-beet-hop-shadow 1s step-end infinite;
+  animation: beetloader-hop-shadow 1s step-end infinite;
 }
 
-@keyframes bootstrap-beet-hop {
+@keyframes beetloader-hop {
   0%, 10% { transform: none; }
   20% { transform: translateY(-2em); }
   30% { transform: translateY(-4em); }
@@ -119,7 +120,7 @@ const HOP_CSS = `
   80% { transform: none; }
 }
 
-@keyframes bootstrap-beet-hop-leaves {
+@keyframes beetloader-hop-leaves {
   0% { transform: none; }
   10%, 20%, 30% { transform: translateY(1em); }
   40%, 50% { transform: none; }
@@ -128,7 +129,7 @@ const HOP_CSS = `
   90% { transform: translateY(1em); }
 }
 
-@keyframes bootstrap-beet-hop-shadow {
+@keyframes beetloader-hop-shadow {
   0%, 10%, 80% { transform: none; }
   20%, 70% { transform: scaleX(0.8); }
   30%, 60% { transform: scaleX(0.6); }
@@ -137,7 +138,7 @@ const HOP_CSS = `
 `;
 
 const PEEKABOO_CSS = `
-.bootstrap-beet--peekaboo .bootstrap-beet__window {
+.beetloader--peekaboo .beetloader__window {
   left: 0;
   top: 0;
   width: 24em;
@@ -145,26 +146,26 @@ const PEEKABOO_CSS = `
   overflow: hidden;
 }
 
-.bootstrap-beet--peekaboo .bootstrap-beet__beet {
+.beetloader--peekaboo .beetloader__beet {
   position: absolute;
-  animation: bootstrap-beet-peekaboo 3s step-end infinite;
+  animation: beetloader-peekaboo 3s step-end infinite;
 }
 
-.bootstrap-beet--peekaboo .bootstrap-beet__ground {
+.beetloader--peekaboo .beetloader__ground {
   left: 2em;
   top: 20em;
   width: 20em;
 }
 
-.bootstrap-beet--peekaboo .bootstrap-beet__crumbs {
+.beetloader--peekaboo .beetloader__crumbs {
   left: 4.5em;
   top: 4em;
   color: var(--cms-color-border-strong, #cfcfcb);
   opacity: 0;
-  animation: bootstrap-beet-peekaboo-crumbs 3s step-end infinite;
+  animation: beetloader-peekaboo-crumbs 3s step-end infinite;
 }
 
-@keyframes bootstrap-beet-peekaboo {
+@keyframes beetloader-peekaboo {
   0% { transform: translateY(16em); }
   12% { transform: translateY(13em); }
   18% { transform: translateY(11em); }
@@ -183,7 +184,7 @@ const PEEKABOO_CSS = `
   87% { transform: translateY(16em); }
 }
 
-@keyframes bootstrap-beet-peekaboo-crumbs {
+@keyframes beetloader-peekaboo-crumbs {
   0%, 90% { opacity: 0; transform: none; }
   85% { opacity: 1; transform: none; }
   88% { opacity: 1; transform: translateY(-1em); }
@@ -191,68 +192,68 @@ const PEEKABOO_CSS = `
 `;
 
 const SPROUT_CSS = `
-.bootstrap-beet--sprout .bootstrap-beet__ground {
+.beetloader--sprout .beetloader__ground {
   left: 4em;
   top: 20em;
   width: 16em;
 }
 
-.bootstrap-beet__sprout-1,
-.bootstrap-beet__sprout-2,
-.bootstrap-beet__sprout-3,
-.bootstrap-beet__sparkles {
+.beetloader__sprout-1,
+.beetloader__sprout-2,
+.beetloader__sprout-3,
+.beetloader__sparkles {
   opacity: 0;
 }
 
-.bootstrap-beet__sprout-1 {
-  animation: bootstrap-beet-sprout-1 3s step-end infinite;
+.beetloader__sprout-1 {
+  animation: beetloader-sprout-1 3s step-end infinite;
 }
 
-.bootstrap-beet__sprout-2 {
-  animation: bootstrap-beet-sprout-2 3s step-end infinite;
+.beetloader__sprout-2 {
+  animation: beetloader-sprout-2 3s step-end infinite;
 }
 
-.bootstrap-beet__sprout-3 {
-  animation: bootstrap-beet-sprout-3 3s step-end infinite;
+.beetloader__sprout-3 {
+  animation: beetloader-sprout-3 3s step-end infinite;
 }
 
-.bootstrap-beet__sprout-grown {
-  animation: bootstrap-beet-sprout-grown 3s step-end infinite;
+.beetloader__sprout-grown {
+  animation: beetloader-sprout-grown 3s step-end infinite;
 }
 
-.bootstrap-beet__sparkles {
-  animation: bootstrap-beet-sprout-sparkles 3s step-end infinite;
+.beetloader__sparkles {
+  animation: beetloader-sprout-sparkles 3s step-end infinite;
 }
 
-@keyframes bootstrap-beet-sprout-1 {
+@keyframes beetloader-sprout-1 {
   0%, 24% { opacity: 0; }
   6% { opacity: 1; }
 }
 
-@keyframes bootstrap-beet-sprout-2 {
+@keyframes beetloader-sprout-2 {
   0%, 40% { opacity: 0; }
   24% { opacity: 1; }
 }
 
-@keyframes bootstrap-beet-sprout-3 {
+@keyframes beetloader-sprout-3 {
   0%, 56% { opacity: 0; }
   40% { opacity: 1; }
 }
 
-@keyframes bootstrap-beet-sprout-grown {
+@keyframes beetloader-sprout-grown {
   0%, 94% { opacity: 0; transform: none; }
   56% { opacity: 1; transform: translateY(-1em); }
   60% { opacity: 1; transform: none; }
 }
 
-@keyframes bootstrap-beet-sprout-sparkles {
+@keyframes beetloader-sprout-sparkles {
   0%, 70%, 82% { opacity: 0; }
   62%, 76% { opacity: 1; }
 }
 `;
 
 const STROLL_CSS = `
-.bootstrap-beet--stroll .bootstrap-beet__window {
+.beetloader--stroll .beetloader__window {
   left: 0;
   top: 0;
   width: 24em;
@@ -260,12 +261,12 @@ const STROLL_CSS = `
   overflow: hidden;
 }
 
-.bootstrap-beet--stroll .bootstrap-beet__beet {
+.beetloader--stroll .beetloader__beet {
   position: absolute;
   top: 3em;
 }
 
-.bootstrap-beet--stroll .bootstrap-beet__ground {
+.beetloader--stroll .beetloader__ground {
   position: absolute;
   left: 0;
   top: 20em;
@@ -277,40 +278,40 @@ const STROLL_CSS = `
     var(--cms-color-border-strong, #cfcfcb) 6em 7em,
     transparent 7em 12em
   );
-  animation: bootstrap-beet-stroll-ground 0.96s steps(12, end) infinite;
+  animation: beetloader-stroll-ground 0.96s steps(12, end) infinite;
 }
 
-.bootstrap-beet--stroll .bootstrap-beet__body {
-  animation: bootstrap-beet-stroll-body 0.32s step-end infinite;
+.beetloader--stroll .beetloader__body {
+  animation: beetloader-stroll-body 0.32s step-end infinite;
 }
 
-.bootstrap-beet--stroll .bootstrap-beet__leaves {
-  animation: bootstrap-beet-stroll-leaves 0.32s step-end infinite;
+.beetloader--stroll .beetloader__leaves {
+  animation: beetloader-stroll-leaves 0.32s step-end infinite;
 }
 
-.bootstrap-beet__leg {
-  animation: bootstrap-beet-stroll-leg 0.64s step-end infinite;
+.beetloader__leg {
+  animation: beetloader-stroll-leg 0.64s step-end infinite;
 }
 
-.bootstrap-beet__leg--right {
+.beetloader__leg--right {
   animation-delay: -0.32s;
 }
 
-@keyframes bootstrap-beet-stroll-ground {
+@keyframes beetloader-stroll-ground {
   to { transform: translateX(-12em); }
 }
 
-@keyframes bootstrap-beet-stroll-body {
+@keyframes beetloader-stroll-body {
   0% { transform: none; }
   50% { transform: translateY(-1em); }
 }
 
-@keyframes bootstrap-beet-stroll-leaves {
+@keyframes beetloader-stroll-leaves {
   0% { transform: translateY(1em); }
   50% { transform: none; }
 }
 
-@keyframes bootstrap-beet-stroll-leg {
+@keyframes beetloader-stroll-leg {
   0% { transform: none; }
   50% { transform: translateY(-1em); }
 }
@@ -396,13 +397,13 @@ function Sprite(props: {paths: BeetPath[]; className?: string}) {
 
 function Hop() {
   return (
-    <div className="bootstrap-beet bootstrap-beet--hop" aria-hidden="true">
-      <div className="bootstrap-beet__ground bootstrap-beet__layer" />
-      <div className="bootstrap-beet__beet bootstrap-beet__layer">
+    <div className="beetloader beetloader--hop" aria-hidden="true">
+      <div className="beetloader__ground beetloader__layer" />
+      <div className="beetloader__beet beetloader__layer">
         <Sprite paths={BEET_BODY_PATHS} />
         <Sprite
           paths={BEET_LEAF_PATHS}
-          className="bootstrap-beet__leaves bootstrap-beet__layer"
+          className="beetloader__leaves beetloader__layer"
         />
       </div>
     </div>
@@ -411,17 +412,17 @@ function Hop() {
 
 function Peekaboo() {
   return (
-    <div className="bootstrap-beet bootstrap-beet--peekaboo" aria-hidden="true">
-      <div className="bootstrap-beet__window">
-        <div className="bootstrap-beet__beet bootstrap-beet__layer">
+    <div className="beetloader beetloader--peekaboo" aria-hidden="true">
+      <div className="beetloader__window">
+        <div className="beetloader__beet beetloader__layer">
           <Sprite paths={BEET_LEAF_PATHS} />
           <Sprite paths={BEET_BODY_PATHS} />
         </div>
       </div>
-      <div className="bootstrap-beet__ground" />
+      <div className="beetloader__ground" />
       <Sprite
         paths={CRUMB_PATHS}
-        className="bootstrap-beet__crumbs bootstrap-beet__layer"
+        className="beetloader__crumbs beetloader__layer"
       />
     </div>
   );
@@ -429,28 +430,28 @@ function Peekaboo() {
 
 function Sprout() {
   return (
-    <div className="bootstrap-beet bootstrap-beet--sprout" aria-hidden="true">
-      <div className="bootstrap-beet__ground" />
-      <div className="bootstrap-beet__beet">
+    <div className="beetloader beetloader--sprout" aria-hidden="true">
+      <div className="beetloader__ground" />
+      <div className="beetloader__beet">
         <Sprite
           paths={SPROUT_1_PATHS}
-          className="bootstrap-beet__sprout-1 bootstrap-beet__layer"
+          className="beetloader__sprout-1 beetloader__layer"
         />
         <Sprite
           paths={SPROUT_2_PATHS}
-          className="bootstrap-beet__sprout-2 bootstrap-beet__layer"
+          className="beetloader__sprout-2 beetloader__layer"
         />
         <Sprite
           paths={SPROUT_3_PATHS}
-          className="bootstrap-beet__sprout-3 bootstrap-beet__layer"
+          className="beetloader__sprout-3 beetloader__layer"
         />
-        <div className="bootstrap-beet__group bootstrap-beet__sprout-grown bootstrap-beet__layer">
+        <div className="beetloader__group beetloader__sprout-grown beetloader__layer">
           <Sprite paths={BEET_LEAF_PATHS} />
           <Sprite paths={BEET_BODY_PATHS} />
         </div>
         <Sprite
           paths={SPARKLE_PATHS}
-          className="bootstrap-beet__sparkles bootstrap-beet__layer"
+          className="beetloader__sparkles beetloader__layer"
         />
       </div>
     </div>
@@ -459,25 +460,25 @@ function Sprout() {
 
 function Stroll() {
   return (
-    <div className="bootstrap-beet bootstrap-beet--stroll" aria-hidden="true">
-      <div className="bootstrap-beet__window">
-        <div className="bootstrap-beet__ground bootstrap-beet__layer" />
-        <div className="bootstrap-beet__beet">
+    <div className="beetloader beetloader--stroll" aria-hidden="true">
+      <div className="beetloader__window">
+        <div className="beetloader__ground beetloader__layer" />
+        <div className="beetloader__beet">
           <Sprite
             paths={LEFT_LEG_PATHS}
-            className="bootstrap-beet__leg bootstrap-beet__layer"
+            className="beetloader__leg beetloader__layer"
           />
           <Sprite
             paths={RIGHT_LEG_PATHS}
-            className="bootstrap-beet__leg bootstrap-beet__leg--right bootstrap-beet__layer"
+            className="beetloader__leg beetloader__leg--right beetloader__layer"
           />
           <Sprite
             paths={BEET_BODY_PATHS}
-            className="bootstrap-beet__body bootstrap-beet__layer"
+            className="beetloader__body beetloader__layer"
           />
           <Sprite
             paths={BEET_LEAF_PATHS}
-            className="bootstrap-beet__leaves bootstrap-beet__layer"
+            className="beetloader__leaves beetloader__layer"
           />
         </div>
       </div>
@@ -485,16 +486,16 @@ function Stroll() {
   );
 }
 
-/** Every loader that can be shown on the bootstrap screen. */
-export const BOOTSTRAP_LOADERS: BootstrapLoader[] = [
-  {id: 'hop', css: BASE_CSS + HOP_CSS, Loader: Hop},
-  {id: 'peekaboo', css: BASE_CSS + PEEKABOO_CSS, Loader: Peekaboo},
-  {id: 'sprout', css: BASE_CSS + SPROUT_CSS, Loader: Sprout},
-  {id: 'stroll', css: BASE_CSS + STROLL_CSS, Loader: Stroll},
+/** Every beetloader that can be shown on the bootstrap screen. */
+export const BEETLOADERS: Beetloader[] = [
+  {id: 'hop', css: BASE_CSS + HOP_CSS, Component: Hop},
+  {id: 'peekaboo', css: BASE_CSS + PEEKABOO_CSS, Component: Peekaboo},
+  {id: 'sprout', css: BASE_CSS + SPROUT_CSS, Component: Sprout},
+  {id: 'stroll', css: BASE_CSS + STROLL_CSS, Component: Stroll},
 ];
 
-/** Picks a loader at random. */
-export function pickBootstrapLoader(random = Math.random): BootstrapLoader {
-  const index = Math.floor(random() * BOOTSTRAP_LOADERS.length);
-  return BOOTSTRAP_LOADERS[index];
+/** Picks a beetloader at random. */
+export function pickBeetloader(random = Math.random): Beetloader {
+  const index = Math.floor(random() * BEETLOADERS.length);
+  return BEETLOADERS[index];
 }

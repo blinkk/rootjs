@@ -21,7 +21,7 @@ describe('renderSignIn', () => {
     );
   });
 
-  it('shows a beet loader with only its own styles', async () => {
+  it('shows a beetloader with only its own styles', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const res: any = {setHeader: vi.fn(), status: vi.fn(), send: vi.fn()};
     const req: any = {get: () => 'example.com', headers: {}};
@@ -30,9 +30,9 @@ describe('renderSignIn', () => {
       cmsConfig: {id: 'test'} as any,
     });
     const html: string = res.send.mock.calls[0][0];
-    expect(html).toContain('class="bootstrap-beet bootstrap-beet--hop"');
-    expect(html).toContain('.bootstrap-beet--hop .bootstrap-beet__beet');
-    expect(html).not.toContain('.bootstrap-beet--stroll');
+    expect(html).toContain('class="beetloader beetloader--hop"');
+    expect(html).toContain('.beetloader--hop .beetloader__beet');
+    expect(html).not.toContain('.beetloader--stroll');
     vi.restoreAllMocks();
   });
 });
