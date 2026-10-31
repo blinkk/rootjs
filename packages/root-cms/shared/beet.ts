@@ -40,24 +40,47 @@ export interface BeetPath {
   fill: string;
 }
 
-/** Builds one SVG path per color, with a 1x1 square for each pixel. */
-function buildBeetPaths(): BeetPath[] {
+/**
+ * Builds one SVG path per color, with a 1x1 square for each pixel. `startRow`
+ * places the first row on the grid, so a layer of a larger sprite stays
+ * aligned with the rest of it.
+ */
+export function spritePaths(
+  rows: string[],
+  startRow = 0,
+  palette: Record<string, string> = BEET_PALETTE
+): BeetPath[] {
   const paths: Record<string, string> = {};
-  BEET_SPRITE.forEach((row, y) => {
+  rows.forEach((row, rowIndex) => {
+    const y = startRow + rowIndex;
     row.split('').forEach((code, x) => {
-      if (code in BEET_PALETTE) {
+      if (code in palette) {
         paths[code] = (paths[code] || '') + `M${x} ${y}h1v1h-1z`;
       }
     });
   });
   return Object.entries(paths).map(([code, d]) => ({
     d,
-    fill: BEET_PALETTE[code],
+    fill: palette[code],
   }));
 }
 
 /** The SVG paths that draw the beet in a `0 0 16 16` viewBox. */
-export const BEET_PATHS = buildBeetPaths();
+export const BEET_PATHS = spritePaths(BEET_SPRITE);
+
+/** The first row of the beet's body; the rows above it are the leaves. */
+const BEET_BODY_START_ROW = 6;
+
+/** The beet's leaves, as a layer that can move apart from the body. */
+export const BEET_LEAF_PATHS = spritePaths(
+  BEET_SPRITE.slice(0, BEET_BODY_START_ROW)
+);
+
+/** The beet's body, as a layer that can move apart from the leaves. */
+export const BEET_BODY_PATHS = spritePaths(
+  BEET_SPRITE.slice(BEET_BODY_START_ROW),
+  BEET_BODY_START_ROW
+);
 
 /** Returns the beet mark as an SVG data URI, e.g. for the favicon. */
 export function beetMarkDataUri(): string {
