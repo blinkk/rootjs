@@ -63,4 +63,13 @@ describe('bundled skills', () => {
       expect(contents).toMatch(new RegExp(`^name: ${skillName}$`, 'm'));
     }
   });
+
+  it('ships the current theme.css with the root-cms-theme skill', () => {
+    const read = (p: string) =>
+      fs.readFileSync(path.resolve(import.meta.dirname, p), 'utf8');
+    expect(
+      read('../skills/root-cms-theme/theme.css'),
+      'run `node scripts/ui-theme-reference.ts`'
+    ).toBe(read('../ui/styles/theme.css'));
+  });
 });

@@ -1,0 +1,286 @@
+/*
+ * The CMS theme: every custom property the UI reads, at its stock value.
+ *
+ * This file IS the contract. Copy it whole, change the values, and load the
+ * result as a theme (`cmsPlugin({themes, defaultTheme})` — see
+ * docs/themes.md) to restyle the CMS. Properties are added here as the UI
+ * grows; their names and meanings are kept stable across releases, so a
+ * theme written against them keeps working when the markup underneath
+ * changes.
+ *
+ * Every Tailwind color, radius, font, type size and shadow used by the UI
+ * resolves to one of these properties (see tailwind.css), so changing a value
+ * here restyles both utility classes and component CSS.
+ *
+ * For what properties can't reach, components carry BEM class hooks
+ * (`Button`, `Dialog__panel`, `Button--variant-primary`), listed with these
+ * properties in the generated reference in docs/themes.md. Utility classes
+ * and DOM structure aren't part of the contract. Themes are experimental.
+ */
+
+:root {
+  /* --- Color: surfaces ------------------------------------------------- */
+
+  /* The page behind cards and panels. */
+  --cms-color-page: #fbfbf9;
+  /* Cards, panels, inputs, menus and modals. */
+  --cms-color-surface: #ffffff;
+  /* A hovered row, menu item or quiet button. */
+  --cms-color-surface-hover: #f5f5f3;
+  /* A faint fill: striped table rows, file dropzones. */
+  --cms-color-surface-subtle: #fafafa;
+  /* A pressed or selected row, menu item or quiet button. */
+  --cms-color-surface-active: #ececea;
+  /* Chips, tags, inline code and other small filled shapes. */
+  --cms-color-chip: #ececea;
+  /* The dimmed backdrop behind a modal. */
+  --cms-color-overlay: rgba(20, 20, 18, 0.4);
+  /* Behind images and video: image editor stages, dark file previews. */
+  --cms-color-media: #000;
+
+  /* --- Color: lines ---------------------------------------------------- */
+
+  /* Borders and dividers. */
+  --cms-color-border: #e4e4e1;
+  /* Input borders and dividers that need more contrast. */
+  --cms-color-border-strong: #cfcfcb;
+
+  /* --- Color: text ----------------------------------------------------- */
+
+  /* Body text. */
+  --cms-color-text: #333333;
+  /* Headings and emphasized text. */
+  --cms-color-text-strong: #1f1f1f;
+  /* Secondary text: help, metadata, timestamps. */
+  --cms-color-text-muted: #646b77;
+  /* Placeholders, disabled text and decorative icons. Below 4.5:1 contrast
+   * on purpose, so never use it for text that needs to be read.
+   */
+  --cms-color-text-subtle: #a3a3a0;
+  /* Text on a filled, dark background. */
+  --cms-color-text-inverse: #ffffff;
+  /* Links. */
+  --cms-color-link: #1971c2;
+
+  /* --- Color: actions -------------------------------------------------- */
+
+  /* Filled (primary) buttons. */
+  --cms-color-primary: #1f1f1f;
+  --cms-color-primary-hover: #000000;
+  /* Text and icons on a primary button. */
+  --cms-color-on-primary: #ffffff;
+  /* The accent color: active tabs and nav items, inline groups, and divider
+   * hovers.
+   */
+  --cms-accent: #d9a6c8;
+  /* Keyboard focus rings. */
+  --cms-color-focus: #228be6;
+
+  /* --- Color: inputs --------------------------------------------------- *
+   * Text fields, selects and their chips. Cooler and a touch stronger than
+   * the chrome greys above, like the Mantine controls the CMS used before.
+   */
+
+  /* Input borders. */
+  --cms-input-border: #ced4da;
+  /* Text typed into an input. */
+  --cms-input-text: #000000;
+  /* Placeholders and the select chevron. Decorative contrast only. */
+  --cms-input-placeholder: #adb5bd;
+  /* Selected-value chips in a multi-select. */
+  --cms-input-chip: #f1f3f5;
+  --cms-input-chip-text: #495057;
+
+  /* --- Color: status --------------------------------------------------- *
+   * Each status has a strong color (text, icons, filled badges), a soft
+   * background and a line color for borders. Strong colors keep at least
+   * 4.5:1 contrast on both the soft background and white.
+   */
+
+  --cms-color-info: #1971c2;
+  --cms-color-info-soft: #e7f5ff;
+  --cms-color-info-line: #a5d8ff;
+  --cms-color-success: #2b7a3b;
+  --cms-color-success-soft: #ebfbee;
+  --cms-color-success-line: #b2f2bb;
+  --cms-color-warning: #a85b00;
+  --cms-color-warning-soft: #fff9db;
+  --cms-color-warning-line: #ffe066;
+  --cms-color-danger: #c92a2a;
+  --cms-color-danger-soft: #fff5f5;
+  --cms-color-danger-line: #ffa8a8;
+
+  /* --- Color: colored buttons ------------------------------------------ *
+   * The `blue`, `blue-light`, `green`, `danger`, `danger-outline` and
+   * `danger-subtle` variants of `Button` and `IconButton`. The values match
+   * the Mantine buttons the CMS used before (shade 6, hover shade 7). They
+   * sit below 4.5:1 contrast with their text, as Mantine's did.
+   */
+
+  /* Filled blue buttons, and the text of `blue-light` ones. */
+  --cms-button-blue: #228be6;
+  --cms-button-blue-hover: #1c7ed6;
+  /* The `blue-light` fill, and its hover (drawn at 65% opacity). */
+  --cms-button-blue-soft: #e7f5ff;
+  --cms-button-blue-soft-hover: #d0ebff;
+  /* Filled green buttons. */
+  --cms-button-green: #40c057;
+  --cms-button-green-hover: #37b24d;
+  /* Filled red (`danger`) buttons, and the text and border of the outline
+   * and subtle forms.
+   */
+  --cms-button-red: #fa5252;
+  --cms-button-red-hover: #f03e3e;
+  /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
+  --cms-button-red-soft: #fff5f5;
+
+  /* --- Color: control tracks ------------------------------------------- */
+
+  /* The well behind a `SegmentedControl`'s segments. */
+  --cms-color-track: var(--cms-color-surface-hover);
+  /* The well's border. */
+  --cms-color-track-border: var(--cms-color-border);
+
+  /* --- Color: task statuses -------------------------------------------- *
+   * Tints for the tasks page's list group headers and board columns, one
+   * per built-in status. Custom statuses use `--cms-task-status-new`.
+   */
+  --cms-task-status-new: #f1f3f5;
+  --cms-task-status-in-progress: #eef3fd;
+  --cms-task-status-in-review: #fdf3ea;
+  --cms-task-status-closed: #eef5f0;
+
+  /* --- Color: gradients ------------------------------------------------ *
+   * Backgrounds for gradient badges (doc and release statuses, task
+   * priorities, translation states), with white text on top. The values
+   * match the badges' original Mantine gradients.
+   */
+
+  /* Drafts, normal priority, info. */
+  --cms-gradient-blue: linear-gradient(45deg, #4c6ef5, #15aabf);
+  /* Published, done. */
+  --cms-gradient-green: linear-gradient(105deg, #12b886, #82c91e);
+  /* Scheduled. */
+  --cms-gradient-pink: linear-gradient(35deg, #be4bdb, #e64980);
+  /* Locked, medium priority. */
+  --cms-gradient-orange: linear-gradient(45deg, #fd7e14, #fa5252);
+  /* Pending, needs attention. */
+  --cms-gradient-yellow: linear-gradient(45deg, #fd7e14, #fab005);
+  /* High priority. */
+  --cms-gradient-red: linear-gradient(35deg, #fa5252, #be4bdb);
+  /* Releases. */
+  --cms-gradient-violet: linear-gradient(45deg, #7950f2, #be4bdb);
+  /* Archived. */
+  --cms-gradient-gray: linear-gradient(45deg, #868e96, #25262b);
+
+  /* --- Color: AI (violet) --------------------------------------------- *
+   * Marks AI features and AI-generated content: AI badges, the shimmer on a
+   * field being generated, and similar accents (e.g. reordered items in a
+   * diff). Mantine's violet, which the CMS used for these before.
+   */
+
+  /* Text, icons, borders and filled badges. */
+  --cms-color-violet: #7950f2;
+  /* Soft backgrounds behind violet text. */
+  --cms-color-violet-soft: #f3f0ff;
+  /* Violet text on the soft background, dark enough for 4.5:1 contrast
+   * (Mantine's violet is just under it there).
+   */
+  --cms-color-violet-strong: #6741d9;
+
+  /* --- Type ------------------------------------------------------------ */
+
+  --cms-font-sans: 'Inter', sans-serif;
+  --cms-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* The type scale. `2xs` is for badges only. */
+  --cms-text-2xs: 10px;
+  --cms-text-xs: 11px;
+  --cms-text-sm: 12px;
+  --cms-text-md: 13px;
+  --cms-text-base: 14px;
+  --cms-text-lg: 16px;
+  --cms-text-xl: 20px;
+  --cms-text-2xl: 24px;
+
+  /* Base size for the document editor's text. */
+  --cms-font-size: 12px;
+  /* Field labels. */
+  --cms-label-size: 12px;
+  /* Help text beneath a label. */
+  --cms-help-size: 12px;
+  /* Its colour. */
+  --cms-help-color: inherit;
+
+  /* --- Shape and elevation --------------------------------------------- */
+
+  --cms-radius-sm: 4px;
+  --cms-radius-md: 6px;
+  --cms-radius-lg: 8px;
+  --cms-radius-xl: 12px;
+
+  /* The selected segment of a `SegmentedControl` (Mantine's `xs` shadow). */
+  --cms-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  /* Cards and raised buttons. */
+  --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  /* Menus, popovers and tooltips. */
+  --cms-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* Modals and toasts. */
+  --cms-shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* --- Layout ---------------------------------------------------------- */
+
+  --cms-header-height: 48px;
+  --cms-sidebar-width-collapsed: 48px;
+  --cms-sidebar-width-expanded: 208px;
+  /* Space around a page's content. */
+  --cms-page-padding: 32px;
+  /* The same, on screens narrower than 768px. */
+  --cms-page-padding-mobile: 16px;
+  /* Height of buttons and single-line inputs. */
+  --cms-control-height-xs: 24px;
+  --cms-control-height-sm: 28px;
+  --cms-control-height-md: 36px;
+
+  /* --- Field groups ----------------------------------------------------
+   * A field group ("drawer") runs edge to edge across the field column by
+   * default, so its header reads as a band. Pull it back into the column
+   * (bleed 0) and give it a border to make it read as a box instead.
+   */
+
+  /* How far a field group runs past the field column, each side. */
+  --cms-drawer-bleed: -16px;
+  /* Border around a field group (a `border` shorthand). */
+  --cms-drawer-border: none;
+  /* Corner radius of a field group. */
+  --cms-drawer-radius: 0;
+  /* Background of a field group. */
+  --cms-drawer-bg: transparent;
+  /* Background of a field group's header row. */
+  --cms-drawer-header-bg: transparent;
+  /* Space before a group's fields, showing the nesting (a length). */
+  --cms-drawer-indent: 0;
+  /* A rule down that space (a `border` shorthand). */
+  --cms-drawer-rule: none;
+  /* Vertical space between fields. */
+  --cms-field-gap: 16px;
+}
+
+/*
+ * Stacking order. These aren't meant to be themed, but live here so every
+ * layer is defined in one place.
+ */
+:root {
+  --cms-z-sticky: 10;
+  --cms-z-dropdown: 100;
+  /* Floating windows that stay open beside the page, e.g. pinned comment
+   * threads: above dropdowns, below modals.
+   */
+  --cms-z-floating: 150;
+  /* Modals need no z-index: they're native <dialog>s, in the top layer. */
+  --cms-z-toast: 300;
+  --cms-z-tooltip: 400;
+}

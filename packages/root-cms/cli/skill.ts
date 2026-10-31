@@ -15,6 +15,7 @@ export const SKILL_NAMES = [
   'root-cms-cli',
   'root-cms-propose',
   'root-cms-apply',
+  'root-cms-theme',
 ] as const;
 
 /**
