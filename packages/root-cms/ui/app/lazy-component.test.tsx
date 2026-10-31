@@ -52,6 +52,22 @@ describe('lazyComponent', () => {
     expect(factory).toHaveBeenCalledTimes(2);
   });
 
+  it('applies dialog autofocus to content that loads after the dialog opens', async () => {
+    function Input() {
+      return <input data-autofocus aria-label="search" />;
+    }
+    const Lazy = lazyComponent(async () => Input, FAST_RETRY);
+    render(
+      <dialog open>
+        <button>close</button>
+        <Lazy />
+      </dialog>
+    );
+    screen.getByRole('button', {name: 'close'}).focus();
+    const input = await screen.findByLabelText('search');
+    await waitFor(() => expect(document.activeElement).toBe(input));
+  });
+
   it('shares one import between preload() and rendering', async () => {
     const factory = vi.fn(async () => Loaded);
     const Lazy = lazyComponent(factory, FAST_RETRY);

@@ -1,4 +1,5 @@
 import {AsyncLocalStorage} from 'node:async_hooks';
+import crypto from 'node:crypto';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -44,6 +45,7 @@ import {sse, SSEBroadcastFn} from './sse.js';
 import {getStaticCacheControl} from './static-cache.js';
 import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
+import {TtlCache} from './ttl-cache.js';
 
 export type {AiConfig, AiModelConfig, AiProvider} from './ai.js';
 export {defineAiSkill, defineAiTool} from './ai-extensions.js';
@@ -226,6 +228,22 @@ const NONCONF_STATIC_PATHS = [
  * until the server is restarted.
  */
 const GET_CURRENT_USER_TIMEOUT_MS = 15 * 1000;
+
+/**
+ * How long to reuse the network lookups that verify a user's session. Every
+ * authenticated request makes them, and loading a page fires many requests at
+ * once. A revoked session or removed user can keep access for up to this long,
+ * though API handlers that gate on the user's role read it fresh.
+ */
+const AUTH_CACHE_TTL_MS = 30 * 1000;
+
+/** Max sessions and users to keep in the auth caches. */
+const AUTH_CACHE_MAX_ENTRIES = 1000;
+
+/** Hashes a session cookie, to avoid keeping raw credentials in memory. */
+function hashSessionCookie(cookie: string): string {
+  return crypto.createHash('sha256').update(cookie).digest('hex');
+}
 
 class TimeoutError extends Error {}
 
@@ -952,6 +970,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig || {};
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
+  const sessionCache = new TtlCache<DecodedIdToken>({
+    ttlMs: AUTH_CACHE_TTL_MS,
+    maxEntries: AUTH_CACHE_MAX_ENTRIES,
+  });
+  const aclCache = new TtlCache<{exists: boolean; role: UserRole | null}>({
+    ttlMs: AUTH_CACHE_TTL_MS,
+    maxEntries: AUTH_CACHE_MAX_ENTRIES,
+  });
   let sseBroadcast: SSEBroadcastFn | null = null;
   /**
    * The running vite dev server, captured in `configureServer()`. Used by the
@@ -1105,6 +1131,21 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   }
 
   /**
+   * Returns a user's ACL entry. Keyed by project since one plugin can serve
+   * multiple sites (see `resolveSite`). Users who aren't in the ACL aren't
+   * cached, so that adding someone takes effect right away.
+   */
+  async function getCachedUserAcl(req: Request, email: string) {
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const key = `${cmsClient.projectId}/${email}`;
+    const acl = await aclCache.get(key, () => cmsClient.getUserAcl(email));
+    if (!acl.exists) {
+      aclCache.delete(key);
+    }
+    return acl;
+  }
+
+  /**
    * Returns the current user based on the request's session cookie. The
    * session cookie is checked for validity through Firebase Auth and the user's
    * email is verified to have access to Root CMS, otherwise returns `null`.
@@ -1143,8 +1184,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
       }
       // Verify the user exists in the DB's ACL list.
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const acl = await cmsClient.getUserAcl(jwt.email);
+      const acl = await getCachedUserAcl(req, jwt.email);
       if (!acl.exists) {
         console.log('session failed: user is not in the firestore acl list');
         return null;
@@ -1159,7 +1199,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // "signed out". Errors from the checks below are backend failures and
       // are left to propagate so callers can respond with an explicit error
       // instead of bouncing an authenticated user to the login page.
-      jwt = await auth.verifySessionCookie(sessionCookie, true);
+      const cookie = sessionCookie;
+      jwt = await sessionCache.get(hashSessionCookie(cookie), () =>
+        auth.verifySessionCookie(cookie, true)
+      );
     } catch (err) {
       const invalidTokenCode = getInvalidTokenErrorCode(err);
       if (invalidTokenCode) {
@@ -1192,8 +1235,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
     }
     // Verify the user exists in the DB's ACL list.
-    const cmsClient = new RootCMSClient(req.rootConfig!);
-    const acl = await cmsClient.getUserAcl(jwt.email);
+    const acl = await getCachedUserAcl(req, jwt.email);
     if (!acl.exists) {
       console.log('session failed: user is not in the firestore acl list');
       return null;

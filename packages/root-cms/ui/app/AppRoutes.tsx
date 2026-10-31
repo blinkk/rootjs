@@ -224,16 +224,26 @@ function getRoutes(): AppRoute[] {
  * waiting on that network request.
  */
 export function preloadRoute(pathname: string) {
-  const route = getRoutes().find((r) => exec(pathname, r.path));
-  (route?.component ?? NotFoundPage).preload();
+  try {
+    const route = getRoutes().find((r) => exec(pathname, r.path));
+    (route?.component ?? NotFoundPage).preload();
+  } catch {
+    // `exec()` throws on URLs it can't decode. Preloading is only an
+    // optimization, so leave it to the router to show the error.
+  }
 }
 
-/** The CMS's routes. */
+/**
+ * The CMS's routes.
+ *
+ * NOTE: the routes must not have keys. `/cms/ai` and `/cms/ai/chat/:chatId`
+ * share a component, and moving between them must not remount it.
+ */
 export function AppRoutes() {
   return (
     <Router>
       {getRoutes().map((route) => (
-        <Route key={route.path} path={route.path} component={route.component} />
+        <Route path={route.path} component={route.component} />
       ))}
       <Route default component={NotFoundPage} />
     </Router>

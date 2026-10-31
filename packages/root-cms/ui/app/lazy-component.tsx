@@ -1,5 +1,5 @@
 import {ComponentChildren, FunctionComponent} from 'preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button} from '../primitives/Button/Button.js';
 import {Spinner} from '../primitives/Spinner/Spinner.js';
 import {importWithRetry, ImportWithRetryOptions} from './lazy-route.js';
@@ -13,6 +13,24 @@ export interface LazyComponentOptions extends ImportWithRetryOptions {
 export interface LazyComponent<P> extends FunctionComponent<P> {
   /** Starts the import. Resolves once it's loaded, rejects if it fails. */
   preload: () => Promise<void>;
+}
+
+/**
+ * Focuses the element that asked for autofocus in the surrounding dialog.
+ * `Dialog` only applies autofocus when it opens, which is before content that
+ * lazy-loaded exists. Skipped if focus has moved elsewhere in the meantime.
+ */
+function DialogAutofocus() {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const dialog = ref.current?.closest('dialog');
+    if (dialog?.contains(document.activeElement)) {
+      dialog
+        .querySelector<HTMLElement>('[data-autofocus], [autofocus]')
+        ?.focus();
+    }
+  }, []);
+  return <span hidden ref={ref} />;
 }
 
 /**
@@ -50,6 +68,7 @@ export function lazyComponent<P>(
     const [resolved, setResolved] = useState(() => ({component}));
     const [failed, setFailed] = useState(false);
     const [attempt, setAttempt] = useState(0);
+    const loadedLate = useRef(!component);
 
     useEffect(() => {
       if (resolved.component) {
@@ -76,7 +95,12 @@ export function lazyComponent<P>(
 
     if (resolved.component) {
       const Component = resolved.component;
-      return <Component {...(props as any)} />;
+      return (
+        <>
+          <Component {...(props as any)} />
+          {loadedLate.current && <DialogAutofocus />}
+        </>
+      );
     }
     if (failed) {
       return (
