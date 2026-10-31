@@ -27,21 +27,21 @@ function fakeRootConfig(projectId?: string): RootConfig {
 
 describe('ai-vertex', () => {
   describe('resolveLanguageModel', () => {
-    it('throws without credentials or a project', () => {
-      expect(() =>
+    it('throws without credentials or a project', async () => {
+      await expect(
         resolveLanguageModel({
           id: 'gemini-2.5-flash',
           provider: 'google-vertex',
           project: 'my-project',
         })
-      ).toThrow(/requires credentials/);
-      expect(() =>
+      ).rejects.toThrow(/requires credentials/);
+      await expect(
         resolveLanguageModel({
           id: 'gemini-2.5-flash',
           provider: 'google-vertex',
           headers: {Authorization: 'Bearer test-token'},
         })
-      ).toThrow(/requires a project/);
+      ).rejects.toThrow(/requires a project/);
     });
   });
 

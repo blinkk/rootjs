@@ -84,7 +84,7 @@ export function createClientChatTransport(
     }): Promise<ReadableStream<UIMessageChunk>> {
       const turn = await options.loadTurnConfig();
       const tools = options.buildTools(turn.model, turn);
-      const languageModel = resolveLanguageModel(
+      const languageModel = await resolveLanguageModel(
         withBrowserHeaders(turn.model)
       );
 
