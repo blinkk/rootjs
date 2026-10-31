@@ -1,0 +1,1 @@
+../../../packages/root-cms/skills/root-cms-email-setup/SKILL.md

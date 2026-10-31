@@ -16,6 +16,7 @@ export const SKILL_NAMES = [
   'root-cms-propose',
   'root-cms-apply',
   'root-cms-theme',
+  'root-cms-email-setup',
 ] as const;
 
 /**

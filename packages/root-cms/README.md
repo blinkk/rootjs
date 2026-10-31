@@ -218,8 +218,9 @@ content can never leak into a `setRawDoc()` round-trip.
 Ready-to-use skills that teach AI coding agents how to use these commands ship
 with the package: `root-cms-cli` (the `client.*` commands), `root-cms-propose`
 (authoring change proposals), `root-cms-apply` (reviewing and applying
-them), and `root-cms-theme` (generating a theme for the CMS UI). Install them
-with:
+them), `root-cms-theme` (generating a theme for the CMS UI), and
+`root-cms-email-setup` (deploying the email service and setting up email
+notifications). Install them with:
 
 ```bash
 root-cms skill.install
