@@ -1,3 +1,4 @@
+import {Timestamp} from 'firebase-admin/firestore';
 import {describe, expect, it} from 'vitest';
 import {parseProposal, type Proposal} from '../shared/proposal.js';
 import {marshalData, type RootCMSClient} from './client.js';
@@ -249,6 +250,46 @@ describe('applyProposal doc changes', () => {
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.errors[0].path).toContain('hero.title');
+  });
+});
+
+describe('applyProposal existing data', () => {
+  const schema = {
+    name: 'Pages',
+    fields: [
+      {id: 'title', type: 'string'},
+      {id: 'launch', type: 'datetime'},
+      {id: 'day', type: 'date'},
+      {id: 'count', type: 'number'},
+    ],
+  };
+  const setTitle = (value: string) =>
+    proposalOf(
+      `version: 1\nid: p\nchanges:\n  - kind: doc.edit\n    docId: Pages/home\n    ops:\n      - op: set\n        path: title\n        after: ${value}\n`
+    );
+
+  it('keeps datetime fields as timestamps', async () => {
+    const client = createStubClient({
+      docs: {
+        'Pages/home': {title: 'a', launch: 1700000000000, day: '2026-01-01'},
+      },
+    });
+    client.getCollection = (async () => schema) as any;
+    const result = await applyProposal(client, setTitle('b'));
+    expect(result.ok).toBe(true);
+    const saved = client.state.docs['Pages/home'];
+    expect(saved.launch).toBeInstanceOf(Timestamp);
+    expect(saved.launch.toMillis()).toBe(1700000000000);
+    expect(saved.day).toBe('2026-01-01');
+  });
+
+  it('does not block an edit on an existing problem', async () => {
+    const client = createStubClient({
+      docs: {'Pages/home': {title: 'a', count: 'not a number'}},
+    });
+    client.getCollection = (async () => schema) as any;
+    expect((await applyProposal(client, setTitle('b'))).ok).toBe(true);
+    expect((await applyProposal(client, setTitle('{a: 1}'))).ok).toBe(false);
   });
 });
 

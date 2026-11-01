@@ -24,6 +24,8 @@ Root CMS JSON File Structure:
 }
 ```
 
+Every item key must be listed in `_array` exactly once, and every key in `_array` must have an item. Keys are random strings: never use `0`, `1`, `2` or other numbers as keys, even though they look like array positions. Keep the keys of existing items unchanged (older data can have human-readable keys, which are fine to keep). To reorder items, reorder the keys in `_array`.
+
 When creating an Array field in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key to an Array field, the output will NOT work with Root CMS. When adding new array items, autogenerate a new random 6-letter key for each item.
 
 The `_array` object notation applies ONLY to Array fields. Every OTHER array-shaped value is a plain JSON array and MUST NEVER be wrapped in an `_array` object. In particular:
@@ -49,6 +51,8 @@ Wrapping any of these in `_array` notation will corrupt the data when it is save
     "height": "400"
 }
 ```
+
+Keep this metadata unchanged. If you add a new image, use only a URL from the existing content or from the user: `src` is required, and you must never make up a URL or use a placeholder.
 
 3. Rich Text fields are stored as Editor.js / Lexical documents, which look like this. You may generate your own UIDs for the `id` fields. Note that `blocks` MUST be a plain JSON array — do NOT use the `_array` object notation here.
 
@@ -85,6 +89,18 @@ Wrapping any of these in `_array` notation will corrupt the data when it is save
 }
 ```
 
+Every block is an object with a `type` and a `data` object. Use only these block types, plus any custom block type defined in `root-cms.d.ts`. Other block names (such as `header` or `list`) are not supported.
+
+- `paragraph`, `quote`: `{"text": "<inline html>"}`
+- `heading`: `{"level": 2, "text": "<inline html>"}`. `level` is a number from 1 to 6.
+- `orderedList`, `unorderedList`: `{"items": [{"content": "<inline html>", "items": []}]}`. Each item must be an object, never a string.
+- `table`: `{"rows": [{"cells": [{"type": "header", "blocks": [...]}]}]}`. A cell's `type` is `header` or `data`, and `blocks` holds rich text blocks.
+- `image`: `{"file": {"url": "https://...", "width": 800, "height": 600, "alt": "..."}}`
+- `html`: `{"html": "..."}`
+- `delimiter`: no data.
+
+Always include the `version` and `time` keys shown above.
+
 4. Root CMS supports "oneOf" fields, where values can be "one of" another schema. These are typically used as array values or object values, where the user can from one of other schema types to structure the data value. For example, each module in a page's module list is "one of" the modules available in the library. One of values have a system-provided `_type` key that describes the type of the value. For example, this is a hero module, whose type is "TemplateHeadline", one of the available templates from the module library:
 
 ```
@@ -118,3 +134,7 @@ Wrapping any of these in `_array` notation will corrupt the data when it is save
 When adding new items to arrays that use `oneOf` fields, try your best to figure out which content type would best satisfy the user's request. You must never _invent_ new content types, for example, if "TemplateFoo" doesn't exist in `root-cms.d.ts`, you must never add a value with `{"_type": "TemplateFoo"}`. If none of the available content types within `root-cms.d.ts` satisfy the user's request, avoid creating the new array item and inform the user that there is no existing template compatible.
 
 Additionally, when adding new items to existing JSON data, you must carefully check the structure of those items as defined by `root-cms.d.ts`. Avoid inventing new fields for content types, use only those defined by the `root-cms.d.ts`. For example, if you are adding a button to a module, carefully check the button structure defined in `root-cms.d.ts` and only populate fields that are defined there.
+
+5. Dates, datetimes and other values must keep the type they have in the input. Use a `YYYY-MM-DD` string for date fields. Leave datetime values exactly as they appear in the input, and use an ISO 8601 string for a new datetime value. Numbers must be JSON numbers and booleans must be `true` or `false`, never strings. Reference fields hold `{"id": "Collection/slug", "collection": "Collection", "slug": "slug"}`. Select fields hold one of the options defined in `root-cms.d.ts`.
+
+The CMS checks your JSON against the schema before the user can accept it, and rejects JSON that does not match.

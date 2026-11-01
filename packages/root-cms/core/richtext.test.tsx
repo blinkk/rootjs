@@ -2,7 +2,7 @@ import {render, cleanup} from '@testing-library/preact';
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {afterEach, expect, test} from 'vitest';
-import {RichText, RichTextData} from './richtext.js';
+import {RichText, RichTextContext, RichTextData} from './richtext.js';
 
 afterEach(() => {
   cleanup();
@@ -72,4 +72,33 @@ test('paragraph size renders as a data-size attribute', () => {
     'body-3',
     null,
   ]);
+});
+
+/**
+ * Stored docs aren't guaranteed to be valid, and a throw here fails the whole
+ * page render rather than one block.
+ */
+test('renders malformed blocks without throwing', () => {
+  const blocks = [
+    {type: 'heading', data: {level: {a: 1}, text: 'Fallback level'}},
+    {type: 'heading', data: {level: 'bad level', text: 'Fallback level'}},
+    {type: 'paragraph', data: {text: {a: 1}}},
+    {type: 'paragraph', data: {text: ['a']}},
+    {type: 'paragraph', data: {text: 'x', components: {a: null}}},
+    {type: 'unorderedList', data: {items: 'abc'}},
+    {type: 'unorderedList', data: {items: [null, 'a']}},
+    {type: 'table', data: {rows: [{}, null, {cells: [null]}]}},
+    {type: 'table', data: {rows: 'abc'}},
+    {type: 'html', data: {html: {a: 1}}},
+    {type: 'paragraph', data: {text: 'Still rendered'}},
+  ];
+  const {container} = render(
+    <RichTextContext.Provider value={{t: (text) => text}}>
+      <RichText data={{blocks} as RichTextData} />
+    </RichTextContext.Provider>
+  );
+  expect(container.textContent).toContain('Still rendered');
+  expect(container.querySelectorAll('h2')).toHaveLength(2);
+  // A value that isn't a list of blocks is ignored.
+  render(<RichText data={{blocks: {_array: []}} as unknown as RichTextData} />);
 });

@@ -149,18 +149,16 @@ test('validates date and datetime fields', () => {
     )
   ).toMatchInlineSnapshot('[]');
 
-  // Invalid data - string instead of object.
-  expect(validateFields({publishDate: '2023-01-01'}, testSchema))
-    .toMatchInlineSnapshot(`
-      [
-        {
-          "expected": "object",
-          "message": "Expected object, received string",
-          "path": "publishDate",
-          "received": "string",
-        },
-      ]
-    `);
+  // The date field stores a date string.
+  expect(validateFields({publishDate: '2023-01-01'}, testSchema)).toEqual([]);
+  expect(validateFields({publishDate: '2023-13-41'}, testSchema)).toHaveLength(
+    1
+  );
+  expect(validateFields({createdAt: '2023-01-01'}, testSchema)).toHaveLength(1);
+
+  // A timestamp can be epoch millis, which is how docs are read.
+  expect(validateFields({createdAt: 1700000000000}, testSchema)).toEqual([]);
+  expect(validateFields({createdAt: Infinity}, testSchema)).toHaveLength(1);
 
   // Invalid data - missing required fields.
   expect(
@@ -1210,4 +1208,189 @@ test('validates localized values', () => {
       },
     ]
   `);
+});
+
+test('validates oneOf values against the collection types map', () => {
+  // `getCollectionSchema()` stores oneOf types as names, hoisted to `types`.
+  const collection = {
+    name: 'Pages',
+    fields: [
+      schema.array({id: 'modules', of: schema.oneOf({types: ['Hero']})}),
+    ],
+    types: {
+      Hero: {
+        name: 'Hero',
+        fields: [schema.string({id: 'title'}), schema.number({id: 'count'})],
+      },
+    },
+  } as unknown as schema.Schema;
+
+  expect(
+    validateFields(
+      {modules: [{_type: 'Hero', title: 'Hi', count: 1}]},
+      collection
+    )
+  ).toEqual([]);
+  expect(
+    validateFields({modules: [{_type: 'Hero', title: 123}]}, collection)
+  ).toMatchObject([
+    {path: 'modules.0.title', message: 'Expected string, received number'},
+  ]);
+  expect(
+    validateFields({modules: [{_type: 'Nope'}]}, collection)
+  ).toMatchObject([{path: 'modules.0._type'}]);
+});
+
+test('handles null without throwing', () => {
+  const testSchema = schema.define({
+    name: 'Test',
+    fields: [
+      schema.date({id: 'date'}),
+      schema.datetime({id: 'datetime'}),
+      schema.image({id: 'image'}),
+      schema.reference({id: 'reference'}),
+      schema.object({id: 'object', fields: []}),
+      schema.richtext({id: 'body'}),
+      schema.oneOf({id: 'oneof', types: []}),
+      schema.array({id: 'items', of: schema.object({fields: []})}),
+    ],
+  });
+
+  // The CMS UI clears these fields by storing null.
+  for (const id of ['date', 'datetime', 'image', 'reference']) {
+    expect(validateFields({[id]: null}, testSchema)).toEqual([]);
+  }
+  for (const id of ['object', 'body', 'oneof']) {
+    expect(validateFields({[id]: null}, testSchema)).toMatchObject([
+      {path: id, message: 'Expected object, received null'},
+    ]);
+  }
+  expect(validateFields({items: [null]}, testSchema)).toMatchObject([
+    {path: 'items.0'},
+  ]);
+});
+
+test('rejects rich text blocks that break the renderer or editor', () => {
+  const testSchema = schema.define({
+    name: 'Test',
+    fields: [schema.richtext({id: 'body'})],
+  });
+  const validate = (block: any) =>
+    validateFields(
+      {body: {version: '1', time: 1, blocks: [block]}},
+      testSchema
+    ).map((error) => error.path);
+
+  expect(validate({type: 'paragraph', data: {text: 'Hello'}})).toEqual([]);
+  expect(validate({type: 'heading', data: {level: 2, text: 'Hi'}})).toEqual([]);
+  expect(
+    validate({
+      type: 'orderedList',
+      data: {items: [{content: 'a', items: [{content: 'b'}]}]},
+    })
+  ).toEqual([]);
+  expect(
+    validate({
+      type: 'table',
+      data: {
+        rows: [
+          {
+            cells: [
+              {
+                type: 'data',
+                blocks: [{type: 'paragraph', data: {text: 'cell'}}],
+              },
+            ],
+          },
+        ],
+      },
+    })
+  ).toEqual([]);
+
+  const prefix = 'body.blocks.0.data';
+  expect(validate({type: 'heading', data: {level: 9, text: 'Hi'}})).toEqual([
+    `${prefix}.level`,
+  ]);
+  expect(validate({type: 'paragraph', data: {text: {a: 1}}})).toEqual([
+    `${prefix}.text`,
+  ]);
+  expect(validate({type: 'unorderedList', data: {items: 'abc'}})).toEqual([
+    `${prefix}.items`,
+  ]);
+  expect(validate({type: 'unorderedList', data: {items: ['a']}})).toEqual([
+    `${prefix}.items.0`,
+  ]);
+  expect(validate({type: 'table', data: {rows: [{}]}})).toEqual([
+    `${prefix}.rows.0.cells`,
+  ]);
+  expect(
+    validate({
+      type: 'table',
+      data: {
+        rows: [{cells: [{blocks: [{type: 'paragraph', data: {text: 1}}]}]}],
+      },
+    })
+  ).toEqual([`${prefix}.rows.0.cells.0.blocks.0.data.text`]);
+  expect(
+    validate({type: 'paragraph', data: {text: 'x', components: {a: null}}})
+  ).toEqual([`${prefix}.components.a`]);
+  // Arrays can't be stored inside of arrays.
+  expect(validate({type: 'custom', data: {content: [['a']]}})).toEqual([
+    `${prefix}.content.0`,
+  ]);
+});
+
+test('rejects values that can not be stored', () => {
+  const testSchema = schema.define({
+    name: 'Test',
+    fields: [
+      schema.number({id: 'count'}),
+      schema.object({id: 'hero', fields: [schema.string({id: 'title'})]}),
+    ],
+  });
+  expect(validateFields({count: Infinity}, testSchema)).toHaveLength(1);
+  // An `_array` map on an object field would read back as an array.
+  expect(
+    validateFields({hero: {_array: ['a'], a: {title: 'x'}}}, testSchema)
+  ).toMatchObject([{path: 'hero'}]);
+  expect(
+    validateFields(JSON.parse('{"hero": {"__proto__": {"a": 1}}}'), testSchema)
+  ).toMatchObject([{path: 'hero.__proto__'}]);
+});
+
+test('strict mode reports likely mistakes', () => {
+  const testSchema = schema.define({
+    name: 'Test',
+    fields: [
+      schema.string({id: 'title'}),
+      schema.select({id: 'theme', options: ['light', 'dark']}),
+      schema.select({id: 'tag', options: ['a'], creatable: true}),
+      schema.multiselect({id: 'tags', options: [{value: 'a'}]}),
+      schema.richtext({
+        id: 'body',
+        blockComponents: [{name: 'Callout', fields: []}],
+      }),
+      schema.reference({id: 'ref'}),
+    ],
+  });
+  const data = {
+    titel: 'Typo',
+    _system: 'ignored',
+    '@title': {},
+    theme: 'blue',
+    tag: 'anything',
+    tags: ['b'],
+    body: {
+      blocks: [
+        {type: 'header', data: {}},
+        {type: 'Callout', data: {}},
+      ],
+    },
+    ref: {id: 'Pages/a', collection: 'Pages', slug: 'b'},
+  };
+  // None of these break anything, so they're valid by default.
+  expect(validateFields(data, testSchema)).toEqual([]);
+  expect(
+    validateFields(data, testSchema, {strict: true}).map((error) => error.path)
+  ).toEqual(['theme', 'tags.0', 'body.blocks.0.type', 'ref.id', 'titel']);
 });

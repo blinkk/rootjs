@@ -264,7 +264,11 @@ export function getCollectionSchema(
   const fileId = `/collections/${collectionId}.schema.ts`;
   const module = SCHEMA_MODULES[fileId];
   if (!module?.default) {
-    console.warn(`collection schema not exported in: ${fileId}`);
+    // No schemas at all means this module wasn't loaded through vite, which
+    // isn't an issue with the schema file.
+    if (Object.keys(SCHEMA_MODULES).length > 0) {
+      console.warn(`collection schema not exported in: ${fileId}`);
+    }
     return null;
   }
   const collection = module.default as schema.Collection;

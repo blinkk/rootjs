@@ -22,14 +22,16 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import type {GoogleWriteToolName} from '../../../../../core/ai-tools-google.js';
-import type {DocEditOperation} from '../../../../../core/ai-tools.js';
+import type {
+  DocEditOperation,
+  FieldRepair,
+} from '../../../../../core/ai-tools.js';
 import {Collection} from '../../../../../core/schema.js';
 import {
-  marshalData,
   resolveArrayObjectPath,
   unmarshalData as unmarshalDataBase,
 } from '../../../../../shared/marshal.js';
-import {isSlugValid} from '../../../../../shared/slug.js';
+import {getSlugError, isSlugValid} from '../../../../../shared/slug.js';
 import {fetchCollectionSchema} from '../../../collections/collection.js';
 import {logAction} from '../../../logs/actions.js';
 import {
@@ -158,18 +160,96 @@ function draftDocRef(docId: string) {
 // touch the draft path — see `draftDocRef` above and the safety policy in
 // `core/ai-tools.ts`.
 
-/** Unmarshal with Firestore Timestamp support. */
+function isTimestamp(value: any): boolean {
+  return value instanceof Timestamp;
+}
+
+/**
+ * Unmarshals doc fields into the plain JSON the tools work on. Array keys are
+ * kept so that writing the fields back doesn't change them.
+ */
 function unmarshalData(data: any): any {
   return unmarshalDataBase(data, {
-    isTimestamp: (v) => v instanceof Timestamp,
+    isTimestamp,
     timestampToValue: (v) => v.toMillis(),
+    preserveArrayKeys: true,
   });
 }
 
-// marshalData is imported from shared/marshal.js above.
+/** Normalizes and validates fields for a write. See `doc-normalize.ts`. */
+async function prepareFields(
+  schema: Collection,
+  fields: Record<string, any>,
+  before?: Record<string, any> | null
+) {
+  const {prepareFieldsForWrite} = await loadValidators();
+  return prepareFieldsForWrite(fields, {
+    schema,
+    before,
+    toTimestamp: (millis) => Timestamp.fromMillis(millis),
+  });
+}
 
-function cloneJson<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value ?? null));
+/** Converts prepared fields to the shape stored in Firestore. */
+async function marshalFields(
+  schema: Collection,
+  fields: Record<string, any>
+): Promise<Record<string, any>> {
+  const {marshalFieldsForStorage} = await loadValidators();
+  return marshalFieldsForStorage(fields, schema, {isTimestamp});
+}
+
+/**
+ * Returns a value as the model reads it, for diffing in the approval preview.
+ * Drops array keys and uses millis for timestamps, so that neither shows up as
+ * a change.
+ */
+function toPreviewValue(value: any): any {
+  if (isTimestamp(value)) {
+    return value.toMillis();
+  }
+  if (Array.isArray(value)) {
+    return value.map(toPreviewValue);
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const [key, val] of Object.entries(value)) {
+      if (key !== '_arrayKey') {
+        out[key] = toPreviewValue(val);
+      }
+    }
+    return out;
+  }
+  return value;
+}
+
+/** Reads the value at a list of keys, walking objects and arrays. */
+function getValueAtSegments(data: any, segments: string[]): any {
+  let cursor = data;
+  for (const segment of segments) {
+    if (cursor === null || typeof cursor !== 'object') {
+      return undefined;
+    }
+    cursor = cursor[segment];
+  }
+  return cursor;
+}
+
+/** Lists automatic repairs in the approval preview. */
+function getRepairDetails(repairs: FieldRepair[]): CmsToolDetail[] {
+  if (repairs.length === 0) {
+    return [];
+  }
+  return [
+    {
+      label: 'Auto-corrected',
+      value: repairs
+        .map((repair) =>
+          repair.path ? `${repair.path}: ${repair.message}` : repair.message
+        )
+        .join(' '),
+    },
+  ];
 }
 
 function normalizeToolValue(value: any): any {
@@ -190,7 +270,7 @@ function normalizeToolValue(value: any): any {
   return value;
 }
 
-/** Normalizes raw `doc_edit` operations, parsing stringified JSON values. */
+/** Normalizes raw `doc_edit` operations into a list of known keys. */
 function normalizeOperations(operations: any): DocEditOperation[] {
   if (!Array.isArray(operations)) {
     return [];
@@ -198,7 +278,7 @@ function normalizeOperations(operations: any): DocEditOperation[] {
   return operations.map((op) => {
     const out: DocEditOperation = {op: op?.op, path: op?.path};
     if (op && 'value' in op) {
-      out.value = normalizeToolValue(op.value);
+      out.value = op.value;
     }
     if (op && op.index !== undefined && op.index !== null) {
       out.index = op.index;
@@ -221,23 +301,6 @@ function describeOperation(op: DocEditOperation): string {
     default:
       return `${op.op} ${op.path}`;
   }
-}
-
-function setValueAtPath(target: any, path: string, value: any) {
-  const segments = path.split('.');
-  let cursor = target;
-  for (let i = 0; i < segments.length - 1; i++) {
-    const segment = segments[i];
-    const key = Array.isArray(cursor) ? Number(segment) : segment;
-    const nextSegment = segments[i + 1];
-    if (cursor[key] === undefined || cursor[key] === null) {
-      cursor[key] = /^\d+$/.test(nextSegment) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-  const last = segments[segments.length - 1];
-  const key = Array.isArray(cursor) ? Number(last) : last;
-  cursor[key] = value;
 }
 
 async function readDraftFields(
@@ -324,40 +387,368 @@ export async function previewCmsWriteTool(
   }
 }
 
+/** Result of validating a doc write tool call that can't proceed. */
+interface DocPlanError {
+  ok: false;
+  error: string;
+  summary: string;
+  path?: string;
+  errors?: unknown[];
+  hint: string;
+}
+
+const SET_VALIDATION_HINT =
+  'Nothing was written. Read the schema with `schema_get` and the doc with ' +
+  '`doc_get`, then retry with a value matching the listed errors.';
+
+interface DocSetPlanOk {
+  ok: true;
+  schema: Collection;
+  collectionId: string;
+  slug: string;
+  fields: Record<string, any>;
+  repairs: FieldRepair[];
+  before: Record<string, any> | null;
+  existingSys: Record<string, any>;
+}
+
+/**
+ * Validates a `doc_set` call. Shared by the approval preview and the execute
+ * handler so both apply the same checks. The same goes for the other `plan`
+ * functions.
+ */
+async function planDocSet(input: {
+  docId: string;
+  fields: Record<string, any>;
+}): Promise<DocSetPlanOk | DocPlanError> {
+  const {collection: collectionId, slug} = parseDocId(input.docId);
+  const fields = normalizeToolValue(input.fields);
+  // Replacing a doc with anything else would wipe its content.
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    return {
+      ok: false,
+      error: 'VALIDATION_FAILED',
+      summary: `\`fields\` must be an object for ${input.docId}.`,
+      hint: 'Pass the complete fields object for the doc.',
+    };
+  }
+  const schema = await getCachedSchema(collectionId);
+  const existing = await readDraftFields(input.docId);
+  const before = existing.found ? existing.fields : null;
+  const prepared = await prepareFields(schema, fields, before);
+  if (prepared.errors.length > 0) {
+    return {
+      ok: false,
+      error: 'VALIDATION_FAILED',
+      summary: `The fields for ${input.docId} do not match the collection schema.`,
+      errors: prepared.errors,
+      hint: SET_VALIDATION_HINT,
+    };
+  }
+  return {
+    ok: true,
+    schema,
+    collectionId,
+    slug,
+    fields: prepared.fields,
+    repairs: prepared.repairs,
+    before,
+    existingSys: existing.raw?.sys || {},
+  };
+}
+
+interface DocCreatePlanOk {
+  ok: true;
+  schema: Collection;
+  collectionId: string;
+  slug: string;
+  fields: Record<string, any>;
+  repairs: FieldRepair[];
+}
+
+async function planDocCreate(input: {
+  docId: string;
+  fields?: Record<string, any>;
+}): Promise<DocCreatePlanOk | DocPlanError> {
+  const {collection: collectionId, slug} = parseDocId(input.docId);
+  const slugError = getTargetSlugError(input.docId);
+  if (slugError) {
+    return slugError;
+  }
+  const existing = await fbGetDoc(draftDocRef(input.docId));
+  if (existing.exists()) {
+    return {
+      ok: false,
+      error: 'ALREADY_EXISTS',
+      summary: `${input.docId} already exists.`,
+      hint: 'Use an unused slug, or use an update tool for the existing draft.',
+    };
+  }
+  const schema = await getCachedSchema(collectionId);
+  const prepared = await prepareFields(
+    schema,
+    normalizeToolValue(input.fields) ?? {}
+  );
+  if (prepared.errors.length > 0) {
+    return {
+      ok: false,
+      error: 'VALIDATION_FAILED',
+      summary: `The initial fields for ${input.docId} do not match the collection schema.`,
+      errors: prepared.errors,
+      hint: SET_VALIDATION_HINT,
+    };
+  }
+  return {
+    ok: true,
+    schema,
+    collectionId,
+    slug,
+    fields: prepared.fields,
+    repairs: prepared.repairs,
+  };
+}
+
+interface DocUpdateFieldPlanOk {
+  ok: true;
+  before: Record<string, any>;
+  after: Record<string, any>;
+  repairs: FieldRepair[];
+  /** The Firestore update to make. */
+  update: Record<string, unknown>;
+}
+
+async function planDocUpdateField(input: {
+  docId: string;
+  path: string;
+  value: any;
+}): Promise<DocUpdateFieldPlanOk | DocPlanError> {
+  const fail = (
+    error: string,
+    summary: string,
+    hint: string,
+    errors?: unknown[]
+  ): DocPlanError => ({
+    ok: false,
+    error,
+    summary,
+    path: input.path,
+    errors,
+    hint,
+  });
+
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+  const {applyDocEdits, validatePathSyntax, validateValueAtPath} =
+    await loadValidators();
+  const syntaxError = validatePathSyntax(String(input.path));
+  if (syntaxError) {
+    return fail(
+      'VALIDATION_FAILED',
+      `Could not validate ${input.path} for ${input.docId}.`,
+      'Use a dotted path relative to the doc fields object, e.g. "hero.title".',
+      [syntaxError]
+    );
+  }
+
+  const draft = await readDraftFields(input.docId);
+  if (!draft.found) {
+    return fail(
+      'NOT_FOUND',
+      `${input.docId} does not exist.`,
+      `Doc "${input.docId}" does not exist.`
+    );
+  }
+
+  const storagePath = resolveArrayObjectPath(
+    draft.raw.fields || {},
+    input.path
+  );
+  if (!storagePath.ok) {
+    return fail(
+      'VALIDATION_FAILED',
+      `Could not resolve ${input.path} in ${input.docId}.`,
+      'Use zero-based array indices for existing array items, or set the ' +
+        'whole array field when appending or removing items.',
+      [storagePath.error]
+    );
+  }
+
+  const applied = applyDocEdits(draft.fields, [
+    {op: 'set', path: input.path, value: input.value},
+  ]);
+  if (!applied.ok) {
+    return fail(
+      'VALIDATION_FAILED',
+      `Could not resolve ${input.path} in ${input.docId}.`,
+      'Read the doc with `doc_get` to confirm its current shape.',
+      [applied.error]
+    );
+  }
+
+  // The whole doc is validated since only the doc knows which `oneof` type the
+  // path goes through. Only errors new to this write are reported.
+  const prepared = await prepareFields(schema, applied.fields, draft.fields);
+  const value = getValueAtSegments(
+    prepared.fields,
+    input.path.trim().split('.')
+  );
+  const errors = [
+    ...prepared.errors,
+    ...validateValueAtPath(schema, input.path, value),
+  ];
+  if (errors.length > 0) {
+    return fail(
+      'VALIDATION_FAILED',
+      `Could not validate ${input.path} for ${input.docId}.`,
+      SET_VALIDATION_HINT,
+      errors
+    );
+  }
+
+  // Only the field is written, unless an array key on the way to it had to be
+  // replaced (e.g. a numeric key), which leaves the stored path out of date.
+  const stored = await marshalFields(schema, prepared.fields);
+  const storageValue = getValueAtSegments(stored, storagePath.segments);
+  return {
+    ok: true,
+    before: draft.fields,
+    after: prepared.fields,
+    repairs: prepared.repairs,
+    update:
+      storageValue === undefined
+        ? {fields: stored}
+        : {[`fields.${storagePath.path}`]: storageValue},
+  };
+}
+
+interface DocEditPlanOk {
+  ok: true;
+  operations: DocEditOperation[];
+  schema: Collection;
+  before: Record<string, any>;
+  after: Record<string, any>;
+  repairs: FieldRepair[];
+}
+
+async function planDocEdit(input: {
+  docId: string;
+  operations: any[];
+}): Promise<DocEditPlanOk | DocPlanError> {
+  const operations = normalizeOperations(input.operations);
+  if (operations.length === 0) {
+    return {
+      ok: false,
+      error: 'INVALID_OPERATION',
+      summary: `No operations were passed for ${input.docId}.`,
+      hint: 'Pass a non-empty `operations` array.',
+    };
+  }
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+
+  const before = await readDraftFields(input.docId);
+  if (!before.found) {
+    return {
+      ok: false,
+      error: 'NOT_FOUND',
+      summary: `${input.docId} does not exist.`,
+      hint: `Doc "${input.docId}" does not exist. Create it with \`doc_create\` first.`,
+    };
+  }
+
+  const {applyDocEdits} = await loadValidators();
+  const applied = applyDocEdits(before.fields, operations);
+  if (!applied.ok) {
+    return {
+      ok: false,
+      error: 'INVALID_OPERATION',
+      summary: `Operation ${applied.error.opIndex + 1} (${
+        applied.error.op
+      }) could not be applied to ${input.docId}.`,
+      errors: [applied.error],
+      hint:
+        'Fix the failing operation. Use zero-based array indices, target ' +
+        'arrays for insert_item/remove_item, and read the doc with ' +
+        '`doc_get` to confirm the current shape.',
+    };
+  }
+
+  const prepared = await prepareFields(schema, applied.fields, before.fields);
+  if (prepared.errors.length > 0) {
+    return {
+      ok: false,
+      error: 'VALIDATION_FAILED',
+      summary: `The edits to ${input.docId} do not match the collection schema.`,
+      errors: prepared.errors,
+      hint: SET_VALIDATION_HINT,
+    };
+  }
+
+  return {
+    ok: true,
+    operations,
+    schema,
+    before: before.fields,
+    after: prepared.fields,
+    repairs: prepared.repairs,
+  };
+}
+
+/**
+ * Returns an error if a new doc's slug isn't one the CMS accepts. The UI checks
+ * this when creating or copying a doc, but tool calls don't go through it.
+ */
+function getTargetSlugError(docId: string): DocPlanError | null {
+  const {collection, slug} = parseDocId(docId);
+  const meta = window.__ROOT_CTX.collections[collection];
+  if (!meta) {
+    return {
+      ok: false,
+      error: 'INVALID_COLLECTION',
+      summary: `Collection "${collection}" does not exist.`,
+      hint: 'Use `collections_list` to find valid collection ids.',
+    };
+  }
+  const slugError = getSlugError(slug, meta.slugRegex);
+  if (!slugError) {
+    return null;
+  }
+  return {
+    ok: false,
+    error: 'INVALID_SLUG',
+    summary: `"${slug}" is not a valid slug. ${slugError}`,
+    hint: 'Slugs use lowercase letters, numbers, dashes and underscores.',
+  };
+}
+
 async function previewDocSet(input: {
   docId: string;
   fields: Record<string, any>;
 }): Promise<CmsToolPreview> {
-  const {collection: collectionId} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-  const {validateFields} = await loadValidators();
-  const errors = validateFields(input.fields, schema);
-  if (errors.length > 0) {
+  const title = 'Replace draft fields';
+  const plan = await planDocSet(input);
+  if (!plan.ok) {
     return createPreviewError({
+      ...plan,
       toolName: 'doc_set',
-      title: 'Replace draft fields',
-      summary: `Could not validate the replacement fields for ${input.docId}.`,
+      title,
       docId: input.docId,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint: 'The fields payload does not match the collection schema. Read the doc and schema, then retry with a valid payload.',
     });
   }
-
-  const before = await readDraftFields(input.docId);
   return {
     toolName: 'doc_set',
-    title: 'Replace draft fields',
+    title,
     summary: `Replace all draft fields for ${input.docId}.`,
     docId: input.docId,
-    before: before.found ? before.fields : {},
-    after: input.fields || {},
+    before: toPreviewValue(plan.before || {}),
+    after: toPreviewValue(plan.fields),
     details: [
       {label: 'Document', value: input.docId},
       {
         label: 'Operation',
-        value: before.found ? 'Replace draft' : 'Create draft',
+        value: plan.before ? 'Replace draft' : 'Create draft',
       },
+      ...getRepairDetails(plan.repairs),
     ],
   };
 }
@@ -366,46 +757,27 @@ async function previewDocCreate(input: {
   docId: string;
   fields?: Record<string, any>;
 }): Promise<CmsToolPreview> {
-  const {collection: collectionId} = parseDocId(input.docId);
-  const existing = await fbGetDoc(draftDocRef(input.docId));
-  if (existing.exists()) {
+  const title = 'Create draft document';
+  const plan = await planDocCreate(input);
+  if (!plan.ok) {
     return createPreviewError({
+      ...plan,
       toolName: 'doc_create',
-      title: 'Create draft document',
-      summary: `${input.docId} already exists.`,
+      title,
       docId: input.docId,
-      error: 'ALREADY_EXISTS',
-      hint: 'Use an unused slug, or use an update tool for the existing draft.',
     });
   }
-
-  if (input.fields) {
-    const schema = await getCachedSchema(collectionId);
-    const {validateFields} = await loadValidators();
-    const errors = validateFields(input.fields, schema);
-    if (errors.length > 0) {
-      return createPreviewError({
-        toolName: 'doc_create',
-        title: 'Create draft document',
-        summary: `Could not validate the initial fields for ${input.docId}.`,
-        docId: input.docId,
-        error: 'VALIDATION_FAILED',
-        errors,
-        hint: 'The fields payload does not match the collection schema.',
-      });
-    }
-  }
-
   return {
     toolName: 'doc_create',
-    title: 'Create draft document',
+    title,
     summary: `Create ${input.docId} as a new draft document.`,
     docId: input.docId,
     before: {},
-    after: input.fields || {},
+    after: toPreviewValue(plan.fields),
     details: [
       {label: 'Document', value: input.docId},
       {label: 'Operation', value: 'Create draft'},
+      ...getRepairDetails(plan.repairs),
     ],
   };
 }
@@ -415,68 +787,29 @@ async function previewDocUpdateField(input: {
   path: string;
   value: any;
 }): Promise<CmsToolPreview> {
-  const value = normalizeToolValue(input.value);
-  const {collection: collectionId} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-  const {validateValueAtPath} = await loadValidators();
-  const errors = validateValueAtPath(schema, input.path, value);
-  if (errors.length > 0) {
+  const title = 'Update draft field';
+  const plan = await planDocUpdateField(input);
+  if (!plan.ok) {
     return createPreviewError({
+      ...plan,
       toolName: 'doc_updateField',
-      title: 'Update draft field',
-      summary: `Could not validate ${input.path} for ${input.docId}.`,
+      title,
       docId: input.docId,
-      path: input.path,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint: 'The value does not match the field schema. Inspect the doc and schema, then retry with a valid value.',
     });
   }
-
-  const ref = draftDocRef(input.docId);
-  const snap = await fbGetDoc(ref);
-  if (!snap.exists()) {
-    return createPreviewError({
-      toolName: 'doc_updateField',
-      title: 'Update draft field',
-      summary: `${input.docId} does not exist.`,
-      docId: input.docId,
-      path: input.path,
-      error: 'NOT_FOUND',
-      hint: `Doc "${input.docId}" does not exist.`,
-    });
-  }
-
-  const raw = snap.data() as any;
-  const storagePath = resolveArrayObjectPath(raw.fields || {}, input.path);
-  if (!storagePath.ok) {
-    return createPreviewError({
-      toolName: 'doc_updateField',
-      title: 'Update draft field',
-      summary: `Could not resolve ${input.path} in ${input.docId}.`,
-      docId: input.docId,
-      path: input.path,
-      error: 'VALIDATION_FAILED',
-      errors: [storagePath.error],
-      hint: 'Use zero-based array indices for existing array items, or set the whole array field when appending or removing items.',
-    });
-  }
-
-  const before = unmarshalData(raw.fields || {});
-  const after = cloneJson(before);
-  setValueAtPath(after, input.path, value);
   return {
     toolName: 'doc_updateField',
-    title: 'Update draft field',
+    title,
     summary: `Update ${input.path} in ${input.docId}.`,
     docId: input.docId,
     path: input.path,
-    before,
-    after,
+    before: toPreviewValue(plan.before),
+    after: toPreviewValue(plan.after),
     details: [
       {label: 'Document', value: input.docId},
       {label: 'Field path', value: input.path},
       {label: 'Operation', value: 'Update draft field'},
+      ...getRepairDetails(plan.repairs),
     ],
   };
 }
@@ -485,72 +818,33 @@ async function previewDocEdit(input: {
   docId: string;
   operations: any[];
 }): Promise<CmsToolPreview> {
-  const operations = normalizeOperations(input.operations);
-  const {collection: collectionId} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-
-  const before = await readDraftFields(input.docId);
-  if (!before.found) {
+  const title = 'Edit draft document';
+  const plan = await planDocEdit(input);
+  if (!plan.ok) {
     return createPreviewError({
+      ...plan,
       toolName: 'doc_edit',
-      title: 'Edit draft document',
-      summary: `${input.docId} does not exist.`,
+      title,
       docId: input.docId,
-      error: 'NOT_FOUND',
-      hint: `Doc "${input.docId}" does not exist. Create it with \`doc_create\` first.`,
     });
   }
-
-  const {applyDocEdits, validateFields} = await loadValidators();
-  const applied = applyDocEdits(before.fields, operations);
-  if (!applied.ok) {
-    return createPreviewError({
-      toolName: 'doc_edit',
-      title: 'Edit draft document',
-      summary: `Operation ${applied.error.opIndex + 1} (${
-        applied.error.op
-      }) could not be applied to ${input.docId}.`,
-      docId: input.docId,
-      error: 'INVALID_OPERATION',
-      errors: [applied.error],
-      hint:
-        'Fix the failing operation. Use zero-based array indices, target ' +
-        'arrays for insert_item/remove_item, and read the doc with ' +
-        '`doc_get` to ' +
-        'confirm the current shape.',
-    });
-  }
-
-  const errors = validateFields(applied.fields, schema);
-  if (errors.length > 0) {
-    return createPreviewError({
-      toolName: 'doc_edit',
-      title: 'Edit draft document',
-      summary: `The edits to ${input.docId} did not match the collection schema.`,
-      docId: input.docId,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint:
-        'The resulting fields do not match the collection schema. Inspect ' +
-        'the doc and schema, then retry with valid values.',
-    });
-  }
-
+  const {operations} = plan;
   return {
     toolName: 'doc_edit',
-    title: 'Edit draft document',
+    title,
     summary: `Apply ${operations.length} edit${
       operations.length === 1 ? '' : 's'
     } to ${input.docId}.`,
     docId: input.docId,
-    before: before.fields,
-    after: applied.fields,
+    before: toPreviewValue(plan.before),
+    after: toPreviewValue(plan.after),
     details: [
       {label: 'Document', value: input.docId},
       ...operations.map((op, i) => ({
         label: `Operation ${i + 1}`,
         value: describeOperation(op),
       })),
+      ...getRepairDetails(plan.repairs),
     ],
   };
 }
@@ -559,6 +853,15 @@ async function previewDocDuplicate(input: {
   fromDocId: string;
   toDocId: string;
 }): Promise<CmsToolPreview> {
+  const slugError = getTargetSlugError(input.toDocId);
+  if (slugError) {
+    return createPreviewError({
+      ...slugError,
+      toolName: 'doc_duplicate',
+      title: 'Duplicate draft document',
+      docId: input.toDocId,
+    });
+  }
   const fromRef = draftDocRef(input.fromDocId);
   const fromSnap = await fbGetDoc(fromRef);
   if (!fromSnap.exists()) {
@@ -591,7 +894,7 @@ async function previewDocDuplicate(input: {
   }
 
   const fromData = fromSnap.data() as any;
-  const fields = unmarshalData(fromData.fields || {});
+  const fields = toPreviewValue(unmarshalData(fromData.fields || {}));
   return {
     toolName: 'doc_duplicate',
     title: 'Duplicate draft document',
@@ -1103,34 +1406,37 @@ async function getCachedSchema(collectionId: string): Promise<Collection> {
   return await fetchCollectionSchema(collectionId);
 }
 
+/** Tool output for a doc write that failed validation. */
+function createPlanFailure(docId: string, plan: DocPlanError) {
+  return {
+    success: false,
+    docId,
+    path: plan.path,
+    error: plan.error,
+    message: plan.summary,
+    errors: plan.errors,
+    hint: plan.hint,
+  };
+}
+
+/** Tells the model what was corrected, so it can avoid it in the next call. */
+function getRepairsOutput(repairs: FieldRepair[]) {
+  return repairs.length > 0 ? {repairs} : {};
+}
+
 async function docSet(input: {docId: string; fields: Record<string, any>}) {
-  const {collection: collectionId, slug} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-  const {validateFields} = await loadValidators();
-  const errors = validateFields(input.fields, schema);
-  if (errors.length > 0) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint:
-        'The fields payload did not match the collection schema. Read the ' +
-        'doc with `doc_get` for an example of the expected shape, then retry ' +
-        'with a valid payload.',
-    };
+  const plan = await planDocSet(input);
+  if (!plan.ok) {
+    return createPlanFailure(input.docId, plan);
   }
 
   const {firebase} = getCtx();
-  const ref = draftDocRef(input.docId);
-  const existing = await fbGetDoc(ref);
-  const existingData = existing.exists() ? (existing.data() as any) : {};
-  const existingSys = existingData.sys || {};
+  const {existingSys} = plan;
   const userEmail = firebase.user?.email || 'root-cms-ai';
   const data = {
     id: input.docId,
-    collection: collectionId,
-    slug,
+    collection: plan.collectionId,
+    slug: plan.slug,
     sys: {
       ...existingSys,
       createdAt: existingSys.createdAt ?? serverTimestamp(),
@@ -1139,13 +1445,14 @@ async function docSet(input: {docId: string; fields: Record<string, any>}) {
       modifiedBy: userEmail,
       locales: existingSys.locales ?? ['en'],
     },
-    fields: marshalData(input.fields),
+    fields: await marshalFields(plan.schema, plan.fields),
   };
-  await setDoc(ref, data);
+  await setDoc(draftDocRef(input.docId), data);
   logAiDocAction('doc.save', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
+    ...getRepairsOutput(plan.repairs),
     receipt: createReceipt({
       title: 'Updated draft document',
       summary: `Replaced all draft fields for ${input.docId}.`,
@@ -1159,39 +1466,17 @@ async function docSet(input: {docId: string; fields: Record<string, any>}) {
 }
 
 async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
-  const {collection: collectionId, slug} = parseDocId(input.docId);
-  const ref = draftDocRef(input.docId);
-  const existing = await fbGetDoc(ref);
-  if (existing.exists()) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'ALREADY_EXISTS',
-      hint: 'A doc with this id already exists. Use `doc_set` to overwrite.',
-    };
-  }
-
-  if (input.fields) {
-    const schema = await getCachedSchema(collectionId);
-    const {validateFields} = await loadValidators();
-    const errors = validateFields(input.fields, schema);
-    if (errors.length > 0) {
-      return {
-        success: false,
-        docId: input.docId,
-        error: 'VALIDATION_FAILED',
-        errors,
-        hint: 'The fields payload did not match the collection schema.',
-      };
-    }
+  const plan = await planDocCreate(input);
+  if (!plan.ok) {
+    return createPlanFailure(input.docId, plan);
   }
 
   const {firebase} = getCtx();
   const userEmail = firebase.user?.email || 'root-cms-ai';
   const data = {
     id: input.docId,
-    collection: collectionId,
-    slug,
+    collection: plan.collectionId,
+    slug: plan.slug,
     sys: {
       createdAt: serverTimestamp(),
       createdBy: userEmail,
@@ -1199,13 +1484,14 @@ async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
       modifiedBy: userEmail,
       locales: ['en'],
     },
-    fields: input.fields ? marshalData(input.fields) : {},
+    fields: await marshalFields(plan.schema, plan.fields),
   };
-  await setDoc(ref, data);
+  await setDoc(draftDocRef(input.docId), data);
   logAiDocAction('doc.create', {docId: input.docId});
   return {
     success: true,
     docId: input.docId,
+    ...getRepairsOutput(plan.repairs),
     receipt: createReceipt({
       title: 'Created draft document',
       summary: `Created ${input.docId} as a new draft document.`,
@@ -1223,58 +1509,14 @@ async function docUpdateField(input: {
   path: string;
   value: any;
 }) {
-  const value = normalizeToolValue(input.value);
-
-  const {collection: collectionId} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-  const {validateValueAtPath} = await loadValidators();
-  const errors = validateValueAtPath(schema, input.path, value);
-  if (errors.length > 0) {
-    return {
-      success: false,
-      docId: input.docId,
-      path: input.path,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint:
-        'The value did not match the field schema. Inspect the doc with ' +
-        '`doc_get` to see the expected shape, then retry with a valid value.',
-    };
-  }
-
-  const ref = draftDocRef(input.docId);
-  const snap = await fbGetDoc(ref);
-  if (!snap.exists()) {
-    return {
-      success: false,
-      docId: input.docId,
-      path: input.path,
-      error: 'NOT_FOUND',
-      hint: `Doc "${input.docId}" does not exist.`,
-    };
-  }
-
-  const raw = snap.data() as any;
-  const storagePath = resolveArrayObjectPath(raw.fields || {}, input.path);
-  if (!storagePath.ok) {
-    return {
-      success: false,
-      docId: input.docId,
-      path: input.path,
-      error: 'VALIDATION_FAILED',
-      errors: [storagePath.error],
-      hint:
-        'The path could not be resolved against the current draft. Use ' +
-        'zero-based array indices for existing array items, or set the ' +
-        'whole array field when appending or removing items.',
-    };
+  const plan = await planDocUpdateField(input);
+  if (!plan.ok) {
+    return createPlanFailure(input.docId, plan);
   }
 
   const {firebase} = getCtx();
-  const fieldKey = `fields.${storagePath.path}`;
-  const marshalled = marshalData(value);
-  await updateDoc(ref, {
-    [fieldKey]: marshalled,
+  await updateDoc(draftDocRef(input.docId), {
+    ...plan.update,
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
   });
@@ -1283,6 +1525,7 @@ async function docUpdateField(input: {
     success: true,
     docId: input.docId,
     path: input.path,
+    ...getRepairsOutput(plan.repairs),
     receipt: createReceipt({
       title: 'Updated draft field',
       summary: `Updated ${input.path} in ${input.docId}.`,
@@ -1297,55 +1540,15 @@ async function docUpdateField(input: {
 }
 
 async function docEdit(input: {docId: string; operations: any[]}) {
-  const operations = normalizeOperations(input.operations);
-  const {collection: collectionId} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-
-  const ref = draftDocRef(input.docId);
-  const snap = await fbGetDoc(ref);
-  if (!snap.exists()) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'NOT_FOUND',
-      hint: `Doc "${input.docId}" does not exist.`,
-    };
-  }
-  const raw = snap.data() as any;
-  const currentFields = unmarshalData(raw.fields || {});
-
-  const {applyDocEdits, validateFields} = await loadValidators();
-  const applied = applyDocEdits(currentFields, operations);
-  if (!applied.ok) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'INVALID_OPERATION',
-      errors: [applied.error],
-      hint:
-        'Fix the failing operation. Use zero-based array indices, target ' +
-        'arrays for insert_item/remove_item, and read the doc with ' +
-        '`doc_get` to ' +
-        'confirm the current shape.',
-    };
+  const plan = await planDocEdit(input);
+  if (!plan.ok) {
+    return createPlanFailure(input.docId, plan);
   }
 
-  const errors = validateFields(applied.fields, schema);
-  if (errors.length > 0) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint:
-        'The resulting fields did not match the collection schema. Inspect ' +
-        'the doc with `doc_get`, then retry with valid values.',
-    };
-  }
-
+  const {operations} = plan;
   const {firebase} = getCtx();
-  await updateDoc(ref, {
-    fields: marshalData(applied.fields),
+  await updateDoc(draftDocRef(input.docId), {
+    fields: await marshalFields(plan.schema, plan.after),
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
   });
@@ -1353,6 +1556,7 @@ async function docEdit(input: {docId: string; operations: any[]}) {
   return {
     success: true,
     docId: input.docId,
+    ...getRepairsOutput(plan.repairs),
     receipt: createReceipt({
       title: 'Edited draft document',
       summary: `Applied ${operations.length} edit${
@@ -1378,6 +1582,10 @@ async function docEdit(input: {docId: string; operations: any[]}) {
 // not by the chat model.
 
 async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
+  const slugError = getTargetSlugError(input.toDocId);
+  if (slugError) {
+    return createPlanFailure(input.toDocId, slugError);
+  }
   const fromRef = draftDocRef(input.fromDocId);
   const fromSnap = await fbGetDoc(fromRef);
   if (!fromSnap.exists()) {

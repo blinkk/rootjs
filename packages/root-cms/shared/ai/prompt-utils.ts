@@ -245,16 +245,37 @@ export function stripUndefined<T>(value: T): T {
 }
 
 /**
- * Extracts JSON from an AI response that may contain markdown code blocks.
+ * Extracts JSON from an AI response. Models that are asked for bare JSON still
+ * tend to wrap it in a markdown code block or add a sentence around it, so this
+ * looks for a code block, then for the outermost object or array.
  */
 export function extractJsonFromResponse(responseText: string): string {
-  let jsonText = responseText.trim();
-  if (jsonText.startsWith('```')) {
-    const lines = jsonText.split('\n');
-    jsonText = lines.slice(1, -1).join('\n');
-    if (jsonText.startsWith('json')) {
-      jsonText = jsonText.substring(4).trim();
+  const text = responseText.trim();
+  const fenced = text.match(/```[a-z]*\s*\n?([\s\S]*?)```/i);
+  if (fenced) {
+    return fenced[1].trim();
+  }
+  const start = text.search(/[{[]/);
+  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  return start !== -1 && end > start ? text.slice(start, end + 1) : text;
+}
+
+/**
+ * Keeps the string values of `locales` from a model's JSON response, since the
+ * model can return anything. Locales missing from the response are omitted.
+ */
+export function pickLocaleStrings(
+  parsed: unknown,
+  locales: string[]
+): Record<string, string> {
+  const strings: Record<string, string> = {};
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    for (const locale of locales) {
+      const value = (parsed as Record<string, unknown>)[locale];
+      if (typeof value === 'string') {
+        strings[locale] = value;
+      }
     }
   }
-  return jsonText;
+  return strings;
 }

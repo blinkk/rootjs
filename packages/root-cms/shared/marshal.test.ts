@@ -1,6 +1,7 @@
 import {describe, it, expect} from 'vitest';
 import {
   marshalData,
+  repairArrayObject,
   unmarshalData,
   isRichTextData,
   resolveArrayObjectPath,
@@ -99,6 +100,101 @@ describe('marshalData', () => {
     const result = marshalData({a: 1, b: undefined, c: 'x'});
     expect(result).toEqual({a: 1, c: 'x'});
     expect('b' in result).toBe(false);
+  });
+});
+
+describe('marshalData array keys', () => {
+  it('replaces duplicate and invalid array keys', () => {
+    const result = marshalData([
+      {_arrayKey: 'abc', n: 1},
+      {_arrayKey: 'abc', n: 2},
+      {_arrayKey: 'a.b', n: 3},
+    ]);
+    expect(new Set(result._array).size).toBe(3);
+    expect(result._array[0]).toBe('abc');
+    expect(result._array).not.toContain('a.b');
+    expect(result._array.map((key: string) => result[key].n)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it('replaces numeric keys and keeps human-readable ones', () => {
+    const result = marshalData([
+      {_arrayKey: '0', n: 1},
+      {_arrayKey: '123', n: 2},
+      {_arrayKey: 'hero-section', n: 3},
+    ]);
+    expect(result._array[2]).toBe('hero-section');
+    for (const key of result._array) {
+      expect(key).not.toMatch(/^\d+$/);
+    }
+    expect(result._array.map((key: string) => result[key].n)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it('round-trips keys with preserveArrayKeys', () => {
+    const stored = {_array: ['abc'], abc: {title: 'a'}};
+    const plain = unmarshalData(stored, {preserveArrayKeys: true});
+    expect(plain).toEqual([{title: 'a', _arrayKey: 'abc'}]);
+    expect(marshalData(plain)).toEqual(stored);
+  });
+});
+
+describe('repairArrayObject', () => {
+  it('leaves a valid array object as is', () => {
+    expect(
+      repairArrayObject({_array: ['abc', 'xyz'], abc: {n: 1}, xyz: {n: 2}})
+    ).toEqual({
+      items: [
+        {n: 1, _arrayKey: 'abc'},
+        {n: 2, _arrayKey: 'xyz'},
+      ],
+      repaired: false,
+    });
+  });
+
+  it('builds the order when `_array` is missing', () => {
+    const result = repairArrayObject({1: {n: 2}, 0: {n: 1}});
+    expect(result?.repaired).toBe(true);
+    expect(result?.items.map((item) => item.n)).toEqual([1, 2]);
+  });
+
+  it('merges a write to an index into the item at that index', () => {
+    const result = repairArrayObject({
+      _array: ['abc', 'xyz'],
+      abc: {title: 'a', body: 'b'},
+      xyz: {title: 'c'},
+      0: {title: 'new'},
+    });
+    expect(result?.repaired).toBe(true);
+    expect(result?.items).toEqual([
+      {title: 'new', body: 'b', _arrayKey: 'abc'},
+      {title: 'c', _arrayKey: 'xyz'},
+    ]);
+  });
+
+  it('adds items missing from `_array` to the end', () => {
+    const result = repairArrayObject({_array: ['a'], a: {n: 1}, b: {n: 2}});
+    expect(result?.items.map((item) => item.n)).toEqual([1, 2]);
+  });
+
+  it('drops `_array` entries that are duplicated or have no item', () => {
+    const result = repairArrayObject({
+      _array: ['a', 'a', 'gone', 7],
+      a: {n: 1},
+    });
+    expect(result?.repaired).toBe(true);
+    expect(result?.items).toEqual([{n: 1, _arrayKey: 'a'}]);
+  });
+
+  it('flags numeric keys', () => {
+    expect(repairArrayObject({_array: ['0'], 0: {n: 1}})?.repaired).toBe(true);
+  });
+
+  it('ignores values that are not a map of items', () => {
+    expect(repairArrayObject([{n: 1}])).toBe(null);
+    expect(repairArrayObject({_type: 'Hero', title: 'x'})).toBe(null);
   });
 });
 

@@ -5,10 +5,12 @@ import {
   createCmsTools,
   createReadOnlyCmsTools,
   getReleaseStatus,
+  simplifySchema,
   validateValueAtPath,
   type CmsToolReadBackend,
 } from './ai-tools.js';
 import {Collection} from './schema.js';
+import {setValueAtPath} from './values.js';
 
 describe('validateValueAtPath', () => {
   const collection: Collection = {
@@ -457,6 +459,76 @@ describe('applyDocEdits', () => {
     if (!result.ok) {
       expect(result.error.path).toBe('content.modules.9');
     }
+  });
+});
+
+describe('path safety', () => {
+  it('rejects paths that reach the object prototype', () => {
+    for (const path of ['__proto__.polluted', 'a.constructor.prototype.b']) {
+      const result = applyDocEdits({}, [{op: 'set', path, value: 'yes'}]);
+      expect(result.ok).toBe(false);
+      expect(({} as any).polluted).toBeUndefined();
+    }
+  });
+
+  it('rejects a non-integer index', () => {
+    const result = applyDocEdits({items: []}, [
+      {op: 'insert_item', path: 'items', value: {}, index: 0.5},
+    ]);
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('setValueAtPath', () => {
+  it('sets array items by position', () => {
+    const data = {items: [{a: 1}]};
+    setValueAtPath(data, 'items.0.a', 2);
+    setValueAtPath(data, 'items.1', {a: 3});
+    expect(data).toEqual({items: [{a: 2}, {a: 3}]});
+  });
+
+  it('never stores a position as a key or leaves gaps', () => {
+    expect(() => setValueAtPath({items: {}}, 'items.0.a', 1)).toThrow();
+    expect(() => setValueAtPath({items: []}, 'items.2', {})).toThrow();
+    expect(() => setValueAtPath({}, '__proto__.polluted', 1)).toThrow();
+  });
+});
+
+describe('oneOf types map', () => {
+  const collection = {
+    name: 'Pages',
+    fields: [
+      {id: 'title', type: 'string'},
+      {
+        id: 'modules',
+        type: 'array',
+        of: {type: 'oneof', types: ['Hero']},
+      },
+    ],
+    types: {
+      Hero: {name: 'Hero', fields: [{id: 'title', type: 'string'}]},
+    },
+  } as unknown as Collection;
+
+  it('validates paths that go through a hoisted oneOf type', () => {
+    expect(validateValueAtPath(collection, 'modules.0.title', 'Hi')).toEqual(
+      []
+    );
+    expect(
+      validateValueAtPath(collection, 'modules.0.title', 123)
+    ).toMatchObject([{path: 'modules.0.title'}]);
+  });
+
+  it('rejects a path that walks into a scalar field', () => {
+    expect(validateValueAtPath(collection, 'title.foo', 'x')).toMatchObject([
+      {path: 'title.foo'},
+    ]);
+  });
+
+  it('gives the model the fields of each type', () => {
+    expect(simplifySchema(collection).types).toEqual({
+      Hero: {fields: [{id: 'title', type: 'string'}]},
+    });
   });
 });
 

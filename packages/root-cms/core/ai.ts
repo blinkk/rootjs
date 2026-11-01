@@ -40,6 +40,7 @@ import {
   buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
+  pickLocaleStrings,
   sanitizeGeneratedTitle,
   TITLE_GENERATION_SYSTEM_PROMPT,
 } from '../shared/ai/prompt-utils.js';
@@ -497,6 +498,35 @@ export function buildGoogleToolsPrompt(options?: {write?: boolean}): string {
   return lines.join('\n');
 }
 
+/**
+ * Describes the JSON shape of each field type for the write tools. Every value
+ * below is checked, so this is what keeps a model from guessing and retrying.
+ */
+export const FIELD_FORMAT_PROMPT = [
+  'CMS field formats:',
+  '- Call `schema_get` before writing to a collection for the first time. `oneof` fields list type names; the fields of each type are in the `types` map of the response. Only use field ids, `_type` values and options that the schema lists, and never invent any.',
+  '- Writes use plain JSON. Arrays are plain JSON arrays. Do not use the `_array` object notation.',
+  '- string, select: a string. For a select, one of its `options` unless it is `creatable`.',
+  '- number: a JSON number. boolean: `true` or `false`.',
+  '- multiselect: an array of strings.',
+  '- date: a `YYYY-MM-DD` string. datetime: an ISO 8601 string or epoch milliseconds.',
+  '- image, file: `{"src": "<url>", "alt": "..."}`. Only use URLs from existing content or that the user gave you, and never make up a URL or use a placeholder.',
+  '- object: an object with the fields of the schema.',
+  '- oneof: an object with `_type` set to one of the type names, plus the fields of that type.',
+  "- array: an array of objects matching the field's `of`. Keep the `_arrayKey` of existing items, and leave it out of new or copied items. The CMS creates the keys, so never write array items as an object, and never use a number as a key.",
+  '- A number in a path is an array position, not a key: "content.modules.0.title" edits the first item. To add an item, use `insert_item` in `doc_edit`; a position that does not exist yet is rejected.',
+  '- reference: `{"id": "Pages/home", "collection": "Pages", "slug": "home"}`. references: an array of those.',
+  '- richtext: `{"blocks": [...]}`, where each block is `{"type": "...", "data": {...}}`. The block types are:',
+  '  - `paragraph`, `quote`: `{"text": "<inline html>"}`',
+  '  - `heading`: `{"level": 2, "text": "<inline html>"}`, with `level` from 1 to 6',
+  '  - `orderedList`, `unorderedList`: `{"items": [{"content": "<inline html>", "items": []}]}`',
+  '  - `table`: `{"rows": [{"cells": [{"type": "header", "blocks": [...]}]}]}`, where a cell `type` is `header` or `data`',
+  '  - `image`: `{"file": {"url": "...", "width": 800, "height": 600, "alt": "..."}}`',
+  '  - `html`: `{"html": "..."}`. `delimiter`: no data.',
+  "  - Also any type listed in the field's `blockComponents`. Inline html can use `a`, `b`, `strong`, `i`, `em`, `u`, `s`, `code`, `sub`, `sup` and `br`.",
+  '- A successful write can return `repairs`, listing values the CMS had to correct. Use the corrected format from then on. A write that fails with `VALIDATION_FAILED` wrote nothing: fix what its `errors` list and retry.',
+].join('\n');
+
 function buildActiveDocPrompt(docId: string): string {
   return [
     'Active document context:',
@@ -600,6 +630,9 @@ export async function buildChatSystemPrompt(
     '',
     buildExecutionModePrompt(executionMode),
   ];
+  if (executionMode !== 'read') {
+    promptSections.push('', FIELD_FORMAT_PROMPT);
+  }
   const localizedValuesPrompt = buildLocalizedValuesPrompt(rootConfig);
   if (localizedValuesPrompt) {
     promptSections.push('', localizedValuesPrompt);
@@ -885,7 +918,7 @@ export async function translateString(
   const responseText = result.text || '{}';
   const jsonText = extractJsonFromResponse(responseText);
   try {
-    return JSON.parse(jsonText);
+    return pickLocaleStrings(JSON.parse(jsonText), options.targetLocales);
   } catch (err) {
     console.error('failed to parse AI translation response:', responseText);
     throw new Error('Invalid response format from AI translation', {
@@ -982,16 +1015,7 @@ export async function transformTranslations(
     throw new Error('Invalid response format from AI transform', {cause: err});
   }
   // Only return the requested locales, and only string values.
-  const transformed: Record<string, string> = {};
-  if (parsed && typeof parsed === 'object') {
-    Object.keys(options.translations).forEach((locale) => {
-      const value = (parsed as Record<string, unknown>)[locale];
-      if (typeof value === 'string') {
-        transformed[locale] = value;
-      }
-    });
-  }
-  return transformed;
+  return pickLocaleStrings(parsed, Object.keys(options.translations));
 }
 
 export interface GenerateAltTextOptions {
