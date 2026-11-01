@@ -1,14 +1,13 @@
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../../../core/client.js';
-import {Text} from '../../../../components/Text/Text.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {Select} from '../../../../primitives/Select/Select.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {cn} from '../../../../utils/classes.js';
 import {sortByKey} from '../../../../utils/objects.js';
-import {EmailAvatar} from '../../../users/EmailAvatar/EmailAvatar.js';
 import {UserProfile, isOrgEmail} from '../../../users/user-profile.js';
+import {UserInfo} from '../../../users/UserInfo/UserInfo.js';
 import {useUserProfiles} from '../../../users/useUserProfile.js';
+import {RoleMenu} from '../RoleMenu/RoleMenu.js';
 
 export interface ShareBoxProps {
   className?: string;
@@ -110,45 +109,22 @@ ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
   return (
     <div className="ShareBox__user flex w-full items-center gap-2 px-3 py-1.5 hover:bg-surface-hover md:px-4">
-      <EmailAvatar
-        className="ShareBox__user__avatar size-6 shrink-0"
+      <UserInfo
+        classNames={{
+          avatar: 'ShareBox__user__avatar',
+          email: 'ShareBox__user__email',
+        }}
         email={props.email}
         profile={props.profile}
-        size={24}
       />
-      <Text
-        className="ShareBox__user__email min-w-0 flex-1 truncate"
-        size="body-sm"
-        weight="semi-bold"
-        color="gray"
-      >
-        {props.email}
-        {isCurrentUser && ' (you)'}
-      </Text>
-      <div className="ShareBox__user__roleSelect w-36 shrink-0">
-        <Select
-          data={[
-            {value: 'ADMIN', label: 'ADMIN'},
-            {value: 'EDITOR', label: 'EDITOR'},
-            {value: 'CONTRIBUTOR', label: 'CONTRIBUTOR'},
-            {value: 'VIEWER', label: 'VIEWER'},
-            {value: 'REMOVE', label: 'REMOVE'},
-          ]}
-          aria-label={`Role for ${props.email}`}
-          value={props.role}
-          disabled={isCurrentUser || !props.currentUserIsAdmin}
-          onValueChange={(value) => {
-            if (!value) {
-              return;
-            }
-            if (value === 'REMOVE') {
-              props.onRemove(props.email);
-            } else {
-              props.onRoleChange(props.email, value as UserRole);
-            }
-          }}
-        />
-      </div>
+      <RoleMenu
+        className="ShareBox__user__roleSelect w-36 shrink-0"
+        role={props.role}
+        aria-label={`Role for ${props.email}: ${props.role}`}
+        disabled={isCurrentUser || !props.currentUserIsAdmin}
+        onChange={(role) => props.onRoleChange(props.email, role)}
+        onRemove={() => props.onRemove(props.email)}
+      />
     </div>
   );
 };

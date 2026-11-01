@@ -484,6 +484,7 @@ Each block, with its `__elements` and `--modifiers`. A `*` stands for a value fi
 #### `ui/features/settings`
 
 - `PermissionGroupsBox`: `__accordion`, `__addGroup`, `__editor`, `__editor__addUser`, `__editor__addUser__email`, `__editor__collections`, `__editor__footer`, `__editor__name`, `__editor__role`, `__editor__row`, `__editor__userItem`, `__editor__userItem__avatar`, `__editor__userItem__email`, `__editor__userList`, `__editor__users`, `__empty`, `__trigger`, `__trigger__badge`, `__trigger__name`
+- `RoleMenu`: `__description`, `__role`, `__trigger`
 - `SettingsPage`: `__customCss`, `__section`, `__section__body`, `__section__left`, `__section__left__title`, `__section__right`, `__section__right__title`, `__section__setting`, `__section__users`, `__section__users__sharebox`, `__share`, `__share__saveBar`, `__share__saveBar__actions`, `__share__subsection`, `__siteAdmin__resetSignIn`, `__siteAdmin__resetSignIn__user`, `__siteAdmin__searchButtons`, `__siteAdmin__searchStats`, `__theme__select`
 - `ShareBox`: `__addUser`, `__addUser__button`, `__addUser__email`, `__user`, `__user__avatar`, `__user__email`, `__user__roleSelect`, `__users`
 
@@ -525,6 +526,7 @@ Each block, with its `__elements` and `--modifiers`. A `*` stands for a value fi
 - `UserActionTooltip`: `__avatar`, `__detail`, `__heading`, `__text`, `__trigger`
 - `UserAvatar`: `__tooltip`, `__tooltip__email`, `__tooltip__name`, `__tooltip__note`; `--inactive`
 - `UserAvatarGroup`: `__avatar`, `__overflow`
+- `UserInfo`: `__avatar`, `__details`, `__email`, `__lastLogin`, `__name`, `__text`, `__title`, `__youBadge`
 - `UserSelect`: `__item`, `__item__email`, `__item__label`, `__item__text`, `__value`, `__value__label`; `--multi`
 - `UserTag`: `__tooltip`, `__tooltip__email`, `__tooltip__name`, `__tooltip__text`
 
