@@ -41,13 +41,12 @@ export function UserInfo(props: UserInfoProps) {
         <div className="UserInfo__title flex min-w-0 items-center gap-1.5">
           <Text
             className={cn(
-              'min-w-0 truncate',
+              'min-w-0 truncate text-strong',
               displayName ? 'UserInfo__name' : 'UserInfo__email',
               !displayName && classNames?.email
             )}
-            size="body-sm"
+            size="body"
             weight="semi-bold"
-            color="gray"
           >
             {displayName || email}
           </Text>
