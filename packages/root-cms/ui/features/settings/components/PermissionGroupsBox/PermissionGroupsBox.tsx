@@ -10,20 +10,13 @@ import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {MultiSelect} from '../../../../primitives/MultiSelect/MultiSelect.js';
-import {Select} from '../../../../primitives/Select/Select.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {cn} from '../../../../utils/classes.js';
-import {EmailAvatar} from '../../../users/EmailAvatar/EmailAvatar.js';
 import {UserProfile, isOrgEmail} from '../../../users/user-profile.js';
+import {UserInfo} from '../../../users/UserInfo/UserInfo.js';
 import {useUserProfiles} from '../../../users/useUserProfile.js';
 import {PermissionGroup, newPermissionGroup} from '../../permissionGroups.js';
-
-const ROLE_OPTIONS = [
-  {value: 'ADMIN', label: 'ADMIN'},
-  {value: 'EDITOR', label: 'EDITOR'},
-  {value: 'CONTRIBUTOR', label: 'CONTRIBUTOR'},
-  {value: 'VIEWER', label: 'VIEWER'},
-];
+import {RoleMenu} from '../RoleMenu/RoleMenu.js';
 
 export interface PermissionGroupsBoxProps {
   className?: string;
@@ -186,17 +179,13 @@ function PermissionGroupEditor(props: PermissionGroupEditorProps) {
           disabled={disabled}
           onInput={(e) => setName(e.currentTarget.value)}
         />
-        <Select
+        <RoleMenu
           className="PermissionGroupsBox__editor__role sm:w-40 sm:shrink-0"
           label="Role"
-          data={ROLE_OPTIONS}
-          value={group.role}
+          aria-label={`Role: ${group.role}`}
+          role={group.role}
           disabled={disabled}
-          onValueChange={(role) => {
-            if (role) {
-              setRole(role as UserRole);
-            }
-          }}
+          onChange={setRole}
         />
       </div>
       <MultiSelect
@@ -248,15 +237,14 @@ function PermissionGroupEditor(props: PermissionGroupEditorProps) {
                   key={email}
                   className="PermissionGroupsBox__editor__userItem flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-surface-hover"
                 >
-                  <EmailAvatar
-                    className="PermissionGroupsBox__editor__userItem__avatar size-6"
+                  <UserInfo
+                    classNames={{
+                      avatar: 'PermissionGroupsBox__editor__userItem__avatar',
+                      email: 'PermissionGroupsBox__editor__userItem__email',
+                    }}
                     email={email}
                     profile={profile}
-                    size={24}
                   />
-                  <span className="PermissionGroupsBox__editor__userItem__email min-w-0 flex-1 truncate">
-                    {email}
-                  </span>
                   <IconButton
                     size="xs"
                     label={`Remove ${email}`}

@@ -1,26 +1,13 @@
-import {IconCheck, IconChevronDown} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../../../core/client.js';
-import {RelativeTime} from '../../../../components/RelativeTime/RelativeTime.js';
-import {Text} from '../../../../components/Text/Text.js';
-import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {Menu, MenuDivider, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {cn} from '../../../../utils/classes.js';
 import {sortByKey} from '../../../../utils/objects.js';
-import {timestampToMillis} from '../../../../utils/time.js';
-import {EmailAvatar} from '../../../users/EmailAvatar/EmailAvatar.js';
 import {UserProfile, isOrgEmail} from '../../../users/user-profile.js';
+import {UserInfo} from '../../../users/UserInfo/UserInfo.js';
 import {useUserProfiles} from '../../../users/useUserProfile.js';
-
-/** The roles offered in a user's role menu, highest access first. */
-const ROLE_OPTIONS: {role: UserRole; description: string}[] = [
-  {role: 'ADMIN', description: 'All of the below and change sharing settings'},
-  {role: 'EDITOR', description: 'View, edit, and publish docs'},
-  {role: 'CONTRIBUTOR', description: 'View and edit docs, but not publish'},
-  {role: 'VIEWER', description: 'View docs but not edit'},
-];
+import {RoleMenu} from '../RoleMenu/RoleMenu.js';
 
 export interface ShareBoxProps {
   className?: string;
@@ -120,86 +107,24 @@ export interface ShareBoxUserProps {
 
 ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
-  const displayName = props.profile?.displayName?.trim();
-  const lastLogin = timestampToMillis(props.profile?.lastSignedInAt);
   return (
     <div className="ShareBox__user flex w-full items-center gap-2 px-3 py-1.5 hover:bg-surface-hover md:px-4">
-      <EmailAvatar
-        className="ShareBox__user__avatar size-6 shrink-0"
+      <UserInfo
+        classNames={{
+          avatar: 'ShareBox__user__avatar',
+          email: 'ShareBox__user__email',
+        }}
         email={props.email}
         profile={props.profile}
-        size={24}
       />
-      <div className="ShareBox__user__info min-w-0 flex-1">
-        <div className="ShareBox__user__title flex min-w-0 items-center gap-1.5">
-          <Text
-            className={cn(
-              'min-w-0 truncate',
-              displayName ? 'ShareBox__user__name' : 'ShareBox__user__email'
-            )}
-            size="body-sm"
-            weight="semi-bold"
-            color="gray"
-          >
-            {displayName || props.email}
-          </Text>
-          {isCurrentUser && (
-            <Badge className="ShareBox__user__youBadge" size="xs">
-              You
-            </Badge>
-          )}
-        </div>
-        {(displayName || lastLogin > 0) && (
-          <Text
-            className="ShareBox__user__details flex min-w-0 gap-1"
-            size="body-sm"
-            color="gray"
-          >
-            {displayName && (
-              <span className="ShareBox__user__email min-w-0 truncate">
-                {props.email}
-              </span>
-            )}
-            {lastLogin > 0 && (
-              <span className="ShareBox__user__lastLogin shrink-0 whitespace-nowrap">
-                {displayName && '· '}Last login{' '}
-                <RelativeTime ts={lastLogin} underline={false} />
-              </span>
-            )}
-          </Text>
-        )}
-      </div>
-      <div className="ShareBox__user__roleSelect w-36 shrink-0">
-        <Menu
-          placement="bottom-end"
-          width={280}
-          trigger={
-            <Button
-              className="w-full justify-between font-normal"
-              aria-label={`Role for ${props.email}: ${props.role}`}
-              iconRight={<IconChevronDown />}
-              disabled={isCurrentUser || !props.currentUserIsAdmin}
-            >
-              {props.role}
-            </Button>
-          }
-        >
-          {ROLE_OPTIONS.map(({role, description}) => (
-            <MenuItem
-              key={role}
-              hint={role === props.role ? <IconCheck /> : undefined}
-              onClick={() => props.onRoleChange(props.email, role)}
-            >
-              <span className="block font-semibold">{role}</span>
-              <span className="mt-0.5 block text-muted">{description}</span>
-            </MenuItem>
-          ))}
-          <MenuDivider />
-          <MenuItem danger onClick={() => props.onRemove(props.email)}>
-            Remove access
-          </MenuItem>
-        </Menu>
-      </div>
+      <RoleMenu
+        className="ShareBox__user__roleSelect w-36 shrink-0"
+        role={props.role}
+        aria-label={`Role for ${props.email}: ${props.role}`}
+        disabled={isCurrentUser || !props.currentUserIsAdmin}
+        onChange={(role) => props.onRoleChange(props.email, role)}
+        onRemove={() => props.onRemove(props.email)}
+      />
     </div>
   );
 };
