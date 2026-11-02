@@ -82,15 +82,27 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const innerRef = useRef<HTMLTextAreaElement>(null);
     const setRefs = useMergedRef(innerRef, ref);
 
+    // The value at the last measure. Measuring forces a layout, so renders
+    // that leave the value unchanged skip it.
+    const measuredValue = useRef<string | null>(null);
+
     const resize = useCallback(() => {
-      if (autosize && innerRef.current) {
-        autosizeTextarea(innerRef.current, minRows, maxRows);
+      const el = innerRef.current;
+      if (autosize && el) {
+        measuredValue.current = el.value;
+        autosizeTextarea(el, minRows, maxRows);
       }
     }, [autosize, minRows, maxRows]);
 
-    // Re-measure on every render (the value may have changed from outside)
-    // and whenever the width changes, since that re-wraps the text.
-    useLayoutEffect(() => resize());
+    // Re-measure when the row limits change, when the value changes (it may
+    // have changed from outside) and when the width changes, since that
+    // re-wraps the text.
+    useLayoutEffect(() => resize(), [resize]);
+    useLayoutEffect(() => {
+      if (innerRef.current?.value !== measuredValue.current) {
+        resize();
+      }
+    });
     useLayoutEffect(() => {
       const el = innerRef.current;
       if (!autosize || !el || typeof ResizeObserver === 'undefined') {
