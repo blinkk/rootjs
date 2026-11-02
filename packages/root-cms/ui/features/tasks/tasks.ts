@@ -862,14 +862,16 @@ function logTaskMetadataChange(change: TaskMetadataChange) {
 }
 
 /**
- * Describes a logged metadata change, e.g.
- * "#1: Status changed from New to In progress".
+ * Returns the display values of a logged metadata change, e.g. a `field` of
+ * "Status", `from` "New" and `to` "In progress".
  */
 export function formatTaskMetadataChange(change: TaskMetadataChange) {
-  const {taskId, field} = change;
-  const from = formatTaskLogValue(field, change.from);
-  const to = formatTaskLogValue(field, change.to);
-  return `#${taskId}: ${TASK_FIELD_LABELS[field]} changed from ${from} to ${to}`;
+  const {field} = change;
+  return {
+    field: TASK_FIELD_LABELS[field],
+    from: formatTaskLogValue(field, change.from),
+    to: formatTaskLogValue(field, change.to),
+  };
 }
 
 /** Formats a metadata value for the action log, e.g. "In progress". */

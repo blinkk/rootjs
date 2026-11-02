@@ -356,6 +356,10 @@ export interface Action<T = any> {
    */
   action: string;
   /**
+   * Describes the action in the CMS's recent actions. See `logAction()`.
+   */
+  label?: string;
+  /**
    * The user's email that performed the action (or "system").
    */
   by?: string;
@@ -3179,10 +3183,29 @@ export class RootCMSClient {
     }
   }
 
+  /**
+   * Logs an action to the CMS's action logs. Custom actions (e.g. from a
+   * plugin) should pass a `label`, which reads as a sentence in the CMS's
+   * recent actions: the user's name, the label, and then the value of the
+   * first metadata key ending in "Id", if any. Without a label, the sentence
+   * uses the action's name.
+   *
+   * Example:
+   * ```ts
+   * await cmsClient.logAction('acme.inventory_sync', {
+   *   by: 'ada@example.com',
+   *   // Shown as "Ada Lin synced inventory from warehouse-feed".
+   *   label: 'synced inventory from',
+   *   metadata: {feedId: 'warehouse-feed', skuCount: 1204},
+   *   links: [{label: 'View run', url: 'https://example.com/runs/42'}],
+   * });
+   * ```
+   */
   async logAction(
     action: string,
     options?: {
       by?: string;
+      label?: string;
       metadata?: any;
       links?: {label: string; url: string; target?: string}[];
     }
@@ -3196,6 +3219,9 @@ export class RootCMSClient {
       by: options?.by || 'system',
       metadata: options?.metadata || {},
     };
+    if (options?.label) {
+      data.label = options.label;
+    }
     if (options?.links) {
       data.links = options.links;
     }

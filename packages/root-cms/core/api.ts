@@ -1008,6 +1008,7 @@ export function api(server: Server, options: ApiOptions) {
     try {
       await cmsClient.logAction(action, {
         by: req.user.email,
+        label: typeof reqBody.label === 'string' ? reqBody.label : undefined,
         metadata: metadata,
         links: reqBody.links,
       });
