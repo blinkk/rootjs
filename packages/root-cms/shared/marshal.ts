@@ -12,6 +12,21 @@ export interface ArrayObject {
   _array: string[];
 }
 
+/** Characters allowed in an array item key. */
+const ARRAY_KEY_RE = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Returns true if `key` can be stored as an array item key. Older docs can have
+ * human-readable keys, which are fine, but a number isn't an acceptable key:
+ * it's indistinguishable from an array index in a doc path, which is how
+ * numeric keys end up in a doc in the first place.
+ */
+export function testValidArrayKey(key: unknown): key is string {
+  return (
+    typeof key === 'string' && ARRAY_KEY_RE.test(key) && !/^\d+$/.test(key)
+  );
+}
+
 export interface ArrayObjectPathError {
   /** The path segment where resolution failed. */
   path: string;
@@ -161,22 +176,7 @@ export function marshalData(
     return data;
   }
   if (Array.isArray(data)) {
-    const obj: Record<string, any> = {};
-    const keys: string[] = [];
-    for (const item of data) {
-      const key =
-        item && typeof item === 'object' && typeof item._arrayKey === 'string'
-          ? item._arrayKey
-          : randKey();
-      keys.push(key);
-      const cleaned = item && typeof item === 'object' ? {...item} : item;
-      if (cleaned && typeof cleaned === 'object') {
-        delete cleaned._arrayKey;
-      }
-      obj[key] = marshalData(cleaned, options);
-    }
-    obj._array = keys;
-    return obj;
+    return toArrayObject(data, (item) => marshalData(item, options));
   }
   // Rich text data (EditorJS format) should remain as-is. Do not marshal
   // the blocks array or any of its children.
@@ -193,6 +193,105 @@ export function marshalData(
 }
 
 /**
+ * Converts a plain array to an ArrayObject, calling `marshalItem` on each item.
+ * An item's `_arrayKey` is reused as its key, unless the key is invalid (see
+ * `testValidArrayKey`) or already used, since a duplicate would make two items
+ * share the same value.
+ */
+export function toArrayObject(
+  items: any[],
+  marshalItem: (item: any) => any
+): ArrayObject {
+  const obj: Record<string, any> = {};
+  const keys: string[] = [];
+  for (const item of items) {
+    const itemKey =
+      item && typeof item === 'object' ? item._arrayKey : undefined;
+    let key = testValidArrayKey(itemKey) ? itemKey : randKey();
+    while (keys.includes(key)) {
+      key = randKey();
+    }
+    keys.push(key);
+    const cleaned = item && typeof item === 'object' ? {...item} : item;
+    if (cleaned && typeof cleaned === 'object') {
+      delete cleaned._arrayKey;
+    }
+    obj[key] = marshalItem(cleaned);
+  }
+  obj._array = keys;
+  return obj as ArrayObject;
+}
+
+/**
+ * Reads the items of an array field from a map that may not be a valid
+ * ArrayObject, returning them as plain items with an `_arrayKey`. Returns
+ * `null` if `value` isn't a map of items. Handles:
+ *
+ * - A missing `_array`, using the order of the map (numeric keys ascending).
+ * - `_array` entries that are duplicated or have no matching item.
+ * - Items missing from `_array`. A numeric key for an index that exists is a
+ *   write to `<array>.<index>.<field>` that went to the map instead of the
+ *   item, so it's merged into that item. Others are added to the end.
+ *
+ * `repaired` is true if the map wasn't valid.
+ */
+export function repairArrayObject(
+  value: any
+): {items: any[]; repaired: boolean} | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const hasOrder = Array.isArray(value._array);
+  const mapKeys = Object.keys(value).filter((key) => key !== '_array');
+  const isItem = (item: any) =>
+    item !== null && typeof item === 'object' && !Array.isArray(item);
+  if (!hasOrder && !mapKeys.every((key) => isItem(value[key]))) {
+    return null;
+  }
+
+  const order: string[] = hasOrder
+    ? value._array.filter(
+        (key: any, index: number) =>
+          typeof key === 'string' &&
+          Object.hasOwn(value, key) &&
+          value._array.indexOf(key) === index
+      )
+    : [];
+  // Object keys that look like integers always come first, in ascending order.
+  const orphans = mapKeys.filter((key) => !order.includes(key));
+  const merges = new Map<number, any>();
+  const extras: string[] = [];
+  for (const key of orphans) {
+    const index = Number(key);
+    if (hasOrder && /^\d+$/.test(key) && index < order.length) {
+      merges.set(index, value[key]);
+    } else {
+      extras.push(key);
+    }
+  }
+
+  const toItem = (key: string, index: number) => {
+    const item = unmarshalData(value[key], {preserveArrayKeys: true});
+    return isItem(item)
+      ? {...item, ...unmarshalMerge(merges.get(index)), _arrayKey: key}
+      : item;
+  };
+  const items = [...order, ...extras].map(toItem);
+  const repaired =
+    !hasOrder ||
+    order.length !== value._array.length ||
+    orphans.length > 0 ||
+    order.some((key) => !testValidArrayKey(key));
+  return {items, repaired};
+}
+
+function unmarshalMerge(item: any): any {
+  return item === undefined
+    ? undefined
+    : unmarshalData(item, {preserveArrayKeys: true});
+}
+
+/**
  * Recursively unmarshals data from Firestore format:
  * - ArrayObjects (objects with `_array`) are converted back to plain arrays.
  * - Timestamp-like objects (with a `toMillis` method) are converted to millis.
@@ -205,6 +304,11 @@ export function unmarshalData(
   options?: {
     isTimestamp?: (v: any) => boolean;
     timestampToValue?: (v: any) => any;
+    /**
+     * Set `_arrayKey` on array items so that marshaling the data again keeps
+     * the original keys.
+     */
+    preserveArrayKeys?: boolean;
   }
 ): any {
   if (data === null || data === undefined) {
@@ -226,9 +330,13 @@ export function unmarshalData(
   }
   // ArrayObject → array.
   if (isArrayObject(data)) {
-    return data._array.map((key: string) =>
-      unmarshalData(data[key] ?? {}, options)
-    );
+    return data._array.map((key: string) => {
+      const item = unmarshalData(data[key] ?? {}, options);
+      if (options?.preserveArrayKeys && item && typeof item === 'object') {
+        return {...item, _arrayKey: key};
+      }
+      return item;
+    });
   }
   // Regular object.
   const out: Record<string, any> = {};
@@ -238,9 +346,13 @@ export function unmarshalData(
   return out;
 }
 
-/** Generates a random 6-char alphanumeric key. */
+/** Generates a random 6-char alphanumeric key that isn't all digits. */
 function randKey(): string {
-  return Math.random().toString(36).slice(2, 8);
+  let key = '';
+  while (key.length < 6 || !testValidArrayKey(key)) {
+    key = Math.random().toString(36).slice(2, 8);
+  }
+  return key;
 }
 
 function getType(value: any): string {

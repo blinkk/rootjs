@@ -8,6 +8,8 @@
  */
 import type {ValidationError} from './validation.js';
 
+const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /** Validates the syntax of a dotted field path. */
 export function validatePathSyntax(path: string): ValidationError | null {
   const trimmed = path.trim();
@@ -35,6 +37,16 @@ export function validatePathSyntax(path: string): ValidationError | null {
       path,
       'Path must be relative to the fields object; remove the leading "fields." prefix.',
       'field path without fields prefix',
+      path
+    );
+  }
+
+  // These would resolve to `Object.prototype` when walking the doc.
+  if (segments.some((segment) => UNSAFE_PATH_SEGMENTS.has(segment))) {
+    return createPathError(
+      path,
+      'Path must not contain reserved object keys.',
+      'field path',
       path
     );
   }
@@ -155,6 +167,17 @@ function applyOneEdit(
   const lastSeg = segments[segments.length - 1];
   const childPath = op.path.trim();
   const lastIsIndex = INDEX_RE.test(lastSeg);
+
+  if (op.index !== undefined && !Number.isInteger(op.index)) {
+    return makeEditError(
+      opIndex,
+      op,
+      childPath,
+      'Operation `index` must be a zero-based integer.',
+      'integer',
+      op.index
+    );
+  }
 
   // For "remove_item" the array (and the whole path) must already exist;
   // "set" and "insert_item" may create intermediate containers on the way.

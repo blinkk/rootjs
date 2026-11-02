@@ -90,6 +90,7 @@ npx root-cms client.call getDoc '["Pages", "home", {"mode": "draft"}]'
 npx root-cms client.call listDocs '["Pages", {"mode": "published", "limit": 10}]'
 
 # saveDraftData(docId, fieldsData, options?)
+# Validates against the collection schema, pass {"validate": false} to skip it.
 npx root-cms client.call saveDraftData '["Pages/home", {"title": "Hello"}]'
 
 # A method that takes no arguments — omit the JSON array entirely:

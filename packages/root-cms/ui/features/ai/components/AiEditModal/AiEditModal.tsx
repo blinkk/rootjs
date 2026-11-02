@@ -6,8 +6,9 @@ import {
   IconFileDiff,
   IconJson,
 } from '@tabler/icons-preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {useMemo, useCallback} from 'preact/hooks';
+import type {Field, Schema} from '../../../../../core/schema.js';
 import {JsDiff} from '../../../../components/JsDiff/JsDiff.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
@@ -20,12 +21,20 @@ import {
 } from '../../../../primitives/Tabs/Tabs.js';
 import {deserializeDocJson} from '../../../documents/doc.js';
 import {AiResponse, ChatPanel} from './ChatPanel.js';
+import {AiEditReview, reviewAiEdit} from './reviewAiEdit.js';
 import {AI_EDIT_MODAL_ID} from './useAiEditModal.js';
+
+/** Number of validation errors to list in the modal. */
+const MAX_ERRORS_SHOWN = 10;
 
 export interface AiEditModalProps {
   [key: string]: unknown;
   title?: string;
   data?: any;
+  /** The field `data` belongs to, used to check the AI's proposed value. */
+  field?: Field;
+  /** The collection's hoisted schemas, needed to check `oneof` values. */
+  types?: Record<string, Schema>;
   onSave: (data: any) => void;
 }
 
@@ -55,15 +64,44 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     [value, originalValue]
   );
 
-  const onSave = useCallback(() => {
-    if (!parsedValue) {
+  // Checks the proposed value against the schema whenever it changes, so
+  // problems are shown before the user accepts the change.
+  const [review, setReview] = useState<AiEditReview | null>(null);
+  useEffect(() => {
+    setReview(null);
+    if (!parsedValue || !changed || !props.field) {
       return;
     }
-    const newValue = deserializeDocJson(parsedValue);
+    let cancelled = false;
+    reviewAiEdit(parsedValue, {
+      field: props.field,
+      types: props.types,
+      before: props.data,
+    }).then((result) => {
+      if (!cancelled) {
+        setReview(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parsedValue, changed, props.field, props.types, props.data]);
+
+  const errors = review?.errors || [];
+  const repairs = review?.repairs || [];
+  const reviewPending = Boolean(
+    parsedValue && changed && props.field && !review
+  );
+
+  const onSave = useCallback(() => {
+    if (!parsedValue || reviewPending || errors.length > 0) {
+      return;
+    }
+    const newValue = review ? review.value : deserializeDocJson(parsedValue);
     if (props.onSave) {
       props.onSave(newValue);
     }
-  }, [parsedValue]);
+  }, [parsedValue, review, reviewPending, errors.length]);
 
   const handleEditModeResponse = useCallback((resp: AiResponse) => {
     if (resp?.data) {
@@ -137,6 +175,36 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           </Tabs>
         </div>
       </div>
+      {errors.length > 0 && (
+        <div
+          className="AiEditModal__errors mt-4 max-h-40 overflow-auto rounded-md border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger"
+          role="alert"
+        >
+          <p className="m-0 font-medium">
+            This change doesn't match the schema. Ask the AI to fix it, or edit
+            the JSON.
+          </p>
+          <ul className="AiEditModal__errors__list m-0 mt-1 pl-4 font-mono wrap-anywhere">
+            {errors.slice(0, MAX_ERRORS_SHOWN).map((error) => (
+              <li key={`${error.path}:${error.message}`}>
+                {error.path ? `${error.path}: ` : ''}
+                {error.message}
+              </li>
+            ))}
+          </ul>
+          {errors.length > MAX_ERRORS_SHOWN && (
+            <p className="m-0 mt-1">
+              And {errors.length - MAX_ERRORS_SHOWN} more.
+            </p>
+          )}
+        </div>
+      )}
+      {errors.length === 0 && repairs.length > 0 && (
+        <p className="AiEditModal__repairs m-0 mt-4 text-sm text-muted">
+          {repairs.length} {repairs.length === 1 ? 'value' : 'values'} will be
+          auto-corrected to match the schema when saved.
+        </p>
+      )}
       <div className="AiEditModal__buttons mt-6 flex flex-wrap justify-end gap-3">
         <Button
           variant="default"
@@ -161,7 +229,9 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           variant="green"
           size="xs"
           type="button"
-          disabled={!parsedValue || !changed}
+          disabled={
+            !parsedValue || !changed || reviewPending || errors.length > 0
+          }
           onClick={onSave}
         >
           Accept changes

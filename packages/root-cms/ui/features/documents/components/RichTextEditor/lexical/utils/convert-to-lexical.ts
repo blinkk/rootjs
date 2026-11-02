@@ -45,11 +45,14 @@ export function convertToLexical(data?: RichTextData | null) {
   const root = $getRoot();
   root.clear();
 
-  const blocks = data?.blocks || [];
+  const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
   for (const block of blocks) {
+    if (!block) {
+      continue;
+    }
     if (block.type === 'paragraph') {
       const paragraphNode = createParagraphNodeWithSize(block.data?.size);
-      if (block.data.text) {
+      if (typeof block.data?.text === 'string' && block.data.text) {
         const children = createNodesFromHTML(
           block.data.text,
           block.data.components
@@ -60,7 +63,7 @@ export function convertToLexical(data?: RichTextData | null) {
     } else if (block.type === 'heading') {
       const tagName = `h${block.data?.level || 2}` as HeadingTagType;
       const headingNode = $createHeadingNode(tagName);
-      if (block.data.text) {
+      if (typeof block.data?.text === 'string' && block.data.text) {
         const children = createNodesFromHTML(
           block.data.text,
           block.data.components
@@ -79,24 +82,27 @@ export function convertToLexical(data?: RichTextData | null) {
       }
       root.append(quoteNode);
     } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
-      const style = block.data.style === 'ordered' ? 'number' : 'bullet';
+      const style = block.data?.style === 'ordered' ? 'number' : 'bullet';
       const listNode = $createListNode(style);
-      for (const item of block.data.items) {
-        listNode.append(...createListItemNodes(item, style));
+      const items = Array.isArray(block.data?.items) ? block.data.items : [];
+      for (const item of items) {
+        if (item) {
+          listNode.append(...createListItemNodes(item, style));
+        }
       }
       root.append(listNode);
     } else if (block.type === 'table') {
       // Handle table blocks with nested rows/cells structure
       const tableNode = $createTableNode();
-      const rows = block.data?.rows || [];
+      const rows = Array.isArray(block.data?.rows) ? block.data.rows : [];
 
       rows.forEach((row: any) => {
         const rowNode = $createTableRowNode();
-        const cells = row.cells || [];
+        const cells = Array.isArray(row?.cells) ? row.cells : [];
 
         cells.forEach((cell: any) => {
-          const cellBlocks = cell.blocks || [];
-          const cellType = cell.type || 'data';
+          const cellBlocks = Array.isArray(cell?.blocks) ? cell.blocks : [];
+          const cellType = cell?.type || 'data';
           // Convert type to header state: 'header' -> 1, 'data' -> 0
           const headerState = cellType === 'header' ? 1 : 0;
           const cellNode = $createTableCellNode(headerState);
@@ -143,10 +149,15 @@ export function convertToLexical(data?: RichTextData | null) {
               cellBlock.type === 'unorderedList'
             ) {
               const style =
-                cellBlock.data.style === 'ordered' ? 'number' : 'bullet';
+                cellBlock.data?.style === 'ordered' ? 'number' : 'bullet';
               const listNode = $createListNode(style);
-              for (const item of cellBlock.data.items) {
-                listNode.append(...createListItemNodes(item, style));
+              const items = Array.isArray(cellBlock.data?.items)
+                ? cellBlock.data.items
+                : [];
+              for (const item of items) {
+                if (item) {
+                  listNode.append(...createListItemNodes(item, style));
+                }
               }
               cellNode.append(listNode);
             } else {

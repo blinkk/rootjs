@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
@@ -65,6 +68,10 @@ import type {
   DependencyGraphService,
 } from './dependency-graph.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
+import {
+  marshalFieldsForStorage,
+  prepareFieldsForWrite,
+} from './doc-normalize.js';
 import {toErrorReport} from './error-logs.js';
 import {CMSPlugin} from './plugin.js';
 import {
@@ -82,7 +89,6 @@ import {
   buildTranslationsLocaleDocDbPath,
   chunkArray,
 } from './translations-manager.js';
-import {validateFields} from './validation.js';
 import {setValueAtPath} from './values.js';
 
 /**
@@ -256,8 +262,15 @@ export interface SaveDraftOptions {
   modifiedBy?: string;
 
   /**
-   * Whether to validate fieldsData against the collection schema before saving.
-   * If validation fails, an error will be thrown with details about the validation errors.
+   * Whether to normalize `fieldsData` and validate it against the collection
+   * schema before saving, using the same checks as Root AI and proposals.
+   * Repairable values are converted to their stored shape (e.g. a numeric
+   * datetime to a `Timestamp`), and an error listing the problems is thrown if
+   * the data is invalid. Problems the current draft already has don't count.
+   *
+   * Defaults to `true`. By default a collection without an available schema is
+   * saved with a warning, while passing `true` explicitly throws an error. Set
+   * to `false` to save the data as-is.
    */
   validate?: boolean;
 }
@@ -269,8 +282,8 @@ export interface UpdateDraftOptions {
   modifiedBy?: string;
 
   /**
-   * Whether to validate the updated field against the collection schema.
-   * If validation fails, an error will be thrown with details about the validation errors.
+   * Whether to normalize and validate the doc. Defaults to `true`. See
+   * `SaveDraftOptions.validate`.
    */
   validate?: boolean;
 }
@@ -777,6 +790,8 @@ function getClientInternals(client: RootCMSClient): ClientInternals {
 
 export class RootCMSClient {
   readonly rootConfig: RootConfig;
+  /** See `loadProjectThroughVite()`. */
+  private viteProject?: Promise<typeof import('./project.js') | null>;
   readonly cmsPlugin: CMSPlugin;
   readonly projectId: string;
   readonly app: App;
@@ -1036,7 +1051,126 @@ export class RootCMSClient {
     // Lazy load the project module to minimize the amount of code loaded
     // when the client is initialized (the project module loads all schema files).
     const project = await import('./project.js');
-    return await project.getCollectionSchema(collectionId);
+    const collection = await project.getCollectionSchema(collectionId);
+    return collection ?? (await this.loadCollectionOutsideVite(collectionId));
+  }
+
+  /**
+   * Finds a collection's schema when the project module has none, because it
+   * can only read them when it's loaded through vite. That's the case for
+   * scripts and the `root-cms` CLI.
+   *
+   * Reads the schema file through vite when there's one, or otherwise the JSON
+   * written by the build (see `preBuild()` in `plugin.ts`). In production only
+   * the JSON is used, since a deployed site shouldn't be starting vite.
+   */
+  private async loadCollectionOutsideVite(
+    collectionId: string
+  ): Promise<Collection | null> {
+    const rootDir = this.rootConfig?.rootDir;
+    if (!rootDir) {
+      return null;
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const schemaPath = path.join(
+        rootDir,
+        'collections',
+        `${collectionId}.schema.ts`
+      );
+      const hasSchemaFile = await fs.access(schemaPath).then(
+        () => true,
+        () => false
+      );
+      if (hasSchemaFile) {
+        const project = await this.loadProjectThroughVite();
+        const collection = project?.getCollectionSchema(collectionId);
+        if (collection) {
+          return collection;
+        }
+      }
+    }
+    try {
+      const jsonPath = path.join(
+        rootDir,
+        'dist',
+        'collections',
+        `${collectionId}.schema.json`
+      );
+      return JSON.parse(await fs.readFile(jsonPath, 'utf8'));
+    } catch {
+      return null;
+    }
+  }
+
+  /** Loads the project module through vite, which takes a moment, only once. */
+  private loadProjectThroughVite() {
+    if (!this.viteProject) {
+      this.viteProject = (async () => {
+        try {
+          const {viteSsrLoadModule} = await import('@blinkk/root/node');
+          const modulePath = fileURLToPath(
+            new URL('./project.js', import.meta.url)
+          );
+          return await viteSsrLoadModule<typeof import('./project.js')>(
+            this.rootConfig,
+            modulePath
+          );
+        } catch (err) {
+          console.warn('[root-cms] failed to load schemas through vite:', err);
+          return null;
+        }
+      })();
+    }
+    return this.viteProject;
+  }
+
+  /**
+   * Normalizes and validates draft fields, returning the stored fields. Returns
+   * `null` when the fields should be saved without either. See
+   * `SaveDraftOptions.validate`.
+   */
+  private async prepareDraftFields(
+    docId: string,
+    fieldsData: any,
+    currentFields: any,
+    validate?: boolean
+  ): Promise<Record<string, any> | null> {
+    if (validate === false) {
+      return null;
+    }
+    const {collection} = parseDocId(docId);
+    const schema = await this.getCollection(collection);
+    if (!schema) {
+      if (validate) {
+        throw new Error(
+          `Collection schema not found for: ${collection}. Unable to validate.`
+        );
+      }
+      console.warn(
+        `[root-cms] saving ${docId} without validation: no schema found for collection "${collection}".`
+      );
+      return null;
+    }
+    const prepared = prepareFieldsForWrite(fieldsData || {}, {
+      schema,
+      before: currentFields ? unmarshalData(currentFields) : null,
+      strict: false,
+      toTimestamp: (millis) => Timestamp.fromMillis(millis),
+    });
+    if (prepared.errors.length > 0) {
+      const errorMessages = prepared.errors
+        .map((err) => `  - ${err.path}: ${err.message}`)
+        .join('\n');
+      throw new Error(`Validation failed for ${docId}:\n${errorMessages}`);
+    }
+    for (const repair of prepared.repairs) {
+      console.warn(
+        `[root-cms] ${docId}: corrected ${repair.path}: ${repair.message}`
+      );
+    }
+    return marshalFieldsForStorage(prepared.fields, schema, {
+      isTimestamp: (value) => typeof value?.toMillis === 'function',
+    });
   }
 
   /**
@@ -1052,28 +1186,17 @@ export class RootCMSClient {
   ) {
     const {collection, slug} = parseDocId(docId);
 
-    // Validate fieldsData if requested.
-    if (options?.validate) {
-      const collectionSchema = await this.getCollection(collection);
-      if (!collectionSchema) {
-        throw new Error(
-          `Collection schema not found for: ${collection}. Unable to validate.`
-        );
-      }
-      const errors = validateFields(fieldsData, collectionSchema);
-      if (errors.length > 0) {
-        const errorMessages = errors
-          .map((err) => `  - ${err.path}: ${err.message}`)
-          .join('\n');
-        throw new Error(`Validation failed for ${docId}:\n${errorMessages}`);
-      }
-    }
-
     const draftDoc =
       (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
+    const fields =
+      (await this.prepareDraftFields(
+        docId,
+        fieldsData,
+        draftDoc.fields,
+        options?.validate
+      )) ?? marshalData(fieldsData || {});
     const draftSys = draftDoc.sys || {};
     const modifiedBy = options?.modifiedBy || this.user;
-    const fields = marshalData(fieldsData || {});
     const data = {
       id: docId,
       collection,
@@ -3331,7 +3454,10 @@ export function marshalData(data: any): any {
   const result: any = {};
   for (const key in data) {
     const val = data[key];
-    if (isObject(val)) {
+    if (typeof val?.toMillis === 'function') {
+      // Keep timestamps, like `unmarshalData()` they're detected by `toMillis`.
+      result[key] = val;
+    } else if (isObject(val)) {
       result[key] = marshalData(val);
     } else if (Array.isArray(val)) {
       if (val.length > 0 && val.some((item) => isObject(item))) {
@@ -3556,7 +3682,11 @@ export function toArrayObject(arr: any[]): ArrayObject {
   }
   const arrObject: ArrayObject = {_array: []};
   for (const item of arr) {
-    const key = randString(6);
+    let key = randString(6);
+    // Keys must not be confused with an array index in a doc path.
+    while (/^\d+$/.test(key) || key in arrObject) {
+      key = randString(6);
+    }
     arrObject[key] = item;
     arrObject._array.push(key);
   }

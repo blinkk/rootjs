@@ -25,11 +25,21 @@ import {testFieldLocalizable} from '../shared/localized-values.js';
 import {createPathError, validatePathSyntax} from './doc-edits.js';
 import {ArrayField, Field, ObjectField, OneOfField, Schema} from './schema.js';
 import {
+  getOneOfTypes,
   validateFields,
   validateLocalizedValues,
   validateValue,
 } from './validation.js';
 import type {ValidationError} from './validation.js';
+
+export {
+  marshalFieldsForStorage,
+  marshalValueForStorage,
+  prepareFieldsForWrite,
+  prepareValueForWrite,
+  type FieldRepair,
+  type PrepareResult,
+} from './doc-normalize.js';
 
 // The doc-edit engine moved to `./doc-edits.js` so it can be used without
 // pulling in the AI SDK. Re-exported here for backwards compatibility.
@@ -38,6 +48,7 @@ export {
   type ApplyDocEditsResult,
   type DocEditError,
   type DocEditOperation,
+  validatePathSyntax,
 } from './doc-edits.js';
 
 /** Tool ids handled client-side. Kept in sync with the schemas below. */
@@ -112,6 +123,16 @@ export interface CmsToolCollectionSummary {
   id: string;
   name?: string;
   description?: string;
+}
+
+/** A collection schema shaped for the model. */
+export interface CmsToolSchema {
+  fields: unknown[];
+  /**
+   * The schemas used by `oneof` fields, keyed by the names in the field's
+   * `types`.
+   */
+  types?: Record<string, {description?: string; fields: unknown[]}>;
 }
 
 /** Lifecycle status of a release, derived via `getReleaseStatus()`. */
@@ -211,10 +232,10 @@ export interface CmsToolReadBackend {
     options: {limit: number}
   ): Promise<CmsToolVersionSummary[]>;
   /**
-   * Returns the simplified field definitions for a collection (see
-   * `simplifyFields`), or `null` if the collection is unknown.
+   * Returns the simplified schema for a collection (see `simplifySchema`), or
+   * `null` if the collection is unknown.
    */
-  getSchemaFields(collectionId: string): Promise<unknown[] | null>;
+  getSchemaFields(collectionId: string): Promise<CmsToolSchema | null>;
   /** Lists releases, most recently created first. */
   listReleases(options: {limit: number}): Promise<CmsToolRelease[]>;
   /** Reads a single release, or `null` if it does not exist. */
@@ -417,7 +438,8 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
         'Paths are relative to the doc fields object; do not prefix them ' +
         'with "fields.". Use dotted paths (e.g. "hero.title") and ' +
         'zero-based array indices. For example, update the first module ' +
-        'title with path "content.modules.0.title". To set a localized ' +
+        'title with path "content.modules.0.title". An index must refer to ' +
+        'an existing item, it is a position and not a key. To set a localized ' +
         'value (a per-locale override), use the path ' +
         '"<parent>.@<fieldId>.localizedValues.<locale>", e.g. ' +
         '"hero.@image.localizedValues.de". To insert or remove ' +
@@ -587,20 +609,21 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
     schema_get: tool({
       description:
         'Get the field schema for a CMS collection. Returns the full field ' +
-        'definitions including types, labels, and validation rules. Use this ' +
-        'to understand what fields a collection supports before creating or ' +
-        'editing docs.',
+        'definitions including types, labels, and validation rules, plus a ' +
+        '`types` map with the fields of every type named by a `oneof` ' +
+        'field. Use this to understand what fields a collection supports ' +
+        'before creating or editing docs, and only use field ids from it.',
       inputSchema: z.object({
         collectionId: z
           .string()
           .describe('Collection id, e.g. "Pages" or "BlogPosts".'),
       }),
       execute: async ({collectionId}) => {
-        const fields = await backend.getSchemaFields(collectionId);
-        if (!fields) {
+        const schema = await backend.getSchemaFields(collectionId);
+        if (!schema) {
           return {found: false, collectionId};
         }
-        return {found: true, collectionId, fields};
+        return {found: true, collectionId, ...schema};
       },
     }),
 
@@ -725,6 +748,26 @@ function clampInt(
 }
 
 /**
+ * Shapes a collection schema for the model. Collections hold their `oneof`
+ * schemas in a `types` map, referenced by name from the fields, which keeps
+ * this flat and safe for recursive schemas.
+ */
+export function simplifySchema(schema: Schema): CmsToolSchema {
+  const out: CmsToolSchema = {fields: simplifyFields(schema.fields || [])};
+  const types = (schema as {types?: Record<string, Schema>}).types;
+  if (types) {
+    out.types = {};
+    for (const [name, type] of Object.entries(types)) {
+      out.types[name] = {fields: simplifyFields(type.fields || [])};
+      if (type.description) {
+        out.types[name].description = type.description;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Reduces a collection's field definitions down to the bits the model needs
  * (id, type, label, options, nested shape). Drops Root-internal metadata
  * (preview, conditional visibility, default UI widget hints, etc.) since
@@ -742,6 +785,13 @@ export function simplifyFields(fields: Field[]): unknown[] {
     // Only explicit values, the defaults are described in the system prompt.
     if (typeof f.localizable === 'boolean') out.localizable = f.localizable;
     if (f.options) out.options = f.options;
+    if (f.creatable) out.creatable = true;
+    if (typeof f.maxItems === 'number') out.maxItems = f.maxItems;
+    if (f.blockComponents?.length) {
+      out.blockComponents = f.blockComponents.map((c: any) =>
+        typeof c === 'string' ? c : c.name
+      );
+    }
     if (f.type === 'object' && f.fields) {
       out.fields = simplifyFields(f.fields);
     }
@@ -752,7 +802,7 @@ export function simplifyFields(fields: Field[]): unknown[] {
       out.types = f.types.map((t: any) =>
         typeof t === 'string'
           ? t
-          : {id: t.id, fields: simplifyFields(t.fields || [])}
+          : {name: t.name, fields: simplifyFields(t.fields || [])}
       );
     }
     return out;
@@ -766,6 +816,10 @@ export function simplifyFields(fields: Field[]): unknown[] {
  * (e.g. the path walks through a `oneof` with an unknown discriminator),
  * returns an empty array to fall back to "no validation" rather than
  * blocking the write.
+ *
+ * Only the value at `path` is checked, against a path that doesn't know which
+ * `oneof` type it goes through. Doc writes should validate the resulting doc
+ * with `prepareFieldsForWrite()` instead.
  */
 export function validateValueAtPath(
   collection: Schema,
@@ -785,7 +839,11 @@ export function validateValueAtPath(
   if (!field) {
     return [];
   }
-  return validateValue(value, field, path);
+  return validateValue(value, field, path, {types: getTypes(collection)});
+}
+
+function getTypes(schema: Schema): Record<string, Schema> | undefined {
+  return (schema as {types?: Record<string, Schema>}).types;
 }
 
 /**
@@ -829,14 +887,16 @@ function validateMetadataAtPath(
   }
 
   const path = segments.join('.');
+  const options = {types: getTypes(collection)};
   if (rest.length === 0) {
-    return validateLocalizedValues(value, field, metadataPath);
+    return validateLocalizedValues(value, field, metadataPath, options);
   }
   if (rest.length === 1) {
     return validateLocalizedValues(
       {localizedValues: value},
       field,
-      metadataPath
+      metadataPath,
+      options
     );
   }
   // Keys starting with "@" hold metadata for a localized value (e.g. "@de").
@@ -845,11 +905,15 @@ function validateMetadataAtPath(
     return [];
   }
   if (rest.length === 2) {
-    return value === null ? [] : validateValue(value, field, path);
+    return value === null ? [] : validateValue(value, field, path, options);
   }
   // A path within the localized value (e.g. ".de.src"), resolved against a
   // schema with the field as its only top-level field.
-  const valueSchema = {name: '', fields: [{...field, id: locale}]} as Schema;
+  const valueSchema = {
+    name: '',
+    fields: [{...field, id: locale}],
+    types: options.types,
+  } as Schema;
   return validateValueAtPath(valueSchema, rest.slice(1).join('.'), value).map(
     (error) => ({
       ...error,
@@ -859,6 +923,16 @@ function validateMetadataAtPath(
 }
 
 export {validateFields};
+
+/** Field types whose value has no sub-paths. */
+const SCALAR_FIELD_TYPES = new Set([
+  'boolean',
+  'date',
+  'multiselect',
+  'number',
+  'select',
+  'string',
+]);
 
 /**
  * Walks `schema` to find the field declaration at `path`. Numeric segments
@@ -939,10 +1013,8 @@ function resolveFieldAtPath(
     if (!next && currentField?.type === 'oneof') {
       // Try each variant's fields.
       const oneOf = currentField as OneOfField;
-      const types = Array.isArray(oneOf.types) ? (oneOf.types as Schema[]) : [];
-      for (const t of types) {
-        if (typeof t === 'string') continue;
-        const found = (t.fields || []).find((f) => f.id === segment);
+      for (const t of getOneOfTypes(oneOf, getTypes(schema)).values()) {
+        const found = t?.fields?.find((f) => f.id === segment);
         if (found) {
           next = found;
           break;
@@ -950,6 +1022,17 @@ function resolveFieldAtPath(
       }
     }
     if (!next) {
+      if (currentField && SCALAR_FIELD_TYPES.has(currentField.type)) {
+        return {
+          field: null,
+          error: createPathError(
+            segmentPath,
+            `Path walks into a ${currentField.type} field, which has no nested fields.`,
+            'field path',
+            segment
+          ),
+        };
+      }
       return {field: null};
     }
     currentField = next;

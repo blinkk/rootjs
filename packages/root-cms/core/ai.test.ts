@@ -496,6 +496,14 @@ describe('ai', () => {
       );
     });
 
+    it('should extract JSON surrounded by other text', () => {
+      const json = '{"en": "Hello"}';
+      expect(
+        extractJsonFromResponse(`Sure!\n\`\`\`json\n${json}\n\`\`\`\nDone.`)
+      ).toBe(json);
+      expect(extractJsonFromResponse(`Here it is: ${json} Enjoy!`)).toBe(json);
+    });
+
     it('should extract JSON from code blocks without language specifier', () => {
       const input = '```\n{"en": "Hello", "es": "Hola"}\n```';
       expect(extractJsonFromResponse(input)).toBe(

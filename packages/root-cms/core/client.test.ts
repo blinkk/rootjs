@@ -19,6 +19,8 @@ vi.mock('firebase-admin/firestore', () => ({
   Timestamp: {
     now: vi.fn(() => ({toMillis: () => 1234567890})),
     fromMillis: vi.fn((millis: number) => ({
+      seconds: Math.floor(millis / 1000),
+      nanoseconds: 0,
       toMillis: () => millis,
       toDate: () => new Date(millis),
     })),
@@ -155,18 +157,54 @@ describe('RootCMSClient Validation', () => {
       expect(mockGetCollectionSchema).not.toHaveBeenCalled();
     });
 
-    it('skips validation when validate option is not provided (backward compatibility)', async () => {
+    it('validates by default', async () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig);
+      mockGetCollectionSchema.mockResolvedValue(
+        schema.define({name: 'Pages', fields: [schema.number({id: 'count'})]})
+      );
 
-      const invalidData = {
-        title: 123, // Invalid but validation is off by default.
-      };
+      await expect(
+        client.saveDraftData('Pages/test', {count: 'many'})
+      ).rejects.toThrow(/Validation failed for Pages\/test/);
+    });
 
-      // Should not call getCollectionSchema.
-      await client.saveDraftData('Pages/test', invalidData);
+    it('saves with a warning by default when there is no schema', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      mockGetCollectionSchema.mockResolvedValue(null);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      expect(mockGetCollectionSchema).not.toHaveBeenCalled();
+      await client.saveDraftData('Pages/test', {count: 'many'});
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Pages/test'));
+      warn.mockRestore();
+    });
+
+    it('stores values in the shape their field uses', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      mockGetCollectionSchema.mockResolvedValue(
+        schema.define({
+          name: 'Pages',
+          fields: [
+            schema.datetime({id: 'launch'}),
+            schema.references({id: 'refs'}),
+          ],
+        })
+      );
+      const setRawDoc = vi.fn();
+      client.setRawDoc = setRawDoc as any;
+      const refs = [{id: 'Pages/a', collection: 'Pages', slug: 'a'}];
+
+      await client.saveDraftData('Pages/test', {
+        launch: 1700000000000,
+        refs,
+      });
+
+      const {fields} = setRawDoc.mock.calls[0][2];
+      expect(fields.launch.toMillis()).toBe(1700000000000);
+      expect(fields.refs).toEqual(refs);
     });
   });
 

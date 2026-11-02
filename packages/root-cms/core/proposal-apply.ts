@@ -16,11 +16,12 @@
  * res.changes.forEach((c) => console.log(c.kind, c.summary));
  * ```
  */
+import {Timestamp} from 'firebase-admin/firestore';
 import {Proposal, ProposalOp, toDocEditOperations} from '../shared/proposal.js';
 import {RootCMSClient, unmarshalData} from './client.js';
 import {applyDocEdits, type DocEditOperation} from './doc-edits.js';
+import {prepareFieldsForWrite} from './doc-normalize.js';
 import type {MultiLocaleTranslationsMap} from './translations-manager.js';
-import {validateFields} from './validation.js';
 
 /** A problem that prevented a change from being applied. */
 export interface ProposalApplyError {
@@ -144,21 +145,26 @@ export async function applyProposal(
             });
             break;
           }
-          const invalid = await validateAgainstSchema(
+          const prepared = await prepareDocFields(
             cmsClient,
             change.docId,
             applied.fields,
+            fields,
             options
           );
-          if (invalid) {
-            errors.push({changeIndex: i, kind: change.kind, ...invalid});
+          if (prepared.invalid) {
+            errors.push({
+              changeIndex: i,
+              kind: change.kind,
+              ...prepared.invalid,
+            });
             break;
           }
           pendingDocs.set(change.docId, applied.fields);
           writes.push({
             type: 'doc',
             docId: change.docId,
-            fields: applied.fields,
+            fields: prepared.fields,
           });
           resolved.push({
             changeIndex: i,
@@ -187,21 +193,26 @@ export async function applyProposal(
             });
             break;
           }
-          const invalid = await validateAgainstSchema(
+          const prepared = await prepareDocFields(
             cmsClient,
             change.docId,
             change.after,
+            null,
             options
           );
-          if (invalid) {
-            errors.push({changeIndex: i, kind: change.kind, ...invalid});
+          if (prepared.invalid) {
+            errors.push({
+              changeIndex: i,
+              kind: change.kind,
+              ...prepared.invalid,
+            });
             break;
           }
           pendingDocs.set(change.docId, change.after);
           writes.push({
             type: 'doc',
             docId: change.docId,
-            fields: change.after,
+            fields: prepared.fields,
           });
           resolved.push({
             changeIndex: i,
@@ -388,8 +399,11 @@ export async function applyProposal(
     }
   }
   for (const [docId, fields] of docWrites) {
+    // Every change was validated above, so that no write starts unless they
+    // all can finish.
     await cmsClient.saveDraftData(docId, fields, {
       modifiedBy: options?.modifiedBy,
+      validate: false,
     });
   }
   for (const write of writes) {
@@ -430,38 +444,52 @@ async function readPendingDocFields(
 }
 
 /**
- * Validates fields against the doc's collection schema. Returns a partial
- * error when validation fails, or null when it passes (or is skipped, or the
- * collection has no schema available).
+ * Normalizes fields and validates them against the doc's collection schema.
+ * Returns the fields to write, plus a partial error when validation fails.
+ * Skipped when requested, or when the collection has no schema available.
+ * Problems that `before` already has don't count as a failure.
  */
-async function validateAgainstSchema(
+async function prepareDocFields(
   cmsClient: RootCMSClient,
   docId: string,
   fields: Record<string, any>,
+  before: Record<string, any> | null,
   options?: ApplyProposalOptions
-): Promise<Omit<ProposalApplyError, 'changeIndex' | 'kind'> | null> {
+): Promise<{
+  fields: Record<string, any>;
+  invalid?: Omit<ProposalApplyError, 'changeIndex' | 'kind'>;
+}> {
   if (options?.skipValidation) {
-    return null;
+    return {fields};
   }
   const {collection} = parseDocId(docId);
   const schema = await cmsClient.getCollection(collection);
   if (!schema) {
-    return null;
+    return {fields};
   }
-  const validationErrors = validateFields(fields, schema);
+  const prepared = prepareFieldsForWrite(fields, {
+    schema,
+    before,
+    strict: false,
+    toTimestamp: (millis) => Timestamp.fromMillis(millis),
+  });
+  const validationErrors = prepared.errors;
   if (validationErrors.length === 0) {
-    return null;
+    return {fields: prepared.fields};
   }
   const first = validationErrors[0];
   return {
-    target: docId,
-    message:
-      validationErrors.length === 1
-        ? first.message
-        : `${first.message} (and ${validationErrors.length - 1} more)`,
-    path: first.path,
-    expected: first.expected,
-    received: first.received,
+    fields,
+    invalid: {
+      target: docId,
+      message:
+        validationErrors.length === 1
+          ? first.message
+          : `${first.message} (and ${validationErrors.length - 1} more)`,
+      path: first.path,
+      expected: first.expected,
+      received: first.received,
+    },
   };
 }
 

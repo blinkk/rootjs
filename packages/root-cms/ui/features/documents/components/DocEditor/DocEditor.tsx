@@ -2420,6 +2420,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
     const data = getItemValue(index);
     aiEditModal.open({
       data: data,
+      field: field.of,
+      types: collectionTypes,
       onSave: (newValue) => {
         console.log('[ai edit] onSave()', newValue);
         dispatch({

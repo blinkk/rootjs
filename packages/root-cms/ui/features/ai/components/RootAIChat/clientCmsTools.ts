@@ -22,7 +22,7 @@ import {
   createCmsTools,
   createReadOnlyCmsTools,
   getReleaseStatus,
-  simplifyFields,
+  simplifySchema,
   type CmsToolDoc,
   type CmsToolReadBackend,
   type CmsToolRelease,
@@ -144,8 +144,7 @@ export function createClientCmsToolBackend(): CmsToolReadBackend {
 
     async getSchemaFields(collectionId) {
       try {
-        const schema = await fetchCollectionSchema(collectionId);
-        return simplifyFields(schema.fields || []);
+        return simplifySchema(await fetchCollectionSchema(collectionId));
       } catch (err) {
         console.error(`failed to load schema for ${collectionId}:`, err);
         return null;

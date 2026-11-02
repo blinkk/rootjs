@@ -64,7 +64,7 @@ export interface RichTextProps {
 
 /** Renders data from the "richtext" field. */
 export function RichText(props: RichTextProps) {
-  const blocks = props.data?.blocks || [];
+  const blocks = Array.isArray(props.data?.blocks) ? props.data.blocks : [];
   if (blocks.length === 0) {
     return null;
   }
@@ -158,7 +158,7 @@ export interface RichTextParagraphBlockProps {
 }
 
 RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
-  if (!props.data?.text) {
+  if (!props.data?.text || typeof props.data.text !== 'string') {
     return null;
   }
   const t = useRichTextTranslations();
@@ -178,11 +178,12 @@ export interface RichTextHeadingBlockProps {
 type HeadingComponent = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
 RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
-  if (!props.data?.text) {
+  if (!props.data?.text || typeof props.data.text !== 'string') {
     return null;
   }
   const t = useRichTextTranslations();
-  const level = props.data.level || 2;
+  // An invalid tag name throws when rendering the page.
+  const level = /^[1-6]$/.test(String(props.data.level)) ? props.data.level : 2;
   const Component = `h${level}` as HeadingComponent;
   const html = sanitizeInlineHtml(t(props.data.text));
   return <Component dangerouslySetInnerHTML={{__html: html}} />;
@@ -203,7 +204,7 @@ export interface RichTextListBlockProps {
 }
 
 RichText.ListBlock = (props: RichTextListBlockProps) => {
-  if (!props.data?.items?.length) {
+  if (!Array.isArray(props.data?.items) || !props.data.items.length) {
     return null;
   }
 
@@ -216,7 +217,7 @@ RichText.ListBlock = (props: RichTextListBlockProps) => {
   return (
     <Component>
       {items.map((item) => {
-        if (item.content || item.items?.length) {
+        if (item?.content || item?.items?.length) {
           return (
             <li>
               {item.content && (
@@ -274,7 +275,8 @@ export interface RichTextHtmlBlockProps {
 
 RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
   const t = useRichTextTranslations();
-  const html = sanitizeBlockHtml(t(props.data?.html || ''));
+  const source = props.data?.html;
+  const html = sanitizeBlockHtml(t(typeof source === 'string' ? source : ''));
   if (!html) {
     return null;
   }
@@ -294,7 +296,7 @@ export interface RichTextTableBlockProps {
 }
 
 RichText.TableBlock = (props: RichTextTableBlockProps) => {
-  const rows = props.data?.rows || [];
+  const rows = Array.isArray(props.data?.rows) ? props.data.rows : [];
   const richTextContext = useRichTextContext();
   if (rows.length === 0) {
     return null;
@@ -304,12 +306,12 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
       <tbody>
         {rows.map((row, rowIndex) => (
           <tr key={rowIndex}>
-            {row.cells.map((cell, cellIndex) => {
-              const Cell = cell.type === 'header' ? 'th' : 'td';
+            {(row?.cells || []).map((cell, cellIndex) => {
+              const Cell = cell?.type === 'header' ? 'th' : 'td';
               return (
                 <Cell key={cellIndex}>
                   <RichText
-                    data={{blocks: cell.blocks, time: 0, version: ''}}
+                    data={{blocks: cell?.blocks, time: 0, version: ''}}
                     components={richTextContext.components}
                   />
                 </Cell>
@@ -362,6 +364,9 @@ function collectInlineComponentParams(
 
   const params: Record<string, string> = {};
   for (const [componentId, component] of Object.entries(components)) {
+    if (!component) {
+      continue;
+    }
     const Component = componentMap[component.type];
     if (Component) {
       const key = `${component.type}:${componentId}`;
