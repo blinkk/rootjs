@@ -425,8 +425,10 @@ function MetadataDisplay(props: {metadata: any}) {
           className="ActionsLogs__metadata__item flex flex-wrap gap-1"
         >
           <span className="ActionsLogs__metadata__key text-muted">{key}:</span>{' '}
-          <span className="ActionsLogs__metadata__value break-words text-fg">
-            {formatMetadataValue(value)}
+          <span className="ActionsLogs__metadata__value break-words whitespace-pre-line text-fg">
+            {key === 'changes' && Array.isArray(value)
+              ? value.join('\n')
+              : formatMetadataValue(value)}
           </span>
         </div>
       ))}
@@ -785,7 +787,8 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
               className={cn(
                 'ActionLogsCompactItemDetails__value min-w-0 break-words',
                 detail.warning ? 'text-warning' : 'text-fg',
-                detail.code && 'font-mono'
+                detail.code && 'font-mono',
+                detail.multiline && 'whitespace-pre-line'
               )}
             >
               {detail.value}
