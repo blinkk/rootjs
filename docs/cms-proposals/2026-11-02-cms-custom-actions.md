@@ -1,44 +1,17 @@
-# Update the developer docs: cms--notifications, plugins
+# Update the developer docs: cms--notifications
 
 - **id:** `2026-11-02-cms-custom-actions`
 - **version:** 1
 - **author:** scripts/propose_docs_copy.ts
-- **generated:** 2026-11-02T17:21:31.205Z
+- **generated:** 2026-11-02T17:32:12.820Z
 
 ## Summary
 
-- Docs/plugins: Links to the new section on logging custom actions.
-- Docs/cms--notifications: Adds a section on logging custom actions from plugins, including the label option of logAction().
-
-## Edit `Docs/plugins`
-
-Links to the new section on logging custom actions.
-
-### Set `content.body`
-
-```diff yaml
- blocks:
-   - type: "paragraph"
-     data:
-       text: "Plugins hook into the Root.js server and build. They're added to the <code>plugins</code> list in <code>root.config.ts</code>. The CMS itself is a plugin (<code>cmsPlugin()</code>), and you can write your own. For every hook, see <code>Plugin</code> in the <a href=\"/docs/api/root/#blinkk-root-plugin\">API reference</a>."
-   - type: "paragraph"
-     data:
--      text: "A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a <a href=\"/docs/plugins/pods/\">pod</a>."
-+      text: "A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a <a href=\"/docs/plugins/pods/\">pod</a>, and record what it does in the CMS by logging <a href=\"/docs/cms/notifications/#custom-actions\">custom actions</a>."
- time: 1790660317218
- version: "2.28.2"
-```
+- Docs/cms--notifications: Documents logging custom actions, including the label option of logAction(), in the Actions section.
 
 ## Edit `Docs/cms--notifications`
 
-Adds a section on logging custom actions from plugins, including the label option of logAction().
-
-### Set `meta.description`
-
-```diff text
--React to CMS actions with the onAction hook and notification services, send email, and connect a translation service.
-+React to CMS actions with the onAction hook and notification services, log custom actions, send email, and connect a translation service.
-```
+Documents logging custom actions, including the label option of logAction(), in the Actions section.
 
 ### Set `content.sections`
 
@@ -70,20 +43,17 @@ Adds a section on logging custom actions from plugins, including the label optio
            },
          }),
        _arrayKey: "EtP1nk"
-   _arrayKey: "9BAz0B"
-+- id: "custom-actions"
-+  title: "Custom actions"
-+  body:
-+    blocks:
-+      - type: "paragraph"
-+        data:
-+          text: "Plugins and other server code can log their own actions with <code>logAction()</code> on <a href=\"/docs/api/root-cms/#blinkk-root-cms-client-rootcmsclient\"><code>RootCMSClient</code></a>. A custom action is stored like any other, so it shows up in the action log and on the CMS home page, and it reaches <code>onAction</code> and your notification services. Name it with a prefix of your own, like <code>inventory.sync</code>, so that it can't collide with the CMS's actions and services can match it with a pattern like <code>inventory.*</code>."
-+      - type: "paragraph"
-+        data:
-+          text: "The home page shows recent actions as sentences: who did it, what they did, and what they did it to. Pass <code>label</code> to write the middle part for your action:"
-+    time: 1793640090297
-+    version: "2.28.2"
-+  blocks:
++    - _type: "CopyBlock"
++      body:
++        blocks:
++          - type: "paragraph"
++            data:
++              text: "Plugins and other server code can log their own actions with <code>logAction()</code> on <a href=\"/docs/api/root-cms/#blinkk-root-cms-client-rootcmsclient\"><code>RootCMSClient</code></a>. A custom action is stored like any other, so it shows up in the action log and on the CMS home page, and it reaches <code>onAction</code> and your notification services. Name it with a prefix of your own, like <code>inventory.sync</code>, so that it can't collide with the CMS's actions and services can match it with a pattern like <code>inventory.*</code>."
++          - type: "paragraph"
++            data:
++              text: "The home page shows recent actions as sentences: who did it, what they did, and what they did it to. Pass <code>label</code> to write the middle part for your action:"
++        time: 1793640732029
++        version: "2.28.2"
 +    - _type: "CodeBlock"
 +      language: "ts"
 +      code: |-
@@ -125,8 +95,9 @@ Adds a section on logging custom actions from plugins, including the label optio
 +          - type: "paragraph"
 +            data:
 +              text: "An <a href=\"/docs/cms/notifications/#email-notifications\">email notification service</a> with no <code>actions</code> list sends an email for every action, including yours, so give it a list if you log custom actions often. From code running in the CMS UI, POST the same fields (<code>action</code>, <code>label</code>, <code>metadata</code> and <code>links</code>) to <code>/cms/api/actions.log</code> to log an action as the signed-in user."
-+        time: 1793640090297
++        time: 1793640732029
 +        version: "2.28.2"
+   _arrayKey: "9BAz0B"
  - id: "notification-services"
    title: "Notification services"
    body:

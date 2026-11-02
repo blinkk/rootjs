@@ -1403,7 +1403,7 @@ export default defineConfig({
 
 const PLUGINS: DocCopy = {
   slug: 'plugins',
-  note: 'Links to the new section on logging custom actions.',
+  note: 'Links to the new Pods page.',
   fields: {
     meta: {
       title: 'Plugins – Root.js',
@@ -1418,7 +1418,7 @@ const PLUGINS: DocCopy = {
           `Plugins hook into the Root.js server and build. They're added to the ${c('plugins')} list in ${c('root.config.ts')}. The CMS itself is a plugin (${c('cmsPlugin()')}), and you can write your own. For every hook, see ${c('Plugin')} in the ${a('/docs/api/root/#blinkk-root-plugin', 'API reference')}.`
         ),
         p(
-          `A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a ${a('/docs/plugins/pods/', 'pod')}, and record what it does in the CMS by logging ${a('/docs/cms/notifications/#custom-actions', 'custom actions')}.`
+          `A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a ${a('/docs/plugins/pods/', 'pod')}.`
         )
       ),
       sections: [
@@ -2531,12 +2531,12 @@ export default schema.collection({
 
 const NOTIFICATIONS: DocCopy = {
   slug: 'cms--notifications',
-  note: 'Adds a section on logging custom actions from plugins, including the label option of logAction().',
+  note: 'Documents logging custom actions, including the label option of logAction(), in the Actions section.',
   fields: {
     meta: {
       title: 'Notifications and integrations – Root.js',
       description:
-        'React to CMS actions with the onAction hook and notification services, log custom actions, send email, and connect a translation service.',
+        'React to CMS actions with the onAction hook and notification services, send email, and connect a translation service.',
       category: 'cms',
       navLabel: 'Notifications and integrations',
     },
@@ -2574,20 +2574,14 @@ cmsPlugin({
   },
 }),`
             ),
-          ]
-        ),
-        section(
-          'custom-actions',
-          'Custom actions',
-          [
-            p(
-              `Plugins and other server code can log their own actions with ${c('logAction()')} on ${a('/docs/api/root-cms/#blinkk-root-cms-client-rootcmsclient', c('RootCMSClient'))}. A custom action is stored like any other, so it shows up in the action log and on the CMS home page, and it reaches ${c('onAction')} and your notification services. Name it with a prefix of your own, like ${c('inventory.sync')}, so that it can't collide with the CMS's actions and services can match it with a pattern like ${c('inventory.*')}.`
+            copy(
+              p(
+                `Plugins and other server code can log their own actions with ${c('logAction()')} on ${a('/docs/api/root-cms/#blinkk-root-cms-client-rootcmsclient', c('RootCMSClient'))}. A custom action is stored like any other, so it shows up in the action log and on the CMS home page, and it reaches ${c('onAction')} and your notification services. Name it with a prefix of your own, like ${c('inventory.sync')}, so that it can't collide with the CMS's actions and services can match it with a pattern like ${c('inventory.*')}.`
+              ),
+              p(
+                `The home page shows recent actions as sentences: who did it, what they did, and what they did it to. Pass ${c('label')} to write the middle part for your action:`
+              )
             ),
-            p(
-              `The home page shows recent actions as sentences: who did it, what they did, and what they did it to. Pass ${c('label')} to write the middle part for your action:`
-            ),
-          ],
-          [
             code(
               'ts',
               `
