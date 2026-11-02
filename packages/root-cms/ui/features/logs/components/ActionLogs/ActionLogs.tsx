@@ -29,6 +29,7 @@ import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
+import {formatTaskMetadataChange} from '../../../tasks/tasks.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {Action, listActions} from '../../actions.js';
 import './ActionsLogs.css';
@@ -773,8 +774,8 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
  * "#1: Status changed from New to In progress".
  */
 function getPreviewLabel(action: Action) {
-  if (action.action === 'tasks.update_metadata' && action.metadata?.label) {
-    return action.metadata.label;
+  if (action.action === 'tasks.update_metadata' && action.metadata?.field) {
+    return formatTaskMetadataChange(action.metadata);
   }
   if (action.action.startsWith('asset.')) {
     const label = getAssetLabel(action.metadata || {});

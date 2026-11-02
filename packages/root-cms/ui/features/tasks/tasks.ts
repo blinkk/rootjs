@@ -119,12 +119,15 @@ export type TaskMetadataField =
   'title' | 'assignee' | 'cc' | 'priority' | 'status' | 'targetLaunchDate';
 
 /** A change to a task's metadata, as recorded in the action log. */
-interface TaskMetadataChange {
+export interface TaskMetadataChange {
   taskId: string;
   /** The task's title when the change was made. */
   taskTitle: string;
   field: TaskMetadataField;
-  /** The stored value, or the formatted date for `targetLaunchDate`. */
+  /**
+   * The stored value, or the formatted date for `targetLaunchDate` since its
+   * display depends on the time zone of the user making the change.
+   */
   from: string | string[] | null;
   to: string | string[] | null;
 }
@@ -853,16 +856,20 @@ async function updateTaskMetadataField(
   }
 }
 
-/**
- * Logs a metadata change under one generic action. The `label` is formatted
- * when logging, since target launch dates depend on the user's time zone.
- */
+/** Logs a metadata change under one generic action. */
 function logTaskMetadataChange(change: TaskMetadataChange) {
+  logAction('tasks.update_metadata', {metadata: change});
+}
+
+/**
+ * Describes a logged metadata change, e.g.
+ * "#1: Status changed from New to In progress".
+ */
+export function formatTaskMetadataChange(change: TaskMetadataChange) {
   const {taskId, field} = change;
   const from = formatTaskLogValue(field, change.from);
   const to = formatTaskLogValue(field, change.to);
-  const label = `#${taskId}: ${TASK_FIELD_LABELS[field]} changed from ${from} to ${to}`;
-  logAction('tasks.update_metadata', {metadata: {...change, label}});
+  return `#${taskId}: ${TASK_FIELD_LABELS[field]} changed from ${from} to ${to}`;
 }
 
 /** Formats a metadata value for the action log, e.g. "In progress". */
