@@ -1,6 +1,7 @@
 import './Layout.css';
 
 import {
+  IconAlertTriangle,
   IconCarrot,
   IconClipboardList,
   IconDatabase,
@@ -30,6 +31,7 @@ import packageJson from '../../../package.json' with {type: 'json'};
 import {clearLastSignIn} from '../../../shared/auth-hints.js';
 import {RootJsLogo} from '../../components/RootJsLogo/RootJsLogo.js';
 import {testAiEnabled} from '../../features/ai/ai.js';
+import {useCronFailures} from '../../features/logs/cron-failures.js';
 import {SearchBar} from '../../features/search/SearchBar/SearchBar.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Avatar} from '../../primitives/Avatar/Avatar.js';
@@ -167,12 +169,43 @@ Layout.Top = (props: {onOpenMenu: () => void}) => {
           <Layout.Version />
         </>
       )}
-      {showSearchBar && (
-        <div className="Layout__top__search ml-auto shrink-0 pl-2 md:pr-2">
-          <SearchBar />
-        </div>
-      )}
+      <div className="Layout__top__actions ml-auto flex shrink-0 items-center gap-2 pl-2 md:pr-2">
+        <Layout.CronAlert />
+        {showSearchBar && (
+          <div className="Layout__top__search">
+            <SearchBar />
+          </div>
+        )}
+      </div>
     </header>
+  );
+};
+
+/**
+ * Alerts admins, from every page, that a background job (e.g. scheduled
+ * publishing) is failing. Links to the details in the settings page, where the
+ * failure can be acknowledged to hide this alert.
+ */
+Layout.CronAlert = () => {
+  const failures = useCronFailures();
+  const count = failures.filter((failure) => !failure.acknowledgedBy).length;
+  if (count === 0) {
+    return null;
+  }
+  const label =
+    count === 1
+      ? '1 background job is failing'
+      : `${count} background jobs are failing`;
+  return (
+    <IconButton
+      className="Layout__top__cronAlert text-danger"
+      href="/cms/settings#site-admin"
+      label={label}
+      size="md"
+      tooltipPlacement="bottom"
+    >
+      <IconAlertTriangle stroke={ICON_STROKE} />
+    </IconButton>
   );
 };
 

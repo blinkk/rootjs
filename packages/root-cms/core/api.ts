@@ -3,6 +3,7 @@ import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {getAuth} from 'firebase-admin/auth';
+import {SEARCH_INDEX_REBUILD_JOB} from '../shared/cron-status.js';
 import {MAX_CSV_IMPORT_BYTES} from '../shared/csv.js';
 import {
   normalizePublishChecks,
@@ -36,6 +37,7 @@ import {
 } from './ai.js';
 import {type CMSCheck} from './checks.js';
 import {RootCMSClient, UserRole, parseDocId, unmarshalData} from './client.js';
+import {CronStatusService} from './cron-status.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 import {
@@ -44,7 +46,7 @@ import {
 } from './dependency-graph.js';
 import {normalizeErrorReport, resolveStack} from './error-logs.js';
 import * as schema from './schema.js';
-import {SearchIndexService, RebuildResult} from './search-index.js';
+import {SearchIndexService} from './search-index.js';
 import {CMS_VERSION} from './server-version.js';
 import {type CMSTranslationService} from './translations.js';
 import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
@@ -345,9 +347,84 @@ export function api(server: Server, options: ApiOptions) {
     }
   });
 
+  /**
+   * Lists the background jobs that are currently failing. ADMIN-only.
+   */
+  server.use('/cms/api/cron.status', async (req: Request, res: Response) => {
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const role = await cmsClient.getUserRole(req.user.email);
+      if (role !== 'ADMIN') {
+        res.status(403).json({success: false, error: 'FORBIDDEN'});
+        return;
+      }
+      const failures = await new CronStatusService(
+        req.rootConfig!
+      ).listFailures();
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({success: true, failures});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Acknowledges a failing background job, which hides the alert for it until
+   * it fails in a new way. ADMIN-only.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/cron.acknowledge
+   * {"job": "incrementalSearchIndex"}
+   * ```
+   */
+  server.use(
+    '/cms/api/cron.acknowledge',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const job = req.body?.job;
+      if (typeof job !== 'string' || !/^\w+$/.test(job)) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const role = await cmsClient.getUserRole(req.user.email);
+        if (role !== 'ADMIN') {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+        await new CronStatusService(req.rootConfig!).acknowledge(
+          job,
+          req.user.email
+        );
+        res.status(200).json({success: true});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
   // Tracks in-flight search index rebuilds, keyed by projectId. Only one
   // rebuild per project may run at a time.
-  const searchRebuildJobs = new Map<string, Promise<RebuildResult>>();
+  const searchRebuildJobs = new Map<string, Promise<void>>();
 
   /**
    * Runs a full-text search query against the persisted index.
@@ -390,7 +467,8 @@ export function api(server: Server, options: ApiOptions) {
 
   /**
    * Returns the search index's current status (last run, doc count, etc).
-   * Authentication: any signed-in CMS user.
+   * Authentication: any signed-in CMS user. Details of a failing rebuild are
+   * only included for admins.
    */
   server.use('/cms/api/search.status', async (req: Request, res: Response) => {
     if (!req.user?.email) {
@@ -402,8 +480,13 @@ export function api(server: Server, options: ApiOptions) {
       const service = new SearchIndexService(req.rootConfig!);
       const status = await service.getStatus();
       const running = searchRebuildJobs.has(cmsClient.projectId);
+      const role = await cmsClient.getUserRole(req.user.email);
+      const failure =
+        role === 'ADMIN'
+          ? await new CronStatusService(req.rootConfig!).getSearchIndexFailure()
+          : null;
       res.setHeader('Cache-Control', 'no-store');
-      res.status(200).json({success: true, status, running});
+      res.status(200).json({success: true, status, running, failure});
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
@@ -454,11 +537,15 @@ export function api(server: Server, options: ApiOptions) {
     const service = new SearchIndexService(req.rootConfig!, (collectionId) =>
       getCollectionSchema(req, collectionId)
     );
+    // The response is sent before the rebuild finishes, so the outcome is
+    // reported through `CronStatusService` (see `/cms/api/search.status`).
+    const cronStatus = new CronStatusService(req.rootConfig!);
     const job = service
       .rebuildIndex({force})
-      .catch((err) => {
+      .then(() => cronStatus.clearFailure(SEARCH_INDEX_REBUILD_JOB))
+      .catch(async (err) => {
         console.error('search.rebuild failed:', err.stack || err);
-        throw err;
+        await cronStatus.recordFailure(SEARCH_INDEX_REBUILD_JOB, err);
       })
       .finally(() => {
         searchRebuildJobs.delete(projectId);

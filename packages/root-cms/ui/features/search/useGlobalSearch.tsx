@@ -9,6 +9,7 @@ import {
   startAt,
 } from 'firebase/firestore';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import type {CronJobFailure} from '../../../shared/cron-status.js';
 
 export interface GlobalSearchHit {
   id: string;
@@ -121,6 +122,8 @@ export function useGlobalSearch(
 export interface SearchIndexAdminStatus {
   status: GlobalSearchStatus;
   running: boolean;
+  /** The latest failure of a search index job, if one is failing. */
+  failure: CronJobFailure | null;
 }
 
 /**
@@ -134,6 +137,7 @@ export function useSearchIndexStatus(): SearchIndexAdminStatus & {
   const [data, setData] = useState<SearchIndexAdminStatus>({
     status: {lastRun: null, docCount: 0, fieldCount: 0, shardCount: 0},
     running: false,
+    failure: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -153,6 +157,7 @@ export function useSearchIndexStatus(): SearchIndexAdminStatus & {
       setData({
         status: json.status,
         running: !!json.running,
+        failure: json.failure || null,
       });
     } catch (err) {
       console.error('search.status failed:', err);

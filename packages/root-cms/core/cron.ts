@@ -1,6 +1,11 @@
 import {RootConfig} from '@blinkk/root';
 import {Timestamp} from 'firebase-admin/firestore';
+import {
+  SEARCH_INDEX_CRON_JOB,
+  SEARCH_INDEX_REBUILD_JOB,
+} from '../shared/cron-status.js';
 import {RootCMSClient} from './client.js';
+import {CronStatusService} from './cron-status.js';
 import {DependencyGraphService} from './dependency-graph.js';
 import {LoadSchemaFn, SearchIndexService} from './search-index.js';
 import {VersionsService} from './versions.js';
@@ -34,35 +39,50 @@ export async function runCronJobs(
   rootConfig: RootConfig,
   options: RunCronJobsOptions = {}
 ) {
-  await Promise.all([
-    runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
-    runCronJob(
-      'syncScheduledDataSources',
-      runSyncScheduledDataSources,
-      rootConfig
-    ),
-    runCronJob('saveVersions', runSaveVersions, rootConfig),
-    runCronJob(
-      'incrementalSearchIndex',
-      runIncrementalSearchIndex,
-      rootConfig,
-      options.loadSchema
-    ),
-    runCronJob('updateDependencyGraph', runUpdateDependencyGraph, rootConfig),
-  ]);
-}
-
-async function runCronJob(
-  name: string,
-  fn: (...args: any[]) => any,
-  ...args: any[]
-) {
+  const cronStatus = new CronStatusService(rootConfig);
+  const failingJobs = new Set<string>();
   try {
-    await fn(...args);
+    const failures = await cronStatus.listFailures();
+    failures.forEach((failure) => failingJobs.add(failure.job));
   } catch (err) {
-    console.log(`cron failed: ${name}`);
-    console.error(String(err.stack || err));
-    throw err;
+    console.error('failed to read cron status:', err);
+  }
+
+  const runCronJob = async (name: string, fn: () => unknown) => {
+    try {
+      await fn();
+      if (failingJobs.has(name)) {
+        await cronStatus.clearFailure(name);
+      }
+    } catch (err) {
+      console.log(`cron failed: ${name}`);
+      console.error(String(err.stack || err));
+      await cronStatus.recordFailure(name, err);
+      throw err;
+    }
+  };
+
+  // Wait for every job to settle, even if one fails, since the process can be
+  // suspended once the request is finished.
+  const results = await Promise.allSettled([
+    runCronJob('publishScheduledDocs', () =>
+      runPublishScheduledDocs(rootConfig)
+    ),
+    runCronJob('syncScheduledDataSources', () =>
+      runSyncScheduledDataSources(rootConfig)
+    ),
+    runCronJob('saveVersions', () => runSaveVersions(rootConfig)),
+    runCronJob(SEARCH_INDEX_CRON_JOB, () =>
+      runIncrementalSearchIndex(rootConfig, options.loadSchema)
+    ),
+    runCronJob('updateDependencyGraph', () =>
+      runUpdateDependencyGraph(rootConfig)
+    ),
+  ]);
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      throw result.reason;
+    }
   }
 }
 
@@ -125,4 +145,8 @@ async function runIncrementalSearchIndex(
     }
   }
   await service.rebuildIndex({force: false});
+  // The index is healthy again, so a failed manual rebuild no longer matters.
+  await new CronStatusService(rootConfig).clearFailure(
+    SEARCH_INDEX_REBUILD_JOB
+  );
 }

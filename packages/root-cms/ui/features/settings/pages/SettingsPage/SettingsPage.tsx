@@ -29,6 +29,8 @@ import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {logAction} from '../../../logs/actions.js';
+import {CronFailures} from '../../../logs/components/CronFailures/CronFailures.js';
+import {refreshCronFailures} from '../../../logs/cron-failures.js';
 import {useSearchIndexStatus} from '../../../search/useGlobalSearch.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {resetUserSignIn} from '../../../users/users.js';
@@ -204,28 +206,38 @@ function SiteAdminSection() {
   const indexStatus = useSearchIndexStatus();
   const [submitting, setSubmitting] = useState(false);
   const [polling, setPolling] = useState(false);
-  const [sawRunning, setSawRunning] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const watchdogRef = useRef<number | null>(null);
+  // The status when the rebuild was started. The rebuild has finished once the
+  // persisted status moves on from this. The in-memory `running` flag can't be
+  // relied on alone, since a fast rebuild can finish between polls and the
+  // status request may be served by a different server instance.
+  const baselineRef = useRef<{
+    lastRun: number | null;
+    failedAt: number | null;
+  } | null>(null);
 
   function stopPolling() {
     if (pollRef.current !== null) {
       window.clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    if (watchdogRef.current !== null) {
+      window.clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
     setPolling(false);
-    setSawRunning(false);
   }
 
   useEffect(() => {
     return stopPolling;
   }, []);
 
-  // Track whether we've ever observed `running: true` since polling began.
   useEffect(() => {
-    if (polling && indexStatus.running) {
-      setSawRunning(true);
+    if (window.location.hash === '#site-admin') {
+      document.getElementById('site-admin')?.scrollIntoView();
     }
-  }, [polling, indexStatus.running]);
+  }, []);
 
   async function rebuild(force: boolean) {
     if (submitting || polling) {
@@ -250,12 +262,26 @@ function SiteAdminSection() {
         color: 'blue',
         autoClose: 4000,
       });
+      baselineRef.current = {
+        lastRun: indexStatus.status.lastRun,
+        failedAt: indexStatus.failure?.lastFailedAt ?? null,
+      };
       setPolling(true);
       pollRef.current = window.setInterval(() => {
         indexStatus.refresh();
       }, 2000);
       // Watchdog: stop polling after 10 minutes.
-      window.setTimeout(stopPolling, 10 * 60_000);
+      watchdogRef.current = window.setTimeout(() => {
+        stopPolling();
+        showNotification({
+          title: 'Search index',
+          message:
+            "The rebuild hasn't finished after 10 minutes. It may still be " +
+            'running. If not, check the server logs.',
+          color: 'yellow',
+          autoClose: false,
+        });
+      }, 10 * 60_000);
     } catch (err: any) {
       showNotification({
         title: 'Error',
@@ -268,12 +294,28 @@ function SiteAdminSection() {
     }
   }
 
-  // Stop polling + notify once the server reports !running, but only after
-  // we've observed running:true at least once (avoids spurious "complete"
-  // toasts on the initial poll cycle before the server-side flag flips).
+  // Stop polling + notify once the rebuild's outcome shows up in the status.
   useEffect(() => {
-    if (polling && sawRunning && !indexStatus.running) {
+    const baseline = baselineRef.current;
+    if (!polling || !baseline) {
+      return;
+    }
+    const failure = indexStatus.failure;
+    if (failure && failure.lastFailedAt !== baseline.failedAt) {
       stopPolling();
+      refreshCronFailures();
+      showNotification({
+        title: 'Search index rebuild failed',
+        message: failure.message,
+        color: 'red',
+        autoClose: false,
+      });
+    } else if (
+      indexStatus.status.lastRun !== baseline.lastRun &&
+      !indexStatus.running
+    ) {
+      stopPolling();
+      refreshCronFailures();
       showNotification({
         title: 'Search index',
         message: 'Rebuild complete.',
@@ -281,16 +323,21 @@ function SiteAdminSection() {
         autoClose: 3000,
       });
     }
-  }, [polling, sawRunning, indexStatus.running]);
+  }, [
+    polling,
+    indexStatus.running,
+    indexStatus.status.lastRun,
+    indexStatus.failure?.lastFailedAt,
+  ]);
 
   const last = indexStatus.status.lastRun;
   const docCount = indexStatus.status.docCount;
   const fieldCount = indexStatus.status.fieldCount;
   const shardCount = indexStatus.status.shardCount;
-  const running = indexStatus.running || submitting;
+  const running = indexStatus.running || polling || submitting;
 
   return (
-    <div className={SECTION_CLASSES}>
+    <div id="site-admin" className={SECTION_CLASSES}>
       <div className="SettingsPage__section__left md:sticky md:top-0 md:self-start">
         <Heading className="SettingsPage__section__left__title mb-2">
           Site Admin
@@ -353,6 +400,19 @@ function SiteAdminSection() {
               Force full rebuild
             </Button>
           </div>
+        </div>
+        <div className={SETTING_CLASSES}>
+          <Text size="body" weight="semi-bold">
+            Background jobs
+          </Text>
+          <Text size="body-sm" weight="semi-bold" color="gray">
+            <p>
+              Jobs that run on a schedule, such as scheduled publishing and
+              search index updates. Failures are also written to the action
+              logs.
+            </p>
+          </Text>
+          <CronFailures />
         </div>
         <ResetSignInSetting />
       </Surface>
