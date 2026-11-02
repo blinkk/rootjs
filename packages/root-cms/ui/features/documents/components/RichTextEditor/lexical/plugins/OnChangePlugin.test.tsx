@@ -310,6 +310,65 @@ describe('OnChangePlugin', () => {
     expect(editor.getRootElement()?.textContent).toBe('hello w');
   });
 
+  test('renders an external value matching a batched edit', async () => {
+    // A parent can batch several keystrokes into one render. Repeated content
+    // must not leave the skipped edits looking like pending echoes.
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    setEditorText(editor, 'a');
+    await flush();
+    setEditorText(editor, 'ab');
+    await flush();
+    setEditorText(editor, 'a');
+    await flush();
+
+    rerender(
+      <TestEditor
+        value={onChange.mock.lastCall![0]}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    rerender(
+      <TestEditor
+        value={richText('ab', 3000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    expect(editor.getRootElement()?.textContent).toBe('ab');
+  });
+
+  test('does not emit external replacements', async () => {
+    const {rerender, onChange, onReady} = await renderEditor('hello');
+    rerender(
+      <TestEditor
+        value={richText('replaced', 2000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test('emits a keystroke right after an external replacement', async () => {
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    rerender(
+      <TestEditor
+        value={richText('replaced', 2000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    setEditorText(editor, 'typed');
+    await flush();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const value = onChange.mock.lastCall![0] as RichTextData;
+    expect(value.blocks[0].data).toEqual({text: 'typed'});
+  });
+
   test('ignores values that only differ by timestamp', async () => {
     let editor!: LexicalEditor;
     const {rerender} = render(

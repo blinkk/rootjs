@@ -1,6 +1,6 @@
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {OnChangePlugin as LexicalOnChangePlugin} from '@lexical/react/LexicalOnChangePlugin';
-import {EditorState} from 'lexical';
+import {EditorState, LexicalEditor} from 'lexical';
 import {useEffect, useRef} from 'preact/hooks';
 import {
   RichTextData,
@@ -21,6 +21,9 @@ export interface OnChangePluginProps {
  */
 const RECENT_VALUES_LIMIT = 20;
 
+/** Update tag for writes that render `props.value` into the editor. */
+const EXTERNAL_VALUE_TAG = 'root-cms-external-value';
+
 export function OnChangePlugin(props: OnChangePluginProps) {
   const [editor] = useLexicalComposerContext();
 
@@ -39,9 +42,12 @@ export function OnChangePlugin(props: OnChangePluginProps) {
    * Treating these values as echoes keeps those stale renders from rewriting
    * the editor (and resetting the cursor). Includes `null`, which is what an
    * emptied editor emits.
+   *
+   * Matched by identity, not content: parents hand back the emitted object,
+   * while anything external (undo history, firestore) is always a new object
+   * and must render even if its content matches an earlier edit.
    */
   const recentValuesRef = useRef<Array<RichTextData | null>>([]);
-  const isUpdatingRef = useRef(false);
 
   useEffect(() => {
     // When props.value changes, convert the RichTextData to lexical data and
@@ -56,9 +62,7 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     // before it (a parent can batch several values into one render). Dropping
     // those lets the same content through later as a real replacement, e.g.
     // undoing an edit or clearing the field.
-    const echoIndex = recentValuesRef.current.findIndex((recent) =>
-      testSameRichTextContent(recent, newValue)
-    );
+    const echoIndex = recentValuesRef.current.indexOf(newValue);
     if (echoIndex !== -1) {
       recentValuesRef.current.splice(0, echoIndex + 1);
       return;
@@ -68,16 +72,21 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     }
     currentValueRef.current = newValue;
     recentValuesRef.current = [];
-    editor.update(() => {
-      isUpdatingRef.current = true;
-      convertToLexical(newValue);
+    // Commit synchronously so that a keystroke can't merge into this update,
+    // which would hide it from onChange() below.
+    editor.update(() => convertToLexical(newValue), {
+      discrete: true,
+      tag: EXTERNAL_VALUE_TAG,
     });
   }, [editor, props.value]);
 
-  const onChange = (editorState: EditorState) => {
+  const onChange = (
+    editorState: EditorState,
+    _editor: LexicalEditor,
+    tags: Set<string>
+  ) => {
     // Ignore editor updates from props.value changes.
-    if (isUpdatingRef.current) {
-      isUpdatingRef.current = false;
+    if (tags.has(EXTERNAL_VALUE_TAG)) {
       return;
     }
     // When the user enters new content, read the current lexical data, convert
