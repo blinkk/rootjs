@@ -264,7 +264,6 @@ const STROLL_CSS = `
 
 .beetloader--stroll .beetloader__beet {
   position: absolute;
-  top: 3em;
 }
 
 .beetloader--stroll .beetloader__ground {
@@ -290,14 +289,6 @@ const STROLL_CSS = `
   animation: beetloader-stroll-leaves 0.32s step-end infinite;
 }
 
-.beetloader__leg {
-  animation: beetloader-stroll-leg 0.64s step-end infinite;
-}
-
-.beetloader__leg--right {
-  animation-delay: -0.32s;
-}
-
 @keyframes beetloader-stroll-ground {
   to { transform: translateX(-12em); }
 }
@@ -310,11 +301,6 @@ const STROLL_CSS = `
 @keyframes beetloader-stroll-leaves {
   0% { transform: translateY(1em); }
   50% { transform: none; }
-}
-
-@keyframes beetloader-stroll-leg {
-  0% { transform: none; }
-  50% { transform: translateY(-1em); }
 }
 `;
 
@@ -368,16 +354,6 @@ const SPROUT_3_PATHS = spritePaths(
     '.......K........',
   ],
   7
-);
-
-const LEFT_LEG_PATHS = spritePaths(
-  ['.....K..........', '.....K..........', '....KK..........'],
-  14
-);
-
-const RIGHT_LEG_PATHS = spritePaths(
-  ['.........K......', '.........K......', '.........KK.....'],
-  14
 );
 
 /** One layer of the sprite, on a grid shared by every layer. */
@@ -465,14 +441,6 @@ function Stroll() {
       <div className="beetloader__window">
         <div className="beetloader__ground beetloader__layer" />
         <div className="beetloader__beet">
-          <Sprite
-            paths={LEFT_LEG_PATHS}
-            className="beetloader__leg beetloader__layer"
-          />
-          <Sprite
-            paths={RIGHT_LEG_PATHS}
-            className="beetloader__leg beetloader__leg--right beetloader__layer"
-          />
           <Sprite
             paths={BEET_BODY_PATHS}
             className="beetloader__body beetloader__layer"
