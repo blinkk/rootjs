@@ -1,4 +1,4 @@
-import {IconChevronDown, IconSelector, IconX} from '@tabler/icons-preact';
+import {IconChevronDown, IconX} from '@tabler/icons-preact';
 import type {ComponentChildren} from 'preact';
 import type {SceneMeta} from '../types.js';
 import {Avatar, CmsFrame} from '../ui/cms.js';
@@ -7,7 +7,7 @@ export const meta: SceneMeta = {
   id: 'cms-roles',
   width: 960,
   height: 600,
-  alt: 'The sharing settings in the Root.js CMS, granting people and a whole email domain Admin, Editor, or Viewer roles, with a group whose role is limited to specific collections.',
+  alt: "The sharing settings in the Root.js CMS, granting people and a whole email domain Admin, Editor, or Viewer roles, showing each person's name and last login, with a group whose role is limited to specific collections.",
 };
 
 /**
@@ -34,37 +34,114 @@ const ROLE_HELP: Array<[string, string]> = [
 ];
 
 /** Direct role grants, sorted by email like the real share box. */
-const USER_ROLES: Array<{email: string; name: string; role: string}> = [
-  {email: '*@fernwood.example', name: 'Fernwood', role: 'VIEWER'},
-  {email: 'ada@fernwood.example', name: 'Ada', role: 'ADMIN'},
-  {email: 'kenji@fernwood.example', name: 'Kenji', role: 'EDITOR'},
-  {email: 'priya@fernwood.example', name: 'Priya', role: 'EDITOR'},
+const USER_ROLES: Array<{
+  email: string;
+  /** Display name. Domain grants don't have one. */
+  name?: string;
+  lastLogin?: string;
+  role: string;
+}> = [
+  {email: '*@fernwood.example', role: 'VIEWER'},
+  {
+    email: 'ada@fernwood.example',
+    name: 'Ada',
+    lastLogin: '2 hours ago',
+    role: 'ADMIN',
+  },
+  {
+    email: 'kenji@fernwood.example',
+    name: 'Kenji',
+    lastLogin: 'yesterday',
+    role: 'EDITOR',
+  },
+  {
+    email: 'priya@fernwood.example',
+    name: 'Priya',
+    lastLogin: '3 days ago',
+    role: 'EDITOR',
+  },
 ];
 
 const BORDER = '1px solid var(--cms-border)';
 
-/** A Mantine-style select (square corners, as in the real share box). */
-function Select(props: {value: string; disabled?: boolean}) {
+/** Members of the open group, with their last login. */
+const GROUP_USERS: Array<[string, string]> = [
+  ['Lea', '4 hours ago'],
+  ['Sam', 'yesterday'],
+];
+
+/** A role picker: a button that opens a menu of roles and their help text. */
+function RoleMenu(props: {value: string; disabled?: boolean}) {
   return (
     <span
+      className="cms-button"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        height: '28px',
-        padding: '0 8px 0 10px',
-        border: '1px solid #ced4da',
-        background: props.disabled ? '#f1f3f5' : '#fff',
-        color: props.disabled ? '#868e96' : 'var(--cms-text)',
+        justifyContent: 'space-between',
         fontSize: '11.5px',
+        fontWeight: 400,
+        opacity: props.disabled ? 0.5 : undefined,
       }}
     >
       {props.value}
-      <IconSelector
-        size={13}
-        color="#adb5bd"
-        style={{marginLeft: 'auto', flex: '0 0 auto'}}
-      />
+      <IconChevronDown color="#646b77" />
     </span>
+  );
+}
+
+/**
+ * A person in a list: avatar, name (or email when they don't have one), and
+ * their email and last login, with a badge on the current user.
+ */
+function UserInfo(props: {
+  email: string;
+  name?: string;
+  lastLogin?: string;
+  you?: boolean;
+}) {
+  const details = [
+    props.name && props.email,
+    props.lastLogin && `Last login ${props.lastLogin}`,
+  ];
+  return (
+    <>
+      <Avatar name={props.name || 'Fernwood'} />
+      <span style={{minWidth: 0}}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            color: '#1f1f1f',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
+        >
+          {props.name || props.email}
+          {props.you && (
+            <span
+              style={{
+                padding: '0 6px',
+                borderRadius: '999px',
+                background: '#ececea',
+                color: 'var(--cms-text)',
+                fontSize: '8.5px',
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                lineHeight: '14px',
+                textTransform: 'uppercase',
+              }}
+            >
+              You
+            </span>
+          )}
+        </span>
+        {props.name && (
+          <span className="cms-muted" style={{fontSize: '10.5px'}}>
+            {details.filter(Boolean).join(' · ')}
+          </span>
+        )}
+      </span>
+    </>
   );
 }
 
@@ -168,45 +245,28 @@ export default function Roles() {
             style={{fontWeight: 500, lineHeight: 1.55, marginTop: '10px'}}
           >
             <p style={{margin: 0}}>
-              Share access to the CMS. To share with everyone in a domain, use{' '}
-              <span className="cms-mono" style={{fontSize: '11.5px'}}>
-                *@fernwood.example
-              </span>
-              .
+              Share access to the CMS. To share with everyone in a domain, use
+              *@fernwood.example.
             </p>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                margin: '16px 0',
-              }}
-            >
+            <ul style={{margin: '12px 0', paddingLeft: '18px'}}>
               {ROLE_HELP.map(([role, help]) => (
-                <div>
-                  <span
-                    className="cms-mono"
-                    style={{
-                      display: 'inline-block',
-                      padding: '1px 6px',
-                      marginBottom: '3px',
-                      borderRadius: '3px',
-                      background: 'var(--cms-chip)',
-                      color: 'var(--cms-text)',
-                      fontSize: '10.5px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {role}
-                  </span>
-                  <div>{help}</div>
-                </div>
+                <li style={{marginBottom: '4px'}}>
+                  {role}: {help}
+                </li>
               ))}
-            </div>
-            <p style={{margin: 0}}>
+            </ul>
+            <p style={{margin: '0 0 12px'}}>
               Use <strong style={{color: 'var(--cms-text)'}}>groups</strong> to
               manage many users at once and optionally scope a role to specific
               collections.
+            </p>
+            <p style={{margin: 0}}>
+              If a user is blocked at sign-in because their Google account is no
+              longer linked, use{' '}
+              <strong style={{color: 'var(--cms-text)'}}>Reset sign-in</strong>{' '}
+              in the{' '}
+              <strong style={{color: 'var(--cms-text)'}}>Site Admin</strong>{' '}
+              section.
             </p>
           </div>
         </div>
@@ -226,6 +286,7 @@ export default function Roles() {
                 height: '28px',
                 padding: '0 10px',
                 border: '1px solid #ced4da',
+                borderRadius: '4px',
                 color: '#adb5bd',
                 fontSize: '11.5px',
               }}
@@ -234,12 +295,19 @@ export default function Roles() {
             </span>
             <span
               className="cms-button cms-button--dark"
-              style={{justifyContent: 'center', borderRadius: 0}}
+              style={{justifyContent: 'center'}}
             >
               Add user
             </span>
           </div>
-          <div style={{marginTop: '8px', padding: '4px 0', border: BORDER}}>
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '4px 0',
+              border: BORDER,
+              borderRadius: '4px',
+            }}
+          >
             {USER_ROLES.map((user) => (
               <div
                 style={{
@@ -247,18 +315,16 @@ export default function Roles() {
                   gridTemplateColumns: '24px minmax(0, 1fr) 120px',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '4px 14px',
+                  padding: '3px 14px',
                 }}
               >
-                <Avatar name={user.name} />
-                <span
-                  className="cms-muted"
-                  style={{fontWeight: 600, fontSize: '12px'}}
-                >
-                  {user.email}
-                  {user.name === 'Ada' && ' (you)'}
-                </span>
-                <Select value={user.role} disabled={user.name === 'Ada'} />
+                <UserInfo
+                  email={user.email}
+                  name={user.name}
+                  lastLogin={user.lastLogin}
+                  you={user.name === 'Ada'}
+                />
+                <RoleMenu value={user.role} disabled={user.name === 'Ada'} />
               </div>
             ))}
           </div>
@@ -266,7 +332,9 @@ export default function Roles() {
           <div style={{marginTop: '14px'}}>
             <SectionTitle>Groups</SectionTitle>
           </div>
-          <div style={{border: BORDER, background: '#fff'}}>
+          <div
+            style={{border: BORDER, borderRadius: '4px', background: '#fff'}}
+          >
             <GroupTrigger name="Growing guides team" users={2} open />
             <div
               style={{
@@ -285,7 +353,9 @@ export default function Roles() {
               >
                 <div>
                   <Label>Role</Label>
-                  <Select value="EDITOR" />
+                  <div style={{display: 'grid'}}>
+                    <RoleMenu value="EDITOR" />
+                  </div>
                 </div>
                 <div>
                   <Label>Collections</Label>
@@ -297,6 +367,7 @@ export default function Roles() {
                       height: '28px',
                       padding: '0 8px 0 4px',
                       border: '1px solid #ced4da',
+                      borderRadius: '4px',
                     }}
                   >
                     <CollectionChip>GrowingGuides</CollectionChip>
@@ -311,8 +382,8 @@ export default function Roles() {
               </div>
               <div>
                 <Label>Users</Label>
-                <div style={{border: BORDER}}>
-                  {['Lea', 'Sam'].map((name, i) => (
+                <div style={{border: BORDER, borderRadius: '4px'}}>
+                  {GROUP_USERS.map(([name, lastLogin], i) => (
                     <div
                       style={{
                         display: 'grid',
@@ -324,8 +395,11 @@ export default function Roles() {
                         fontSize: '12px',
                       }}
                     >
-                      <Avatar name={name} />
-                      <span>{`${name.toLowerCase()}@fernwood.example`}</span>
+                      <UserInfo
+                        email={`${name.toLowerCase()}@fernwood.example`}
+                        name={name}
+                        lastLogin={lastLogin}
+                      />
                       <IconX size={13} color="#868e96" />
                     </div>
                   ))}

@@ -7,40 +7,10 @@ export const meta: SceneMeta = {
   id: 'cms-releases',
   width: 960,
   height: 600,
-  alt: 'The Releases page in the Root.js CMS, listing scheduled, unpublished and published releases that bundle docs and data sources.',
+  alt: 'The Releases page in the Root.js CMS, listing scheduled, unpublished and published releases that bundle docs and data sources, with who last acted on each and when.',
 };
 
 const RELEASES_CSS = `
-.rl__segmented {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--cms-border);
-  border-radius: 6px;
-  background: #f5f5f3;
-  font-size: 12px;
-  font-weight: 500;
-}
-.rl__segmented > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  color: #646b77;
-}
-.rl__segmented > span.active {
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  color: #1f1f1f;
-}
-.rl__count {
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #ececea;
-  color: #646b77;
-  font-size: 10px;
-  line-height: 14px;
-}
 .rl__surface {
   overflow: hidden;
   border: 1px solid var(--cms-border);
@@ -66,9 +36,9 @@ const RELEASES_CSS = `
   vertical-align: top;
 }
 .rl__table tr:last-child td { border-bottom: none; }
-.rl__title { color: #1f1f1f; font-size: 13px; font-weight: 600; }
-.rl__id { margin-top: 2px; color: #646b77; font-family: var(--cms-font-mono); font-size: 11px; }
-.rl__chips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 340px; }
+.rl__id { color: #1f1f1f; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.rl__description { margin-top: 2px; color: #646b77; font-size: 12px; }
+.rl__chips { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .rl__chip {
   display: inline-flex;
   align-items: center;
@@ -90,7 +60,9 @@ const RELEASES_CSS = `
   font-weight: 500;
 }
 .rl__chip svg { width: 11px; height: 11px; }
-.rl__owner { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rl__activity { display: flex; align-items: center; gap: 8px; }
+.rl__activityUser { font-weight: 500; }
+.rl__activityAction { color: #646b77; font-size: 11px; white-space: nowrap; }
 `;
 
 /** How many chips show before the rest collapse into "+N more". */
@@ -101,8 +73,9 @@ const RELEASES: Array<{
   description: string;
   dataSources: string[];
   docs: string[];
-  owner: string;
   status: [BadgeVariant, string];
+  /** The most recent action taken on the release. */
+  activity: {by: string; label: string};
 }> = [
   {
     id: 'spring-harvest-2027',
@@ -115,50 +88,37 @@ const RELEASES: Array<{
       'Products/purple-top-turnips',
       'Recipes/roasted-roots',
       'Recipes/beet-salad',
-      'Events/seed-swap',
     ],
-    owner: 'Ada',
     status: ['scheduled', 'Scheduled'],
+    activity: {by: 'Ada', label: 'Scheduled for Mar 3, 2027, 7:00 AM'},
   },
   {
     id: 'seed-catalog',
     description: 'Seed catalog and growing guides',
-    dataSources: ['seed-inventory', 'farm-stand-prices'],
+    dataSources: ['seed-inventory'],
     docs: ['Products/seeds', 'GrowingGuides/sowing-carrots'],
-    owner: 'Kenji',
     status: ['scheduled', 'Scheduled'],
+    activity: {by: 'Kenji', label: 'Scheduled for Mar 9, 2027, 9:00 AM'},
   },
   {
     id: 'growing-guides-de',
     description: 'German growing guides',
     dataSources: [],
-    docs: [
-      'GrowingGuides/sowing-carrots',
-      'GrowingGuides/storing-beets',
-      'GrowingGuides/winter-radishes',
-    ],
-    owner: 'Lea',
+    docs: ['GrowingGuides/sowing-carrots', 'GrowingGuides/storing-beets'],
     status: ['draft', 'Unpublished'],
+    activity: {by: 'Lea', label: 'Created · 3 days ago'},
   },
   {
     id: 'winter-roots-sale',
     description: 'Winter root cellar sale',
     dataSources: ['farm-stand-prices'],
-    docs: ['Pages/winter-sale', 'Products/storage-beets'],
-    owner: 'Priya',
+    docs: ['Pages/winter-sale'],
     status: ['published', 'Published'],
-  },
-  {
-    id: 'holiday-baskets',
-    description: 'Holiday harvest baskets',
-    dataSources: [],
-    docs: ['Pages/harvest-boxes'],
-    owner: 'Sam',
-    status: ['published', 'Published'],
+    activity: {by: 'Priya', label: 'Published · Feb 11, 2027'},
   },
 ];
 
-/** A release's data sources and docs as chips, as on the real page. */
+/** A release's data sources and docs as chips, one per line. */
 function Contents(props: {dataSources: string[]; docs: string[]}) {
   const items = [
     ...props.dataSources.map((id) => ({id, data: true})),
@@ -186,22 +146,35 @@ function Contents(props: {dataSources: string[]; docs: string[]}) {
 /** The releases list page. */
 export default function Releases() {
   const filters: Array<[string, number]> = [
-    ['Active', 5],
-    ['Unpublished', 1],
-    ['Published', 2],
+    ['Active', 4],
+    ['Unpublished', 3],
+    ['Published', 1],
     ['Archived', 4],
   ];
   return (
     <CmsFrame active="releases">
       <style>{RELEASES_CSS}</style>
-      <div style={{padding: '24px 28px', fontSize: '12.5px'}}>
-        <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
-          <div>
-            <h1 className="cms-h1">Releases</h1>
-            <p className="cms-muted" style={{margin: '6px 0 18px'}}>
-              Bundle docs and data sources, then publish them together — now or
-              on a schedule.
-            </p>
+      <div style={{padding: '22px 28px', fontSize: '12.5px'}}>
+        <h1 className="cms-h1">Releases</h1>
+        <p className="cms-muted" style={{margin: '6px 0 16px'}}>
+          Bundle one or more documents and publish them together. Schedule a
+          release to go live at a specific time, or publish manually when you're
+          ready.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '12px',
+          }}
+        >
+          <div className="cms-segmented">
+            {filters.map(([label, count], i) => (
+              <span className={i === 0 ? 'active' : ''}>
+                {label}
+                <span className="cms-segmented__count">{count}</span>
+              </span>
+            ))}
           </div>
           <span
             className="cms-button cms-button--dark"
@@ -211,42 +184,39 @@ export default function Releases() {
             New release
           </span>
         </div>
-        <div className="rl__segmented" style={{marginBottom: '14px'}}>
-          {filters.map(([label, count], i) => (
-            <span className={i === 0 ? 'active' : ''}>
-              {label}
-              <span className="rl__count">{count}</span>
-            </span>
-          ))}
-        </div>
         <div className="rl__surface">
           <table className="rl__table">
             <thead>
               <tr>
+                <th>Status</th>
                 <th>Release</th>
                 <th>Contents</th>
-                <th>Created by</th>
-                <th>Status</th>
+                <th>Last activity</th>
               </tr>
             </thead>
             <tbody>
               {RELEASES.map((r) => (
                 <tr>
+                  <td style={{width: 0}}>
+                    <Badge variant={r.status[0]}>{r.status[1]}</Badge>
+                  </td>
                   <td>
-                    <div className="rl__title">{r.description}</div>
                     <div className="rl__id">{r.id}</div>
+                    <div className="rl__description">{r.description}</div>
                   </td>
                   <td>
                     <Contents dataSources={r.dataSources} docs={r.docs} />
                   </td>
                   <td>
-                    <span className="rl__owner">
-                      <Avatar name={r.owner} />
-                      {r.owner}
-                    </span>
-                  </td>
-                  <td>
-                    <Badge variant={r.status[0]}>{r.status[1]}</Badge>
+                    <div className="rl__activity">
+                      <Avatar name={r.activity.by} large />
+                      <div>
+                        <div className="rl__activityUser">{r.activity.by}</div>
+                        <div className="rl__activityAction">
+                          {r.activity.label}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ))}
