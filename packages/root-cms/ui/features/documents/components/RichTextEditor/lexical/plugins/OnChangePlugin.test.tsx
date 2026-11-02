@@ -72,6 +72,35 @@ async function flush() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** Renders the editor with an initial value and waits for it to settle. */
+async function renderEditor(text: string) {
+  let editor!: LexicalEditor;
+  const onChange = vi.fn();
+  const onReady = (e: LexicalEditor) => (editor = e);
+  const {rerender} = render(
+    <TestEditor
+      value={richText(text, 1000)}
+      onChange={onChange}
+      onReady={onReady}
+    />
+  );
+  await flush();
+  return {editor, rerender, onChange, onReady};
+}
+
+/** Simulates a user edit that leaves the editor holding `text`. */
+function setEditorText(editor: LexicalEditor, text: string) {
+  editor.update(() => {
+    const paragraph = $createParagraphNode();
+    if (text) {
+      paragraph.append($createTextNode(text));
+    }
+    const root = $getRoot();
+    root.clear();
+    root.append(paragraph);
+  });
+}
+
 describe('OnChangePlugin', () => {
   test('renders the incoming value', async () => {
     const {container} = render(<TestEditor value={richText('hello', 1000)} />);
@@ -191,6 +220,153 @@ describe('OnChangePlugin', () => {
     await flush();
     expect(editor.getEditorState()).toBe(editorState);
     expect(editor.getRootElement()?.textContent).toContain('hel');
+  });
+
+  test('ignores a stale echo of the emptied editor', async () => {
+    // Select-all + delete emits `null`. When that value renders back after the
+    // next keystroke, it must not clear what the user just typed.
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    setEditorText(editor, '');
+    await flush();
+    expect(onChange.mock.lastCall![0]).toBe(null);
+    setEditorText(editor, 'a');
+    await flush();
+
+    rerender(<TestEditor value={null} onChange={onChange} onReady={onReady} />);
+    await flush();
+    expect(editor.getRootElement()?.textContent).toBe('a');
+  });
+
+  test('ignores every lagging echo after the editor is emptied', async () => {
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    const echo = async (value: RichTextData | null) => {
+      rerender(
+        <TestEditor value={value} onChange={onChange} onReady={onReady} />
+      );
+      await flush();
+    };
+
+    setEditorText(editor, '');
+    await flush();
+    setEditorText(editor, 'a');
+    await flush();
+    setEditorText(editor, 'ab');
+    await flush();
+    const emitted = onChange.mock.calls.map((call) => call[0]);
+
+    await echo(emitted[0]);
+    setEditorText(editor, 'abc');
+    await flush();
+    await echo(emitted[1]);
+    setEditorText(editor, 'abcd');
+    await flush();
+    await echo(emitted[2]);
+    expect(editor.getRootElement()?.textContent).toBe('abcd');
+  });
+
+  test('renders an external clear after echoes settle', async () => {
+    // A `null` echo must only be ignored once. Later on, `null` is a real
+    // replacement, e.g. discarding edits to a doc with an empty field.
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    setEditorText(editor, '');
+    await flush();
+    setEditorText(editor, 'a');
+    await flush();
+    for (const [value] of onChange.mock.calls) {
+      rerender(
+        <TestEditor value={value} onChange={onChange} onReady={onReady} />
+      );
+      await flush();
+    }
+
+    rerender(<TestEditor value={null} onChange={onChange} onReady={onReady} />);
+    await flush();
+    expect(editor.getRootElement()?.textContent).toBe('');
+  });
+
+  test('renders an external value matching an older edit', async () => {
+    // Once its echo has been seen, an older edit can only come back from
+    // outside the editor, e.g. undoing changes at the doc level.
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    setEditorText(editor, 'hello w');
+    await flush();
+    setEditorText(editor, 'hello wo');
+    await flush();
+    for (const [value] of onChange.mock.calls) {
+      rerender(
+        <TestEditor value={value} onChange={onChange} onReady={onReady} />
+      );
+      await flush();
+    }
+
+    rerender(
+      <TestEditor
+        value={richText('hello w', 3000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    expect(editor.getRootElement()?.textContent).toBe('hello w');
+  });
+
+  test('renders an external value matching a batched edit', async () => {
+    // A parent can batch several keystrokes into one render. Repeated content
+    // must not leave the skipped edits looking like pending echoes.
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    setEditorText(editor, 'a');
+    await flush();
+    setEditorText(editor, 'ab');
+    await flush();
+    setEditorText(editor, 'a');
+    await flush();
+
+    rerender(
+      <TestEditor
+        value={onChange.mock.lastCall![0]}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    rerender(
+      <TestEditor
+        value={richText('ab', 3000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    expect(editor.getRootElement()?.textContent).toBe('ab');
+  });
+
+  test('does not emit external replacements', async () => {
+    const {rerender, onChange, onReady} = await renderEditor('hello');
+    rerender(
+      <TestEditor
+        value={richText('replaced', 2000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    await flush();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test('emits a keystroke right after an external replacement', async () => {
+    const {editor, rerender, onChange, onReady} = await renderEditor('hello');
+    rerender(
+      <TestEditor
+        value={richText('replaced', 2000)}
+        onChange={onChange}
+        onReady={onReady}
+      />
+    );
+    setEditorText(editor, 'typed');
+    await flush();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const value = onChange.mock.lastCall![0] as RichTextData;
+    expect(value.blocks[0].data).toEqual({text: 'typed'});
   });
 
   test('ignores values that only differ by timestamp', async () => {
