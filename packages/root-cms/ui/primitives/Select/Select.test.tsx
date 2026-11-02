@@ -1,4 +1,6 @@
 import {cleanup, fireEvent, render, screen} from '@testing-library/preact';
+import {useState} from 'preact/hooks';
+import {act} from 'preact/test-utils';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {MultiSelect} from '../MultiSelect/MultiSelect.js';
 import {getComboboxItems, resolveOptions} from './combobox.js';
@@ -13,6 +15,11 @@ const DATA = [
 
 function key(key: string) {
   fireEvent.keyDown(document.activeElement!, {key});
+}
+
+/** Fires `focusout`, which is what `preact/compat` binds `onBlur` to. */
+function blur(el: Element) {
+  fireEvent(el, new FocusEvent('focusout', {bubbles: true}));
 }
 
 function activeOption() {
@@ -154,6 +161,72 @@ describe('Select', () => {
     fireEvent.input(input, {target: {value: 'zzz'}});
     expect(screen.getByText('No fruit')).toBeTruthy();
     expect(screen.queryAllByRole('option')).toHaveLength(0);
+  });
+
+  it('keeps the chosen value when the parent unmounts it on change', () => {
+    const onValueChange = vi.fn();
+    // Like a picker in a popover, which closes as soon as a value is chosen.
+    function Picker() {
+      const [open, setOpen] = useState(true);
+      if (!open) {
+        return null;
+      }
+      return (
+        <Select
+          aria-label="Role"
+          data={DATA}
+          defaultValue="admin"
+          defaultOpen
+          searchable
+          clearable
+          onValueChange={(value) => {
+            onValueChange(value);
+            setOpen(false);
+          }}
+        />
+      );
+    }
+    render(<Picker />);
+    const input = screen.getByRole('combobox');
+    input.focus();
+    // Erases the current value's text, then picks another option.
+    act(() => {
+      fireEvent.input(input, {target: {value: ''}});
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('option', {name: 'Viewer'}));
+    });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenLastCalledWith('viewer');
+    expect(screen.queryByRole('combobox')).toBeNull();
+
+    // Removing a focused input blurs it, on the last rendered handlers.
+    blur(input);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears when leaving with the text erased', () => {
+    const onValueChange = vi.fn();
+    render(
+      <Select
+        aria-label="Role"
+        data={DATA}
+        defaultValue="admin"
+        searchable
+        clearable
+        onValueChange={onValueChange}
+      />
+    );
+    const input = screen.getByRole('combobox');
+    input.focus();
+    act(() => {
+      fireEvent.input(input, {target: {value: ''}});
+    });
+    act(() => {
+      blur(input);
+    });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenLastCalledWith(null);
   });
 });
 

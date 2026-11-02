@@ -220,6 +220,10 @@ export function useCombobox<T extends SelectOption>(
   const typeaheadRef = useRef({query: '', timer: 0});
   const onCloseRef = useRef(opts.onClose);
   onCloseRef.current = opts.onClose;
+  // Read by `close`, which can run from a handler of an older render: when a
+  // choice makes the parent remove the control, it blurs on the way out.
+  const openRef = useRef(open);
+  openRef.current = open;
 
   const shown = open && (items.length > 0 || opts.hasEmptyState);
   const {setReference, setFloating, reference, floating} = useFloating({
@@ -250,9 +254,10 @@ export function useCombobox<T extends SelectOption>(
   }
 
   function close(reason: CloseReason = 'toggle') {
-    if (!open) {
+    if (!openRef.current) {
       return;
     }
+    openRef.current = false;
     setOpen(false);
     setActiveIndex(-1);
     onCloseRef.current?.(reason);
