@@ -32,14 +32,15 @@ export function OnChangePlugin(props: OnChangePluginProps) {
    */
   const currentValueRef = useRef<RichTextData | null>(null);
   /**
-   * Values recently emitted via `onChange()`, newest last. A controlled
-   * parent renders each emitted value back into `props.value`, but its
-   * effects can lag behind fast typing: by the time the effect for one
-   * keystroke runs, the editor may already hold the next one. Treating any
-   * recently emitted value as an echo keeps those stale renders from
-   * rewriting the editor (and resetting the cursor).
+   * Values emitted via `onChange()` that haven't been echoed back yet, newest
+   * last. A controlled parent renders each emitted value back into
+   * `props.value`, but its effects can lag behind fast typing: by the time the
+   * effect for one keystroke runs, the editor may already hold the next one.
+   * Treating these values as echoes keeps those stale renders from rewriting
+   * the editor (and resetting the cursor). Includes `null`, which is what an
+   * emptied editor emits.
    */
-  const recentValuesRef = useRef<RichTextData[]>([]);
+  const recentValuesRef = useRef<Array<RichTextData | null>>([]);
   const isUpdatingRef = useRef(false);
 
   useEffect(() => {
@@ -51,14 +52,18 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     // external replacement can carry an older timestamp, e.g. "discard draft
     // edits" restores the published version of the doc.
     const newValue = props.value ?? null;
-    if (testSameRichTextContent(currentValueRef.current, newValue)) {
+    // Echoes arrive in order, so an echo also accounts for anything emitted
+    // before it (a parent can batch several values into one render). Dropping
+    // those lets the same content through later as a real replacement, e.g.
+    // undoing an edit or clearing the field.
+    const echoIndex = recentValuesRef.current.findIndex((recent) =>
+      testSameRichTextContent(recent, newValue)
+    );
+    if (echoIndex !== -1) {
+      recentValuesRef.current.splice(0, echoIndex + 1);
       return;
     }
-    if (
-      recentValuesRef.current.some((recent) =>
-        testSameRichTextContent(recent, newValue)
-      )
-    ) {
+    if (testSameRichTextContent(currentValueRef.current, newValue)) {
       return;
     }
     currentValueRef.current = newValue;
@@ -81,12 +86,10 @@ export function OnChangePlugin(props: OnChangePluginProps) {
       () => {
         const richTextData = convertToRichTextData();
         currentValueRef.current = richTextData;
-        if (richTextData) {
-          const recent = recentValuesRef.current;
-          recent.push(richTextData);
-          if (recent.length > RECENT_VALUES_LIMIT) {
-            recent.splice(0, recent.length - RECENT_VALUES_LIMIT);
-          }
+        const recent = recentValuesRef.current;
+        recent.push(richTextData);
+        if (recent.length > RECENT_VALUES_LIMIT) {
+          recent.splice(0, recent.length - RECENT_VALUES_LIMIT);
         }
         if (props.onChange) {
           props.onChange(richTextData);

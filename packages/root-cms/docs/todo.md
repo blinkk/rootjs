@@ -9,9 +9,6 @@ them, and delete them as they land.
   Sheet" and "Export to Sheet" buttons (shown when a doc has a linked sheet)
   have no click handlers. Needs the import/export flow wired up, or the
   buttons removed.
-- Rich text: typing fast right after select-all + delete can come out
-  scrambled. Possibly a race between `RichTextField`'s value sync and
-  `OnChangePlugin`.
 
 ## Cleanup
 
