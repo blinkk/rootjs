@@ -1,5 +1,30 @@
 # @blinkk/root-cms
 
+## 4.3.1
+
+### Patch Changes
+
+- f10c638: feat: show a random animated beet on the cms loading screen
+- 3b5dd0f: feat: show recent actions as readable sentences, with a `label` option on `logAction()` for custom actions
+- a6be4e9: feat: harden root ai writes with deeper validation and automatic repair of model output
+- 731daf3: feat: load cms ai provider sdks on demand
+- a6be4e9: feat: validate and normalize RootCMSClient draft writes by default, with `validate: false` to opt out
+- 353371e: fix: speed up the edit translations modal on large documents
+- a3acde5: feat: reduce the cms initial load time by trimming the startup bundle
+- bc24a52: feat: log task metadata changes as a single tasks.update_metadata action and use snake_case for all action ids
+- 9b920b7: feat: rewrite the cms ui without mantine
+- 4f98483: feat: redesign the create and edit data source pages
+- a8c0ab0: feat: refresh the data source page with synced, published and changes views
+- 815dfba: feat: show data sources as cards with a diff of unpublished changes
+- d8cb42d: fix: removing array items (and paste, clear, undo) inside rich text block and inline component modals no longer throws "Cannot read properties of undefined (reading 'group')" (#1561)
+- a0b6d5c: fix: skip deprecated fields when generating default values for new docs, oneOf types and rich text blocks (#1560)
+- 5f59266: fix: stop stale rich text echoes from scrambling typed text
+- c8f8ba9: feat: add a root-cms-email-setup agent skill for deploying the email notification service
+- f425d0b: feat: add a root-cms-theme agent skill for generating cms themes
+- ad1345f: fix: support large search indexes and show background job failures to admins
+- 6f71d3a: feat: show names, last login and role help text in the cms share settings users and groups
+  - @blinkk/root@4.3.1
+
 ## 4.2.2
 
 ### Patch Changes
