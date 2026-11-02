@@ -20,6 +20,16 @@ import {logAction} from '../logs/actions.js';
 const TASK_COUNTER_ID = 'tasks';
 const TASK_ID_ALLOCATION_ATTEMPTS = 20;
 
+/** Human-friendly names of task metadata fields, used in the action log. */
+const TASK_FIELD_LABELS: Record<TaskMetadataField, string> = {
+  title: 'Title',
+  assignee: 'Assignee',
+  cc: 'Cc',
+  priority: 'Priority',
+  status: 'Status',
+  targetLaunchDate: 'Target launch',
+};
+
 export interface Task {
   id: string;
   title: string;
@@ -108,6 +118,17 @@ export interface TaskComment {
 export type TaskMetadataField =
   'title' | 'assignee' | 'cc' | 'priority' | 'status' | 'targetLaunchDate';
 
+/** A change to a task's metadata, as recorded in the action log. */
+interface TaskMetadataChange {
+  taskId: string;
+  /** The task's title when the change was made. */
+  taskTitle: string;
+  field: TaskMetadataField;
+  /** The stored value, or the formatted date for `targetLaunchDate`. */
+  from: string | string[] | null;
+  to: string | string[] | null;
+}
+
 export interface TaskEvent {
   id: string;
   taskId: string;
@@ -183,7 +204,7 @@ export async function setDefaultTaskAssignee(assignee: string | null) {
     new FieldPath('settings', 'defaultAssignee'),
     assignee
   );
-  logAction('tasks.defaultAssignee', {
+  logAction('tasks.default_assignee', {
     metadata: {assignee: assignee || null},
   });
 }
@@ -490,16 +511,7 @@ export async function updateTaskAssignee(
     throw new Error('missing task id');
   }
   const normalizedAssignee = assignee?.trim() || null;
-  const didUpdate = await updateTaskMetadataField(
-    taskId,
-    'assignee',
-    normalizedAssignee
-  );
-  if (didUpdate) {
-    logAction('tasks.updateAssignee', {
-      metadata: {taskId, assignee: normalizedAssignee},
-    });
-  }
+  await updateTaskMetadataField(taskId, 'assignee', normalizedAssignee);
 }
 
 /**
@@ -516,7 +528,7 @@ export async function updateTaskCcList(taskId: string, cc: string[]) {
   const eventRef = taskEventDocRef(taskId);
   const userEmail = window.firebase.user.email || '';
 
-  const didUpdate = await runTransaction(db, async (transaction) => {
+  const change = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(taskRef);
     if (!snapshot.exists()) {
       throw new Error('task not found');
@@ -524,7 +536,7 @@ export async function updateTaskCcList(taskId: string, cc: string[]) {
     const data = snapshot.data() as Task;
     const oldCc = normalizeTaskCcList(data.cc || []);
     if (oldCc.join(',') === normalizedCc.join(',')) {
-      return false;
+      return null;
     }
     transaction.update(taskRef, {
       cc: normalizedCc,
@@ -541,11 +553,11 @@ export async function updateTaskCcList(taskId: string, cc: string[]) {
       createdAt: serverTimestamp(),
       createdBy: userEmail,
     });
-    return true;
+    return {taskTitle: data.title, from: oldCc};
   });
 
-  if (didUpdate) {
-    logAction('tasks.updateCc', {metadata: {taskId, cc: normalizedCc}});
+  if (change) {
+    logTaskMetadataChange({...change, taskId, field: 'cc', to: normalizedCc});
   }
 }
 
@@ -597,14 +609,7 @@ export async function updateTaskTitle(taskId: string, title: string) {
   if (!normalizedTitle) {
     throw new Error('missing title');
   }
-  const didUpdate = await updateTaskMetadataField(
-    taskId,
-    'title',
-    normalizedTitle
-  );
-  if (didUpdate) {
-    logAction('tasks.updateTitle', {metadata: {taskId}});
-  }
+  await updateTaskMetadataField(taskId, 'title', normalizedTitle);
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
@@ -614,15 +619,7 @@ export async function updateTaskStatus(taskId: string, status: string) {
   if (!status) {
     throw new Error('missing status');
   }
-  const normalizedStatus = status.trim();
-  const didUpdate = await updateTaskMetadataField(
-    taskId,
-    'status',
-    normalizedStatus
-  );
-  if (didUpdate) {
-    logAction('tasks.updateStatus', {metadata: {taskId, status}});
-  }
+  await updateTaskMetadataField(taskId, 'status', status.trim());
 }
 
 export async function updateTaskPriority(
@@ -632,10 +629,7 @@ export async function updateTaskPriority(
   if (!taskId) {
     throw new Error('missing task id');
   }
-  const didUpdate = await updateTaskMetadataField(taskId, 'priority', priority);
-  if (didUpdate) {
-    logAction('tasks.updatePriority', {metadata: {taskId, priority}});
-  }
+  await updateTaskMetadataField(taskId, 'priority', priority);
 }
 
 /**
@@ -655,19 +649,20 @@ export async function updateTaskTargetLaunch(
   const eventRef = taskEventDocRef(taskId);
   const userEmail = window.firebase.user.email || '';
 
-  const didUpdate = await runTransaction(db, async (transaction) => {
+  const change = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(taskRef);
     if (!snapshot.exists()) {
       throw new Error('task not found');
     }
-    const prev = getTaskTargetLaunch(snapshot.data() as Task);
+    const data = snapshot.data() as Task;
+    const prev = getTaskTargetLaunch(data);
     const prevType = prev?.type ?? null;
     const prevDate = prev?.date ?? null;
     if (
       prevType === next.type &&
       taskMetadataValuesEqual(prevDate, next.date)
     ) {
-      return false;
+      return null;
     }
 
     transaction.update(taskRef, {
@@ -688,11 +683,16 @@ export async function updateTaskTargetLaunch(
       createdAt: serverTimestamp(),
       createdBy: userEmail,
     });
-    return true;
+    return {taskTitle: data.title, prev};
   });
-  if (didUpdate) {
-    logAction('tasks.updateTargetLaunch', {
-      metadata: {taskId, type: next.type},
+  if (change) {
+    const nextLaunch = toTaskTargetLaunch(next.type, next.date);
+    logTaskMetadataChange({
+      taskId,
+      taskTitle: change.taskTitle,
+      field: 'targetLaunchDate',
+      from: change.prev ? formatTaskTargetLaunch(change.prev) : null,
+      to: nextLaunch ? formatTaskTargetLaunch(nextLaunch) : null,
     });
   }
 }
@@ -709,7 +709,7 @@ export async function updateTaskDescription(
     updatedAt: serverTimestamp(),
     updatedBy: window.firebase.user.email || '',
   });
-  logAction('tasks.updateDescription', {metadata: {taskId}});
+  logAction('tasks.update_description', {metadata: {taskId}});
 }
 
 export async function addTaskAttachment(
@@ -809,15 +809,15 @@ export async function removeTaskAttachment(
 
 async function updateTaskMetadataField(
   taskId: string,
-  field: TaskMetadataField,
-  value: string | Timestamp | null
+  field: Exclude<TaskMetadataField, 'cc' | 'targetLaunchDate'>,
+  value: string | null
 ) {
   const db = window.firebase.db;
   const taskRef = taskDocRef(taskId);
   const eventRef = taskEventDocRef(taskId);
   const userEmail = window.firebase.user.email || '';
 
-  return runTransaction(db, async (transaction) => {
+  const change = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(taskRef);
     if (!snapshot.exists()) {
       throw new Error('task not found');
@@ -826,8 +826,8 @@ async function updateTaskMetadataField(
     const data = snapshot.data() as Task;
     const oldValue = normalizeTaskMetadataValue(data[field]);
     const newValue = normalizeTaskMetadataValue(value);
-    if (taskMetadataValuesEqual(oldValue, newValue)) {
-      return false;
+    if (oldValue === newValue) {
+      return null;
     }
 
     transaction.update(taskRef, {
@@ -845,15 +845,50 @@ async function updateTaskMetadataField(
       createdAt: serverTimestamp(),
       createdBy: userEmail,
     });
-    return true;
+    return {taskTitle: data.title, from: oldValue, to: newValue};
   });
+
+  if (change) {
+    logTaskMetadataChange({...change, taskId, field});
+  }
 }
 
-function normalizeTaskMetadataValue(value: unknown): string | Timestamp | null {
-  if (value instanceof Timestamp || typeof value === 'string') {
-    return value;
+/**
+ * Logs a metadata change under one generic action. The `label` is formatted
+ * when logging, since target launch dates depend on the user's time zone.
+ */
+function logTaskMetadataChange(change: TaskMetadataChange) {
+  const {taskId, field} = change;
+  const from = formatTaskLogValue(field, change.from);
+  const to = formatTaskLogValue(field, change.to);
+  const label = `#${taskId}: ${TASK_FIELD_LABELS[field]} changed from ${from} to ${to}`;
+  logAction('tasks.update_metadata', {metadata: {...change, label}});
+}
+
+/** Formats a metadata value for the action log, e.g. "In progress". */
+function formatTaskLogValue(
+  field: TaskMetadataField,
+  value: TaskMetadataChange['from']
+) {
+  if (Array.isArray(value)) {
+    return value.join(', ') || 'None';
   }
-  return null;
+  if (field === 'status') {
+    const status = normalizeTaskStatus(value || undefined);
+    return capitalize(status.replace(/[-_]/g, ' '));
+  }
+  if (field === 'priority') {
+    return capitalize(value || 'normal');
+  }
+  return value || 'None';
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeTaskMetadataValue(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function taskMetadataValuesEqual(

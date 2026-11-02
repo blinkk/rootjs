@@ -769,8 +769,13 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
 /**
  * Returns the label shown in the compact preview row. For asset library
  * actions, this is the asset's human-friendly file path rather than its id.
+ * Task metadata changes show what changed, e.g.
+ * "#1: Status changed from New to In progress".
  */
 function getPreviewLabel(action: Action) {
+  if (action.action === 'tasks.update_metadata' && action.metadata?.label) {
+    return action.metadata.label;
+  }
   if (action.action.startsWith('asset.')) {
     const label = getAssetLabel(action.metadata || {});
     if (label) {
