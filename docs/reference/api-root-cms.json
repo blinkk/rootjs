@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "@blinkk/root-cms",
-      "version": "4.1.2",
+      "version": "4.2.2",
       "entryPoints": [
         {
           "importPath": "@blinkk/root-cms",
@@ -17,6 +17,12 @@
                   "name": "action",
                   "signature": "action: string;",
                   "doc": "The name of the action.",
+                  "examples": []
+                },
+                {
+                  "name": "label",
+                  "signature": "label?: string;",
+                  "doc": "Describes the action in the CMS's recent actions. See `logAction()`.",
                   "examples": []
                 },
                 {
@@ -554,6 +560,12 @@
                   "examples": []
                 },
                 {
+                  "name": "localizedValues",
+                  "signature": "localizedValues?: boolean;",
+                  "doc": "Whether to resolve localized field values (per-locale overrides of a\nfield's value, stored in the field's `@<id>.localizedValues` metadata)\nfor the rendered locale. Applies to the route's doc and\nthe batch response's docs and queries once the locale is resolved, so\n`resolveLocale()` and `resolveDoc()` receive the unresolved doc, while\n`translations()`, `preRenderHook()` and the page's props receive the\nresolved doc. Defaults to `true`.\n\nTo resolve localized values for other docs (e.g. in `fetchData()`), use\n`resolveLocalizedValues()`.",
+                  "examples": []
+                },
+                {
                   "name": "disableCacheControl",
                   "signature": "disableCacheControl?: boolean;",
                   "doc": "Sets Cache-Control header to `private`.",
@@ -1087,7 +1099,7 @@
                 },
                 {
                   "name": "sys",
-                  "signature": "sys: {\n    createdAt: number;\n    createdBy: string;\n    modifiedAt: number;\n    modifiedBy: string;\n    firstPublishedAt?: number;\n    firstPublishedBy?: string;\n    publishedAt?: number;\n    publishedBy?: string;\n    publishingLocked: {\n        lockedAt: string;\n        lockedBy: string;\n        reason: string;\n        until?: Timestamp;\n    };\n    locales?: string[];\n    assets?: string[];\n    sortKey?: string;\n};",
+                  "signature": "sys: {\n    createdAt: number;\n    createdBy: string;\n    modifiedAt: number;\n    modifiedBy: string;\n    firstPublishedAt?: number;\n    firstPublishedBy?: string;\n    publishedAt?: number;\n    publishedBy?: string;\n    publishingLocked: {\n        lockedAt: string;\n        lockedBy: string;\n        reason: string;\n        until?: Timestamp;\n    };\n    locales?: string[];\n    assets?: string[];\n    sortKey?: string;\n    scheduledAt?: Timestamp;\n    scheduledBy?: string;\n    archivedAt?: Timestamp;\n    archivedBy?: string;\n};",
                   "doc": "",
                   "examples": []
                 },
@@ -1374,6 +1386,14 @@
               "signature": "function getFirstQueryParam(req: Request, key: string): string | null;",
               "members": [],
               "doc": "Returns the first query param value in a given request.\n\nFor example, for a URL like `/?foo=bar&foo=baz`, calling\n`getFirstQueryParam(req, 'foo')` would return `\"bar\"`.",
+              "examples": []
+            },
+            {
+              "name": "getLocalizedValueLocales",
+              "kind": "function",
+              "signature": "function getLocalizedValueLocales(localizedValues: any): string[];",
+              "members": [],
+              "doc": "Returns the locales in a field's `localizedValues` map, sorted\nalphabetically (Firestore doesn't preserve the key order of maps). Keys\nstarting with `@` hold metadata for a localized value (e.g. `@de`) and are\nexcluded.",
               "examples": []
             },
             {
@@ -2435,6 +2455,30 @@
                   "signature": "publishedBy?: string;",
                   "doc": "",
                   "examples": []
+                },
+                {
+                  "name": "rolledBackAt",
+                  "signature": "rolledBackAt?: Timestamp;",
+                  "doc": "Set when a published release is rolled back. A rolled back release is no\nlonger published, so it can be edited and re-published.",
+                  "examples": []
+                },
+                {
+                  "name": "rolledBackBy",
+                  "signature": "rolledBackBy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "archivedAt",
+                  "signature": "archivedAt?: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "archivedBy",
+                  "signature": "archivedBy?: string;",
+                  "doc": "",
+                  "examples": []
                 }
               ],
               "doc": "",
@@ -2666,6 +2710,35 @@
               "examples": []
             },
             {
+              "name": "resolveLocalizedValues",
+              "kind": "function",
+              "signature": "function resolveLocalizedValues<T>(data: T, locale: string, options?: ResolveLocalizedValuesOptions): T;",
+              "members": [],
+              "doc": "Returns a copy of `data` with each field that has localized values replaced\nby the localized value for `locale`, or for the first of\n`options.fallbacks` with one. Locales are matched case-insensitively.\n\nThe input is never mutated. Objects that don't contain any localized values\nare returned as-is (not copied), so unchanged subtrees are shared between\nthe input and the output.\n\n```ts\nconst doc = resolveLocalizedValues(rawDoc, 'en-CA', {fallbacks: ['en-GB']});\n```",
+              "examples": []
+            },
+            {
+              "name": "ResolveLocalizedValuesOptions",
+              "kind": "interface",
+              "signature": "interface ResolveLocalizedValuesOptions",
+              "members": [
+                {
+                  "name": "fallbacks",
+                  "signature": "fallbacks?: string[];",
+                  "doc": "Locales to check, in order of precedence, when the locale has no localized\nvalue, e.g. `[\"en-GB\"]` for `en-CA`. Unlike translations, localized values\ndon't follow the `i18n.fallbacks` config, so by default a locale without a\nlocalized value uses the field's default value.",
+                  "examples": []
+                },
+                {
+                  "name": "keepLocalizedValues",
+                  "signature": "keepLocalizedValues?: boolean;",
+                  "doc": "Keeps the `localizedValues` in the `@<id>` metadata of the returned data.\nBy default they're removed, since they're no longer needed once resolved\nand can be large (e.g. an image for every locale).",
+                  "examples": []
+                }
+              ],
+              "doc": "",
+              "examples": []
+            },
+            {
               "name": "resolvePromisesMap",
               "kind": "function",
               "signature": "function resolvePromisesMap(promisesMap: Record<string, Promise<any>>): Promise<Record<string, any>>;",
@@ -2820,7 +2893,7 @@
                 },
                 {
                   "name": "publishDocs",
-                  "signature": "publishDocs(docIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    releaseId?: string;\n}): Promise<any[]>;",
+                  "signature": "publishDocs(docIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    releaseId?: string;\n    rollbackRecorder?: ReleaseRollbackRecorder;\n}): Promise<any[]>;",
                   "doc": "Batch publishes a set of docs by id.",
                   "examples": []
                 },
@@ -2994,7 +3067,7 @@
                 },
                 {
                   "name": "publishDataSources",
-                  "signature": "publishDataSources(dataSourceIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    commitBatch?: boolean;\n}): Promise<void>;",
+                  "signature": "publishDataSources(dataSourceIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    commitBatch?: boolean;\n    rollbackRecorder?: ReleaseRollbackRecorder;\n}): Promise<void>;",
                   "doc": "",
                   "examples": []
                 },
@@ -3041,9 +3114,27 @@
                   "examples": []
                 },
                 {
+                  "name": "logError",
+                  "signature": "logError(report: ErrorReport): Promise<void>;",
+                  "doc": "Saves an error report from the CMS UI to the database, so a developer can\nlook it up by the id shown to the user. The report is also written to the\nserver logs.",
+                  "examples": []
+                },
+                {
+                  "name": "listErrorLogs",
+                  "signature": "listErrorLogs(options?: {\n    limit?: number;\n}): Promise<ErrorReport[]>;",
+                  "doc": "Lists the most recent UI error reports, newest first.",
+                  "examples": []
+                },
+                {
+                  "name": "getErrorLog",
+                  "signature": "getErrorLog(id: string): Promise<ErrorReport | null>;",
+                  "doc": "Gets a UI error report by its id. Returns `null` if not found.",
+                  "examples": []
+                },
+                {
                   "name": "logAction",
-                  "signature": "logAction(action: string, options?: {\n    by?: string;\n    metadata?: any;\n    links?: {\n        label: string;\n        url: string;\n        target?: string;\n    }[];\n}): Promise<void>;",
-                  "doc": "",
+                  "signature": "logAction(action: string, options?: {\n    by?: string;\n    label?: string;\n    metadata?: any;\n    links?: {\n        label: string;\n        url: string;\n        target?: string;\n    }[];\n}): Promise<void>;",
+                  "doc": "Logs an action to the CMS's action logs. Custom actions (e.g. from a\nplugin) should pass a `label`, which reads as a sentence in the CMS's\nrecent actions: the user's name, the label, and then the value of the\nfirst metadata key ending in \"Id\", if any. Without a label, the sentence\nuses the action's name.\n\nExample:\n```ts\nawait cmsClient.logAction('acme.inventory_sync', {\n  by: 'ada@example.com',\n  // Shown as \"Ada Lin synced inventory from warehouse-feed\".\n  label: 'synced inventory from',\n  metadata: {feedId: 'warehouse-feed', skuCount: 1204},\n  links: [{label: 'View run', url: 'https://example.com/runs/42'}],\n});\n```",
                   "examples": []
                 },
                 {
@@ -3266,7 +3357,7 @@
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
-                  "doc": "Whether to validate fieldsData against the collection schema before saving.\nIf validation fails, an error will be thrown with details about the validation errors.",
+                  "doc": "Whether to normalize `fieldsData` and validate it against the collection\nschema before saving, using the same checks as Root AI and proposals.\nRepairable values are converted to their stored shape (e.g. a numeric\ndatetime to a `Timestamp`), and an error listing the problems is thrown if\nthe data is invalid. Problems the current draft already has don't count.\n\nDefaults to `true`. By default a collection without an available schema is\nsaved with a warning, while passing `true` explicitly throws an error. Set\nto `false` to save the data as-is.",
                   "examples": []
                 }
               ],
@@ -3758,6 +3849,14 @@
               "examples": []
             },
             {
+              "name": "testFieldLocalizable",
+              "kind": "function",
+              "signature": "function testFieldLocalizable(field: Field): boolean;",
+              "members": [],
+              "doc": "Returns whether editors can set localized values for a field.",
+              "examples": []
+            },
+            {
               "name": "toArrayObject",
               "kind": "function",
               "signature": "function toArrayObject(arr: any[]): ArrayObject;",
@@ -4027,8 +4126,8 @@
                 },
                 {
                   "name": "addPublishTranslationsOps",
-                  "signature": "addPublishTranslationsOps(localeDocs: TranslationsLocaleDocWithRef[], batch: WriteBatch, options?: {\n    publishedBy?: string;\n}): number;",
-                  "doc": "Adds the write ops for publishing a set of draft translations locale docs\nto a batch. For each locale doc, the draft doc's `sys` is updated with\n`publishedAt/By` and a copy is saved to the published collection. Returns\nthe number of ops added to the batch (2 per locale doc).",
+                  "signature": "addPublishTranslationsOps(localeDocs: TranslationsLocaleDocWithRef[], batch: WriteBatch, options?: {\n    publishedBy?: string;\n    publishedAt?: Timestamp;\n}): number;",
+                  "doc": "Adds the write ops for publishing a set of draft translations locale docs\nto a batch. For each locale doc, the draft doc's `sys` is updated with\n`publishedAt/By` and a copy is saved to the published collection. Returns\nthe number of ops added to the batch (2 per locale doc).\n\nPass `publishedAt` to stamp every locale doc with the same timestamp (e.g.\nso a release rollback snapshot can record the exact value).",
                   "examples": []
                 },
                 {
@@ -4183,7 +4282,7 @@
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
-                  "doc": "Whether to validate the updated field against the collection schema.\nIf validation fails, an error will be thrown with details about the validation errors.",
+                  "doc": "Whether to normalize and validate the doc. Defaults to `true`. See\n`SaveDraftOptions.validate`.",
                   "examples": []
                 }
               ],
@@ -4808,6 +4907,12 @@
                   "examples": []
                 },
                 {
+                  "name": "label",
+                  "signature": "label?: string;",
+                  "doc": "Describes the action in the CMS's recent actions. See `logAction()`.",
+                  "examples": []
+                },
+                {
                   "name": "by",
                   "signature": "by?: string;",
                   "doc": "The user's email that performed the action (or \"system\").",
@@ -5404,7 +5509,7 @@
                 },
                 {
                   "name": "sys",
-                  "signature": "sys: {\n    createdAt: number;\n    createdBy: string;\n    modifiedAt: number;\n    modifiedBy: string;\n    firstPublishedAt?: number;\n    firstPublishedBy?: string;\n    publishedAt?: number;\n    publishedBy?: string;\n    publishingLocked: {\n        lockedAt: string;\n        lockedBy: string;\n        reason: string;\n        until?: Timestamp;\n    };\n    locales?: string[];\n    assets?: string[];\n    sortKey?: string;\n};",
+                  "signature": "sys: {\n    createdAt: number;\n    createdBy: string;\n    modifiedAt: number;\n    modifiedBy: string;\n    firstPublishedAt?: number;\n    firstPublishedBy?: string;\n    publishedAt?: number;\n    publishedBy?: string;\n    publishingLocked: {\n        lockedAt: string;\n        lockedBy: string;\n        reason: string;\n        until?: Timestamp;\n    };\n    locales?: string[];\n    assets?: string[];\n    sortKey?: string;\n    scheduledAt?: Timestamp;\n    scheduledBy?: string;\n    archivedAt?: Timestamp;\n    archivedBy?: string;\n};",
                   "doc": "",
                   "examples": []
                 },
@@ -6059,6 +6164,30 @@
                   "signature": "publishedBy?: string;",
                   "doc": "",
                   "examples": []
+                },
+                {
+                  "name": "rolledBackAt",
+                  "signature": "rolledBackAt?: Timestamp;",
+                  "doc": "Set when a published release is rolled back. A rolled back release is no\nlonger published, so it can be edited and re-published.",
+                  "examples": []
+                },
+                {
+                  "name": "rolledBackBy",
+                  "signature": "rolledBackBy?: string;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "archivedAt",
+                  "signature": "archivedAt?: Timestamp;",
+                  "doc": "",
+                  "examples": []
+                },
+                {
+                  "name": "archivedBy",
+                  "signature": "archivedBy?: string;",
+                  "doc": "",
+                  "examples": []
                 }
               ],
               "doc": "",
@@ -6219,7 +6348,7 @@
                 },
                 {
                   "name": "publishDocs",
-                  "signature": "publishDocs(docIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    releaseId?: string;\n}): Promise<any[]>;",
+                  "signature": "publishDocs(docIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    releaseId?: string;\n    rollbackRecorder?: ReleaseRollbackRecorder;\n}): Promise<any[]>;",
                   "doc": "Batch publishes a set of docs by id.",
                   "examples": []
                 },
@@ -6393,7 +6522,7 @@
                 },
                 {
                   "name": "publishDataSources",
-                  "signature": "publishDataSources(dataSourceIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    commitBatch?: boolean;\n}): Promise<void>;",
+                  "signature": "publishDataSources(dataSourceIds: string[], options?: {\n    publishedBy: string;\n    batch?: WriteBatch;\n    commitBatch?: boolean;\n    rollbackRecorder?: ReleaseRollbackRecorder;\n}): Promise<void>;",
                   "doc": "",
                   "examples": []
                 },
@@ -6440,9 +6569,27 @@
                   "examples": []
                 },
                 {
+                  "name": "logError",
+                  "signature": "logError(report: ErrorReport): Promise<void>;",
+                  "doc": "Saves an error report from the CMS UI to the database, so a developer can\nlook it up by the id shown to the user. The report is also written to the\nserver logs.",
+                  "examples": []
+                },
+                {
+                  "name": "listErrorLogs",
+                  "signature": "listErrorLogs(options?: {\n    limit?: number;\n}): Promise<ErrorReport[]>;",
+                  "doc": "Lists the most recent UI error reports, newest first.",
+                  "examples": []
+                },
+                {
+                  "name": "getErrorLog",
+                  "signature": "getErrorLog(id: string): Promise<ErrorReport | null>;",
+                  "doc": "Gets a UI error report by its id. Returns `null` if not found.",
+                  "examples": []
+                },
+                {
                   "name": "logAction",
-                  "signature": "logAction(action: string, options?: {\n    by?: string;\n    metadata?: any;\n    links?: {\n        label: string;\n        url: string;\n        target?: string;\n    }[];\n}): Promise<void>;",
-                  "doc": "",
+                  "signature": "logAction(action: string, options?: {\n    by?: string;\n    label?: string;\n    metadata?: any;\n    links?: {\n        label: string;\n        url: string;\n        target?: string;\n    }[];\n}): Promise<void>;",
+                  "doc": "Logs an action to the CMS's action logs. Custom actions (e.g. from a\nplugin) should pass a `label`, which reads as a sentence in the CMS's\nrecent actions: the user's name, the label, and then the value of the\nfirst metadata key ending in \"Id\", if any. Without a label, the sentence\nuses the action's name.\n\nExample:\n```ts\nawait cmsClient.logAction('acme.inventory_sync', {\n  by: 'ada@example.com',\n  // Shown as \"Ada Lin synced inventory from warehouse-feed\".\n  label: 'synced inventory from',\n  metadata: {feedId: 'warehouse-feed', skuCount: 1204},\n  links: [{label: 'View run', url: 'https://example.com/runs/42'}],\n});\n```",
                   "examples": []
                 },
                 {
@@ -6526,7 +6673,7 @@
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
-                  "doc": "Whether to validate fieldsData against the collection schema before saving.\nIf validation fails, an error will be thrown with details about the validation errors.",
+                  "doc": "Whether to normalize `fieldsData` and validate it against the collection\nschema before saving, using the same checks as Root AI and proposals.\nRepairable values are converted to their stored shape (e.g. a numeric\ndatetime to a `Timestamp`), and an error listing the problems is thrown if\nthe data is invalid. Problems the current draft already has don't count.\n\nDefaults to `true`. By default a collection without an available schema is\nsaved with a warning, while passing `true` explicitly throws an error. Set\nto `false` to save the data as-is.",
                   "examples": []
                 }
               ],
@@ -6689,7 +6836,7 @@
                 {
                   "name": "validate",
                   "signature": "validate?: boolean;",
-                  "doc": "Whether to validate the updated field against the collection schema.\nIf validation fails, an error will be thrown with details about the validation errors.",
+                  "doc": "Whether to normalize and validate the doc. Defaults to `true`. See\n`SaveDraftOptions.validate`.",
                   "examples": []
                 }
               ],

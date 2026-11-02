@@ -1403,7 +1403,7 @@ export default defineConfig({
 
 const PLUGINS: DocCopy = {
   slug: 'plugins',
-  note: 'Links to the new Pods page.',
+  note: 'Links to the new section on logging custom actions.',
   fields: {
     meta: {
       title: 'Plugins – Root.js',
@@ -1418,7 +1418,7 @@ const PLUGINS: DocCopy = {
           `Plugins hook into the Root.js server and build. They're added to the ${c('plugins')} list in ${c('root.config.ts')}. The CMS itself is a plugin (${c('cmsPlugin()')}), and you can write your own. For every hook, see ${c('Plugin')} in the ${a('/docs/api/root/#blinkk-root-plugin', 'API reference')}.`
         ),
         p(
-          `A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a ${a('/docs/plugins/pods/', 'pod')}.`
+          `A plugin can also add pages, custom elements and CMS collections to a site by bundling them as a ${a('/docs/plugins/pods/', 'pod')}, and record what it does in the CMS by logging ${a('/docs/cms/notifications/#custom-actions', 'custom actions')}.`
         )
       ),
       sections: [
@@ -2531,12 +2531,12 @@ export default schema.collection({
 
 const NOTIFICATIONS: DocCopy = {
   slug: 'cms--notifications',
-  note: 'Adds the Mail API limits, the scheduled job, and a prompt for the root-cms-email-setup agent skill to the email delivery section.',
+  note: 'Adds a section on logging custom actions from plugins, including the label option of logAction().',
   fields: {
     meta: {
       title: 'Notifications and integrations – Root.js',
       description:
-        'React to CMS actions with the onAction hook and notification services, send email, and connect a translation service.',
+        'React to CMS actions with the onAction hook and notification services, log custom actions, send email, and connect a translation service.',
       category: 'cms',
       navLabel: 'Notifications and integrations',
     },
@@ -2573,6 +2573,61 @@ cmsPlugin({
     }
   },
 }),`
+            ),
+          ]
+        ),
+        section(
+          'custom-actions',
+          'Custom actions',
+          [
+            p(
+              `Plugins and other server code can log their own actions with ${c('logAction()')} on ${a('/docs/api/root-cms/#blinkk-root-cms-client-rootcmsclient', c('RootCMSClient'))}. A custom action is stored like any other, so it shows up in the action log and on the CMS home page, and it reaches ${c('onAction')} and your notification services. Name it with a prefix of your own, like ${c('inventory.sync')}, so that it can't collide with the CMS's actions and services can match it with a pattern like ${c('inventory.*')}.`
+            ),
+            p(
+              `The home page shows recent actions as sentences: who did it, what they did, and what they did it to. Pass ${c('label')} to write the middle part for your action:`
+            ),
+          ],
+          [
+            code(
+              'ts',
+              `
+// @/plugins/inventory.ts
+
+import type {RootConfig} from '@blinkk/root';
+import {RootCMSClient} from '@blinkk/root-cms';
+
+export async function logInventorySync(
+  rootConfig: RootConfig,
+  options: {userEmail: string; feedId: string; skuCount: number}
+) {
+  const {userEmail, feedId, skuCount} = options;
+  const cmsClient = new RootCMSClient(rootConfig);
+  await cmsClient.logAction('inventory.sync', {
+    by: userEmail,
+    label: 'synced inventory from',
+    metadata: {feedId, skuCount},
+    links: [
+      {label: 'View feed', url: \`https://example.com/feeds/\${feedId}\`},
+    ],
+  });
+}`
+            ),
+            copy(
+              p(
+                `That row reads "Ada Lin synced inventory from warehouse-feed". The name comes from ${c('by')}, so write the label as a lowercase phrase that follows it, with no final period. The value at the end comes from the action's metadata: a key the CMS knows, like ${c('docId')}, or else the first key ending in ${c('Id')} alphabetically. If your metadata has no such key, the label stands alone, as in "rebuilt the search index".`
+              ),
+              p(
+                `Pass the user's email as ${c('by')} so that the row shows their name and avatar. Without it, the action is attributed to ${c('system')} and the row starts with "System". Any other value is shown as written, next to a clock icon.`
+              ),
+              p(
+                `Expanding a row lists all of a custom action's metadata, a button for each of its ${c('links')}, and the action's name. Metadata like ${c('docId')}, ${c('releaseId')}, ${c('datasourceId')} and ${c('assetId')} also adds a link to that item.`
+              ),
+              p(
+                `Without a label, the row uses the action's name, as in "Ada Lin logged inventory.sync for warehouse-feed". Labels are stored with each action, so entries logged without one stay that way. The label is on ${c('action.label')} in ${c('onAction')} handlers, while the full action log keeps showing names and raw metadata.`
+              ),
+              p(
+                `An ${a('/docs/cms/notifications/#email-notifications', 'email notification service')} with no ${c('actions')} list sends an email for every action, including yours, so give it a list if you log custom actions often. From code running in the CMS UI, POST the same fields (${c('action')}, ${c('label')}, ${c('metadata')} and ${c('links')}) to ${c('/cms/api/actions.log')} to log an action as the signed-in user.`
+              )
             ),
           ]
         ),
