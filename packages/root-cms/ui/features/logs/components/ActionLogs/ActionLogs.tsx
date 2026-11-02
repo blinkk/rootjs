@@ -28,6 +28,7 @@ import {
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
+import {isCmsInternalUrl} from '../../../../utils/cms-url.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
@@ -566,13 +567,18 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
 
   if (action.links) {
     action.links.forEach((link, index) => {
+      // Links that leave the CMS open in a new tab, unless the action says
+      // otherwise.
+      const target =
+        link.target || (isCmsInternalUrl(link.url) ? undefined : '_blank');
       links.push(
         <Button
           key={`link-${index}`}
           variant="default"
           size="xs"
           href={link.url}
-          target={link.target}
+          target={target}
+          rel={target === '_blank' ? 'noopener noreferrer' : undefined}
         >
           {label(link.label)}
         </Button>
@@ -732,7 +738,7 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
   const userName = useActionUserName(action);
 
   return (
-    <div className="ActionLogsCompactItemPreview items-center gap-x-3 font-sans text-md font-normal text-fg max-md:gap-y-0.5">
+    <div className="ActionLogsCompactItemPreview items-center gap-x-3 font-sans text-sm font-normal text-fg max-md:gap-y-0.5">
       <div className="ActionLogsCompactItemPreview__user flex max-md:row-span-2 max-md:self-start">
         <ActionAvatar action={action} />
       </div>
@@ -744,7 +750,7 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
         {phrase.target && (
           <>
             {' '}
-            <span className="ActionLogsCompactItemPreview__target rounded-sm bg-chip box-decoration-clone px-1 py-0.5 font-mono text-sm">
+            <span className="ActionLogsCompactItemPreview__target rounded-sm bg-chip box-decoration-clone px-1 py-0.5 font-mono text-sm font-semibold">
               {phrase.target}
             </span>
           </>

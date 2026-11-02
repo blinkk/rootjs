@@ -10,6 +10,7 @@ import {
 import {sanitizeInlineHtml} from '../../../../shared/sanitize.js';
 import {Markdown} from '../../../components/Markdown/Markdown.js';
 import {cn, joinClassNames} from '../../../utils/classes.js';
+import {isCmsInternalUrl} from '../../../utils/cms-url.js';
 import {UserTag} from '../../users/UserTag/UserTag.js';
 
 export interface CommentBodyProps {
@@ -75,19 +76,6 @@ export function onCommentBodyClick(e: MouseEvent) {
   e.preventDefault();
   e.stopPropagation();
   window.open(link.href, '_blank', 'noopener,noreferrer');
-}
-
-/** Returns true if a link should be handled by the CMS SPA router. */
-function isCmsInternalUrl(href: string) {
-  try {
-    const url = new URL(href, window.location.origin);
-    return (
-      url.origin === window.location.origin &&
-      (url.pathname === '/cms' || url.pathname.startsWith('/cms/'))
-    );
-  } catch {
-    return false;
-  }
 }
 
 /**

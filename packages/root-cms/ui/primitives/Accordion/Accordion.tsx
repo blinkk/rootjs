@@ -108,8 +108,9 @@ export interface AccordionItemProps extends Omit<
   /** Identifies the item in the accordion's `value`. */
   value: string;
   /**
-   * The header's content: text, or richer markup (no buttons or links; use
-   * `href` to make the label a link).
+   * The header's content: text, or richer markup (no buttons; use `href` to
+   * make the label a link). Without `href`, clicking a link nested in the
+   * label follows it without toggling the item.
    */
   label: ComponentChildren;
   /**
@@ -221,7 +222,13 @@ export function AccordionItem(props: AccordionItemProps) {
           aria-expanded={open}
           aria-controls={`${id}-panel`}
           disabled={disabled}
-          onClick={() => ctx.toggle(value)}
+          onClick={(e) => {
+            // Don't stop propagation from the link instead: the SPA router
+            // handles clicks on `window`.
+            if (!(e.target as Element).closest('a[href]')) {
+              ctx.toggle(value);
+            }
+          }}
           className={cn(
             'Accordion__control',
             'flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent px-2 py-3 text-left font-sans text-base font-medium text-strong transition-colors',
