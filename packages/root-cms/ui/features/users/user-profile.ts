@@ -248,20 +248,22 @@ export function isOrgEmail(email: string): boolean {
 
 /**
  * Returns a deterministic background color for an email so missing-photo
- * avatars are visually distinct but stable across renders.
+ * avatars are visually distinct but stable across renders. The palette is
+ * muted so the swap to a loaded profile photo isn't jarring, and every color
+ * keeps at least 4.5:1 contrast with the white initials.
  */
 export function getAvatarColor(email: string): string {
   const palette = [
-    '#1f6feb',
-    '#0e7490',
-    '#0f766e',
-    '#15803d',
-    '#9333ea',
-    '#c026d3',
-    '#db2777',
-    '#dc2626',
-    '#ea580c',
-    '#b45309',
+    '#5b7092',
+    '#4f7785',
+    '#4d7a74',
+    '#5c7a62',
+    '#73688f',
+    '#86678a',
+    '#94647c',
+    '#99615f',
+    '#96694f',
+    '#857148',
   ];
   let hash = 0;
   for (let i = 0; i < email.length; i++) {
