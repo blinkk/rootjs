@@ -10,6 +10,7 @@ import * as schema from './schema.js';
 import {extractDocRecords} from './search-extract.js';
 import {
   SearchIndexService,
+  chunkByUtf8Bytes,
   isCollectionIndexable,
   isDocIndexable,
   isTitleyDeepKey,
@@ -150,5 +151,27 @@ describe('MiniSearch round-trip with extracted records', () => {
     expect(all.length).toBeGreaterThan(0);
     const top = all[0];
     expect(top.deepKey).toBe('fields.title');
+  });
+});
+
+describe('chunkByUtf8Bytes', () => {
+  const byteLength = (text: string) => Buffer.byteLength(text);
+
+  it('keeps every chunk within the byte limit for multi-byte text', () => {
+    const text = 'aé日😀'.repeat(1000);
+    const chunks = chunkByUtf8Bytes(text, 100);
+    expect(chunks.join('')).toBe(text);
+    for (const chunk of chunks) {
+      expect(byteLength(chunk)).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('does not split surrogate pairs', () => {
+    const chunks = chunkByUtf8Bytes('😀😀😀', 5);
+    expect(chunks).toEqual(['😀', '😀', '😀']);
+  });
+
+  it('returns no chunks for an empty string', () => {
+    expect(chunkByUtf8Bytes('', 10)).toEqual([]);
   });
 });

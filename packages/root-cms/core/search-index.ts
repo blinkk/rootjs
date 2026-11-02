@@ -3,13 +3,25 @@
  *
  * The index is built from the `Drafts` collection of every doc in the project,
  * serialized via MiniSearch's `toJSON()`, sharded across Firestore docs (to
- * stay under the 1 MB per-doc limit), and queried server-side by the
+ * stay under the 1 MiB per-doc limit), and queried server-side by the
  * `/cms/api/search.query` endpoint.
  *
  * Persistence layout:
- *   Projects/{projectId}/SearchIndex/_meta        — {lastRun, shardCount, docCount, fieldCount}
- *   Projects/{projectId}/SearchIndex/_docMap      — {records: {[docId]: recordIds[]}}
- *   Projects/{projectId}/SearchIndex/shard-0..N   — {shardId, data}  (chunks of toJSON())
+ *   Projects/{projectId}/SearchIndex/_meta
+ *     {lastRun, generation, shardCount, docMapShardCount, docCount, fieldCount}
+ *   Projects/{projectId}/SearchIndex/{generation}-shard-0..N
+ *     {shardId, data}  (chunks of toJSON())
+ *   Projects/{projectId}/SearchIndex/{generation}-docmap-0..N
+ *     {shardId, data}  (chunks of the JSON-encoded doc map)
+ *
+ * An index is too large to write in a single Firestore commit, so each write
+ * goes to a new "generation" of docs. `_meta` is written last and is what
+ * points readers at a generation, which makes the switch to a new index atomic:
+ * a write that fails partway leaves the current index untouched.
+ *
+ * Indexes written before generations existed have no `generation` on `_meta`.
+ * They're stored in `shard-0..N` and `_docMap` ({records}), remain readable, and
+ * are replaced the next time the index is written.
  *
  * Build modes:
  *   - `force: false` (cron path) — incremental: discard records for docs whose
@@ -30,8 +42,24 @@ import type {SchemaWithTypes} from './schema.js';
 import {extractDocRecords, ExtractedRecord} from './search-extract.js';
 import {executeQuery, parseQuery} from './search-query.js';
 
-/** Max chars per shard. Leaves headroom under the Firestore 1 MB doc cap. */
-const SHARD_MAX_CHARS = 500_000;
+/** Max UTF-8 bytes per shard. Leaves headroom under Firestore's 1 MiB doc cap. */
+const SHARD_MAX_BYTES = 900_000;
+
+/**
+ * Max shards per commit. Firestore rejects commits over 10 MiB, and this keeps
+ * a full batch of `SHARD_MAX_BYTES` shards well under that.
+ */
+const SHARDS_PER_BATCH = 8;
+
+/** Max deletes per commit (Firestore's limit on writes in a batch). */
+const DELETES_PER_BATCH = 500;
+
+/**
+ * Age at which a generation that isn't the current one is treated as abandoned
+ * (e.g. the process died while writing it). The delay avoids deleting the docs
+ * of a concurrent rebuild that hasn't finished yet.
+ */
+const ABANDONED_GENERATION_MS = 60 * 60 * 1000;
 
 /** Hard ceiling that aborts a rebuild before it produces an unwieldy index. */
 const MAX_INDEX_SIZE_BYTES = 50 * 1024 * 1024;
@@ -41,7 +69,13 @@ const VACUUM_EVERY_N_RUNS = 25;
 
 const SEARCH_INDEX_SUBCOLLECTION = 'SearchIndex';
 const META_DOC_ID = '_meta';
-const DOC_MAP_DOC_ID = '_docMap';
+const LEGACY_DOC_MAP_DOC_ID = '_docMap';
+
+/** Matches a doc from an index written before generations existed. */
+const LEGACY_INDEX_DOC_RE = /^(shard-\d+|_docMap)$/;
+
+/** Matches a doc of a generation, capturing the generation's creation time. */
+const GENERATION_DOC_RE = /^(g(\d+)_[a-z0-9]+)-(shard|docmap)-\d+$/;
 
 /** Boost-eligible terminal deepKey segments (case-insensitive match). */
 const TITLEY_KEYS = new Set(['title', 'name', 'slug', 'headline', 'label']);
@@ -73,7 +107,11 @@ interface IndexableRecord extends ExtractedRecord {
 
 interface SearchIndexMeta {
   lastRun: Timestamp;
+  /** The generation of docs holding the index. Unset for legacy indexes. */
+  generation?: string;
   shardCount: number;
+  /** Number of doc map shards in the generation. Unset for legacy indexes. */
+  docMapShardCount?: number;
   docCount: number;
   fieldCount: number;
   /** How many incremental rebuilds have run since the last vacuum. */
@@ -123,6 +161,41 @@ interface CmsCollectionDoc {
 }
 
 type DocMap = Record<string, string[]>;
+
+/** Thrown when a doc that `_meta` refers to no longer exists. */
+class MissingShardError extends Error {}
+
+/**
+ * Splits a string into chunks of at most `maxBytes` when encoded as UTF-8,
+ * without separating the two halves of a surrogate pair. Firestore's limits are
+ * in bytes, so chunking by chars would overflow on non-Latin content.
+ */
+export function chunkByUtf8Bytes(text: string, maxBytes: number): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  let bytes = 0;
+  let i = 0;
+  while (i < text.length) {
+    const code = text.codePointAt(i)!;
+    const size = code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+    if (bytes + size > maxBytes) {
+      chunks.push(text.slice(start, i));
+      start = i;
+      bytes = 0;
+    }
+    bytes += size;
+    i += code > 0xffff ? 2 : 1;
+  }
+  if (start < text.length) {
+    chunks.push(text.slice(start));
+  }
+  return chunks;
+}
+
+function createGeneration(): string {
+  const suffix = Math.random().toString(36).slice(2, 8) || '0';
+  return `g${Date.now()}_${suffix}`;
+}
 
 /**
  * Normalized form of `CMSSearchIndexConfig`. Empty arrays are treated as
@@ -316,30 +389,41 @@ export class SearchIndexService {
     return (snap.data() as SearchIndexMeta) || null;
   }
 
-  private async readDocMap(): Promise<DocMap> {
-    const ref = this.db.doc(this.indexDocPath(DOC_MAP_DOC_ID));
-    const snap = await ref.get();
-    if (!snap.exists) {
-      return {};
+  private async readDocMap(meta: SearchIndexMeta): Promise<DocMap> {
+    if (!meta.generation) {
+      const ref = this.db.doc(this.indexDocPath(LEGACY_DOC_MAP_DOC_ID));
+      const snap = await ref.get();
+      return ((snap.data() || {}).records || {}) as DocMap;
     }
-    const data = snap.data() || {};
-    const records = (data.records || {}) as DocMap;
-    return records;
+    const docIds = Array.from(
+      {length: meta.docMapShardCount || 0},
+      (_, i) => `${meta.generation}-docmap-${i}`
+    );
+    const json = await this.readChunks(docIds);
+    return json ? (JSON.parse(json) as DocMap) : {};
   }
 
-  /** Reads all shard docs and returns the concatenated MiniSearch JSON string. */
-  private async readShards(shardCount: number): Promise<string> {
-    if (shardCount <= 0) {
+  /** Reads all index shards and returns the MiniSearch JSON string. */
+  private async readShards(meta: SearchIndexMeta): Promise<string> {
+    const docIds = Array.from({length: meta.shardCount}, (_, i) =>
+      meta.generation ? `${meta.generation}-shard-${i}` : `shard-${i}`
+    );
+    return this.readChunks(docIds);
+  }
+
+  /** Reads a list of shard docs and returns their concatenated data. */
+  private async readChunks(docIds: string[]): Promise<string> {
+    if (docIds.length === 0) {
       return '';
     }
-    const refs = Array.from({length: shardCount}, (_, i) =>
-      this.db.doc(this.indexDocPath(`shard-${i}`))
-    );
+    const refs = docIds.map((id) => this.db.doc(this.indexDocPath(id)));
     const snaps = await this.db.getAll(...refs);
     const parts: string[] = [];
     for (const snap of snaps) {
       if (!snap.exists) {
-        throw new Error(`searchIndex: missing shard ${snap.ref.path}`);
+        throw new MissingShardError(
+          `searchIndex: missing shard ${snap.ref.path}`
+        );
       }
       const data = snap.data() || {};
       parts.push(typeof data.data === 'string' ? data.data : '');
@@ -347,49 +431,78 @@ export class SearchIndexService {
     return parts.join('');
   }
 
-  /** Writes shards, _docMap, _meta in one batched commit. */
+  /** Writes shard docs across as many commits as it takes. */
+  private async writeChunks(
+    generation: string,
+    kind: 'shard' | 'docmap',
+    chunks: string[]
+  ) {
+    for (let i = 0; i < chunks.length; i += SHARDS_PER_BATCH) {
+      const batch = this.db.batch();
+      chunks.slice(i, i + SHARDS_PER_BATCH).forEach((data, offset) => {
+        const shardId = i + offset;
+        const ref = this.db.doc(
+          this.indexDocPath(`${generation}-${kind}-${shardId}`)
+        );
+        batch.set(ref, {shardId, data});
+      });
+      await batch.commit();
+    }
+  }
+
+  /**
+   * Writes the index to a new generation, then points `_meta` at it. If this
+   * throws before `_meta` is written, the current index is left as it was.
+   */
   private async writeIndex(
     serialized: string,
     docMap: DocMap,
-    counts: {docCount: number; fieldCount: number; runsSinceVacuum: number},
-    existingShardCount: number
+    counts: {
+      docCount: number;
+      fieldCount: number;
+      runsSinceVacuum: number;
+      /** When the source docs were read. See `rebuildIndex()`. */
+      lastRun: Timestamp;
+    },
+    previous: SearchIndexMeta | null
   ): Promise<{shardCount: number}> {
-    if (serialized.length > MAX_INDEX_SIZE_BYTES) {
+    const sizeBytes = Buffer.byteLength(serialized);
+    if (sizeBytes > MAX_INDEX_SIZE_BYTES) {
       throw new Error(
-        `searchIndex: serialized index size (${serialized.length} chars) ` +
+        `searchIndex: serialized index size (${sizeBytes} bytes) ` +
           'exceeds MAX_INDEX_SIZE_BYTES. Reduce indexed fields or migrate ' +
           'to Cloud Storage.'
       );
     }
-    const shards: string[] = [];
-    for (let i = 0; i < serialized.length; i += SHARD_MAX_CHARS) {
-      shards.push(serialized.slice(i, i + SHARD_MAX_CHARS));
+    const generation = createGeneration();
+    const shards = chunkByUtf8Bytes(serialized, SHARD_MAX_BYTES);
+    const docMapShards = chunkByUtf8Bytes(
+      JSON.stringify(docMap),
+      SHARD_MAX_BYTES
+    );
+    try {
+      await this.writeChunks(generation, 'shard', shards);
+      await this.writeChunks(generation, 'docmap', docMapShards);
+    } catch (err) {
+      await this.deleteDocs((id) => id.startsWith(`${generation}-`)).catch(
+        (cleanupErr) => console.error(cleanupErr)
+      );
+      throw err;
     }
-    const newShardCount = shards.length;
-
-    // Firestore batches max out at 500 ops, but we never approach that here.
-    const batch = this.db.batch();
-    shards.forEach((data, i) => {
-      const ref = this.db.doc(this.indexDocPath(`shard-${i}`));
-      batch.set(ref, {shardId: i, data});
-    });
-    // Delete any orphaned shards from a previous larger index.
-    for (let i = newShardCount; i < existingShardCount; i++) {
-      const ref = this.db.doc(this.indexDocPath(`shard-${i}`));
-      batch.delete(ref);
-    }
-    const docMapRef = this.db.doc(this.indexDocPath(DOC_MAP_DOC_ID));
-    batch.set(docMapRef, {records: docMap});
-    const metaRef = this.db.doc(this.indexDocPath(META_DOC_ID));
     const meta: SearchIndexMeta = {
-      lastRun: Timestamp.now(),
-      shardCount: newShardCount,
+      lastRun: counts.lastRun,
+      generation,
+      shardCount: shards.length,
+      docMapShardCount: docMapShards.length,
       docCount: counts.docCount,
       fieldCount: counts.fieldCount,
       runsSinceVacuum: counts.runsSinceVacuum,
     };
-    batch.set(metaRef, meta);
-    await batch.commit();
+    await this.db.doc(this.indexDocPath(META_DOC_ID)).set(meta);
+    // The new index is live, so a failure from here on must not fail the build.
+    await this.deleteSupersededDocs(generation, previous).catch((err) =>
+      console.error('searchIndex: failed to delete old shards:', err)
+    );
     // Persist a high-level marker on the project doc for client convenience.
     await this.db.doc(`Projects/${this.projectId}`).set(
       {
@@ -399,18 +512,45 @@ export class SearchIndexService {
       },
       {merge: true}
     );
-    return {shardCount: newShardCount};
+    return {shardCount: shards.length};
   }
 
-  /** Drops every doc under the SearchIndex subcollection. */
-  private async wipeIndex(): Promise<void> {
-    const snap = await this.db.collection(this.indexCollectionPath()).get();
-    if (snap.empty) {
-      return;
+  /**
+   * Deletes the generation that `current` replaced, the legacy index, and any
+   * generations abandoned by failed writes.
+   */
+  private async deleteSupersededDocs(
+    current: string,
+    previous: SearchIndexMeta | null
+  ) {
+    const now = Date.now();
+    await this.deleteDocs((id) => {
+      if (LEGACY_INDEX_DOC_RE.test(id)) {
+        return true;
+      }
+      const match = id.match(GENERATION_DOC_RE);
+      if (!match || match[1] === current) {
+        return false;
+      }
+      return (
+        match[1] === previous?.generation ||
+        now - Number(match[2]) > ABANDONED_GENERATION_MS
+      );
+    });
+  }
+
+  /** Deletes the docs in the SearchIndex subcollection matching `shouldDelete`. */
+  private async deleteDocs(shouldDelete: (docId: string) => boolean) {
+    const snap = await this.db
+      .collection(this.indexCollectionPath())
+      .select()
+      .get();
+    const refs = snap.docs.filter((d) => shouldDelete(d.id)).map((d) => d.ref);
+    for (let i = 0; i < refs.length; i += DELETES_PER_BATCH) {
+      const batch = this.db.batch();
+      refs.slice(i, i + DELETES_PER_BATCH).forEach((ref) => batch.delete(ref));
+      await batch.commit();
     }
-    const batch = this.db.batch();
-    snap.forEach((d) => batch.delete(d.ref));
-    await batch.commit();
   }
 
   /**
@@ -491,7 +631,19 @@ export class SearchIndexService {
       }
     }
     // No modified docs — check for deletions.
-    const map = docMap ?? (await this.readDocMap());
+    let map = docMap;
+    if (!map) {
+      const meta = await this.readMeta();
+      try {
+        map = meta ? await this.readDocMap(meta) : {};
+      } catch (err) {
+        if (err instanceof MissingShardError) {
+          // Let `rebuildIndex()` repair the index.
+          return true;
+        }
+        throw err;
+      }
+    }
     const knownIds = new Set(Object.keys(map));
     if (knownIds.size === 0) {
       return false;
@@ -518,11 +670,19 @@ export class SearchIndexService {
   /** Orchestrates a rebuild (incremental by default; full when `force: true`). */
   async rebuildIndex(opts: {force?: boolean} = {}): Promise<RebuildResult> {
     const start = Date.now();
+    // `lastRun` is set to when the rebuild started, rather than when it was
+    // written, so that docs saved during the rebuild are picked up by the next
+    // incremental run.
+    const startedAt = Timestamp.now();
     const force = !!opts.force;
     const collectionIds = await this.listCollectionIds();
 
     if (force) {
-      const result = await this.fullRebuild(collectionIds);
+      const result = await this.fullRebuild(
+        collectionIds,
+        startedAt,
+        await this.readMeta()
+      );
       return {
         forced: true,
         skipped: false,
@@ -536,7 +696,7 @@ export class SearchIndexService {
     const meta = await this.readMeta();
     if (!meta) {
       // No existing index — bootstrap with a full build.
-      const result = await this.fullRebuild(collectionIds);
+      const result = await this.fullRebuild(collectionIds, startedAt, null);
       return {
         forced: false,
         skipped: false,
@@ -546,7 +706,19 @@ export class SearchIndexService {
         durationMs: Date.now() - start,
       };
     }
-    const result = await this.incrementalRebuild(collectionIds, meta);
+    let result: Awaited<ReturnType<typeof this.incrementalRebuild>>;
+    try {
+      result = await this.incrementalRebuild(collectionIds, meta, startedAt);
+    } catch (err) {
+      if (!(err instanceof MissingShardError)) {
+        throw err;
+      }
+      console.warn(`${err.message}; rebuilding the search index from scratch`);
+      result = {
+        skipped: false,
+        ...(await this.fullRebuild(collectionIds, startedAt, meta)),
+      };
+    }
     return {
       forced: false,
       skipped: result.skipped,
@@ -557,8 +729,11 @@ export class SearchIndexService {
     };
   }
 
-  private async fullRebuild(collectionIds: string[]) {
-    await this.wipeIndex();
+  private async fullRebuild(
+    collectionIds: string[],
+    startedAt: Timestamp,
+    previous: SearchIndexMeta | null
+  ) {
     const index = new MiniSearch(MINISEARCH_OPTIONS);
     const docMap: DocMap = {};
     let docCount = 0;
@@ -601,8 +776,8 @@ export class SearchIndexService {
     const {shardCount} = await this.writeIndex(
       serialized,
       docMap,
-      {docCount, fieldCount, runsSinceVacuum: 0},
-      0
+      {docCount, fieldCount, runsSinceVacuum: 0, lastRun: startedAt},
+      previous
     );
     this.cached = null; // force reload on next read
     return {docCount, fieldCount, shardCount};
@@ -610,14 +785,15 @@ export class SearchIndexService {
 
   private async incrementalRebuild(
     collectionIds: string[],
-    meta: SearchIndexMeta
+    meta: SearchIndexMeta,
+    startedAt: Timestamp
   ) {
     // Load the existing index.
-    const json = await this.readShards(meta.shardCount);
+    const json = await this.readShards(meta);
     const index = json
       ? MiniSearch.loadJSON(json, MINISEARCH_OPTIONS)
       : new MiniSearch(MINISEARCH_OPTIONS);
-    const docMap = await this.readDocMap();
+    const docMap = await this.readDocMap(meta);
 
     const lastRun = meta.lastRun;
     const changedDocs = await this.listChangedDocs(collectionIds, lastRun);
@@ -695,7 +871,7 @@ export class SearchIndexService {
       // here without re-querying everything.
       const noopMeta: SearchIndexMeta = {
         ...meta,
-        lastRun: Timestamp.now(),
+        lastRun: startedAt,
       };
       await this.db
         .doc(this.indexDocPath(META_DOC_ID))
@@ -726,8 +902,8 @@ export class SearchIndexService {
     const {shardCount} = await this.writeIndex(
       serialized,
       docMap,
-      {docCount, fieldCount, runsSinceVacuum},
-      meta.shardCount
+      {docCount, fieldCount, runsSinceVacuum, lastRun: startedAt},
+      meta
     );
     this.cached = null;
     return {skipped: false, docCount, fieldCount, shardCount};
@@ -750,13 +926,31 @@ export class SearchIndexService {
     ) {
       return this.cached;
     }
-    const json = await this.readShards(meta.shardCount);
+    try {
+      this.cached = await this.loadIndex(meta);
+    } catch (err) {
+      // A rebuild may have replaced the generation while it was being read, in
+      // which case `_meta` now points at the new one.
+      const latest = await this.readMeta();
+      if (
+        !(err instanceof MissingShardError) ||
+        !latest ||
+        latest.generation === meta.generation
+      ) {
+        throw err;
+      }
+      this.cached = await this.loadIndex(latest);
+    }
+    return this.cached;
+  }
+
+  private async loadIndex(meta: SearchIndexMeta): Promise<CachedIndex> {
+    const json = await this.readShards(meta);
     const index = json
       ? MiniSearch.loadJSON(json, MINISEARCH_OPTIONS)
       : new MiniSearch(MINISEARCH_OPTIONS);
-    const docMap = await this.readDocMap();
-    this.cached = {index, meta, docMap};
-    return this.cached;
+    const docMap = await this.readDocMap(meta);
+    return {index, meta, docMap};
   }
 
   /** Runs a query against the loaded index. */
