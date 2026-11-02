@@ -119,8 +119,12 @@ export type ModalState =
 
 /** What `useModals()` returns. */
 export interface ModalsContextProps {
-  /** Open modals, bottom to top. */
-  modals: ModalState[];
+  /**
+   * Open modals, bottom to top. Reading this doesn't subscribe to changes: the
+   * context value is stable, so opening or closing a modal doesn't re-render
+   * every `useModals()` consumer (which includes most doc editor fields).
+   */
+  readonly modals: ModalState[];
   /** Opens a modal with arbitrary content. Returns its id. */
   openModal: (props: OpenModal) => string;
   /** Opens a confirm / cancel modal. Returns its id. */
@@ -188,7 +192,7 @@ export function ModalsProvider(props: ModalsProviderProps) {
   const registryRef = useRef(props.modals);
   registryRef.current = props.modals;
 
-  const actions = useMemo(() => {
+  const context = useMemo<ModalsContextProps>(() => {
     function commit(next: ModalState[]) {
       modalsRef.current = next;
       setModals(next);
@@ -235,6 +239,9 @@ export function ModalsProvider(props: ModalsProviderProps) {
     }
 
     return {
+      get modals() {
+        return modalsRef.current;
+      },
       openModal: (props: OpenModal) =>
         open({id: props.id || generateId(), type: 'content', props}),
       openConfirmModal: (props: OpenConfirmModal) =>
@@ -250,11 +257,6 @@ export function ModalsProvider(props: ModalsProviderProps) {
       closeAll,
     };
   }, []);
-
-  const context = useMemo<ModalsContextProps>(
-    () => ({modals, ...actions}),
-    [modals, actions]
-  );
 
   return (
     <ModalsContext.Provider value={context}>

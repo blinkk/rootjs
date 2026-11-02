@@ -159,6 +159,29 @@ describe('ModalsProvider', () => {
     expect(body.classList.contains('Dialog__body')).toBe(true);
     expect(body.classList.contains('pb-0')).toBe(true);
   });
+
+  it('does not re-render useModals() consumers when modals change', () => {
+    let renders = 0;
+    let modals!: ModalsContextProps;
+    function Consumer() {
+      renders += 1;
+      modals = useModals();
+      return null;
+    }
+    render(
+      <ModalsProvider>
+        <Consumer />
+      </ModalsProvider>
+    );
+    act(() => {
+      modals.openModal({title: 'A', children: 'a'});
+    });
+    expect(modals.modals).toHaveLength(1);
+    expect(screen.getByText('a')).toBeTruthy();
+    act(() => modals.closeAll());
+    expect(modals.modals).toEqual([]);
+    expect(renders).toBe(1);
+  });
 });
 
 describe('Dialog', () => {

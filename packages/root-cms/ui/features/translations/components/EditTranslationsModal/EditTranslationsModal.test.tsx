@@ -8,10 +8,21 @@ import {
 
 const mockCloseModal = vi.fn();
 const mockLoadTranslations = vi.fn();
+const mockLoadTranslationsByHashes = vi.fn();
 const mockCmsDocImportTranslations = vi.fn();
+const mockPortModalOpen = vi.fn();
 
 vi.mock('../../l10n.js', () => ({
   loadTranslations: (...args: any[]) => mockLoadTranslations(...args),
+  loadTranslationsByHashes: (...args: any[]) =>
+    mockLoadTranslationsByHashes(...args),
+  sourceHash: async (source: string) => `hash:${source}`,
+  isLocaleExcludedFromTranslations: () => false,
+  toLocaleTranslations: (row: Record<string, string>) => {
+    const translations = {...row};
+    delete translations.source;
+    return translations;
+  },
   toTranslationLanguages: (locales: string[]) => locales,
   getTranslationForLanguage: (
     translations: Record<string, string>,
@@ -25,7 +36,7 @@ vi.mock('../../../documents/doc.js', () => ({
 }));
 
 vi.mock('../PortTranslationsModal/usePortTranslationsModal.js', () => ({
-  usePortTranslationsModal: () => ({open: vi.fn()}),
+  usePortTranslationsModal: () => ({open: mockPortModalOpen}),
 }));
 
 vi.mock('../../../../primitives/Toast/toastStore.js', () => ({
@@ -47,6 +58,7 @@ describe('EditTranslationsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLoadTranslations.mockResolvedValue({});
+    mockLoadTranslationsByHashes.mockResolvedValue({});
     mockCmsDocImportTranslations.mockResolvedValue({});
     (window as any).__ROOT_CTX = {
       rootConfig: {
@@ -69,6 +81,54 @@ describe('EditTranslationsModal', () => {
     context: {closeModal: mockCloseModal} as unknown as ModalsContextProps,
     id: 'modal-id',
   };
+
+  it('should only load the strings being shown on open', async () => {
+    mockDraft.controller.getValue.mockReturnValue({});
+    mockLoadTranslationsByHashes.mockResolvedValue({
+      'hash:Hello World': {source: 'Hello World', es: 'Hola Mundo'},
+    });
+
+    render(<EditTranslationsModal {...defaultProps} />);
+
+    await vi.waitFor(() => screen.getByDisplayValue('Hola Mundo'));
+    expect(mockLoadTranslationsByHashes).toHaveBeenCalledWith([
+      'hash:Hello World',
+      'hash:Goodbye',
+    ]);
+    expect(mockLoadTranslations).not.toHaveBeenCalled();
+  });
+
+  it('should load the doc strings for porting on demand', async () => {
+    mockDraft.controller.getValue.mockReturnValue({});
+    mockLoadTranslationsByHashes.mockResolvedValue({
+      'hash:Hello World': {source: 'Hello World', es: 'Hola Mundo'},
+    });
+    mockLoadTranslations.mockResolvedValue({
+      'hash:Hello World': {source: 'Hello World', es: 'Stale'},
+      'hash:Hi World': {source: 'Hi World', es: 'Hola'},
+    });
+
+    render(<EditTranslationsModal {...defaultProps} />);
+
+    await vi.waitFor(() => screen.getByDisplayValue('Hola Mundo'));
+    fireEvent.click(
+      screen.getAllByLabelText('Port translations from another string')[0]
+    );
+
+    const {loadCandidates} = mockPortModalOpen.mock.calls[0][0];
+    expect(mockLoadTranslations).not.toHaveBeenCalled();
+    expect(await loadCandidates()).toEqual(
+      expect.arrayContaining([
+        {
+          source: 'Hello World',
+          translations: {es: 'Hola Mundo'},
+          label: undefined,
+        },
+        {source: 'Hi World', translations: {es: 'Hola'}, label: 'unused'},
+      ])
+    );
+    expect(mockLoadTranslations).toHaveBeenCalledWith({tags: ['Pages/test']});
+  });
 
   it('should hide translation table when "Do not translate" is checked', async () => {
     mockDraft.controller.getValue.mockReturnValue({

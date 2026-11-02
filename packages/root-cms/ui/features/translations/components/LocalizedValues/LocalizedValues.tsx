@@ -323,14 +323,17 @@ function LocalePicker(props: LocalePickerProps) {
   };
 
   const q = query.trim().toLowerCase();
-  const options = props.locales
-    .map((locale) => ({locale, name: getLanguageName(locale)}))
-    .filter(
-      (option) =>
-        !q ||
-        option.locale.toLowerCase().includes(q) ||
-        option.name.toLowerCase().includes(q)
-    );
+  // A picker is rendered per field header, so skip the work while it's closed.
+  const options = opened
+    ? props.locales
+        .map((locale) => ({locale, name: getLanguageName(locale)}))
+        .filter(
+          (option) =>
+            !q ||
+            option.locale.toLowerCase().includes(q) ||
+            option.name.toLowerCase().includes(q)
+        )
+    : [];
 
   return (
     <Popover
@@ -392,11 +395,13 @@ function LocalePicker(props: LocalePickerProps) {
   );
 }
 
+/** Shared because `Intl.DisplayNames` is expensive to construct. */
+const LANGUAGE_NAMES = new Intl.DisplayNames(['en'], {type: 'language'});
+
 /** Returns the language name of a locale, e.g. "German" for "de". */
 function getLanguageName(locale: string): string {
   try {
-    const langNames = new Intl.DisplayNames(['en'], {type: 'language'});
-    const langName = langNames.of(locale.replace('_', '-'));
+    const langName = LANGUAGE_NAMES.of(locale.replace('_', '-'));
     if (langName && langName !== locale) {
       return langName;
     }

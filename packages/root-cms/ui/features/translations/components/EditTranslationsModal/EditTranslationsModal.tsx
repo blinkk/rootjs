@@ -38,11 +38,13 @@ import {
 } from '../../../documents/doc.js';
 import {DraftDocContext} from '../../../documents/useDraftDoc.js';
 import {
+  Translation,
   batchSaveTranslations,
   getTranslationByHash,
   getTranslationForLanguage,
   isLocaleExcludedFromTranslations,
   loadTranslations,
+  loadTranslationsByHashes,
   sourceHash,
   toLocaleTranslations,
   toTranslationLanguages,
@@ -103,33 +105,44 @@ export function EditTranslationsModal(
     }
   }, [props.field?.deepKey, draft?.controller]);
 
+  /**
+   * Re-keys a row from root locales to translation languages so edits and
+   * saves apply to every root locale that shares the language.
+   */
+  function toLanguageRow(row: Translation): Record<string, string> {
+    const langRow: Record<string, string> = {source: row.source};
+    i18nLocales.forEach((lang) => {
+      const value = getTranslationForLanguage(row, lang);
+      if (value) {
+        langRow[lang] = value;
+      }
+    });
+    return langRow;
+  }
+
   useEffect(() => {
     const init = async () => {
       await notifyErrors(async () => {
+        // Only load the strings being shown. A field usually has one string,
+        // whereas a large doc can have hundreds tagged with it.
+        const hashes = await Promise.all(
+          strings.map((source) => sourceHash(source))
+        );
         const res = await withTimeout(
-          loadTranslations({tags: [props.docId]}),
+          loadTranslationsByHashes(hashes),
           undefined,
           'loading translations'
         );
         const translationsMap: Record<string, Record<string, string>> = {};
         Object.values(res).forEach((row) => {
-          // Re-key rows from root locales to translation languages so edits
-          // and saves apply to every root locale that shares the language.
-          const langRow: Record<string, string> = {source: row.source};
-          i18nLocales.forEach((lang) => {
-            const value = getTranslationForLanguage(row, lang);
-            if (value) {
-              langRow[lang] = value;
-            }
-          });
-          translationsMap[row.source] = langRow;
+          translationsMap[row.source] = toLanguageRow(row);
         });
         setTranslationsMap(translationsMap);
       });
       setLoading(false);
     };
     init();
-  }, [props.docId]);
+  }, [props.docId, props.strings]);
 
   async function onSave() {
     setSaving(true);
@@ -214,13 +227,20 @@ export function EditTranslationsModal(
         )
       ),
       // Candidates are the strings tagged with the doc, which include the
-      // field's previous source strings.
-      loadCandidates: async () =>
-        Object.values(translationsMap).map((row) => ({
+      // field's previous source strings. They're loaded on demand, and the
+      // modal's own rows win so that unsaved edits are included.
+      loadCandidates: async () => {
+        const tagged = await loadTranslations({tags: [props.docId]});
+        const rows: Record<string, Record<string, string>> = {};
+        Object.values(tagged).forEach((row) => {
+          rows[row.source] = toLanguageRow(row);
+        });
+        return Object.values({...rows, ...translationsMap}).map((row) => ({
           source: row.source,
           translations: toLocaleTranslations(row),
           label: strings.includes(row.source) ? undefined : 'unused',
-        })),
+        }));
+      },
       lookupSource: async (lookupSource) => {
         const translation = await getTranslationByHash(
           await sourceHash(lookupSource)
