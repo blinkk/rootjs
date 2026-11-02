@@ -29,6 +29,8 @@ export interface ActionDetail {
   value: string;
   /** Marks a value worth noticing, e.g. docs a rollback overwrote. */
   warning?: boolean;
+  /** Shows the value in a monospace font, e.g. an action's id. */
+  code?: boolean;
 }
 
 type Metadata = Record<string, any>;

@@ -579,7 +579,7 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
   }
 
   if (links.length === 0) {
-    return <span className="ActionsLogs__links--empty text-subtle"></span>;
+    return null;
   }
 
   if (props.limit) {
@@ -742,7 +742,7 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
         {phrase.target && (
           <>
             {' '}
-            <span className="ActionLogsCompactItemPreview__target font-mono text-sm">
+            <span className="ActionLogsCompactItemPreview__target rounded-sm bg-chip box-decoration-clone px-1 py-0.5 font-mono text-sm">
               {phrase.target}
             </span>
           </>
@@ -761,7 +761,10 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
 
 function ActionLogsCompactItemDetails(props: {action: Action}) {
   const {action} = props;
-  const details: ActionDetail[] = getActionDetails(action);
+  const details: ActionDetail[] = [
+    {label: 'Action', value: action.action, code: true},
+    ...getActionDetails(action),
+  ];
   if (isUserAction(action)) {
     details.push({label: 'User', value: action.by});
   }
@@ -781,7 +784,8 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
             <dd
               className={cn(
                 'ActionLogsCompactItemDetails__value min-w-0 break-words',
-                detail.warning ? 'text-warning' : 'text-fg'
+                detail.warning ? 'text-warning' : 'text-fg',
+                detail.code && 'font-mono'
               )}
             >
               {detail.value}
@@ -789,12 +793,7 @@ function ActionLogsCompactItemDetails(props: {action: Action}) {
           </Fragment>
         ))}
       </dl>
-      <div className="ActionLogsCompactItemDetails__footer flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <QuickLinks action={action} />
-        <span className="ActionLogsCompactItemDetails__actionId font-mono text-xs text-muted">
-          {action.action}
-        </span>
-      </div>
+      <QuickLinks action={action} />
     </div>
   );
 }

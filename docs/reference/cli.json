@@ -3,7 +3,7 @@
     {
       "bin": "create-root",
       "packageName": "@blinkk/create-root",
-      "version": "4.1.2",
+      "version": "4.2.2",
       "commands": [
         {
           "name": "create-root",
@@ -44,7 +44,7 @@
     {
       "bin": "root",
       "packageName": "@blinkk/root",
-      "version": "4.1.2",
+      "version": "4.2.2",
       "commands": [
         {
           "name": "root build",
@@ -429,7 +429,7 @@
     {
       "bin": "root-cms",
       "packageName": "@blinkk/root-cms",
-      "version": "4.1.2",
+      "version": "4.2.2",
       "commands": [
         {
           "name": "root-cms init-firebase",
@@ -762,6 +762,54 @@
           "subcommands": []
         },
         {
+          "name": "root-cms errors.list",
+          "aliases": [],
+          "usage": "root-cms errors.list [options]",
+          "summary": "lists the most recent errors reported by the cms ui",
+          "description": "When the CMS UI crashes, the error screen shows the user an error id and saves the full report (with a source-mapped stack trace) to the database.",
+          "examples": [
+            "root-cms errors.list",
+            "root-cms errors.list --limit 50 --json"
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--limit <n>",
+              "description": "max number of errors to list (default: 20)"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms errors.get",
+          "aliases": [],
+          "usage": "root-cms errors.get <id> [options]",
+          "summary": "prints the full report for an error reported by the cms ui",
+          "description": "",
+          "examples": [
+            "root-cms errors.get k3x9q2m7pa"
+          ],
+          "arguments": [
+            {
+              "name": "id",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
           "name": "root-cms client.call",
           "aliases": [],
           "usage": "root-cms client.call <method> [jsonArgs]",
@@ -965,7 +1013,7 @@
     {
       "bin": "root-password-protect",
       "packageName": "@blinkk/root-password-protect",
-      "version": "4.1.2",
+      "version": "4.2.2",
       "commands": [
         {
           "name": "root-password-protect generate-hash",
