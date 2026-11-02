@@ -31,6 +31,8 @@ export interface ActionDetail {
   warning?: boolean;
   /** Shows the value in a monospace font, e.g. an action's id. */
   code?: boolean;
+  /** Keeps the line breaks in the value, e.g. a list of changes. */
+  multiline?: boolean;
 }
 
 type Metadata = Record<string, any>;
@@ -67,6 +69,27 @@ function defaultTaskAssignee(metadata: Metadata): ActionPhrase {
 function fieldComment(metadata: Metadata, verb: string): ActionPhrase {
   const field = metadata.fieldLabel || metadata.fieldKey;
   return {verb: field ? `${verb} ${field} in` : verb};
+}
+
+/** Returns the phrase for a save of the sharing settings. */
+function sharingChange(metadata: Metadata): ActionPhrase {
+  const changes: string[] = metadata.changes || [];
+  if (changes.length === 1) {
+    const change = changes[0];
+    const sentence = change.charAt(0).toLowerCase() + change.slice(1);
+    return {verb: `updated sharing: ${sentence}`, target: ''};
+  }
+  if (changes.length > 1) {
+    return {verb: `made ${changes.length} sharing changes`, target: ''};
+  }
+  // Older logs, from before the changes were logged, only have totals.
+  return {
+    verb: `updated sharing for ${pluralize(
+      metadata.groupCount,
+      'group'
+    )} and ${pluralize(metadata.userCount, 'user')}`,
+    target: '',
+  };
 }
 
 /**
@@ -239,13 +262,7 @@ const ACTION_PHRASES: Record<
   'tasks.updateTargetLaunch': 'changed the target launch of task',
   'tasks.updateTitle': 'renamed task',
 
-  'acls.save_groups': (metadata) => ({
-    verb: `updated sharing for ${pluralize(
-      metadata.groupCount,
-      'group'
-    )} and ${pluralize(metadata.userCount, 'user')}`,
-    target: '',
-  }),
+  'acls.save_groups': sharingChange,
   'user.reset_sign_in': (metadata) => ({
     verb: 'reset sign-in for',
     target: metadata.email,
@@ -387,6 +404,14 @@ export function getActionDetails(action: Action): ActionDetail[] {
       metadata as TaskMetadataChange
     );
     details.push({label: field, value: `${from} → ${to}`});
+  }
+
+  if (action.action === 'acls.save_groups' && metadata.changes?.length > 0) {
+    details.push({
+      label: 'Changes',
+      value: metadata.changes.join('\n'),
+      multiline: true,
+    });
   }
 
   // The sentence can truncate before its " with Root AI" tail.

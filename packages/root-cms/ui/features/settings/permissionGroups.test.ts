@@ -2,6 +2,7 @@ import {describe, it, expect} from 'vitest';
 import {
   PermissionGroup,
   derivedRolesFromGroups,
+  describeShareChanges,
   higherRole,
   newPermissionGroup,
   roleRank,
@@ -148,6 +149,101 @@ describe('permissionGroups', () => {
       expect(g.role).toBe('EDITOR');
       expect(g.collections).toEqual(['BlogPosts']);
       expect(g.users).toEqual(['a@example.com']);
+    });
+  });
+
+  describe('describeShareChanges', () => {
+    it('describes direct role changes', () => {
+      const changes = describeShareChanges(
+        {
+          globalRoles: {
+            'bob@example.com': 'VIEWER',
+            'cara@example.com': 'ADMIN',
+            'dan@example.com': 'EDITOR',
+          },
+          permissionGroups: [],
+        },
+        {
+          globalRoles: {
+            'ada@example.com': 'EDITOR',
+            'bob@example.com': 'EDITOR',
+            'dan@example.com': 'EDITOR',
+          },
+          permissionGroups: [],
+        }
+      );
+      expect(changes).toEqual([
+        'Added ada@example.com as EDITOR',
+        'Changed bob@example.com from VIEWER to EDITOR',
+        'Removed cara@example.com (was ADMIN)',
+      ]);
+    });
+
+    it('describes edits to a group, matching it by id', () => {
+      const before = group({
+        id: 'g1',
+        name: 'Blog',
+        role: 'VIEWER',
+        collections: [],
+        users: ['ada@example.com', 'bob@example.com'],
+      });
+      const after = group({
+        id: 'g1',
+        name: 'Blog editors',
+        role: 'EDITOR',
+        collections: ['Posts'],
+        users: ['bob@example.com', 'cara@example.com'],
+      });
+      expect(
+        describeShareChanges(
+          {globalRoles: {}, permissionGroups: [before]},
+          {globalRoles: {}, permissionGroups: [after]}
+        )
+      ).toEqual([
+        'Renamed group "Blog" to "Blog editors"',
+        'Changed group "Blog editors" role from VIEWER to EDITOR',
+        'Changed group "Blog editors" collections from all collections to Posts',
+        'Added cara@example.com to group "Blog editors"',
+        'Removed ada@example.com from group "Blog editors"',
+      ]);
+    });
+
+    it('describes created and deleted groups', () => {
+      const created = group({
+        name: 'Blog',
+        role: 'EDITOR',
+        collections: ['Posts'],
+        users: ['ada@example.com'],
+      });
+      const deleted = group({name: 'Old', role: 'ADMIN'});
+      expect(
+        describeShareChanges(
+          {globalRoles: {}, permissionGroups: [deleted]},
+          {globalRoles: {}, permissionGroups: [created]}
+        )
+      ).toEqual([
+        'Created group "Blog" (EDITOR on Posts, users: ada@example.com)',
+        'Deleted group "Old" (ADMIN on all collections, no users)',
+      ]);
+    });
+
+    it('ignores reordered users and collections', () => {
+      const before = group({
+        id: 'g1',
+        collections: ['Pages', 'Posts'],
+        users: ['ada@example.com', 'bob@example.com'],
+      });
+      const after = group({
+        id: 'g1',
+        collections: ['Posts', 'Pages'],
+        users: ['bob@example.com', 'ada@example.com'],
+      });
+      expect(
+        describeShareChanges(
+          {globalRoles: {}, permissionGroups: [before]},
+          {globalRoles: {}, permissionGroups: [after]}
+        )
+      ).toEqual([]);
     });
   });
 });

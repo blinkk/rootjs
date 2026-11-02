@@ -40,7 +40,9 @@ import {PermissionGroupsBox} from '../../components/PermissionGroupsBox/Permissi
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {
   PermissionGroup,
+  ShareDoc,
   derivedRolesFromGroups,
+  describeShareChanges,
 } from '../../permissionGroups.js';
 
 /** Classes for each two-column section (description left, card right). */
@@ -420,11 +422,6 @@ function SiteAdminSection() {
   );
 }
 
-interface ShareDoc {
-  globalRoles: Record<string, UserRole>;
-  permissionGroups: PermissionGroup[];
-}
-
 function shareDocsEqual(a: ShareDoc, b: ShareDoc): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -565,6 +562,7 @@ function ShareSection() {
           groupCount: draft.permissionGroups.length,
           userCount: Object.keys(derivedProjectRoles).length,
           collections: Array.from(touchedCollections),
+          changes: describeShareChanges(savedState, draft),
         },
       });
       showNotification({
