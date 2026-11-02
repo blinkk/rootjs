@@ -13,6 +13,8 @@ const ACTION_TIMESTAMPS: Record<string, number> = {};
 
 export interface Action {
   action: string;
+  /** Describes the action, for custom actions. See `logAction()`. */
+  label?: string;
   metadata: any;
   timestamp: Timestamp;
   by: string;
@@ -22,6 +24,11 @@ export interface Action {
 export async function logAction(
   action: string,
   options?: {
+    /**
+     * Describes the action in the CMS's recent actions, following the user's
+     * name, e.g. "synced inventory from". See `RootCMSClient.logAction()`.
+     */
+    label?: string;
     metadata?: any;
     throttle?: number;
     throttleId?: string;
@@ -43,6 +50,7 @@ export async function logAction(
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({
       action: action,
+      label: options?.label,
       metadata: options?.metadata || {},
       links: options?.links,
     }),

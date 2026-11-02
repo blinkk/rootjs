@@ -1,5 +1,6 @@
-import {IconExternalLink, IconSearch} from '@tabler/icons-preact';
+import {IconClock, IconExternalLink, IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
+import {Fragment} from 'preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {
   Pagination,
@@ -29,8 +30,19 @@ import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {formatTaskMetadataChange} from '../../../tasks/tasks.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
+import {useUserProfile} from '../../../users/useUserProfile.js';
+import {
+  ActionDetail,
+  formatLongDate,
+  formatMetadataValue,
+  formatTime,
+  getActionDetails,
+  getActionPhrase,
+  getSystemUserName,
+  isUserAction,
+  toTimestamp,
+} from '../../action-summary.js';
 import {Action, listActions} from '../../actions.js';
 import './ActionsLogs.css';
 
@@ -422,46 +434,6 @@ function MetadataDisplay(props: {metadata: any}) {
   );
 }
 
-/** Formats a metadata value for display. */
-function formatMetadataValue(value: any): string {
-  if (value === null || value === undefined) {
-    return '—';
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return '[]';
-    }
-    if (value.length <= 3) {
-      return value.join(', ');
-    }
-    return `${value.slice(0, 3).join(', ')} (+${value.length - 3} more)`;
-  }
-  if (typeof value === 'object') {
-    const obj = cleanObject(value);
-    try {
-      return JSON.stringify(obj);
-    } catch (e) {
-      console.error(e);
-      console.error('failed to stringify json:', obj);
-    }
-  }
-  return String(value);
-}
-
-/**
- * Removes keys starting with `_` from the object. Without this for some reason
- * there are circular issues when trying to stringify to JSON.
- */
-function cleanObject(obj: any) {
-  const newObj: any = {};
-  Object.entries(obj).forEach(([key, val]) => {
-    if (!key.startsWith('_')) {
-      newObj[key] = val;
-    }
-  });
-  return newObj;
-}
-
 /** Displays quick links for an action. */
 function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
   const {action} = props;
@@ -600,7 +572,7 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
           href={link.url}
           target={link.target}
         >
-          {link.label}
+          {label(link.label)}
         </Button>
       );
     });
@@ -727,26 +699,60 @@ function ActionLogsOnboarding() {
   );
 }
 
+/** Returns the name to show for the user that performed an action. */
+function useActionUserName(action: Action) {
+  const isUser = isUserAction(action);
+  const {profile} = useUserProfile(isUser ? action.by : null);
+  if (!isUser) {
+    return getSystemUserName(action.by);
+  }
+  return profile?.displayName || action.by.split('@')[0];
+}
+
+/** The avatar of the user that performed an action, or a job's clock icon. */
+function ActionAvatar(props: {action: Action}) {
+  const {action} = props;
+  if (isUserAction(action)) {
+    return <UserAvatar email={action.by} size={20} />;
+  }
+  return (
+    <Tooltip label={getSystemUserName(action.by)}>
+      <span className="ActionAvatar flex size-5 items-center justify-center rounded-full bg-chip text-muted">
+        <IconClock className="size-3.5" aria-hidden="true" />
+      </span>
+    </Tooltip>
+  );
+}
+
 function ActionLogsCompactItemPreview(props: {action: Action}) {
-  const action = props.action;
-  const actionMetaId = getPreviewLabel(action);
-  const actionBy = props.action.by || '';
+  const {action} = props;
+  const phrase = getActionPhrase(action);
+  const userName = useActionUserName(action);
 
   return (
-    <div className="ActionLogsCompactItemPreview items-center gap-3 font-mono text-sm font-normal tracking-tight text-fg">
-      <div className="ActionLogsCompactItemPreview__user flex">
-        <UserAvatar email={actionBy} size={20} />
+    <div className="ActionLogsCompactItemPreview items-center gap-x-3 font-sans text-md font-normal text-fg max-md:gap-y-0.5">
+      <div className="ActionLogsCompactItemPreview__user flex max-md:row-span-2 max-md:self-start">
+        <ActionAvatar action={action} />
       </div>
-      <div className="ActionLogsCompactItemPreview__timestamp truncate">
+      <div className="ActionLogsCompactItemPreview__sentence min-w-0 max-md:line-clamp-2 max-md:whitespace-normal max-md:wrap-anywhere md:truncate">
+        <span className="ActionLogsCompactItemPreview__subject font-semibold text-strong">
+          {phrase.subject || userName}
+        </span>{' '}
+        {phrase.verb}
+        {phrase.target && (
+          <>
+            {' '}
+            <span className="ActionLogsCompactItemPreview__target font-mono text-sm">
+              {phrase.target}
+            </span>
+          </>
+        )}
+        {phrase.tail}
+      </div>
+      <div className="ActionLogsCompactItemPreview__timestamp whitespace-nowrap text-sm tabular-nums text-muted max-md:col-start-2 md:text-right">
         <ActionTimestamp timestamp={action.timestamp} />
       </div>
-      <div className="ActionLogsCompactItemPreview__action max-w-full truncate rounded-sm md:justify-self-end bg-chip px-1.5 py-0 font-semibold">
-        {action.action}
-      </div>
-      <div className="ActionLogsCompactItemPreview__actionMetaId truncate">
-        {actionMetaId}
-      </div>
-      <div className="ActionLogsCompactItemPreview__buttons flex flex-1 justify-end">
+      <div className="ActionLogsCompactItemPreview__buttons hidden justify-end md:flex">
         <QuickLinks action={action} label="Open" limit={1} />
       </div>
     </div>
@@ -754,94 +760,43 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
 }
 
 function ActionLogsCompactItemDetails(props: {action: Action}) {
-  const action = props.action;
-  const metadata = {
-    user: action.by,
-    ...action.metadata,
-  };
+  const {action} = props;
+  const details: ActionDetail[] = getActionDetails(action);
+  if (isUserAction(action)) {
+    details.push({label: 'User', value: action.by});
+  }
+  const millis = toTimestamp(action.timestamp)?.toMillis();
+  if (millis) {
+    details.push({label: 'Time', value: formatLongDate(millis)});
+  }
+
   return (
-    <div className="ActionLogsCompactItemDetails flex flex-col gap-2 font-mono pl-7">
-      <MetadataDisplay metadata={metadata} />
-      <QuickLinks action={action} />
+    <div className="ActionLogsCompactItemDetails flex flex-col gap-2.5 pl-7">
+      <dl className="ActionLogsCompactItemDetails__list text-sm">
+        {details.map((detail, i) => (
+          <Fragment key={i}>
+            <dt className="ActionLogsCompactItemDetails__label text-muted">
+              {detail.label}
+            </dt>
+            <dd
+              className={cn(
+                'ActionLogsCompactItemDetails__value min-w-0 break-words',
+                detail.warning ? 'text-warning' : 'text-fg'
+              )}
+            >
+              {detail.value}
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
+      <div className="ActionLogsCompactItemDetails__footer flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <QuickLinks action={action} />
+        <span className="ActionLogsCompactItemDetails__actionId font-mono text-xs text-muted">
+          {action.action}
+        </span>
+      </div>
     </div>
   );
-}
-
-/**
- * Returns the label shown in the compact preview row. For asset library
- * actions, this is the asset's human-friendly file path rather than its id.
- * Task metadata changes show what changed, e.g.
- * "#1: Status changed from New to In progress".
- */
-function getPreviewLabel(action: Action) {
-  if (action.action === 'tasks.update_metadata' && action.metadata?.field) {
-    return formatTaskMetadataChange(action.metadata);
-  }
-  if (action.action.startsWith('asset.')) {
-    const label = getAssetLabel(action.metadata || {});
-    if (label) {
-      return label;
-    }
-  }
-  return getFirstMetadataId(action);
-}
-
-/**
- * Returns a human-friendly label for an asset action. Older logs predate the
- * `path` metadata, so this falls back to the folder path or asset name.
- */
-function getAssetLabel(metadata: Record<string, any>): string {
-  if (metadata.path) {
-    return metadata.path;
-  }
-  if (metadata.folder) {
-    return metadata.folder;
-  }
-  // Folder renames and moves log the folder's new path as `to`.
-  if (!metadata.assetId && typeof metadata.to === 'string') {
-    return metadata.to;
-  }
-  if (Array.isArray(metadata.folders)) {
-    return formatMetadataValue(metadata.folders);
-  }
-  return metadata.name || '';
-}
-
-function getFirstMetadataId(action: Action) {
-  for (const key of Object.keys(action.metadata || {})) {
-    if (key.toLowerCase().endsWith('id')) {
-      return action.metadata[key];
-    }
-  }
-  return '';
-}
-
-/**
- * Safely converts a timestamp value to a Firestore Timestamp. Handles
- * potentially corrupt or invalid timestamp values from the database.
- */
-function toTimestamp(ts: any): Timestamp | null {
-  if (!ts) {
-    return null;
-  }
-  // Already a valid Timestamp.
-  if (ts instanceof Timestamp) {
-    return ts;
-  }
-  // Firestore Timestamp-like object with _seconds.
-  if (typeof ts === 'object' && typeof ts._seconds === 'number') {
-    return new Timestamp(ts._seconds, ts._nanoseconds || 0);
-  }
-  // Firestore Timestamp-like object with seconds.
-  if (typeof ts === 'object' && typeof ts.seconds === 'number') {
-    return new Timestamp(ts.seconds, ts.nanoseconds || 0);
-  }
-  // Timestamp as milliseconds number.
-  if (typeof ts === 'number') {
-    return Timestamp.fromMillis(ts);
-  }
-  // Invalid timestamp format.
-  return null;
 }
 
 /**
@@ -886,27 +841,11 @@ const MONTHS = [
   'Dec',
 ];
 
-function formatTime(date: Date) {
-  const hours24 = date.getHours();
-  const ampm = hours24 < 12 ? 'AM' : 'PM';
-  const hh = String(hours24 % 12 || 12).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${min} ${ampm}`;
-}
-
 /** Formats a timestamp as a fixed-width compact date, e.g. "Jun 12, 10:21 AM". */
 function formatCompactDate(millis: number) {
   const date = new Date(millis);
   const dd = String(date.getDate()).padStart(2, '0');
   return `${MONTHS[date.getMonth()]} ${dd}, ${formatTime(date)}`;
-}
-
-/** Formats a timestamp as a long date, e.g. "June 12, 2026 10:21 AM". */
-function formatLongDate(millis: number) {
-  const date = new Date(millis);
-  const month = date.toLocaleDateString('en', {month: 'long'});
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${month} ${dd}, ${date.getFullYear()} ${formatTime(date)}`;
 }
 
 /** Formats a timestamp as an exact date time, e.g. "Jun 11, 2026, 07:23:45 PM". */

@@ -2,23 +2,27 @@
   .ActionLogsCompactItemPreview {
     display: grid;
     /**
-     * Each accordion row is its own grid. The timestamp renders in a
-     * fixed-width format (e.g. "Jun 12, 10:21 AM") so its column can be
-     * `auto`; the action column uses a fixed width to keep columns aligned
-     * across rows.
+     * Each accordion row is its own grid, so the buttons column keeps a
+     * minimum width to line timestamps up across rows, including rows with
+     * nothing to link to.
      */
-    grid-template-columns: auto auto 170px minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(48px, auto);
   }
 
-  /* Phones drop the id column; it's still listed in the expanded details. */
+  /**
+   * Phones stack the timestamp under the sentence, and drop the buttons since
+   * the links are listed in the expanded details.
+   */
   @media (width < 768px) {
     .ActionLogsCompactItemPreview {
-      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr);
     }
+  }
 
-    .ActionLogsCompactItemPreview__actionMetaId {
-      display: none;
-    }
+  .ActionLogsCompactItemDetails__list {
+    display: grid;
+    grid-template-columns: minmax(88px, max-content) minmax(0, 1fr);
+    gap: 4px 12px;
   }
 
   .ActionLogsCompact__item .Accordion__content {
