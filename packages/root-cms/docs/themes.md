@@ -448,12 +448,13 @@ Each block, with its `__elements` and `--modifiers`. A `*` stands for a value fi
 
 #### `ui/features/logs`
 
+- `ActionAvatar`
 - `ActionLogsCompact`: `__item`, `__table`; `--loading`
-- `ActionLogsCompactItemDetails`
-- `ActionLogsCompactItemPreview`: `__action`, `__actionMetaId`, `__buttons`, `__timestamp`, `__user`
+- `ActionLogsCompactItemDetails`: `__label`, `__list`, `__value`
+- `ActionLogsCompactItemPreview`: `__buttons`, `__sentence`, `__subject`, `__target`, `__timestamp`, `__user`
 - `ActionLogsOnboarding`: `__body`, `__button`, `__logo`, `__title`
 - `ActionsLog`: `__filters`, `__filters__search`, `__filters__select`, `__table`, `__tableHeader`, `__tableSurface`; `--loading`
-- `ActionsLogs`: `__action`, `__links`, `__metadata`, `__metadata__item`, `__metadata__key`, `__metadata__value`, `__table__buttons`, `__table__col`, `__table__header`, `__table__row`, `__timestamp`, `__user`, `__user__email`; `__links--empty`, `__metadata--empty`, `__table__col--action`, `__table__col--empty`, `__table__col--links`, `__table__col--metadata`, `__table__col--nowrap`, `__table__row--header`
+- `ActionsLogs`: `__action`, `__metadata`, `__metadata__item`, `__metadata__key`, `__metadata__value`, `__table__buttons`, `__table__col`, `__table__header`, `__table__row`, `__timestamp`, `__user`, `__user__email`; `__metadata--empty`, `__table__col--action`, `__table__col--empty`, `__table__col--links`, `__table__col--metadata`, `__table__col--nowrap`, `__table__row--header`
 - `ErrorLogsPage`: `__empty`, `__header`, `__header__title`, `__item`, `__item__body`, `__item__id`, `__item__message`, `__item__stack`, `__item__summary`, `__item__time`, `__item__user`, `__list`, `__loading`, `__search`
 - `LogsPage`: `__header`
 
