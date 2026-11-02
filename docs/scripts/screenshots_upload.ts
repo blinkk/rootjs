@@ -39,8 +39,11 @@
  *
  * Requires application-default credentials with access to the project's
  * Firestore and Storage bucket, e.g. `gcloud auth application-default login`.
+ * Uploads are attributed to the active gcloud account in the action logs. Set
+ * `ROOT_CMS_USER` to use a different email.
  */
 
+import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import {readFile, writeFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -65,8 +68,6 @@ const MAP_PATH = path.join(SCREENSHOTS_DIR, 'screenshots.json');
 
 /** Asset library folder that screenshots are uploaded to. */
 const ASSET_FOLDER = 'screenshots';
-/** Recorded in the asset library as the uploader. */
-const UPLOADED_BY = 'screenshots_upload.ts';
 
 interface Args {
   scenes: string[];
@@ -120,6 +121,35 @@ async function writeMap(map: ScreenshotsMap) {
   await writeFile(MAP_PATH, JSON.stringify(sorted, null, 2) + '\n');
 }
 
+/**
+ * Returns the email uploads are attributed to in the action logs:
+ * `ROOT_CMS_USER`, or the active gcloud account (the same lookup
+ * `root-cms proposal.apply` uses).
+ */
+function getCliUser(): string {
+  const fromEnv =
+    process.env.ROOT_CMS_USER?.trim() ||
+    process.env.CLOUDSDK_CORE_ACCOUNT?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  let account = '';
+  try {
+    account = execFileSync('gcloud', ['config', 'get-value', 'account'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    // Fall through to the error below.
+  }
+  if (!account) {
+    throw new Error(
+      'could not determine the logged in user. run `gcloud auth login` or set ROOT_CMS_USER.'
+    );
+  }
+  return account;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const manifest = await readJson<Record<string, ManifestEntry>>(
@@ -146,9 +176,10 @@ async function main() {
   }
 
   const rootConfig = await loadRootConfig(DOCS_DIR, {command: 'root-cms'});
-  const client = new RootCMSClient(rootConfig);
+  const client = new RootCMSClient(rootConfig, {user: getCliUser()});
   console.log(`project: ${client.projectId}`);
   console.log(`asset folder: ${ASSET_FOLDER}`);
+  console.log(`user: ${client.user}`);
 
   let changed = 0;
   const failedDocIds = new Set<string>();
@@ -197,7 +228,6 @@ async function main() {
       filename: filename,
       assetId: assetId,
       alt: entry.alt,
-      modifiedBy: UPLOADED_BY,
     });
     const file = res.asset.file!;
     const screenshot: ScreenshotEntry = {

@@ -1,175 +1,286 @@
-import {IconPlus, IconTable, IconWorld} from '@tabler/icons-preact';
+import {
+  IconArrowUp,
+  IconPlus,
+  IconRefresh,
+  IconTable,
+  IconWorld,
+} from '@tabler/icons-preact';
 import type {SceneMeta} from '../types.js';
-import {CmsFrame} from '../ui/cms.js';
+import {Avatar, CmsFrame} from '../ui/cms.js';
 
 export const meta: SceneMeta = {
   id: 'cms-data-sources',
   width: 960,
   height: 600,
-  alt: 'The Data Sources page in the Root.js CMS, listing Google Sheets and HTTP JSON feeds with their publish status and when each was last synced and published.',
+  alt: 'The Data Sources page in the Root.js CMS, showing Google Sheets and HTTP JSON feeds as cards with their publish status, sync schedule, and when and by whom each was last synced and published.',
 };
 
-type Status = 'published' | 'unpublished';
+const DATA_SOURCES_CSS = `
+.ds__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ds__card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cms-border);
+  border-radius: 10px;
+  background: var(--cms-surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.ds__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.ds__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.ds__icon {
+  display: flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #ececea;
+  color: #646b77;
+}
+.ds__icon--sheet {
+  background: #ebfbee;
+  color: #2b7a3b;
+}
+.ds__title {
+  flex: 1;
+  min-width: 0;
+}
+.ds__id {
+  overflow: hidden;
+  color: #1f1f1f;
+  font-family: var(--cms-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds__source {
+  overflow: hidden;
+  margin-top: 1px;
+  color: #646b77;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds__badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.ds__badges .cms-badge {
+  height: 15px;
+  padding: 0 6px;
+  font-size: 8.5px;
+}
+.ds__description {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.ds__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: auto 0 0;
+  padding-top: 8px;
+  border-top: 1px solid #ececea;
+  font-size: 10.5px;
+}
+.ds__stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ds__stat dt { color: #646b77; }
+.ds__stat dd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+.ds__stat .cms-avatar {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  font-size: 7.5px;
+}
+.ds__newer {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a85b00;
+}
+.ds__newerTime {
+  color: #a85b00;
+  font-weight: 500;
+}
+.ds__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid #ececea;
+}
+.ds__actions .cms-button {
+  justify-content: center;
+  height: 26px;
+  font-size: 11.5px;
+}
+.ds__actions .cms-button[aria-disabled='true'] { opacity: 0.5; }
+`;
 
+interface Activity {
+  /** Relative time, or a date when it's more than a week old. */
+  at: string;
+  /** First name of a fixture user. */
+  by: string;
+}
+
+/** Fixture data sources, sorted by id like the real page. */
 const DATA_SOURCES: Array<{
   id: string;
   description: string;
   type: 'gsheet' | 'http';
-  url: string;
-  status: Status;
-  synced: string;
-  published: string;
-  /** Hover tooltip for the "last synced" time, if shown. */
-  syncedTooltip?: string;
+  /** "Google Sheet", or the request method and url for HTTP. */
+  source: string;
+  status: 'published' | 'unpublished';
+  /** Whether it was synced after it was last published. */
+  hasChanges?: boolean;
+  synced: Activity;
+  published?: Activity;
+  schedule: string;
 }> = [
   {
     id: 'csa-box-contents',
     description: 'Weekly CSA box',
     type: 'gsheet',
-    url: 'https://docs.google.com/spreadsheets/d/1CsAb0xW33k',
+    source: 'Google Sheet',
     status: 'published',
-    synced: '5 days ago',
-    published: '5 days ago',
+    synced: {at: '5 days ago', by: 'Lea'},
+    published: {at: '5 days ago', by: 'Lea'},
+    schedule: 'Manual',
   },
   {
     id: 'farm-stand-prices',
     description: 'Farm stand prices',
     type: 'gsheet',
-    url: 'https://docs.google.com/spreadsheets/d/1FwMkt7pR1c3s',
+    source: 'Google Sheet',
     status: 'published',
-    synced: '2 hr. ago',
-    published: '2 hr. ago',
+    hasChanges: true,
+    synced: {at: '2 hours ago', by: 'Priya'},
+    published: {at: '3 days ago', by: 'Kenji'},
+    schedule: 'Every hour',
   },
   {
     id: 'frost-alerts',
     description: 'Frost alerts',
     type: 'http',
-    url: 'https://weather.fernwood.example/v1/frost',
+    source: 'GET weather.fernwood.example/v1/frost',
     status: 'published',
-    synced: 'Feb 11, 2027',
-    published: 'Feb 11, 2027',
+    synced: {at: 'Feb 11, 2027', by: 'Sam'},
+    published: {at: 'Feb 11, 2027', by: 'Sam'},
+    schedule: 'Daily at 6:00 AM, auto-publish',
   },
   {
     id: 'market-events',
     description: 'Market events',
     type: 'http',
-    url: 'https://events.fernwood.example/feed.json',
+    source: 'GET events.fernwood.example/feed.json',
     status: 'published',
-    synced: '20 min. ago',
-    published: '20 min. ago',
-  },
-  {
-    id: 'planting-calendar',
-    description: 'Planting calendar',
-    type: 'gsheet',
-    url: 'https://docs.google.com/spreadsheets/d/1PlAnt1ngCaL',
-    status: 'published',
-    synced: '2 days ago',
-    published: '2 days ago',
+    synced: {at: '20 minutes ago', by: 'Ada'},
+    published: {at: '20 minutes ago', by: 'Ada'},
+    schedule: 'Every 6 hours, auto-publish',
   },
   {
     id: 'seed-inventory',
     description: 'Seed inventory',
     type: 'gsheet',
-    url: 'https://docs.google.com/spreadsheets/d/1SeEd5inV3nt0ry',
+    source: 'Google Sheet',
     status: 'unpublished',
-    synced: '4 min. ago',
-    published: 'never',
+    synced: {at: '4 minutes ago', by: 'Kenji'},
+    schedule: 'Manual',
   },
   {
     id: 'store-hours',
     description: 'Store hours',
     type: 'http',
-    url: 'https://api.fernwood.example/hours.json',
+    source: 'GET api.fernwood.example/hours.json',
     status: 'published',
-    synced: '12 min. ago',
-    published: '12 min. ago',
-    syncedTooltip: 'Feb 24, 2027, 07:00 AM by cron',
+    synced: {at: '12 minutes ago', by: 'Ada'},
+    published: {at: '12 minutes ago', by: 'Ada'},
+    schedule: 'Every hour, auto-publish',
   },
 ];
 
-/** A Mantine "xs" status badge, as rendered by `DataSourceStatusBadge`. */
-function StatusBadge(props: {status: Status}) {
-  const published = props.status === 'published';
+/** A "Synced" or "Published" row: the time and who did it, or "Never". */
+function Stat(props: {label: string; activity?: Activity; newer?: boolean}) {
+  const {label, activity, newer} = props;
   return (
-    <span
-      className="cms-badge"
-      style={{
-        height: '16px',
-        padding: '0 7px',
-        fontSize: '9px',
-        background: published
-          ? 'linear-gradient(105deg, #12b886, #82c91e)'
-          : 'linear-gradient(45deg, #4c6ef5, #15aabf)',
-      }}
-    >
-      {published ? 'Published' : 'Unpublished'}
-    </span>
-  );
-}
-
-/** The time since an action plus its compact action button. */
-function StatusButton(props: {label: string; action: 'sync' | 'publish'}) {
-  return (
-    <span style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-      <span
-        style={{whiteSpace: 'nowrap'}}
-        className={props.label === 'never' ? 'cms-muted' : undefined}
-      >
-        {props.label}
-      </span>
-      <span
-        className="cms-button"
-        style={{
-          height: '22px',
-          padding: '0 8px',
-          marginLeft: 'auto',
-          fontSize: '11px',
-        }}
-      >
-        {props.action}
-      </span>
-    </span>
-  );
-}
-
-/** A dark tooltip, just below the element above it. */
-function Tooltip(props: {children: string}) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: '4px',
-        top: 'calc(100% + 4px)',
-        padding: '5px 10px',
-        borderRadius: '4px',
-        background: '#212529',
-        color: '#fff',
-        fontSize: '11.5px',
-        whiteSpace: 'nowrap',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      }}
-    >
-      {props.children}
+    <div className="ds__stat">
+      <dt>{label}</dt>
+      {activity ? (
+        <dd>
+          {newer && <span className="ds__newer" />}
+          <span className={newer ? 'ds__newerTime' : undefined}>
+            {activity.at}
+          </span>
+          <span className="cms-muted">·</span>
+          <Avatar name={activity.by} />
+          {activity.by}
+        </dd>
+      ) : (
+        <dd className="cms-muted">Never</dd>
+      )}
     </div>
   );
 }
 
-/** The data sources list page. */
+/** The data sources list page, a grid of cards. */
 export default function DataSources() {
-  const cell = {padding: '10px 10px'};
-  const divider = {borderLeft: '1px solid var(--cms-border)'};
   return (
     <CmsFrame active="data">
-      <div style={{padding: '24px 28px', fontSize: '12px'}}>
-        <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
-          <div>
-            <h1 className="cms-h1">Data Sources</h1>
-            <p className="cms-muted" style={{margin: '6px 0 16px'}}>
-              Sync data from external services, like Google Sheets and JSON
-              APIs, on demand or on a schedule. Publish it on its own or with a
-              release.
-            </p>
+      <style>{DATA_SOURCES_CSS}</style>
+      <div style={{padding: '22px 28px', fontSize: '12px'}}>
+        <h1 className="cms-h1">Data Sources</h1>
+        <p className="cms-muted" style={{margin: '6px 0 16px'}}>
+          Sync data from external services like Google Sheets or an HTTP
+          endpoint for use on the site.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '12px',
+          }}
+        >
+          <div className="cms-segmented">
+            <span className="active">
+              Active
+              <span className="cms-segmented__count">
+                {DATA_SOURCES.length}
+              </span>
+            </span>
+            <span>
+              Archived
+              <span className="cms-segmented__count">2</span>
+            </span>
           </div>
           <span
             className="cms-button cms-button--dark"
@@ -179,143 +290,74 @@ export default function DataSources() {
             New data source
           </span>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            gap: '8px',
-            margin: '8px 0 12px',
-          }}
-        >
-          <span
-            style={{
-              position: 'relative',
-              width: '30px',
-              height: '16px',
-              borderRadius: '8px',
-              background: '#e9ecef',
-              border: '1px solid #dee2e6',
-            }}
-          >
-            <span
-              style={{
-                position: 'absolute',
-                top: '1px',
-                left: '1px',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: '#fff',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-              }}
-            />
-          </span>
-          Show archived
-        </div>
-        <table
-          className="cms-table"
-          style={{tableLayout: 'fixed', overflow: 'visible'}}
-        >
-          <thead>
-            <tr>
-              <th style={{...cell, width: '126px', borderTopLeftRadius: '6px'}}>
-                id
-              </th>
-              <th style={{...cell, ...divider, width: '126px'}}>description</th>
-              <th style={{...cell, ...divider, width: '74px'}}>type</th>
-              <th style={{...cell, ...divider}}>url</th>
-              <th style={{...cell, ...divider, width: '96px'}}>status</th>
-              <th style={{...cell, ...divider, width: '144px'}}>last synced</th>
-              <th
-                style={{
-                  ...cell,
-                  ...divider,
-                  width: '160px',
-                  borderTopRightRadius: '6px',
-                }}
-              >
-                last published
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {DATA_SOURCES.map((ds, i) => (
-              <tr style={{background: i % 2 === 0 ? '#f8f9fa' : undefined}}>
-                <td style={{...cell, textDecoration: 'underline'}}>{ds.id}</td>
-                <td style={{...cell, ...divider}}>{ds.description}</td>
-                <td style={{...cell, ...divider}}>
+        <div className="ds__grid">
+          {DATA_SOURCES.map((ds) => (
+            <article className="ds__card">
+              <div className="ds__body">
+                <div className="ds__header">
                   <span
-                    style={{display: 'flex', alignItems: 'center', gap: '6px'}}
+                    className={`ds__icon ${
+                      ds.type === 'gsheet' ? 'ds__icon--sheet' : ''
+                    }`}
                   >
-                    <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '4px',
-                        background: 'var(--cms-chip)',
-                        color: 'var(--cms-text-muted)',
-                      }}
-                    >
-                      {ds.type === 'gsheet' ? (
-                        <IconTable size={13} stroke={1.5} />
-                      ) : (
-                        <IconWorld size={13} stroke={1.5} />
-                      )}
-                    </span>
-                    {ds.type}
+                    {ds.type === 'gsheet' ? (
+                      <IconTable size={17} stroke={1.5} />
+                    ) : (
+                      <IconWorld size={17} stroke={1.5} />
+                    )}
                   </span>
-                </td>
-                <td style={{...cell, ...divider}}>
-                  <span
-                    style={{display: 'flex', alignItems: 'center', gap: '6px'}}
-                  >
-                    {ds.type === 'gsheet' && (
-                      <span
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flex: '0 0 22px',
-                          height: '22px',
-                          borderRadius: '4px',
-                          background: '#40c057',
-                          color: '#fff',
-                        }}
-                      >
-                        <IconTable size={15} stroke={2.25} />
+                  <div className="ds__title">
+                    <div className="ds__id">{ds.id}</div>
+                    <div className="ds__source">{ds.source}</div>
+                  </div>
+                  <div className="ds__badges">
+                    <span
+                      className={`cms-badge ${
+                        ds.status === 'published'
+                          ? 'cms-badge--published'
+                          : 'cms-badge--draft'
+                      }`}
+                    >
+                      {ds.status === 'published' ? 'Published' : 'Unpublished'}
+                    </span>
+                    {ds.hasChanges && (
+                      <span className="cms-badge cms-badge--locked">
+                        Has changes
                       </span>
                     )}
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        textDecoration:
-                          ds.type === 'gsheet' ? 'underline' : undefined,
-                      }}
-                    >
-                      {ds.url}
-                    </span>
-                  </span>
-                </td>
-                <td style={{...cell, ...divider}}>
-                  <StatusBadge status={ds.status} />
-                </td>
-                <td style={{...cell, ...divider, position: 'relative'}}>
-                  {ds.syncedTooltip && <Tooltip>{ds.syncedTooltip}</Tooltip>}
-                  <StatusButton label={ds.synced} action="sync" />
-                </td>
-                <td style={{...cell, ...divider}}>
-                  <StatusButton label={ds.published} action="publish" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </div>
+                </div>
+                <p className="ds__description">{ds.description}</p>
+                <dl className="ds__stats">
+                  <Stat
+                    label="Synced"
+                    activity={ds.synced}
+                    newer={ds.hasChanges}
+                  />
+                  <Stat label="Published" activity={ds.published} />
+                  <div className="ds__stat">
+                    <dt>Schedule</dt>
+                    <dd>{ds.schedule}</dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="ds__actions">
+                <span className="cms-button">
+                  <IconRefresh />
+                  Sync
+                </span>
+                {/* Publish is disabled when the latest sync is already live. */}
+                <span
+                  className="cms-button cms-button--blue"
+                  aria-disabled={ds.status === 'published' && !ds.hasChanges}
+                >
+                  <IconArrowUp />
+                  Publish
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </CmsFrame>
   );
