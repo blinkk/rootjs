@@ -1509,6 +1509,12 @@ DocEditor.ObjectField = (props: FieldProps) => {
   );
 };
 
+/**
+ * A collapsible group of fields. The fields stay mounted while collapsed, so
+ * don't lazy-mount them: find in page (cmd+f) reveals matches inside a closed
+ * `<details>`, and preview clicks find fields by id (see `useDeeplink()`).
+ * Array items rely on the same behavior.
+ */
 DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   const collapsed = field.drawerOptions?.collapsed || false;
@@ -2836,6 +2842,7 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                 </Menu>
               </div>
             </summary>
+            {/* Stays mounted while collapsed; see `ObjectFieldDrawer`. */}
             <div className="DocEditor__ArrayField__item__body border-2 border-t-0 border-solid border-border p-4 max-md:p-3">
               <DocEditor.Field
                 key={itemDeepKey}
