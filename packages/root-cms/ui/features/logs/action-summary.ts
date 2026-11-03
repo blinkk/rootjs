@@ -271,24 +271,24 @@ const ACTION_PHRASES: Record<
 
 /** Metadata shown in the expanded details of the CMS's own actions. */
 const DETAIL_LABELS: Record<string, string> = {
-  publishMessage: 'Message',
-  taskTitle: 'Task',
-  content: 'Comment',
-  mentions: 'Mentions',
-  reason: 'Reason',
-  scheduledAt: 'Publish date',
-  until: 'Locked until',
-  versionModifiedAt: 'Version from',
-  versionModifiedBy: 'Version by',
-  docIds: 'Docs',
-  dataSourceIds: 'Data sources',
-  overwritten: 'Overwritten',
-  collections: 'Collections',
-  autoPublish: 'Auto-publish',
-  service: 'Service',
-  locales: 'Locales',
-  languages: 'Languages',
-  numStrings: 'Strings',
+  publishMessage: 'message',
+  taskTitle: 'task',
+  content: 'comment',
+  mentions: 'mentions',
+  reason: 'reason',
+  scheduledAt: 'publishDate',
+  until: 'lockedUntil',
+  versionModifiedAt: 'versionFrom',
+  versionModifiedBy: 'versionBy',
+  docIds: 'docs',
+  dataSourceIds: 'dataSources',
+  overwritten: 'overwritten',
+  collections: 'collections',
+  autoPublish: 'autoPublish',
+  service: 'service',
+  locales: 'locales',
+  languages: 'languages',
+  numStrings: 'strings',
 };
 
 /** Metadata values that are dates. */
@@ -400,15 +400,13 @@ export function getActionDetails(action: Action): ActionDetail[] {
 
   // The sentence can truncate before the end of a long change.
   if (action.action === 'tasks.update_metadata' && metadata.field) {
-    const {field, from, to} = formatTaskMetadataChange(
-      metadata as TaskMetadataChange
-    );
-    details.push({label: field, value: `${from} → ${to}`});
+    const {from, to} = formatTaskMetadataChange(metadata as TaskMetadataChange);
+    details.push({label: metadata.field, value: `${from} → ${to}`});
   }
 
   if (action.action === 'acls.save_groups' && metadata.changes?.length > 0) {
     details.push({
-      label: 'Changes',
+      label: 'changes',
       value: metadata.changes.join('\n'),
       multiline: true,
     });
@@ -416,7 +414,7 @@ export function getActionDetails(action: Action): ActionDetail[] {
 
   // The sentence can truncate before its " with Root AI" tail.
   if (metadata.source === 'root-ai') {
-    details.push({label: 'Made with', value: 'Root AI'});
+    details.push({label: 'madeWith', value: 'Root AI'});
   }
 
   if (action.action === 'asset.sync_run') {
@@ -424,7 +422,7 @@ export function getActionDetails(action: Action): ActionDetail[] {
       .filter((key) => metadata[key] > 0)
       .map((key) => `${metadata[key]} ${key}`);
     details.push({
-      label: 'Result',
+      label: 'result',
       value: result.length > 0 ? result.join(', ') : 'Up to date',
     });
   }
