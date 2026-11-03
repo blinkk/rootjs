@@ -82,8 +82,51 @@ function enterOffset() {
     : 'translateY(100%)';
 }
 
+/** How long the toasts around a toast take to make its space, in ms. */
+const EXPAND_DURATION = 150;
+
 /** How long a toast takes to slide in or out, in ms (Mantine's 250). */
-const TRANSITION_DURATION = 250;
+const SLIDE_DURATION = 250;
+
+const TRANSITION_DURATION = EXPAND_DURATION + SLIDE_DURATION;
+
+/** Where the expand phase ends (or, leaving, starts) in the transition. */
+const EXPAND_OFFSET = EXPAND_DURATION / TRANSITION_DURATION;
+
+/**
+ * Keyframes that open the toast's space first, then slide it in, so it
+ * moves straight in rather than diagonally while the stack shifts. Reversed,
+ * the toast slides out first, then its space closes.
+ */
+function enterKeyframes(el: HTMLElement): Keyframe[] {
+  const {hidden, shown} = slideKeyframes(el);
+  return [
+    {...hidden, easing: 'ease'},
+    {
+      ...shown,
+      opacity: 0,
+      transform: hidden.transform,
+      offset: EXPAND_OFFSET,
+      easing: 'ease',
+    },
+    shown,
+  ];
+}
+
+function exitKeyframes(el: HTMLElement): Keyframe[] {
+  const {hidden, shown} = slideKeyframes(el);
+  return [
+    {...shown, easing: 'ease'},
+    {
+      ...shown,
+      opacity: 0,
+      transform: hidden.transform,
+      offset: 1 - EXPAND_OFFSET,
+      easing: 'ease',
+    },
+    hidden,
+  ];
+}
 
 /**
  * Keyframes for a toast slid out and collapsed to no height, so the toasts
@@ -182,15 +225,11 @@ export function Toast(props: ToastProps) {
     // A toast hidden as it's shown (it remounts to leave) skips straight to
     // its exit.
     if (!leaving && canAnimate(el)) {
-      const {hidden, shown} = slideKeyframes(el);
-      el.animate([hidden, shown], {
-        duration: TRANSITION_DURATION,
-        easing: 'ease',
-      });
+      el.animate(enterKeyframes(el), {duration: TRANSITION_DURATION});
     }
   }, []);
 
-  // Exit: slide out while collapsing the space it took, so the toasts around
+  // Exit: slide out, then collapse the space it took, so the toasts around
   // it slide into place.
   useLayoutEffect(() => {
     if (!leaving) {
@@ -204,10 +243,8 @@ export function Toast(props: ToastProps) {
     }
     // Measured at rest, not partway through the enter animation.
     el.getAnimations().forEach((a) => a.cancel());
-    const {hidden, shown} = slideKeyframes(el);
-    const anim = el.animate([shown, hidden], {
+    const anim = el.animate(exitKeyframes(el), {
       duration: TRANSITION_DURATION,
-      easing: 'ease',
       fill: 'forwards',
     });
     anim.onfinish = () => onExited?.(toast.id);
