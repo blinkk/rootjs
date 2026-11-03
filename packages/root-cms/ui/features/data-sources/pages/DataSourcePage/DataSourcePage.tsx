@@ -82,9 +82,9 @@ export function DataSourcePage(props: {id: string}) {
   return (
     <Layout>
       <div className="DataSourcePage bg-page p-page">
-        <div className="DataSourcePage__content max-w-7xl">
+        <div className="DataSourcePage__content">
           <Breadcrumbs
-            className="DataSourcePage__breadcrumbs mb-3"
+            className="DataSourcePage__breadcrumbs mb-3 max-w-7xl"
             items={[{label: 'Data Sources', href: '/cms/data'}, {label: id}]}
           />
           {loading ? (
@@ -106,7 +106,7 @@ export function DataSourcePage(props: {id: string}) {
               />
             </>
           ) : (
-            <Text className="DataSourcePage__notFound">
+            <Text className="DataSourcePage__notFound max-w-7xl">
               Data source not found.
             </Text>
           )}
@@ -136,7 +136,7 @@ DataSourcePage.Header = (props: {
   const publish = useDataSourceAction(dataSource, 'publish', props.onChange);
 
   return (
-    <div className="DataSourcePage__header mb-6 flex flex-wrap items-start gap-4">
+    <div className="DataSourcePage__header mb-6 flex max-w-7xl flex-wrap items-start gap-4">
       <div className="DataSourcePage__headerText min-w-0 grow basis-100">
         <div className="DataSourcePage__title flex flex-wrap items-center gap-2.5">
           <Heading
@@ -203,7 +203,7 @@ DataSourcePage.Stats = (props: {dataSource: DataSource}) => {
   const hasChanges =
     !dataSource.archivedAt && testHasUnpublishedChanges(dataSource);
   return (
-    <dl className="DataSourcePage__stats m-0 mb-8 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-surface-active shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+    <dl className="DataSourcePage__stats m-0 mb-8 grid max-w-7xl grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-surface-active shadow-sm sm:grid-cols-2 lg:grid-cols-4">
       <DataSourcePage.Stat label="Source">
         <DataSourcePage.Source dataSource={dataSource} />
       </DataSourcePage.Stat>
@@ -329,7 +329,7 @@ DataSourcePage.DataSection = (props: {
   }
   return (
     <div className="DataSourcePage__data">
-      <div className="DataSourcePage__dataHeader mb-3 flex flex-wrap items-center gap-3">
+      <div className="DataSourcePage__dataHeader mb-3 flex max-w-7xl flex-wrap items-center gap-3">
         <Heading size="h2" className="mr-2">
           Data
         </Heading>
@@ -346,7 +346,7 @@ DataSourcePage.DataSection = (props: {
           }))}
         />
         {caption && (
-          <Text size="body-sm" color="gray" className="ml-auto">
+          <Text size="body-sm" color="gray">
             {caption}
           </Text>
         )}
