@@ -770,15 +770,15 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
 function ActionLogsCompactItemDetails(props: {action: Action}) {
   const {action} = props;
   const details: ActionDetail[] = [
-    {label: 'Action', value: action.action, code: true},
+    {label: 'action', value: action.action, code: true},
     ...getActionDetails(action),
   ];
   if (isUserAction(action)) {
-    details.push({label: 'User', value: action.by});
+    details.push({label: 'user', value: action.by});
   }
   const millis = toTimestamp(action.timestamp)?.toMillis();
   if (millis) {
-    details.push({label: 'Time', value: formatLongDate(millis)});
+    details.push({label: 'time', value: formatLongDate(millis)});
   }
 
   return (
