@@ -1,5 +1,5 @@
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {isSlugValid} from '../../../../../shared/slug.js';
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
@@ -35,11 +35,15 @@ export interface ReleaseFormProps {
 
 export function ReleaseForm(props: ReleaseFormProps) {
   const {route} = useLocation();
-  const formRef = useRef<HTMLFormElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!props.releaseId);
-  const [release, setRelease] = useState<Release | null>(null);
+  // Held in state so re-renders (e.g. when the docs list changes) don't
+  // generate a new id or wipe what the user typed.
+  const [releaseId, setReleaseId] = useState(
+    () => props.releaseId || generateReleaseId()
+  );
+  const [description, setDescription] = useState('');
   const [docIds, setDocIds] = useState<string[]>([]);
   const [dataSourceIds, setDataSourceIds] = useState<string[]>([]);
   const docPickerModal = useDocPickerModal();
@@ -53,7 +57,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
     console.log(releaseId);
     await notifyErrors(async () => {
       const release = await getRelease(releaseId);
-      setRelease(release);
+      setDescription(release?.description || '');
       setDocIds(release?.docIds || []);
       setDataSourceIds(release?.dataSourceIds || []);
     });
@@ -70,54 +74,43 @@ export function ReleaseForm(props: ReleaseFormProps) {
 
   async function onSubmit() {
     setError('');
-    const form = formRef.current!;
-
-    function getValue(name: string) {
-      const inputEl = form.elements[name as any] as HTMLInputElement;
-      if (inputEl) {
-        return inputEl.value.trim();
-      }
-      return '';
-    }
-
-    const releaseId = props.releaseId || getValue('id');
-    if (!releaseId) {
+    const id = (props.releaseId || releaseId).trim();
+    if (!id) {
       setError('missing id');
       return;
     }
-    if (!isSlugValid(releaseId)) {
+    if (!isSlugValid(id)) {
       setError('id is invalid (alphanumeric characters and dashes only)');
       return;
     }
 
     const release: Release = {
-      id: releaseId,
-      description: getValue('description'),
+      id: id,
+      description: description.trim(),
       docIds: docIds,
       dataSourceIds: dataSourceIds,
     };
 
     try {
-      setRelease(release);
       setSubmitting(true);
       if (props.releaseId) {
         await updateRelease(props.releaseId, release);
         showNotification({
           title: 'Saved release',
-          message: `Updated ${releaseId}`,
+          message: `Updated ${id}`,
           autoClose: 5000,
         });
         setSubmitting(false);
       } else {
-        await addRelease(releaseId, release);
+        await addRelease(id, release);
         showNotification({
           title: 'Added release',
-          message: `Successfully added ${releaseId}`,
+          message: `Successfully added ${id}`,
           autoClose: 5000,
         });
         setSubmitting(false);
       }
-      route(`/cms/releases/${releaseId}`);
+      route(`/cms/releases/${id}`);
     } catch (err) {
       console.error(err);
       showNotification({
@@ -202,7 +195,6 @@ export function ReleaseForm(props: ReleaseFormProps) {
         'ReleaseForm relative flex max-w-162 flex-col gap-4 text-base',
         props.className
       )}
-      ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
@@ -214,7 +206,8 @@ export function ReleaseForm(props: ReleaseFormProps) {
         name="id"
         label="ID"
         description="Unique identifier for the release. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
-        defaultValue={props.releaseId || generateReleaseId()}
+        value={releaseId}
+        onInput={(e) => setReleaseId(e.currentTarget.value)}
         disabled={!!props.releaseId}
       />
       <Textarea
@@ -222,7 +215,8 @@ export function ReleaseForm(props: ReleaseFormProps) {
         name="description"
         label="Description"
         description="Optional."
-        value={release?.description}
+        value={description}
+        onInput={(e) => setDescription(e.currentTarget.value)}
         disabled={!canPublish}
       />
       <Field
