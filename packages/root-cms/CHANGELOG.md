@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 4.3.2
+
+### Patch Changes
+
+- 6312fef: fix: keep the chosen user when replacing a task's assignee or cc
+- dcc2aa6: feat: show what changed in the action log when sharing settings are saved
+- 6273aed: chore: use a more muted color palette for avatars without a profile photo
+  - @blinkk/root@4.3.2
+
 ## 4.3.1
 
 ### Patch Changes
