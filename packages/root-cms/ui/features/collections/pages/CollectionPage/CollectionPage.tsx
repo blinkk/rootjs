@@ -276,7 +276,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
       <div className="CollectionPage__collection">
         <div className="CollectionPage__collection__docsTab pb-30">
           <div className="CollectionPage__collection__docsTab__header mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-            <h1 className="CollectionPage__collection__docsTab__header__title m-0 min-w-0 flex-1 break-words text-xl font-semibold tracking-tight">
+            <h1 className="CollectionPage__collection__docsTab__header__title m-0 min-w-0 flex-auto break-words text-xl font-semibold tracking-tight">
               {collection.name || props.collection}
             </h1>
             <div className="CollectionPage__collection__docsTab__controls flex flex-wrap items-center gap-x-4 gap-y-2 text-base">
