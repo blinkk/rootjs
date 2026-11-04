@@ -277,6 +277,38 @@ describe('extract', () => {
       ],
     };
 
+    it('should extract strings from rich text stored in `_array` notation', () => {
+      const strings = new Set<string>();
+      extractRichTextStrings(
+        strings,
+        {
+          blocks: {
+            _array: ['a', 'b'],
+            a: {type: 'paragraph', data: {text: 'First paragraph'}},
+            b: {
+              type: 'unorderedList',
+              data: {
+                items: {
+                  _array: ['c'],
+                  c: {content: 'List item'},
+                },
+              },
+            },
+          },
+        } as any,
+        richTextField
+      );
+
+      expect(Array.from(strings)).toEqual(['First paragraph', 'List item']);
+    });
+
+    it('should ignore rich text without blocks', () => {
+      const strings = new Set<string>();
+      extractRichTextStrings(strings, {blocks: 'oops'} as any, richTextField);
+      extractRichTextStrings(strings, null as any, richTextField);
+      expect(strings.size).toBe(0);
+    });
+
     it('should extract strings from custom block components', () => {
       const data = {
         '@body': {},

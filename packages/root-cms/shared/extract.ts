@@ -6,6 +6,7 @@
  */
 
 import type * as schema from '../core/schema.js';
+import {unmarshalData} from './marshal.js';
 import {isObject} from './objects.js';
 import type {
   RichTextBlock,
@@ -267,7 +268,14 @@ export function extractRichTextStrings(
     inlineComponents: toSchemaMap(field?.inlineComponents),
     types,
   };
-  const blocks = data?.blocks || [];
+  // Rich text saved without a `time` and `version` is stored with its `blocks`
+  // (and nested lists, rows, etc.) in the `_array` notation, so convert it back
+  // to plain arrays first.
+  const richText: RichTextData | undefined = unmarshalData(data);
+  const blocks = richText?.blocks;
+  if (!Array.isArray(blocks)) {
+    return;
+  }
   blocks.forEach((block) => {
     extractBlockStrings(strings, block, ctx);
   });
