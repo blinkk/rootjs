@@ -94,6 +94,13 @@ const TRANSITION_DURATION = EXPAND_DURATION + SLIDE_DURATION;
 const EXPAND_OFFSET = EXPAND_DURATION / TRANSITION_DURATION;
 
 /**
+ * Mantine's notification easing: its last control point (y > 1) carries the
+ * toast slightly past its resting place before it settles, for a small
+ * bounce at the end of the slide in.
+ */
+const SLIDE_IN_EASING = 'cubic-bezier(.51, .3, 0, 1.21)';
+
+/**
  * Keyframes that open the toast's space first, then slide it in, so it
  * moves straight in rather than diagonally while the stack shifts. Reversed,
  * the toast slides out first, then its space closes.
@@ -107,7 +114,7 @@ function enterKeyframes(el: HTMLElement): Keyframe[] {
       opacity: 0,
       transform: hidden.transform,
       offset: EXPAND_OFFSET,
-      easing: 'ease',
+      easing: SLIDE_IN_EASING,
     },
     shown,
   ];
