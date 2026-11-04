@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 4.3.3
+
+### Patch Changes
+
+- febd484: fix: keep the release id and description when the docs list changes in the release form
+- 69d4b0f: fix: wrap the docs list controls below the collection title on narrow windows instead of squeezing the title
+- 12572f6: fix: let the data table on the data source page expand to the full page width
+- 2d0afe4: fix: slide toasts straight in from the right instead of diagonally
+  - @blinkk/root@4.3.3
+
 ## 4.3.2
 
 ### Patch Changes
