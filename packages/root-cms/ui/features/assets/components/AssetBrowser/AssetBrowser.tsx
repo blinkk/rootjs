@@ -76,6 +76,7 @@ import {
   AssetSortDir,
   AssetSortField,
   DEFAULT_ASSET_SORT,
+  DeleteAssetResult,
   countFolderContents,
   createAssetFile,
   createAssetFolder,
@@ -107,7 +108,11 @@ import {
   getUploadFiles,
   getUploadFilesFromDataTransfer,
 } from '../../file-tree.js';
-import {AssetDetailsModal, testIsCroppableAsset} from './AssetDetailsModal.js';
+import {
+  AssetDetailsModal,
+  notifyDeleteFileIssues,
+  testIsCroppableAsset,
+} from './AssetDetailsModal.js';
 import {
   AssetThumbnail,
   THUMB_CLASSES,
@@ -1791,6 +1796,7 @@ function DeleteAssetModal(props: {
   const assetIds = assets.map((asset) => asset.id).join(',');
 
   const [loading, setLoading] = useState(false);
+  const [deleteFiles, setDeleteFiles] = useState(false);
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [folderContents, setFolderContents] =
     useState<AssetFolderContents | null>(null);
@@ -1836,14 +1842,24 @@ function DeleteAssetModal(props: {
   // unknown count still warns since the delete removes nested assets.
   const deletesFolderContents =
     folders.length > 0 && (!folderContents || folderContents.total > 0);
+  // Whether the delete can remove any files (unknown folder contents may).
+  const deletesAnyFiles =
+    files.length > 0 ||
+    (folders.length > 0 && (!folderContents || folderContents.files > 0));
 
   async function onDelete() {
     setLoading(true);
     const failed: string[] = [];
+    const results: DeleteAssetResult[] = [];
     let numDeleted = 0;
     for (const asset of assets) {
       try {
-        await deleteAsset(asset, {recursive: true});
+        results.push(
+          await deleteAsset(asset, {
+            recursive: true,
+            deleteFiles: deleteFiles && deletesAnyFiles,
+          })
+        );
         numDeleted += 1;
       } catch (err) {
         console.error(`failed to delete ${asset.name}:`, err);
@@ -1860,14 +1876,21 @@ function DeleteAssetModal(props: {
       });
     }
     if (numDeleted > 0) {
+      const numFiles = results.reduce(
+        (total, res) => total + res.deletedFiles.length,
+        0
+      );
+      const filesSuffix =
+        numFiles > 0 ? ` and ${numFiles} file(s) from GCS` : '';
       showNotification({
         message:
           assets.length === 1
-            ? `Deleted "${assets[0].name}".`
-            : `Deleted ${numDeleted} item(s).`,
+            ? `Deleted "${assets[0].name}"${filesSuffix}.`
+            : `Deleted ${numDeleted} item(s)${filesSuffix}.`,
         color: 'green',
       });
     }
+    notifyDeleteFileIssues(results);
     props.onDeleted();
   }
 
@@ -1892,7 +1915,7 @@ function DeleteAssetModal(props: {
             <b>{assets.length} items</b>
           )}{' '}
           from the asset manager?
-          {files.length > 0 && (
+          {files.length > 0 && !deleteFiles && (
             <>
               {' '}
               The underlying files are not deleted from GCS, and docs that
@@ -1920,9 +1943,23 @@ function DeleteAssetModal(props: {
         {usageCount !== null && usageCount > 0 && (
           <div className={WARNING_CLASSES}>
             {assets.length === 1 ? 'This asset is' : 'These assets are'}{' '}
-            currently used in {usageCount} doc(s). Those docs will no longer
-            receive updates when the asset changes.
+            currently used in {usageCount} doc(s).{' '}
+            {deleteFiles
+              ? 'The files will no longer load in those docs.'
+              : 'Those docs will no longer receive updates when the asset changes.'}
           </div>
+        )}
+        {deletesAnyFiles && !checkingFolders && (
+          <Checkbox
+            className="AssetBrowser__deleteModal__deleteFiles"
+            label="Also delete the files from GCS"
+            description={`Permanently removes the files${
+              folders.length > 0 ? ' (including those in nested folders)' : ''
+            } from the storage bucket. Files that other assets still use are kept.`}
+            checked={deleteFiles}
+            disabled={loading}
+            onChange={(e) => setDeleteFiles(e.currentTarget.checked)}
+          />
         )}
         <div className="AssetBrowser__deleteModal__buttons flex justify-end gap-2">
           <Button size="md" onClick={props.onClose} disabled={loading}>

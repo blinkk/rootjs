@@ -46,7 +46,11 @@ import {
   validateAssetName,
   type AssetSyncResult,
 } from '../../../shared/assets.js';
-import {UploadFileOptions, UploadedFile} from '../../integrations/gcs.js';
+import {
+  UploadFileOptions,
+  UploadedFile,
+  deleteFileFromGCS,
+} from '../../integrations/gcs.js';
 import {autokey} from '../../utils/rand.js';
 import {removeDocsFromCache} from '../documents/doc-cache.js';
 import type {CMSDoc} from '../documents/doc.js';
@@ -976,21 +980,148 @@ async function deleteAssetDocs(assets: Asset[]) {
 }
 
 /**
+ * Hosts whose URLs `deleteFileFromGCS()` can resolve to a GCS object, for
+ * files that don't have an explicit `gcsPath`.
+ */
+const GCS_URL_RE =
+  /^https?:\/\/(storage\.googleapis\.com|storage\.cloud\.google\.com|firebasestorage\.googleapis\.com)\//;
+
+/**
+ * Returns the GCS location of an uploaded file (in a form accepted by
+ * `deleteFileFromGCS()`), or null when the file isn't stored in GCS. Image
+ * files served through Google Cloud Images store their bucket path in
+ * `gcsPath`; other uploads use their public `storage.googleapis.com` URL.
+ */
+export function getFileGcsPath(file?: UploadedFile | null): string | null {
+  if (file?.gcsPath) {
+    return file.gcsPath;
+  }
+  if (file?.src && GCS_URL_RE.test(file.src)) {
+    return file.src;
+  }
+  return null;
+}
+
+/** Options for {@link deleteAsset}. */
+export interface DeleteAssetOptions {
+  /** Deletes a non-empty folder along with everything nested inside it. */
+  recursive?: boolean;
+  /**
+   * Also deletes the underlying files from the GCS bucket. Files that other
+   * assets in the library still use are kept. Docs that embed a deleted file
+   * keep their copy of the URL, which will no longer resolve.
+   */
+  deleteFiles?: boolean;
+}
+
+/** Outcome of deleting the GCS files for {@link deleteAsset}. */
+export interface DeleteAssetResult {
+  /** GCS files that were deleted. */
+  deletedFiles: string[];
+  /** GCS files kept because other assets in the library still use them. */
+  keptFiles: string[];
+  /** Files that could not be deleted (errors, or not stored in GCS). */
+  failedFiles: string[];
+}
+
+/** Number of GCS files deleted in parallel. */
+const FILE_DELETE_CONCURRENCY = 10;
+
+/**
+ * Returns true if an asset outside of `excludeIds` points at the same file.
+ * Uploads are content-addressed, so re-uploading the same bytes (or copying
+ * an asset) yields multiple assets that share one GCS object.
+ */
+async function isFileUsedByOtherAssets(
+  src: string,
+  excludeIds: Set<string>
+): Promise<boolean> {
+  const snapshot = await getDocs(
+    query(getAssetsDbCollection(), where('file.src', '==', src))
+  );
+  let used = false;
+  snapshot.forEach((snap) => {
+    if (!excludeIds.has((snap.data() as Asset).id)) {
+      used = true;
+    }
+  });
+  return used;
+}
+
+/**
+ * Deletes the GCS files of deleted file assets. `deletedIds` are the ids of
+ * every asset removed by the delete, so assets removed alongside each other
+ * don't keep each other's files alive.
+ */
+async function deleteAssetFiles(
+  files: AssetFile[],
+  deletedIds: Set<string>
+): Promise<DeleteAssetResult> {
+  const result: DeleteAssetResult = {
+    deletedFiles: [],
+    keptFiles: [],
+    failedFiles: [],
+  };
+  // Dedupes assets that share the same file.
+  const filesByPath = new Map<string, UploadedFile>();
+  for (const asset of files) {
+    const gcsPath = getFileGcsPath(asset.file);
+    if (!gcsPath) {
+      result.failedFiles.push(asset.file?.src || asset.name);
+      continue;
+    }
+    filesByPath.set(gcsPath, asset.file);
+  }
+
+  async function deleteFile(gcsPath: string, file: UploadedFile) {
+    try {
+      if (await isFileUsedByOtherAssets(file.src, deletedIds)) {
+        result.keptFiles.push(gcsPath);
+        return;
+      }
+      await deleteFileFromGCS(gcsPath);
+      result.deletedFiles.push(gcsPath);
+    } catch (err: any) {
+      // A file that's already gone is as good as deleted.
+      if (err?.code === 'storage/object-not-found') {
+        result.deletedFiles.push(gcsPath);
+        return;
+      }
+      console.error(`failed to delete ${gcsPath} from gcs:`, err);
+      result.failedFiles.push(gcsPath);
+    }
+  }
+
+  const entries = Array.from(filesByPath.entries());
+  for (let i = 0; i < entries.length; i += FILE_DELETE_CONCURRENCY) {
+    const chunk = entries.slice(i, i + FILE_DELETE_CONCURRENCY);
+    await Promise.all(
+      chunk.map(([gcsPath, file]) => deleteFile(gcsPath, file))
+    );
+  }
+  return result;
+}
+
+/**
  * Deletes an asset from the asset library. Deleting a folder that still has
  * contents throws a {@link FolderNotEmptyError} unless `recursive` is set, in
- * which case everything nested below the folder is deleted along with it. The
- * underlying GCS files are left untouched since published docs may still
- * reference them.
+ * which case everything nested below the folder is deleted along with it.
+ *
+ * By default the underlying GCS files are left untouched since published docs
+ * may still reference them. Set `deleteFiles` to delete them as well; the
+ * asset docs are removed first, so a failed file delete never leaves an asset
+ * pointing at a missing file.
  */
 export async function deleteAsset(
   asset: Asset,
-  options?: {recursive?: boolean}
-) {
+  options?: DeleteAssetOptions
+): Promise<DeleteAssetResult> {
   const metadata: Record<string, any> = {
     assetId: asset.id,
     name: asset.name,
     path: joinFolderPath(asset.parent, asset.name),
   };
+  const deletedAssets: Asset[] = [asset];
   if (asset.type === 'folder') {
     const folderPath = joinFolderPath(asset.parent, asset.name);
     const descendants = await listFolderDescendants(folderPath);
@@ -999,12 +1130,33 @@ export async function deleteAsset(
         throw new FolderNotEmptyError('Folder is not empty.');
       }
       await deleteAssetDocs(descendants);
+      deletedAssets.push(...descendants);
       metadata.folder = folderPath;
       metadata.numDescendants = descendants.length;
     }
   }
   await deleteDoc(doc(getAssetsDbCollection(), asset.id));
+
+  let result: DeleteAssetResult = {
+    deletedFiles: [],
+    keptFiles: [],
+    failedFiles: [],
+  };
+  if (options?.deleteFiles) {
+    const files = deletedAssets.filter(
+      (deleted): deleted is AssetFile => deleted.type === 'file'
+    );
+    if (files.length > 0) {
+      result = await deleteAssetFiles(
+        files,
+        new Set(deletedAssets.map((deleted) => deleted.id))
+      );
+    }
+    metadata.deleteFiles = true;
+    metadata.numFilesDeleted = result.deletedFiles.length;
+  }
   logAction('asset.delete', {metadata: metadata});
+  return result;
 }
 
 /**

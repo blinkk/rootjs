@@ -36,6 +36,7 @@ import {formatDateTime} from '../../../../utils/time.js';
 import {CMSDoc} from '../../../documents/doc.js';
 import {
   AssetFile,
+  DeleteAssetResult,
   createAssetFile,
   deleteAsset,
   findDocsUsingAsset,
@@ -98,6 +99,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   const [altText, setAltText] = useState(props.asset.file?.alt || '');
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteFiles, setDeleteFiles] = useState(false);
   const [pendingReplace, setPendingReplace] = useState<File | null>(null);
   const [usageDocs, setUsageDocs] = useState<CMSDoc[] | null>(null);
 
@@ -262,8 +264,15 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   async function onDelete() {
     setSaving(true);
     await notifyErrors(async () => {
-      await deleteAsset(asset);
-      showNotification({message: `Deleted "${asset.name}".`, color: 'green'});
+      const result = await deleteAsset(asset, {deleteFiles});
+      showNotification({
+        message:
+          result.deletedFiles.length > 0
+            ? `Deleted "${asset.name}" and its file.`
+            : `Deleted "${asset.name}".`,
+        color: 'green',
+      });
+      notifyDeleteFileIssues([result]);
       props.onDeleted();
     });
     setSaving(false);
@@ -517,15 +526,31 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           <div className="AssetBrowser__details__confirmDelete flex flex-col gap-2 rounded-sm bg-danger-soft p-3 text-base text-danger">
             <div>
               Delete <b>{asset.name}</b> from the asset library?
-              {usageDocs && usageDocs.length > 0 && (
-                <>
-                  {' '}
-                  This asset is used in {usageDocs.length} doc(s); those docs
-                  keep their copy of the file but will no longer receive
-                  updates.
-                </>
-              )}
+              {usageDocs &&
+                usageDocs.length > 0 &&
+                (deleteFiles ? (
+                  <>
+                    {' '}
+                    This asset is used in {usageDocs.length} doc(s); the file
+                    will no longer load in those docs.
+                  </>
+                ) : (
+                  <>
+                    {' '}
+                    This asset is used in {usageDocs.length} doc(s); those docs
+                    keep their copy of the file but will no longer receive
+                    updates.
+                  </>
+                ))}
             </div>
+            <Checkbox
+              className="AssetBrowser__details__confirmDelete__deleteFiles"
+              label="Also delete the file from GCS"
+              description="Permanently removes the file from the storage bucket. Files that other assets still use are kept."
+              checked={deleteFiles}
+              disabled={saving}
+              onChange={(e) => setDeleteFiles(e.currentTarget.checked)}
+            />
             <div className="AssetBrowser__details__confirmDelete__buttons flex gap-2">
               <Button
                 onClick={() => setConfirmingDelete(false)}
@@ -546,6 +571,29 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
       </div>
     </Dialog>
   );
+}
+
+/**
+ * Warns about GCS files that a delete kept (still used by other assets) or
+ * failed to remove.
+ */
+export function notifyDeleteFileIssues(results: DeleteAssetResult[]) {
+  const kept = results.reduce((n, res) => n + res.keptFiles.length, 0);
+  const failed = results.flatMap((res) => res.failedFiles);
+  if (kept > 0) {
+    showNotification({
+      message: `Kept ${kept} file(s) in GCS since other assets still use them.`,
+      color: 'yellow',
+    });
+  }
+  if (failed.length > 0) {
+    showNotification({
+      title: 'Failed to delete files from GCS',
+      message: failed.join(', '),
+      color: 'red',
+      autoClose: false,
+    });
+  }
 }
 
 /** A label / value row in the details table. */
