@@ -199,7 +199,7 @@ export function AccordionItem(props: AccordionItemProps) {
         'Accordion__control',
         'mx-1 flex size-control-sm shrink-0 cursor-pointer appearance-none items-center justify-center rounded-sm border-0 bg-transparent p-0 transition-colors',
         'hover:bg-surface-active focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
-        'disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:size-10'
+        'disabled:cursor-not-allowed disabled:opacity-(--cms-disabled-opacity) pointer-coarse:size-10'
       )}
     >
       {chevron}
@@ -233,7 +233,7 @@ export function AccordionItem(props: AccordionItemProps) {
             'Accordion__control',
             'flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent px-2 py-3 text-left font-sans text-base font-medium text-strong transition-colors',
             'hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
-            'disabled:cursor-not-allowed disabled:opacity-50',
+            'disabled:cursor-not-allowed disabled:opacity-(--cms-disabled-opacity)',
             chevronLeft && 'flex-row-reverse',
             classNames?.control
           )}

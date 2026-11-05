@@ -115,14 +115,14 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
               'peer-checked:bg-primary',
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
               'peer-aria-invalid:outline-1 peer-aria-invalid:outline-danger',
-              'peer-disabled:opacity-50'
+              'peer-disabled:opacity-(--cms-disabled-opacity)'
             )}
             aria-hidden="true"
           />
           <span
             className={cn(
-              'Switch__thumb pointer-events-none absolute rounded-full border border-border-strong bg-surface shadow-sm transition-[translate,border-color]',
-              'peer-checked:border-primary peer-checked:peer-disabled:border-primary/50',
+              'Switch__thumb pointer-events-none absolute rounded-full border border-border-strong bg-thumb shadow-sm transition-[translate,border-color,background-color]',
+              'peer-checked:border-primary peer-checked:bg-on-primary peer-checked:peer-disabled:border-primary/50',
               THUMB_SIZE_CLASSES[size]
             )}
             aria-hidden="true"

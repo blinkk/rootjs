@@ -93,6 +93,8 @@
    */
 
   --cms-color-track: #0f0f0e;
+  /* A light knob, so an off switch doesn't read as a hole in its track. */
+  --cms-color-thumb: #c8c8c2;
 
   /* --- Gradients: the archived badge's dark end (#25262b) disappears
    * into a dark page, so end it on a mid grey instead.
@@ -117,6 +119,10 @@
   --cms-color-violet: #b197fc;
   --cms-color-violet-soft: #241c3f;
   --cms-color-violet-strong: #d0bfff;
+
+  /* --- States: a disabled primary button fades less brightly ---------- */
+
+  --cms-disabled-opacity: 0.4;
 
   /* --- Elevation: shadows need more weight to read on dark ------------- */
 

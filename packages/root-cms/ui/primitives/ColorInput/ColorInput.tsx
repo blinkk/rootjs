@@ -164,7 +164,7 @@ export function ColorSwatches(props: ColorSwatchesProps) {
             'ColorSwatches__swatch relative m-0 size-5 cursor-pointer appearance-none rounded-sm border border-border-strong p-0',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
             'aria-pressed:outline-2 aria-pressed:outline-offset-1 aria-pressed:outline-strong',
-            'disabled:cursor-not-allowed disabled:opacity-50',
+            'disabled:cursor-not-allowed disabled:opacity-(--cms-disabled-opacity)',
             'pointer-coarse:size-8'
           )}
           style={{backgroundColor: color}}

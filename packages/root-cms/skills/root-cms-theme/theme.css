@@ -163,6 +163,18 @@
   --cms-color-track: var(--cms-color-surface-hover);
   /* The well's border. */
   --cms-color-track-border: var(--cms-color-border);
+  /* The knob of a `Switch` that's off. When it's on, the knob takes
+   * `--cms-color-on-primary`, over a primary-colored track.
+   */
+  --cms-color-thumb: var(--cms-color-surface);
+
+  /* --- Color: highlights ------------------------------------------------ */
+
+  /* Highlighted text in the rich text editor, and its marker for invisible
+   * characters such as non-breaking spaces. Drawn as a translucent tint and
+   * underline mixed from this color, so it reads on light and dark pages.
+   */
+  --cms-color-highlight: #ffd400;
 
   /* --- Color: task statuses -------------------------------------------- *
    * Tints for the tasks page's list group headers and board columns, one
@@ -253,6 +265,12 @@
   /* Modals and toasts. */
   --cms-shadow-lg:
     0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* How far a disabled control fades: buttons, checkboxes, switches,
+   * segmented controls. A dark theme with a light primary color may lower
+   * it, so a disabled primary button doesn't outshine enabled ones.
+   */
+  --cms-disabled-opacity: 0.5;
 
   /* --- Layout ---------------------------------------------------------- */
 

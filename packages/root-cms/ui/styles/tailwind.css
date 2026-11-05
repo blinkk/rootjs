@@ -99,6 +99,7 @@
   /* Control tracks (`SegmentedControl`). */
   --color-track: var(--cms-color-track);
   --color-track-border: var(--cms-color-track-border);
+  --color-thumb: var(--cms-color-thumb);
 
   /* Task status tints (`features/tasks`). */
   --color-task-new: var(--cms-task-status-new);
