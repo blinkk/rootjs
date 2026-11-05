@@ -74,6 +74,33 @@ const TASKS_CSS = `
   background: #fff;
   font-size: 11.5px;
 }
+.tm__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.tm__switch__track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ced4da;
+}
+.tm__switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid #ced4da;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
 .tm__board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -283,11 +310,9 @@ const COLUMNS: Array<{status: string; label: string; tasks: TaskCard[]}> = [
 ];
 
 const FILTERS: Array<[string, number]> = [
-  ['Active', 6],
+  ['All', 6],
   ['Assigned to me', 1],
   ['Created by me', 3],
-  ['Closed', 18],
-  ['All', 24],
 ];
 
 /** A task's target launch, as rendered by `TaskTargetLaunchLabel`. */
@@ -355,6 +380,12 @@ export default function Tasks() {
             ))}
           </div>
           <div className="tm__actions">
+            <span className="tm__switch">
+              Show closed
+              <span className="tm__switch__track">
+                <span className="tm__switch__thumb" />
+              </span>
+            </span>
             <span className="tm__sort">
               <IconArrowsSort size={14} strokeWidth={1.8} />
               Priority
