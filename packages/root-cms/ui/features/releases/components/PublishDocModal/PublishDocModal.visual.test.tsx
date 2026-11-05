@@ -274,7 +274,7 @@ function renderModal(docId: string, size: {width: number; height: number}) {
           width: size.width,
           minHeight: size.height,
           padding: 20,
-          background: '#fff',
+          background: 'var(--cms-color-surface)',
         }}
       >
         <PublishDocModal {...props} />

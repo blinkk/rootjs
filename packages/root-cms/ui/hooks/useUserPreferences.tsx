@@ -5,6 +5,8 @@ import {useFirebase} from './useFirebase.js';
 
 export interface UserPreferencesContextValue {
   preferences: Record<string, any>;
+  /** Whether `preferences` holds the user's saved values yet. */
+  loaded: boolean;
   setPreference: (key: string, value: any) => Promise<void>;
 }
 
@@ -15,6 +17,7 @@ export function UserPreferencesProvider(props: {children?: ComponentChildren}) {
   const {db, user} = useFirebase();
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const [preferences, setPreferences] = useState<Record<string, any>>({});
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const prefDocRef = doc(db, 'Projects', projectId, 'Users', user.uid);
@@ -26,6 +29,7 @@ export function UserPreferencesProvider(props: {children?: ComponentChildren}) {
         } else {
           setPreferences({});
         }
+        setLoaded(true);
       },
       (error) => {
         console.error('Failed to subscribe to user preferences:', error);
@@ -47,7 +51,9 @@ export function UserPreferencesProvider(props: {children?: ComponentChildren}) {
   );
 
   return (
-    <UserPreferencesContext.Provider value={{preferences, setPreference}}>
+    <UserPreferencesContext.Provider
+      value={{preferences, loaded, setPreference}}
+    >
       {props.children}
     </UserPreferencesContext.Provider>
   );

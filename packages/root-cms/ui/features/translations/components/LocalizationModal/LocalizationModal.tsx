@@ -1489,7 +1489,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                         <div className="LocalizationModal__translationsFullyTranslated flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-bold text-success">
                           <IconCheck
                             size={14}
-                            className="rounded-full bg-success p-0.5 text-inverse"
+                            className="rounded-full bg-success p-0.5 text-on-status"
                           />
                           <span>Translated</span>
                         </div>

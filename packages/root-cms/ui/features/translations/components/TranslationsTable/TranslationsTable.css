@@ -13,6 +13,19 @@
   }
 
   .TranslationsTable .ag-theme-alpine {
+    --ag-background-color: var(--cms-color-surface) !important;
+    --ag-foreground-color: var(--cms-color-text) !important;
+    --ag-data-color: var(--cms-color-text) !important;
+    --ag-secondary-foreground-color: var(--cms-color-text-muted) !important;
+    --ag-header-foreground-color: var(--cms-color-text-strong) !important;
+    --ag-header-background-color: var(--cms-color-surface-subtle) !important;
+    --ag-odd-row-background-color: var(--cms-color-surface-subtle) !important;
+    --ag-row-hover-color: var(--cms-color-surface-hover) !important;
+    --ag-selected-row-background-color: var(
+      --cms-color-surface-active
+    ) !important;
+    --ag-range-selection-border-color: var(--cms-color-focus) !important;
+    --ag-input-focus-border-color: var(--cms-color-focus) !important;
     --ag-border-color: var(--cms-color-border) !important;
     --ag-row-border-color: var(--cms-color-border) !important;
     --ag-header-column-separator-color: var(--cms-color-border) !important;

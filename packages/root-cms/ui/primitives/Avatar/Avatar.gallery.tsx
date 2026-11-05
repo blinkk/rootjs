@@ -43,10 +43,10 @@ export const AvatarGallery = defineGallery({
     ),
     Fallbacks: () => (
       <div className="flex flex-wrap items-center gap-2">
-        <Avatar alt="Grace Hopper" className="bg-info text-inverse">
+        <Avatar alt="Grace Hopper" className="bg-info text-on-status">
           GH
         </Avatar>
-        <Avatar alt="Margaret Hamilton" className="bg-success text-inverse">
+        <Avatar alt="Margaret Hamilton" className="bg-success text-on-status">
           MH
         </Avatar>
         <Avatar alt="3 more viewers">+3</Avatar>

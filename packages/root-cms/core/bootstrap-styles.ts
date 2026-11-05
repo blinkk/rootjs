@@ -15,8 +15,9 @@ body {
 
 .bootstrap {
   box-sizing: border-box;
-  font-family: var(--font-family-default, 'Inter', sans-serif);
-  color: var(--color-text-default, #333333);
+  font-family: var(--cms-font-sans, 'Inter', sans-serif);
+  color: var(--cms-color-text, #333333);
+  background-color: var(--cms-color-surface, #ffffff);
   font-size: 48px;
   font-weight: 900;
   line-height: 1.5;
@@ -76,7 +77,7 @@ body {
 }
 
 .bootstrap__error-message {
-  color: #b00020;
+  color: var(--cms-color-danger, #c92a2a);
   font-size: 16px;
   font-weight: 500;
   line-height: 1.5;
@@ -85,10 +86,10 @@ body {
 
 .bootstrap__error-button {
   appearance: none;
-  background: #1a1b1e;
+  background: var(--cms-color-primary, #1f1f1f);
   border: none;
   border-radius: 4px;
-  color: #fff;
+  color: var(--cms-color-on-primary, #ffffff);
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
@@ -98,7 +99,7 @@ body {
 }
 
 .bootstrap__error-button:hover {
-  background: #333;
+  background: var(--cms-color-primary-hover, #000000);
 }
 
 @keyframes bootstrap-loading-error {

@@ -62,6 +62,10 @@
     --cms-color-violet: #b197fc;
     --cms-color-violet-soft: #241d3d;
     --cms-color-violet-strong: #d0bfff;
+    --cms-color-on-status: #111118;
+
+    --cms-color-tooltip: #3a3a48;
+    --cms-color-on-tooltip: #f4f4f8;
 
     --cms-button-blue-soft: #13283b;
     --cms-button-blue-soft-hover: #1c4a6e;

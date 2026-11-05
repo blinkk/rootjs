@@ -1,0 +1,103 @@
+/*
+ * Dark: the CMS's built-in dark theme.
+ *
+ * Every project offers it under Settings → Theme, and can make it the
+ * default with `cmsPlugin({defaultTheme: 'dark'})`. A project theme with the
+ * id `dark` replaces it.
+ *
+ * It only sets `--cms-*` custom properties (see `ui/styles/theme.css`), so
+ * it doubles as an example of a full theme: copy it as a starting point for
+ * your own. Properties it leaves out (the accent, the gradients, the colored
+ * buttons' fills, type, shape and layout) keep their stock values.
+ */
+
+:root {
+  /* Native form controls, scrollbars and the date picker. */
+  color-scheme: dark;
+
+  /* --- Surfaces ------------------------------------------------------- */
+
+  --cms-color-page: #141413;
+  --cms-color-surface: #1c1c1b;
+  --cms-color-surface-hover: #262624;
+  --cms-color-surface-subtle: #191918;
+  --cms-color-surface-active: #30302e;
+  --cms-color-chip: #30302e;
+  --cms-color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* --- Lines ---------------------------------------------------------- */
+
+  --cms-color-border: #2e2e2c;
+  --cms-color-border-strong: #454542;
+
+  /* --- Text ----------------------------------------------------------- */
+
+  --cms-color-text: #d9d9d4;
+  --cms-color-text-strong: #f3f3f0;
+  --cms-color-text-muted: #a1a19b;
+  --cms-color-text-subtle: #6c6c67;
+  --cms-color-link: #74b3ef;
+
+  /* --- Actions: primary buttons flip to light on dark ------------------ */
+
+  --cms-color-primary: #ecece8;
+  --cms-color-primary-hover: #ffffff;
+  --cms-color-on-primary: #141413;
+  --cms-color-focus: #4dabf7;
+
+  /* --- Inputs --------------------------------------------------------- */
+
+  --cms-input-border: #4a4a47;
+  --cms-input-text: #f3f3f0;
+  --cms-input-placeholder: #75756f;
+  --cms-input-chip: #30302e;
+  --cms-input-chip-text: #d9d9d4;
+
+  /* --- Status: light strong colors on dark soft backgrounds ------------ */
+
+  --cms-color-info: #74c0fc;
+  --cms-color-info-soft: #10273a;
+  --cms-color-info-line: #1d4b70;
+  --cms-color-success: #69db7c;
+  --cms-color-success-soft: #11291a;
+  --cms-color-success-line: #215c2d;
+  --cms-color-warning: #ffc94d;
+  --cms-color-warning-soft: #2d2410;
+  --cms-color-warning-line: #5e4a14;
+  --cms-color-danger: #ff8a8a;
+  --cms-color-danger-soft: #371718;
+  --cms-color-danger-line: #702828;
+  /* The strong colors are light, so solid badges take dark text. */
+  --cms-color-on-status: #141413;
+
+  /* --- Colored buttons: the fills stay, their soft forms darken -------- */
+
+  --cms-button-blue-soft: #10273a;
+  --cms-button-blue-soft-hover: #183a57;
+  --cms-button-red-soft: #371718;
+
+  /* --- Tooltips ------------------------------------------------------- */
+
+  --cms-color-tooltip: #42423e;
+  --cms-color-on-tooltip: #f3f3f0;
+
+  /* --- Task statuses -------------------------------------------------- */
+
+  --cms-task-status-new: #262624;
+  --cms-task-status-in-progress: #18213a;
+  --cms-task-status-in-review: #33241a;
+  --cms-task-status-closed: #16291d;
+
+  /* --- AI (violet) ---------------------------------------------------- */
+
+  --cms-color-violet: #b197fc;
+  --cms-color-violet-soft: #241c3f;
+  --cms-color-violet-strong: #d0bfff;
+
+  /* --- Elevation: shadows need more weight to read on dark ------------- */
+
+  --cms-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --cms-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --cms-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+}

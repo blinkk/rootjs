@@ -177,7 +177,7 @@ export function AiImageEditorDialog(props: AiImageEditorDialogProps) {
                     src={version.src}
                     alt=""
                   />
-                  <span className="AiImageEditorDialog__Versions__Item__Label absolute inset-x-0 bottom-0 truncate bg-strong/75 px-0.5 text-xs leading-snug text-inverse">
+                  <span className="AiImageEditorDialog__Versions__Item__Label absolute inset-x-0 bottom-0 truncate bg-tooltip/75 px-0.5 text-xs leading-snug text-on-tooltip">
                     {index === 0 ? 'Original' : `v${index}`}
                   </span>
                 </button>

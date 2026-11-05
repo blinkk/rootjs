@@ -1,26 +1,28 @@
 import {useEffect} from 'preact/hooks';
+import {NO_THEME, THEME_LINK_ID, themeStorageKey} from '../../shared/theme.js';
 import {useSiteSettings} from './useSiteSettings.js';
 import {useUserPreferences} from './useUserPreferences.js';
+
+export {NO_THEME};
 
 /** The user preference holding the chosen theme's id. */
 export const THEME_PREFERENCE_KEY = 'theme';
 
-/** Preference value meaning no theme: the CMS's own, default look. */
-export const NO_THEME = 'none';
-
 /** The user preference holding the user's own CSS. */
 export const CUSTOM_CSS_PREFERENCE_KEY = 'customCss';
-
-/** The `<link>` the server renders for the default theme's stylesheet. */
-const LINK_ID = 'root-cms-theme';
 
 export interface ThemeOption {
   id: string;
   name: string;
   hash: string;
+  /** The cache-busted stylesheet URL. */
+  href: string;
 }
 
-/** The themes the project registered, and which one applies by default. */
+/**
+ * The themes a user can pick (the project's, then the built-in ones), and
+ * which one applies by default.
+ */
 export function getThemeConfig(): {
   defaultTheme: string | null;
   themes: ThemeOption[];
@@ -54,16 +56,18 @@ export function resolveTheme(
 
 /**
  * Points the page's theme stylesheet at `theme`, or removes it. The server
- * renders the default's `<link>`, so a user on the default never sees a
- * swap; everyone else gets theirs as soon as preferences load.
+ * renders the default's `<link>` (or the theme this browser last used, see
+ * `rememberTheme()`), so most loads never see a swap.
  */
 function applyTheme(theme: ThemeOption | null) {
-  const existing = document.getElementById(LINK_ID) as HTMLLinkElement | null;
+  const existing = document.getElementById(
+    THEME_LINK_ID
+  ) as HTMLLinkElement | null;
   if (!theme) {
     existing?.remove();
     return;
   }
-  const href = `/cms/themes/${theme.id}.css?c=${theme.hash}`;
+  const href = theme.href;
   if (existing) {
     if (existing.getAttribute('href') !== href) {
       existing.setAttribute('href', href);
@@ -71,7 +75,7 @@ function applyTheme(theme: ThemeOption | null) {
     return;
   }
   const link = document.createElement('link');
-  link.id = LINK_ID;
+  link.id = THEME_LINK_ID;
   link.rel = 'stylesheet';
   link.href = href;
   // After the CMS's own stylesheet, before any custom CSS.
@@ -85,6 +89,26 @@ function applyTheme(theme: ThemeOption | null) {
     base.after(link);
   } else {
     document.head.appendChild(link);
+  }
+}
+
+/**
+ * Remembers the user's choice on this browser, so the next page load can
+ * apply it before their preferences arrive. No choice (or one naming a
+ * theme that's gone) is forgotten, so the project's default applies.
+ */
+function rememberTheme(preference: unknown, themes: ThemeOption[]) {
+  const key = themeStorageKey(window.__ROOT_CTX.rootConfig.projectId);
+  const known =
+    preference === NO_THEME || themes.some((theme) => theme.id === preference);
+  try {
+    if (known) {
+      window.localStorage.setItem(key, preference as string);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be unavailable (e.g. blocked); the theme still applies.
   }
 }
 
@@ -114,18 +138,23 @@ function applyCustomCss(id: string, css: unknown) {
 
 /**
  * Loads the user's theme, then the site's and the user's custom CSS, into
- * the page whenever any of them changes.
+ * the page whenever any of them changes. The theme waits for the user's
+ * preferences, keeping the one the page loaded with until then.
  */
 export function ThemeLoader() {
-  const {preferences} = useUserPreferences();
+  const {preferences, loaded} = useUserPreferences();
   const {settings} = useSiteSettings();
   const preference = preferences[THEME_PREFERENCE_KEY];
   const siteCss = settings.customCss;
   const userCss = preferences[CUSTOM_CSS_PREFERENCE_KEY];
   useEffect(() => {
+    if (!loaded) {
+      return;
+    }
     const {defaultTheme, themes} = getThemeConfig();
     applyTheme(resolveTheme(preference, defaultTheme, themes));
-  }, [preference]);
+    rememberTheme(preference, themes);
+  }, [loaded, preference]);
   useEffect(() => {
     applyCustomCss('root-cms-site-css', siteCss);
     applyCustomCss('root-cms-user-css', userCss);

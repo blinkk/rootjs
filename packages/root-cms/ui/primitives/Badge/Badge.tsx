@@ -23,11 +23,11 @@ const TONE_CLASSES: Record<
   },
   filled: {
     neutral: 'bg-primary text-on-primary',
-    info: 'bg-info text-inverse',
-    success: 'bg-success text-inverse',
-    warning: 'bg-warning text-inverse',
-    danger: 'bg-danger text-inverse',
-    violet: 'bg-violet text-inverse',
+    info: 'bg-info text-on-status',
+    success: 'bg-success text-on-status',
+    warning: 'bg-warning text-on-status',
+    danger: 'bg-danger text-on-status',
+    violet: 'bg-violet text-on-status',
   },
   outline: {
     neutral: 'border-border-strong bg-surface text-muted',

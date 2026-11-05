@@ -57,7 +57,9 @@
    * on purpose, so never use it for text that needs to be read.
    */
   --cms-color-text-subtle: #a3a3a0;
-  /* Text on a filled, dark background. */
+  /* Text on a saturated fill: colored buttons and gradient badges. Those
+   * fills keep their color in a dark theme, so this usually stays light.
+   */
   --cms-color-text-inverse: #ffffff;
   /* Links. */
   --cms-color-link: #1971c2;
@@ -109,6 +111,10 @@
   --cms-color-danger: #c92a2a;
   --cms-color-danger-soft: #fff5f5;
   --cms-color-danger-line: #ffa8a8;
+  /* Text and icons on a filled status color (a solid badge). A dark theme
+   * that lightens the strong colors should darken this.
+   */
+  --cms-color-on-status: var(--cms-color-text-inverse);
 
   /* --- Color: colored buttons ------------------------------------------ *
    * The `blue`, `blue-light`, `green`, `danger`, `danger-outline` and
@@ -133,6 +139,13 @@
   --cms-button-red-hover: #f03e3e;
   /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
   --cms-button-red-soft: #fff5f5;
+
+  /* --- Color: tooltips ----------------------------------------------- */
+
+  /* Tooltips, and small labels drawn over images. */
+  --cms-color-tooltip: var(--cms-color-text-strong);
+  /* Text and icons on a tooltip. */
+  --cms-color-on-tooltip: var(--cms-color-text-inverse);
 
   /* --- Color: control tracks ------------------------------------------- */
 

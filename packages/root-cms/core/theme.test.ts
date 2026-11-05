@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {loadTheme, loadThemes, themeUrl} from './theme.js';
+import {loadTheme, loadThemes, themeUrl, withBuiltinThemes} from './theme.js';
 
 describe('themeUrl', () => {
   it('maps an id to its stylesheet under /cms/themes', () => {
@@ -67,6 +67,21 @@ describe('loadThemes', () => {
       [{id: 'abc', css: 'a {}'}, {id: 'empty'}, {id: 'xyz', css: 'b {}'}],
       '/tmp'
     );
-    expect(themes.map((theme) => theme.id)).toEqual(['abc', 'xyz']);
+    expect(themes.map((theme) => theme.id)).toEqual(['abc', 'xyz', 'dark']);
+  });
+
+  it('loads the built-in dark theme from the package', async () => {
+    const themes = await loadThemes(undefined, '/tmp');
+    expect(themes).toEqual([
+      expect.objectContaining({id: 'dark', name: 'Dark'}),
+    ]);
+    expect(themes[0].css).toContain('--cms-color-page');
+  });
+});
+
+describe('withBuiltinThemes', () => {
+  it('lets a project theme replace a built-in one by id', () => {
+    const mine = {id: 'dark', name: 'Our dark', css: 'a {}'};
+    expect(withBuiltinThemes([mine])).toEqual([mine]);
   });
 });

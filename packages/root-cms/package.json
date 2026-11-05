@@ -13,7 +13,8 @@
   },
   "files": [
     "dist/**/*",
-    "skills/**/*"
+    "skills/**/*",
+    "themes/**/*"
   ],
   "bin": {
     "root-cms": "./bin/root-cms.js"
@@ -72,6 +73,7 @@
     "dev:ui": "pnpm build:ui:bundle --watch",
     "test": "pnpm build && firebase emulators:exec 'vitest run --exclude=**/*.visual.test.tsx'",
     "test:visual": "pnpm build:ui:css && vitest run --config=vitest.config.visual.ts",
+    "test:visual:dark": "CMS_THEME=dark pnpm test:visual",
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'",
     "ui:snapshots": "node scripts/ui-snapshots.ts",
     "ui:theme-reference": "node scripts/ui-theme-reference.ts"

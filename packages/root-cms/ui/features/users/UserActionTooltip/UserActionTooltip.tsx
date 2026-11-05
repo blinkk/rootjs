@@ -44,7 +44,7 @@ export function UserActionTooltip(props: UserActionTooltipProps) {
     <div className="UserActionTooltip flex max-w-60 items-center gap-2">
       {user && (
         <UserAvatar
-          className="UserActionTooltip__avatar shrink-0 border border-inverse/35"
+          className="UserActionTooltip__avatar shrink-0 border border-on-tooltip/35"
           email={user}
           size={20}
           withTooltip={false}
@@ -52,7 +52,7 @@ export function UserActionTooltip(props: UserActionTooltipProps) {
       )}
       <div className="UserActionTooltip__text flex min-w-0 flex-col *:min-w-0 *:wrap-anywhere *:whitespace-normal">
         {heading && (
-          <span className="UserActionTooltip__heading mb-1.5 border-b border-inverse/20 pb-1.5 font-semibold">
+          <span className="UserActionTooltip__heading mb-1.5 border-b border-on-tooltip/20 pb-1.5 font-semibold">
             {heading}
           </span>
         )}

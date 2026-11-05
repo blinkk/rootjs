@@ -3,7 +3,7 @@ import {useLocation} from 'preact-iso';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {GALLERY_ENTRIES} from './registry.js';
-import {applyTestTheme} from './test-theme.js';
+import {type GalleryTheme, applyGalleryTheme} from './test-theme.js';
 import type {GalleryEntry} from './types.js';
 
 /** Viewport widths the gallery can preview side by side. */
@@ -46,7 +46,7 @@ export function GalleryPage(props: GalleryPageProps) {
     return (
       <GalleryFrame
         entry={entry}
-        themed={query.theme === 'test'}
+        theme={(query.theme as GalleryTheme) || 'stock'}
         story={query.story}
       />
     );
@@ -59,9 +59,9 @@ function GalleryShell(props: {entry: GalleryEntry}) {
     'root::GalleryPage:widths',
     WIDTHS
   );
-  const [themed, setThemed] = useLocalStorage<boolean>(
-    'root::GalleryPage:themed',
-    false
+  const [theme, setTheme] = useLocalStorage<GalleryTheme>(
+    'root::GalleryPage:theme',
+    'stock'
   );
   // Overlay stories render open, so they're previewed one at a time rather
   // than stacked on top of each other.
@@ -129,13 +129,16 @@ function GalleryShell(props: {entry: GalleryEntry}) {
               </label>
             ))}
           </fieldset>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={themed}
-              onChange={() => setThemed(!themed)}
-            />
-            Test theme
+          <label className="flex items-center gap-2">
+            Theme
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.currentTarget.value as GalleryTheme)}
+            >
+              <option value="stock">Stock</option>
+              <option value="test">Test</option>
+              <option value="dark">Dark</option>
+            </select>
           </label>
           {isViewport && (
             <label className="flex items-center gap-2">
@@ -156,10 +159,10 @@ function GalleryShell(props: {entry: GalleryEntry}) {
         <div className="GalleryPage__frames flex items-start gap-4 overflow-x-auto pb-4">
           {widths.map((width) => (
             <GalleryIframe
-              key={`${props.entry.id}-${width}-${themed}-${isViewport ? story : ''}`}
+              key={`${props.entry.id}-${width}-${theme}-${isViewport ? story : ''}`}
               entry={props.entry}
               width={width}
-              themed={themed}
+              theme={theme}
               story={isViewport ? story : undefined}
             />
           ))}
@@ -176,7 +179,7 @@ function GalleryShell(props: {entry: GalleryEntry}) {
 function GalleryIframe(props: {
   entry: GalleryEntry;
   width: number;
-  themed: boolean;
+  theme: GalleryTheme;
   story?: string;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
@@ -202,8 +205,8 @@ function GalleryIframe(props: {
   }, []);
 
   const params = new URLSearchParams({frame: '1'});
-  if (props.themed) {
-    params.set('theme', 'test');
+  if (props.theme !== 'stock') {
+    params.set('theme', props.theme);
   }
   if (props.story) {
     params.set('story', props.story);
@@ -233,15 +236,15 @@ function GalleryIframe(props: {
  */
 export function GalleryFrame(props: {
   entry: GalleryEntry;
-  themed: boolean;
+  theme: GalleryTheme;
   story?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    applyTestTheme(props.themed);
-    return () => applyTestTheme(false);
-  }, [props.themed]);
+    applyGalleryTheme(props.theme);
+    return () => applyGalleryTheme('stock');
+  }, [props.theme]);
 
   useEffect(() => {
     const el = ref.current;

@@ -1194,7 +1194,7 @@ FileField.Preview = () => {
             {Boolean(ctx.value?.width && ctx.value?.height) && (
               <div
                 className={cn(
-                  'FileField__Preview__Info pointer-events-auto absolute left-1.5 z-1 rounded-sm bg-strong px-1.5 py-0.5 text-2xs font-bold leading-tight text-inverse',
+                  'FileField__Preview__Info pointer-events-auto absolute left-1.5 z-1 rounded-sm bg-tooltip px-1.5 py-0.5 text-2xs font-bold leading-tight text-on-tooltip',
                   // Below the asset library badge, when there is one.
                   hasAssetBadge ? 'bottom-1.5' : 'top-1.5'
                 )}
@@ -1204,7 +1204,7 @@ FileField.Preview = () => {
             )}
             {hasAssetBadge && (
               <a
-                className="FileField__Preview__AssetLibraryBadge pointer-events-auto absolute left-1.5 top-1.5 z-1 block rounded-sm bg-info px-1.5 py-0.5 text-2xs font-bold leading-tight text-inverse no-underline active:translate-y-px"
+                className="FileField__Preview__AssetLibraryBadge pointer-events-auto absolute left-1.5 top-1.5 z-1 block rounded-sm bg-info px-1.5 py-0.5 text-2xs font-bold leading-tight text-on-status no-underline active:translate-y-px"
                 href={`/cms/assets?asset=${ctx.value?.assetId}`}
                 target="_blank"
               >
