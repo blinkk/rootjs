@@ -309,6 +309,26 @@ function SignIn(props: SignInProps) {
     </html>
   );
 }
+/**
+ * Firebase config keys that the sign-in page needs. Firebase Auth only reads
+ * `apiKey` and `authDomain`, so everything else (e.g. `storageBucket`) is left
+ * out to avoid exposing it to signed-out visitors.
+ */
+const SIGN_IN_FIREBASE_CONFIG_KEYS = ['apiKey', 'authDomain'] as const;
+
+function getSignInFirebaseConfig(
+  firebaseConfig?: Record<string, string | undefined>
+): Record<string, string> {
+  const config: Record<string, string> = {};
+  for (const key of SIGN_IN_FIREBASE_CONFIG_KEYS) {
+    const value = firebaseConfig?.[key];
+    if (value) {
+      config[key] = value;
+    }
+  }
+  return config;
+}
+
 export async function renderSignIn(
   req: Request,
   res: Response,
@@ -316,7 +336,7 @@ export async function renderSignIn(
 ) {
   const ctx: any = {
     name: options.cmsConfig.name || options.cmsConfig.id || '',
-    firebaseConfig: options.cmsConfig.firebaseConfig,
+    firebaseConfig: getSignInFirebaseConfig(options.cmsConfig.firebaseConfig),
   };
 
   // If the session cookie secret is missing, users will be forced to re-login
