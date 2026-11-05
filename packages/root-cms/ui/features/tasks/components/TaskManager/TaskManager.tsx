@@ -21,6 +21,7 @@ import {Menu, MenuGroup, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {Popover} from '../../../../primitives/Popover/Popover.js';
 import {SegmentedControl} from '../../../../primitives/SegmentedControl/SegmentedControl.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {Switch} from '../../../../primitives/Switch/Switch.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {cn, joinClassNames} from '../../../../utils/classes.js';
 import {errorMessage} from '../../../../utils/notifications.js';
@@ -50,8 +51,7 @@ import {
   toTaskTargetLaunchDraft,
 } from '../TaskTargetLaunch/TaskTargetLaunch.js';
 
-type TaskFilter =
-  'open' | 'all' | 'closed' | 'assigned-to-me' | 'created-by-me';
+type TaskFilter = 'all' | 'assigned-to-me' | 'created-by-me';
 type TaskLayout = 'list' | 'board';
 type TaskListLayout = TaskLayout | 'compact';
 type TaskManagerVariant = 'compact' | 'page';
@@ -70,10 +70,6 @@ const TASK_DRAG_MIME_TYPE = 'application/x-root-cms-task-id';
 
 const TASK_OPEN_STATUS_COLUMNS = TASK_STATUS_COLUMNS.filter(
   (column) => column.value !== 'closed'
-);
-
-const TASK_CLOSED_STATUS_COLUMNS = TASK_STATUS_COLUMNS.filter(
-  (column) => column.value === 'closed'
 );
 
 const TASK_LAYOUT_OPTIONS: Array<{value: TaskLayout; label: JSX.Element}> = [
@@ -135,16 +131,14 @@ const TASK_PRIORITY_RANK: Record<TaskPriority, number> = {
 };
 
 const TASK_COMPACT_FILTER_OPTIONS: Array<{value: TaskFilter; label: string}> = [
-  {value: 'open', label: 'Active'},
+  {value: 'all', label: 'Active'},
   {value: 'assigned-to-me', label: 'Assigned to me'},
 ];
 
 const TASK_PAGE_FILTER_OPTIONS: Array<{value: TaskFilter; label: string}> = [
-  {value: 'open', label: 'Active'},
+  {value: 'all', label: 'All'},
   {value: 'assigned-to-me', label: 'Assigned to me'},
   {value: 'created-by-me', label: 'Created by me'},
-  {value: 'closed', label: 'Closed'},
-  {value: 'all', label: 'All'},
 ];
 
 export interface TaskManagerProps {
@@ -158,7 +152,13 @@ export function TaskManager(props: TaskManagerProps) {
   const variant = props.variant || 'compact';
   const showPageLayout = variant === 'page';
   const {tasks, loading, error} = useTasks(showPageLayout ? 'all' : 'open');
-  const [filter, setFilter] = useState<TaskFilter>('open');
+  const [filter, setFilter] = useState<TaskFilter>('all');
+  const [showClosed, setShowClosed] = useLocalStorage<boolean>(
+    'root-cms-task-manager-show-closed',
+    false
+  );
+  // The compact list only loads open tasks, so the toggle is page-only.
+  const includeClosed = showPageLayout && showClosed;
   const [layout, setLayout] = useLocalStorage<TaskLayout>(
     'root-cms-task-manager-layout-v3',
     'board'
@@ -183,20 +183,26 @@ export function TaskManager(props: TaskManagerProps) {
     ? TASK_PAGE_FILTER_OPTIONS
     : TASK_COMPACT_FILTER_OPTIONS;
   const visibleTasks = useMemo(() => {
-    const filteredTasks = filterTasks(tasks, filter, currentUserEmail);
+    const filteredTasks = filterTasks(
+      tasks,
+      filter,
+      currentUserEmail,
+      includeClosed
+    );
     return sortTasks(filteredTasks, showPageLayout ? sort : 'created');
-  }, [tasks, filter, currentUserEmail, showPageLayout, sort]);
+  }, [tasks, filter, currentUserEmail, includeClosed, showPageLayout, sort]);
   const filterCounts = useMemo(() => {
     const counts: Partial<Record<TaskFilter, number>> = {};
     filterOptions.forEach((option) => {
       counts[option.value] = filterTasks(
         tasks,
         option.value,
-        currentUserEmail
+        currentUserEmail,
+        includeClosed
       ).length;
     });
     return counts;
-  }, [tasks, filterOptions, currentUserEmail]);
+  }, [tasks, filterOptions, currentUserEmail, includeClosed]);
   const canCreate = Boolean(title.trim()) && !creating;
   const descriptionOpen = Boolean(title.trim() || description);
 
@@ -444,6 +450,17 @@ export function TaskManager(props: TaskManagerProps) {
         <div className="TaskManager__listHeader__actions flex flex-wrap items-center gap-2.5">
           {showPageLayout ? (
             <>
+              <Switch
+                className="TaskManager__showClosed"
+                size="md"
+                labelPosition="left"
+                label="Show closed"
+                classNames={{label: 'text-base font-medium'}}
+                checked={showClosed}
+                onChange={(e) =>
+                  setShowClosed(Boolean(e.currentTarget.checked))
+                }
+              />
               <TaskSortMenu value={sort} onChange={setSort} />
               <SegmentedControl
                 className="TaskManager__layoutToggle shrink-0"
@@ -465,6 +482,7 @@ export function TaskManager(props: TaskManagerProps) {
       <TaskListContent
         error={error}
         filter={filter}
+        includeClosed={includeClosed}
         layout={showPageLayout ? layout : 'compact'}
         loading={loading}
         tasks={visibleTasks}
@@ -521,6 +539,7 @@ function TaskSortMenu(props: {
 interface TaskListContentProps {
   error: string;
   filter: TaskFilter;
+  includeClosed: boolean;
   layout: TaskListLayout;
   loading: boolean;
   tasks: Task[];
@@ -528,7 +547,7 @@ interface TaskListContentProps {
 
 /** Renders the current task list view and shared loading states. */
 function TaskListContent(props: TaskListContentProps) {
-  const {error, filter, layout, loading, tasks} = props;
+  const {error, filter, includeClosed, layout, loading, tasks} = props;
   const listClasses = 'TaskManager__list min-h-14';
   const stateClasses =
     'TaskManager__list__state flex min-h-18 items-center justify-center p-5 text-base text-muted';
@@ -559,16 +578,16 @@ function TaskListContent(props: TaskListContentProps) {
     return (
       <Surface className={listClasses}>
         <div className={stateClasses}>
-          {getEmptyTaskMessage(filter, layout)}
+          {getEmptyTaskMessage(filter, includeClosed)}
         </div>
       </Surface>
     );
   }
   if (layout === 'board') {
-    return <TaskBoard filter={filter} tasks={tasks} />;
+    return <TaskBoard includeClosed={includeClosed} tasks={tasks} />;
   }
   if (layout === 'list') {
-    return <TaskGroupedList filter={filter} tasks={tasks} />;
+    return <TaskGroupedList includeClosed={includeClosed} tasks={tasks} />;
   }
   return (
     <Surface className={cn(listClasses, 'divide-y divide-border')}>
@@ -580,8 +599,8 @@ function TaskListContent(props: TaskListContentProps) {
 }
 
 /** Renders tasks in a list, with a separate group for each status. */
-function TaskGroupedList(props: {filter: TaskFilter; tasks: Task[]}) {
-  const columns = getTaskStatusColumns(props.tasks, props.filter);
+function TaskGroupedList(props: {includeClosed: boolean; tasks: Task[]}) {
+  const columns = getTaskStatusColumns(props.tasks, props.includeClosed);
   return (
     <div className="TaskManager__groups flex flex-col gap-5">
       {columns.map((column) => {
@@ -717,7 +736,7 @@ function UnassignedAvatar(props: {smallIcon?: boolean}) {
  * Renders tasks grouped by status in a board. Cards can be dragged between
  * columns to change their status.
  */
-function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
+function TaskBoard(props: {includeClosed: boolean; tasks: Task[]}) {
   // Statuses set by a drop that haven't been reflected in `props.tasks` yet,
   // keyed by task id. Status updates run in a transaction, so the snapshot
   // listener doesn't see them until the write commits.
@@ -733,7 +752,7 @@ function TaskBoard(props: {filter: TaskFilter; tasks: Task[]}) {
       return pendingStatus ? {...task, status: pendingStatus} : task;
     });
   }, [props.tasks, pendingStatuses]);
-  const columns = getTaskStatusColumns(tasks, props.filter);
+  const columns = getTaskStatusColumns(tasks, props.includeClosed);
 
   // Drop pending statuses once the snapshot catches up.
   useEffect(() => {
@@ -994,20 +1013,20 @@ function useTasks(scope: TaskScope) {
 function filterTasks(
   tasks: Task[],
   filter: TaskFilter,
-  currentUserEmail: string
+  currentUserEmail: string,
+  includeClosed: boolean
 ) {
+  const statusTasks = includeClosed
+    ? tasks
+    : tasks.filter((task) => isOpenTaskStatus(task.status));
   switch (filter) {
-    case 'all':
-      return tasks;
-    case 'closed':
-      return tasks.filter((task) => !isOpenTaskStatus(task.status));
     case 'assigned-to-me':
-      return tasks.filter((task) => task.assignee === currentUserEmail);
+      return statusTasks.filter((task) => task.assignee === currentUserEmail);
     case 'created-by-me':
-      return tasks.filter((task) => task.createdBy === currentUserEmail);
-    case 'open':
+      return statusTasks.filter((task) => task.createdBy === currentUserEmail);
+    case 'all':
     default:
-      return tasks.filter((task) => isOpenTaskStatus(task.status));
+      return statusTasks;
   }
 }
 
@@ -1048,21 +1067,16 @@ function getCreatedMillis(task: Task) {
   return task.createdAt?.toMillis?.() || 0;
 }
 
-function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
+function getEmptyTaskMessage(filter: TaskFilter, includeClosed: boolean) {
+  const active = includeClosed ? '' : 'active ';
   switch (filter) {
     case 'assigned-to-me':
-      return layout === 'compact'
-        ? 'No active tasks are assigned to you.'
-        : 'No tasks are assigned to you.';
+      return `No ${active}tasks are assigned to you.`;
     case 'created-by-me':
-      return 'No tasks created by you.';
-    case 'closed':
-      return 'No closed tasks yet.';
+      return `No ${active}tasks created by you.`;
     case 'all':
-      return 'No tasks yet.';
-    case 'open':
     default:
-      return 'No active tasks yet.';
+      return `No ${active}tasks yet.`;
   }
 }
 
@@ -1084,13 +1098,10 @@ function getTaskStatusValue(task: Task) {
   return normalizeTaskStatus(task.status);
 }
 
-function getTaskStatusColumns(tasks: Task[], filter: TaskFilter) {
-  const baseColumns =
-    filter === 'open'
-      ? TASK_OPEN_STATUS_COLUMNS
-      : filter === 'closed'
-        ? TASK_CLOSED_STATUS_COLUMNS
-        : TASK_STATUS_COLUMNS;
+function getTaskStatusColumns(tasks: Task[], includeClosed: boolean) {
+  const baseColumns = includeClosed
+    ? TASK_STATUS_COLUMNS
+    : TASK_OPEN_STATUS_COLUMNS;
   const knownStatuses = new Set(baseColumns.map((column) => column.value));
   const customStatuses = tasks
     .map((task) => getTaskStatusValue(task))
