@@ -656,7 +656,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
  */
 const STATUS_BAR_GROUP_BUTTON_CLASSES =
   'DocEditor__statusBar__buttonGroup__button z-0 -ml-px rounded-none max-md:gap-0 max-md:px-1.5 group-first/segment:ml-0 group-first/segment:rounded-l-sm group-last/segment:rounded-r-sm ' +
-  'aria-pressed:z-10 aria-pressed:border-info-line aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-hover aria-pressed:hover:bg-button-blue-soft';
+  'aria-pressed:z-10 aria-pressed:border-info-line aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text aria-pressed:hover:bg-button-blue-soft';
 
 /**
  * Hides a status bar button's label (but not from screen readers) below

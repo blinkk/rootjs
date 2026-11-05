@@ -43,7 +43,7 @@ export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
     'border border-transparent bg-transparent text-button-red hover:bg-button-red-soft',
   blue: 'border border-transparent bg-button-blue text-inverse hover:bg-button-blue-hover',
   'blue-light':
-    'border border-transparent bg-button-blue-soft text-button-blue hover:bg-button-blue-soft-hover/65',
+    'border border-transparent bg-button-blue-soft text-button-blue-soft-text hover:bg-button-blue-soft-hover/65',
   green:
     'border border-transparent bg-button-green text-inverse hover:bg-button-green-hover',
 };

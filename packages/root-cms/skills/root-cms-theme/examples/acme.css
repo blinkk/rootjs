@@ -22,6 +22,7 @@
 
     --cms-color-page: #111118;
     --cms-color-surface: #1a1a23;
+    --cms-color-surface-raised: #22222d;
     --cms-color-surface-hover: #23232e;
     --cms-color-surface-subtle: #16161e;
     --cms-color-surface-active: #2c2c39;
@@ -69,6 +70,7 @@
 
     --cms-button-blue-soft: #13283b;
     --cms-button-blue-soft-hover: #1c4a6e;
+    --cms-button-blue-soft-text: #74c0fc;
     --cms-button-red-soft: #3a1717;
 
     --cms-task-status-new: #23232e;

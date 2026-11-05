@@ -213,7 +213,7 @@ export function MentionsPlugin() {
         }
         return createPortal(
           <ul
-            className="MentionsPlugin__menu m-0 mt-1 max-h-60 w-65 list-none overflow-y-auto rounded-lg border border-solid border-border bg-surface p-1 shadow-md"
+            className="MentionsPlugin__menu m-0 mt-1 max-h-60 w-65 list-none overflow-y-auto rounded-lg border border-solid border-border bg-surface-raised p-1 shadow-md"
             role="listbox"
             aria-label="User mention suggestions"
           >

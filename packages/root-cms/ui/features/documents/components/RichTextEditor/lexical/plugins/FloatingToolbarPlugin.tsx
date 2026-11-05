@@ -204,7 +204,7 @@ function FloatingToolbar(props: FloatingToolbarProps) {
   return (
     <div
       ref={popupCharStylesEditorRef}
-      className="LexicalEditor__floatingToolbar absolute left-0 top-0 z-10 flex max-w-full flex-wrap gap-0.5 rounded-lg border border-solid border-surface-active bg-surface p-1 align-middle opacity-0 shadow-md transition-opacity duration-500 will-change-transform"
+      className="LexicalEditor__floatingToolbar absolute left-0 top-0 z-10 flex max-w-full flex-wrap gap-0.5 rounded-lg border border-solid border-surface-active bg-surface-raised p-1 align-middle opacity-0 shadow-md transition-opacity duration-500 will-change-transform"
     >
       {editor.isEditable() && (
         <>

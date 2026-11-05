@@ -116,11 +116,19 @@ strong, soft and line colors, violet, the soft button fills and the task
 status tints. Go through `theme.css` group by group. Also set
 `color-scheme: dark` so scrollbars and native controls match.
 
-Two pairs flip with the rest and are easy to miss: lightened status colors
-need dark text on solid badges (`--cms-color-on-status`), and tooltips
-default to the strong text color, which turns light
-(`--cms-color-tooltip`, `--cms-color-on-tooltip`). Leave
-`--cms-color-text-inverse` white: it's the text on colored buttons and
+A few properties are easy to miss:
+
+- Lightened status colors need dark text on solid badges
+  (`--cms-color-on-status`).
+- Tooltips default to the strong text color, which turns light
+  (`--cms-color-tooltip`, `--cms-color-on-tooltip`).
+- Menus, popovers and toasts should sit a step lighter than the surface
+  (`--cms-color-surface-raised`), with hover and active colors that still
+  show on it, since shadows barely read on a dark page.
+- A darkened `--cms-button-blue-soft` needs lighter text
+  (`--cms-button-blue-soft-text`).
+
+Leave `--cms-color-text-inverse` white: it's the text on colored buttons and
 gradient badges, whose fills don't change.
 
 For a theme that's light or dark with the user's OS, put the dark values in

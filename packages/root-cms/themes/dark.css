@@ -19,15 +19,24 @@
 
   --cms-color-page: #141413;
   --cms-color-surface: #1c1c1b;
-  --cms-color-surface-hover: #262624;
+  /* Menus, popovers and toasts sit a step above the surface, so one opened
+   * in a modal stands apart from it.
+   */
+  --cms-color-surface-raised: #252523;
+  /* Hover and active stay visible on the raised surface too. */
+  --cms-color-surface-hover: #2d2d2b;
   --cms-color-surface-subtle: #191918;
-  --cms-color-surface-active: #30302e;
+  --cms-color-surface-active: #363634;
   --cms-color-chip: #30302e;
   --cms-color-overlay: rgba(0, 0, 0, 0.6);
 
   /* --- Lines ---------------------------------------------------------- */
 
-  --cms-color-border: #2e2e2c;
+  /* A step stronger than a straight inversion of the light border: on dark,
+   * shadows barely show, so borders do most of the work of separating a
+   * menu or popover from what's behind it.
+   */
+  --cms-color-border: #333331;
   --cms-color-border-strong: #454542;
 
   /* --- Text ----------------------------------------------------------- */
@@ -74,7 +83,22 @@
 
   --cms-button-blue-soft: #10273a;
   --cms-button-blue-soft-hover: #183a57;
+  /* The fill blue is too dim as text on the dark soft fill. */
+  --cms-button-blue-soft-text: #74c0fc;
   --cms-button-red-soft: #371718;
+
+  /* --- Segmented controls: a well darker than the surface, so the selected
+   * segment (drawn in the surface color) reads as raised, as it does in
+   * the light theme, rather than pressed in.
+   */
+
+  --cms-color-track: #0f0f0e;
+
+  /* --- Gradients: the archived badge's dark end (#25262b) disappears
+   * into a dark page, so end it on a mid grey instead.
+   */
+
+  --cms-gradient-gray: linear-gradient(45deg, #868e96, #495057);
 
   /* --- Tooltips ------------------------------------------------------- */
 
@@ -98,6 +122,14 @@
 
   --cms-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
   --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --cms-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
-  --cms-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+  /* Floating layers (md: menus, popovers, tooltips; lg: modals, toasts)
+   * also get a faint top highlight, the usual dark-mode cue for "this sits
+   * above", since a drop shadow on a near-black page is nearly invisible.
+   */
+  --cms-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --cms-shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }

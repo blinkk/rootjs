@@ -144,7 +144,7 @@ export function Popover(props: PopoverProps) {
         aria-labelledby={label ? undefined : triggerId}
         tabIndex={-1}
         className={cn(
-          'Popover overflow-auto rounded-md border border-border bg-surface p-3 font-sans text-base text-fg shadow-md focus:outline-none',
+          'Popover overflow-auto rounded-md border border-border bg-surface-raised p-3 font-sans text-base text-fg shadow-md focus:outline-none',
           positionClasses,
           className
         )}
@@ -186,7 +186,7 @@ export function Popover(props: PopoverProps) {
               {renderPanel('relative z-10 min-h-0 max-w-full')}
               <div
                 ref={setArrow}
-                className="Popover__arrow absolute size-2.5 rotate-45 border border-border bg-surface"
+                className="Popover__arrow absolute size-2.5 rotate-45 border border-border bg-surface-raised"
                 aria-hidden="true"
               />
             </div>

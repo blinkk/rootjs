@@ -23,8 +23,13 @@
 
   /* The page behind cards and panels. */
   --cms-color-page: #fbfbf9;
-  /* Cards, panels, inputs, menus and modals. */
+  /* Cards, panels, inputs and modals. */
   --cms-color-surface: #ffffff;
+  /* Layers that float over a surface: menus, popovers, dropdown lists,
+   * toasts and the rich text editor's floating panels. A dark theme lifts
+   * this above the surface, so a menu opened in a modal stands apart.
+   */
+  --cms-color-surface-raised: var(--cms-color-surface);
   /* A hovered row, menu item or quiet button. */
   --cms-color-surface-hover: #f5f5f3;
   /* A faint fill: striped table rows, file dropzones. */
@@ -123,12 +128,17 @@
    * sit below 4.5:1 contrast with their text, as Mantine's did.
    */
 
-  /* Filled blue buttons, and the text of `blue-light` ones. */
+  /* Filled blue buttons. */
   --cms-button-blue: #228be6;
   --cms-button-blue-hover: #1c7ed6;
   /* The `blue-light` fill, and its hover (drawn at 65% opacity). */
   --cms-button-blue-soft: #e7f5ff;
   --cms-button-blue-soft-hover: #d0ebff;
+  /* Text and icons on the `blue-light` fill, and on pressed toggle buttons
+   * (the rich text toolbar's). A dark theme that darkens the soft fill
+   * should lighten this.
+   */
+  --cms-button-blue-soft-text: var(--cms-button-blue-hover);
   /* Filled green buttons. */
   --cms-button-green: #40c057;
   --cms-button-green-hover: #37b24d;

@@ -113,7 +113,7 @@ const DROPDOWN_BUTTON_CLASSES =
  * Classes for a pressed (active) toolbar icon button: Mantine's light blue.
  */
 const ACTIVE_ICON_CLASSES =
-  'aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-hover';
+  'aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text';
 
 /**
  * Joins a row of icon buttons into one segmented control: square inner
@@ -346,7 +346,7 @@ function MoreFormattingDropdown(props: MoreFormattingDropdownProps) {
           className={cn(
             'LexicalEditor__toolbar__actionIcon',
             isAnyActive &&
-              'LexicalEditor__toolbar__actionIcon--active bg-button-blue-soft text-button-blue-hover'
+              'LexicalEditor__toolbar__actionIcon--active bg-button-blue-soft text-button-blue-soft-text'
           )}
         >
           <IconChevronDown />

@@ -413,7 +413,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       ref={editorRef}
       className={cn(
         'LexicalEditor__linkEditor',
-        'absolute left-0 top-0 z-10 flex w-full max-w-100 items-center gap-2 rounded-lg border border-solid border-surface-active bg-surface p-2 opacity-0 shadow-md transition-opacity duration-500 will-change-transform',
+        'absolute left-0 top-0 z-10 flex w-full max-w-100 items-center gap-2 rounded-lg border border-solid border-surface-active bg-surface-raised p-2 opacity-0 shadow-md transition-opacity duration-500 will-change-transform',
         !isLink && 'LexicalEditor__linkEditor--hidden hidden'
       )}
     >
