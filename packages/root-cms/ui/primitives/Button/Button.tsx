@@ -24,7 +24,7 @@ export type ButtonSize = 'xs' | 'sm' | 'md';
 export const BUTTON_BASE_CLASSES =
   'relative m-0 inline-flex shrink-0 cursor-pointer select-none appearance-none items-center justify-center whitespace-nowrap rounded-sm font-sans font-semibold no-underline p-0 transition-colors ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ' +
-  'disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ' +
+  'disabled:pointer-events-none disabled:opacity-(--cms-disabled-opacity) aria-disabled:pointer-events-none aria-disabled:opacity-(--cms-disabled-opacity) ' +
   'pointer-coarse:after:absolute pointer-coarse:after:-inset-2';
 
 /** Colors for each variant, shared by `Button` and `IconButton`. */
@@ -43,7 +43,7 @@ export const BUTTON_VARIANT_CLASSES: Record<ButtonVariant, string> = {
     'border border-transparent bg-transparent text-button-red hover:bg-button-red-soft',
   blue: 'border border-transparent bg-button-blue text-inverse hover:bg-button-blue-hover',
   'blue-light':
-    'border border-transparent bg-button-blue-soft text-button-blue hover:bg-button-blue-soft-hover/65',
+    'border border-transparent bg-button-blue-soft text-button-blue-soft-text hover:bg-button-blue-soft-hover/65',
   green:
     'border border-transparent bg-button-green text-inverse hover:bg-button-green-hover',
 };

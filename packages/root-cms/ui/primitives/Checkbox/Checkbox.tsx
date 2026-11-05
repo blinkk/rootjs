@@ -151,7 +151,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               BOX_COLOR_CLASSES[color],
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
               'peer-aria-invalid:border-danger',
-              'peer-disabled:opacity-50'
+              'peer-disabled:opacity-(--cms-disabled-opacity)'
             )}
             aria-hidden="true"
           />

@@ -513,7 +513,7 @@ export function ComboboxDropdown<T extends SelectOption>(
         ref={combobox.setFloating}
         className={cn(
           `${block}__dropdown`,
-          'z-(--cms-z-dropdown) flex flex-col overflow-hidden rounded-md border border-border bg-surface p-1 font-sans text-sm text-fg shadow-md',
+          'z-(--cms-z-dropdown) flex flex-col overflow-hidden rounded-md border border-border bg-surface-raised p-1 font-sans text-sm text-fg shadow-md',
           props.className
         )}
         // Keep focus on the control when the dropdown is pressed.

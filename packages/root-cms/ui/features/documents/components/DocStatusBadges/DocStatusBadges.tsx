@@ -228,7 +228,7 @@ function PublishingLockTooltip(props: {doc: CMSDoc}) {
       <div className="DocStatusBadges__lockTooltip__top flex items-center gap-2">
         {lock.lockedBy && (
           <UserAvatar
-            className="shrink-0 border border-inverse/35"
+            className="shrink-0 border border-on-tooltip/35"
             email={lock.lockedBy}
             size={20}
             withTooltip={false}
@@ -247,7 +247,7 @@ function PublishingLockTooltip(props: {doc: CMSDoc}) {
       </div>
       {lock.reason && (
         <>
-          <div className="DocStatusBadges__lockTooltip__divider my-1 h-px bg-inverse opacity-30" />
+          <div className="DocStatusBadges__lockTooltip__divider my-1 h-px bg-on-tooltip opacity-30" />
           <div className="DocStatusBadges__lockTooltip__line leading-snug">
             Reason:
           </div>

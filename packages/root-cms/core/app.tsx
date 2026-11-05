@@ -4,6 +4,7 @@ import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
 import {beetMarkDataUri} from '../shared/beet.js';
 import {serializeJsonForScript} from '../shared/safe-json.js';
+import {NO_THEME, THEME_LINK_ID, themeStorageKey} from '../shared/theme.js';
 import {serializeAiConfig} from './ai.js';
 import {Beetloader, pickBeetloader} from './beetloader.js';
 import {BOOTSTRAP_CSS} from './bootstrap-styles.js';
@@ -54,12 +55,45 @@ function Favicon(props: {url?: string}) {
   return <link rel="icon" href={DEFAULT_FAVICON_URL} type="image/svg+xml" />;
 }
 
+/**
+ * Swaps in the theme this browser last used for the project, before the
+ * page paints, so a user whose theme isn't the project's default doesn't
+ * see the default flash first. `ThemeLoader` remembers the theme once the
+ * user's preferences load, and corrects it if it has changed since.
+ */
+function ThemeScript(props: {
+  storageKey: string;
+  hrefs: Record<string, string>;
+}) {
+  const script = `(function () {
+  try {
+    var id = localStorage.getItem(${serializeJsonForScript(props.storageKey)});
+    var hrefs = ${serializeJsonForScript(props.hrefs)};
+    var link = document.getElementById(${serializeJsonForScript(THEME_LINK_ID)});
+    if (id === ${serializeJsonForScript(NO_THEME)}) {
+      if (link) link.remove();
+    } else if (id && Object.prototype.hasOwnProperty.call(hrefs, id)) {
+      if (!link) {
+        link = document.createElement('link');
+        link.id = ${serializeJsonForScript(THEME_LINK_ID)};
+        link.rel = 'stylesheet';
+        document.currentScript.before(link);
+      }
+      link.setAttribute('href', hrefs[id]);
+    }
+  } catch (e) {}
+})();`;
+  return <script dangerouslySetInnerHTML={{__html: script}} nonce="{NONCE}" />;
+}
+
 interface AppProps {
   title: string;
   ctx: any;
   favicon?: string;
   /** The default theme's stylesheet, cache-busted by its content. */
   themeUrl?: string;
+  /** Each theme's stylesheet URL, by id, for `ThemeScript`. */
+  themeHrefs: Record<string, string>;
 }
 
 function App(props: AppProps) {
@@ -100,12 +134,16 @@ function App(props: AppProps) {
             the user's own choice (Settings → Theme). */}
         {props.themeUrl && (
           <link
-            id="root-cms-theme"
+            id={THEME_LINK_ID}
             rel="stylesheet"
             href={props.themeUrl}
             nonce="{NONCE}"
           />
         )}
+        <ThemeScript
+          storageKey={themeStorageKey(props.ctx.rootConfig.projectId)}
+          hrefs={props.themeHrefs}
+        />
       </head>
       <body>
         <div id="root">
@@ -154,6 +192,10 @@ export async function renderApp(
   const buildInfo = await getBuildInfo(rootConfig.rootDir);
   const themes = await loadThemes(cmsConfig.themes, rootConfig.rootDir);
   const defaultTheme = resolveDefaultTheme(themes, cmsConfig.defaultTheme);
+  const themeHrefs: Record<string, string> = {};
+  for (const theme of themes) {
+    themeHrefs[theme.id] = cachebust(req, themeUrl(theme.id)!, theme.hash);
+  }
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -200,7 +242,12 @@ export async function renderApp(
     // do (Settings → Theme).
     theme: {
       default: defaultTheme?.id ?? null,
-      themes: themes.map(({id, name, hash}) => ({id, name, hash})),
+      themes: themes.map(({id, name, hash}) => ({
+        id,
+        name,
+        hash,
+        href: themeHrefs[id],
+      })),
     },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
@@ -211,11 +258,8 @@ export async function renderApp(
       title={title}
       ctx={ctx}
       favicon={cmsConfig.favicon}
-      themeUrl={
-        defaultTheme
-          ? cachebust(req, themeUrl(defaultTheme.id)!, defaultTheme.hash)
-          : undefined
-      }
+      themeUrl={defaultTheme ? themeHrefs[defaultTheme.id] : undefined}
+      themeHrefs={themeHrefs}
     />
   );
   const nonce = generateNonce();

@@ -52,8 +52,36 @@ export const TEST_THEME: Record<string, string> = {
   '--cms-shadow-lg': '10px 10px 0 #7e22ce',
 };
 
+/**
+ * The themes the gallery previews: the stock look, the test theme above,
+ * and the built-in dark theme (loaded from the server, as in the CMS).
+ */
+export type GalleryTheme = 'stock' | 'test' | 'dark';
+
+/** Id of the `<link>` the gallery loads the dark theme with. */
+const DARK_LINK_ID = 'root-cms-gallery-theme';
+
+/** Switches the gallery's preview to `theme`. */
+export function applyGalleryTheme(theme: GalleryTheme) {
+  applyTestTheme(theme === 'test');
+  let link = document.getElementById(DARK_LINK_ID) as HTMLLinkElement | null;
+  if (theme !== 'dark') {
+    link?.remove();
+    return;
+  }
+  if (!link) {
+    link = document.createElement('link');
+    link.id = DARK_LINK_ID;
+    link.rel = 'stylesheet';
+    // Last in the head, so it wins over the CMS's own `:root` values.
+    document.head.appendChild(link);
+  }
+  const dark = window.__ROOT_CTX.theme?.themes.find((t) => t.id === 'dark');
+  link.href = dark?.href ?? '/cms/themes/dark.css';
+}
+
 /** Applies (or removes) the test theme on the document root. */
-export function applyTestTheme(enabled: boolean) {
+function applyTestTheme(enabled: boolean) {
   const style = document.documentElement.style;
   for (const [name, value] of Object.entries(TEST_THEME)) {
     if (enabled) {

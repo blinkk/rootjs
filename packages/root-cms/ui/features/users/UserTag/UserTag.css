@@ -15,6 +15,7 @@
   }
 
   .UserTag__tooltip .UserAvatar {
-    border: 1px solid rgb(255 255 255 / 0.35);
+    border: 1px solid
+      color-mix(in srgb, var(--cms-color-on-tooltip) 35%, transparent);
   }
 }

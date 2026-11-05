@@ -41,6 +41,7 @@
   --color-*: initial;
   --color-page: var(--cms-color-page);
   --color-surface: var(--cms-color-surface);
+  --color-surface-raised: var(--cms-color-surface-raised);
   --color-surface-subtle: var(--cms-color-surface-subtle);
   --color-surface-hover: var(--cms-color-surface-hover);
   --color-surface-active: var(--cms-color-surface-active);
@@ -77,12 +78,18 @@
   --color-danger: var(--cms-color-danger);
   --color-danger-soft: var(--cms-color-danger-soft);
   --color-danger-line: var(--cms-color-danger-line);
+  --color-on-status: var(--cms-color-on-status);
+
+  /* Tooltips (`bg-tooltip text-on-tooltip`). */
+  --color-tooltip: var(--cms-color-tooltip);
+  --color-on-tooltip: var(--cms-color-on-tooltip);
 
   /* Colored buttons (`Button` and `IconButton` variants only). */
   --color-button-blue: var(--cms-button-blue);
   --color-button-blue-hover: var(--cms-button-blue-hover);
   --color-button-blue-soft: var(--cms-button-blue-soft);
   --color-button-blue-soft-hover: var(--cms-button-blue-soft-hover);
+  --color-button-blue-soft-text: var(--cms-button-blue-soft-text);
   --color-button-green: var(--cms-button-green);
   --color-button-green-hover: var(--cms-button-green-hover);
   --color-button-red: var(--cms-button-red);
@@ -92,6 +99,7 @@
   /* Control tracks (`SegmentedControl`). */
   --color-track: var(--cms-color-track);
   --color-track-border: var(--cms-color-track-border);
+  --color-thumb: var(--cms-color-thumb);
 
   /* Task status tints (`features/tasks`). */
   --color-task-new: var(--cms-task-status-new);

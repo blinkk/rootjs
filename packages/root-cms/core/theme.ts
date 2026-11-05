@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 /**
  * A theme for the CMS UI: a stylesheet loaded after the CMS's own, styling
@@ -25,6 +26,31 @@ export interface LoadedTheme {
   css: string;
   /** Hash of `css`, to cache-bust the stylesheet URL. */
   hash: string;
+}
+
+/**
+ * Themes that ship with the CMS, offered in every project after the
+ * project's own. Their stylesheets live in the package's `themes/` folder,
+ * which sits next to both `core/` and `dist/`.
+ */
+export const BUILTIN_THEMES: CMSTheme[] = [
+  {
+    id: 'dark',
+    name: 'Dark',
+    file: path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../themes/dark.css'
+    ),
+  },
+];
+
+/**
+ * The project's themes followed by the built-in ones. A project theme with
+ * a built-in theme's id replaces it.
+ */
+export function withBuiltinThemes(themes: CMSTheme[] = []): CMSTheme[] {
+  const ids = new Set(themes.map((theme) => theme.id));
+  return [...themes, ...BUILTIN_THEMES.filter((theme) => !ids.has(theme.id))];
 }
 
 /** Themes are served under this prefix, behind the CMS's login. */
@@ -98,16 +124,16 @@ export async function loadTheme(
   };
 }
 
-/** Reads every usable theme the project registered, in config order. */
+/**
+ * Reads every usable theme the project registered, in config order, then
+ * the built-in ones.
+ */
 export async function loadThemes(
   themes: CMSTheme[] | undefined,
   rootDir: string
 ): Promise<LoadedTheme[]> {
-  if (!themes?.length) {
-    return [];
-  }
   const loaded = await Promise.all(
-    themes.map((theme) => loadTheme(theme, rootDir))
+    withBuiltinThemes(themes).map((theme) => loadTheme(theme, rootDir))
   );
   return loaded.filter((theme): theme is LoadedTheme => theme !== null);
 }

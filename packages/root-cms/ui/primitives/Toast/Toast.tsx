@@ -284,7 +284,7 @@ export function Toast(props: ToastProps) {
         'Toast',
         `Toast--status-${status}`,
         leaving && 'Toast--leaving pointer-events-none',
-        'pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pl-5.5 pr-3 text-base text-fg shadow-lg',
+        'pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface-raised py-3 pl-5.5 pr-3 text-base text-fg shadow-lg',
         toast.className
       )}
       role={status === 'danger' ? 'alert' : undefined}

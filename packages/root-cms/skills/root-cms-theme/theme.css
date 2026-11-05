@@ -23,8 +23,13 @@
 
   /* The page behind cards and panels. */
   --cms-color-page: #fbfbf9;
-  /* Cards, panels, inputs, menus and modals. */
+  /* Cards, panels, inputs and modals. */
   --cms-color-surface: #ffffff;
+  /* Layers that float over a surface: menus, popovers, dropdown lists,
+   * toasts and the rich text editor's floating panels. A dark theme lifts
+   * this above the surface, so a menu opened in a modal stands apart.
+   */
+  --cms-color-surface-raised: var(--cms-color-surface);
   /* A hovered row, menu item or quiet button. */
   --cms-color-surface-hover: #f5f5f3;
   /* A faint fill: striped table rows, file dropzones. */
@@ -57,7 +62,9 @@
    * on purpose, so never use it for text that needs to be read.
    */
   --cms-color-text-subtle: #a3a3a0;
-  /* Text on a filled, dark background. */
+  /* Text on a saturated fill: colored buttons and gradient badges. Those
+   * fills keep their color in a dark theme, so this usually stays light.
+   */
   --cms-color-text-inverse: #ffffff;
   /* Links. */
   --cms-color-link: #1971c2;
@@ -109,6 +116,10 @@
   --cms-color-danger: #c92a2a;
   --cms-color-danger-soft: #fff5f5;
   --cms-color-danger-line: #ffa8a8;
+  /* Text and icons on a filled status color (a solid badge). A dark theme
+   * that lightens the strong colors should darken this.
+   */
+  --cms-color-on-status: var(--cms-color-text-inverse);
 
   /* --- Color: colored buttons ------------------------------------------ *
    * The `blue`, `blue-light`, `green`, `danger`, `danger-outline` and
@@ -117,12 +128,17 @@
    * sit below 4.5:1 contrast with their text, as Mantine's did.
    */
 
-  /* Filled blue buttons, and the text of `blue-light` ones. */
+  /* Filled blue buttons. */
   --cms-button-blue: #228be6;
   --cms-button-blue-hover: #1c7ed6;
   /* The `blue-light` fill, and its hover (drawn at 65% opacity). */
   --cms-button-blue-soft: #e7f5ff;
   --cms-button-blue-soft-hover: #d0ebff;
+  /* Text and icons on the `blue-light` fill, and on pressed toggle buttons
+   * (the rich text toolbar's). A dark theme that darkens the soft fill
+   * should lighten this.
+   */
+  --cms-button-blue-soft-text: var(--cms-button-blue-hover);
   /* Filled green buttons. */
   --cms-button-green: #40c057;
   --cms-button-green-hover: #37b24d;
@@ -134,12 +150,31 @@
   /* The hover fill of `danger-subtle` (and of `danger-outline`, at 35%). */
   --cms-button-red-soft: #fff5f5;
 
+  /* --- Color: tooltips ----------------------------------------------- */
+
+  /* Tooltips, and small labels drawn over images. */
+  --cms-color-tooltip: var(--cms-color-text-strong);
+  /* Text and icons on a tooltip. */
+  --cms-color-on-tooltip: var(--cms-color-text-inverse);
+
   /* --- Color: control tracks ------------------------------------------- */
 
   /* The well behind a `SegmentedControl`'s segments. */
   --cms-color-track: var(--cms-color-surface-hover);
   /* The well's border. */
   --cms-color-track-border: var(--cms-color-border);
+  /* The knob of a `Switch` that's off. When it's on, the knob takes
+   * `--cms-color-on-primary`, over a primary-colored track.
+   */
+  --cms-color-thumb: var(--cms-color-surface);
+
+  /* --- Color: highlights ------------------------------------------------ */
+
+  /* Highlighted text in the rich text editor, and its marker for invisible
+   * characters such as non-breaking spaces. Drawn as a translucent tint and
+   * underline mixed from this color, so it reads on light and dark pages.
+   */
+  --cms-color-highlight: #ffd400;
 
   /* --- Color: task statuses -------------------------------------------- *
    * Tints for the tasks page's list group headers and board columns, one
@@ -230,6 +265,12 @@
   /* Modals and toasts. */
   --cms-shadow-lg:
     0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  /* How far a disabled control fades: buttons, checkboxes, switches,
+   * segmented controls. A dark theme with a light primary color may lower
+   * it, so a disabled primary button doesn't outshine enabled ones.
+   */
+  --cms-disabled-opacity: 0.5;
 
   /* --- Layout ---------------------------------------------------------- */
 

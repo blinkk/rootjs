@@ -726,10 +726,9 @@ function CustomCssSetting(props: {scope: 'site' | 'user'}) {
 }
 
 /**
- * The user's theme, chosen from the ones the project registered. "Default"
- * is the CMS's own look; the theme the project made its default is marked
- * as such. Picking the project's default clears the preference, so the user
- * follows the default if it changes. Rendered only when there are themes.
+ * The user's theme: "Light" (the CMS's own look), the project's themes and
+ * the built-in ones. The project's default is marked as such. Picking it
+ * clears the preference, so the user follows the default if it changes.
  */
 function ThemePreference() {
   const userPrefs = useUserPreferences();
@@ -739,12 +738,12 @@ function ThemePreference() {
   }
   const projectDefault = defaultTheme ?? NO_THEME;
   const options = [
-    {value: NO_THEME, label: 'Default'},
-    ...themes.map((theme) => ({
-      value: theme.id,
-      label: theme.id === defaultTheme ? `${theme.name} (default)` : theme.name,
-    })),
-  ];
+    {value: NO_THEME, name: 'Light'},
+    ...themes.map((theme) => ({value: theme.id, name: theme.name})),
+  ].map(({value, name}) => ({
+    value,
+    label: value === projectDefault ? `${name} (default)` : name,
+  }));
   const current = userPrefs.preferences[THEME_PREFERENCE_KEY];
   const value =
     typeof current === 'string' &&

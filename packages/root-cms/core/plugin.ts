@@ -43,7 +43,12 @@ import {
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {getStaticCacheControl} from './static-cache.js';
-import {type CMSTheme, THEMES_URL_PREFIX, loadTheme} from './theme.js';
+import {
+  type CMSTheme,
+  THEMES_URL_PREFIX,
+  loadTheme,
+  withBuiltinThemes,
+} from './theme.js';
 import {type CMSTranslationService} from './translations.js';
 import {TtlCache} from './ttl-cache.js';
 
@@ -612,6 +617,9 @@ export type CMSPluginOptions = {
    * the CMS's login and read on each request, so an edit shows on the next
    * reload.
    *
+   * The CMS also ships a built-in `dark` theme, offered after these. A theme
+   * here with the id `dark` replaces it.
+   *
    * Every user picks their own theme from this list under Settings → Theme;
    * `defaultTheme` is what applies until they do, and no default means the
    * CMS's own look. CSS can also be added from the CMS itself, without a
@@ -626,8 +634,9 @@ export type CMSPluginOptions = {
   themes?: CMSTheme[];
 
   /**
-   * Experimental: the id of the theme in `themes` that applies to users who
-   * haven't chosen one. Omit for the CMS's own look.
+   * Experimental: the id of the theme in `themes` (or a built-in one, such
+   * as `dark`) that applies to users who haven't chosen one. Omit for the
+   * CMS's own look.
    */
   defaultTheme?: string;
 
@@ -1690,8 +1699,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         translations: options.translations,
       });
 
-      // The project's themes (`themes` option), each served as its own
-      // stylesheet behind the same login as the page that links it.
+      // The project's themes (`themes` option) and the built-in ones, each
+      // served as its own stylesheet behind the same login as the page that
+      // links it.
       server.get(
         `${THEMES_URL_PREFIX}:file`,
         async (expressReq, expressRes) => {
@@ -1704,7 +1714,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             return;
           }
           const id = String(req.params.file).replace(/\.css$/, '');
-          const configured = options.themes?.find((theme) => theme.id === id);
+          const configured = withBuiltinThemes(options.themes).find(
+            (theme) => theme.id === id
+          );
           const theme = configured
             ? await loadTheme(configured, req.rootConfig!.rootDir)
             : null;

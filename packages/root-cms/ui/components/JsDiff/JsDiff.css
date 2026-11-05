@@ -1,5 +1,5 @@
 .JsDiff__container {
-  background-color: #f8f9fa;
+  background-color: var(--cms-color-surface-subtle);
   overflow: auto;
 }
 
@@ -16,24 +16,24 @@
 }
 
 .JsDiff__diffLine--added {
-  background-color: #d4edda;
-  color: #155724;
-  border-left-color: #28a745;
+  background-color: var(--cms-color-success-soft);
+  color: var(--cms-color-success);
+  border-left-color: var(--cms-color-success);
 }
 
 .JsDiff__diffLine--removed {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-left-color: #dc3545;
+  background-color: var(--cms-color-danger-soft);
+  color: var(--cms-color-danger);
+  border-left-color: var(--cms-color-danger);
 }
 
 .JsDiff__diffLine--unchanged {
   background-color: transparent;
-  color: #333;
+  color: var(--cms-color-text);
 }
 
 .JsDiff__lineNumber {
-  color: #6c757d;
+  color: var(--cms-color-text-muted);
   font-size: 0.875rem;
   padding-right: 1rem;
   user-select: none;
@@ -43,7 +43,7 @@
 }
 
 .JsDiff__lineContent {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: var(--cms-font-mono);
   font-size: 0.875rem;
 }
 
@@ -57,17 +57,17 @@
   gap: 6px;
   padding: 4px 8px;
   font-size: 0.75rem;
-  color: #57606a;
-  background-color: #f0f4f8;
-  border-top: 1px solid #d0d7de;
-  border-bottom: 1px solid #d0d7de;
+  color: var(--cms-color-text-muted);
+  background-color: var(--cms-color-surface-hover);
+  border-top: 1px solid var(--cms-color-border);
+  border-bottom: 1px solid var(--cms-color-border);
   cursor: pointer;
   user-select: none;
 }
 
 .JsDiff__collapsed:hover {
-  background-color: #e4e8ec;
-  color: #24292f;
+  background-color: var(--cms-color-surface-active);
+  color: var(--cms-color-text-strong);
 }
 
 .JsDiff__collapsed__icon {

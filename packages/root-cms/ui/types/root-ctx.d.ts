@@ -124,8 +124,11 @@ declare global {
       theme?: {
         /** Id of the theme used when a user hasn't chosen one. */
         default: string | null;
-        /** The themes the project registered, in config order. */
-        themes: Array<{id: string; name: string; hash: string}>;
+        /**
+         * The themes a user can pick: the project's, in config order, then
+         * the built-in ones. `href` is the cache-busted stylesheet URL.
+         */
+        themes: Array<{id: string; name: string; hash: string; href: string}>;
       };
     };
     firebase: FirebaseContextObject;

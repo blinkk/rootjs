@@ -433,7 +433,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
           id={id}
           role="tooltip"
           className={cn(
-            'Tooltip__content relative z-10 max-w-64 rounded-sm bg-strong px-2.5 py-1.25 font-sans text-sm font-semibold leading-normal text-inverse shadow-md',
+            'Tooltip__content relative z-10 max-w-64 rounded-sm bg-tooltip px-2.5 py-1.25 font-sans text-sm font-semibold leading-normal text-on-tooltip shadow-md',
             classNames?.tooltip
           )}
         >
@@ -442,7 +442,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
         {withArrow && (
           <div
             ref={setArrow}
-            className="Tooltip__arrow absolute size-2 rotate-45 bg-strong"
+            className="Tooltip__arrow absolute size-2 rotate-45 bg-tooltip"
             aria-hidden="true"
           />
         )}

@@ -9,7 +9,15 @@
    * an element set to `content-box` (e.g. the header, for its safe-area
    * padding) passes it to its children, as the CMS was built against.
    */
+  /*
+   * The page's own background shows behind the header and the sidebar, so
+   * it's painted with the surface color rather than left to the browser.
+   * `color-scheme` styles native controls and scrollbars; a dark theme sets
+   * it to `dark` on `:root`.
+   */
   html {
+    color-scheme: light;
+    background-color: var(--cms-color-surface);
     box-sizing: border-box;
     overflow-x: hidden;
     font-size: 16px;
@@ -55,10 +63,6 @@
   a {
     color: inherit;
     text-decoration: underline;
-  }
-
-  select {
-    color-scheme: light;
   }
 
   body.menu\:open {

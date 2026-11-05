@@ -218,7 +218,7 @@ export const SegmentedControl = forwardRef<
               !indicator.rect &&
                 'aria-checked:bg-surface aria-checked:shadow-xs',
               'focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus',
-              'disabled:cursor-not-allowed disabled:opacity-50',
+              'disabled:cursor-not-allowed disabled:opacity-(--cms-disabled-opacity)',
               fullWidth && 'flex-1',
               ITEM_SIZE_CLASSES[size]
             )}

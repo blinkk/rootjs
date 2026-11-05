@@ -289,7 +289,7 @@ export function Menu(props: MenuProps) {
             ref={setFloating}
             tabIndex={-1}
             className={cn(
-              'Menu z-(--cms-z-dropdown) flex w-max min-w-48 flex-col overflow-hidden rounded-md border border-border bg-surface font-sans text-sm text-fg shadow-md focus:outline-none',
+              'Menu z-(--cms-z-dropdown) flex w-max min-w-48 flex-col overflow-hidden rounded-md border border-border bg-surface-raised font-sans text-sm text-fg shadow-md focus:outline-none',
               className
             )}
             style={{

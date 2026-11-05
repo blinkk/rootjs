@@ -1,0 +1,141 @@
+/*
+ * Dark: the CMS's built-in dark theme.
+ *
+ * Every project offers it under Settings → Theme, and can make it the
+ * default with `cmsPlugin({defaultTheme: 'dark'})`. A project theme with the
+ * id `dark` replaces it.
+ *
+ * It only sets `--cms-*` custom properties (see `ui/styles/theme.css`), so
+ * it doubles as an example of a full theme: copy it as a starting point for
+ * your own. Properties it leaves out (the accent, the gradients, the colored
+ * buttons' fills, type, shape and layout) keep their stock values.
+ */
+
+:root {
+  /* Native form controls, scrollbars and the date picker. */
+  color-scheme: dark;
+
+  /* --- Surfaces ------------------------------------------------------- */
+
+  --cms-color-page: #141413;
+  --cms-color-surface: #1c1c1b;
+  /* Menus, popovers and toasts sit a step above the surface, so one opened
+   * in a modal stands apart from it.
+   */
+  --cms-color-surface-raised: #252523;
+  /* Hover and active stay visible on the raised surface too. */
+  --cms-color-surface-hover: #2d2d2b;
+  --cms-color-surface-subtle: #191918;
+  --cms-color-surface-active: #363634;
+  --cms-color-chip: #30302e;
+  --cms-color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* --- Lines ---------------------------------------------------------- */
+
+  /* A step stronger than a straight inversion of the light border: on dark,
+   * shadows barely show, so borders do most of the work of separating a
+   * menu or popover from what's behind it.
+   */
+  --cms-color-border: #333331;
+  --cms-color-border-strong: #454542;
+
+  /* --- Text ----------------------------------------------------------- */
+
+  --cms-color-text: #d9d9d4;
+  --cms-color-text-strong: #f3f3f0;
+  --cms-color-text-muted: #a1a19b;
+  --cms-color-text-subtle: #6c6c67;
+  --cms-color-link: #74b3ef;
+
+  /* --- Actions: primary buttons flip to light on dark ------------------ */
+
+  --cms-color-primary: #ecece8;
+  --cms-color-primary-hover: #ffffff;
+  --cms-color-on-primary: #141413;
+  --cms-color-focus: #4dabf7;
+
+  /* --- Inputs --------------------------------------------------------- */
+
+  --cms-input-border: #4a4a47;
+  --cms-input-text: #f3f3f0;
+  --cms-input-placeholder: #75756f;
+  --cms-input-chip: #30302e;
+  --cms-input-chip-text: #d9d9d4;
+
+  /* --- Status: light strong colors on dark soft backgrounds ------------ */
+
+  --cms-color-info: #74c0fc;
+  --cms-color-info-soft: #10273a;
+  --cms-color-info-line: #1d4b70;
+  --cms-color-success: #69db7c;
+  --cms-color-success-soft: #11291a;
+  --cms-color-success-line: #215c2d;
+  --cms-color-warning: #ffc94d;
+  --cms-color-warning-soft: #2d2410;
+  --cms-color-warning-line: #5e4a14;
+  --cms-color-danger: #ff8a8a;
+  --cms-color-danger-soft: #371718;
+  --cms-color-danger-line: #702828;
+  /* The strong colors are light, so solid badges take dark text. */
+  --cms-color-on-status: #141413;
+
+  /* --- Colored buttons: the fills stay, their soft forms darken -------- */
+
+  --cms-button-blue-soft: #10273a;
+  --cms-button-blue-soft-hover: #183a57;
+  /* The fill blue is too dim as text on the dark soft fill. */
+  --cms-button-blue-soft-text: #74c0fc;
+  --cms-button-red-soft: #371718;
+
+  /* --- Segmented controls: a well darker than the surface, so the selected
+   * segment (drawn in the surface color) reads as raised, as it does in
+   * the light theme, rather than pressed in.
+   */
+
+  --cms-color-track: #0f0f0e;
+  /* A light knob, so an off switch doesn't read as a hole in its track. */
+  --cms-color-thumb: #c8c8c2;
+
+  /* --- Gradients: the archived badge's dark end (#25262b) disappears
+   * into a dark page, so end it on a mid grey instead.
+   */
+
+  --cms-gradient-gray: linear-gradient(45deg, #868e96, #495057);
+
+  /* --- Tooltips ------------------------------------------------------- */
+
+  --cms-color-tooltip: #42423e;
+  --cms-color-on-tooltip: #f3f3f0;
+
+  /* --- Task statuses -------------------------------------------------- */
+
+  --cms-task-status-new: #262624;
+  --cms-task-status-in-progress: #18213a;
+  --cms-task-status-in-review: #33241a;
+  --cms-task-status-closed: #16291d;
+
+  /* --- AI (violet) ---------------------------------------------------- */
+
+  --cms-color-violet: #b197fc;
+  --cms-color-violet-soft: #241c3f;
+  --cms-color-violet-strong: #d0bfff;
+
+  /* --- States: a disabled primary button fades less brightly ---------- */
+
+  --cms-disabled-opacity: 0.4;
+
+  /* --- Elevation: shadows need more weight to read on dark ------------- */
+
+  --cms-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --cms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* Floating layers (md: menus, popovers, tooltips; lg: modals, toasts)
+   * also get a faint top highlight, the usual dark-mode cue for "this sits
+   * above", since a drop shadow on a near-black page is nearly invisible.
+   */
+  --cms-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --cms-shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
