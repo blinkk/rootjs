@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 4.3.4
+
+### Patch Changes
+
+- cac1e8b: feat: add an option to also delete the underlying GCS files when deleting assets from the asset library
+- 031ab76: fix: only expose the firebase config needed to sign in (`apiKey` and `authDomain`) on the sign-in page
+- fcf25b3: feat: add a "show closed" switch to the tasks page
+- e0612f0: fix: add a slight bounce to the end of the toast slide-in, as in Mantine
+- 76cc3b9: fix: extract translation strings from rich text stored in `_array` notation instead of crashing the translations manager with "forEach is not a function"
+  - @blinkk/root@4.3.4
+
 ## 4.3.3
 
 ### Patch Changes
