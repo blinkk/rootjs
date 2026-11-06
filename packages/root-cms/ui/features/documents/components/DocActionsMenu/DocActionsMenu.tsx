@@ -149,6 +149,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           id: notificationId,
           title: 'Discarded draft edits',
           message: `Successfully reverted ${docId} back to its published version`,
+          color: 'green',
           loading: false,
           autoClose: 5000,
         });
@@ -211,6 +212,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           id: notificationId,
           title: 'Unpublished!',
           message: `Successfully unpublished ${docId}!`,
+          color: 'green',
           loading: false,
           autoClose: 5000,
         });
@@ -264,6 +266,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           id: notificationId,
           title: 'Unscheduled!',
           message: `Successfully unscheduled ${docId}!`,
+          color: 'green',
           loading: false,
           autoClose: 5000,
         });
@@ -313,6 +316,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           id: notificationId,
           title: 'Archived!',
           message: `Successfully archived ${docId}!`,
+          color: 'green',
           loading: false,
           autoClose: 5000,
         });
@@ -338,6 +342,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       id: notificationId,
       title: 'Unarchived!',
       message: `Successfully unarchived ${docId}!`,
+      color: 'green',
       loading: false,
       autoClose: 5000,
     });
@@ -380,6 +385,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           id: notificationId,
           title: 'Deleted!',
           message: `Successfully deleted ${docId}!`,
+          color: 'green',
           loading: false,
           autoClose: 5000,
         });

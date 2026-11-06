@@ -153,6 +153,7 @@ export function PublishDocModal(
       });
       showNotification({
         title: 'Published!',
+        color: 'green',
         message: `Succesfully published ${props.docId}.`,
         autoClose: 10000,
       });
@@ -185,6 +186,7 @@ export function PublishDocModal(
       });
       showNotification({
         title: 'Scheduled!',
+        color: 'green',
         message: `${props.docId} will go live ${scheduledDate}.`,
         autoClose: 10000,
       });
