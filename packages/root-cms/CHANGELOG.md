@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 4.3.5
+
+### Patch Changes
+
+- 7e0fce4: feat: add a built-in dark theme to the CMS
+  - @blinkk/root@4.3.5
+
 ## 4.3.4
 
 ### Patch Changes
