@@ -79,8 +79,9 @@ export interface BulkActionBarProps {
 /**
  * The toolbar that floats at the bottom of the docs list while docs are
  * selected, with actions that apply to every selected doc. An action is only
- * enabled when every selected doc supports it; otherwise its tooltip says
- * why. Escape clears the selection.
+ * enabled when every selected doc supports it; otherwise its tooltip (or menu
+ * note) says why. Menu actions that no selected doc supports are hidden.
+ * Escape clears the selection.
  */
 export function BulkActionBar(props: BulkActionBarProps) {
   const {roles} = useProjectRoles();
@@ -126,7 +127,7 @@ export function BulkActionBar(props: BulkActionBarProps) {
   const unarchiveBlocked = !canEdit
     ? NO_EDIT_ACCESS
     : archived < count
-      ? 'Only archived docs can be unarchived.'
+      ? docsAre(count - archived, 'not archived')
       : '';
   const unpublishBlocked = !canPublish
     ? NO_PUBLISH_ACCESS
@@ -136,6 +137,13 @@ export function BulkActionBar(props: BulkActionBarProps) {
         ? `${docsAre(scheduled, 'scheduled')} Unschedule ${them(scheduled)} first.`
         : '';
   const deleteBlocked = !canEdit ? NO_EDIT_ACCESS : '';
+
+  // The More menu only lists an action when at least one selected doc is in a
+  // state it applies to (e.g. Unarchive needs an archived doc). A listed action
+  // is still disabled, with the reason, when it can't apply to all of them.
+  const showArchive = archived < count;
+  const showUnarchive = archived > 0;
+  const showUnpublish = published > 0;
 
   // Escape clears the selection, unless it's closing something else first.
   useEffect(() => {
@@ -363,13 +371,6 @@ export function BulkActionBar(props: BulkActionBarProps) {
             blocked={publishBlocked}
             onClick={() => setDialog('publish')}
           />
-          <BarAction
-            className="BulkActionBar__archive"
-            icon={<IconArchive size={16} />}
-            label="Archive"
-            blocked={archiveBlocked}
-            onClick={() => setDialog('archive')}
-          />
           <Menu
             className="BulkActionBar__moreMenu"
             placement="top-end"
@@ -386,21 +387,34 @@ export function BulkActionBar(props: BulkActionBarProps) {
               </BarButton>
             }
           >
-            <BlockedMenuItem
-              icon={<IconCloudOff />}
-              blocked={unpublishBlocked}
-              onClick={() => setDialog('unpublish')}
-            >
-              Unpublish
-            </BlockedMenuItem>
-            <BlockedMenuItem
-              icon={<IconArchiveOff />}
-              blocked={unarchiveBlocked}
-              onClick={() => onUnarchive()}
-            >
-              Unarchive
-            </BlockedMenuItem>
-            <MenuDivider />
+            {showArchive && (
+              <BlockedMenuItem
+                icon={<IconArchive />}
+                blocked={archiveBlocked}
+                onClick={() => setDialog('archive')}
+              >
+                Archive
+              </BlockedMenuItem>
+            )}
+            {showUnarchive && (
+              <BlockedMenuItem
+                icon={<IconArchiveOff />}
+                blocked={unarchiveBlocked}
+                onClick={() => onUnarchive()}
+              >
+                Unarchive
+              </BlockedMenuItem>
+            )}
+            {showUnpublish && (
+              <BlockedMenuItem
+                icon={<IconCloudOff />}
+                blocked={unpublishBlocked}
+                onClick={() => setDialog('unpublish')}
+              >
+                Unpublish
+              </BlockedMenuItem>
+            )}
+            {(showArchive || showUnarchive || showUnpublish) && <MenuDivider />}
             <BlockedMenuItem
               icon={<IconTrash />}
               blocked={deleteBlocked}
