@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 4.3.6
+
+### Patch Changes
+
+- 5fdadb4: feat: bulk edit docs from the collection list
+  - @blinkk/root@4.3.6
+
 ## 4.3.5
 
 ### Patch Changes
