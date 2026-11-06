@@ -90,6 +90,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       const docUrl = `/cms/content/${toCollectionId}/${cleanSlug}`;
       showNotification({
         title: 'Copied!',
+        color: 'green',
         message: (
           <div>
             <div>{`Successfully copied ${sourceLabel} to ${toDocId}.`}</div>

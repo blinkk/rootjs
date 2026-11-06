@@ -83,6 +83,7 @@ LockPublishingModal.Lock = (
       await cmsLockPublishing(props.docId, {reason, until});
       showNotification({
         title: isEdit ? 'Updated!' : 'Locked!',
+        color: 'green',
         message: isEdit
           ? `Publishing lock updated for ${props.docId}.`
           : `Publishing is locked for ${props.docId}.`,
@@ -102,6 +103,7 @@ LockPublishingModal.Lock = (
       await cmsUnlockPublishing(props.docId);
       showNotification({
         title: 'Unlocked!',
+        color: 'green',
         message: `Publishing is unlocked for ${props.docId}.`,
         autoClose: 10000,
       });
@@ -197,6 +199,7 @@ LockPublishingModal.Unlock = (
       await cmsUnlockPublishing(props.docId);
       showNotification({
         title: 'Unlocked!',
+        color: 'green',
         message: `Publishing is unlocked for ${props.docId}.`,
         autoClose: 10000,
       });

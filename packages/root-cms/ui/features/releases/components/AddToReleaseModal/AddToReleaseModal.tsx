@@ -96,6 +96,7 @@ export function useAddToRelease(options?: {
       await addRelease(releaseId, release);
       showNotification({
         title: `Release created: ${releaseId}`,
+        color: 'green',
         message: (
           <div>
             <div>Created release with {docIds.length} doc(s).</div>
@@ -144,6 +145,7 @@ export function useAddToRelease(options?: {
       const addedCount = mergedDocIds.length - existingDocIds.length;
       showNotification({
         title: `Docs added to release: ${releaseId}`,
+        color: 'green',
         message: (
           <div>
             <div>Added {addedCount} new doc(s) to release.</div>

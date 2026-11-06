@@ -53,9 +53,11 @@ import {usePendingReleases} from '../../../releases/usePendingReleases.js';
 import {testCanEdit} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
+import {BulkActionBar} from '../../components/BulkActionBar/BulkActionBar.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
 import {Density, useDensity} from '../../useDensity.js';
+import {DocSelection, useDocSelection} from '../../useDocSelection.js';
 import {useDocsList} from '../../useDocsList.js';
 
 const DENSITY_OPTIONS: Array<{
@@ -243,6 +245,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
   });
 
   const customSortMode = effectiveOrderBy === 'custom';
+  const selection = useDocSelection(docs.map((doc: any) => doc.id));
   const keylessCount = customSortMode
     ? docs.filter((doc: any) => !doc.sys?.sortKey).length
     : 0;
@@ -364,11 +367,24 @@ CollectionPage.Collection = (props: CollectionProps) => {
                     reloadDocs={() => listDocs()}
                     reorderable={customSortMode && canEdit}
                     onDocsChange={setDocs}
+                    selection={selection}
                   />
                 </div>
               </div>
             )}
           </Surface>
+          {selection.active && (
+            <BulkActionBar
+              docs={docs.filter((doc: any) => selection.isSelected(doc.id))}
+              totalCount={docs.length}
+              onSelectAll={selection.selectAll}
+              onClear={selection.clear}
+              onDone={() => {
+                selection.clear();
+                listDocs();
+              }}
+            />
+          )}
         </div>
       </div>
     </>
@@ -692,17 +708,26 @@ function ReorderableRow(props: {
   compact?: boolean;
   draggableId: string;
   index: number;
+  /** Highlights the row as selected for a bulk action. */
+  selected?: boolean;
+  /** Click and mouse-down handlers for bulk selection. */
+  selectHandlers?: RowSelectHandlers;
   children: ComponentChildren;
 }) {
   const className = cn(
     'CollectionPage__collection__docsList__doc',
-    'border-t border-border first:border-t-0',
+    'group border-t border-border first:border-t-0',
     props.compact
       ? 'grid items-center gap-3.5 px-3 py-1'
-      : 'flex items-center overflow-hidden p-3'
+      : 'flex items-center overflow-hidden p-3',
+    props.selected && 'bg-info-soft'
   );
   if (!props.enabled) {
-    return <div className={className}>{props.children}</div>;
+    return (
+      <div className={className} {...props.selectHandlers}>
+        {props.children}
+      </div>
+    );
   }
   return (
     <Draggable draggableId={props.draggableId} index={props.index}>
@@ -710,6 +735,7 @@ function ReorderableRow(props: {
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
+          {...props.selectHandlers}
           className={cn(
             className,
             snapshot.isDragging &&
@@ -723,6 +749,7 @@ function ReorderableRow(props: {
             )}
             {...provided.dragHandleProps}
             aria-label="Reorder doc"
+            data-bulk-select-ignore
           >
             <IconGripVertical size={16} stroke="1.5" />
           </div>
@@ -744,6 +771,8 @@ CollectionPage.DocsList = (props: {
   reorderable?: boolean;
   /** Called with the updated docs array after an optimistic reorder. */
   onDocsChange?: (docs: any[]) => void;
+  /** Bulk selection state. Rows are selectable when set. */
+  selection?: DocSelection;
 }) => {
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[props.collection];
@@ -796,6 +825,62 @@ CollectionPage.DocsList = (props: {
   }
 
   const reorderable = !!props.reorderable;
+  const selection = props.selection;
+
+  /**
+   * Bulk selection on a row: Shift-click selects a range, and while any doc is
+   * selected every click toggles the row instead of opening the doc. Other
+   * clicks (including ⌘/Ctrl-click to open in a new tab) are left alone.
+   */
+  function getSelectHandlers(docId: string): RowSelectHandlers | undefined {
+    if (!selection) {
+      return undefined;
+    }
+    const ignored = (e: MouseEvent) =>
+      !!(e.target as Element | null)?.closest?.('[data-bulk-select-ignore]');
+    return {
+      onClickCapture: (e: MouseEvent) => {
+        if (e.button !== 0 || ignored(e)) {
+          return;
+        }
+        if (e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          selection.selectRange(docId);
+        } else if (selection.active) {
+          e.preventDefault();
+          e.stopPropagation();
+          selection.toggle(docId);
+        }
+      },
+      // Keeps Shift-click from selecting the row's text.
+      onMouseDown: (e: MouseEvent) => {
+        if (e.shiftKey && !ignored(e)) {
+          e.preventDefault();
+        }
+      },
+    };
+  }
+
+  function renderSelectCheckbox(
+    docId: string,
+    variant: 'overlay' | 'inline',
+    className: string
+  ) {
+    if (!selection) {
+      return null;
+    }
+    return (
+      <DocSelectCheckbox
+        className={className}
+        docId={docId}
+        variant={variant}
+        checked={selection.isSelected(docId)}
+        selectionActive={selection.active}
+        onToggle={() => selection.toggle(docId)}
+      />
+    );
+  }
 
   /**
    * Returns an optimistic local copy of a doc with an updated sort key.
@@ -944,19 +1029,32 @@ CollectionPage.DocsList = (props: {
                 compact
                 draggableId={doc.id}
                 index={index}
+                selected={selection?.isSelected(doc.id)}
+                selectHandlers={getSelectHandlers(doc.id)}
               >
-                <a
-                  className="CollectionPage__collection__docsList__doc__image box-content block w-10 shrink-0 border border-border leading-none"
-                  href={cmsUrl}
-                >
-                  <FilePreview
-                    file={previewImage}
-                    width={40}
-                    height={30}
-                    fit={rootCollection.preview?.fit}
-                    withPlaceholder={!previewImage?.src}
-                  />
-                </a>
+                <div className="CollectionPage__collection__docsList__doc__imageCell relative">
+                  <a
+                    className={cn(
+                      'CollectionPage__collection__docsList__doc__image box-content block w-10 shrink-0 border border-border leading-none',
+                      selection?.isSelected(doc.id) &&
+                        'outline-2 -outline-offset-1 outline-focus'
+                    )}
+                    href={cmsUrl}
+                  >
+                    <FilePreview
+                      file={previewImage}
+                      width={40}
+                      height={30}
+                      fit={rootCollection.preview?.fit}
+                      withPlaceholder={!previewImage?.src}
+                    />
+                  </a>
+                  {renderSelectCheckbox(
+                    doc.id,
+                    'overlay',
+                    'absolute inset-0 m-auto'
+                  )}
+                </div>
                 <a
                   className="CollectionPage__collection__docsList__doc__docId truncate text-sm font-medium text-fg no-underline hover:underline"
                   href={cmsUrl}
@@ -978,7 +1076,10 @@ CollectionPage.DocsList = (props: {
                 <div className={TIMESTAMP_CLASSES}>
                   {renderTimestamp(doc?.sys?.modifiedAt, doc?.sys?.modifiedBy)}
                 </div>
-                <div className="CollectionPage__collection__docsList__doc__controls flex">
+                <div
+                  className="CollectionPage__collection__docsList__doc__controls flex"
+                  data-bulk-select-ignore
+                >
                   <DocActionsMenu
                     docId={doc.id}
                     data={doc}
@@ -1028,8 +1129,18 @@ CollectionPage.DocsList = (props: {
             enabled={reorderable}
             draggableId={doc.id}
             index={index}
+            selected={selection?.isSelected(doc.id)}
+            selectHandlers={getSelectHandlers(doc.id)}
           >
-            <div className="CollectionPage__collection__docsList__doc__image hidden shrink-0 border border-border sm:block">
+            {/* Phones have no thumbnail, so the checkbox sits in the row. */}
+            {renderSelectCheckbox(doc.id, 'inline', 'mr-3 sm:hidden')}
+            <div
+              className={cn(
+                'CollectionPage__collection__docsList__doc__image relative hidden shrink-0 border border-border sm:block',
+                selection?.isSelected(doc.id) &&
+                  'outline-2 -outline-offset-1 outline-focus'
+              )}
+            >
               <a className="block leading-none" href={cmsUrl}>
                 <FilePreview
                   file={previewImage}
@@ -1039,6 +1150,11 @@ CollectionPage.DocsList = (props: {
                   withPlaceholder={!previewImage?.src}
                 />
               </a>
+              {renderSelectCheckbox(
+                doc.id,
+                'overlay',
+                'absolute left-1.5 top-1.5'
+              )}
             </div>
             <a
               className="CollectionPage__collection__docsList__doc__content block min-w-0 flex-1 pr-3 text-fg no-underline sm:pl-3"
@@ -1059,7 +1175,10 @@ CollectionPage.DocsList = (props: {
                 </div>
               )}
             </a>
-            <div className="CollectionPage__collection__docsList__doc__controls shrink-0">
+            <div
+              className="CollectionPage__collection__docsList__doc__controls shrink-0"
+              data-bulk-select-ignore
+            >
               <DocActionsMenu
                 docId={doc.id}
                 data={doc}
@@ -1105,5 +1224,57 @@ function renderTimestamp(ts: any, by?: string) {
         {getTimeAgo(ts.toMillis())}
       </span>
     </UserActionTooltip>
+  );
+}
+
+/** A docs-list row's handlers for bulk selection. */
+interface RowSelectHandlers {
+  onClickCapture: (e: MouseEvent) => void;
+  onMouseDown: (e: MouseEvent) => void;
+}
+
+/**
+ * The checkbox that selects a doc for bulk actions. Over a thumbnail
+ * (`overlay`) it only shows while the row is hovered or focused, or once any
+ * doc is selected, so the list looks unchanged at rest. On touch screens it's
+ * always shown.
+ */
+function DocSelectCheckbox(props: {
+  docId: string;
+  checked: boolean;
+  /** Whether any doc is selected, which shows every row's checkbox. */
+  selectionActive: boolean;
+  variant: 'overlay' | 'inline';
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={props.checked}
+      aria-label={`Select ${props.docId}`}
+      className={cn(
+        'CollectionPage__collection__docsList__doc__select',
+        'relative z-1 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md border-2 text-inverse transition-opacity',
+        'focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+        'pointer-coarse:opacity-100 pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5',
+        props.variant === 'overlay'
+          ? 'border-on-tooltip bg-tooltip/45 shadow-sm hover:bg-tooltip/70'
+          : 'border-border-strong bg-surface',
+        'aria-checked:border-focus aria-checked:bg-focus',
+        props.checked || props.selectionActive
+          ? 'opacity-100'
+          : 'opacity-0 group-hover:opacity-100',
+        props.className
+      )}
+      onClick={(e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        props.onToggle();
+      }}
+    >
+      {props.checked && <IconCheck size={14} stroke={3} aria-hidden="true" />}
+    </button>
   );
 }
