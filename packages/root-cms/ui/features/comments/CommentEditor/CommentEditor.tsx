@@ -37,11 +37,37 @@ export interface CommentEditorProps {
 export function CommentEditor(props: CommentEditorProps) {
   const variant = props.variant || 'default';
 
+  function submitShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    props.onSubmitShortcut?.();
+  }
+
+  /**
+   * Handles the submit shortcut in the editor text. Runs in the capture phase,
+   * before the editor handles Enter, which would otherwise insert a new
+   * paragraph or list item before submitting. While the `@mention` menu is
+   * open, the editor gets the key so it can select the highlighted user.
+   */
+  function onKeyDownCapture(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
+    if (
+      isSubmitShortcut(e) &&
+      target.isContentEditable &&
+      !isMentionMenuOpen(target)
+    ) {
+      submitShortcut(e);
+    }
+  }
+
+  /**
+   * Handles the submit shortcut in other fields inside the editor (e.g. the
+   * link editor's URL field), after the field handles the key itself.
+   */
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      e.stopPropagation();
-      props.onSubmitShortcut?.();
+    const target = e.target as HTMLElement;
+    if (isSubmitShortcut(e) && !target.isContentEditable) {
+      submitShortcut(e);
     }
   }
 
@@ -61,6 +87,7 @@ export function CommentEditor(props: CommentEditorProps) {
         'CommentEditor__wrap',
         variant === 'minimal' && 'CommentEditor__wrap--minimal'
       )}
+      onKeyDownCapture={onKeyDownCapture}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
     >
@@ -77,4 +104,24 @@ export function CommentEditor(props: CommentEditorProps) {
       />
     </div>
   );
+}
+
+/** Returns true for Cmd+Enter (or Ctrl+Enter). */
+function isSubmitShortcut(e: KeyboardEvent) {
+  return e.key === 'Enter' && (e.metaKey || e.ctrlKey);
+}
+
+/**
+ * Returns true when the `@mention` menu is showing suggestions for the editor
+ * containing `target`. Lexical's typeahead points the editor's
+ * `aria-controls` at the menu's container while a query is active.
+ */
+function isMentionMenuOpen(target: HTMLElement) {
+  const root = target.closest('[aria-controls]');
+  const menuId = root?.getAttribute('aria-controls');
+  if (!menuId) {
+    return false;
+  }
+  const menu = document.getElementById(menuId);
+  return Boolean(menu?.querySelector('.MentionsPlugin__menu'));
 }

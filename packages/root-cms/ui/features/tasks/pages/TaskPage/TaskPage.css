@@ -40,11 +40,11 @@
 
 /* Monospace mode for the description and comments. */
 .TaskPage--mono .TaskPage__description__content,
-.TaskPage--mono .TaskPage__description textarea,
 .TaskPage--mono .TaskPage__comment__body .CommentBody {
   font-family: var(--cms-font-mono);
 }
 
+.TaskPage__description .CommentBody,
 .TaskPage__comment__body .CommentBody {
   font-size: var(--cms-text-base);
   line-height: 1.55;

@@ -33,7 +33,14 @@ const TASK_FIELD_LABELS: Record<TaskMetadataField, string> = {
 export interface Task {
   id: string;
   title: string;
+  /**
+   * Plain-text description, kept in sync with `descriptionBody` for places
+   * that only need text (e.g. task cards). Tasks saved before rich text
+   * support only have this field.
+   */
   description?: string;
+  /** Rich text description. */
+  descriptionBody?: RichTextData | null;
   attachments?: TaskAttachment[];
   assignee?: string | null;
   /** Emails of users cc'd on the task. */
@@ -702,13 +709,22 @@ export async function updateTaskTargetLaunch(
 
 export async function updateTaskDescription(
   taskId: string,
-  description: string
+  content: string | RichTextData | null
 ) {
   if (!taskId) {
     throw new Error('missing task id');
   }
+  const description = !content
+    ? ''
+    : typeof content === 'string'
+      ? content.trim()
+      : getRichTextPlainText(content);
+  // Rich text with no visible text (e.g. only spaces) clears the description.
+  const descriptionBody =
+    description && typeof content !== 'string' ? content : null;
   await updateDoc(taskDocRef(taskId), {
     description,
+    descriptionBody,
     updatedAt: serverTimestamp(),
     updatedBy: window.firebase.user.email || '',
   });
