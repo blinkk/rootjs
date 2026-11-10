@@ -40,7 +40,6 @@ import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {Popover} from '../../../../primitives/Popover/Popover.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {Switch} from '../../../../primitives/Switch/Switch.js';
-import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
@@ -572,19 +571,25 @@ function TaskActionsMenu(props: {task: Task}) {
 function TaskDescription(props: {task: Task}) {
   const {task} = props;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(task.description || '');
+  const [draft, setDraft] = useState<RichTextData | null>(() =>
+    getTaskDescriptionBody(task)
+  );
   const [saving, setSaving] = useState(false);
+  const descriptionBody = useMemo(
+    () => getTaskDescriptionBody(task),
+    [task.descriptionBody, task.description]
+  );
 
   useEffect(() => {
     if (!editing) {
-      setDraft(task.description || '');
+      setDraft(descriptionBody);
     }
-  }, [task.description, editing]);
+  }, [descriptionBody, editing]);
 
   async function saveDescription() {
     setSaving(true);
     try {
-      await updateTaskDescription(task.id, draft.trim());
+      await updateTaskDescription(task.id, draft);
       setEditing(false);
     } catch (err) {
       showNotification({
@@ -596,6 +601,11 @@ function TaskDescription(props: {task: Task}) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setDraft(descriptionBody);
   }
 
   return (
@@ -613,54 +623,63 @@ function TaskDescription(props: {task: Task}) {
         )}
       </div>
       {editing ? (
-        <div className="TaskPage__description__edit mt-1 flex flex-col gap-2.5">
-          <Textarea
-            autosize
+        <div
+          className={cn(
+            'TaskPage__description__edit mt-1',
+            COMPOSER_FORM_CLASSES
+          )}
+        >
+          <CommentEditor
+            variant="minimal"
             autoFocus
-            aria-label="Description"
-            size="md"
-            minRows={4}
             value={draft}
             placeholder="Add task details, scope, and acceptance criteria."
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-              setDraft(e.currentTarget.value)
-            }
+            onChange={setDraft}
+            onSubmitShortcut={saveDescription}
           />
-          <div className="TaskPage__description__editActions flex justify-end gap-2">
+          <div className={COMPOSER_ACTIONS_CLASSES}>
             <Button
-              size="xs"
-              icon={<IconX strokeWidth="1.8" />}
-              onClick={() => {
-                setEditing(false);
-                setDraft(task.description || '');
-              }}
+              className="TaskPage__composer__button"
+              onClick={cancelEditing}
             >
               Cancel
             </Button>
             <Button
-              size="xs"
+              className="TaskPage__composer__button"
               variant="primary"
               loading={saving}
-              icon={<IconCheck strokeWidth="1.8" />}
               onClick={saveDescription}
             >
               Save
             </Button>
           </div>
         </div>
+      ) : task.descriptionBody ? (
+        <CommentBody
+          className="TaskPage__description__content mt-1"
+          body={task.descriptionBody}
+        />
+      ) : task.description ? (
+        // Plain-text descriptions (saved before rich text support, or from
+        // the task list's quick-add form) keep their spacing and indentation.
+        <div className="TaskPage__description__content mt-1 whitespace-pre-wrap text-base leading-normal">
+          {task.description}
+        </div>
       ) : (
-        <div
-          className={cn(
-            'TaskPage__description__content mt-1 whitespace-pre-wrap text-base leading-normal',
-            !task.description &&
-              'TaskPage__description__content--empty italic text-muted'
-          )}
-        >
-          {task.description || 'No description provided.'}
+        <div className="TaskPage__description__content TaskPage__description__content--empty mt-1 text-base leading-normal italic text-muted">
+          No description provided.
         </div>
       )}
     </Surface>
   );
+}
+
+/**
+ * Returns the task's description as rich text, converting plain-text
+ * descriptions saved before rich text support.
+ */
+function getTaskDescriptionBody(task: Task): RichTextData | null {
+  return task.descriptionBody || richTextFromPlainText(task.description || '');
 }
 
 /** Renders task attachment upload controls and the current attachment list. */
