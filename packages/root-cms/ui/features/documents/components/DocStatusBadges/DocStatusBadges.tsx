@@ -6,7 +6,11 @@ import {Badge, type BadgeGradient} from '../../../../primitives/Badge/Badge.js';
 import {Popover} from '../../../../primitives/Popover/Popover.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
-import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
+import {
+  formatDateTime,
+  getTimeAgo,
+  timestampToMillis,
+} from '../../../../utils/time.js';
 import {Release} from '../../../releases/release.js';
 import {usePendingReleases} from '../../../releases/usePendingReleases.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
@@ -365,8 +369,9 @@ function timeDiff(ts: Timestamp | null) {
   // Since we're using server timestamps, firestore doesn't always return the
   // timestamp right away since the db save is happening asynchronously. In
   // these cases, assume that the update happened very recently.
-  if (!ts) {
+  const millis = timestampToMillis(ts);
+  if (!millis) {
     return getTimeAgo(new Date().getTime());
   }
-  return getTimeAgo(ts.toMillis());
+  return getTimeAgo(millis);
 }
