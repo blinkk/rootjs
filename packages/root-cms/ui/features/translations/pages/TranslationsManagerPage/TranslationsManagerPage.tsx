@@ -26,7 +26,11 @@ import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
-import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
+import {
+  formatDateTime,
+  getTimeAgo,
+  timestampToMillis,
+} from '../../../../utils/time.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
 import {
   TranslationsDocSummary,
@@ -332,7 +336,7 @@ TranslationsManagerPage.DocRow = (props: {
             message={formatDateTime(doc.modifiedAt)}
             user={doc.modifiedBy}
           >
-            <span>{getTimeAgo(doc.modifiedAt.toMillis())}</span>
+            <span>{getTimeAgo(timestampToMillis(doc.modifiedAt))}</span>
           </UserActionTooltip>
         ) : (
           '—'
@@ -344,7 +348,7 @@ TranslationsManagerPage.DocRow = (props: {
             message={formatDateTime(doc.publishedAt)}
             user={doc.publishedBy}
           >
-            <span>{getTimeAgo(doc.publishedAt.toMillis())}</span>
+            <span>{getTimeAgo(timestampToMillis(doc.publishedAt))}</span>
           </UserActionTooltip>
         ) : (
           '—'
