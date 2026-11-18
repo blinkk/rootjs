@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 4.3.7
+
+### Patch Changes
+
+- 8519735: feat: support syncing gsheet data sources in RootCMSClient with gcloud user credentials
+  - @blinkk/root@4.3.7
+
 ## 4.3.6
 
 ### Patch Changes
