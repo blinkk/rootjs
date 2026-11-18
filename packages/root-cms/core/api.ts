@@ -889,9 +889,12 @@ export function api(server: Server, options: ApiOptions) {
     try {
       await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user.email});
       res.status(200).json({success: true, id: dataSourceId});
-    } catch (err) {
+    } catch (err: any) {
       console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+      res.status(500).json({
+        success: false,
+        error: err?.message || 'UNKNOWN',
+      });
     }
   });
 
