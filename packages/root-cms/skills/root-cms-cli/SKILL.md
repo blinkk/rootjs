@@ -35,6 +35,18 @@ Together these give you full programmatic access to the CMS backend
 - Writes are attributed to the active gcloud account (`gcloud config get-value
   account`), or to `ROOT_CMS_USER` if set, and doc saves, publishes and
   unpublishes are recorded in the CMS action logs like edits made in the UI.
+- **Syncing Google Sheets data sources (`syncDataSource`)**: By default,
+  `gcloud auth application-default login` only requests Google Cloud scopes and
+  does not include Google Sheets access. To allow `syncDataSource` to fetch
+  from Google Sheets using the logged-in `gcloud` user:
+  1. Enable the Google Sheets API on the project:
+     `gcloud services enable sheets.googleapis.com --project=<PROJECT_ID>`
+  2. Authenticate Application Default Credentials with the Sheets read-only
+     scope:
+     `gcloud auth application-default login --scopes="https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly"`
+  3. Share the Google Sheet (at least "Viewer" access) with the logged-in
+     `gcloud` user's email address (or with the service account email in
+     production/CI).
 - Invoke via the package binary. If `@blinkk/root-cms` is installed locally,
   use `npx root-cms ...` (or `pnpm exec root-cms ...`); otherwise the global
   `root-cms` binary.
@@ -151,6 +163,18 @@ npx root-cms client.call getDocsCount '["Pages", {"mode": "draft"}]'
 
 # Look up a user's role
 npx root-cms client.call getUserRole '["someone@example.com"]'
+
+# List configured data sources
+npx root-cms client.call listDataSources
+
+# Sync a data source (HTTP or Google Sheet) to draft state
+npx root-cms client.call syncDataSource '["my-data-source"]'
+
+# Read synced data from a data source (draft or published)
+npx root-cms client.call getFromDataSource '["my-data-source", {"mode": "draft"}]'
+
+# Publish a synced data source to prod
+npx root-cms client.call publishDataSource '["my-data-source"]'
 ```
 
 ### Asset library

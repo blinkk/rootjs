@@ -1,3 +1,4 @@
+import {execFile} from 'node:child_process';
 import crypto from 'node:crypto';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
@@ -12,6 +13,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {GoogleAuth} from 'google-auth-library';
 import {
   extractAssetIds,
   type AssetSyncResult,
@@ -107,6 +109,39 @@ const DEFAULT_EMAIL_SERVICE_URL = 'https://services.rootjs.dev';
 
 /** Max time to wait for the email service to process the email queue. */
 const EMAIL_SERVICE_TIMEOUT_MS = 60 * 1000;
+
+/** OAuth scope required to read Google Sheets via the Sheets API v4. */
+const GSHEETS_READONLY_SCOPE =
+  'https://www.googleapis.com/auth/spreadsheets.readonly';
+
+/** OAuth scope required for Google Cloud Platform APIs. */
+const CLOUD_PLATFORM_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
+
+/**
+ * Recommended `gcloud` command for authenticating local Application Default
+ * Credentials with both Google Cloud and Google Sheets read access.
+ */
+export const GCLOUD_GSHEET_LOGIN_COMMAND =
+  'gcloud auth application-default login --scopes="https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly"';
+
+/** Timeout in milliseconds when invoking the `gcloud` CLI for auth fallback. */
+const GCLOUD_CLI_TIMEOUT_MS = 10 * 1000;
+
+/** Resolved Google Cloud credentials used to fetch a Google Sheet. */
+export interface GsheetAuthInfo {
+  /** OAuth2 access token. */
+  accessToken: string;
+  /** Email of the authenticated gcloud user or service account, if known. */
+  accountEmail?: string;
+  /** Primary GCP project id for the `x-goog-user-project` quota header. */
+  quotaProjectId?: string;
+  /** Fallback GCP project id if the primary quota project is rejected. */
+  fallbackQuotaProjectId?: string;
+  /** Whether the credential belongs to an end user rather than a service account. */
+  isUserCredential: boolean;
+  /** Where the credential was obtained from. */
+  source: 'adc' | 'gcloud' | 'app-credential';
+}
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -2597,6 +2632,19 @@ export class RootCMSClient {
   }
 
   /**
+   * Lists all data sources configured in the project.
+   */
+  async listDataSources(): Promise<DataSource[]> {
+    const dbPath = `Projects/${this.projectId}/DataSources`;
+    const querySnapshot = await this.db.collection(dbPath).get();
+    const res: DataSource[] = [];
+    querySnapshot.forEach((doc) => {
+      res.push(doc.data() as DataSource);
+    });
+    return res;
+  }
+
+  /**
    * Returns a data source configuration object.
    */
   async getDataSource(dataSourceId: string) {
@@ -2649,7 +2697,21 @@ export class RootCMSClient {
   }
 
   /**
-   * Syncs a data source to draft state.
+   * Syncs a data source (`http` or `gsheet`) from its external source into
+   * draft state.
+   *
+   * For Google Sheets (`gsheet`) data sources, credentials are resolved from
+   * Application Default Credentials (including a logged-in `gcloud` user
+   * locally or the runtime service account in production), falling back to the
+   * `gcloud` CLI session.
+   *
+   * Local `gcloud` setup for Google Sheets:
+   * 1. Enable the Google Sheets API on your GCP project:
+   *    `gcloud services enable sheets.googleapis.com --project=<PROJECT_ID>`
+   * 2. Authenticate Application Default Credentials with the Sheets scope:
+   *    `gcloud auth application-default login --scopes="https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly"`
+   * 3. Ensure the Google Sheet is shared (at least "Viewer") with your
+   *    logged-in `gcloud` email (or the service account email in production).
    */
   async syncDataSource(dataSourceId: string, options?: {syncedBy?: string}) {
     const dataSource = await this.getDataSource(dataSourceId);
@@ -2668,7 +2730,11 @@ export class RootCMSClient {
     const dataDocRef = this.db.doc(
       `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/draft`
     );
-    const syncedBy = options?.syncedBy || this.user;
+    const syncedBy =
+      options?.syncedBy ||
+      (this.user && this.user !== DEFAULT_CLIENT_USER
+        ? this.user
+        : result.syncedBy || this.user || DEFAULT_CLIENT_USER);
 
     const updatedDataSource: DataSource = {
       ...dataSource,
@@ -2692,6 +2758,9 @@ export class RootCMSClient {
     console.log(`synced by: ${syncedBy}`);
   }
 
+  /**
+   * Publishes previously synced draft data for a data source to published state.
+   */
   async publishDataSource(
     dataSourceId: string,
     options?: {publishedBy?: string}
@@ -2841,7 +2910,7 @@ export class RootCMSClient {
 
   private async fetchData(
     dataSource: DataSource
-  ): Promise<{data: any; headers?: string[]}> {
+  ): Promise<{data: any; headers?: string[]; syncedBy?: string}> {
     if (dataSource.type === 'http') {
       return {data: await this.fetchHttpData(dataSource)};
     }
@@ -2854,18 +2923,32 @@ export class RootCMSClient {
   private async fetchHttpData(dataSource: DataSource) {
     const url = dataSource.url || '';
     if (!url.startsWith('https://')) {
-      throw new Error(`url not supported: ${url}`);
+      const msg =
+        `Failed to sync HTTP data source "${dataSource.id}": url not supported: ${url}. ` +
+        'Only "https://" URLs are supported.';
+      console.error(msg);
+      throw new Error(msg);
     }
 
-    const res = await fetch(url, {
-      method: dataSource.httpOptions?.method || 'GET',
-      headers: dataSource.httpOptions?.headers || [],
-      body: dataSource.httpOptions?.body || undefined,
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: dataSource.httpOptions?.method || 'GET',
+        headers: dataSource.httpOptions?.headers || [],
+        body: dataSource.httpOptions?.body || undefined,
+      });
+    } catch (err: any) {
+      const reason = err?.message || String(err);
+      const msg = `Failed to sync HTTP data source "${dataSource.id}" (${url}): network request failed: ${reason}`;
+      console.error(msg);
+      throw new Error(msg, {cause: err});
+    }
 
     if (res.status !== 200) {
       const err = await res.text();
-      throw new Error(`req failed: ${err}`);
+      const msg = `Failed to sync HTTP data source "${dataSource.id}" (${url}): req failed (HTTP ${res.status}): ${err}`;
+      console.error(msg);
+      throw new Error(msg);
     }
 
     const contentType = String(res.headers.get('content-type'));
@@ -2876,57 +2959,305 @@ export class RootCMSClient {
   }
 
   /**
+   * Returns the configured GCP project id from the CMS plugin or Firebase app,
+   * if available.
+   */
+  private getGcpProjectId(): string | undefined {
+    return (
+      this.cmsPlugin?.getConfig()?.firebaseConfig?.projectId ||
+      this.app?.options?.projectId ||
+      undefined
+    );
+  }
+
+  /**
+   * Resolves Google Cloud credentials for reading a Google Sheet.
+   *
+   * Prefers Application Default Credentials (`GoogleAuth` with the
+   * `spreadsheets.readonly` scope, which works for both a logged-in `gcloud`
+   * user via `gcloud auth application-default login --scopes=...` and a
+   * service account in production). Falls back to the active `gcloud` CLI
+   * session (`gcloud auth print-access-token`) or a custom credential on the
+   * Firebase Admin app.
+   */
+  private async resolveGsheetAuth(
+    dataSourceId: string,
+    options?: {preferGcloudCli?: boolean}
+  ): Promise<GsheetAuthInfo> {
+    const configuredProjectId = this.getGcpProjectId();
+
+    // Support custom non-ADC credentials passed explicitly to `initializeApp`
+    // (e.g. `cert(...)` or test stubs).
+    const appCredential = this.app?.options?.credential;
+    if (
+      appCredential &&
+      appCredential.constructor?.name !== 'ApplicationDefaultCredential' &&
+      !options?.preferGcloudCli
+    ) {
+      const tokenRes = await appCredential.getAccessToken();
+      if (tokenRes?.access_token) {
+        return {
+          accessToken: tokenRes.access_token,
+          quotaProjectId: configuredProjectId,
+          isUserCredential: false,
+          source: 'app-credential',
+        };
+      }
+    }
+
+    let adcError: unknown;
+    if (!options?.preferGcloudCli) {
+      try {
+        const auth = new GoogleAuth({
+          scopes: [GSHEETS_READONLY_SCOPE, CLOUD_PLATFORM_SCOPE],
+        });
+        const client = await auth.getClient();
+        const {token} = await client.getAccessToken();
+        if (!token) {
+          throw new Error('no access token returned from ADC');
+        }
+        const clientEmail =
+          typeof (client as any).email === 'string'
+            ? ((client as any).email as string)
+            : undefined;
+        const isServiceAccount =
+          Boolean(clientEmail?.endsWith('.gserviceaccount.com')) ||
+          client.constructor?.name === 'Compute' ||
+          client.constructor?.name === 'JWT';
+        const adcQuotaProjectId =
+          typeof (client as any).quotaProjectId === 'string' &&
+          (client as any).quotaProjectId
+            ? ((client as any).quotaProjectId as string)
+            : undefined;
+        const idToken = (client as any).credentials?.id_token as
+          string | undefined;
+        const accountEmail =
+          clientEmail ||
+          decodeEmailFromIdToken(idToken) ||
+          (await getGcloudCliConfigValue('account'));
+
+        let quotaProjectId: string | undefined;
+        let fallbackQuotaProjectId: string | undefined;
+        if (isServiceAccount) {
+          quotaProjectId = adcQuotaProjectId;
+        } else {
+          quotaProjectId =
+            configuredProjectId ||
+            adcQuotaProjectId ||
+            (await getGcloudCliConfigValue('project'));
+          if (adcQuotaProjectId && adcQuotaProjectId !== quotaProjectId) {
+            fallbackQuotaProjectId = adcQuotaProjectId;
+          }
+        }
+
+        return {
+          accessToken: token,
+          accountEmail,
+          quotaProjectId,
+          fallbackQuotaProjectId,
+          isUserCredential: !isServiceAccount,
+          source: 'adc',
+        };
+      } catch (err) {
+        adcError = err;
+      }
+    }
+
+    // Fall back to the logged-in `gcloud` CLI session.
+    const gcloudToken = await getGcloudCliAccessToken();
+    if (gcloudToken) {
+      const [accountEmail, gcloudProjectId] = await Promise.all([
+        getGcloudCliConfigValue('account'),
+        getGcloudCliConfigValue('project'),
+      ]);
+      const quotaProjectId = configuredProjectId || gcloudProjectId;
+      const fallbackQuotaProjectId =
+        gcloudProjectId && gcloudProjectId !== quotaProjectId
+          ? gcloudProjectId
+          : undefined;
+      return {
+        accessToken: gcloudToken,
+        accountEmail,
+        quotaProjectId,
+        fallbackQuotaProjectId,
+        isUserCredential: true,
+        source: 'gcloud',
+      };
+    }
+
+    const reason =
+      adcError instanceof Error
+        ? adcError.message
+        : adcError
+          ? String(adcError)
+          : 'no credentials found';
+    const msg = [
+      `Failed to sync Google Sheet data source "${dataSourceId}": could not obtain Google Cloud credentials (${reason}).`,
+      '',
+      'To authenticate locally with your gcloud user account and grant Google Sheets read access, run:',
+      `  ${GCLOUD_GSHEET_LOGIN_COMMAND}`,
+      '',
+      'For production or CI environments, ensure the runtime service account is configured or set GOOGLE_APPLICATION_CREDENTIALS to a service account key file.',
+    ].join('\n');
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  /**
+   * Executes a Google Sheets API GET request with automatic credential / quota
+   * project fallback and user-friendly error formatting.
+   */
+  private async fetchGsheetApi(
+    url: string,
+    dataSource: DataSource,
+    spreadsheetId: string,
+    auth: GsheetAuthInfo
+  ): Promise<{res: Response; auth: GsheetAuthInfo}> {
+    const doFetch = async (currentAuth: GsheetAuthInfo) => {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${currentAuth.accessToken}`,
+      };
+      if (currentAuth.quotaProjectId) {
+        headers['x-goog-user-project'] = currentAuth.quotaProjectId;
+      }
+      return await fetch(url, {headers});
+    };
+
+    let currentAuth = auth;
+    let res: Response;
+    try {
+      res = await doFetch(currentAuth);
+    } catch (err: any) {
+      const reason = err?.message || String(err);
+      const msg = `Failed to sync Google Sheet data source "${dataSource.id}": network request to Google Sheets API failed: ${reason}`;
+      console.error(msg);
+      throw new Error(msg, {cause: err});
+    }
+
+    if (res.status === 200) {
+      return {res, auth: currentAuth};
+    }
+
+    let errText = await res.text();
+    let errJson = parseJsonSafe(errText);
+
+    // If ADC failed due to an expired token or missing Sheets scope, try the
+    // `gcloud` CLI session (in case the user ran `gcloud auth login
+    // --enable-gdrive-access` without updating ADC).
+    if (
+      currentAuth.source === 'adc' &&
+      (res.status === 401 ||
+        isInsufficientScopeError(res.status, errJson, errText))
+    ) {
+      const gcloudAuth = await this.resolveGsheetAuth(dataSource.id, {
+        preferGcloudCli: true,
+      }).catch(() => null);
+      if (gcloudAuth && gcloudAuth.accessToken !== currentAuth.accessToken) {
+        const retryRes = await doFetch(gcloudAuth);
+        if (retryRes.status === 200) {
+          return {res: retryRes, auth: gcloudAuth};
+        }
+      }
+    }
+
+    // If the request failed because the primary quota project does not have the
+    // Sheets API enabled or denies quota usage, retry with the fallback quota
+    // project from ADC / gcloud config if different.
+    if (
+      res.status === 403 &&
+      currentAuth.fallbackQuotaProjectId &&
+      isQuotaOrServiceDisabledError(errJson, errText)
+    ) {
+      const fallbackAuth: GsheetAuthInfo = {
+        ...currentAuth,
+        quotaProjectId: currentAuth.fallbackQuotaProjectId,
+        fallbackQuotaProjectId: undefined,
+      };
+      const retryRes = await doFetch(fallbackAuth);
+      if (retryRes.status === 200) {
+        return {res: retryRes, auth: fallbackAuth};
+      }
+      res = retryRes;
+      errText = await res.text();
+      errJson = parseJsonSafe(errText);
+      currentAuth = fallbackAuth;
+    }
+
+    const msg = formatGsheetApiError({
+      status: res.status,
+      errJson,
+      errText,
+      dataSource,
+      spreadsheetId,
+      auth: currentAuth,
+      configuredProjectId: this.getGcpProjectId(),
+    });
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  /**
    * Fetches data from a Google Sheet using the Google Sheets API v4.
    *
    * ## Setup
    *
-   * For the server-side service account to access the Google Sheet:
+   * ### Local development (logged-in `gcloud` user)
+   *
+   * 1. **Enable the Google Sheets API** on your Google Cloud project:
+   *    ```bash
+   *    gcloud services enable sheets.googleapis.com --project=<PROJECT_ID>
+   *    ```
+   *    Or enable it in the Cloud Console:
+   *    https://console.cloud.google.com/apis/library/sheets.googleapis.com
+   *
+   * 2. **Authenticate Application Default Credentials with the Sheets scope**:
+   *    ```bash
+   *    gcloud auth application-default login --scopes="https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly"
+   *    ```
+   *
+   * 3. **Share the Google Sheet** with your Google account (at least Viewer
+   *    access).
+   *
+   * ### Production / Server-side service account
    *
    * 1. **Enable the Google Sheets API** in the Google Cloud Console for the
    *    project associated with the service account.
-   *    https://console.cloud.google.com/apis/library/sheets.googleapis.com
    *
    * 2. **Share the Google Sheet** with the service account's email address
-   *    (e.g. `my-service-account@my-project.iam.gserviceaccount.com`).
-   *    Open the sheet in Google Sheets, click "Share", and add the service
-   *    account email as a Viewer.
-   *
-   *    - For **App Engine**: the service account email is typically
-   *      `<project-id>@appspot.gserviceaccount.com`.
-   *    - For **Cloud Run**: check the service account configured for the
-   *      Cloud Run service in the Google Cloud Console.
-   *    - For **local development**: use the service account email from the
-   *      JSON key file specified in `GOOGLE_APPLICATION_CREDENTIALS`.
+   *    (e.g. `my-service-account@my-project.iam.gserviceaccount.com`) as a
+   *    Viewer:
+   *    - **App Engine**: `<project-id>@appspot.gserviceaccount.com`
+   *    - **Cloud Run**: the service account configured on the Cloud Run service
+   *    - **Custom key**: the `client_email` in `GOOGLE_APPLICATION_CREDENTIALS`
    */
   private async fetchGsheetData(
     dataSource: DataSource
-  ): Promise<{data: any; headers?: string[]}> {
+  ): Promise<{data: any; headers?: string[]; syncedBy?: string}> {
     const gsheetId = parseSpreadsheetUrl(dataSource.url);
     if (!gsheetId?.spreadsheetId) {
-      throw new Error(`failed to parse google sheet url: ${dataSource.url}`);
+      const msg =
+        `Failed to sync Google Sheet data source "${dataSource.id}": ` +
+        `failed to parse google sheet url: ${dataSource.url}. ` +
+        'Expected format: https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=<GID>';
+      console.error(msg);
+      throw new Error(msg);
     }
 
-    const credential = this.app.options.credential;
-    if (!credential) {
-      throw new Error(
-        'firebase credential not available. ensure the firebase admin app is initialized with a service account.'
-      );
-    }
-    const {access_token} = await credential.getAccessToken();
+    let auth = await this.resolveGsheetAuth(dataSource.id);
 
     // Resolve the gid to a sheet title by fetching spreadsheet metadata.
     let sheetTitle = 'Sheet1';
     const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       gsheetId.spreadsheetId
     )}?fields=sheets.properties`;
-    const metaRes = await fetch(metaUrl, {
-      headers: {Authorization: `Bearer ${access_token}`},
-    });
-    if (metaRes.status !== 200) {
-      const err = await metaRes.text();
-      throw new Error(`failed to fetch spreadsheet metadata: ${err}`);
-    }
-    const meta = (await metaRes.json()) as {
+    const metaFetch = await this.fetchGsheetApi(
+      metaUrl,
+      dataSource,
+      gsheetId.spreadsheetId,
+      auth
+    );
+    auth = metaFetch.auth;
+    const meta = (await metaFetch.res.json()) as {
       sheets?: {properties?: {sheetId?: number; title?: string}}[];
     };
     const sheets = meta.sheets || [];
@@ -2934,10 +3265,22 @@ export class RootCMSClient {
       const sheet = sheets.find((s) => s.properties?.sheetId === gsheetId.gid);
       if (sheet?.properties?.title) {
         sheetTitle = sheet.properties.title;
+      } else if (gsheetId.gid === 0 && sheets[0]?.properties?.title) {
+        sheetTitle = sheets[0].properties.title;
       } else if (gsheetId.gid !== 0) {
-        throw new Error(
-          `sheet with gid ${gsheetId.gid} not found in spreadsheet`
-        );
+        const availableTabs =
+          sheets
+            .map(
+              (s) =>
+                `"${s.properties?.title || 'Untitled'}" (gid=${s.properties?.sheetId ?? 0})`
+            )
+            .join(', ') || 'none';
+        const msg =
+          `Failed to sync Google Sheet data source "${dataSource.id}": ` +
+          `sheet with gid ${gsheetId.gid} not found in spreadsheet "${gsheetId.spreadsheetId}". ` +
+          `Available tabs: ${availableTabs}.`;
+        console.error(msg);
+        throw new Error(msg);
       }
     }
 
@@ -2946,17 +3289,16 @@ export class RootCMSClient {
     const valuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       gsheetId.spreadsheetId
     )}/values/${range}`;
-    const valuesRes = await fetch(valuesUrl, {
-      headers: {Authorization: `Bearer ${access_token}`},
-    });
-    if (valuesRes.status !== 200) {
-      const err = await valuesRes.text();
-      throw new Error(`failed to fetch sheet values: ${err}`);
-    }
-    const valuesData = (await valuesRes.json()) as {values?: string[][]};
+    const valuesFetch = await this.fetchGsheetApi(
+      valuesUrl,
+      dataSource,
+      gsheetId.spreadsheetId,
+      auth
+    );
+    const valuesData = (await valuesFetch.res.json()) as {values?: string[][]};
     const values: string[][] = valuesData.values || [];
     if (values.length === 0) {
-      return {data: [], headers: []};
+      return {data: [], headers: [], syncedBy: auth.accountEmail};
     }
 
     const headers = values[0];
@@ -2964,7 +3306,11 @@ export class RootCMSClient {
 
     if (dataSource.dataFormat === 'grid') {
       // Grid data includes the header row so that the data mirrors the sheet.
-      return {data: [headers, ...rows], headers};
+      return {
+        data: [headers, ...rows],
+        headers,
+        syncedBy: auth.accountEmail,
+      };
     }
 
     // Convert rows to an array of objects keyed by column headers.
@@ -2978,7 +3324,7 @@ export class RootCMSClient {
       });
       return item;
     });
-    return {data: mapData, headers};
+    return {data: mapData, headers, syncedBy: auth.accountEmail};
   }
 
   /**
@@ -3784,10 +4130,10 @@ function isIntervalDue(
  * Expects a URL in the format:
  * `https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit#gid=<gid>`
  */
-function parseSpreadsheetUrl(
+export function parseSpreadsheetUrl(
   url: string
 ): {spreadsheetId: string; gid: number} | null {
-  if (!url.startsWith('https://docs.google.com/spreadsheets/d/')) {
+  if (!url || !url.startsWith('https://docs.google.com/spreadsheets/d/')) {
     return null;
   }
   const parts = url.split('/');
@@ -3795,20 +4141,270 @@ function parseSpreadsheetUrl(
   if (dIndex === -1 || dIndex + 1 >= parts.length) {
     return null;
   }
-  const spreadsheetId = parts[dIndex + 1];
+  const spreadsheetId = parts[dIndex + 1]?.split(/[?#]/)[0];
   if (!spreadsheetId) {
     return null;
   }
   let gid = 0;
-  const hashIndex = url.indexOf('#');
-  if (hashIndex !== -1) {
-    const hash = url.slice(hashIndex);
-    const gidMatch = hash.match(/gid=(\d+)/);
-    if (gidMatch && gidMatch[1]) {
-      gid = parseInt(gidMatch[1]);
-    }
+  const gidMatch = url.match(/[#?&]gid=(\d+)/);
+  if (gidMatch && gidMatch[1]) {
+    gid = parseInt(gidMatch[1], 10);
   }
   return {spreadsheetId, gid};
+}
+
+/**
+ * Decodes the `email` claim from a JWT `id_token` if present.
+ */
+function decodeEmailFromIdToken(
+  idToken: string | undefined
+): string | undefined {
+  if (!idToken || typeof idToken !== 'string') {
+    return undefined;
+  }
+  const parts = idToken.split('.');
+  if (parts.length < 2) {
+    return undefined;
+  }
+  try {
+    const payload = JSON.parse(
+      Buffer.from(parts[1], 'base64url').toString('utf8')
+    );
+    if (typeof payload?.email === 'string' && payload.email) {
+      return payload.email;
+    }
+  } catch {
+    // Ignore malformed JWT payloads.
+  }
+  return undefined;
+}
+
+/**
+ * Runs a `gcloud` CLI command and returns trimmed stdout, or `undefined` if
+ * `gcloud` is not installed or the command fails.
+ */
+function runGcloudCommand(args: string[]): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    execFile(
+      'gcloud',
+      args,
+      {timeout: GCLOUD_CLI_TIMEOUT_MS},
+      (err, stdout) => {
+        if (err) {
+          resolve(undefined);
+          return;
+        }
+        const trimmed = String(stdout || '').trim();
+        resolve(trimmed || undefined);
+      }
+    );
+  });
+}
+
+/**
+ * Attempts to read an OAuth2 access token from the active `gcloud` CLI user
+ * session (`gcloud auth print-access-token`).
+ */
+async function getGcloudCliAccessToken(): Promise<string | undefined> {
+  return await runGcloudCommand(['auth', 'print-access-token', '--quiet']);
+}
+
+/**
+ * Reads a `gcloud` configuration property (such as `account` or `project`).
+ */
+async function getGcloudCliConfigValue(
+  key: 'account' | 'project'
+): Promise<string | undefined> {
+  const val = await runGcloudCommand(['config', 'get-value', key, '--quiet']);
+  if (!val || val === '(unset)') {
+    return undefined;
+  }
+  return val;
+}
+
+/** Parses a JSON string, returning `null` on failure. */
+function parseJsonSafe(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts structured error reasons and message from a Google API JSON error
+ * response body.
+ */
+function extractGoogleApiErrorDetails(errJson: any): {
+  message: string;
+  status: string;
+  reasons: string[];
+} {
+  const errObj = errJson?.error;
+  if (!errObj || typeof errObj !== 'object') {
+    return {message: '', status: '', reasons: []};
+  }
+  const message = typeof errObj.message === 'string' ? errObj.message : '';
+  const status = typeof errObj.status === 'string' ? errObj.status : '';
+  const reasons: string[] = [];
+  if (Array.isArray(errObj.errors)) {
+    for (const item of errObj.errors) {
+      if (typeof item?.reason === 'string') {
+        reasons.push(item.reason);
+      }
+    }
+  }
+  if (Array.isArray(errObj.details)) {
+    for (const detail of errObj.details) {
+      if (typeof detail?.reason === 'string') {
+        reasons.push(detail.reason);
+      }
+    }
+  }
+  return {message, status, reasons};
+}
+
+/**
+ * Returns true if the Google API response indicates the access token lacks the
+ * required Google Sheets OAuth scope.
+ */
+function isInsufficientScopeError(
+  httpStatus: number,
+  errJson: any,
+  errText: string
+): boolean {
+  if (httpStatus !== 403) {
+    return false;
+  }
+  const {message, reasons} = extractGoogleApiErrorDetails(errJson);
+  if (
+    reasons.some(
+      (r) =>
+        r.toUpperCase() === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' ||
+        r.toLowerCase() === 'insufficientpermissions'
+    )
+  ) {
+    return true;
+  }
+  const combined = `${message} ${errText}`.toLowerCase();
+  return combined.includes('insufficient authentication scopes');
+}
+
+/**
+ * Returns true if a 403 response indicates the Google Sheets API is disabled on
+ * the quota project or the quota project is missing / denied.
+ */
+function isQuotaOrServiceDisabledError(errJson: any, errText: string): boolean {
+  const {message, reasons} = extractGoogleApiErrorDetails(errJson);
+  const upperReasons = reasons.map((r) => r.toUpperCase());
+  if (
+    upperReasons.some(
+      (r) =>
+        r === 'SERVICE_DISABLED' ||
+        r === 'ACCESSNOTCONFIGURED' ||
+        r === 'USER_PROJECT_DENIED' ||
+        r === 'BILLING_DISABLED'
+    )
+  ) {
+    return true;
+  }
+  const lower = `${message} ${errText}`.toLowerCase();
+  return (
+    lower.includes('has not been used in project') ||
+    lower.includes('sheets.googleapis.com') ||
+    lower.includes('requires a quota project') ||
+    lower.includes('authenticated using end user credentials')
+  );
+}
+
+/**
+ * Formats a user-friendly, actionable error message when a Google Sheets API
+ * request fails.
+ */
+export function formatGsheetApiError(options: {
+  status: number;
+  errJson: any;
+  errText: string;
+  dataSource: DataSource;
+  spreadsheetId: string;
+  auth: GsheetAuthInfo;
+  configuredProjectId?: string;
+}): string {
+  const {
+    status,
+    errJson,
+    errText,
+    dataSource,
+    spreadsheetId,
+    auth,
+    configuredProjectId,
+  } = options;
+  const {message: apiMessage} = extractGoogleApiErrorDetails(errJson);
+
+  if (isInsufficientScopeError(status, errJson, errText)) {
+    return [
+      `Failed to sync Google Sheet data source "${dataSource.id}": Google Cloud credentials are missing the Google Sheets scope.`,
+      '',
+      'Application Default Credentials do not include Google Sheets access by default.',
+      'Re-authenticate with the Google Sheets read-only scope by running:',
+      `  ${GCLOUD_GSHEET_LOGIN_COMMAND}`,
+    ].join('\n');
+  }
+
+  if (status === 403 && isQuotaOrServiceDisabledError(errJson, errText)) {
+    const projectHint =
+      auth.quotaProjectId || configuredProjectId || '<YOUR_GCP_PROJECT_ID>';
+    return [
+      `Failed to sync Google Sheet data source "${dataSource.id}": the Google Sheets API is not enabled or a quota project is not configured for project "${projectHint}".`,
+      ...(apiMessage ? [`Details: ${apiMessage}`] : []),
+      '',
+      'To fix this:',
+      '1. Enable the Google Sheets API on your Google Cloud project:',
+      `   gcloud services enable sheets.googleapis.com --project=${projectHint}`,
+      `   (or https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=${projectHint})`,
+      '2. Ensure your Application Default Credentials have a quota project set:',
+      `   gcloud auth application-default set-quota-project ${projectHint}`,
+    ].join('\n');
+  }
+
+  if (status === 403) {
+    const who = auth.accountEmail
+      ? `your authenticated Google account (${auth.accountEmail})`
+      : 'your authenticated gcloud user account or service account';
+    return [
+      `Failed to sync Google Sheet data source "${dataSource.id}": permission denied accessing spreadsheet "${spreadsheetId}" (${dataSource.url}).`,
+      ...(apiMessage ? [`Details: ${apiMessage}`] : []),
+      '',
+      `Make sure the Google Sheet is shared (at least "Viewer" access) with ${who}.`,
+    ].join('\n');
+  }
+
+  if (status === 401) {
+    return [
+      `Failed to sync Google Sheet data source "${dataSource.id}": Google Cloud access token is invalid or expired${apiMessage ? ` (${apiMessage})` : ''}.`,
+      '',
+      'Re-authenticate by running:',
+      `  ${GCLOUD_GSHEET_LOGIN_COMMAND}`,
+    ].join('\n');
+  }
+
+  if (status === 404) {
+    return [
+      `Failed to sync Google Sheet data source "${dataSource.id}": spreadsheet "${spreadsheetId}" was not found (${dataSource.url}).`,
+      'Verify that the Google Sheet URL is correct and the spreadsheet has not been deleted.',
+    ].join('\n');
+  }
+
+  if (status === 429) {
+    return (
+      `Failed to sync Google Sheet data source "${dataSource.id}": ` +
+      `Google Sheets API rate limit exceeded${apiMessage ? ` (${apiMessage})` : ''}. ` +
+      'Wait a moment and try again.'
+    );
+  }
+
+  const detail = apiMessage || errText.trim() || `HTTP ${status}`;
+  return `Failed to sync Google Sheet data source "${dataSource.id}" (HTTP ${status}): ${detail}`;
 }
 
 function randString(len: number): string {
