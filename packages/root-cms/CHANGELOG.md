@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 4.3.8
+
+### Patch Changes
+
+- 26a826f: fix: keep toast notifications on screen when a modal opens or closes
+  - @blinkk/root@4.3.8
+
 ## 4.3.7
 
 ### Patch Changes
