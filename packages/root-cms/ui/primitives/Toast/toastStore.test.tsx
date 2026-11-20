@@ -1,5 +1,6 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {pushDialog, removeDialog} from '../Dialog/dialogStack.js';
 import {Toaster} from './Toast.js';
 import {createToastStore, type ToastStore} from './toastStore.js';
 
@@ -66,6 +67,28 @@ describe('Toaster', () => {
     });
     expect(screen.queryByText('Default delay')).toBeNull();
     expect(screen.queryByText('Sticky')).not.toBeNull();
+  });
+
+  it('keeps its toasts mounted when a dialog opens and closes', () => {
+    render(<Toaster store={store} autoClose={false} />);
+    act(() => {
+      store.show({message: 'Saved'});
+    });
+    const toast = screen.getByText('Saved').closest('.Toast')!;
+    expect(document.body.contains(toast)).toBe(true);
+
+    const dialog = document.createElement('dialog');
+    document.body.appendChild(dialog);
+    act(() => pushDialog(dialog));
+    // The same element, moved into the dialog rather than remounted.
+    expect(screen.getByText('Saved').closest('.Toast')).toBe(toast);
+    expect(dialog.contains(toast)).toBe(true);
+
+    act(() => removeDialog(dialog));
+    expect(screen.getByText('Saved').closest('.Toast')).toBe(toast);
+    expect(dialog.contains(toast)).toBe(false);
+    expect(document.body.contains(toast)).toBe(true);
+    dialog.remove();
   });
 
   it('restarts the timer when a loading toast is updated', () => {

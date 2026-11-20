@@ -349,6 +349,25 @@ export function Toast(props: ToastProps) {
   );
 }
 
+/**
+ * Appends `el` to `parent`. Uses `moveBefore()` where supported, which keeps
+ * the moved subtree's state (running animations, focus, hover).
+ */
+function moveInto(parent: HTMLElement, el: HTMLElement) {
+  const target = parent as HTMLElement & {
+    moveBefore?: (node: Node, child: Node | null) => void;
+  };
+  if (el.isConnected && typeof target.moveBefore === 'function') {
+    try {
+      target.moveBefore(el, null);
+      return;
+    } catch {
+      // Not movable in place (e.g. `parent` is detached); append instead.
+    }
+  }
+  parent.appendChild(el);
+}
+
 export interface ToasterProps {
   /** The store to render. Default: the app's shared `toastStore`. */
   store?: ToastStore;
@@ -369,8 +388,11 @@ export interface ToasterProps {
  * New toasts are announced politely, errors (`color: 'red'`) assertively.
  * Mount one in the app shell; replaces Mantine's `NotificationsProvider`.
  *
- * It portals into the topmost open `Dialog`, if any, so toasts stay above
- * modals and clickable.
+ * Its toasts live in one host element, which moves into the topmost open
+ * `Dialog`, if any, so they stay above modals and clickable. The host is
+ * moved rather than re-portaled: a portal that changes container remounts
+ * its children, which would replay every toast's enter animation and
+ * restart its timer each time a dialog opens or closes.
  */
 export function Toaster(props: ToasterProps) {
   const store = props.store ?? toastStore;
@@ -384,6 +406,19 @@ export function Toaster(props: ToasterProps) {
   >([]);
   const shownRef = useRef<ToastData[]>([]);
   const root = useOverlayRoot();
+  const [host] = useState(() => {
+    const el = document.createElement('div');
+    el.className = 'Toaster__host contents';
+    return el;
+  });
+
+  useLayoutEffect(() => {
+    if (host.parentNode !== root) {
+      moveInto(root, host);
+    }
+  }, [root]);
+
+  useLayoutEffect(() => () => host.remove(), []);
 
   useEffect(() => {
     setToasts(store.getToasts());
@@ -439,6 +474,6 @@ export function Toaster(props: ToasterProps) {
         ))}
       </div>
     </section>,
-    root
+    host
   );
 }
