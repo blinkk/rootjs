@@ -251,7 +251,7 @@ export function PrototypeCommentsCard(props: PrototypeCommentsCardProps) {
   return (
     <aside
       aria-label="Comments"
-      className="PrototypeCommentsCard fixed right-3 top-14 bottom-16 z-(--cms-z-floating) flex w-90 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
+      className="PrototypeCommentsCard absolute top-14 right-3 bottom-16 z-20 flex w-90 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
     >
       <div className="PrototypeCommentsCard__header flex shrink-0 items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
@@ -694,7 +694,7 @@ export function PrototypeCommentPopover(props: PrototypeCommentPopoverProps) {
       aria-label={
         thread ? `Comment thread on ${thread.anchorLabel}` : 'New comment'
       }
-      className="PrototypeCommentPopover fixed z-(--cms-z-floating) w-80 rounded-lg border border-border bg-surface-raised p-3 shadow-lg"
+      className="PrototypeCommentPopover fixed z-30 w-80 rounded-lg border border-border bg-surface-raised p-3 shadow-lg"
       style={{left: `${left}px`, top: `${top}px`}}
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}

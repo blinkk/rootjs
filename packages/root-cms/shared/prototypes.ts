@@ -6,10 +6,7 @@
 
 /** Default pages created on every new prototype board. */
 export const DEFAULT_PROTOTYPE_PAGES: readonly PrototypeBoardPage[] = [
-  {id: 'explorations', name: 'Explorations'},
-  {id: 'approved', name: 'Approved'},
-  {id: 'mobile', name: 'Mobile'},
-  {id: 'archive', name: 'Archive'},
+  {id: 'page-1', name: 'Page 1'},
 ];
 
 /** Default simulated fold heights (in CSS px) used for `--proto-vh`. */

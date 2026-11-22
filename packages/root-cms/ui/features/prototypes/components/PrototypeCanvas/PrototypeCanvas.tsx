@@ -14,6 +14,7 @@ import {
   zoomCameraAroundPoint,
 } from '../../../../../shared/prototypes.js';
 import {Button} from '../../../../primitives/Button/Button.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {cn} from '../../../../utils/classes.js';
 import type {PrototypeExportPayload} from '../../prototype-export.js';
 import {
@@ -58,6 +59,10 @@ export interface PrototypeCanvasProps {
   canEdit: boolean;
   /** Whether Root AI is available. */
   aiAvailable: boolean;
+  /** Whether Root AI is currently generating or has an initial prompt in flight. */
+  aiGenerating?: boolean;
+  /** Whether a right-hand floating panel is open (used to center empty/skeleton states). */
+  sidePanelOpen?: boolean;
   /** Exposes viewport element measurement callback to the parent page. */
   onViewportElement?: (el: HTMLDivElement | null) => void;
   /** Selection and interaction callbacks. */
@@ -92,7 +97,7 @@ export interface PrototypeCanvasProps {
   onDuplicateFrame: (frameId: string) => void;
   onResizeFrame: (frameId: string, width: number) => void;
   onMoveFrameToPage: (frameId: string, pageId: string) => void;
-  onExportFrame: (frameId: string, format: 'png' | 'jpg') => void;
+  onExportFrame: (frameId: string) => void;
   onDeleteFrame: (frameId: string) => void;
   onNewFrame: () => void;
   onOpenAi: () => void;
@@ -119,6 +124,8 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     activeThreadId,
     canEdit,
     aiAvailable,
+    aiGenerating = false,
+    sidePanelOpen = false,
     onViewportElement,
     onSelect,
     onToggleInteractive,
@@ -438,48 +445,109 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
         })}
       </div>
 
-      {/* Empty state centered over the canvas when the page has zero frames. */}
+      {/* Empty or AI-generating skeleton state centered over the canvas when the page has zero frames. */}
       {frames.length === 0 && (
         <div
-          className="PrototypeCanvas__empty pointer-events-none absolute inset-0 flex items-center justify-center p-4"
+          className={cn(
+            'PrototypeCanvas__empty pointer-events-none absolute inset-0 flex items-center justify-center p-4 pt-16 pb-16 transition-[padding]',
+            sidePanelOpen && 'lg:pr-98'
+          )}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="pointer-events-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border border-border bg-surface p-6 text-center shadow-md">
-            <div className="flex size-10 items-center justify-center rounded-full bg-surface-hover text-muted">
-              <IconFrame size={20} />
+          {aiGenerating ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="PrototypeCanvas__skeleton pointer-events-auto flex w-full max-w-xl flex-col gap-2.5"
+            >
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2 text-sm font-semibold text-strong">
+                  <Spinner size="sm" label={null} />
+                  <span>Building artboard with Root AI…</span>
+                </div>
+                <span className="font-mono text-xs text-muted">1440px</span>
+              </div>
+
+              <div className="flex flex-col gap-5 overflow-hidden rounded-lg border border-border bg-surface p-6 shadow-md">
+                <div className="flex items-center gap-2.5 rounded-md border border-info-line bg-info-soft/60 px-3.5 py-2.5 text-left">
+                  <IconRobot
+                    size={18}
+                    className="shrink-0 text-info"
+                    aria-hidden="true"
+                  />
+                  <p className="m-0 text-sm text-fg">
+                    Root AI is sketching your layout — your artboard will show
+                    up here shortly.
+                  </p>
+                </div>
+
+                {/* Skeleton hero block. */}
+                <div className="flex animate-pulse flex-col items-center gap-2.5 rounded-md border border-border bg-surface-subtle px-6 py-8">
+                  <div className="h-2.5 w-24 rounded-full bg-surface-active" />
+                  <div className="h-5 w-3/4 rounded-md bg-border-strong/60" />
+                  <div className="h-3 w-1/2 rounded-md bg-surface-active" />
+                  <div className="mt-2 h-7 w-28 rounded-md bg-border-strong/50" />
+                </div>
+
+                {/* Skeleton 3-column feature/content grid. */}
+                <div className="grid animate-pulse grid-cols-3 gap-3">
+                  {[0, 1, 2].map((idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col gap-2 rounded-md border border-border bg-surface-subtle p-4"
+                    >
+                      <div className="h-3 w-1/2 rounded-sm bg-border-strong/50" />
+                      <div className="h-2.5 w-full rounded-sm bg-surface-active" />
+                      <div className="h-2.5 w-4/5 rounded-sm bg-surface-active" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Skeleton footer CTA band. */}
+                <div className="flex animate-pulse flex-col items-center gap-2 rounded-md bg-surface-active/80 px-6 py-5">
+                  <div className="h-3.5 w-2/5 rounded-sm bg-border-strong/60" />
+                  <div className="h-6 w-24 rounded-sm bg-border-strong/50" />
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <h2 className="m-0 text-base font-semibold text-strong">
-                No frames on {activePage.name}
-              </h2>
-              <p className="m-0 text-sm text-muted">
-                Create a blank artboard frame or ask Root AI to generate layout
-                explorations.
-              </p>
+          ) : (
+            <div className="pointer-events-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border border-border bg-surface p-6 text-center shadow-md">
+              <div className="flex size-10 items-center justify-center rounded-full bg-surface-hover text-muted">
+                <IconFrame size={20} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <h2 className="m-0 text-base font-semibold text-strong">
+                  No frames on {activePage.name}
+                </h2>
+                <p className="m-0 text-sm text-muted">
+                  Create a blank artboard frame or ask Root AI to generate
+                  layout explorations.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {canEdit && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<IconFrame />}
+                    onClick={onNewFrame}
+                  >
+                    New frame
+                  </Button>
+                )}
+                {aiAvailable && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    icon={<IconRobot />}
+                    onClick={onOpenAi}
+                  >
+                    Edit with AI
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              {canEdit && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon={<IconFrame />}
-                  onClick={onNewFrame}
-                >
-                  New frame
-                </Button>
-              )}
-              {aiAvailable && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  icon={<IconRobot />}
-                  onClick={onOpenAi}
-                >
-                  Edit with AI
-                </Button>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

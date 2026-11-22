@@ -271,7 +271,7 @@ function sanitizeFrameForStorage(
     pageId:
       typeof raw.pageId === 'string' && raw.pageId.trim()
         ? raw.pageId.trim().slice(0, 64)
-        : existing?.pageId || 'explorations',
+        : existing?.pageId || 'page-1',
     title:
       typeof raw.title === 'string' && raw.title.trim()
         ? raw.title.trim().slice(0, 160)
@@ -423,20 +423,14 @@ function buildBoardSummary(
   }
   let frameCount = 0;
   for (const frame of frames) {
-    const pid = frame.pageId || 'explorations';
+    const pid = frame.pageId || 'page-1';
     pageFrameCounts[pid] = (pageFrameCounts[pid] || 0) + 1;
-    if (pid !== 'archive') {
-      frameCount++;
-    }
+    frameCount++;
   }
   const openCommentCount = comments.filter((c) => c.status === 'open').length;
 
   const sorted = sortFrames(frames);
-  const nonArchive = sorted.filter((f) => f.pageId !== 'archive');
-  const previewSource = (nonArchive.length > 0 ? nonArchive : sorted).slice(
-    0,
-    3
-  );
+  const previewSource = sorted.slice(0, 3);
   const previewFrames = previewSource.map((frame) => ({
     id: frame.id,
     title: frame.title,

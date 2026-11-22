@@ -93,12 +93,10 @@ const ProjectPage = lazyRoute(() =>
     (m) => m.ProjectPage
   )
 );
-const PrototypeBoardPage = lazyRoute(
-  () =>
-    import('../features/prototypes/pages/PrototypeBoardPage/PrototypeBoardPage.js').then(
-      (m) => m.PrototypeBoardPage
-    ),
-  {frame: false}
+const PrototypeBoardPage = lazyRoute(() =>
+  import('../features/prototypes/pages/PrototypeBoardPage/PrototypeBoardPage.js').then(
+    (m) => m.PrototypeBoardPage
+  )
 );
 const PrototypesPage = lazyRoute(() =>
   import('../features/prototypes/pages/PrototypesPage/PrototypesPage.js').then(

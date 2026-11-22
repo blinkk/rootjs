@@ -8,7 +8,7 @@ import {
   IconFolder,
   IconHome,
   IconLanguage,
-  IconLayoutBoard,
+  IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
@@ -424,7 +424,7 @@ Layout.NavLinks = (props: {expanded: boolean}) => {
             }
             expanded={expanded}
           >
-            <IconLayoutBoard stroke={ICON_STROKE} />
+            <IconLayoutDashboard stroke={ICON_STROKE} />
           </Layout.SideButton>
         )}
 

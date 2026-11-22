@@ -171,6 +171,8 @@ export interface UsePrototypeBoardResult {
   updateBoardStatus: (status: PrototypeBoardStatus) => Promise<void>;
   /** Appends a new page to `board.pages` and returns it. */
   addPage: (name: string) => Promise<PrototypeBoardPage | null>;
+  /** Renames an existing page in `board.pages` while preserving its `id`. */
+  renamePage: (pageId: string, name: string) => Promise<void>;
   /** Duplicates the current board and returns the new summary. */
   duplicateBoard: () => Promise<PrototypeBoardSummary>;
   /** Permanently deletes the current board. */
@@ -339,6 +341,25 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
       });
       setBundle((prev) => (prev ? {...prev, board: updated} : prev));
       return page;
+    },
+    [boardId]
+  );
+
+  const renamePage = useCallback(
+    async (pageId: string, name: string): Promise<void> => {
+      const current = bundleRef.current;
+      const trimmed = name.trim();
+      if (!current || !trimmed) {
+        return;
+      }
+      const nextPages = current.board.pages.map((page) =>
+        page.id === pageId ? {...page, name: trimmed} : page
+      );
+      const updated = await apiUpdatePrototypeBoard({
+        boardId,
+        pages: nextPages,
+      });
+      setBundle((prev) => (prev ? {...prev, board: updated} : prev));
     },
     [boardId]
   );
@@ -715,6 +736,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     renameBoard,
     updateBoardStatus,
     addPage,
+    renamePage,
     duplicateBoard,
     deleteBoard,
     createFrame,

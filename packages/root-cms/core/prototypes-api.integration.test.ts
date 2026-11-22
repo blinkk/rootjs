@@ -153,13 +153,16 @@ describe('registerPrototypesApi integration', () => {
     });
     expect(viewerCreate.status).toBe(403);
 
-    // EDITOR creates the board.
+    // EDITOR creates the board (seeded with a single "Page 1").
     const created = await callApi({
       path: '/cms/api/prototypes.create',
       email: 'editor@example.com',
       body: {title: 'Pricing Page Refresh', description: 'Q4 pricing options'},
     });
     expect(created.status).toBe(200);
+    expect(created.body.data.board.pages).toEqual([
+      {id: 'page-1', name: 'Page 1'},
+    ]);
     const boardId = created.body.data.board.id as string;
     expect(boardId).toContain('pricing-page-refresh');
 

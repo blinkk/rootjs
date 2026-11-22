@@ -179,7 +179,7 @@ export interface PrototypeFrameProps {
   onDuplicateFrame: (frameId: string) => void;
   onResizeFrame: (frameId: string, width: number) => void;
   onMoveFrameToPage: (frameId: string, pageId: string) => void;
-  onExportFrame: (frameId: string, format: 'png' | 'jpg') => void;
+  onExportFrame: (frameId: string) => void;
   onDeleteFrame: (frameId: string) => void;
 }
 
@@ -706,15 +706,9 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             <MenuDivider />
             <MenuItem
               icon={<IconPhoto />}
-              onClick={() => onExportFrame(frame.id, 'png')}
+              onClick={() => onExportFrame(frame.id)}
             >
               Export frame as PNG
-            </MenuItem>
-            <MenuItem
-              icon={<IconPhoto />}
-              onClick={() => onExportFrame(frame.id, 'jpg')}
-            >
-              Export frame as JPG
             </MenuItem>
             {canEdit && (
               <>

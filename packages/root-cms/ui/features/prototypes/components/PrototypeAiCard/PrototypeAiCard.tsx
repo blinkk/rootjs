@@ -72,6 +72,8 @@ export interface PrototypeAiCardProps {
   selectedBlockKey: string | null;
   /** Optional external prompt queued from another UI control (e.g. Comments). */
   queuedPrompt?: {id: string | number; text: string} | null;
+  /** Invoked once `queuedPrompt` has been dispatched into the chat session. */
+  onQueuedPromptHandled?: () => void;
   /** Invoked to clear a single context selection chip (`frame` or `block`). */
   onClearContext?: (kind: 'frame' | 'block') => void;
   /** Invoked when AI creates/updates a frame so optimistic UI & selection stay in sync. */
@@ -80,6 +82,8 @@ export interface PrototypeAiCardProps {
   onComponentMutated?: (spec: PrototypeComponentSpec) => void;
   /** Invoked when an AI turn snapshot is saved or reverted. */
   onTurnMutated?: (turn?: PrototypeTurnSnapshot) => void;
+  /** Invoked when the AI streaming/running state changes. */
+  onStreamingChange?: (streaming: boolean) => void;
   /** Invoked when the user closes the floating Root AI card. */
   onClose: () => void;
 }
@@ -216,30 +220,63 @@ function mergeSkillSummaries(
  */
 export function PrototypeAiCard(props: PrototypeAiCardProps) {
   const isDesktop = useMediaQuery('(width >= 48rem)');
-  const [config, setConfig] = useState<AiConfigResponse | null>(null);
+  const [config, setConfig] = useState<AiConfigResponse | null>(() => {
+    const ctxAi =
+      typeof window !== 'undefined' ? window.__ROOT_CTX?.ai : undefined;
+    if (ctxAi && Array.isArray(ctxAi.models) && ctxAi.models.length > 0) {
+      return {
+        enabled: true,
+        defaultModel: ctxAi.defaultModel,
+        models: ctxAi.models,
+        skills: [],
+      };
+    }
+    return null;
+  });
   const [configError, setConfigError] = useState('');
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(
     null
   );
-  const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState(() => {
+    const ctxAi =
+      typeof window !== 'undefined' ? window.__ROOT_CTX?.ai : undefined;
+    const models = ctxAi?.models || [];
+    if (models.length === 0) {
+      return '';
+    }
+    return (
+      readStoredSelectedModel(models) ||
+      ctxAi?.defaultModel ||
+      models[0]?.id ||
+      ''
+    );
+  });
 
   // Load AI model configuration once on mount.
   useEffect(() => {
     let active = true;
     fetch('/cms/api/ai.config', {credentials: 'include'})
       .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`ai.config returned ${res.status}`);
+        }
         const data = (await res.json()) as AiConfigResponse;
         if (!active) {
           return;
         }
         setConfig(data);
         const models = data.models || [];
-        const preferred =
-          readStoredSelectedModel(models) ||
-          data.defaultModel ||
-          models[0]?.id ||
-          '';
-        setSelectedModelId(preferred);
+        setSelectedModelId((current) => {
+          if (current && models.some((m) => m.id === current)) {
+            return current;
+          }
+          return (
+            readStoredSelectedModel(models) ||
+            data.defaultModel ||
+            models[0]?.id ||
+            ''
+          );
+        });
       })
       .catch((err) => {
         if (active) {
@@ -337,7 +374,7 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
           </div>
         </div>
         <div className="PrototypeAiCard__headerActions flex shrink-0 items-center gap-1">
-          {isEnabled && models.length > 1 && (
+          {isEnabled && models.length > 0 && (
             <Menu
               label="Select AI model"
               placement="bottom-end"
@@ -346,11 +383,11 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
                   type="button"
                   variant="subtle"
                   size="xs"
-                  className="PrototypeAiCard__modelPicker max-w-32 text-xs font-medium text-muted"
+                  className="PrototypeAiCard__modelPicker min-w-0 max-w-36 text-xs font-medium text-muted"
                   iconRight={<IconChevronDown />}
                 >
                   <span className="truncate">
-                    {selectedModel?.label || 'Model'}
+                    {selectedModel?.label || 'Select model'}
                   </span>
                 </Button>
               }
@@ -433,7 +470,7 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
   return (
     <aside
       aria-label="Root AI"
-      className="PrototypeAiCard fixed top-16 right-4 bottom-4 z-(--cms-z-floating) flex w-92 max-w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg"
+      className="PrototypeAiCard absolute top-14 right-3 bottom-3 z-20 flex w-92 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg"
     >
       {cardBody}
     </aside>
@@ -675,6 +712,16 @@ function PrototypeAiChatSession({
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
+  useEffect(() => {
+    propsRef.current.onStreamingChange?.(isStreaming);
+  }, [isStreaming]);
+
+  useEffect(() => {
+    return () => {
+      propsRef.current.onStreamingChange?.(false);
+    };
+  }, []);
+
   const send = useCallback(
     (text: string, attachments: ImageAttachment[] = []) => {
       const trimmed = text.trim();
@@ -709,6 +756,7 @@ function PrototypeAiChatSession({
     }
     handledQueuedPromptIdRef.current = queued.id;
     send(text);
+    propsRef.current.onQueuedPromptHandled?.();
   }, [
     props.queuedPrompt?.id,
     props.queuedPrompt?.text,

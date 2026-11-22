@@ -61,12 +61,14 @@ export interface PrototypeTopBarProps {
   onSelectPage: (pageId: string) => void;
   /** Adds a new page to the board and switches to it. */
   onAddPage: (name: string) => Promise<void>;
+  /** Renames an existing page on the board. */
+  onRenamePage: (pageId: string, name: string) => Promise<void>;
   /** Renames the board title. */
   onRenameBoard: (title: string) => Promise<void>;
   /** Duplicates the board and navigates to the new board. */
   onDuplicateBoard: () => Promise<void>;
-  /** Exports the selected frame (or active page frames) as PNG or JPG. */
-  onExport: (format: 'png' | 'jpg') => Promise<void>;
+  /** Exports the selected frame (or active page frames) as PNG. */
+  onExport: () => Promise<void>;
   /** Archives or restores the board. */
   onToggleArchive: () => Promise<void>;
   /** Deletes the board and navigates back to `/cms/prototypes`. */
@@ -92,6 +94,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
     exporting = false,
     onSelectPage,
     onAddPage,
+    onRenamePage,
     onRenameBoard,
     onDuplicateBoard,
     onExport,
@@ -108,6 +111,10 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
   const [addPageOpen, setAddPageOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [addingPage, setAddingPage] = useState(false);
+
+  const [renamePageOpen, setRenamePageOpen] = useState(false);
+  const [renamePageValue, setRenamePageValue] = useState('');
+  const [renamingPage, setRenamingPage] = useState(false);
 
   const activePage = useMemo(
     () =>
@@ -188,6 +195,27 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
     }
   }
 
+  async function handleSubmitRenamePage(e: Event) {
+    e.preventDefault();
+    const trimmed = renamePageValue.trim();
+    if (!trimmed || renamingPage) {
+      return;
+    }
+    setRenamingPage(true);
+    try {
+      await onRenamePage(activePage.id, trimmed);
+      setRenamePageOpen(false);
+    } catch (err) {
+      showNotification({
+        title: 'Could not rename page',
+        message: errorMessage(err),
+        color: 'red',
+      });
+    } finally {
+      setRenamingPage(false);
+    }
+  }
+
   function confirmDeleteBoard() {
     modals.openConfirmModal({
       title: 'Delete prototype',
@@ -215,7 +243,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
 
   return (
     <>
-      <header className="PrototypeTopBar pointer-events-none fixed inset-x-0 top-0 z-(--cms-z-sticky) flex items-center justify-between gap-2 p-2 md:p-3">
+      <header className="PrototypeTopBar pointer-events-none absolute inset-x-0 top-0 z-(--cms-z-sticky) flex items-center justify-between gap-2 p-2 md:p-3">
         {/* Top-left floating bar: breadcrumb + board menu + pages switcher. */}
         <div className="PrototypeTopBar__left pointer-events-auto flex min-w-0 items-center gap-1 overflow-hidden rounded-md border border-border bg-surface px-1.5 py-1 shadow-sm sm:px-2">
           <a
@@ -282,7 +310,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
               icon={<IconPhoto />}
               disabled={exporting}
               onClick={() => {
-                onExport('png').catch((err) => {
+                onExport().catch((err) => {
                   showNotification({
                     title: 'Could not export PNG',
                     message: errorMessage(err),
@@ -292,21 +320,6 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
               }}
             >
               Export as PNG
-            </MenuItem>
-            <MenuItem
-              icon={<IconPhoto />}
-              disabled={exporting}
-              onClick={() => {
-                onExport('jpg').catch((err) => {
-                  showNotification({
-                    title: 'Could not export JPG',
-                    message: errorMessage(err),
-                    color: 'red',
-                  });
-                });
-              }}
-            >
-              Export as JPG
             </MenuItem>
             {canEdit && (
               <>
@@ -382,6 +395,15 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
             {canEdit && (
               <>
                 <MenuDivider />
+                <MenuItem
+                  icon={<IconPencil />}
+                  onClick={() => {
+                    setRenamePageValue(activePage.name);
+                    setRenamePageOpen(true);
+                  }}
+                >
+                  Rename page…
+                </MenuItem>
                 <MenuItem
                   icon={<IconPlus />}
                   onClick={() => {
@@ -503,7 +525,39 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
             label="Page name"
             value={newPageName}
             onInput={(e) => setNewPageName(e.currentTarget.value)}
-            placeholder="e.g. Checkout flow"
+            placeholder="e.g. Page 2"
+            required
+            data-autofocus
+          />
+        </form>
+      </Dialog>
+
+      {/* Rename page modal. */}
+      <Dialog
+        open={renamePageOpen}
+        onClose={() => setRenamePageOpen(false)}
+        title="Rename page"
+        size="sm"
+        footer={
+          <>
+            <Button onClick={() => setRenamePageOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              loading={renamingPage}
+              disabled={!renamePageValue.trim()}
+              onClick={handleSubmitRenamePage}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitRenamePage}>
+          <TextInput
+            label="Page name"
+            value={renamePageValue}
+            onInput={(e) => setRenamePageValue(e.currentTarget.value)}
+            placeholder="e.g. Page 1"
             required
             data-autofocus
           />

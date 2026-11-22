@@ -4,7 +4,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconExternalLink,
-  IconLayoutBoard,
+  IconLayoutDashboard,
   IconMessageCircle,
   IconPencil,
   IconPlus,
@@ -60,7 +60,7 @@ import {
 } from '../../prototypes-client.js';
 
 /** Sort order options for the prototypes gallery. */
-type PrototypeSortOption = 'updated' | 'title' | 'frames';
+type PrototypeSortOption = 'updated' | 'title';
 
 const FILTER_OPTIONS: ReadonlyArray<{
   label: string;
@@ -73,7 +73,6 @@ const FILTER_OPTIONS: ReadonlyArray<{
 const SORT_OPTIONS: Array<{value: PrototypeSortOption; label: string}> = [
   {value: 'updated', label: 'Recently updated'},
   {value: 'title', label: 'Title A–Z'},
-  {value: 'frames', label: 'Most frames'},
 ];
 
 /** Formats a singular or plural count label, e.g. `1 frame` or `3 frames`. */
@@ -177,12 +176,6 @@ export function PrototypesPage() {
         return (a.title || '').localeCompare(b.title || '', undefined, {
           sensitivity: 'base',
         });
-      }
-      if (sortBy === 'frames') {
-        const diff = (b.frameCount || 0) - (a.frameCount || 0);
-        if (diff !== 0) {
-          return diff;
-        }
       }
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
@@ -548,8 +541,6 @@ function PrototypeBoardCard(props: PrototypeBoardCardProps) {
   const {board, canEdit, busy} = props;
   const href = `/cms/prototypes/${board.id}`;
   const isArchived = board.status === 'archived';
-  const pageCount = board.pages?.length ?? 0;
-  const frameCount = board.frameCount ?? 0;
   const openComments = board.openCommentCount ?? 0;
   const authorEmail = board.updatedBy || board.createdBy || '';
   const displayTitle = board.title || 'Untitled prototype';
@@ -663,25 +654,20 @@ function PrototypeBoardCard(props: PrototypeBoardCardProps) {
           </p>
         )}
 
-        <div className="PrototypesPage__cardMeta mt-auto flex items-center justify-between gap-2 border-0 border-t border-solid border-border pt-3 text-xs text-muted">
-          <span className="PrototypesPage__cardCounts truncate">
-            {pluralize(frameCount, 'frame')} · {pluralize(pageCount, 'page')}
-          </span>
-          <div className="PrototypesPage__cardUpdated flex shrink-0 items-center gap-1.5">
-            {openComments > 0 && (
-              <span className="sr-only">
-                {pluralize(openComments, 'open comment')}
-              </span>
-            )}
-            <RelativeTime ts={board.updatedAt} className="text-xs text-muted" />
-            {authorEmail && (
-              <UserAvatar
-                email={authorEmail}
-                profile={props.authorProfile}
-                size={20}
-              />
-            )}
-          </div>
+        <div className="PrototypesPage__cardMeta mt-auto flex items-center gap-2 pt-3 text-xs text-muted">
+          {openComments > 0 && (
+            <span className="sr-only">
+              {pluralize(openComments, 'open comment')}
+            </span>
+          )}
+          {authorEmail && (
+            <UserAvatar
+              email={authorEmail}
+              profile={props.authorProfile}
+              size={20}
+            />
+          )}
+          <RelativeTime ts={board.updatedAt} className="text-xs text-muted" />
         </div>
       </div>
     </Surface>
@@ -821,7 +807,7 @@ interface EmptyStateStep {
 
 const EMPTY_STATE_STEPS: EmptyStateStep[] = [
   {
-    icon: <IconLayoutBoard size={20} stroke={1.5} />,
+    icon: <IconLayoutDashboard size={20} stroke={1.5} />,
     title: 'Start an artboard',
     description:
       'Create a board to arrange desktop and mobile page explorations side by side.',
