@@ -168,14 +168,33 @@ describe('PrototypesPage', () => {
     await findByText('No prototypes yet');
   });
 
-  it('creates a new prototype with an initial AI prompt and routes with ?prompt', async () => {
+  it('creates a new prototype with model selection and an initial AI prompt', async () => {
+    (window as any).__ROOT_CTX = {
+      ai: {
+        defaultModel: 'claude-opus-5-5',
+        models: [
+          {
+            id: 'claude-sonnet-5',
+            label: 'Claude Sonnet 5',
+            provider: 'anthropic',
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+          {
+            id: 'claude-opus-5-5',
+            label: 'Claude Opus 5.5',
+            provider: 'anthropic',
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+        ],
+      },
+    };
     vi.mocked(apiCreatePrototypeBoard).mockResolvedValue({
       board: {
         id: 'new-board-1',
         title: 'Homepage v2',
         description: 'Fresh hero variants',
         status: 'active',
-        pages: [{id: 'explorations', name: 'Explorations'}],
+        pages: [{id: 'page-1', name: 'Page 1'}],
         theme: {},
         createdAt: 1700003000000,
         createdBy: 'editor@example.com',
@@ -195,6 +214,8 @@ describe('PrototypesPage', () => {
 
     const titleInput = getByLabelText(/^Title/i) as HTMLInputElement;
     const descInput = getByLabelText(/^Description/i) as HTMLTextAreaElement;
+    const modelSelect = getByLabelText(/AI model/i);
+    expect(modelSelect.textContent).toContain('Claude Opus 5.5');
     const promptInput = getByLabelText(
       /Initial AI prompt/i
     ) as HTMLTextAreaElement;
@@ -214,6 +235,9 @@ describe('PrototypesPage', () => {
         initialPrompt: 'Explore two hero layouts',
       });
     });
+    expect(window.localStorage.getItem('root-cms.ai.selectedModel')).toBe(
+      'claude-opus-5-5'
+    );
     expect(mockRoute).toHaveBeenCalledWith(
       '/cms/prototypes/new-board-1?prompt=Explore%20two%20hero%20layouts'
     );

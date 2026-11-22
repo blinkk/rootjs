@@ -69,10 +69,11 @@ const BUILTIN_PROTOTYPE_AI_SKILLS: SerializedAiSkill[] = [
     description:
       'Generate 2–3 distinct UX layout frames side-by-side on the active page.',
     instructions: [
-      'Generate 2–3 distinct UX layout frames side-by-side on the active page.',
+      'Generate 2–3 distinct UX layout frames side-by-side on the active page immediately in this turn.',
       'First inspect the board with `board_overview` and existing components with `components_list`.',
-      'Reuse existing site schemas where they fit (inspecting source with `component_inspect` before creating Visual Twins) and propose net-new components (`proposed: true`) only where existing components do not cover the UX need.',
-      'Create clearly titled variants (e.g. "Variant A — Editorial", "Variant B — Comparison") spaced cleanly across the page and summarize the key tradeoffs.',
+      'If the board has 0 frames or the user references an existing page (such as the home page, pricing, or docs), read the live CMS page content via `collections_list` / `docs_list` / `doc_get` (e.g. `Pages/index`) and inspect relevant site components (`GlobalHeader`, `GlobalFooter`, hero/section templates) via `component_inspect` — NEVER stop to ask clarifying questions because the board is empty.',
+      'Reuse existing site schemas/components where they fit and propose net-new components (`proposed: true`) where existing components do not cover the UX need.',
+      'Create complete, full-page, high-fidelity variants (including site header, rich hero/body sections with realistic copy and inline SVG icons, and footer) via `frame_create` and summarize the tradeoffs.',
     ].join('\n'),
   },
   {
@@ -511,6 +512,7 @@ function buildPrototypeSystemPrompt(options: {
     fields: Array<{id: string; type: string}>;
   }>;
   rootMdExcerpt?: string;
+  styleExcerpts?: Array<{path: string; content: string}>;
   selectedFrameId?: string | null;
   selectedBlockKey?: string | null;
 }): string {
@@ -520,12 +522,34 @@ function buildPrototypeSystemPrompt(options: {
     'iterate on team comments, reuse existing site components, and propose',
     'net-new components on an isolated Tailwind v4 artboard.',
     '',
-    'Design & technical rules:',
+    'CRITICAL — Empty-board & bias-for-action rules:',
+    '- Newly created prototype boards intentionally start with 0 frames while',
+    '  the user waits on a live loading artboard skeleton.',
+    '- NEVER tell the user "the board is empty" or stop to ask clarifying',
+    '  questions before creating frames! Always deliver complete rendered',
+    '  artboard frame(s) via `frame_create` in this same turn first, then',
+    '  briefly mention 2–3 optional follow-up directions at the end.',
+    '- When the user references an existing site page (e.g. "home page",',
+    '  "landing page", "pricing", "about", "docs") or asks for variations of a',
+    '  page not yet on the board, immediately use `collections_list`,',
+    '  `docs_list`, and `doc_get` (for example `doc_get` on `Pages/index` for',
+    '  the home page) to read the real CMS content, copy, and block structure,',
+    '  and use `component_inspect` on relevant templates/components (such as',
+    '  `GlobalHeader`, `GlobalFooter`, and hero/section templates) to ground',
+    '  your design in the real site.',
+    '',
+    'Visual fidelity & technical rules:',
+    '- Render high-fidelity, production-grade full-page mocks — NEVER bare',
+    '  wireframe grey boxes or sparse skeleton placeholders. Include realistic',
+    '  top navigation (`header`), expressive hero typography, real copy and',
+    '  CTAs from the project docs, crisp inline `svg` icons, layered card',
+    '  surfaces, borders, subtle shadows/gradients, realistic UI details, and',
+    '  a complete site `footer`.',
     '- Every prototype frame renders inside a sandboxed iframe with a live',
     '  Tailwind v4 compiler and the board `@theme` CSS custom properties.',
-    '- Prefer clean semantic HTML (`section`, `div`, `header`, `h1`-`h6`, `p`,',
-    '  `ul`, `li`, `a`, `button`, `img`, `table`, inline `svg`) styled with',
-    '  Tailwind v4 utility classes and the board theme variables:',
+    '- Prefer clean semantic HTML (`section`, `div`, `header`, `nav`, `h1`-`h6`,',
+    '  `p`, `ul`, `li`, `a`, `button`, `img`, `table`, `footer`, inline `svg`)',
+    '  styled with Tailwind v4 utility classes and the board theme variables:',
     '  `var(--color-bg)`, `var(--color-surface)`, `var(--color-fg)`,',
     '  `var(--color-muted)`, `var(--color-primary)`, `var(--color-on-primary)`,',
     '  `var(--color-border)`, `var(--font-sans)`, `var(--font-heading)`,',
@@ -538,11 +562,12 @@ function buildPrototypeSystemPrompt(options: {
     '- When existing components do not satisfy the layout need, propose a',
     '  net-new component (`proposed: true`) and save its reusable spec with',
     '  a short design rationale.',
-    '- Keep responses concise, structured, and focused on design decisions.',
+    '- Keep text replies concise, structured, and focused on design decisions.',
     '',
     'Active board:',
     `- Project: ${options.projectName}`,
     `- Board: ${options.board.title} (id: ${options.board.id})`,
+    `- Frame count on board: ${options.frames.length}`,
     `- Pages: ${(options.board.pages || []).map((p) => `${p.name} (${p.id})`).join(', ')}`,
     `- Theme tokens: ${JSON.stringify(options.board.theme || {})}`,
   ];
@@ -581,6 +606,18 @@ function buildPrototypeSystemPrompt(options: {
         `- ${s.name} (${s.label})${s.description ? ` — ${s.description}` : ''}${fieldSummary ? ` [${fieldSummary}]` : ''}`
       );
     }
+  }
+
+  if (options.styleExcerpts && options.styleExcerpts.length > 0) {
+    const combinedStyles = options.styleExcerpts
+      .slice(0, 4)
+      .map((s) => `/* ${s.path} */\n${s.content}`)
+      .join('\n\n');
+    lines.push(
+      '',
+      'Project stylesheet & design token excerpts:',
+      wrapPromptBlock('project-styles', combinedStyles)
+    );
   }
 
   if (options.rootMdExcerpt) {
@@ -1922,6 +1959,7 @@ export function registerPrototypesApi(
           projectName: projectCtx.projectName,
           schemas: projectCtx.schemas,
           rootMdExcerpt: projectCtx.rootMdExcerpt,
+          styleExcerpts: projectCtx.styleExcerpts,
           selectedFrameId,
           selectedBlockKey,
         });
@@ -1932,7 +1970,7 @@ export function registerPrototypesApi(
           data: {
             model: clientModel,
             system,
-            maxSteps: aiConfig.maxSteps ?? 12,
+            maxSteps: aiConfig.maxSteps ?? 24,
             skills: BUILTIN_PROTOTYPE_AI_SKILLS,
           },
         });

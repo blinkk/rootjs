@@ -52,7 +52,13 @@ const PRIORITY_STYLE_BASENAMES = [
 ];
 
 /** Component source root directories searched for matching `.tsx`/`.scss` files. */
-const COMPONENT_SEARCH_DIRS = ['templates', 'components', 'blocks'] as const;
+const COMPONENT_SEARCH_DIRS = [
+  'templates',
+  'components',
+  'blocks',
+  'elements',
+  'layouts',
+] as const;
 
 /** Safe identifier pattern for requested component names. */
 const SAFE_COMPONENT_NAME_RE = /^[A-Za-z0-9_-]{1,80}$/;
@@ -249,6 +255,50 @@ async function loadSiteSchemas(
   return Array.from(summariesByName.values()).sort((a, b) =>
     a.name.localeCompare(b.name)
   );
+}
+
+/** Discovers UI components in `components/`, `elements/`, and `layouts/` that lack `.schema.ts` files. */
+async function discoverNonSchemaComponents(
+  realRootDir: string,
+  existingNames: Set<string>
+): Promise<SiteSchemaSummary[]> {
+  const discovered: SiteSchemaSummary[] = [];
+  const seen = new Set(Array.from(existingNames, (n) => n.toLowerCase()));
+  const uiDirs = ['components', 'elements', 'layouts'] as const;
+
+  for (const dir of uiDirs) {
+    const tsxFiles = await walkSafeFiles(
+      realRootDir,
+      dir,
+      new Set(['.tsx']),
+      3
+    );
+    for (const relPath of tsxFiles) {
+      if (relPath.endsWith('.test.tsx') || relPath.endsWith('.stories.tsx')) {
+        continue;
+      }
+      const segments = relPath.split('/');
+      const fileBase = path.basename(relPath, '.tsx');
+      const parentName =
+        segments.length >= 3 ? segments[segments.length - 2] : fileBase;
+      const candidate = fileBase === 'index' ? parentName : fileBase;
+      if (!SAFE_COMPONENT_NAME_RE.test(candidate)) {
+        continue;
+      }
+      const key = candidate.toLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      discovered.push({
+        name: candidate,
+        label: candidate,
+        description: `Project ${dir.replace(/s$/, '')} (${relPath})`,
+        fields: [],
+      });
+    }
+  }
+  return discovered;
 }
 
 /** Sorts style file paths so token/theme/global stylesheets are read first. */
@@ -513,18 +563,21 @@ async function loadComponentSources(
       break;
     }
     const lowerName = name.toLowerCase();
+    const strippedLower = lowerName.replace(/^template/, '');
     const matched = allFiles.filter((relPath) => {
       const segments = relPath.split('/');
       const fileName = segments[segments.length - 1];
-      const baseNoExt = fileName.replace(
-        /\.(?:module\.)?(?:tsx|scss|css)$/i,
-        ''
-      );
-      const parentDir =
-        segments.length >= 2 ? segments[segments.length - 2] : '';
+      const baseNoExt = fileName
+        .replace(/\.(?:module\.)?(?:tsx|scss|css)$/i, '')
+        .toLowerCase();
+      const parentDir = (
+        segments.length >= 2 ? segments[segments.length - 2] : ''
+      ).toLowerCase();
       return (
-        baseNoExt.toLowerCase() === lowerName ||
-        parentDir.toLowerCase() === lowerName
+        baseNoExt === lowerName ||
+        parentDir === lowerName ||
+        (strippedLower.length >= 3 &&
+          (baseNoExt === strippedLower || parentDir === strippedLower))
       );
     });
 
@@ -579,11 +632,16 @@ export async function loadPrototypeProjectContext(
     path.basename(realRootDir) ||
     'Project';
 
-  const [schemas, rootMdRaw, stylePaths] = await Promise.all([
+  const [schemaDefs, rootMdRaw, stylePaths] = await Promise.all([
     loadSiteSchemas(options.viteServer),
     readSafeTextFile(realRootDir, 'ROOT.md', MAX_ROOT_MD_BYTES),
     walkSafeFiles(realRootDir, 'styles', new Set(['.css', '.scss']), 4),
   ]);
+  const uiComponents = await discoverNonSchemaComponents(
+    realRootDir,
+    new Set(schemaDefs.map((s) => s.name))
+  );
+  const schemas = [...schemaDefs, ...uiComponents];
 
   const sortedStylePaths = sortStylePaths(stylePaths);
   const styleExcerpts: Array<{path: string; content: string}> = [];

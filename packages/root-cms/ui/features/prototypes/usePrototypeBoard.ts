@@ -161,7 +161,7 @@ export interface UsePrototypeBoardResult {
   loading: boolean;
   /** Initial load error, if any. */
   error: unknown;
-  /** Read-only project schemas and tokens for the Components picker. */
+  /** Read-only project schemas and extracted design tokens. */
   projectContext: PrototypeProjectContext | null;
   /** Reloads the entire board bundle from the server. */
   reload: () => Promise<void>;

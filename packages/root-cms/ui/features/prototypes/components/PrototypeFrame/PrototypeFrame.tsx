@@ -785,7 +785,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             <div className="PrototypeFrame__emptyHint pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface/90 p-8 text-center">
               <div className="text-lg font-semibold text-fg">Empty frame</div>
               <div className="max-w-80 text-base text-muted">
-                Insert a component from the bottom dock or ask Root AI to build
+                Select this frame and open Edit with AI to build or iterate on
                 this layout.
               </div>
             </div>

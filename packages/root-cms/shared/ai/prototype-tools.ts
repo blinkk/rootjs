@@ -40,11 +40,11 @@ export const PROTOTYPE_AI_SKILLS: SerializedAiSkill[] = [
     description:
       'Generate 2–3 distinct UX layout frames side-by-side on the active page.',
     instructions: [
-      'Generate 2–3 meaningfully distinct UX layout variants side-by-side on the active page.',
-      '1. Call `board_overview` and `components_list` first to see existing frames, board theme tokens, and available site components.',
-      '2. Inspect the most relevant existing site components via `component_inspect` before reusing them so your Tailwind v4 Visual Twins accurately reflect the site code and design tokens.',
+      'Generate 2–3 meaningfully distinct UX layout variants side-by-side on the active page immediately in this turn.',
+      '1. Call `board_overview` and `components_list` first. If the board is empty or the user references an existing site page (e.g. home page, pricing, docs), also read the real CMS content via `collections_list` / `docs_list` / `doc_get` (such as `Pages/index`) — NEVER stop to ask clarifying questions because the board has 0 frames.',
+      '2. Inspect the most relevant existing site components and UI shell (`GlobalHeader`, `GlobalFooter`, hero/section templates) via `component_inspect` before reusing them so your Tailwind v4 Visual Twins accurately reflect the site code and design tokens.',
       '3. Reuse existing site components whenever they fit (saving reusable Visual Twins via `component_save_spec` with `origin: "existing"` when helpful), and propose net-new components via `component_save_spec` (`origin: "proposed"` with a clear `rationale`) only where existing site components do not cover the UX need.',
-      '4. Create 2–3 frames on the active page via `frame_create` (omit `x` and `y` so frames are placed side-by-side without overlapping). Give each variant a clear, distinct layout structure and concise title (e.g. "Variant A · Story-led", "Variant B · Comparison").',
+      '4. Create 2–3 complete, high-fidelity full-page frames on the active page via `frame_create` (omit `x` and `y` so frames are placed side-by-side without overlapping). Include realistic header nav, rich typography/copy, inline SVG icons, cards/surfaces, and footer.',
       '5. Summarize each variant, which existing components were reused, and any proposed net-new components.',
     ].join('\n'),
   },
@@ -1447,6 +1447,18 @@ export function prettyPrototypeToolLabel(
     }
     case 'frame_comments_list':
       return 'Reading open comments…';
+    case 'collections_list':
+      return 'Listing CMS collections…';
+    case 'docs_list':
+      return input?.collection
+        ? `Listing ${input.collection} documents…`
+        : 'Listing CMS documents…';
+    case 'doc_get':
+      return input?.docId ? `Reading ${input.docId}…` : 'Reading CMS document…';
+    case 'schema_get':
+      return input?.collection
+        ? `Reading ${input.collection} schema…`
+        : 'Reading collection schema…';
     default:
       return `Running ${toolName}…`;
   }

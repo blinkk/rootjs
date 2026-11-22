@@ -50,6 +50,7 @@ import {
   type ClientTurnConfig,
   createClientChatTransport,
 } from '../../../ai/components/RootAIChat/clientChatTransport.js';
+import {createReadOnlyClientCmsTools} from '../../../ai/components/RootAIChat/clientCmsTools.js';
 import {
   apiGetPrototypeContext,
   apiPreparePrototypeAiTurn,
@@ -639,64 +640,67 @@ function PrototypeAiChatSession({
           if (!model.capabilities.tools) {
             return {};
           }
-          return createPrototypeAiTools({
-            getState: () => {
-              const currentProps = propsRef.current;
-              return {
-                board: currentProps.bundle.board,
-                activePageId: currentProps.activePageId,
-                selectedFrameId: currentProps.selectedFrameId,
-                selectedBlockKey: currentProps.selectedBlockKey,
-                frames: liveFramesRef.current,
-                components: liveComponentsRef.current,
-                comments: currentProps.bundle.comments,
-              };
-            },
-            getProjectContext: async (options) => {
-              if (!options?.componentNames?.length) {
-                if (projectContextCacheRef.current) {
-                  return projectContextCacheRef.current;
+          return {
+            ...createReadOnlyClientCmsTools(),
+            ...createPrototypeAiTools({
+              getState: () => {
+                const currentProps = propsRef.current;
+                return {
+                  board: currentProps.bundle.board,
+                  activePageId: currentProps.activePageId,
+                  selectedFrameId: currentProps.selectedFrameId,
+                  selectedBlockKey: currentProps.selectedBlockKey,
+                  frames: liveFramesRef.current,
+                  components: liveComponentsRef.current,
+                  comments: currentProps.bundle.comments,
+                };
+              },
+              getProjectContext: async (options) => {
+                if (!options?.componentNames?.length) {
+                  if (projectContextCacheRef.current) {
+                    return projectContextCacheRef.current;
+                  }
+                  const ctx = await apiGetPrototypeContext();
+                  projectContextCacheRef.current = ctx;
+                  return ctx;
                 }
-                const ctx = await apiGetPrototypeContext();
-                projectContextCacheRef.current = ctx;
-                return ctx;
-              }
-              return apiGetPrototypeContext(options);
-            },
-            saveFrame: async (frame) => {
-              const currentProps = propsRef.current;
-              const saved = await apiSavePrototypeFrame({
-                boardId: currentProps.bundle.board.id,
-                frame,
-              });
-              const existingIdx = liveFramesRef.current.findIndex(
-                (f) => f.id === saved.id
-              );
-              if (existingIdx >= 0) {
-                const next = [...liveFramesRef.current];
-                next[existingIdx] = saved;
-                liveFramesRef.current = next;
-              } else {
-                liveFramesRef.current = [...liveFramesRef.current, saved];
-              }
-              currentProps.onFrameMutated?.(saved);
-              return saved;
-            },
-            saveComponent: async (spec) => {
-              const currentProps = propsRef.current;
-              const saved = await apiSavePrototypeComponent({
-                boardId: currentProps.bundle.board.id,
-                spec,
-              });
-              liveComponentsRef.current = {
-                ...liveComponentsRef.current,
-                [saved.name]: saved,
-              };
-              currentProps.onComponentMutated?.(saved);
-              return saved;
-            },
-            turnTracker: turnTrackerRef.current,
-          });
+                return apiGetPrototypeContext(options);
+              },
+              saveFrame: async (frame) => {
+                const currentProps = propsRef.current;
+                const saved = await apiSavePrototypeFrame({
+                  boardId: currentProps.bundle.board.id,
+                  frame,
+                });
+                const existingIdx = liveFramesRef.current.findIndex(
+                  (f) => f.id === saved.id
+                );
+                if (existingIdx >= 0) {
+                  const next = [...liveFramesRef.current];
+                  next[existingIdx] = saved;
+                  liveFramesRef.current = next;
+                } else {
+                  liveFramesRef.current = [...liveFramesRef.current, saved];
+                }
+                currentProps.onFrameMutated?.(saved);
+                return saved;
+              },
+              saveComponent: async (spec) => {
+                const currentProps = propsRef.current;
+                const saved = await apiSavePrototypeComponent({
+                  boardId: currentProps.bundle.board.id,
+                  spec,
+                });
+                liveComponentsRef.current = {
+                  ...liveComponentsRef.current,
+                  [saved.name]: saved,
+                };
+                currentProps.onComponentMutated?.(saved);
+                return saved;
+              },
+              turnTracker: turnTrackerRef.current,
+            }),
+          };
         },
         onFinish: handleTurnFinish,
       }),

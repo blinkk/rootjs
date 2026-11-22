@@ -6,10 +6,58 @@ import type {PrototypeBoardBundle} from '../../../../../shared/prototypes.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {Select} from '../../../../primitives/Select/Select.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showErrorNotification} from '../../../../utils/notifications.js';
 import {apiCreatePrototypeBoard} from '../../prototypes-client.js';
+
+const SELECTED_MODEL_STORAGE_KEY = 'root-cms.ai.selectedModel';
+
+interface ModalModelOption {
+  id: string;
+  label: string;
+}
+
+function getInitialCtxModels(): {
+  models: ModalModelOption[];
+  defaultModel?: string;
+} {
+  if (typeof window === 'undefined') {
+    return {models: []};
+  }
+  const ctxAi = window.__ROOT_CTX?.ai;
+  if (ctxAi && Array.isArray(ctxAi.models) && ctxAi.models.length > 0) {
+    return {
+      models: ctxAi.models.map((m) => ({id: m.id, label: m.label})),
+      defaultModel: ctxAi.defaultModel,
+    };
+  }
+  return {models: []};
+}
+
+function resolvePreferredModelId(
+  models: ModalModelOption[],
+  defaultModel?: string
+): string {
+  if (models.length === 0) {
+    return '';
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = window.localStorage.getItem(SELECTED_MODEL_STORAGE_KEY);
+      if (stored && models.some((m) => m.id === stored)) {
+        return stored;
+      }
+    } catch {
+      // Ignore localStorage read errors.
+    }
+  }
+  if (defaultModel && models.some((m) => m.id === defaultModel)) {
+    return defaultModel;
+  }
+  return models[0].id;
+}
 
 /** Props for `NewPrototypeModal`. */
 export interface NewPrototypeModalProps {
@@ -22,8 +70,8 @@ export interface NewPrototypeModalProps {
 }
 
 /**
- * Modal dialog for creating a new UX prototype board, with an optional initial
- * Root AI prompt that auto-queues when the board opens.
+ * Modal dialog for creating a new UX prototype board, with AI model selection
+ * and an optional initial Root AI prompt that auto-queues when the board opens.
  */
 export function NewPrototypeModal(props: NewPrototypeModalProps) {
   const {route} = useLocation();
@@ -31,18 +79,65 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
+  const [models, setModels] = useState<ModalModelOption[]>(
+    () => getInitialCtxModels().models
+  );
+  const [selectedModelId, setSelectedModelId] = useState<string>(() => {
+    const initial = getInitialCtxModels();
+    return resolvePreferredModelId(initial.models, initial.defaultModel);
+  });
   const [titleError, setTitleError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset form fields each time the dialog opens so prior input does not linger.
+  // Reset form fields and sync available AI models each time the dialog opens.
   useEffect(() => {
-    if (props.open) {
-      setTitle('');
-      setDescription('');
-      setInitialPrompt('');
-      setTitleError('');
-      setSubmitting(false);
+    if (!props.open) {
+      return;
     }
+    setTitle('');
+    setDescription('');
+    setInitialPrompt('');
+    setTitleError('');
+    setSubmitting(false);
+
+    const ctxModels = getInitialCtxModels();
+    if (ctxModels.models.length > 0) {
+      setModels(ctxModels.models);
+      setSelectedModelId(
+        resolvePreferredModelId(ctxModels.models, ctxModels.defaultModel)
+      );
+    }
+
+    let active = true;
+    fetch('/cms/api/ai.config', {credentials: 'include'})
+      .then(async (res) => {
+        if (!res.ok) {
+          return;
+        }
+        const data = (await res.json()) as {
+          enabled?: boolean;
+          defaultModel?: string;
+          models?: ModalModelOption[];
+        };
+        if (!active || !data.enabled || !Array.isArray(data.models)) {
+          return;
+        }
+        const fetched = data.models;
+        setModels(fetched);
+        setSelectedModelId((current) => {
+          if (current && fetched.some((m) => m.id === current)) {
+            return current;
+          }
+          return resolvePreferredModelId(fetched, data.defaultModel);
+        });
+      })
+      .catch(() => {
+        // Leave context models in place if fetching `ai.config` fails.
+      });
+
+    return () => {
+      active = false;
+    };
   }, [props.open]);
 
   function handleClose() {
@@ -66,6 +161,17 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
 
     const trimmedDescription = description.trim();
     const trimmedPrompt = initialPrompt.trim();
+
+    if (selectedModelId && typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(
+          SELECTED_MODEL_STORAGE_KEY,
+          selectedModelId
+        );
+      } catch {
+        // Ignore localStorage write errors.
+      }
+    }
 
     setTitleError('');
     setSubmitting(true);
@@ -161,6 +267,21 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
           value={description}
           onInput={(e) => setDescription(e.currentTarget.value)}
         />
+        {models.length > 0 && (
+          <Select
+            className="NewPrototypeModal__modelSelect"
+            label="AI model"
+            size="md"
+            disabled={submitting}
+            data={models.map((m) => ({value: m.id, label: m.label}))}
+            value={selectedModelId}
+            onValueChange={(value) => {
+              if (value) {
+                setSelectedModelId(value);
+              }
+            }}
+          />
+        )}
         <Textarea
           className="NewPrototypeModal__promptInput"
           label={
