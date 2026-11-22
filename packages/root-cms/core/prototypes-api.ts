@@ -1801,6 +1801,119 @@ export function registerPrototypesApi(
   );
 
   /**
+   * Moves a comment thread's pin anchor to new frame/block/canvas coordinates.
+   * Allowed for thread authors (including VIEWER) and EDIT_ROLES members.
+   * POST /cms/api/prototypes.comment.move
+   */
+  server.use(
+    '/cms/api/prototypes.comment.move',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, false);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      const threadId = req.body?.threadId;
+      const rawAnchor = req.body?.anchor as
+        Partial<PrototypeCommentAnchor> | undefined;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+      if (!isValidDocId(threadId)) {
+        res.status(400).json({success: false, error: 'INVALID_THREAD_ID'});
+        return;
+      }
+      if (
+        !rawAnchor ||
+        typeof rawAnchor.pageId !== 'string' ||
+        !rawAnchor.pageId.trim()
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'anchor',
+        });
+        return;
+      }
+
+      try {
+        const refs = getPrototypeRefs(
+          auth.cmsClient.db,
+          auth.cmsClient.projectId
+        );
+        const threadRef = refs.commentsCol(boardId).doc(threadId);
+        const snap = await threadRef.get();
+        if (!snap.exists) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+        const existing = {
+          ...(snap.data() as PrototypeCommentThread),
+          id: snap.id,
+        };
+        if (existing.createdBy !== auth.email && !EDIT_ROLES.has(auth.role)) {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+
+        const anchor: PrototypeCommentAnchor = {
+          pageId: rawAnchor.pageId.trim().slice(0, 64),
+          frameId:
+            typeof rawAnchor.frameId === 'string' && rawAnchor.frameId.trim()
+              ? rawAnchor.frameId.trim().slice(0, 128)
+              : null,
+          ...(typeof rawAnchor.blockKey === 'string' &&
+          rawAnchor.blockKey.trim()
+            ? {blockKey: rawAnchor.blockKey.trim().slice(0, 128)}
+            : {}),
+          relX:
+            typeof rawAnchor.relX === 'number' &&
+            Number.isFinite(rawAnchor.relX)
+              ? Math.max(0, Math.min(1, rawAnchor.relX))
+              : 0.5,
+          relY:
+            typeof rawAnchor.relY === 'number' &&
+            Number.isFinite(rawAnchor.relY)
+              ? Math.max(0, Math.min(1, rawAnchor.relY))
+              : 0.5,
+          fallbackX:
+            typeof rawAnchor.fallbackX === 'number' &&
+            Number.isFinite(rawAnchor.fallbackX)
+              ? rawAnchor.fallbackX
+              : 0,
+          fallbackY:
+            typeof rawAnchor.fallbackY === 'number' &&
+            Number.isFinite(rawAnchor.fallbackY)
+              ? rawAnchor.fallbackY
+              : 0,
+        };
+
+        const nextAnchorLabel =
+          typeof req.body?.anchorLabel === 'string' &&
+          req.body.anchorLabel.trim()
+            ? req.body.anchorLabel.trim().slice(0, 200)
+            : existing.anchorLabel;
+
+        const updated: PrototypeCommentThread = {
+          ...existing,
+          anchor,
+          anchorLabel: nextAnchorLabel,
+          updatedAt: Date.now(),
+          updatedBy: auth.email,
+        };
+
+        await threadRef.set(stripUndefinedDeep(updated));
+        res.status(200).json({success: true, data: updated});
+      } catch (err: any) {
+        console.error('[prototypes.comment.move] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
    * Deletes a comment item, or the entire thread when removing its first comment.
    * Allowed for comment authors (including VIEWER) and ADMIN/EDITOR moderators.
    * POST /cms/api/prototypes.comment.delete

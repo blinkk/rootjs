@@ -188,6 +188,19 @@ export async function apiSetPrototypeCommentStatus(input: {
   );
 }
 
+/** Moves a comment thread's pin anchor to new frame, block, or canvas coordinates. */
+export async function apiMovePrototypeComment(input: {
+  boardId: string;
+  threadId: string;
+  anchor: PrototypeCommentAnchor;
+  anchorLabel?: string;
+}): Promise<PrototypeCommentThread> {
+  return postJson<PrototypeCommentThread>(
+    '/cms/api/prototypes.comment.move',
+    input
+  );
+}
+
 /** Deletes a comment item (or thread if it was the first comment). */
 export async function apiDeletePrototypeComment(input: {
   boardId: string;

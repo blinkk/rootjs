@@ -22,7 +22,6 @@ import type {
   PrototypeBlockRect,
   PrototypeBoardPage,
   PrototypeCommentAnchor,
-  PrototypeCommentThread,
   PrototypeFrame,
   PrototypeTheme,
 } from '../../../../../shared/prototypes.js';
@@ -145,10 +144,6 @@ export interface PrototypeFrameProps {
   canEdit: boolean;
   /** Whether Root AI is enabled for the project. */
   aiAvailable: boolean;
-  /** Open comment threads anchored to this frame. */
-  openThreads: PrototypeCommentThread[];
-  /** Active thread id whose pin popover is open, if any. */
-  activeThreadId: string | null;
   /** Called when the user selects the frame or a specific block inside it. */
   onSelect: (frameId: string, blockKey: string | null) => void;
   /** Expands the rendered frame into a full-screen preview overlay. */
@@ -168,12 +163,6 @@ export interface PrototypeFrameProps {
   onDropCommentPin: (
     anchor: PrototypeCommentAnchor,
     anchorLabel: string,
-    clientX: number,
-    clientY: number
-  ) => void;
-  /** Called when the user clicks an existing comment badge on a block or frame. */
-  onSelectCommentThread: (
-    thread: PrototypeCommentThread,
     clientX: number,
     clientY: number
   ) => void;
@@ -213,15 +202,12 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     selectedBlockKey,
     canEdit,
     aiAvailable,
-    openThreads,
-    activeThreadId,
     onSelect,
     onExpandFrame,
     onOpenPreview,
     onEditFrameWithAi,
     onDragPosition,
     onDropCommentPin,
-    onSelectCommentThread,
     onLayout,
     onRegisterExporter,
     onDuplicateFrame,
@@ -572,29 +558,6 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     onSelect(frame.id, hit ? hit.blockKey : null);
   }
 
-  // Group open threads by blockKey so each block gets a single crisp badge with
-  // total open comment count; frame-level threads render at their fallback coords.
-  const blockThreadsMap = useMemo(() => {
-    const grouped = new Map<string, PrototypeCommentThread[]>();
-    for (const thread of openThreads) {
-      if (thread.anchor.blockKey && blockRectMap.has(thread.anchor.blockKey)) {
-        const list = grouped.get(thread.anchor.blockKey) || [];
-        list.push(thread);
-        grouped.set(thread.anchor.blockKey, list);
-      }
-    }
-    return grouped;
-  }, [openThreads, blockRectMap]);
-
-  const unanchoredFrameThreads = useMemo(
-    () =>
-      openThreads.filter(
-        (thread) =>
-          !thread.anchor.blockKey || !blockRectMap.has(thread.anchor.blockKey)
-      ),
-    [openThreads, blockRectMap]
-  );
-
   const displayHeight = Math.max(
     240,
     isLive ? measuredHeight : frame.cachedHeight || FALLBACK_FRAME_HEIGHT
@@ -914,86 +877,6 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             </div>
           </div>
         )}
-
-        {/* Open comment count badges anchored to blocks. */}
-        {Array.from(blockThreadsMap.entries()).map(([blockKey, threads]) => {
-          const rect = blockRectMap.get(blockKey);
-          if (!rect) {
-            return null;
-          }
-          const primaryThread = threads[0];
-          const totalMessages = threads.reduce(
-            (sum, thread) =>
-              sum +
-              thread.comments.filter((item) => item.type === 'comment').length,
-            0
-          );
-          const isActivePin = threads.some((t) => t.id === activeThreadId);
-          return (
-            <button
-              key={blockKey}
-              type="button"
-              className={cn(
-                'PrototypeFrame__commentPin absolute z-30 flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-surface bg-button-blue-hover font-sans text-xs font-bold text-inverse shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-                isActivePin && 'ring-2 ring-focus'
-              )}
-              style={{
-                left: `${Math.max(8, rect.left + rect.width - 14)}px`,
-                top: `${Math.max(8, rect.top + 12)}px`,
-                transform: `translate(-50%, -50%) scale(${hudScale})`,
-              }}
-              aria-label={`Open ${totalMessages} comment${totalMessages === 1 ? '' : 's'} on ${primaryThread.anchorLabel}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(frame.id, blockKey);
-                onSelectCommentThread(primaryThread, e.clientX, e.clientY);
-              }}
-            >
-              {totalMessages || threads.length}
-            </button>
-          );
-        })}
-
-        {/* Open comment pins anchored to frame coordinates (without a matching block rect). */}
-        {unanchoredFrameThreads.map((thread) => {
-          const messageCount =
-            thread.comments.filter((item) => item.type === 'comment').length ||
-            1;
-          const pinX = Math.min(
-            frame.width - 16,
-            Math.max(16, thread.anchor.fallbackX || frame.width - 24)
-          );
-          const pinY = Math.min(
-            displayHeight - 16,
-            Math.max(16, thread.anchor.fallbackY || 24)
-          );
-          const isActivePin = thread.id === activeThreadId;
-          return (
-            <button
-              key={thread.id}
-              type="button"
-              className={cn(
-                'PrototypeFrame__commentPin absolute z-30 flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-surface bg-button-blue-hover font-sans text-xs font-bold text-inverse shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-                isActivePin && 'ring-2 ring-focus'
-              )}
-              style={{
-                left: `${pinX}px`,
-                top: `${pinY}px`,
-                transform: `translate(-50%, -50%) scale(${hudScale})`,
-              }}
-              aria-label={`Open comment thread on ${thread.anchorLabel}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(frame.id, thread.anchor.blockKey || null);
-                onSelectCommentThread(thread, e.clientX, e.clientY);
-              }}
-            >
-              {messageCount}
-            </button>
-          );
-        })}
       </div>
     </div>
   );

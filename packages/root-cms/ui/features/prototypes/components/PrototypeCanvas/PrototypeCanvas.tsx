@@ -10,6 +10,7 @@ import type {
   PrototypeTheme,
 } from '../../../../../shared/prototypes.js';
 import {
+  getOrderedBlocks,
   MAX_LIVE_PROTOTYPE_IFRAMES,
   zoomCameraAroundPoint,
 } from '../../../../../shared/prototypes.js';
@@ -55,6 +56,8 @@ export interface PrototypeCanvasProps {
   activeThreadId: string | null;
   /** Whether the user can mutate frames. */
   canEdit: boolean;
+  /** Lowercased email of the signed-in user (allows viewers to drag their own pins). */
+  currentUserEmail?: string;
   /** Whether Root AI is available. */
   aiAvailable: boolean;
   /** Whether Root AI is currently generating or has an initial prompt in flight. */
@@ -85,6 +88,13 @@ export interface PrototypeCanvasProps {
     clientX: number,
     clientY: number
   ) => void;
+  onMoveComment: (
+    threadId: string,
+    anchor: PrototypeCommentAnchor,
+    anchorLabel: string,
+    persist: boolean
+  ) => void;
+  onStartDragComment?: () => void;
   onFrameLayout: (
     frameId: string,
     height: number,
@@ -122,6 +132,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     openThreads,
     activeThreadId,
     canEdit,
+    currentUserEmail = '',
     aiAvailable,
     aiGenerating = false,
     sidePanelOpen = false,
@@ -133,6 +144,8 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onDragFramePosition,
     onDropCommentPin,
     onSelectCommentThread,
+    onMoveComment,
+    onStartDragComment,
     onFrameLayout,
     onRegisterExporter,
     onDuplicateFrame,
@@ -147,6 +160,13 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportSize, setViewportSize] = useState({width: 1280, height: 800});
   const [panning, setPanning] = useState(false);
+  const [draggingThreadId, setDraggingThreadId] = useState<string | null>(null);
+  const [layoutByFrame, setLayoutByFrame] = useState<
+    Record<string, {height: number; blockRects: PrototypeBlockRect[]}>
+  >({});
+  const layoutByFrameRef = useRef(layoutByFrame);
+  layoutByFrameRef.current = layoutByFrame;
+  const suppressPinClickRef = useRef<string | null>(null);
 
   const cameraRef = useRef(camera);
   cameraRef.current = camera;
@@ -333,20 +353,228 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     viewportSize.height,
   ]);
 
-  const threadsByFrame = useMemo(() => {
-    const map = new Map<string, PrototypeCommentThread[]>();
-    const floating: PrototypeCommentThread[] = [];
-    for (const thread of openThreads) {
-      if (thread.anchor.frameId) {
-        const list = map.get(thread.anchor.frameId) || [];
-        list.push(thread);
-        map.set(thread.anchor.frameId, list);
-      } else {
-        floating.push(thread);
+  const framesById = useMemo(() => {
+    const map = new Map<string, PrototypeFrame>();
+    for (const frame of frames) {
+      map.set(frame.id, frame);
+    }
+    return map;
+  }, [frames]);
+
+  /** Computes the canvas world `(worldX, worldY)` coordinates for an open comment thread. */
+  function getCommentWorldPosition(thread: PrototypeCommentThread): {
+    worldX: number;
+    worldY: number;
+  } {
+    if (thread.anchor.frameId) {
+      const frame = framesById.get(thread.anchor.frameId);
+      if (frame) {
+        const layout = layoutByFrame[frame.id];
+        const frameHeight = Math.max(
+          240,
+          layout?.height || frame.cachedHeight || 760
+        );
+        if (thread.anchor.blockKey && layout?.blockRects) {
+          const rect = layout.blockRects.find(
+            (r) => r.blockKey === thread.anchor.blockKey
+          );
+          if (rect && rect.width > 0 && rect.height > 0) {
+            const localX = rect.left + thread.anchor.relX * rect.width;
+            const localY = rect.top + thread.anchor.relY * rect.height;
+            return {
+              worldX: Math.round(frame.x + localX),
+              worldY: Math.round(frame.y + localY),
+            };
+          }
+        }
+        const localX = Math.min(
+          frame.width - 12,
+          Math.max(
+            12,
+            thread.anchor.fallbackX ?? frame.width * thread.anchor.relX
+          )
+        );
+        const localY = Math.min(
+          frameHeight - 12,
+          Math.max(
+            12,
+            thread.anchor.fallbackY ?? frameHeight * thread.anchor.relY
+          )
+        );
+        return {
+          worldX: Math.round(frame.x + localX),
+          worldY: Math.round(frame.y + localY),
+        };
       }
     }
-    return {byFrame: map, floating};
-  }, [openThreads]);
+    return {
+      worldX: Math.round(thread.anchor.fallbackX),
+      worldY: Math.round(thread.anchor.fallbackY),
+    };
+  }
+
+  /** Hit-tests a world `(worldX, worldY)` point against frames and blocks on the active page. */
+  function resolveCommentAnchorAtWorldPoint(
+    worldX: number,
+    worldY: number
+  ): {anchor: PrototypeCommentAnchor; anchorLabel: string} {
+    for (let i = frames.length - 1; i >= 0; i--) {
+      const frame = frames[i];
+      const layout = layoutByFrameRef.current[frame.id];
+      const frameHeight = Math.max(
+        240,
+        layout?.height || frame.cachedHeight || 760
+      );
+      if (
+        worldX >= frame.x &&
+        worldX <= frame.x + frame.width &&
+        worldY >= frame.y &&
+        worldY <= frame.y + frameHeight
+      ) {
+        const localX = Math.min(
+          frame.width - 12,
+          Math.max(12, worldX - frame.x)
+        );
+        const localY = Math.min(
+          frameHeight - 12,
+          Math.max(12, worldY - frame.y)
+        );
+        const rects = layout?.blockRects || [];
+        const hitRect = rects.find(
+          (r) =>
+            localX >= r.left &&
+            localX <= r.left + r.width &&
+            localY >= r.top &&
+            localY <= r.top + r.height
+        );
+        if (hitRect && hitRect.width > 0 && hitRect.height > 0) {
+          const ordered = getOrderedBlocks(frame.blocks);
+          const hitBlock = ordered.find(
+            (item) => item.key === hitRect.blockKey
+          )?.block;
+          return {
+            anchor: {
+              pageId: activePage.id,
+              frameId: frame.id,
+              blockKey: hitRect.blockKey,
+              relX: Math.min(
+                1,
+                Math.max(0, (localX - hitRect.left) / hitRect.width)
+              ),
+              relY: Math.min(
+                1,
+                Math.max(0, (localY - hitRect.top) / hitRect.height)
+              ),
+              fallbackX: Math.round(localX),
+              fallbackY: Math.round(localY),
+            },
+            anchorLabel: hitBlock
+              ? `${frame.title} › ${hitBlock.label}`
+              : frame.title,
+          };
+        }
+        return {
+          anchor: {
+            pageId: activePage.id,
+            frameId: frame.id,
+            relX: Math.min(1, Math.max(0, localX / Math.max(1, frame.width))),
+            relY: Math.min(1, Math.max(0, localY / Math.max(1, frameHeight))),
+            fallbackX: Math.round(localX),
+            fallbackY: Math.round(localY),
+          },
+          anchorLabel: frame.title,
+        };
+      }
+    }
+
+    return {
+      anchor: {
+        pageId: activePage.id,
+        frameId: null,
+        relX: 0,
+        relY: 0,
+        fallbackX: Math.round(worldX),
+        fallbackY: Math.round(worldY),
+      },
+      anchorLabel: `${activePage.name} canvas`,
+    };
+  }
+
+  function handlePinPointerDown(
+    e: PointerEvent,
+    thread: PrototypeCommentThread,
+    initialWorldX: number,
+    initialWorldY: number,
+    canMovePin: boolean
+  ) {
+    if (e.button !== 0 || effectivePanMode) {
+      return;
+    }
+    e.stopPropagation();
+    if (!canMovePin) {
+      return;
+    }
+
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let moved = false;
+    let latestResolved: {
+      anchor: PrototypeCommentAnchor;
+      anchorLabel: string;
+    } | null = null;
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const screenDist = Math.hypot(
+        moveEvent.clientX - startClientX,
+        moveEvent.clientY - startClientY
+      );
+      if (!moved && screenDist < 4) {
+        return;
+      }
+      if (!moved) {
+        moved = true;
+        setDraggingThreadId(thread.id);
+        suppressPinClickRef.current = thread.id;
+        onStartDragComment?.();
+      }
+      const zoom = cameraRef.current.zoom;
+      const nextWorldX =
+        initialWorldX + (moveEvent.clientX - startClientX) / zoom;
+      const nextWorldY =
+        initialWorldY + (moveEvent.clientY - startClientY) / zoom;
+      latestResolved = resolveCommentAnchorAtWorldPoint(nextWorldX, nextWorldY);
+      onMoveComment(
+        thread.id,
+        latestResolved.anchor,
+        latestResolved.anchorLabel,
+        false
+      );
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      setDraggingThreadId(null);
+      if (moved && latestResolved) {
+        onMoveComment(
+          thread.id,
+          latestResolved.anchor,
+          latestResolved.anchorLabel,
+          true
+        );
+        window.setTimeout(() => {
+          if (suppressPinClickRef.current === thread.id) {
+            suppressPinClickRef.current = null;
+          }
+        }, 50);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
 
   // Scale dot-grid spacing cleanly so dots stay legible when zoomed far out.
   const gridStep = Math.max(12, DOT_GRID_STEP * camera.zoom);
@@ -360,7 +588,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
       ref={viewportRef}
       className={cn(
         'PrototypeCanvas relative size-full overflow-hidden select-none bg-page',
-        panning
+        panning || draggingThreadId
           ? 'cursor-grabbing'
           : effectivePanMode
             ? 'cursor-grab'
@@ -397,16 +625,19 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             }
             canEdit={canEdit}
             aiAvailable={aiAvailable}
-            openThreads={threadsByFrame.byFrame.get(frame.id) || []}
-            activeThreadId={activeThreadId}
             onSelect={(frameId, blockKey) => onSelect(frameId, blockKey)}
             onExpandFrame={onExpandFrame}
             onOpenPreview={onOpenPreview}
             onEditFrameWithAi={onEditFrameWithAi}
             onDragPosition={onDragFramePosition}
             onDropCommentPin={onDropCommentPin}
-            onSelectCommentThread={onSelectCommentThread}
-            onLayout={onFrameLayout}
+            onLayout={(frameId, height, blockRects) => {
+              setLayoutByFrame((prev) => ({
+                ...prev,
+                [frameId]: {height, blockRects},
+              }));
+              onFrameLayout(frameId, height, blockRects);
+            }}
             onRegisterExporter={onRegisterExporter}
             onDuplicateFrame={onDuplicateFrame}
             onResizeFrame={onResizeFrame}
@@ -416,29 +647,54 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
           />
         ))}
 
-        {/* Free-floating canvas comments (not anchored to a specific frame). */}
-        {threadsByFrame.floating.map((thread) => {
+        {/* Unified draggable comment bubbles across frames, blocks, and free canvas. */}
+        {openThreads.map((thread) => {
           const messageCount =
             thread.comments.filter((item) => item.type === 'comment').length ||
             1;
           const isActivePin = thread.id === activeThreadId;
+          const isDraggingPin = thread.id === draggingThreadId;
+          const canMovePin =
+            canEdit ||
+            Boolean(
+              currentUserEmail &&
+              thread.createdBy.toLowerCase() === currentUserEmail
+            );
+          const {worldX, worldY} = getCommentWorldPosition(thread);
           return (
             <button
               key={thread.id}
               type="button"
               className={cn(
-                'PrototypeCanvas__floatingPin absolute z-30 flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-surface bg-button-blue-hover font-sans text-xs font-bold text-inverse shadow-md transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                'PrototypeCanvas__commentPin absolute z-30 flex size-7 items-center justify-center rounded-full border-2 border-surface bg-button-blue-hover font-sans text-xs font-bold text-inverse shadow-md transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                isDraggingPin
+                  ? 'scale-110 cursor-grabbing ring-2 ring-focus'
+                  : canMovePin && !effectivePanMode
+                    ? 'cursor-grab hover:scale-110'
+                    : 'cursor-pointer hover:scale-110',
                 isActivePin && 'ring-2 ring-focus'
               )}
               style={{
-                left: `${thread.anchor.fallbackX}px`,
-                top: `${thread.anchor.fallbackY}px`,
+                left: `${worldX}px`,
+                top: `${worldY}px`,
                 transform: `translate(-50%, -50%) scale(${hudScale})`,
               }}
               aria-label={`Open comment thread on ${thread.anchorLabel}`}
-              onPointerDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) =>
+                handlePinPointerDown(e, thread, worldX, worldY, canMovePin)
+              }
               onClick={(e) => {
                 e.stopPropagation();
+                if (suppressPinClickRef.current === thread.id) {
+                  suppressPinClickRef.current = null;
+                  return;
+                }
+                if (thread.anchor.frameId) {
+                  onSelect(
+                    thread.anchor.frameId,
+                    thread.anchor.blockKey || null
+                  );
+                }
                 onSelectCommentThread(thread, e.clientX, e.clientY);
               }}
             >

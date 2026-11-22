@@ -24,6 +24,7 @@ import {
   apiDuplicatePrototypeBoard,
   apiGetPrototypeBoard,
   apiGetPrototypeContext,
+  apiMovePrototypeComment,
   apiSavePrototypeFrame,
   apiSetPrototypeCommentStatus,
   apiUpdatePrototypeBoard,
@@ -224,6 +225,13 @@ export interface UsePrototypeBoardResult {
     threadId: string,
     status: 'open' | 'resolved'
   ) => Promise<PrototypeCommentThread>;
+  /** Moves a comment thread's pin anchor during or after dragging. */
+  updateCommentAnchor: (
+    threadId: string,
+    anchor: PrototypeCommentAnchor,
+    anchorLabel: string,
+    persist?: boolean
+  ) => void;
   /** Deletes a comment item (or thread if it was the first comment). */
   deleteComment: (threadId: string, commentId: string) => Promise<void>;
   /** Integrates a frame mutation performed by Root AI into local state. */
@@ -646,6 +654,52 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     [boardId]
   );
 
+  const updateCommentAnchor = useCallback(
+    (
+      threadId: string,
+      anchor: PrototypeCommentAnchor,
+      anchorLabel: string,
+      persist = true
+    ) => {
+      setBundle((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return {
+          ...prev,
+          comments: prev.comments.map((thread) =>
+            thread.id === threadId ? {...thread, anchor, anchorLabel} : thread
+          ),
+        };
+      });
+      if (persist) {
+        apiMovePrototypeComment({
+          boardId,
+          threadId,
+          anchor,
+          anchorLabel,
+        })
+          .then((saved) => {
+            setBundle((prev) => {
+              if (!prev) {
+                return prev;
+              }
+              return {
+                ...prev,
+                comments: prev.comments.map((thread) =>
+                  thread.id === saved.id ? saved : thread
+                ),
+              };
+            });
+          })
+          .catch((err) => {
+            console.error('Failed to persist comment position:', err);
+          });
+      }
+    },
+    [boardId]
+  );
+
   const deleteComment = useCallback(
     async (threadId: string, commentId: string) => {
       await apiDeletePrototypeComment({boardId, threadId, commentId});
@@ -749,6 +803,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     insertBlockIntoFrame,
     addComment,
     setCommentStatus,
+    updateCommentAnchor,
     deleteComment,
     applyFrameMutated,
     applyComponentMutated,

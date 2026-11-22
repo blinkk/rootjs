@@ -90,6 +90,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     updateFrameCachedHeight,
     addComment,
     setCommentStatus,
+    updateCommentAnchor,
     deleteComment,
     applyFrameMutated,
     applyComponentMutated,
@@ -659,6 +660,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           openThreads={openPageThreads}
           activeThreadId={pinPopover?.threadId || null}
           canEdit={canEdit}
+          currentUserEmail={currentUserEmail}
           aiAvailable={aiAvailable}
           aiGenerating={aiGenerating}
           sidePanelOpen={activePanel !== null}
@@ -690,6 +692,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               clientY,
             });
           }}
+          onMoveComment={updateCommentAnchor}
+          onStartDragComment={() => setPinPopover(null)}
           onFrameLayout={handleFrameLayout}
           onRegisterExporter={handleRegisterExporter}
           onDuplicateFrame={(frameId) => {

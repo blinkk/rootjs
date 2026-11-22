@@ -257,6 +257,49 @@ describe('registerPrototypesApi integration', () => {
     expect(viewerReply.status).toBe(200);
     const viewerReplyId = viewerReply.body.data.comments[1].id as string;
 
+    // VIEWER cannot move an EDITOR's comment pin, while EDITOR can move it.
+    const forbiddenMove = await callApi({
+      path: '/cms/api/prototypes.comment.move',
+      email: 'viewer@example.com',
+      body: {
+        boardId,
+        threadId,
+        anchor: {
+          pageId: 'explorations',
+          frameId,
+          blockKey: 'hero',
+          relX: 0.75,
+          relY: 0.4,
+          fallbackX: 980,
+          fallbackY: 240,
+        },
+        anchorLabel: 'Pricing B › Pricing matrix',
+      },
+    });
+    expect(forbiddenMove.status).toBe(403);
+
+    const movedPin = await callApi({
+      path: '/cms/api/prototypes.comment.move',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        threadId,
+        anchor: {
+          pageId: 'explorations',
+          frameId,
+          blockKey: 'hero',
+          relX: 0.75,
+          relY: 0.4,
+          fallbackX: 980,
+          fallbackY: 240,
+        },
+        anchorLabel: 'Pricing B › Pricing matrix',
+      },
+    });
+    expect(movedPin.status).toBe(200);
+    expect(movedPin.body.data.anchor.relX).toBe(0.75);
+    expect(movedPin.body.data.anchor.fallbackX).toBe(980);
+
     // VIEWER cannot delete EDITOR's root comment.
     const forbiddenDelete = await callApi({
       path: '/cms/api/prototypes.comment.delete',
