@@ -118,11 +118,6 @@ interface ImageAttachment {
 
 const SELECTED_MODEL_STORAGE_KEY = 'root-cms.ai.selectedModel';
 
-const QUICK_SKILLS: ReadonlyArray<{name: string; label: string}> = [
-  {name: 'explore-variants', label: '/explore-variants'},
-  {name: 'address-comments', label: '/address-comments'},
-];
-
 const STARTER_PROMPTS: ReadonlyArray<string> = [
   '/explore-variants Explore 2 distinct layout directions for this page',
   '/propose-component Propose a comparison block matching our brand tokens',
@@ -377,46 +372,6 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
           </div>
         </div>
         <div className="PrototypeAiCard__headerActions flex shrink-0 items-center gap-1">
-          {isEnabled && models.length > 0 && (
-            <Menu
-              label="Select AI model"
-              placement="bottom-end"
-              trigger={
-                <Button
-                  type="button"
-                  variant="subtle"
-                  size="xs"
-                  className="PrototypeAiCard__modelPicker min-w-0 max-w-36 text-xs font-medium text-muted"
-                  iconRight={<IconChevronDown />}
-                >
-                  <span className="truncate">
-                    {selectedModel?.label || 'Select model'}
-                  </span>
-                </Button>
-              }
-            >
-              {models.map((model) => (
-                <MenuItem
-                  key={model.id}
-                  hint={
-                    model.id === selectedModel?.id ? <IconCheck /> : undefined
-                  }
-                  onClick={() => handleSelectModel(model.id)}
-                >
-                  <div className="PrototypeAiCard__modelOption flex min-w-44 flex-col gap-0.5">
-                    <div className="text-sm font-medium text-fg">
-                      {model.label}
-                    </div>
-                    {model.description && (
-                      <div className="text-xs text-muted">
-                        {model.description}
-                      </div>
-                    )}
-                  </div>
-                </MenuItem>
-              ))}
-            </Menu>
-          )}
           <IconButton
             size="xs"
             label="Close Root AI"
@@ -440,7 +395,9 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
           props={props}
           initialChatId={boardAiChatId}
           initialMessages={initialMessages}
+          models={models}
           selectedModel={selectedModel}
+          onSelectModel={handleSelectModel}
           selectedFrame={selectedFrame}
           selectedBlock={selectedBlock}
           skills={skills}
@@ -517,7 +474,9 @@ interface PrototypeAiChatSessionProps {
   props: PrototypeAiCardProps;
   initialChatId: string;
   initialMessages: UIMessage[];
+  models: ModelInfo[];
   selectedModel?: ModelInfo;
+  onSelectModel: (modelId: string) => void;
   selectedFrame: PrototypeFrame | null;
   selectedBlock: PrototypeBlock | null;
   skills: SerializedAiSkillSummary[];
@@ -527,7 +486,9 @@ function PrototypeAiChatSession({
   props,
   initialChatId,
   initialMessages,
+  models,
   selectedModel,
+  onSelectModel,
   selectedFrame,
   selectedBlock,
   skills,
@@ -844,6 +805,9 @@ function PrototypeAiChatSession({
         canAttach={Boolean(selectedModel?.capabilities.attachments)}
         isStreaming={isStreaming}
         focusKey={props.focusKey}
+        models={models}
+        selectedModel={selectedModel}
+        onSelectModel={onSelectModel}
         skills={skills}
         selectedFrame={selectedFrame}
         selectedBlock={selectedBlock}
@@ -1149,6 +1113,9 @@ interface ComposerFooterProps {
   canAttach: boolean;
   isStreaming: boolean;
   focusKey?: number;
+  models: ModelInfo[];
+  selectedModel?: ModelInfo;
+  onSelectModel: (modelId: string) => void;
   skills: SerializedAiSkillSummary[];
   selectedFrame: PrototypeFrame | null;
   selectedBlock: PrototypeBlock | null;
@@ -1417,7 +1384,7 @@ function ComposerFooter(props: ComposerFooterProps) {
         />
 
         <div className="PrototypeAiCard__composerBar mt-2 flex items-center justify-between gap-2">
-          <div className="PrototypeAiCard__quickActions flex min-w-0 flex-wrap items-center gap-1">
+          <div className="PrototypeAiCard__quickActions flex min-w-0 flex-1 items-center gap-1">
             {props.canAttach && (
               <>
                 <IconButton
@@ -1439,24 +1406,55 @@ function ComposerFooter(props: ComposerFooterProps) {
                 />
               </>
             )}
-            {QUICK_SKILLS.map((skill) => (
-              <button
-                key={skill.name}
-                type="button"
-                className="PrototypeAiCard__skillPill cursor-pointer appearance-none rounded-full border border-border bg-page px-2 py-0.5 font-sans text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
-                disabled={props.disabled}
-                onClick={() => selectSkill(skill.name)}
+            {props.models.length > 0 && (
+              <Menu
+                label="Select AI model"
+                placement="top-start"
+                trigger={
+                  <Button
+                    type="button"
+                    variant="subtle"
+                    size="xs"
+                    className="PrototypeAiCard__modelPicker min-w-0 max-w-44 text-xs font-medium text-muted"
+                    iconRight={<IconChevronDown />}
+                  >
+                    <span className="truncate">
+                      {props.selectedModel?.label || 'Select model'}
+                    </span>
+                  </Button>
+                }
               >
-                {skill.label}
-              </button>
-            ))}
+                {props.models.map((model) => (
+                  <MenuItem
+                    key={model.id}
+                    hint={
+                      model.id === props.selectedModel?.id ? (
+                        <IconCheck />
+                      ) : undefined
+                    }
+                    onClick={() => props.onSelectModel(model.id)}
+                  >
+                    <div className="PrototypeAiCard__modelOption flex min-w-44 flex-col gap-0.5">
+                      <div className="text-sm font-medium text-fg">
+                        {model.label}
+                      </div>
+                      {model.description && (
+                        <div className="text-xs text-muted">
+                          {model.description}
+                        </div>
+                      )}
+                    </div>
+                  </MenuItem>
+                ))}
+              </Menu>
+            )}
           </div>
 
           {props.isStreaming ? (
             <IconButton
               className="PrototypeAiCard__stopButton shrink-0"
-              variant="primary"
-              size="sm"
+              variant="subtle"
+              size="xs"
               label="Stop generating"
               onClick={props.onStop}
             >
@@ -1466,7 +1464,7 @@ function ComposerFooter(props: ComposerFooterProps) {
             <IconButton
               className="PrototypeAiCard__sendButton shrink-0"
               variant="primary"
-              size="sm"
+              size="xs"
               label="Send prompt"
               disabled={
                 props.disabled ||
