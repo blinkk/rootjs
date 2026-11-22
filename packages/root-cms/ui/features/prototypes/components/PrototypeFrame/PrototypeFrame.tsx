@@ -132,8 +132,6 @@ export interface PrototypeFrameProps {
   zoom: number;
   /** Current active canvas tool. */
   tool: PrototypeCanvasTool;
-  /** Whether Meta/Ctrl is currently held (morphs Expand into Open in new tab). */
-  metaPressed?: boolean;
   /** All board pages (for the "Move to page…" submenu). */
   pages: PrototypeBoardPage[];
   /** Whether this frame is within the live iframe budget. */
@@ -198,7 +196,6 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     theme,
     zoom,
     tool,
-    metaPressed = false,
     pages,
     isLive,
     isSelected,
@@ -581,7 +578,6 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       : null;
 
   const otherPages = pages.filter((page) => page.id !== frame.pageId);
-  const previewUrl = `/cms/prototypes-preview/${encodeURIComponent(frame.boardId)}/${encodeURIComponent(frame.id)}`;
 
   // Right-justify header actions to the right edge of the frame when the frame
   // has enough horizontal width in header space; fall back to compact inline
@@ -639,21 +635,14 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
           <IconButton
             size="xs"
             variant="subtle"
-            href={previewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            label={metaPressed ? 'Open preview in new tab' : 'Expand'}
+            label="Expand"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e: MouseEvent) => {
+            onClick={(e) => {
               e.stopPropagation();
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
-                return;
-              }
-              e.preventDefault();
               onExpandFrame(frame.id);
             }}
           >
-            {metaPressed ? <IconExternalLink /> : <IconArrowsDiagonal />}
+            <IconArrowsDiagonal />
           </IconButton>
           <Menu
             placement={rightJustifyActions ? 'bottom-end' : 'bottom-start'}

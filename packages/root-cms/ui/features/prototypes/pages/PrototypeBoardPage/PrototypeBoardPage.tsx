@@ -119,7 +119,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   });
   const [tool, setTool] = useState<PrototypeCanvasTool>('select');
   const [spacePressed, setSpacePressed] = useState(false);
-  const [metaPressed, setMetaPressed] = useState(false);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
@@ -337,12 +336,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     );
   }, []);
 
-  // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -) and Meta modifier tracking.
+  // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Meta' || e.key === 'Control' || e.metaKey || e.ctrlKey) {
-        setMetaPressed(true);
-      }
       if (expandedFrameId || isEditableTarget(e.target)) {
         return;
       }
@@ -396,18 +392,10 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       if (e.code === 'Space') {
         setSpacePressed(false);
       }
-      if (
-        e.key === 'Meta' ||
-        e.key === 'Control' ||
-        (!e.metaKey && !e.ctrlKey)
-      ) {
-        setMetaPressed(false);
-      }
     }
 
     function onBlur() {
       setSpacePressed(false);
-      setMetaPressed(false);
     }
 
     window.addEventListener('keydown', onKeyDown);
@@ -667,7 +655,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           }}
           tool={tool}
           spacePressed={spacePressed}
-          metaPressed={metaPressed}
           selectedFrameId={selectedFrameId}
           selectedBlockKey={selectedBlockKey}
           openThreads={openPageThreads}
