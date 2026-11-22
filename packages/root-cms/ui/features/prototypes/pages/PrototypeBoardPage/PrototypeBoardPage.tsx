@@ -1,0 +1,873 @@
+import './PrototypeBoardPage.css';
+
+import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useLocation, useRoute} from 'preact-iso';
+import type {
+  CanvasCamera,
+  PrototypeBlock,
+  PrototypeBlockRect,
+  PrototypeCommentThread,
+} from '../../../../../shared/prototypes.js';
+import {
+  fitCameraToBounds,
+  zoomCameraAroundPoint,
+} from '../../../../../shared/prototypes.js';
+import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
+import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
+import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {isEditableTarget} from '../../../../utils/keyboard.js';
+import {errorMessage} from '../../../../utils/notifications.js';
+import {testAiEnabled} from '../../../ai/ai.js';
+import {testCanEdit} from '../../../users/permissions.js';
+import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {PrototypeAiCard} from '../../components/PrototypeAiCard/PrototypeAiCard.js';
+import {PrototypeCanvas} from '../../components/PrototypeCanvas/PrototypeCanvas.js';
+import {
+  type PrototypeCommentDraft,
+  PrototypeCommentPopover,
+  PrototypeCommentsCard,
+} from '../../components/PrototypeCommentsCard/PrototypeCommentsCard.js';
+import {PrototypeDock} from '../../components/PrototypeDock/PrototypeDock.js';
+import type {PrototypeCanvasTool} from '../../components/PrototypeFrame/PrototypeFrame.js';
+import {
+  type PrototypeSidePanel,
+  PrototypeTopBar,
+} from '../../components/PrototypeTopBar/PrototypeTopBar.js';
+import {
+  exportFramesToImage,
+  type PrototypeExportPayload,
+} from '../../prototype-export.js';
+import {usePrototypeBoard} from '../../usePrototypeBoard.js';
+
+/** Props accepted by `PrototypeBoardPage` via the CMS router. */
+export interface PrototypeBoardPageProps {
+  /** Prototype board id matched from `/cms/prototypes/:boardId`. */
+  boardId?: string;
+}
+
+/** Active pin popover anchor state on the canvas. */
+interface OpenPinPopover {
+  threadId?: string;
+  draft?: PrototypeCommentDraft;
+  clientX: number;
+  clientY: number;
+}
+
+/** Zoom multiplier per button click or keyboard zoom step. */
+const ZOOM_STEP_FACTOR = 1.25;
+
+/**
+ * Full-bleed infinite canvas workspace for `/cms/prototypes/:boardId`.
+ * Orchestrates the floating top bar, infinite dot-grid artboard, sandboxed
+ * frames, bottom tool/zoom dock, floating Comments card & pin popovers, and
+ * floating Root AI assistant card.
+ */
+export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
+  const {params} = useRoute();
+  const {query, route} = useLocation();
+  const boardId = props.boardId || params.boardId || '';
+
+  const {
+    bundle,
+    loading,
+    error,
+    projectContext,
+    renameBoard,
+    updateBoardStatus,
+    addPage,
+    duplicateBoard,
+    deleteBoard,
+    createFrame,
+    saveFrame,
+    duplicateFrame,
+    deleteFrame,
+    moveFrameToPage,
+    updateFramePosition,
+    updateFrameCachedHeight,
+    insertBlockIntoFrame,
+    addComment,
+    setCommentStatus,
+    deleteComment,
+    applyFrameMutated,
+    applyComponentMutated,
+    applyTurnMutated,
+  } = usePrototypeBoard(boardId);
+
+  const {roles} = useProjectRoles();
+  const currentUserEmail = (window.firebase?.user?.email || '').toLowerCase();
+  const canEdit = useMemo(
+    () => testCanEdit(roles, currentUserEmail),
+    [roles, currentUserEmail]
+  );
+  const aiAvailable = testAiEnabled();
+
+  usePageTitle(
+    bundle?.board.title ? `${bundle.board.title} · Prototypes` : 'Prototypes'
+  );
+
+  const [activePageId, setActivePageId] = useState<string>(
+    () => (query.page as string) || ''
+  );
+  const [camera, setCamera] = useState<CanvasCamera>({
+    x: 80,
+    y: 80,
+    zoom: 0.65,
+  });
+  const [tool, setTool] = useState<PrototypeCanvasTool>('select');
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
+  const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
+  const [interactiveFrameId, setInteractiveFrameId] = useState<string | null>(
+    null
+  );
+  const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
+  const [queuedPrompt, setQueuedPrompt] = useState<{
+    id: string | number;
+    text: string;
+  } | null>(null);
+  const [pinPopover, setPinPopover] = useState<OpenPinPopover | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const viewportElRef = useRef<HTMLDivElement | null>(null);
+  const blockRectsByFrameRef = useRef(new Map<string, PrototypeBlockRect[]>());
+  const exportersRef = useRef(
+    new Map<string, () => Promise<PrototypeExportPayload | null>>()
+  );
+  const initialFitDoneRef = useRef<string | null>(null);
+  const initialPromptHandledRef = useRef(false);
+
+  // Sync active page once the board loads (respecting `?page=` when valid).
+  useEffect(() => {
+    if (!bundle) {
+      return;
+    }
+    const pages = bundle.board.pages;
+    if (pages.length === 0) {
+      return;
+    }
+    const queryPage = query.page as string | undefined;
+    if (queryPage && pages.some((page) => page.id === queryPage)) {
+      setActivePageId(queryPage);
+      return;
+    }
+    if (!activePageId || !pages.some((page) => page.id === activePageId)) {
+      setActivePageId(pages[0].id);
+    }
+  }, [bundle?.board.id, bundle?.board.pages.length]);
+
+  // Auto-open Root AI and queue `?prompt=` once when navigating from NewPrototypeModal.
+  useEffect(() => {
+    if (initialPromptHandledRef.current || !bundle) {
+      return;
+    }
+    const promptParam = (query.prompt as string | undefined)?.trim();
+    if (promptParam && aiAvailable) {
+      initialPromptHandledRef.current = true;
+      setActivePanel('ai');
+      setQueuedPrompt({id: Date.now(), text: promptParam});
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete('prompt');
+      window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
+    }
+  }, [bundle, query.prompt, aiAvailable]);
+
+  const activePage = useMemo(() => {
+    const pages = bundle?.board.pages || [];
+    return (
+      pages.find((page) => page.id === activePageId) ||
+      pages[0] || {id: 'explorations', name: 'Explorations'}
+    );
+  }, [bundle?.board.pages, activePageId]);
+
+  const pageFrames = useMemo(
+    () =>
+      (bundle?.frames || []).filter((frame) => frame.pageId === activePage.id),
+    [bundle?.frames, activePage.id]
+  );
+
+  const openCommentCount = useMemo(
+    () =>
+      (bundle?.comments || []).filter((thread) => thread.status === 'open')
+        .length,
+    [bundle?.comments]
+  );
+
+  const openPageThreads = useMemo(
+    () =>
+      (bundle?.comments || []).filter(
+        (thread) =>
+          thread.status === 'open' && thread.anchor.pageId === activePage.id
+      ),
+    [bundle?.comments, activePage.id]
+  );
+
+  const fitActivePageToScreen = useCallback(
+    (framesToFit = pageFrames) => {
+      const el = viewportElRef.current;
+      const vw = el?.clientWidth || window.innerWidth || 1280;
+      const vh = el?.clientHeight || window.innerHeight || 800;
+      const boxes = framesToFit.map((frame) => ({
+        x: frame.x,
+        y: frame.y,
+        width: frame.width,
+        height: frame.cachedHeight || 760,
+      }));
+      setCamera(fitCameraToBounds(boxes, vw, vh, 96));
+    },
+    [pageFrames]
+  );
+
+  // Fit frames to viewport on initial board load and when switching pages.
+  useEffect(() => {
+    if (!bundle || !activePage.id) {
+      return;
+    }
+    const fitKey = `${bundle.board.id}:${activePage.id}`;
+    if (initialFitDoneRef.current === fitKey) {
+      return;
+    }
+    initialFitDoneRef.current = fitKey;
+    fitActivePageToScreen(pageFrames);
+  }, [bundle?.board.id, activePage.id, pageFrames, fitActivePageToScreen]);
+
+  const handleSelectPage = useCallback((pageId: string) => {
+    setActivePageId(pageId);
+    setSelectedFrameId(null);
+    setSelectedBlockKey(null);
+    setInteractiveFrameId(null);
+    setPinPopover(null);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('page', pageId);
+    window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
+  }, []);
+
+  const handleNewFrame = useCallback(async () => {
+    if (!canEdit || !bundle) {
+      return;
+    }
+    try {
+      const created = await createFrame({pageId: activePage.id});
+      setSelectedFrameId(created.id);
+      setSelectedBlockKey(null);
+      setInteractiveFrameId(null);
+      // Pan camera smoothly to center on the newly created frame.
+      const el = viewportElRef.current;
+      const vw = el?.clientWidth || window.innerWidth || 1280;
+      const vh = el?.clientHeight || window.innerHeight || 800;
+      setCamera(
+        fitCameraToBounds(
+          [
+            {
+              x: created.x,
+              y: created.y,
+              width: created.width,
+              height: created.cachedHeight || 760,
+            },
+          ],
+          vw,
+          vh,
+          96
+        )
+      );
+    } catch (err) {
+      showNotification({
+        title: 'Could not create frame',
+        message: errorMessage(err),
+        color: 'red',
+      });
+    }
+  }, [canEdit, bundle, createFrame, activePage.id]);
+
+  const handleZoomBy = useCallback((factor: number) => {
+    const el = viewportElRef.current;
+    const cx = (el?.clientWidth || window.innerWidth || 1280) / 2;
+    const cy = (el?.clientHeight || window.innerHeight || 800) / 2;
+    setCamera((prev) =>
+      zoomCameraAroundPoint(prev, prev.zoom * factor, cx, cy)
+    );
+  }, []);
+
+  // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -).
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (isEditableTarget(e.target)) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (interactiveFrameId) {
+          setInteractiveFrameId(null);
+          return;
+        }
+        if (pinPopover) {
+          setPinPopover(null);
+          return;
+        }
+        if (tool !== 'select') {
+          setTool('select');
+          return;
+        }
+        setSelectedBlockKey(null);
+        setSelectedFrameId(null);
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setSpacePressed(true);
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === 'v') {
+        e.preventDefault();
+        setTool('select');
+      } else if (key === 'h') {
+        e.preventDefault();
+        setTool('pan');
+      } else if (key === 'f' && canEdit) {
+        e.preventDefault();
+        handleNewFrame();
+      } else if (key === 'c') {
+        e.preventDefault();
+        setTool((prev) => (prev === 'comment' ? 'select' : 'comment'));
+      } else if (key === '0') {
+        e.preventDefault();
+        fitActivePageToScreen();
+      } else if (key === '=' || key === '+') {
+        e.preventDefault();
+        handleZoomBy(ZOOM_STEP_FACTOR);
+      } else if (key === '-') {
+        e.preventDefault();
+        handleZoomBy(1 / ZOOM_STEP_FACTOR);
+      }
+    }
+
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+      }
+    }
+
+    function onBlur() {
+      setSpacePressed(false);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, [
+    canEdit,
+    interactiveFrameId,
+    pinPopover,
+    tool,
+    handleNewFrame,
+    fitActivePageToScreen,
+    handleZoomBy,
+  ]);
+
+  const handleRegisterExporter = useCallback(
+    (
+      frameId: string,
+      exporter: (() => Promise<PrototypeExportPayload | null>) | null
+    ) => {
+      if (exporter) {
+        exportersRef.current.set(frameId, exporter);
+      } else {
+        exportersRef.current.delete(frameId);
+      }
+    },
+    []
+  );
+
+  const handleFrameLayout = useCallback(
+    (frameId: string, height: number, blockRects: PrototypeBlockRect[]) => {
+      blockRectsByFrameRef.current.set(frameId, blockRects);
+      updateFrameCachedHeight(frameId, height);
+    },
+    [updateFrameCachedHeight]
+  );
+
+  const handleExportFrames = useCallback(
+    async (format: 'png' | 'jpg', targetFrameId?: string) => {
+      if (!bundle) {
+        return;
+      }
+      const chosenId = targetFrameId || selectedFrameId;
+      const chosenFrame = chosenId
+        ? pageFrames.find((frame) => frame.id === chosenId) ||
+          bundle.frames.find((frame) => frame.id === chosenId)
+        : null;
+      const framesToExport = chosenFrame ? [chosenFrame] : pageFrames;
+      if (framesToExport.length === 0) {
+        showNotification({
+          title: 'Nothing to export',
+          message: 'Add at least one frame to this page before exporting.',
+          color: 'yellow',
+        });
+        return;
+      }
+      setExporting(true);
+      try {
+        await exportFramesToImage({
+          boardTitle: bundle.board.title,
+          frames: framesToExport,
+          theme: bundle.board.theme,
+          format,
+          requestExportPayload: async (frameId) => {
+            const exporter = exportersRef.current.get(frameId);
+            return exporter ? exporter() : null;
+          },
+        });
+        showNotification({
+          title: `Exported ${format.toUpperCase()}`,
+          message:
+            framesToExport.length === 1
+              ? `Downloaded "${framesToExport[0].title}" at 2x resolution.`
+              : `Downloaded ${framesToExport.length} frames from "${activePage.name}" at 2x resolution.`,
+          color: 'green',
+        });
+      } finally {
+        setExporting(false);
+      }
+    },
+    [bundle, selectedFrameId, pageFrames, activePage.name]
+  );
+
+  const handleInsertComponent = useCallback(
+    async (block: PrototypeBlock) => {
+      if (!canEdit || !bundle) {
+        return;
+      }
+      try {
+        let targetFrameId =
+          selectedFrameId &&
+          pageFrames.some((frame) => frame.id === selectedFrameId)
+            ? selectedFrameId
+            : pageFrames[0]?.id || null;
+        if (!targetFrameId) {
+          const created = await createFrame({
+            pageId: activePage.id,
+            title: `${activePage.name} 1`,
+          });
+          targetFrameId = created.id;
+        }
+        const {frame, blockKey} = await insertBlockIntoFrame(
+          targetFrameId,
+          block
+        );
+        setSelectedFrameId(frame.id);
+        setSelectedBlockKey(blockKey);
+        showNotification({
+          title: `Inserted ${block.label}`,
+          message: `Added to "${frame.title}".`,
+          color: 'green',
+        });
+      } catch (err) {
+        showNotification({
+          title: 'Could not insert component',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      }
+    },
+    [
+      canEdit,
+      bundle,
+      selectedFrameId,
+      pageFrames,
+      createFrame,
+      activePage.id,
+      activePage.name,
+      insertBlockIntoFrame,
+    ]
+  );
+
+  const handleNavigateToThread = useCallback(
+    (thread: PrototypeCommentThread) => {
+      if (!bundle) {
+        return;
+      }
+      if (thread.anchor.pageId !== activePage.id) {
+        handleSelectPage(thread.anchor.pageId);
+      }
+      const el = viewportElRef.current;
+      const vw = el?.clientWidth || window.innerWidth || 1280;
+      const vh = el?.clientHeight || window.innerHeight || 800;
+
+      if (thread.anchor.frameId) {
+        const frame = bundle.frames.find(
+          (item) => item.id === thread.anchor.frameId
+        );
+        if (frame) {
+          setSelectedFrameId(frame.id);
+          setSelectedBlockKey(thread.anchor.blockKey || null);
+          setInteractiveFrameId(null);
+          const rects = blockRectsByFrameRef.current.get(frame.id) || [];
+          const blockRect = thread.anchor.blockKey
+            ? rects.find((r) => r.blockKey === thread.anchor.blockKey)
+            : null;
+          const targetBox = blockRect
+            ? {
+                x: frame.x + blockRect.left,
+                y: frame.y + blockRect.top,
+                width: Math.max(320, blockRect.width),
+                height: Math.max(240, blockRect.height),
+              }
+            : {
+                x: frame.x,
+                y: frame.y,
+                width: frame.width,
+                height: frame.cachedHeight || 760,
+              };
+          setCamera(fitCameraToBounds([targetBox], vw, vh, 120));
+          return;
+        }
+      }
+
+      // Free-floating canvas pin: center the viewport on its world coordinates.
+      const zoom = Math.max(camera.zoom, 0.75);
+      setCamera({
+        x: Math.round(vw / 2 - thread.anchor.fallbackX * zoom),
+        y: Math.round(vh / 2 - thread.anchor.fallbackY * zoom),
+        zoom,
+      });
+    },
+    [bundle, activePage.id, handleSelectPage, camera.zoom]
+  );
+
+  const handleAddressCommentsInAi = useCallback(() => {
+    setPinPopover(null);
+    setActivePanel('ai');
+    setQueuedPrompt({id: Date.now(), text: '/address-comments '});
+  }, []);
+
+  const handleTogglePanel = useCallback(
+    (panel: Exclude<PrototypeSidePanel, null>) => {
+      setActivePanel((prev) => (prev === panel ? null : panel));
+    },
+    []
+  );
+
+  const activePopoverThread = useMemo(() => {
+    if (!pinPopover?.threadId || !bundle) {
+      return null;
+    }
+    return (
+      bundle.comments.find((thread) => thread.id === pinPopover.threadId) ||
+      null
+    );
+  }, [pinPopover?.threadId, bundle]);
+
+  if (loading) {
+    return (
+      <div className="PrototypeBoardPage flex items-center justify-center bg-page">
+        <Spinner size="lg" label="Loading prototype board" />
+      </div>
+    );
+  }
+
+  if (error || !bundle) {
+    return (
+      <div className="PrototypeBoardPage flex items-center justify-center bg-page p-page">
+        <DataLoadError
+          title="Could not load prototype board"
+          error={error || new Error('Prototype board not found.')}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="PrototypeBoardPage relative overflow-hidden bg-page">
+      {/* Top floating bar (breadcrumb + board menu + pages + Comments/AI toggle). */}
+      <PrototypeTopBar
+        board={bundle.board}
+        frames={bundle.frames}
+        activePageId={activePage.id}
+        openCommentCount={openCommentCount}
+        activePanel={activePanel}
+        aiAvailable={aiAvailable}
+        canEdit={canEdit}
+        exporting={exporting}
+        onSelectPage={handleSelectPage}
+        onAddPage={async (name) => {
+          const created = await addPage(name);
+          if (created) {
+            handleSelectPage(created.id);
+          }
+        }}
+        onRenameBoard={renameBoard}
+        onDuplicateBoard={async () => {
+          const duplicated = await duplicateBoard();
+          showNotification({
+            title: 'Prototype duplicated',
+            message: `Opened "${duplicated.title}".`,
+            color: 'green',
+          });
+          route(`/cms/prototypes/${duplicated.id}`);
+        }}
+        onExport={(format) => handleExportFrames(format)}
+        onToggleArchive={async () => {
+          const nextStatus =
+            bundle.board.status === 'archived' ? 'active' : 'archived';
+          await updateBoardStatus(nextStatus);
+          showNotification({
+            title:
+              nextStatus === 'archived'
+                ? 'Prototype archived'
+                : 'Prototype restored',
+            message:
+              nextStatus === 'archived'
+                ? 'Moved to the Archived tab on Prototypes.'
+                : 'Restored to Active prototypes.',
+            color: 'green',
+          });
+        }}
+        onDeleteBoard={async () => {
+          await deleteBoard();
+          showNotification({
+            title: 'Prototype deleted',
+            message: `Deleted "${bundle.board.title}".`,
+            color: 'green',
+          });
+          route('/cms/prototypes');
+        }}
+        onTogglePanel={handleTogglePanel}
+      />
+
+      {/* Full-bleed infinite dot-grid canvas. */}
+      <PrototypeCanvas
+        frames={pageFrames}
+        theme={bundle.board.theme}
+        activePage={activePage}
+        pages={bundle.board.pages}
+        camera={camera}
+        onChangeCamera={setCamera}
+        tool={tool}
+        spacePressed={spacePressed}
+        selectedFrameId={selectedFrameId}
+        selectedBlockKey={selectedBlockKey}
+        interactiveFrameId={interactiveFrameId}
+        openThreads={openPageThreads}
+        activeThreadId={pinPopover?.threadId || null}
+        canEdit={canEdit}
+        aiAvailable={aiAvailable}
+        onViewportElement={(el) => {
+          viewportElRef.current = el;
+        }}
+        onSelect={(frameId, blockKey) => {
+          setSelectedFrameId(frameId);
+          setSelectedBlockKey(blockKey);
+          if (interactiveFrameId && interactiveFrameId !== frameId) {
+            setInteractiveFrameId(null);
+          }
+          if (!frameId) {
+            setPinPopover(null);
+          }
+        }}
+        onToggleInteractive={(frameId, enabled) => {
+          setInteractiveFrameId(enabled ? frameId : null);
+        }}
+        onDragFramePosition={updateFramePosition}
+        onDropCommentPin={(anchor, anchorLabel, clientX, clientY) => {
+          setPinPopover({
+            draft: {anchor, anchorLabel, clientX, clientY},
+            clientX,
+            clientY,
+          });
+        }}
+        onSelectCommentThread={(thread, clientX, clientY) => {
+          setPinPopover({
+            threadId: thread.id,
+            clientX,
+            clientY,
+          });
+        }}
+        onFrameLayout={handleFrameLayout}
+        onRegisterExporter={handleRegisterExporter}
+        onDuplicateFrame={(frameId) => {
+          duplicateFrame(frameId)
+            .then((created) => {
+              if (created) {
+                setSelectedFrameId(created.id);
+                setSelectedBlockKey(null);
+              }
+            })
+            .catch((err) => {
+              showNotification({
+                title: 'Could not duplicate frame',
+                message: errorMessage(err),
+                color: 'red',
+              });
+            });
+        }}
+        onResizeFrame={(frameId, width) => {
+          saveFrame({id: frameId, width}).catch((err) => {
+            showNotification({
+              title: 'Could not resize frame',
+              message: errorMessage(err),
+              color: 'red',
+            });
+          });
+        }}
+        onMoveFrameToPage={(frameId, targetPageId) => {
+          moveFrameToPage(frameId, targetPageId)
+            .then(() => {
+              const targetPage = bundle.board.pages.find(
+                (page) => page.id === targetPageId
+              );
+              showNotification({
+                title: 'Frame moved',
+                message: `Moved to "${targetPage?.name || targetPageId}".`,
+                color: 'green',
+              });
+            })
+            .catch((err) => {
+              showNotification({
+                title: 'Could not move frame',
+                message: errorMessage(err),
+                color: 'red',
+              });
+            });
+        }}
+        onExportFrame={(frameId, format) => {
+          handleExportFrames(format, frameId).catch((err) => {
+            showNotification({
+              title: `Could not export ${format.toUpperCase()}`,
+              message: errorMessage(err),
+              color: 'red',
+            });
+          });
+        }}
+        onDeleteFrame={(frameId) => {
+          deleteFrame(frameId)
+            .then(() => {
+              if (selectedFrameId === frameId) {
+                setSelectedFrameId(null);
+                setSelectedBlockKey(null);
+              }
+              if (interactiveFrameId === frameId) {
+                setInteractiveFrameId(null);
+              }
+            })
+            .catch((err) => {
+              showNotification({
+                title: 'Could not delete frame',
+                message: errorMessage(err),
+                color: 'red',
+              });
+            });
+        }}
+        onNewFrame={handleNewFrame}
+        onOpenAi={() => setActivePanel('ai')}
+      />
+
+      {/* Bottom-center floating tools & zoom dock. */}
+      <PrototypeDock
+        tool={spacePressed ? 'pan' : tool}
+        zoom={camera.zoom}
+        canEdit={canEdit}
+        boardComponents={bundle.components}
+        siteSchemas={projectContext?.schemas || []}
+        onChangeTool={(nextTool) => {
+          setTool(nextTool);
+          if (nextTool !== 'select') {
+            setInteractiveFrameId(null);
+          }
+        }}
+        onNewFrame={handleNewFrame}
+        onInsertComponent={handleInsertComponent}
+        onZoomOut={() => handleZoomBy(1 / ZOOM_STEP_FACTOR)}
+        onFitToScreen={() => fitActivePageToScreen()}
+        onZoomIn={() => handleZoomBy(ZOOM_STEP_FACTOR)}
+      />
+
+      {/* Floating pin thread or new-comment popover anchored on the canvas. */}
+      {pinPopover && (
+        <PrototypeCommentPopover
+          thread={activePopoverThread}
+          draft={pinPopover.draft}
+          clientX={pinPopover.clientX}
+          clientY={pinPopover.clientY}
+          onCreateThread={async (input) => {
+            const created = await addComment(input);
+            setTool('select');
+            setPinPopover({
+              threadId: created.id,
+              clientX: pinPopover.clientX,
+              clientY: pinPopover.clientY,
+            });
+          }}
+          onAddReply={async (input) => {
+            await addComment(input);
+          }}
+          onSetThreadStatus={async (threadId, status) => {
+            await setCommentStatus(threadId, status);
+            if (status === 'resolved') {
+              setPinPopover(null);
+            }
+          }}
+          onDeleteComment={deleteComment}
+          onClose={() => setPinPopover(null)}
+        />
+      )}
+
+      {/* Right-hand floating Comments card (or mobile Dialog sheet below md). */}
+      {activePanel === 'comments' && (
+        <PrototypeCommentsCard
+          threads={bundle.comments}
+          activePageId={activePage.id}
+          aiAvailable={aiAvailable}
+          activeThreadId={pinPopover?.threadId || null}
+          onNavigateToThread={handleNavigateToThread}
+          onAddReply={async (input) => {
+            await addComment(input);
+          }}
+          onSetThreadStatus={async (threadId, status) => {
+            await setCommentStatus(threadId, status);
+          }}
+          onDeleteComment={deleteComment}
+          onAddressCommentsInAi={handleAddressCommentsInAi}
+          onClose={() => setActivePanel(null)}
+        />
+      )}
+
+      {/* Right-hand floating Root AI card (only one right panel open at a time). */}
+      {activePanel === 'ai' && aiAvailable && (
+        <div className="PrototypeBoardPage__aiHost pointer-events-none fixed right-3 top-14 bottom-16 z-(--cms-z-floating) flex w-96 max-w-full flex-col max-md:inset-2 max-md:w-auto *:pointer-events-auto">
+          <PrototypeAiCard
+            bundle={bundle}
+            activePageId={activePage.id}
+            selectedFrameId={selectedFrameId}
+            selectedBlockKey={selectedBlockKey}
+            queuedPrompt={queuedPrompt}
+            onClearContext={(kind) => {
+              if (kind === 'block') {
+                setSelectedBlockKey(null);
+              } else {
+                setSelectedFrameId(null);
+                setSelectedBlockKey(null);
+              }
+            }}
+            onFrameMutated={(frame) => {
+              applyFrameMutated(frame);
+              if (frame.pageId === activePage.id) {
+                setSelectedFrameId(frame.id);
+              }
+            }}
+            onComponentMutated={applyComponentMutated}
+            onTurnMutated={applyTurnMutated}
+            onClose={() => setActivePanel(null)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

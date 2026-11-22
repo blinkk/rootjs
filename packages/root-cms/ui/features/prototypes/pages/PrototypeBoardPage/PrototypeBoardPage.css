@@ -1,0 +1,16 @@
+@layer components {
+  .PrototypeCanvas {
+    background-image: radial-gradient(
+      circle,
+      var(--cms-color-border-strong) 1px,
+      transparent 1px
+    );
+  }
+
+  .PrototypeBoardPage {
+    height: 100dvh;
+    width: 100%;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
