@@ -1,11 +1,11 @@
 import {
-  IconArrowsMaximize,
+  IconArrowsDiagonal,
+  IconArrowUpRight,
   IconCopy,
   IconDeviceDesktop,
   IconDeviceMobile,
   IconDeviceTablet,
   IconDotsVertical,
-  IconExternalLink,
   IconFolderSymlink,
   IconPhoto,
   IconRobot,
@@ -585,7 +585,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   // layout when narrower than title + actions.
   const frameHeaderSpaceWidth = Math.round(frame.width / hudScale);
   const estimatedTitleWidth = titleNaturalWidth || frame.title.length * 7.5;
-  const neededHeaderWidth = Math.min(estimatedTitleWidth, 280) + 64;
+  const neededHeaderWidth = Math.min(estimatedTitleWidth, 280) + 92;
   const rightJustifyActions = frameHeaderSpaceWidth >= neededHeaderWidth;
 
   return (
@@ -639,7 +639,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             href={previewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            label={`Expand ${frame.title}`}
+            label="Expand"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e: MouseEvent) => {
               e.stopPropagation();
@@ -650,7 +650,19 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
               onExpandFrame(frame.id);
             }}
           >
-            <IconArrowsMaximize />
+            <IconArrowsDiagonal />
+          </IconButton>
+          <IconButton
+            size="xs"
+            variant="subtle"
+            href={previewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            label="Open preview in new tab"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <IconArrowUpRight />
           </IconButton>
           <Menu
             placement={rightJustifyActions ? 'bottom-end' : 'bottom-start'}
@@ -659,7 +671,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
               <IconButton
                 size="xs"
                 variant="subtle"
-                label={`Actions for ${frame.title}`}
+                label="More options"
                 tooltip={false}
               >
                 <IconDotsVertical />
@@ -667,7 +679,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             }
           >
             <MenuItem
-              icon={<IconExternalLink />}
+              icon={<IconArrowUpRight />}
               onClick={() => onOpenPreview(frame.id)}
             >
               Open preview in new tab

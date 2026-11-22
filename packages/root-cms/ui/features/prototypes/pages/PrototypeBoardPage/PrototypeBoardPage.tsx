@@ -1,6 +1,6 @@
 import './PrototypeBoardPage.css';
 
-import {IconExternalLink, IconX} from '@tabler/icons-preact';
+import {IconArrowUpRight, IconX} from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation, useRoute} from 'preact-iso';
 import type {
@@ -923,7 +923,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
                         rel="noopener noreferrer"
                         label="Open preview in new tab"
                       >
-                        <IconExternalLink />
+                        <IconArrowUpRight />
                       </IconButton>
                       <IconButton
                         size="xs"
