@@ -694,7 +694,7 @@ export function buildStandalonePreviewDocument(
     "form-action 'none'",
     "frame-src 'none'",
   ].join('; ');
-  const httpCsp = `sandbox allow-scripts; ${metaCsp}; frame-ancestors 'none'`;
+  const httpCsp = `sandbox allow-scripts; ${metaCsp}; frame-ancestors 'self'`;
 
   const ordered = getOrderedBlocks(options.frame.blocks);
   const htmlParts: string[] = [];

@@ -1,4 +1,5 @@
 import {
+  IconArrowsMaximize,
   IconCopy,
   IconDeviceDesktop,
   IconDeviceMobile,
@@ -10,7 +11,13 @@ import {
   IconRobot,
   IconTrash,
 } from '@tabler/icons-preact';
-import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import type {
   PrototypeBlockRect,
   PrototypeBoardPage,
@@ -144,6 +151,8 @@ export interface PrototypeFrameProps {
   activeThreadId: string | null;
   /** Called when the user selects the frame or a specific block inside it. */
   onSelect: (frameId: string, blockKey: string | null) => void;
+  /** Expands the rendered frame into a full-screen preview overlay. */
+  onExpandFrame: (frameId: string) => void;
   /** Opens the rendered frame full-page in a new browser tab. */
   onOpenPreview: (frameId: string) => void;
   /** Selects this frame and opens the Root AI editing panel. */
@@ -207,6 +216,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     openThreads,
     activeThreadId,
     onSelect,
+    onExpandFrame,
     onOpenPreview,
     onEditFrameWithAi,
     onDragPosition,
@@ -232,6 +242,15 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   const [blockRects, setBlockRects] = useState<PrototypeBlockRect[]>([]);
   const [hoveredBlockKey, setHoveredBlockKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [titleNaturalWidth, setTitleNaturalWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (el) {
+      setTitleNaturalWidth(el.scrollWidth);
+    }
+  }, [frame.title]);
 
   const orderedBlocks = useMemo(
     () => getOrderedBlocks(frame.blocks),
@@ -460,8 +479,8 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     if (e.button !== 0 || tool === 'pan') {
       return;
     }
-    // Let clicks on buttons inside the header act normally.
-    if ((e.target as HTMLElement).closest('button, [role="menu"]')) {
+    // Let clicks on buttons or links inside the header act normally.
+    if ((e.target as HTMLElement).closest('button, a, [role="menu"]')) {
       return;
     }
     e.stopPropagation();
@@ -596,6 +615,15 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       : null;
 
   const otherPages = pages.filter((page) => page.id !== frame.pageId);
+  const previewUrl = `/cms/prototypes-preview/${encodeURIComponent(frame.boardId)}/${encodeURIComponent(frame.id)}`;
+
+  // Right-justify header actions to the right edge of the frame when the frame
+  // has enough horizontal width in header space; fall back to compact inline
+  // layout when narrower than title + actions.
+  const frameHeaderSpaceWidth = Math.round(frame.width / hudScale);
+  const estimatedTitleWidth = titleNaturalWidth || frame.title.length * 7.5;
+  const neededHeaderWidth = Math.min(estimatedTitleWidth, 280) + 64;
+  const rightJustifyActions = frameHeaderSpaceWidth >= neededHeaderWidth;
 
   return (
     <div
@@ -614,38 +642,55 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       <div
         className={cn(
           'PrototypeFrame__header absolute bottom-full left-0 mb-2 flex items-center gap-1.5 pb-1',
+          rightJustifyActions ? 'justify-between' : 'w-max',
           canEdit && tool !== 'pan' && 'cursor-grab',
           dragging && 'cursor-grabbing'
         )}
         style={{
           transform: `scale(${hudScale})`,
           transformOrigin: '0 100%',
-          maxWidth: `${Math.round(frame.width / hudScale)}px`,
+          ...(rightJustifyActions
+            ? {width: `${frameHeaderSpaceWidth}px`}
+            : {maxWidth: '360px'}),
         }}
         onPointerDown={handleHeaderPointerDown}
       >
         <span
+          ref={titleRef}
           className={cn(
-            'PrototypeFrame__title truncate text-sm font-semibold',
+            'PrototypeFrame__title min-w-0 truncate text-sm font-semibold',
             isSelected ? 'text-info' : 'text-fg'
           )}
         >
           {frame.title}
         </span>
-        <span className="PrototypeFrame__width shrink-0 font-mono text-xs text-muted">
-          · {frame.width}
-        </span>
-        <div className="PrototypeFrame__actions ml-1 flex shrink-0 items-center gap-0.5">
+        <div
+          className={cn(
+            'PrototypeFrame__actions flex shrink-0 items-center gap-0.5',
+            rightJustifyActions ? 'ml-auto' : 'ml-1'
+          )}
+        >
           <IconButton
             size="xs"
             variant="subtle"
-            label={`Open ${frame.title} preview in new tab`}
-            onClick={() => onOpenPreview(frame.id)}
+            href={previewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            label={`Expand ${frame.title}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation();
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+                return;
+              }
+              e.preventDefault();
+              onExpandFrame(frame.id);
+            }}
           >
-            <IconExternalLink />
+            <IconArrowsMaximize />
           </IconButton>
           <Menu
-            placement="bottom-start"
+            placement={rightJustifyActions ? 'bottom-end' : 'bottom-start'}
             label={`Actions for ${frame.title}`}
             trigger={
               <IconButton

@@ -1,5 +1,6 @@
 import './PrototypeBoardPage.css';
 
+import {IconExternalLink, IconX} from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation, useRoute} from 'preact-iso';
 import type {
@@ -14,6 +15,8 @@ import {
 import {Layout} from '../../../../app/layout/Layout.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
+import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {isEditableTarget} from '../../../../utils/keyboard.js';
@@ -117,6 +120,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const [spacePressed, setSpacePressed] = useState(false);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
+  const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
   const [aiFocusKey, setAiFocusKey] = useState(0);
   const [queuedPrompt, setQueuedPrompt] = useState<{
@@ -334,7 +338,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (isEditableTarget(e.target)) {
+      if (expandedFrameId || isEditableTarget(e.target)) {
         return;
       }
       if (e.key === 'Escape') {
@@ -403,6 +407,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     };
   }, [
     canEdit,
+    expandedFrameId,
     pinPopover,
     tool,
     handleNewFrame,
@@ -667,6 +672,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               setPinPopover(null);
             }
           }}
+          onExpandFrame={(frameId) => setExpandedFrameId(frameId)}
           onOpenPreview={handleOpenFramePreview}
           onEditFrameWithAi={handleEditFrameWithAi}
           onDragFramePosition={updateFramePosition}
@@ -746,6 +752,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
                 if (selectedFrameId === frameId) {
                   setSelectedFrameId(null);
                   setSelectedBlockKey(null);
+                }
+                if (expandedFrameId === frameId) {
+                  setExpandedFrameId(null);
                 }
               })
               .catch((err) => {
@@ -866,6 +875,74 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
             onClose={() => setActivePanel(null)}
           />
         )}
+
+        {/* Full-screen interactive frame preview modal (Esc to exit). */}
+        {(() => {
+          const expandedFrame = expandedFrameId
+            ? bundle.frames.find((frame) => frame.id === expandedFrameId) ||
+              null
+            : null;
+          const expandedPreviewUrl = expandedFrame
+            ? `/cms/prototypes-preview/${encodeURIComponent(boardId)}/${encodeURIComponent(expandedFrame.id)}`
+            : '';
+          return (
+            <Dialog
+              open={Boolean(expandedFrame)}
+              onClose={() => setExpandedFrameId(null)}
+              withCloseButton={false}
+              size="full"
+              aria-label={
+                expandedFrame
+                  ? `${expandedFrame.title} full screen preview`
+                  : 'Full screen preview'
+              }
+              style={{padding: 0}}
+              className="PrototypeBoardPage__fullscreenDialog"
+              classNames={{
+                panel:
+                  'size-full overflow-hidden rounded-none md:rounded-none md:border-0',
+                body: 'flex min-h-0 flex-1 flex-col overflow-hidden p-0 pt-0',
+              }}
+            >
+              {expandedFrame && (
+                <>
+                  <div className="PrototypeBoardPage__fullscreenBar flex h-11 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
+                    <div className="min-w-0 truncate text-sm font-semibold text-strong">
+                      {expandedFrame.title}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        href={expandedPreviewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        label="Open preview in new tab"
+                      >
+                        <IconExternalLink />
+                      </IconButton>
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        label="Exit full screen"
+                        tooltip={false}
+                        onClick={() => setExpandedFrameId(null)}
+                      >
+                        <IconX />
+                      </IconButton>
+                    </div>
+                  </div>
+                  <iframe
+                    src={expandedPreviewUrl}
+                    sandbox="allow-scripts"
+                    title={expandedFrame.title}
+                    className="block min-h-0 w-full flex-1 border-0 bg-surface"
+                  />
+                </>
+              )}
+            </Dialog>
+          );
+        })()}
       </div>
     </Layout>
   );

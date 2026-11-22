@@ -65,6 +65,7 @@ export interface PrototypeCanvasProps {
   onViewportElement?: (el: HTMLDivElement | null) => void;
   /** Selection and interaction callbacks. */
   onSelect: (frameId: string | null, blockKey: string | null) => void;
+  onExpandFrame: (frameId: string) => void;
   onOpenPreview: (frameId: string) => void;
   onEditFrameWithAi: (frameId: string) => void;
   onDragFramePosition: (
@@ -126,6 +127,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     sidePanelOpen = false,
     onViewportElement,
     onSelect,
+    onExpandFrame,
     onOpenPreview,
     onEditFrameWithAi,
     onDragFramePosition,
@@ -398,6 +400,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             openThreads={threadsByFrame.byFrame.get(frame.id) || []}
             activeThreadId={activeThreadId}
             onSelect={(frameId, blockKey) => onSelect(frameId, blockKey)}
+            onExpandFrame={onExpandFrame}
             onOpenPreview={onOpenPreview}
             onEditFrameWithAi={onEditFrameWithAi}
             onDragPosition={onDragFramePosition}
@@ -465,7 +468,6 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
                   <Spinner size="sm" label={null} />
                   <span>Building artboard with Root AI…</span>
                 </div>
-                <span className="font-mono text-xs text-muted">1440px</span>
               </div>
 
               <div className="flex flex-col gap-5 overflow-hidden rounded-lg border border-border bg-surface p-6 shadow-md">
