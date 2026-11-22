@@ -4,9 +4,10 @@ import {
   IconDeviceMobile,
   IconDeviceTablet,
   IconDotsVertical,
+  IconExternalLink,
   IconFolderSymlink,
-  IconHandClick,
   IconPhoto,
+  IconRobot,
   IconTrash,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -23,6 +24,7 @@ import {
   DEFAULT_FOLD_HEIGHT_MOBILE,
   getOrderedBlocks,
 } from '../../../../../shared/prototypes.js';
+import {Button} from '../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {
   Menu,
@@ -132,18 +134,20 @@ export interface PrototypeFrameProps {
   isSelected: boolean;
   /** Selected block key inside this frame, if any. */
   selectedBlockKey: string | null;
-  /** Whether Interactive Mode is active on this frame (pointer shield lifted). */
-  interactive: boolean;
   /** Whether the user can edit/mutate frames. */
   canEdit: boolean;
+  /** Whether Root AI is enabled for the project. */
+  aiAvailable: boolean;
   /** Open comment threads anchored to this frame. */
   openThreads: PrototypeCommentThread[];
   /** Active thread id whose pin popover is open, if any. */
   activeThreadId: string | null;
   /** Called when the user selects the frame or a specific block inside it. */
   onSelect: (frameId: string, blockKey: string | null) => void;
-  /** Called when the user double-clicks to toggle Interactive Mode. */
-  onToggleInteractive: (frameId: string, enabled: boolean) => void;
+  /** Opens the rendered frame full-page in a new browser tab. */
+  onOpenPreview: (frameId: string) => void;
+  /** Selects this frame and opens the Root AI editing panel. */
+  onEditFrameWithAi: (frameId: string) => void;
   /** Called when the user drags the frame header to reposition it. */
   onDragPosition: (
     frameId: string,
@@ -198,12 +202,13 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     isLive,
     isSelected,
     selectedBlockKey,
-    interactive,
     canEdit,
+    aiAvailable,
     openThreads,
     activeThreadId,
     onSelect,
-    onToggleInteractive,
+    onOpenPreview,
+    onEditFrameWithAi,
     onDragPosition,
     onDropCommentPin,
     onSelectCommentThread,
@@ -548,15 +553,6 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     onSelect(frame.id, hit ? hit.blockKey : null);
   }
 
-  function handleShieldDoubleClick(e: MouseEvent) {
-    if (tool !== 'select') {
-      return;
-    }
-    e.stopPropagation();
-    onSelect(frame.id, null);
-    onToggleInteractive(frame.id, true);
-  }
-
   // Group open threads by blockKey so each block gets a single crisp badge with
   // total open comment count; frame-level threads render at their fallback coords.
   const blockThreadsMap = useMemo(() => {
@@ -605,8 +601,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     <div
       className={cn(
         'PrototypeFrame absolute select-none',
-        isSelected && 'PrototypeFrame--selected',
-        interactive && 'PrototypeFrame--interactive'
+        isSelected && 'PrototypeFrame--selected'
       )}
       style={{
         left: `${frame.x}px`,
@@ -640,12 +635,15 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
         <span className="PrototypeFrame__width shrink-0 font-mono text-xs text-muted">
           · {frame.width}
         </span>
-        {interactive && (
-          <span className="PrototypeFrame__interactiveBadge ml-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-2xs font-semibold text-info">
-            Interactive · Esc to exit
-          </span>
-        )}
-        <div className="PrototypeFrame__actions ml-1 shrink-0">
+        <div className="PrototypeFrame__actions ml-1 flex shrink-0 items-center gap-0.5">
+          <IconButton
+            size="xs"
+            variant="subtle"
+            label={`Open ${frame.title} preview in new tab`}
+            onClick={() => onOpenPreview(frame.id)}
+          >
+            <IconExternalLink />
+          </IconButton>
           <Menu
             placement="bottom-start"
             label={`Actions for ${frame.title}`}
@@ -661,10 +659,10 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             }
           >
             <MenuItem
-              icon={<IconHandClick />}
-              onClick={() => onToggleInteractive(frame.id, !interactive)}
+              icon={<IconExternalLink />}
+              onClick={() => onOpenPreview(frame.id)}
             >
-              {interactive ? 'Exit interactive mode' : 'Interactive preview'}
+              Open preview in new tab
             </MenuItem>
             {canEdit && (
               <>
@@ -752,66 +750,82 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             />
           ) : (
             <div className="PrototypeFrame__wireframe flex size-full flex-col gap-4 bg-surface p-8">
-              {orderedBlocks.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border text-lg text-muted">
-                  Empty frame
-                </div>
-              ) : (
-                orderedBlocks.map(({key, block}) => (
-                  <div
-                    key={key}
-                    className="PrototypeFrame__wireframeBand flex min-h-24 flex-col justify-center gap-2 rounded-md border border-border bg-surface-subtle p-6"
-                  >
-                    <div className="flex items-center gap-2">
-                      {block.proposed && (
-                        <span className="rounded-sm bg-violet-soft px-2 py-0.5 text-xs font-semibold text-violet-strong">
-                          Proposed
-                        </span>
-                      )}
-                      <span className="text-base font-semibold text-fg">
-                        {block.label}
+              {orderedBlocks.map(({key, block}) => (
+                <div
+                  key={key}
+                  className="PrototypeFrame__wireframeBand flex min-h-24 flex-col justify-center gap-2 rounded-md border border-border bg-surface-subtle p-6"
+                >
+                  <div className="flex items-center gap-2">
+                    {block.proposed && (
+                      <span className="rounded-sm bg-violet-soft px-2 py-0.5 text-xs font-semibold text-violet-strong">
+                        Proposed
                       </span>
-                    </div>
-                    <div className="h-3 w-2/3 rounded-sm bg-surface-active" />
-                    <div className="h-3 w-1/2 rounded-sm bg-surface-hover" />
+                    )}
+                    <span className="text-base font-semibold text-fg">
+                      {block.label}
+                    </span>
                   </div>
-                ))
-              )}
+                  <div className="h-3 w-2/3 rounded-sm bg-surface-active" />
+                  <div className="h-3 w-1/2 rounded-sm bg-surface-hover" />
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Empty live frame helper hint. */}
-          {isLive && orderedBlocks.length === 0 && (
-            <div className="PrototypeFrame__emptyHint pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface/90 p-8 text-center">
-              <div className="text-lg font-semibold text-fg">Empty frame</div>
-              <div className="max-w-80 text-base text-muted">
-                Select this frame and open Edit with AI to build or iterate on
-                this layout.
+          {/* Transparent pointer shield for canvas selection, pan, and comments. */}
+          <div
+            className={cn(
+              'PrototypeFrame__shield absolute inset-0 z-10',
+              tool === 'comment'
+                ? 'cursor-crosshair'
+                : tool === 'pan'
+                  ? 'pointer-events-none'
+                  : 'cursor-default'
+            )}
+            onPointerMove={handleShieldPointerMove}
+            onPointerLeave={() => setHoveredBlockKey(null)}
+            onPointerDown={handleShieldPointerDown}
+          />
+
+          {/* Empty frame action button opening Edit with AI with this frame preselected. */}
+          {orderedBlocks.length === 0 && (
+            <div className="PrototypeFrame__emptyHint pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-surface/90 p-8 text-center">
+              <div
+                style={{
+                  transform: `scale(${hudScale})`,
+                  transformOrigin: 'center center',
+                }}
+              >
+                {canEdit && aiAvailable ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    icon={<IconRobot />}
+                    className={cn(
+                      tool === 'select'
+                        ? 'pointer-events-auto'
+                        : 'pointer-events-none'
+                    )}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditFrameWithAi(frame.id);
+                    }}
+                  >
+                    Edit with AI
+                  </Button>
+                ) : (
+                  <span className="text-sm font-medium text-muted">
+                    Empty frame
+                  </span>
+                )}
               </div>
             </div>
-          )}
-
-          {/* Transparent pointer shield (lifted only in Interactive Mode). */}
-          {!interactive && (
-            <div
-              className={cn(
-                'PrototypeFrame__shield absolute inset-0 z-10',
-                tool === 'comment'
-                  ? 'cursor-crosshair'
-                  : tool === 'pan'
-                    ? 'pointer-events-none'
-                    : 'cursor-default'
-              )}
-              onPointerMove={handleShieldPointerMove}
-              onPointerLeave={() => setHoveredBlockKey(null)}
-              onPointerDown={handleShieldPointerDown}
-              onDblClick={handleShieldDoubleClick}
-            />
           )}
         </div>
 
         {/* Hovered block subtle outline. */}
-        {!interactive && hoveredBlockRect && (
+        {hoveredBlockRect && (
           <div
             className="PrototypeFrame__hoverOutline pointer-events-none absolute z-20 rounded-sm border border-info-line bg-info-soft/20"
             style={{

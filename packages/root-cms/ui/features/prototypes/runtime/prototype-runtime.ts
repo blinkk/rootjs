@@ -18,6 +18,7 @@ interface RenderMessage {
   themeCss?: string;
   blockCss?: string;
   foldHeight?: number;
+  standalone?: boolean;
 }
 
 interface RequestExportMessage {
@@ -43,6 +44,7 @@ const UNSAFE_TAGS = new Set([
 const UNSAFE_URL_RE = /^\s*(?:javascript|vbscript|data\s*:\s*text\/html)/i;
 
 let currentFrameId = '';
+let isStandalonePreview = false;
 let cachedThemeKey: string | null = null;
 let cachedCompiler: Awaited<ReturnType<typeof compile>> | null = null;
 let renderSeq = 0;
@@ -168,7 +170,7 @@ async function compileTailwindCss(
 
 /** Measures the rendered height and `[data-block-key]` rects and notifies parent. */
 function postLayoutNow() {
-  if (!currentFrameId) {
+  if (!currentFrameId || isStandalonePreview || window.parent === window) {
     return;
   }
   const rootEl = ensureRootEl();
@@ -221,14 +223,20 @@ async function handleRender(msg: RenderMessage) {
     document.title = msg.title.trim();
   }
 
-  const foldHeight =
-    typeof msg.foldHeight === 'number' && Number.isFinite(msg.foldHeight)
-      ? Math.max(300, msg.foldHeight)
-      : 900;
-  document.documentElement.style.setProperty(
-    '--proto-vh',
-    `${foldHeight / 100}px`
-  );
+  const standalone = Boolean(msg.standalone) || window.parent === window;
+  isStandalonePreview = standalone;
+  if (standalone) {
+    document.documentElement.style.setProperty('--proto-vh', '1vh');
+  } else {
+    const foldHeight =
+      typeof msg.foldHeight === 'number' && Number.isFinite(msg.foldHeight)
+        ? Math.max(300, msg.foldHeight)
+        : 900;
+    document.documentElement.style.setProperty(
+      '--proto-vh',
+      `${foldHeight / 100}px`
+    );
+  }
 
   const safeThemeCss = sanitizeRuntimeCss(msg.themeCss || '');
   const safeBlockCss = sanitizeRuntimeCss(msg.blockCss || '');
@@ -320,14 +328,26 @@ function boot() {
     });
   }
 
-  // Prevent anchor navigation inside prototypes and forward block clicks.
+  // Prevent external navigation inside prototypes, support in-page hash jumps in
+  // standalone preview tabs, and forward block clicks when embedded on canvas.
   rootEl.addEventListener('click', (event) => {
     const target = event.target as Element | null;
     if (!target) {
       return;
     }
-    if (target.closest('a')) {
+    const anchor = target.closest('a');
+    if (anchor) {
       event.preventDefault();
+      if (isStandalonePreview || window.parent === window) {
+        const href = (anchor.getAttribute('href') || '').trim();
+        if (href.startsWith('#') && href.length > 1) {
+          const targetEl = document.getElementById(href.slice(1));
+          targetEl?.scrollIntoView({behavior: 'smooth'});
+        }
+      }
+    }
+    if (isStandalonePreview || window.parent === window) {
+      return;
     }
     const blockEl = target.closest('[data-block-key]');
     const blockKey = blockEl?.getAttribute('data-block-key');
@@ -342,6 +362,25 @@ function boot() {
       );
     }
   });
+
+  const standaloneEl = document.getElementById('proto-standalone-data');
+  if (standaloneEl?.textContent) {
+    isStandalonePreview = true;
+    try {
+      const parsed = JSON.parse(standaloneEl.textContent) as Omit<
+        RenderMessage,
+        'type'
+      >;
+      void handleRender({
+        type: 'proto:render',
+        ...parsed,
+        standalone: true,
+      });
+    } catch (err) {
+      console.error('[prototype-runtime] failed to boot standalone data:', err);
+    }
+    return;
+  }
 
   window.addEventListener('message', (event: MessageEvent) => {
     if (event.source !== window.parent) {

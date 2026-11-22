@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   buildFrameSrcdoc,
+  buildStandalonePreviewDocument,
   buildThemeCss,
   renderSchemaFallbackHtml,
   sanitizePrototypeCss,
@@ -174,5 +175,46 @@ describe('buildFrameSrcdoc', () => {
     );
     expect(doc).toContain('https://fonts.googleapis.com/css2');
     expect(doc).not.toContain('evil.example');
+  });
+});
+
+describe('buildStandalonePreviewDocument', () => {
+  it('builds a full-page sandboxed preview HTML document with escaped JSON payload', () => {
+    const {html, csp} = buildStandalonePreviewDocument({
+      boardTitle: 'Home Page Copy Refresh',
+      cmsOrigin: 'https://cms.example.com',
+      theme: {colorPrimary: '#15803d'},
+      frame: {
+        id: 'variant-a',
+        boardId: 'home-copy',
+        pageId: 'page-1',
+        title: 'Variant A',
+        width: 1440,
+        x: 80,
+        y: 80,
+        blocks: {
+          _array: ['hero'],
+          hero: {
+            component: 'Hero',
+            label: 'Hero',
+            html: '<section class="py-20"><script>bad()</script><h1>Build. Edit. Ship.</h1></section>',
+          },
+        },
+        createdAt: 1,
+        createdBy: 'dev@example.com',
+        updatedAt: 1,
+        updatedBy: 'dev@example.com',
+      },
+    });
+
+    expect(csp).toContain('sandbox allow-scripts;');
+    expect(csp).toContain(
+      'script-src https://cms.example.com/cms/static/prototype-runtime.js'
+    );
+    expect(html).toContain('<title>Variant A · Home Page Copy Refresh</title>');
+    expect(html).toContain('id="proto-standalone-data"');
+    expect(html).toContain('Build. Edit. Ship.');
+    expect(html).not.toContain('bad()');
+    expect(html).not.toContain('</script><script>');
   });
 });

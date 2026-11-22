@@ -73,6 +73,8 @@ export interface PrototypeAiCardProps {
   selectedBlockKey: string | null;
   /** Optional external prompt queued from another UI control (e.g. Comments). */
   queuedPrompt?: {id: string | number; text: string} | null;
+  /** Monotonic key incremented to focus the prompt textarea on demand. */
+  focusKey?: number;
   /** Invoked once `queuedPrompt` has been dispatched into the chat session. */
   onQueuedPromptHandled?: () => void;
   /** Invoked to clear a single context selection chip (`frame` or `block`). */
@@ -538,13 +540,38 @@ function PrototypeAiChatSession({
   selectedModelRef.current = selectedModel;
 
   // Keep a mutable live view of frames and components so multi-step tool calls
-  // within a single turn always see mutations from previous steps immediately.
+  // within a single turn always see mutations from previous steps immediately
+  // without being overwritten by intermediate chat-stream re-renders.
   const liveFramesRef = useRef<PrototypeFrame[]>(props.bundle.frames);
-  liveFramesRef.current = props.bundle.frames;
+  useEffect(() => {
+    const incomingById = new Map<string, PrototypeFrame>();
+    for (const frame of props.bundle.frames) {
+      incomingById.set(frame.id, frame);
+    }
+    for (const prev of liveFramesRef.current) {
+      const incoming = incomingById.get(prev.id);
+      if (incoming && (prev.updatedAt || 0) > (incoming.updatedAt || 0)) {
+        incomingById.set(prev.id, prev);
+      }
+    }
+    liveFramesRef.current = Array.from(incomingById.values());
+  }, [props.bundle.frames]);
+
   const liveComponentsRef = useRef<Record<string, PrototypeComponentSpec>>(
     props.bundle.components
   );
-  liveComponentsRef.current = props.bundle.components;
+  useEffect(() => {
+    const next: Record<string, PrototypeComponentSpec> = {
+      ...props.bundle.components,
+    };
+    for (const [name, prev] of Object.entries(liveComponentsRef.current)) {
+      const incoming = next[name];
+      if (incoming && (prev.updatedAt || 0) > (incoming.updatedAt || 0)) {
+        next[name] = prev;
+      }
+    }
+    liveComponentsRef.current = next;
+  }, [props.bundle.components]);
 
   const projectContextCacheRef = useRef<PrototypeProjectContext | null>(null);
   const turnTrackerRef = useRef<PrototypeTurnTracker>(
@@ -816,6 +843,7 @@ function PrototypeAiChatSession({
         disabled={!selectedModel}
         canAttach={Boolean(selectedModel?.capabilities.attachments)}
         isStreaming={isStreaming}
+        focusKey={props.focusKey}
         skills={skills}
         selectedFrame={selectedFrame}
         selectedBlock={selectedBlock}
@@ -1120,6 +1148,7 @@ interface ComposerFooterProps {
   disabled: boolean;
   canAttach: boolean;
   isStreaming: boolean;
+  focusKey?: number;
   skills: SerializedAiSkillSummary[];
   selectedFrame: PrototypeFrame | null;
   selectedBlock: PrototypeBlock | null;
@@ -1136,6 +1165,15 @@ function ComposerFooter(props: ComposerFooterProps) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!props.focusKey || props.disabled) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, [props.focusKey, props.disabled]);
 
   useEffect(() => {
     window.requestAnimationFrame(() => {

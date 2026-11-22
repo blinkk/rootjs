@@ -12,6 +12,7 @@ import type {
 } from 'firebase-admin/firestore';
 import type {SerializedAiSkill} from '../shared/ai/extensions.js';
 import {
+  buildStandalonePreviewDocument,
   sanitizePrototypeCss,
   sanitizePrototypeHtml,
 } from '../shared/prototype-render.js';
@@ -1980,4 +1981,101 @@ export function registerPrototypesApi(
       }
     }
   );
+
+  // Full-page standalone preview route (`/cms/prototypes-preview/:boardId/:frameId`)
+  // opened in a new browser tab. Served with `Content-Security-Policy: sandbox allow-scripts`
+  // so top-level previews execute inside an isolated opaque `null` origin.
+  server.use('/cms/prototypes-preview', async (req: Request, res: Response) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.status(405).send('Method Not Allowed');
+      return;
+    }
+
+    const email = req.user?.email;
+    if (!email) {
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    const rootConfig = resolveRootConfig(req);
+    const cmsClient = new RootCMSClient(rootConfig);
+    let role: UserRole | null;
+    try {
+      role = await cmsClient.getUserRole(email);
+    } catch (err: any) {
+      console.error('[prototypes-preview] failed to resolve user role:', err);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+    if (!role) {
+      res.status(403).send('Forbidden');
+      return;
+    }
+
+    const rawPath = String(
+      (req as any).path || String(req.originalUrl || '').split('?')[0] || ''
+    ).replace(/^\/cms\/prototypes-preview\/?/, '');
+    const segments = rawPath
+      .split('/')
+      .map((part) => decodeURIComponent(part.trim()))
+      .filter(Boolean);
+    const boardId = segments[0] || String(req.query?.boardId || '').trim();
+    const frameId = segments[1] || String(req.query?.frameId || '').trim();
+
+    if (!isValidDocId(boardId) || !isValidDocId(frameId)) {
+      res.status(400).send('Invalid prototype preview path.');
+      return;
+    }
+
+    try {
+      const refs = getPrototypeRefs(cmsClient.db, cmsClient.projectId);
+      const [boardSnap, frameSnap] = await Promise.all([
+        refs.boardDoc(boardId).get(),
+        refs.framesCol(boardId).doc(frameId).get(),
+      ]);
+      if (!boardSnap.exists || !frameSnap.exists) {
+        res.status(404).send('Prototype frame not found.');
+        return;
+      }
+      const board: PrototypeBoard = {
+        ...(boardSnap.data() as PrototypeBoard),
+        id: boardSnap.id,
+      };
+      const frame: PrototypeFrame = {
+        ...(frameSnap.data() as PrototypeFrame),
+        id: frameSnap.id,
+      };
+
+      const forwardedProto = String(req.get('x-forwarded-proto') || '')
+        .split(',')[0]
+        .trim();
+      const proto =
+        forwardedProto === 'https' || forwardedProto === 'http'
+          ? forwardedProto
+          : (req as any).protocol === 'https'
+            ? 'https'
+            : 'http';
+      const host = String(req.get('x-forwarded-host') || req.get('host') || '')
+        .split(',')[0]
+        .trim();
+      const cmsOrigin = host ? `${proto}://${host}` : '';
+
+      const {html, csp} = buildStandalonePreviewDocument({
+        boardTitle: board.title,
+        frame,
+        theme: board.theme || {},
+        cmsOrigin,
+      });
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Security-Policy', csp);
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.status(200).send(html);
+    } catch (err: any) {
+      console.error('[prototypes-preview] error:', err.stack || err);
+      res.status(500).send('Internal Server Error');
+    }
+  });
 }

@@ -561,4 +561,68 @@ describe('createPrototypeAiTools', () => {
       'Reused Headline, Feature grid, CTA band',
     ]);
   });
+
+  test('places parallel frame_create calls side-by-side without stacking when network saves overlap', async () => {
+    const base = makeTestBackend({frames: []});
+    const savedFrames: PrototypeFrame[] = [];
+
+    // Simulate async network latency where `getState().frames` lags behind
+    // until all concurrent `saveFrame` calls finish.
+    const slowBackend: PrototypeToolBackend = {
+      ...base.backend,
+      getState: () => ({
+        ...base.backend.getState(),
+        frames: [...savedFrames],
+      }),
+      saveFrame: async (input) => {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        const saved = await base.backend.saveFrame(input);
+        savedFrames.push(saved);
+        return saved;
+      },
+    };
+
+    const tools = createPrototypeAiTools(slowBackend);
+    const ctx = {toolCallId: 'tc_parallel', messages: []};
+
+    const [resA, resB, resC] = await Promise.all([
+      (tools.frame_create as any).execute(
+        {
+          title: 'Variant A',
+          width: 1440,
+          blocks: [
+            {component: 'TemplateHero', label: 'Hero', html: '<h1>A</h1>'},
+          ],
+        },
+        ctx
+      ),
+      (tools.frame_create as any).execute(
+        {
+          title: 'Variant B',
+          width: 1440,
+          blocks: [
+            {component: 'TemplateHero', label: 'Hero', html: '<h1>B</h1>'},
+          ],
+        },
+        ctx
+      ),
+      (tools.frame_create as any).execute(
+        {
+          title: 'Variant C',
+          width: 1440,
+          blocks: [
+            {component: 'TemplateHero', label: 'Hero', html: '<h1>C</h1>'},
+          ],
+        },
+        ctx
+      ),
+    ]);
+
+    expect([resA.frame.x, resB.frame.x, resC.frame.x]).toEqual([
+      80,
+      80 + 1440 + FRAME_AUTO_LAYOUT_GAP,
+      80 + 2 * (1440 + FRAME_AUTO_LAYOUT_GAP),
+    ]);
+    expect([resA.frame.y, resB.frame.y, resC.frame.y]).toEqual([80, 80, 80]);
+  });
 });

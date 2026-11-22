@@ -5,7 +5,12 @@
  */
 
 import sanitizeHtml, {type IOptions} from 'sanitize-html';
-import type {PrototypeTheme, SiteSchemaSummary} from './prototypes.js';
+import {
+  getOrderedBlocks,
+  type PrototypeFrame,
+  type PrototypeTheme,
+  type SiteSchemaSummary,
+} from './prototypes.js';
 
 /** Semantic layout and inline SVG tags permitted inside prototype frames. */
 const ALLOWED_PROTOTYPE_TAGS: string[] = [
@@ -653,4 +658,116 @@ export function buildFrameSrcdoc(options: BuildFrameSrcdocOptions): string {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/** Options for `buildStandalonePreviewDocument()`. */
+export interface BuildStandalonePreviewOptions {
+  /** Prototype board title shown in the browser tab title. */
+  boardTitle: string;
+  /** Frame data to render full-page. */
+  frame: PrototypeFrame;
+  /** Board theme tokens and optional Google Fonts URLs. */
+  theme: PrototypeTheme;
+  /** Origin of the CMS server (e.g. `https://cms.example.com`). */
+  cmsOrigin: string;
+}
+
+/**
+ * Builds a standalone full-page HTML document and matching `sandbox allow-scripts`
+ * Content-Security-Policy header for opening a prototype frame in a new tab.
+ */
+export function buildStandalonePreviewDocument(
+  options: BuildStandalonePreviewOptions
+): {html: string; csp: string} {
+  const safeOrigin = sanitizeCspOrigin(options.cmsOrigin);
+  const runtimeUrl = safeOrigin
+    ? `${safeOrigin}/cms/static/prototype-runtime.js`
+    : '/cms/static/prototype-runtime.js';
+
+  const metaCsp = [
+    "default-src 'none'",
+    `script-src ${runtimeUrl}`,
+    "style-src 'unsafe-inline' https://fonts.googleapis.com",
+    'font-src https://fonts.gstatic.com https: data:',
+    'img-src https: data: blob:',
+    "connect-src 'none'",
+    "form-action 'none'",
+    "frame-src 'none'",
+  ].join('; ');
+  const httpCsp = `sandbox allow-scripts; ${metaCsp}; frame-ancestors 'none'`;
+
+  const ordered = getOrderedBlocks(options.frame.blocks);
+  const htmlParts: string[] = [];
+  const cssParts: string[] = [];
+  for (const {key, block} of ordered) {
+    htmlParts.push(
+      `<section data-block-key="${escapeHtmlAttr(key)}" data-component="${escapeHtmlAttr(block.component)}">${sanitizePrototypeHtml(block.html)}</section>`
+    );
+    if (block.css) {
+      const cleaned = sanitizePrototypeCss(block.css);
+      if (cleaned) {
+        cssParts.push(cleaned);
+      }
+    }
+  }
+
+  const renderedHtml =
+    htmlParts.length > 0
+      ? htmlParts.join('\n')
+      : '<section class="flex min-h-screen items-center justify-center p-8 text-center text-sm text-[var(--color-muted)]">This prototype frame has no content yet.</section>';
+
+  const themeCss = buildThemeCss(options.theme || {});
+  const blockCss = cssParts.join('\n');
+  const pageTitle = [options.frame.title, options.boardTitle]
+    .map((part) => (part || '').trim())
+    .filter(Boolean)
+    .join(' · ');
+
+  const standalonePayload = JSON.stringify({
+    frameId: options.frame.id,
+    title: pageTitle || 'Prototype Preview',
+    html: renderedHtml,
+    themeCss,
+    blockCss,
+    standalone: true,
+  }).replace(/</g, '\\u003c');
+
+  const fontLinks = filterAllowedFontUrls(options.theme?.fontUrls)
+    .map(
+      (href) =>
+        `  <link rel="stylesheet" href="${escapeHtmlAttr(href)}" crossorigin="anonymous">`
+    )
+    .join('\n');
+
+  const frameWidth = Math.max(240, Math.round(options.frame.width || 1440));
+  const viewportShellCss =
+    frameWidth < 1024
+      ? `html{margin:0;padding:0;background:#f1f5f9;}body{margin:0 auto;padding:0;min-height:100vh;max-width:${frameWidth}px;box-shadow:0 0 0 1px rgba(15,23,42,0.08),0 12px 32px rgba(15,23,42,0.08);}#proto-root{min-height:100vh;}`
+      : 'html,body{margin:0;padding:0;min-height:100vh;}#proto-root{min-height:100vh;}';
+
+  const html = [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '  <meta charset="utf-8">',
+    `  <title>${escapeHtml(pageTitle || 'Prototype Preview')}</title>`,
+    '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+    `  <meta http-equiv="Content-Security-Policy" content="${escapeHtmlAttr(metaCsp)}">`,
+    fontLinks,
+    `  <style>${viewportShellCss}</style>`,
+    '  <style id="proto-theme"></style>',
+    '  <style id="proto-tw"></style>',
+    '  <style id="proto-blocks"></style>',
+    '</head>',
+    '<body>',
+    '  <main id="proto-root"></main>',
+    `  <script id="proto-standalone-data" type="application/json">${standalonePayload}</script>`,
+    `  <script type="module" src="${escapeHtmlAttr(runtimeUrl)}"></script>`,
+    '</body>',
+    '</html>',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  return {html, csp: httpCsp};
 }

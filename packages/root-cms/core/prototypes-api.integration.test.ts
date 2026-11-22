@@ -94,6 +94,7 @@ describe('registerPrototypesApi integration', () => {
   /** Invokes a registered `/cms/api/prototypes.*` handler in-process. */
   async function callApi<T = any>(options: {
     path: string;
+    requestPath?: string;
     method?: 'GET' | 'POST';
     email?: string | null;
     query?: Record<string, string>;
@@ -105,9 +106,15 @@ describe('registerPrototypesApi integration', () => {
     }
     const method = options.method || 'POST';
     const reqHeaders: Record<string, string> =
-      method === 'POST' ? {'content-type': 'application/json'} : {};
+      method === 'POST'
+        ? {'content-type': 'application/json', host: 'localhost:4007'}
+        : {host: 'localhost:4007'};
     const req = {
       method,
+      path: options.requestPath || '',
+      originalUrl: options.requestPath
+        ? `${options.path}${options.requestPath}`
+        : options.path,
       query: options.query || {},
       body: options.body || {},
       user: options.email ? {email: options.email} : undefined,
@@ -127,6 +134,10 @@ describe('registerPrototypesApi integration', () => {
         return res;
       },
       json: (payload: any) => {
+        responseBody = payload;
+        return res;
+      },
+      send: (payload: any) => {
         responseBody = payload;
         return res;
       },
@@ -261,6 +272,29 @@ describe('registerPrototypesApi integration', () => {
       body: {boardId, threadId, commentId: viewerReplyId},
     });
     expect(ownDelete.status).toBe(200);
+
+    // VIEWER can open the full-page standalone preview, while strangers get 403.
+    const viewerPreview = await callApi<string>({
+      path: '/cms/prototypes-preview',
+      requestPath: `/${boardId}/${frameId}`,
+      method: 'GET',
+      email: 'viewer@example.com',
+    });
+    expect(viewerPreview.status).toBe(200);
+    expect(viewerPreview.headers['content-security-policy']).toContain(
+      'sandbox allow-scripts;'
+    );
+    expect(viewerPreview.body).toContain('Pricing B · Pricing Page Refresh');
+    expect(viewerPreview.body).toContain('\\u003ch2>Plans\\u003c/h2>');
+    expect(viewerPreview.body).not.toContain('evil()');
+
+    const strangerPreview = await callApi<string>({
+      path: '/cms/prototypes-preview',
+      requestPath: `/${boardId}/${frameId}`,
+      method: 'GET',
+      email: 'stranger@example.com',
+    });
+    expect(strangerPreview.status).toBe(403);
   });
 
   it('reverts and restores created and modified frames and components via prototypes.turn.revert', async () => {

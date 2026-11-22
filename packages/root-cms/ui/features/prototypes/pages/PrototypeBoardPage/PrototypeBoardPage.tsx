@@ -117,10 +117,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const [spacePressed, setSpacePressed] = useState(false);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
-  const [interactiveFrameId, setInteractiveFrameId] = useState<string | null>(
-    null
-  );
   const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
+  const [aiFocusKey, setAiFocusKey] = useState(0);
   const [queuedPrompt, setQueuedPrompt] = useState<{
     id: string | number;
     text: string;
@@ -135,6 +133,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     new Map<string, () => Promise<PrototypeExportPayload | null>>()
   );
   const initialFitDoneRef = useRef<string | null>(null);
+  const lastAutoFitCountRef = useRef(0);
+  const userMovedCameraRef = useRef(false);
   const initialPromptHandledRef = useRef(false);
 
   // Sync active page once the board loads (respecting `?page=` when valid).
@@ -218,7 +218,14 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     [pageFrames]
   );
 
-  // Fit frames to viewport on initial board load and when switching pages.
+  const aiGenerating =
+    aiAvailable &&
+    (aiStreaming ||
+      Boolean(queuedPrompt) ||
+      Boolean((query.prompt as string | undefined)?.trim()));
+
+  // Fit frames to viewport on initial board load, when switching pages, and as
+  // Root AI populates an initially empty page with side-by-side variants.
   useEffect(() => {
     if (!bundle || !activePage.id) {
       return;
@@ -227,19 +234,56 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     if (initialFitDoneRef.current === fitKey) {
       return;
     }
-    initialFitDoneRef.current = fitKey;
-    fitActivePageToScreen(pageFrames);
-  }, [bundle?.board.id, activePage.id, pageFrames, fitActivePageToScreen]);
+    if (pageFrames.length > 0) {
+      if (
+        !userMovedCameraRef.current &&
+        pageFrames.length !== lastAutoFitCountRef.current
+      ) {
+        lastAutoFitCountRef.current = pageFrames.length;
+        fitActivePageToScreen(pageFrames);
+      }
+      if (!aiGenerating) {
+        initialFitDoneRef.current = fitKey;
+      }
+    } else if (
+      lastAutoFitCountRef.current === 0 &&
+      !userMovedCameraRef.current
+    ) {
+      fitActivePageToScreen(pageFrames);
+    }
+  }, [
+    bundle?.board.id,
+    activePage.id,
+    pageFrames,
+    aiGenerating,
+    fitActivePageToScreen,
+  ]);
 
   const handleSelectPage = useCallback((pageId: string) => {
     setActivePageId(pageId);
     setSelectedFrameId(null);
     setSelectedBlockKey(null);
-    setInteractiveFrameId(null);
     setPinPopover(null);
+    lastAutoFitCountRef.current = 0;
+    userMovedCameraRef.current = false;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('page', pageId);
     window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
+  }, []);
+
+  const handleOpenFramePreview = useCallback(
+    (frameId: string) => {
+      const previewUrl = `/cms/prototypes-preview/${encodeURIComponent(boardId)}/${encodeURIComponent(frameId)}`;
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    },
+    [boardId]
+  );
+
+  const handleEditFrameWithAi = useCallback((frameId: string) => {
+    setSelectedFrameId(frameId);
+    setSelectedBlockKey(null);
+    setActivePanel('ai');
+    setAiFocusKey((prev) => prev + 1);
   }, []);
 
   const handleNewFrame = useCallback(async () => {
@@ -250,7 +294,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       const created = await createFrame({pageId: activePage.id});
       setSelectedFrameId(created.id);
       setSelectedBlockKey(null);
-      setInteractiveFrameId(null);
       // Pan camera smoothly to center on the newly created frame.
       const el = viewportElRef.current;
       const vw = el?.clientWidth || window.innerWidth || 1280;
@@ -295,10 +338,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         return;
       }
       if (e.key === 'Escape') {
-        if (interactiveFrameId) {
-          setInteractiveFrameId(null);
-          return;
-        }
         if (pinPopover) {
           setPinPopover(null);
           return;
@@ -364,7 +403,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     };
   }, [
     canEdit,
-    interactiveFrameId,
     pinPopover,
     tool,
     handleNewFrame,
@@ -459,7 +497,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         if (frame) {
           setSelectedFrameId(frame.id);
           setSelectedBlockKey(thread.anchor.blockKey || null);
-          setInteractiveFrameId(null);
           const rects = blockRectsByFrameRef.current.get(frame.id) || [];
           const blockRect = thread.anchor.blockKey
             ? rects.find((r) => r.blockKey === thread.anchor.blockKey)
@@ -539,12 +576,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     );
   }
 
-  const aiGenerating =
-    aiAvailable &&
-    (aiStreaming ||
-      Boolean(queuedPrompt) ||
-      Boolean((query.prompt as string | undefined)?.trim()));
-
   return (
     <Layout>
       <div className="PrototypeBoardPage relative overflow-hidden bg-page">
@@ -612,12 +643,14 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           activePage={activePage}
           pages={bundle.board.pages}
           camera={camera}
-          onChangeCamera={setCamera}
+          onChangeCamera={(next) => {
+            userMovedCameraRef.current = true;
+            setCamera(next);
+          }}
           tool={tool}
           spacePressed={spacePressed}
           selectedFrameId={selectedFrameId}
           selectedBlockKey={selectedBlockKey}
-          interactiveFrameId={interactiveFrameId}
           openThreads={openPageThreads}
           activeThreadId={pinPopover?.threadId || null}
           canEdit={canEdit}
@@ -630,16 +663,12 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           onSelect={(frameId, blockKey) => {
             setSelectedFrameId(frameId);
             setSelectedBlockKey(blockKey);
-            if (interactiveFrameId && interactiveFrameId !== frameId) {
-              setInteractiveFrameId(null);
-            }
             if (!frameId) {
               setPinPopover(null);
             }
           }}
-          onToggleInteractive={(frameId, enabled) => {
-            setInteractiveFrameId(enabled ? frameId : null);
-          }}
+          onOpenPreview={handleOpenFramePreview}
+          onEditFrameWithAi={handleEditFrameWithAi}
           onDragFramePosition={updateFramePosition}
           onDropCommentPin={(anchor, anchorLabel, clientX, clientY) => {
             setPinPopover({
@@ -718,9 +747,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
                   setSelectedFrameId(null);
                   setSelectedBlockKey(null);
                 }
-                if (interactiveFrameId === frameId) {
-                  setInteractiveFrameId(null);
-                }
               })
               .catch((err) => {
                 showNotification({
@@ -731,7 +757,10 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               });
           }}
           onNewFrame={handleNewFrame}
-          onOpenAi={() => setActivePanel('ai')}
+          onOpenAi={() => {
+            setActivePanel('ai');
+            setAiFocusKey((prev) => prev + 1);
+          }}
         />
 
         {/* Bottom-center floating tools & zoom dock. */}
@@ -741,14 +770,20 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           canEdit={canEdit}
           onChangeTool={(nextTool) => {
             setTool(nextTool);
-            if (nextTool !== 'select') {
-              setInteractiveFrameId(null);
-            }
           }}
           onNewFrame={handleNewFrame}
-          onZoomOut={() => handleZoomBy(1 / ZOOM_STEP_FACTOR)}
-          onFitToScreen={() => fitActivePageToScreen()}
-          onZoomIn={() => handleZoomBy(ZOOM_STEP_FACTOR)}
+          onZoomOut={() => {
+            userMovedCameraRef.current = true;
+            handleZoomBy(1 / ZOOM_STEP_FACTOR);
+          }}
+          onFitToScreen={() => {
+            userMovedCameraRef.current = false;
+            fitActivePageToScreen();
+          }}
+          onZoomIn={() => {
+            userMovedCameraRef.current = true;
+            handleZoomBy(ZOOM_STEP_FACTOR);
+          }}
         />
 
         {/* Floating pin thread or new-comment popover anchored on the canvas. */}
@@ -809,6 +844,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
             selectedFrameId={selectedFrameId}
             selectedBlockKey={selectedBlockKey}
             queuedPrompt={queuedPrompt}
+            focusKey={aiFocusKey}
             onQueuedPromptHandled={() => setQueuedPrompt(null)}
             onStreamingChange={setAiStreaming}
             onClearContext={(kind) => {

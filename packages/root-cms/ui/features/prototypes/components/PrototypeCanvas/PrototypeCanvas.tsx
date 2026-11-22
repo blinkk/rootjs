@@ -49,8 +49,6 @@ export interface PrototypeCanvasProps {
   selectedFrameId: string | null;
   /** Currently selected block key inside `selectedFrameId`, if any. */
   selectedBlockKey: string | null;
-  /** Frame currently in Interactive Mode (pointer shield lifted), if any. */
-  interactiveFrameId: string | null;
   /** Open comment threads on the active page. */
   openThreads: PrototypeCommentThread[];
   /** Active thread id whose pin popover is open, if any. */
@@ -67,7 +65,8 @@ export interface PrototypeCanvasProps {
   onViewportElement?: (el: HTMLDivElement | null) => void;
   /** Selection and interaction callbacks. */
   onSelect: (frameId: string | null, blockKey: string | null) => void;
-  onToggleInteractive: (frameId: string, enabled: boolean) => void;
+  onOpenPreview: (frameId: string) => void;
+  onEditFrameWithAi: (frameId: string) => void;
   onDragFramePosition: (
     frameId: string,
     x: number,
@@ -119,7 +118,6 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     spacePressed,
     selectedFrameId,
     selectedBlockKey,
-    interactiveFrameId,
     openThreads,
     activeThreadId,
     canEdit,
@@ -128,7 +126,8 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     sidePanelOpen = false,
     onViewportElement,
     onSelect,
-    onToggleInteractive,
+    onOpenPreview,
+    onEditFrameWithAi,
     onDragFramePosition,
     onDropCommentPin,
     onSelectCommentThread,
@@ -270,17 +269,18 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onSelect(null, null);
   }
 
-  // Enforce MAX_LIVE_PROTOTYPE_IFRAMES (6): always keep selected/interactive
-  // frames live, then fill remaining slots with frames closest to viewport center.
+  // Enforce MAX_LIVE_PROTOTYPE_IFRAMES (6): always keep the selected frame
+  // live, then fill remaining slots with frames closest to viewport center.
   const liveFrameIds = useMemo(() => {
     if (frames.length <= MAX_LIVE_PROTOTYPE_IFRAMES) {
       return new Set(frames.map((frame) => frame.id));
     }
     const chosen = new Set<string>();
-    for (const priorityId of [interactiveFrameId, selectedFrameId]) {
-      if (priorityId && frames.some((frame) => frame.id === priorityId)) {
-        chosen.add(priorityId);
-      }
+    if (
+      selectedFrameId &&
+      frames.some((frame) => frame.id === selectedFrameId)
+    ) {
+      chosen.add(selectedFrameId);
     }
 
     const viewLeft = -camera.x / camera.zoom;
@@ -323,7 +323,6 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     return chosen;
   }, [
     frames,
-    interactiveFrameId,
     selectedFrameId,
     camera.x,
     camera.y,
@@ -394,12 +393,13 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             selectedBlockKey={
               selectedFrameId === frame.id ? selectedBlockKey : null
             }
-            interactive={interactiveFrameId === frame.id}
             canEdit={canEdit}
+            aiAvailable={aiAvailable}
             openThreads={threadsByFrame.byFrame.get(frame.id) || []}
             activeThreadId={activeThreadId}
             onSelect={(frameId, blockKey) => onSelect(frameId, blockKey)}
-            onToggleInteractive={onToggleInteractive}
+            onOpenPreview={onOpenPreview}
+            onEditFrameWithAi={onEditFrameWithAi}
             onDragPosition={onDragFramePosition}
             onDropCommentPin={onDropCommentPin}
             onSelectCommentThread={onSelectCommentThread}

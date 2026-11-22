@@ -869,6 +869,72 @@ const frameBlockOperationSchema = z.discriminatedUnion('op', [
 export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
   const generateId = backend.generateId || defaultGeneratePrototypeId;
 
+  // Track frames and components synchronously before async network saves settle
+  // so parallel `frame_create` / `frame_duplicate` calls in a single LLM step
+  // never collide at the same `(x, y)` canvas coordinates.
+  const pendingFrames = new Map<string, PrototypeFrame>();
+  const committedFrames = new Map<string, PrototypeFrame>();
+  const committedComponents = new Map<string, PrototypeComponentSpec>();
+  const frameEditQueues = new Map<string, Promise<unknown>>();
+
+  function getEffectiveState(): PrototypeToolBoardState {
+    const raw = backend.getState();
+    const framesById = new Map<string, PrototypeFrame>();
+    for (const frame of raw.frames) {
+      framesById.set(frame.id, frame);
+    }
+    for (const [id, committed] of committedFrames.entries()) {
+      const fromBackend = framesById.get(id);
+      if (!fromBackend) {
+        framesById.set(id, committed);
+      } else if ((fromBackend.updatedAt || 0) >= (committed.updatedAt || 0)) {
+        committedFrames.delete(id);
+      } else {
+        framesById.set(id, committed);
+      }
+    }
+    for (const [id, pending] of pendingFrames.entries()) {
+      framesById.set(id, pending);
+    }
+
+    const components: Record<string, PrototypeComponentSpec> = {
+      ...raw.components,
+    };
+    for (const [name, committed] of committedComponents.entries()) {
+      const fromBackend = components[name];
+      if (!fromBackend) {
+        components[name] = committed;
+      } else if ((fromBackend.updatedAt || 0) >= (committed.updatedAt || 0)) {
+        committedComponents.delete(name);
+      } else {
+        components[name] = committed;
+      }
+    }
+
+    return {
+      ...raw,
+      frames: Array.from(framesById.values()),
+      components,
+    };
+  }
+
+  function runSerializedFrameEdit<T>(
+    frameId: string,
+    task: () => Promise<T>
+  ): Promise<T> {
+    const previous = frameEditQueues.get(frameId) || Promise.resolve();
+    const next = previous.catch(() => undefined).then(task);
+    frameEditQueues.set(
+      frameId,
+      next.finally(() => {
+        if (frameEditQueues.get(frameId) === next) {
+          frameEditQueues.delete(frameId);
+        }
+      })
+    );
+    return next;
+  }
+
   return {
     board_overview: tool({
       description:
@@ -882,7 +948,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .describe('Optional page id to filter frames to a single page.'),
       }),
       execute: async ({pageId}) => {
-        const state = backend.getState();
+        const state = getEffectiveState();
         const openCommentsByFrame = new Map<string, number>();
         const openCommentsByPage = new Map<string, number>();
         let totalOpenComments = 0;
@@ -949,7 +1015,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
       execute: async ({query}) => {
         const [context, state] = await Promise.all([
           backend.getProjectContext(),
-          Promise.resolve(backend.getState()),
+          Promise.resolve(getEffectiveState()),
         ]);
         const needle = query?.trim().toLowerCase() || '';
         const matchesQuery = (
@@ -1014,7 +1080,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
       execute: async ({names}) => {
         const [context, state] = await Promise.all([
           backend.getProjectContext({componentNames: names}),
-          Promise.resolve(backend.getState()),
+          Promise.resolve(getEffectiveState()),
         ]);
         const schemasByName = new Map(
           context.schemas.map((schema) => [schema.name, schema])
@@ -1090,7 +1156,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
         css: z.string().optional().describe('Optional scoped CSS rules.'),
       }),
       execute: async (input) => {
-        const state = backend.getState();
+        const state = getEffectiveState();
         const before = state.components[input.name] || null;
         const saved = await backend.saveComponent({
           name: input.name,
@@ -1101,6 +1167,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           defaultHtml: input.defaultHtml,
           css: input.css,
         });
+        committedComponents.set(saved.name, saved);
         backend.turnTracker?.recordComponentSave(before, saved);
         return {
           saved: true,
@@ -1148,7 +1215,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .describe('Ordered list of component blocks from top to bottom.'),
       }),
       execute: async (input) => {
-        const state = backend.getState();
+        const state = getEffectiveState();
         const pageId = input.pageId || state.activePageId;
         const width = input.width || DEFAULT_FRAME_WIDTH;
         const autoPos = computeNextFramePosition(state.frames, pageId, width);
@@ -1162,21 +1229,47 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             : autoPos.y;
         const blocks = buildBlockMap(input.blocks, state.components);
         const id = generateId('frame');
-        const saved = await backend.saveFrame({
+        const trimmedTitle = input.title.trim();
+        const now = Date.now();
+
+        // Reserve coordinates synchronously before awaiting network persistence
+        // so sibling `frame_create` calls in the same parallel batch place
+        // themselves cleanly to the right instead of stacking.
+        pendingFrames.set(id, {
           id,
           boardId: state.board.id,
           pageId,
-          title: input.title.trim(),
+          title: trimmedTitle,
           width,
           x,
           y,
           blocks,
+          createdAt: now,
+          createdBy: '',
+          updatedAt: now,
+          updatedBy: '',
         });
-        backend.turnTracker?.recordFrameCreate(saved);
-        return {
-          created: true,
-          frame: summarizeFrame(saved, new Map()),
-        };
+
+        try {
+          const saved = await backend.saveFrame({
+            id,
+            boardId: state.board.id,
+            pageId,
+            title: trimmedTitle,
+            width,
+            x,
+            y,
+            blocks,
+          });
+          committedFrames.set(saved.id, saved);
+          backend.turnTracker?.recordFrameCreate(saved);
+          return {
+            created: true,
+            frame: summarizeFrame(saved, new Map()),
+          };
+        } finally {
+          pendingFrames.delete(id);
+        }
       },
     }),
 
@@ -1213,7 +1306,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .describe('Optional replacement blocks for the duplicated frame.'),
       }),
       execute: async (input) => {
-        const state = backend.getState();
+        const state = getEffectiveState();
         const source = state.frames.find(
           (frame) => frame.id === input.sourceFrameId
         );
@@ -1243,31 +1336,56 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           ? buildBlockMap(input.blocks, state.components)
           : cloneBlockMap(source.blocks);
         const id = generateId('frame');
-        const saved = await backend.saveFrame({
+        const nextTitle = input.title?.trim() || `${source.title} (Copy)`;
+        const cachedHeight = input.blocks ? undefined : source.cachedHeight;
+        const now = Date.now();
+
+        pendingFrames.set(id, {
           id,
           boardId: state.board.id,
           pageId,
-          title: input.title?.trim() || `${source.title} (Copy)`,
+          title: nextTitle,
           width,
           x,
           y,
-          cachedHeight: input.blocks ? undefined : source.cachedHeight,
+          cachedHeight,
           blocks,
+          createdAt: now,
+          createdBy: '',
+          updatedAt: now,
+          updatedBy: '',
         });
-        backend.turnTracker?.recordFrameCreate(saved);
-        return {
-          duplicated: true,
-          frame: summarizeFrame(saved, new Map()),
-        };
+
+        try {
+          const saved = await backend.saveFrame({
+            id,
+            boardId: state.board.id,
+            pageId,
+            title: nextTitle,
+            width,
+            x,
+            y,
+            cachedHeight,
+            blocks,
+          });
+          committedFrames.set(saved.id, saved);
+          backend.turnTracker?.recordFrameCreate(saved);
+          return {
+            duplicated: true,
+            frame: summarizeFrame(saved, new Map()),
+          };
+        } finally {
+          pendingFrames.delete(id);
+        }
       },
     }),
 
     frame_edit: tool({
       description:
-        'Update an existing frame title, width, pageId, and/or apply targeted ' +
-        'block operations (`insert`, `update`, `remove`, `reorder`, or ' +
-        '`replaceAll`). Prefer targeted operations over `replaceAll` when ' +
-        'modifying one or two blocks.',
+        'Update an existing frame title, width, pageId, canvas position (`x`, `y`), ' +
+        'and/or apply targeted block operations (`insert`, `update`, `remove`, ' +
+        '`reorder`, or `replaceAll`). Prefer targeted operations over `replaceAll` ' +
+        'when modifying one or two blocks.',
       inputSchema: z.object({
         frameId: z.string().min(1).describe('Id of the frame to edit.'),
         title: z.string().optional().describe('Optional updated frame title.'),
@@ -1282,60 +1400,79 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .string()
           .optional()
           .describe('Optional page id to move the frame to.'),
+        x: z
+          .number()
+          .optional()
+          .describe('Optional updated canvas world X coordinate.'),
+        y: z
+          .number()
+          .optional()
+          .describe('Optional updated canvas world Y coordinate.'),
         operations: z
           .array(frameBlockOperationSchema)
           .optional()
           .describe('Ordered list of block mutations to apply.'),
       }),
-      execute: async (input) => {
-        const state = backend.getState();
-        const existing = state.frames.find(
-          (frame) => frame.id === input.frameId
-        );
-        if (!existing) {
-          return {
-            updated: false,
-            error: `Frame "${input.frameId}" not found.`,
-          };
-        }
-
-        let nextBlocks = cloneBlockMap(existing.blocks);
-        let opResult: ApplyFrameBlockOperationsResult | null = null;
-        if (input.operations && input.operations.length > 0) {
-          opResult = applyFrameBlockOperations(
-            existing.blocks,
-            input.operations,
-            state.components
+      execute: async (input) =>
+        runSerializedFrameEdit(input.frameId, async () => {
+          const state = getEffectiveState();
+          const existing = state.frames.find(
+            (frame) => frame.id === input.frameId
           );
-          if (!opResult.ok) {
+          if (!existing) {
             return {
               updated: false,
-              error: opResult.error || 'Failed to apply block operations.',
+              error: `Frame "${input.frameId}" not found.`,
             };
           }
-          nextBlocks = opResult.blocks;
-        }
 
-        const before = cloneSnapshot(existing);
-        const saved = await backend.saveFrame({
-          id: existing.id,
-          boardId: existing.boardId,
-          pageId: input.pageId || existing.pageId,
-          title: input.title?.trim() || existing.title,
-          width: input.width || existing.width,
-          x: existing.x,
-          y: existing.y,
-          blocks: nextBlocks,
-        });
-        backend.turnTracker?.recordFrameEdit(before, saved, {
-          reusedLabels: opResult?.reusedLabels,
-          proposedLabels: opResult?.proposedLabels,
-        });
-        return {
-          updated: true,
-          frame: summarizeFrame(saved, new Map()),
-        };
-      },
+          let nextBlocks = cloneBlockMap(existing.blocks);
+          let opResult: ApplyFrameBlockOperationsResult | null = null;
+          if (input.operations && input.operations.length > 0) {
+            opResult = applyFrameBlockOperations(
+              existing.blocks,
+              input.operations,
+              state.components
+            );
+            if (!opResult.ok) {
+              return {
+                updated: false,
+                error: opResult.error || 'Failed to apply block operations.',
+              };
+            }
+            nextBlocks = opResult.blocks;
+          }
+
+          const nextX =
+            typeof input.x === 'number' && Number.isFinite(input.x)
+              ? Math.round(input.x)
+              : existing.x;
+          const nextY =
+            typeof input.y === 'number' && Number.isFinite(input.y)
+              ? Math.round(input.y)
+              : existing.y;
+
+          const before = cloneSnapshot(existing);
+          const saved = await backend.saveFrame({
+            id: existing.id,
+            boardId: existing.boardId,
+            pageId: input.pageId || existing.pageId,
+            title: input.title?.trim() || existing.title,
+            width: input.width || existing.width,
+            x: nextX,
+            y: nextY,
+            blocks: nextBlocks,
+          });
+          committedFrames.set(saved.id, saved);
+          backend.turnTracker?.recordFrameEdit(before, saved, {
+            reusedLabels: opResult?.reusedLabels,
+            proposedLabels: opResult?.proposedLabels,
+          });
+          return {
+            updated: true,
+            frame: summarizeFrame(saved, new Map()),
+          };
+        }),
     }),
 
     frame_comments_list: tool({
@@ -1362,7 +1499,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           ),
       }),
       execute: async ({frameId, pageId, includeResolved}) => {
-        const state = backend.getState();
+        const state = getEffectiveState();
         const targetPageId = frameId ? undefined : pageId || state.activePageId;
         const threads = state.comments.filter((thread) => {
           if (!includeResolved && thread.status !== 'open') {
