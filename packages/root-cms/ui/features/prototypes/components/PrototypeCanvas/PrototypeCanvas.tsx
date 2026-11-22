@@ -46,6 +46,8 @@ export interface PrototypeCanvasProps {
   tool: PrototypeCanvasTool;
   /** Whether Spacebar temporary-pan is currently held. */
   spacePressed: boolean;
+  /** Whether Meta/Ctrl is currently held (morphs Expand into Open in new tab). */
+  metaPressed?: boolean;
   /** Currently selected frame id, if any. */
   selectedFrameId: string | null;
   /** Currently selected block key inside `selectedFrameId`, if any. */
@@ -127,6 +129,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onChangeCamera,
     tool,
     spacePressed,
+    metaPressed = false,
     selectedFrameId,
     selectedBlockKey,
     openThreads,
@@ -617,6 +620,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             theme={theme}
             zoom={camera.zoom}
             tool={effectivePanMode ? 'pan' : tool}
+            metaPressed={metaPressed}
             pages={pages}
             isLive={liveFrameIds.has(frame.id)}
             isSelected={selectedFrameId === frame.id}
