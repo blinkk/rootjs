@@ -8,7 +8,7 @@ import {
   IconPointer,
   IconSearch,
 } from '@tabler/icons-preact';
-import {useMemo, useState} from 'preact/hooks';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import type {
   PrototypeBlock,
   PrototypeComponentSpec,
@@ -81,6 +81,85 @@ export function PrototypeDock(props: PrototypeDockProps) {
 
   const [componentsOpen, setComponentsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // Install a roving-tabindex fallback for horizontal `role="toolbar"` only
+  // when native `focusgroup` is unsupported, keeping a single tab stop and
+  // RTL-aware ArrowLeft/ArrowRight + Home/End navigation across groups.
+  useEffect(() => {
+    const bar = toolbarRef.current;
+    if (!bar || 'focusGroup' in HTMLElement.prototype) {
+      return;
+    }
+    const getToolbarButtons = () =>
+      Array.from(
+        bar.querySelectorAll<HTMLButtonElement>(
+          ':scope > button, :scope > [role="group"] > button'
+        )
+      );
+
+    const syncInitialTabStops = () => {
+      const items = getToolbarButtons();
+      if (items.length === 0) {
+        return;
+      }
+      const hasActive = items.some((b) => b.tabIndex === 0);
+      if (!hasActive) {
+        items.forEach((b, i) => {
+          b.tabIndex = i === 0 ? 0 : -1;
+        });
+      }
+    };
+    syncInitialTabStops();
+
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLButtonElement | null;
+      const items = getToolbarButtons();
+      if (target && items.includes(target)) {
+        items.forEach((b) => {
+          b.tabIndex = b === target ? 0 : -1;
+        });
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLButtonElement | null;
+      const items = getToolbarButtons();
+      if (!target || !items.includes(target) || items.length === 0) {
+        return;
+      }
+      const rtl = window.getComputedStyle(bar).direction === 'rtl';
+      const stepMap: Record<string, number> = {
+        ArrowRight: rtl ? -1 : 1,
+        ArrowLeft: rtl ? 1 : -1,
+      };
+      const current = items.indexOf(target);
+      let nextIndex = -1;
+      if (event.key === 'Home') {
+        nextIndex = 0;
+      } else if (event.key === 'End') {
+        nextIndex = items.length - 1;
+      } else if (event.key in stepMap) {
+        nextIndex =
+          (current + stepMap[event.key] + items.length) % items.length;
+      }
+      if (nextIndex < 0) {
+        return;
+      }
+      event.preventDefault();
+      items.forEach((b, i) => {
+        b.tabIndex = i === nextIndex ? 0 : -1;
+      });
+      items[nextIndex].focus();
+    };
+
+    bar.addEventListener('focusin', onFocusIn);
+    bar.addEventListener('keydown', onKeyDown);
+    return () => {
+      bar.removeEventListener('focusin', onFocusIn);
+      bar.removeEventListener('keydown', onKeyDown);
+    };
+  }, [canEdit]);
 
   const {proposedEntries, existingEntries} = useMemo(() => {
     const proposed: ComponentPickerEntry[] = [];
@@ -179,195 +258,209 @@ export function PrototypeDock(props: PrototypeDockProps) {
 
   const zoomPercent = `${Math.round(zoom * 100)}%`;
 
+  const toolToggleClasses =
+    'PrototypeDock__toolButton aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text aria-pressed:hover:bg-button-blue-soft';
+
   return (
     <div className="PrototypeDock__wrap pointer-events-none fixed inset-x-2 bottom-3 z-(--cms-z-sticky) flex justify-center">
       <div
+        ref={toolbarRef}
         role="toolbar"
         aria-label="Canvas tools"
+        {...({focusgroup: 'toolbar wrap'} as Record<string, string>)}
         className="PrototypeDock pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-surface px-1.5 py-1 shadow-md"
       >
-        <IconButton
-          label="Select (V)"
-          size="sm"
-          pressed={tool === 'select'}
-          className={cn(
-            'PrototypeDock__toolButton',
-            tool === 'select' &&
-              'bg-button-blue-soft text-button-blue-soft-text hover:bg-button-blue-soft'
-          )}
-          onClick={() => onChangeTool('select')}
+        <div
+          role="group"
+          aria-label="Tools"
+          className="PrototypeDock__group flex items-center gap-0.5"
         >
-          <IconPointer />
-        </IconButton>
+          <IconButton
+            label="Select (V)"
+            size="sm"
+            pressed={tool === 'select'}
+            className={toolToggleClasses}
+            onClick={() => onChangeTool('select')}
+          >
+            <IconPointer />
+          </IconButton>
 
-        <IconButton
-          label="Pan (H)"
-          size="sm"
-          pressed={tool === 'pan'}
-          className={cn(
-            'PrototypeDock__toolButton',
-            tool === 'pan' &&
-              'bg-button-blue-soft text-button-blue-soft-text hover:bg-button-blue-soft'
-          )}
-          onClick={() => onChangeTool('pan')}
-        >
-          <IconHandStop />
-        </IconButton>
+          <IconButton
+            label="Pan (H)"
+            size="sm"
+            pressed={tool === 'pan'}
+            className={toolToggleClasses}
+            onClick={() => onChangeTool('pan')}
+          >
+            <IconHandStop />
+          </IconButton>
 
-        <IconButton
-          label="New Frame (F)"
-          size="sm"
-          disabled={!canEdit}
-          className="PrototypeDock__toolButton"
-          onClick={onNewFrame}
-        >
-          <IconFrame />
-        </IconButton>
-
-        <IconButton
-          label="Comment (C)"
-          size="sm"
-          pressed={tool === 'comment'}
-          className={cn(
-            'PrototypeDock__toolButton',
-            tool === 'comment' &&
-              'bg-button-blue-soft text-button-blue-soft-text hover:bg-button-blue-soft'
-          )}
-          onClick={() =>
-            onChangeTool(tool === 'comment' ? 'select' : 'comment')
-          }
-        >
-          <IconMessagePlus />
-        </IconButton>
-
-        {canEdit && (
-          <Popover
-            placement="top"
-            width={300}
-            label="Insert component"
-            open={componentsOpen}
-            onOpenChange={(next) => {
-              setComponentsOpen(next);
-              if (!next) {
-                setSearch('');
+          <IconButton
+            label="New Frame (F)"
+            size="sm"
+            aria-disabled={!canEdit || undefined}
+            className={cn(
+              'PrototypeDock__toolButton',
+              !canEdit && 'cursor-not-allowed opacity-50'
+            )}
+            onClick={() => {
+              if (!canEdit) {
+                return;
               }
+              onNewFrame();
             }}
-            className="PrototypeDock__componentsPopover p-0"
-            trigger={
-              <Button
-                variant="subtle"
-                size="sm"
-                className="PrototypeDock__componentsButton max-sm:gap-0 max-sm:px-2"
-                icon={<IconComponents />}
-                aria-label="Components"
-              >
-                <span className="hidden sm:inline">Components</span>
-              </Button>
+          >
+            <IconFrame />
+          </IconButton>
+
+          <IconButton
+            label="Comment (C)"
+            size="sm"
+            pressed={tool === 'comment'}
+            className={toolToggleClasses}
+            onClick={() =>
+              onChangeTool(tool === 'comment' ? 'select' : 'comment')
             }
           >
-            <div className="PrototypeDock__componentsPanel flex max-h-80 flex-col">
-              <div className="border-b border-border p-2">
-                <TextInput
-                  size="xs"
-                  aria-label="Filter components"
-                  placeholder="Filter components…"
-                  leftSection={<IconSearch />}
-                  value={search}
-                  onInput={(e) => setSearch(e.currentTarget.value)}
-                />
-              </div>
-              <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-1.5">
-                {filteredProposed.length > 0 && (
-                  <div className="PrototypeDock__componentsGroup flex flex-col gap-0.5">
-                    <div className="px-2 py-1 text-xs font-semibold text-muted">
-                      Proposed components
+            <IconMessagePlus />
+          </IconButton>
+
+          {canEdit && (
+            <Popover
+              placement="top"
+              width={300}
+              label="Insert component"
+              open={componentsOpen}
+              onOpenChange={(next) => {
+                setComponentsOpen(next);
+                if (!next) {
+                  setSearch('');
+                }
+              }}
+              className="PrototypeDock__componentsPopover p-0"
+              trigger={
+                <Button
+                  variant="subtle"
+                  size="sm"
+                  className="PrototypeDock__componentsButton max-sm:gap-0 max-sm:px-2"
+                  icon={<IconComponents />}
+                  aria-label="Components"
+                >
+                  <span className="hidden sm:inline">Components</span>
+                </Button>
+              }
+            >
+              <div className="PrototypeDock__componentsPanel flex max-h-80 flex-col">
+                <div className="border-b border-border p-2">
+                  <TextInput
+                    size="xs"
+                    aria-label="Filter components"
+                    placeholder="Filter components…"
+                    leftSection={<IconSearch />}
+                    value={search}
+                    onInput={(e) => setSearch(e.currentTarget.value)}
+                  />
+                </div>
+                <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-1.5">
+                  {filteredProposed.length > 0 && (
+                    <div className="PrototypeDock__componentsGroup flex flex-col gap-0.5">
+                      <div className="px-2 py-1 text-xs font-semibold text-muted">
+                        Proposed components
+                      </div>
+                      {filteredProposed.map((entry) => (
+                        <button
+                          key={entry.name}
+                          type="button"
+                          className="PrototypeDock__componentItem flex w-full cursor-pointer flex-col gap-0.5 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
+                          onClick={() => handlePickComponent(entry)}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-medium text-strong">
+                              {entry.label}
+                            </span>
+                            <Badge tone="violet" size="xs">
+                              Proposed
+                            </Badge>
+                          </div>
+                          {entry.description && (
+                            <span className="line-clamp-1 text-xs text-muted">
+                              {entry.description}
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    {filteredProposed.map((entry) => (
-                      <button
-                        key={entry.name}
-                        type="button"
-                        className="PrototypeDock__componentItem flex w-full cursor-pointer flex-col gap-0.5 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
-                        onClick={() => handlePickComponent(entry)}
-                      >
-                        <div className="flex items-center gap-1.5">
+                  )}
+
+                  {filteredExisting.length > 0 && (
+                    <div className="PrototypeDock__componentsGroup flex flex-col gap-0.5">
+                      <div className="px-2 py-1 text-xs font-semibold text-muted">
+                        Site components
+                      </div>
+                      {filteredExisting.map((entry) => (
+                        <button
+                          key={entry.name}
+                          type="button"
+                          className="PrototypeDock__componentItem flex w-full cursor-pointer flex-col gap-0.5 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
+                          onClick={() => handlePickComponent(entry)}
+                        >
                           <span className="truncate text-sm font-medium text-strong">
                             {entry.label}
                           </span>
-                          <Badge tone="violet" size="xs">
-                            Proposed
-                          </Badge>
-                        </div>
-                        {entry.description && (
-                          <span className="line-clamp-1 text-xs text-muted">
-                            {entry.description}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {filteredExisting.length > 0 && (
-                  <div className="PrototypeDock__componentsGroup flex flex-col gap-0.5">
-                    <div className="px-2 py-1 text-xs font-semibold text-muted">
-                      Site components
-                    </div>
-                    {filteredExisting.map((entry) => (
-                      <button
-                        key={entry.name}
-                        type="button"
-                        className="PrototypeDock__componentItem flex w-full cursor-pointer flex-col gap-0.5 rounded-sm border-0 bg-transparent px-2 py-1.5 text-left font-sans hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
-                        onClick={() => handlePickComponent(entry)}
-                      >
-                        <span className="truncate text-sm font-medium text-strong">
-                          {entry.label}
-                        </span>
-                        {entry.description && (
-                          <span className="line-clamp-1 text-xs text-muted">
-                            {entry.description}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {filteredProposed.length === 0 &&
-                  filteredExisting.length === 0 && (
-                    <div className="px-3 py-6 text-center text-sm text-muted">
-                      {query
-                        ? 'No components match your filter.'
-                        : 'No site schemas found. Ask Root AI to generate a block.'}
+                          {entry.description && (
+                            <span className="line-clamp-1 text-xs text-muted">
+                              {entry.description}
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   )}
-              </div>
-            </div>
-          </Popover>
-        )}
 
-        <div
-          className="PrototypeDock__divider mx-1 h-5 w-px shrink-0 bg-border"
-          aria-hidden="true"
+                  {filteredProposed.length === 0 &&
+                    filteredExisting.length === 0 && (
+                      <div className="px-3 py-6 text-center text-sm text-muted">
+                        {query
+                          ? 'No components match your filter.'
+                          : 'No site schemas found. Ask Root AI to generate a block.'}
+                      </div>
+                    )}
+                </div>
+              </div>
+            </Popover>
+          )}
+        </div>
+
+        <span
+          role="separator"
+          aria-orientation="vertical"
+          className="PrototypeDock__divider mx-1 h-5 w-0 shrink-0 border-l border-border"
         />
 
-        <IconButton label="Zoom out (-)" size="sm" onClick={onZoomOut}>
-          <IconMinus />
-        </IconButton>
+        <div
+          role="group"
+          aria-label="Zoom"
+          className="PrototypeDock__group flex items-center gap-0.5"
+        >
+          <IconButton label="Zoom out (-)" size="sm" onClick={onZoomOut}>
+            <IconMinus />
+          </IconButton>
 
-        <Tooltip label="Fit to screen (0)">
-          <Button
-            variant="subtle"
-            size="sm"
-            className="PrototypeDock__zoomPercent min-w-12 px-1.5 font-mono text-xs tabular-nums text-fg"
-            onClick={onFitToScreen}
-          >
-            {zoomPercent}
-          </Button>
-        </Tooltip>
+          <Tooltip label="Fit to screen (0)">
+            <Button
+              variant="subtle"
+              size="sm"
+              className="PrototypeDock__zoomPercent min-w-12 px-1.5 font-mono text-xs tabular-nums text-fg"
+              onClick={onFitToScreen}
+            >
+              {zoomPercent}
+            </Button>
+          </Tooltip>
 
-        <IconButton label="Zoom in (+)" size="sm" onClick={onZoomIn}>
-          <IconPlus />
-        </IconButton>
+          <IconButton label="Zoom in (+)" size="sm" onClick={onZoomIn}>
+            <IconPlus />
+          </IconButton>
+        </div>
       </div>
     </div>
   );

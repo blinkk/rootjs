@@ -841,32 +841,30 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
 
       {/* Right-hand floating Root AI card (only one right panel open at a time). */}
       {activePanel === 'ai' && aiAvailable && (
-        <div className="PrototypeBoardPage__aiHost pointer-events-none fixed right-3 top-14 bottom-16 z-(--cms-z-floating) flex w-96 max-w-full flex-col max-md:inset-2 max-md:w-auto *:pointer-events-auto">
-          <PrototypeAiCard
-            bundle={bundle}
-            activePageId={activePage.id}
-            selectedFrameId={selectedFrameId}
-            selectedBlockKey={selectedBlockKey}
-            queuedPrompt={queuedPrompt}
-            onClearContext={(kind) => {
-              if (kind === 'block') {
-                setSelectedBlockKey(null);
-              } else {
-                setSelectedFrameId(null);
-                setSelectedBlockKey(null);
-              }
-            }}
-            onFrameMutated={(frame) => {
-              applyFrameMutated(frame);
-              if (frame.pageId === activePage.id) {
-                setSelectedFrameId(frame.id);
-              }
-            }}
-            onComponentMutated={applyComponentMutated}
-            onTurnMutated={applyTurnMutated}
-            onClose={() => setActivePanel(null)}
-          />
-        </div>
+        <PrototypeAiCard
+          bundle={bundle}
+          activePageId={activePage.id}
+          selectedFrameId={selectedFrameId}
+          selectedBlockKey={selectedBlockKey}
+          queuedPrompt={queuedPrompt}
+          onClearContext={(kind) => {
+            if (kind === 'block') {
+              setSelectedBlockKey(null);
+            } else {
+              setSelectedFrameId(null);
+              setSelectedBlockKey(null);
+            }
+          }}
+          onFrameMutated={(frame) => {
+            applyFrameMutated(frame);
+            if (frame.pageId === activePage.id) {
+              setSelectedFrameId(frame.id);
+            }
+          }}
+          onComponentMutated={applyComponentMutated}
+          onTurnMutated={applyTurnMutated}
+          onClose={() => setActivePanel(null)}
+        />
       )}
     </div>
   );

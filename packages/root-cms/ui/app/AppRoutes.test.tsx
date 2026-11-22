@@ -12,4 +12,11 @@ describe('preloadRoute', () => {
     // app stuck on its loading screen.
     expect(() => preloadRoute('/cms/content/Pages/100%')).not.toThrow();
   });
+
+  it('preloads prototypes gallery and board routes cleanly', () => {
+    expect(() => preloadRoute('/cms/prototypes')).not.toThrow();
+    expect(() =>
+      preloadRoute('/cms/prototypes/pricing-page-refresh')
+    ).not.toThrow();
+  });
 });

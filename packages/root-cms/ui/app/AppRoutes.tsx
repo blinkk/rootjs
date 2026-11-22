@@ -93,6 +93,18 @@ const ProjectPage = lazyRoute(() =>
     (m) => m.ProjectPage
   )
 );
+const PrototypeBoardPage = lazyRoute(
+  () =>
+    import('../features/prototypes/pages/PrototypeBoardPage/PrototypeBoardPage.js').then(
+      (m) => m.PrototypeBoardPage
+    ),
+  {frame: false}
+);
+const PrototypesPage = lazyRoute(() =>
+  import('../features/prototypes/pages/PrototypesPage/PrototypesPage.js').then(
+    (m) => m.PrototypesPage
+  )
+);
 const ReleasePage = lazyRoute(() =>
   import('../features/releases/pages/ReleasePage/ReleasePage.js').then(
     (m) => m.ReleasePage
@@ -202,6 +214,8 @@ function getRoutes(): AppRoute[] {
     {path: '/cms/data/:id/edit', component: EditDataSourcePage},
     {path: '/cms/logs', component: LogsPage},
     {path: '/cms/logs/errors', component: ErrorLogsPage},
+    {path: '/cms/prototypes', component: PrototypesPage},
+    {path: '/cms/prototypes/:boardId', component: PrototypeBoardPage},
     {path: '/cms/releases', component: ReleasesPage},
     {path: '/cms/releases/new', component: NewReleasePage},
     {path: '/cms/releases/:id', component: ReleasePage},

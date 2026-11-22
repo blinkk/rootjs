@@ -13,6 +13,7 @@ import type {PrototypeBlockRect} from '../../../../shared/prototypes.js';
 interface RenderMessage {
   type: 'proto:render';
   frameId: string;
+  title?: string;
   html?: string;
   themeCss?: string;
   blockCss?: string;
@@ -216,6 +217,9 @@ function scheduleLayoutReport() {
 async function handleRender(msg: RenderMessage) {
   const seq = ++renderSeq;
   currentFrameId = msg.frameId || '';
+  if (typeof msg.title === 'string' && msg.title.trim()) {
+    document.title = msg.title.trim();
+  }
 
   const foldHeight =
     typeof msg.foldHeight === 'number' && Number.isFinite(msg.foldHeight)

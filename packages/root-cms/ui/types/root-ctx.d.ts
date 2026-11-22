@@ -56,6 +56,7 @@ declare global {
       };
       experiments?: {
         ai?: boolean | {endpoint?: string};
+        prototypes?: boolean;
         taskManager?: boolean;
         v2TranslationsManager?: boolean;
       };

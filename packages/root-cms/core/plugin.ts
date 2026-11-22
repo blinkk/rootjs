@@ -774,6 +774,13 @@ export type CMSPluginOptions = {
      * Enabled by default; set to `false` to hide it.
      */
     taskManager?: boolean;
+
+    /**
+     * Enables the UX Prototyping workspace (sidebar entry and
+     * `/cms/prototypes` routes) when Root AI is configured. Enabled by
+     * default; set to `false` to hide it.
+     */
+    prototypes?: boolean;
   };
 
   /**

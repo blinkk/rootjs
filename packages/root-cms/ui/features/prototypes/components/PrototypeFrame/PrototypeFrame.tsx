@@ -53,6 +53,14 @@ const FALLBACK_FRAME_HEIGHT = 760;
 /** Timeout in ms when awaiting an export payload from a sandboxed iframe. */
 const EXPORT_PAYLOAD_TIMEOUT_MS = 2500;
 
+/** Escapes plain text for safe insertion inside an HTML `<title>` element. */
+function escapeHtmlTitle(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
  * Builds the sandboxed `<iframe sandbox="allow-scripts" srcdoc>` document
  * shell with a strict CSP that allows only the CMS prototype runtime script
@@ -61,6 +69,7 @@ const EXPORT_PAYLOAD_TIMEOUT_MS = 2500;
 function buildSandboxedFrameSrcdoc(options: {
   cmsOrigin: string;
   fontUrls?: string[];
+  initialTitle?: string;
 }): string {
   const runtimeUrl = `${options.cmsOrigin}/cms/static/prototype-runtime.js`;
   const csp = [
@@ -80,12 +89,16 @@ function buildSandboxedFrameSrcdoc(options: {
       (url) => `<link rel="stylesheet" href="${url.replace(/"/g, '&quot;')}" />`
     )
     .join('\n    ');
+  const safeTitle = escapeHtmlTitle(
+    (options.initialTitle || '').trim() || 'Prototype Frame'
+  );
 
   return [
     '<!doctype html>',
     '<html lang="en">',
     '  <head>',
     '    <meta charset="utf-8" />',
+    `    <title>${safeTitle}</title>`,
     '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
     `    <meta http-equiv="Content-Security-Policy" content="${csp}" />`,
     fontLinks ? `    ${fontLinks}` : '',
@@ -243,6 +256,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     return buildSandboxedFrameSrcdoc({
       cmsOrigin,
       fontUrls: theme.fontUrls,
+      initialTitle: frame.title,
     });
   }, [fontUrlsKey]);
 
@@ -258,6 +272,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
 
   const latestRenderRef = useRef({
     frameId: frame.id,
+    title: frame.title,
     html: renderContent.html,
     themeCss,
     blockCss: renderContent.blockCss,
@@ -265,6 +280,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   });
   latestRenderRef.current = {
     frameId: frame.id,
+    title: frame.title,
     html: renderContent.html,
     themeCss,
     blockCss: renderContent.blockCss,
@@ -281,6 +297,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       {
         type: 'proto:render',
         frameId: payload.frameId,
+        title: payload.title,
         html: payload.html,
         themeCss: payload.themeCss,
         blockCss: payload.blockCss,
@@ -397,6 +414,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     }
   }, [
     isLive,
+    frame.title,
     renderContent.html,
     renderContent.blockCss,
     themeCss,

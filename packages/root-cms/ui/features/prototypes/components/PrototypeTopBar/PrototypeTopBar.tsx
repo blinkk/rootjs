@@ -1,6 +1,7 @@
 import {
   IconArchive,
   IconArchiveOff,
+  IconArrowLeft,
   IconCheck,
   IconChevronDown,
   IconCopy,
@@ -216,15 +217,17 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
     <>
       <header className="PrototypeTopBar pointer-events-none fixed inset-x-0 top-0 z-(--cms-z-sticky) flex items-center justify-between gap-2 p-2 md:p-3">
         {/* Top-left floating bar: breadcrumb + board menu + pages switcher. */}
-        <div className="PrototypeTopBar__left pointer-events-auto flex min-w-0 items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 shadow-sm">
+        <div className="PrototypeTopBar__left pointer-events-auto flex min-w-0 items-center gap-1 overflow-hidden rounded-md border border-border bg-surface px-1.5 py-1 shadow-sm sm:px-2">
           <a
             href="/cms/prototypes"
-            className="PrototypeTopBar__back shrink-0 rounded-sm px-1.5 py-1 text-sm font-medium text-muted no-underline transition-colors hover:bg-surface-hover hover:text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            aria-label="Prototypes"
+            className="PrototypeTopBar__back inline-flex shrink-0 items-center rounded-sm px-1 py-1 text-sm font-medium text-muted no-underline transition-colors hover:bg-surface-hover hover:text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:px-1.5"
           >
-            Prototypes
+            <IconArrowLeft size={16} className="sm:hidden" aria-hidden="true" />
+            <span className="hidden sm:inline">Prototypes</span>
           </a>
           <span
-            className="PrototypeTopBar__slash shrink-0 text-sm text-subtle"
+            className="PrototypeTopBar__slash hidden shrink-0 text-sm text-subtle sm:inline"
             aria-hidden="true"
           >
             /
@@ -237,7 +240,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
               <Button
                 variant="subtle"
                 size="sm"
-                className="PrototypeTopBar__boardMenu max-w-36 px-1.5 font-semibold text-strong sm:max-w-56 md:max-w-72"
+                className="PrototypeTopBar__boardMenu min-w-0 shrink max-w-28 px-1.5 font-semibold text-strong sm:max-w-56 md:max-w-72"
                 iconRight={<IconChevronDown />}
               >
                 {board.title}
@@ -348,7 +351,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
               <Button
                 variant="subtle"
                 size="sm"
-                className="PrototypeTopBar__pageSwitcher max-w-32 px-1.5 font-medium text-fg sm:max-w-44"
+                className="PrototypeTopBar__pageSwitcher min-w-0 shrink max-w-24 px-1.5 font-medium text-fg sm:max-w-44"
                 icon={<IconFile />}
                 iconRight={<IconChevronDown />}
               >
@@ -405,7 +408,11 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
               size="sm"
               className={cn(SEGMENTED_GROUP_BUTTON_CLASSES, 'shadow-sm')}
               aria-pressed={activePanel === 'comments'}
-              aria-label="Comments"
+              aria-label={
+                openCommentCount > 0
+                  ? `Comments ${openCommentCount}`
+                  : 'Comments'
+              }
               icon={<IconMessageCircle />}
               onClick={() => onTogglePanel('comments')}
             >
