@@ -12,7 +12,6 @@ import {
   IconMessagePlus,
   IconMinus,
   IconNote,
-  IconPalette,
   IconPlus,
   IconPointer,
   IconRobot,
@@ -146,9 +145,6 @@ export default function DesignPrototypes() {
             boxShadow: '0 2px 8px rgba(15, 23, 42, 0.07)',
           }}
         >
-          <span className="cms-icon-button" title="Theme">
-            <IconPalette size={14} />
-          </span>
           <span className="cms-button" style={{height: '24px', border: 'none'}}>
             <IconMessageCircle size={13} />2
           </span>
