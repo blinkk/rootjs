@@ -81,6 +81,7 @@ export default defineConfig({
         },
       },
       ai: {
+        defaultModel: 'claude-opus-5-5',
         models: [
           {
             id: 'claude-sonnet-5',

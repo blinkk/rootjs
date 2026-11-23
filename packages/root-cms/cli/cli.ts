@@ -9,6 +9,16 @@ import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
 import {initFirebase} from './init-firebase.js';
 import {proposalApply, proposalCheck, proposalDiff} from './proposal.js';
+import {
+  prototypesComments,
+  prototypesCreate,
+  prototypesDelete,
+  prototypesFrameDelete,
+  prototypesFrameSet,
+  prototypesGet,
+  prototypesList,
+  prototypesUpdate,
+} from './prototypes.js';
 import {setup} from './setup/setup.js';
 import {installSkill} from './skill.js';
 import {translationsMigrate} from './translations.js';
@@ -27,11 +37,15 @@ class CliRunner {
     program.version(this.version);
     program.option('-q, --quiet', 'quiet');
     program.hook('preAction', (cmd, actionCommand) => {
-      // The `client.*` and `proposal.*` commands emit machine-readable JSON
-      // on stdout, so skip the decorative banner to keep their output clean
-      // for AI agents.
+      // The `client.*`, `proposal.*`, and `prototypes.*` commands emit
+      // machine-readable JSON on stdout, so skip the decorative banner to keep
+      // their output clean for AI agents.
       const name = actionCommand.name();
-      if (name.startsWith('client.') || name.startsWith('proposal.')) {
+      if (
+        name.startsWith('client.') ||
+        name.startsWith('proposal.') ||
+        name.startsWith('prototypes.')
+      ) {
         return;
       }
       if (!cmd.opts().quiet) {
@@ -320,6 +334,146 @@ class CliRunner {
       .option('--modified-by <email>', 'email attributed as the author')
       .action(proposalApply);
     program
+      .command('prototypes.list')
+      .description(
+        'lists UX prototype boards stored in Root CMS\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.list\n' +
+          '  $ root-cms prototypes.list --status all --json'
+      )
+      .option(
+        '--status <status>',
+        'filter by status: "active", "archived", or "all" (default: "active")'
+      )
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesList);
+    program
+      .command('prototypes.get <boardId> [outputDir]')
+      .description(
+        'fetches a UX prototype board bundle as JSON, or exports editable HTML/JSON frames to outputDir\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.get pricing-refresh\n' +
+          '  $ root-cms prototypes.get pricing-refresh ./tmp/pricing\n' +
+          '  $ root-cms prototypes.get pricing-refresh --json'
+      )
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesGet);
+    program
+      .command('prototypes.create [boardId]')
+      .description(
+        'creates a new UX prototype board in Root CMS\n\n' +
+          'Extracts default brand theme tokens from the local project styles/ directory automatically.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.create pricing-refresh --title "Pricing page refresh"\n' +
+          '  $ root-cms prototypes.create --title "Homepage exploration" --json'
+      )
+      .option('--title <title>', 'board display title')
+      .option('--description <text>', 'optional summary shown on the list page')
+      .option('--page <name>', 'initial page name (default: "Page 1")')
+      .option('--upsert', 'update metadata if boardId already exists')
+      .option('--modified-by <email>', 'email attributed as the author')
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesCreate);
+    program
+      .command('prototypes.update <boardId>')
+      .description(
+        'updates a UX prototype board title, status, pages, or theme tokens\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.update pricing-refresh --title "Pricing v2"\n' +
+          '  $ root-cms prototypes.update pricing-refresh --add-page "Mobile"\n' +
+          '  $ root-cms prototypes.update pricing-refresh --rename-page "page-1:Desktop"\n' +
+          '  $ root-cms prototypes.update pricing-refresh --theme ./theme.json'
+      )
+      .option('--title <title>', 'updated board title')
+      .option('--description <text>', 'updated board description')
+      .option('--status <status>', 'board status: "active" or "archived"')
+      .option(
+        '--theme <jsonOrFile>',
+        'JSON string or path to .json file with PrototypeTheme tokens'
+      )
+      .option('--add-page <name>', 'append a new page to the board')
+      .option(
+        '--rename-page <spec>',
+        'rename an existing page ("<pageId>:<newName>")'
+      )
+      .option('--modified-by <email>', 'email attributed as the author')
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesUpdate);
+    program
+      .command('prototypes.delete <boardId>')
+      .description(
+        'permanently deletes a UX prototype board and its frames and comments\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.delete pricing-refresh'
+      )
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesDelete);
+    program
+      .command('prototypes.frame.set <boardId> <frameId> [filepath]')
+      .description(
+        'creates or updates a prototype artboard frame from an .html file, .json file, or stdin\n\n' +
+          'HTML files may include `<!-- @block key="hero" component="Hero" label="Hero" proposed="true" -->`\n' +
+          'markers so each section becomes an individually selectable, commentable block on the CMS canvas.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.frame.set pricing-refresh variant-a ./variant-a.html --title "Variant A" --width 1440\n' +
+          '  $ root-cms prototypes.frame.set pricing-refresh variant-b ./variant-b.json\n' +
+          '  $ cat variant.html | root-cms prototypes.frame.set pricing-refresh variant-a - --html'
+      )
+      .option('--title <title>', 'frame display title')
+      .option('--page <pageId>', 'target page id on the board')
+      .option(
+        '--width <px>',
+        'frame viewport width in px (e.g. 1440, 768, 390)'
+      )
+      .option(
+        '--x <px>',
+        'world X coordinate (auto-placed if omitted on create)'
+      )
+      .option('--y <px>', 'world Y coordinate')
+      .option('--html', 'treat input as HTML markup instead of JSON')
+      .option('--css <filepath>', 'optional companion CSS file for HTML input')
+      .option(
+        '--component <name>',
+        'component name when uploading plain HTML without @block markers'
+      )
+      .option(
+        '--label <label>',
+        'block label when uploading plain HTML without @block markers'
+      )
+      .option(
+        '--proposed',
+        'mark plain HTML upload block as a proposed net-new component'
+      )
+      .option('--modified-by <email>', 'email attributed as the author')
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesFrameSet);
+    program
+      .command('prototypes.frame.delete <boardId> <frameId>')
+      .description(
+        'deletes a single frame from a UX prototype board\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.frame.delete pricing-refresh variant-b'
+      )
+      .option('--modified-by <email>', 'email attributed as the author')
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesFrameDelete);
+    program
+      .command('prototypes.comments <boardId>')
+      .description(
+        'lists or resolves reviewer comment threads on a UX prototype board\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms prototypes.comments pricing-refresh\n' +
+          '  $ root-cms prototypes.comments pricing-refresh --frame variant-a --json\n' +
+          '  $ root-cms prototypes.comments pricing-refresh --resolve thread-123'
+      )
+      .option('--page <pageId>', 'filter comments by page id')
+      .option('--frame <frameId>', 'filter comments by frame id')
+      .option('--all', 'include resolved comment threads')
+      .option('--resolve <threadId>', 'mark a comment thread as resolved')
+      .option('--modified-by <email>', 'email attributed as the author')
+      .option('--json', 'output machine-readable JSON')
+      .action(prototypesComments);
+    program
       .command('skill.install [dir]')
       .description(
         'installs the bundled agent skills\n\n' +
@@ -381,5 +535,13 @@ export {
   proposalApply,
   proposalCheck,
   proposalDiff,
+  prototypesComments,
+  prototypesCreate,
+  prototypesDelete,
+  prototypesFrameDelete,
+  prototypesFrameSet,
+  prototypesGet,
+  prototypesList,
+  prototypesUpdate,
   setup,
 };

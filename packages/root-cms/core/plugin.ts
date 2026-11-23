@@ -40,6 +40,7 @@ import {
   isDevSharedAuthEnabled,
   setDevAuthCookie,
 } from './dev-session.js';
+import {registerPrototypesApi} from './prototypes-api.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {getStaticCacheControl} from './static-cache.js';
@@ -128,6 +129,7 @@ export type CMSBuiltInSidebarTool =
   | 'data'
   | 'assets'
   | 'translations'
+  | 'prototypes'
   | 'ai'
   | 'settings';
 
@@ -218,6 +220,7 @@ const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
 /** Paths to non-confidential static files. These files won't require authentication. */
 const NONCONF_STATIC_PATHS = [
+  '/cms/static/prototype-runtime.js',
   '/cms/static/signin.css',
   '/cms/static/signin.js',
   '/cms/static/ui.css',
@@ -771,6 +774,13 @@ export type CMSPluginOptions = {
      * Enabled by default; set to `false` to hide it.
      */
     taskManager?: boolean;
+
+    /**
+     * Enables the UX Prototyping workspace (sidebar entry and
+     * `/cms/prototypes` routes) when Root AI is configured. Enabled by
+     * default; set to `false` to hide it.
+     */
+    prototypes?: boolean;
   };
 
   /**
@@ -1466,7 +1476,13 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // routes only; body-parser short-circuits when `req._body` is already
       // set, so the global parser below is a no-op for them.
       server.use(
-        ['/cms/api/ai.chat.prepare', '/cms/api/ai.edit.prepare'],
+        [
+          '/cms/api/ai.chat.prepare',
+          '/cms/api/ai.edit.prepare',
+          '/cms/api/prototypes.frame.save',
+          '/cms/api/prototypes.component.save',
+          '/cms/api/prototypes.ai.prepare',
+        ],
         bodyParser.json({limit: '4mb'})
       );
       // Image editing iterates on its own output, so the request body can
@@ -1600,19 +1616,26 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // (requests for lazy route chunks would otherwise get redirected to the
       // login page and the dynamic import would fail).
       const staticDir = path.resolve(__dirname, 'ui');
-      if (process.env.NODE_ENV === 'development') {
-        // In dev, the `?c=` cachebust param is fixed for the lifetime of the
-        // server process while the UI may be rebuilt underneath it, so
-        // disable browser caching to avoid serving a stale ui.js that
-        // references hashed chunk files that no longer exist.
-        server.use(
-          '/cms/static',
-          (req: Request, res: Response, next: NextFunction) => {
-            res.setHeader('cache-control', 'no-store');
-            next();
+      server.use(
+        '/cms/static',
+        (req: Request, res: Response, next: NextFunction) => {
+          // Sandboxed `srcdoc` iframes run with an opaque `null` origin and
+          // fetch `<script type="module">` in CORS mode, so the public
+          // prototype runtime bundle must send permissive CORS/CORP headers.
+          if (req.path === '/prototype-runtime.js') {
+            res.setHeader('access-control-allow-origin', '*');
+            res.setHeader('cross-origin-resource-policy', 'cross-origin');
           }
-        );
-      }
+          if (process.env.NODE_ENV === 'development') {
+            // In dev, the `?c=` cachebust param is fixed for the lifetime of the
+            // server process while the UI may be rebuilt underneath it, so
+            // disable browser caching to avoid serving a stale ui.js that
+            // references hashed chunk files that no longer exist.
+            res.setHeader('cache-control', 'no-store');
+          }
+          next();
+        }
+      );
       server.use(
         '/cms/static',
         sirv(
@@ -1698,6 +1721,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         checks: options.checks,
         translations: options.translations,
       });
+      if (options.experiments?.prototypes !== false) {
+        registerPrototypesApi(server, {
+          rootConfig: serverOptions.rootConfig,
+          cmsConfig: options,
+        });
+      }
 
       // The project's themes (`themes` option) and the built-in ones, each
       // served as its own stylesheet behind the same login as the page that

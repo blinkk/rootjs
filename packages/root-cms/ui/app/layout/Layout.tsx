@@ -8,6 +8,7 @@ import {
   IconFolder,
   IconHome,
   IconLanguage,
+  IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
@@ -410,6 +411,22 @@ Layout.NavLinks = (props: {expanded: boolean}) => {
           <IconLanguage stroke={ICON_STROKE} />
         </Layout.SideButton>
       )}
+
+      {testAiEnabled() &&
+        !isBuiltInHidden('prototypes') &&
+        experiments.prototypes !== false && (
+          <Layout.SideButton
+            label="Design Prototypes"
+            url="/cms/prototypes"
+            active={
+              currentUrl === '/cms/prototypes' ||
+              currentUrl.startsWith('/cms/prototypes/')
+            }
+            expanded={expanded}
+          >
+            <IconLayoutDashboard stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
       {testAiEnabled() && !isBuiltInHidden('ai') && (
         <Layout.SideButton
