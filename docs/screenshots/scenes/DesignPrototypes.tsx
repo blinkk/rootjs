@@ -517,8 +517,8 @@ export default function DesignPrototypes() {
             <div
               style={{
                 position: 'absolute',
-                right: '-216px',
-                bottom: '12px',
+                right: '-222px',
+                bottom: '-42px',
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '8px',
