@@ -30,6 +30,45 @@ service cloud.firestore {
           if isSignedIn() && userCanEdit();
       }
 
+      match /TranslationsManager/draft/Translations/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Tasks/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Counters/tasks {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Viewers/{viewerDoc} {
+        allow write:
+          if isSignedIn() && userCanRead();
+      }
+
+      match /UserProfiles/{email} {
+        allow write:
+          if isSignedIn() && userCanRead() && request.auth.token.email == email;
+      }
+
+      match /Users/{uid} {
+        allow write:
+          if isSignedIn() && userCanRead() && request.auth.uid == uid;
+      }
+
+      match /AiChats/{chatId} {
+        allow create:
+          if isSignedIn() && userCanRead() && request.resource.data.createdBy == request.auth.token.email;
+        allow update:
+          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email && request.resource.data.createdBy == request.auth.token.email;
+        allow delete:
+          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email;
+      }
+
       function isSignedIn() {
         return request.auth != null;
       }

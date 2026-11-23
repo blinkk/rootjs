@@ -14,7 +14,7 @@ import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
+import {testCanPublish} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
 import {DataSourceActivity} from '../../components/DataSourceActivity/DataSourceActivity.js';
 import {useDataSourceChangesModal} from '../../components/DataSourceChangesModal/DataSourceChangesModal.js';
@@ -41,7 +41,6 @@ export function DataPage() {
   usePageTitle('Data Sources');
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
   const canPublish = testCanPublish(roles, currentUserEmail);
 
   return (
@@ -54,13 +53,13 @@ export function DataPage() {
             endpoint for use on the site.
           </Text>
         </div>
-        <DataPage.DataSourcesGrid canEdit={canEdit} canPublish={canPublish} />
+        <DataPage.DataSourcesGrid canPublish={canPublish} />
       </div>
     </Layout>
   );
 }
 
-DataPage.DataSourcesGrid = (props: {canEdit: boolean; canPublish: boolean}) => {
+DataPage.DataSourcesGrid = (props: {canPublish: boolean}) => {
   const [loading, setLoading] = useState(true);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [storedFilter, setFilter] = useLocalStorage<DataSourceListFilter>(
@@ -128,13 +127,13 @@ DataPage.DataSourcesGrid = (props: {canEdit: boolean; canPublish: boolean}) => {
         <div className="DataPage__newDataSource ml-auto">
           <ConditionalTooltip
             label="You don't have access to create new data sources"
-            condition={!props.canEdit}
+            condition={!props.canPublish}
           >
             <Button
               variant="primary"
               icon={<IconPlus />}
               href="/cms/data/new"
-              disabled={!props.canEdit}
+              disabled={!props.canPublish}
             >
               New data source
             </Button>
