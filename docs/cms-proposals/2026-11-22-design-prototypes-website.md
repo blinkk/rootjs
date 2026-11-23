@@ -6,12 +6,12 @@
 
 ## Summary
 
-- Pages/index: Add a Design Prototypes feature spotlight right after Root AI (with a link to the new guide), update the Automate pillar and Agent-ready CLI card, and re-balance alternating section themes/layouts.
-- Guides/design-prototypes: Add a non-technical guide introducing Design Prototypes—design-system-aware iteration with Root AI in the CMS or external agent harnesses (Antigravity, Claude Code) and converting approved mocks into production components.
+- Pages/index: Add a Design Prototypes feature spotlight right after Root AI (with the cms-design-prototypes.png screenshot), add "Read the guide" buttons to all 5 spotlight sections, update the Automate pillar and Agent-ready CLI card, and re-balance alternating section themes/layouts.
+- Guides/design-prototypes: Add a non-technical guide introducing Design Prototypes with the cms-design-prototypes.png hero and card screenshot.
 
 ## Edit `Pages/index`
 
-Add the Design Prototypes spotlight module (attach cms-design-prototypes.png from the asset library after uploading the screenshot scene) and update the Automate pillar and Agent-ready CLI card.
+Add the Design Prototypes spotlight module with its screenshot, add "Read the guide" buttons to all five feature spotlights, and update the Automate pillar and Agent-ready CLI card.
 
 ### Set `content.modules`
 
@@ -140,6 +140,12 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
    _arrayKey: "Jlye8e"
 -- id: "schemas"
 -  body: "Define schemas in TypeScript to generate typed props automatically, then render them directly in your TSX components."
++  buttons:
++    - label: "Read the guide"
++      href: "/guides/root-ai/"
++      options:
++        - "variant:outline"
++      _arrayKey: "aiBtn1"
 +- id: "prototypes"
 +  _type: "TemplateFeatureSpotlight"
    options:
@@ -167,6 +173,14 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
 +      options:
 +        - "variant:outline"
 +      _arrayKey: "dpBtn1"
++  image:
++    assetId: "rxXoK0rvwfAq"
++    filename: "cms-design-prototypes.png"
++    src: "https://lh3.googleusercontent.com/v5Y8n3xAXCN47j85AcjmdKdCn9rYkfiG2aAhGqIT1Ui0IMdFIOV0MRo0XbWgyEtdSgcQM5PkiZX1kPw0v0QXalvzy0LuI5Os2WA"
++    width: 1920
++    height: 1200
++    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared canvas, with a pinned team comment and Root AI adding a new comparison component."
++    gcsPath: "/rootjs-dev.appspot.com/www/uploads/5fd792f93c3ba2c49f60557a61dd7db1e3347df1.png"
 +  _arrayKey: "dpSp0t"
 +- id: "schemas"
 +  body: "Define schemas in TypeScript to generate typed props automatically, then render them directly in your TSX components."
@@ -257,6 +271,12 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
      - text: "Custom checks for missing translations, accessibility, and broken links"
        _arrayKey: "wzBLb7"
    _arrayKey: "h56ZKX"
++  buttons:
++    - label: "Read the guide"
++      href: "/guides/publishing/"
++      options:
++        - "variant:outline"
++      _arrayKey: "pbBtn1"
  - eyebrow: "Localization"
    _type: "TemplateFeatureSpotlight"
    options:
@@ -289,6 +309,12 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
      - text: "Connect third-party translation providers like Crowdin"
        _arrayKey: "d2mvgM"
    _arrayKey: "erjGXp"
++  buttons:
++    - label: "Read the guide"
++      href: "/guides/localization/"
++      options:
++        - "variant:outline"
++      _arrayKey: "lcBtn1"
  - id: "collaboration"
    _type: "TemplateFeatureSpotlight"
    eyebrow: "Collaboration"
@@ -321,6 +347,12 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
            text: "See who else has a doc open, get their edits in real time, and leave comment threads directly on individual fields with @mentions."
      version: "lexical-0.31.2"
    _arrayKey: "jQagyo"
++  buttons:
++    - label: "Read the guide"
++      href: "/guides/collaboration/"
++      options:
++        - "variant:outline"
++      _arrayKey: "clBtn1"
  - id: "framework"
    _type: "TemplateFeatureGrid"
    eyebrow: "The framework"
@@ -427,12 +459,20 @@ Add the Design Prototypes spotlight module (attach cms-design-prototypes.png fro
 
 ## Create `Guides/design-prototypes`
 
-New non-technical guide for Design Prototypes (attach cms-design-prototypes.png as heroImage/meta.image after uploading the screenshot scene).
+New non-technical guide for Design Prototypes with the uploaded cms-design-prototypes.png screenshot.
 
 ```yaml
 meta:
   title: "Design Prototypes"
   description: "Design and iterate on new pages and components with Root AI, gather team feedback, and turn approved mocks into production-ready code."
+  image: &a1
+    assetId: "rxXoK0rvwfAq"
+    filename: "cms-design-prototypes.png"
+    src: "https://lh3.googleusercontent.com/v5Y8n3xAXCN47j85AcjmdKdCn9rYkfiG2aAhGqIT1Ui0IMdFIOV0MRo0XbWgyEtdSgcQM5PkiZX1kPw0v0QXalvzy0LuI5Os2WA"
+    width: 1920
+    height: 1200
+    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared canvas, with a pinned team comment and Root AI adding a new comparison component."
+    gcsPath: "/rootjs-dev.appspot.com/www/uploads/5fd792f93c3ba2c49f60557a61dd7db1e3347df1.png"
 content:
   eyebrow: "Design Prototypes"
   title: "From first concept to production-ready components"
@@ -446,6 +486,7 @@ content:
           text: "Your team can sketch and iterate on new pages on a shared artboard with Root AI—which already understands your site’s design system—or update prototypes from external agent harnesses like Antigravity and Claude Code. Once a concept is reviewed and approved, your harness can convert it straight into production-ready components."
     time: 1795401200000
     version: "2.28.2"
+  heroImage: *a1
   takeaways:
     - text: "Design new pages and components with Root AI using your existing design system."
       _arrayKey: "dpTk01"
