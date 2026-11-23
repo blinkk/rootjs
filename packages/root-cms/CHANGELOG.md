@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 4.4.1
+
+### Patch Changes
+
+- 26a826f: fix: keep toast notifications on screen when a modal opens or closes
+- fefb49b: feat: add AI-powered UX prototyping workspace
+  - @blinkk/root@4.4.1
+
 ## 4.3.7
 
 ### Patch Changes
