@@ -416,7 +416,7 @@ Layout.NavLinks = (props: {expanded: boolean}) => {
         !isBuiltInHidden('prototypes') &&
         experiments.prototypes !== false && (
           <Layout.SideButton
-            label="Prototypes"
+            label="Design Prototypes"
             url="/cms/prototypes"
             active={
               currentUrl === '/cms/prototypes' ||

@@ -86,7 +86,7 @@ function pluralize(count: number, singular: string, plural?: string): string {
  * active/archived filtering, search, sorting, and board management actions.
  */
 export function PrototypesPage() {
-  usePageTitle('Prototypes');
+  usePageTitle('Design Prototypes');
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase?.user?.email || '';
   const canEdit = testCanEdit(roles, currentUserEmail);
@@ -313,7 +313,7 @@ export function PrototypesPage() {
       <div className="PrototypesPage bg-page p-page">
         <div className="PrototypesPage__header mb-6 flex max-w-7xl flex-wrap items-start justify-between gap-4">
           <div className="PrototypesPage__headerText min-w-0 grow basis-72">
-            <Heading size="h1">Prototypes</Heading>
+            <Heading size="h1">Design Prototypes</Heading>
             <Text as="p" className="mb-0 mt-2 max-w-prose" color="gray">
               Explore page layouts, gather team comments, and iterate on UX
               wireframes with Root AI in an isolated artboard.
