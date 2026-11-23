@@ -315,8 +315,8 @@ export function PrototypesPage() {
           <div className="PrototypesPage__headerText min-w-0 grow basis-72">
             <Heading size="h1">Design Prototypes</Heading>
             <Text as="p" className="mb-0 mt-2 max-w-prose" color="gray">
-              Explore page layouts, gather team comments, and iterate on UX
-              wireframes with Root AI in an isolated artboard.
+              Create, review, and iterate on visual page concepts with your
+              team.
             </Text>
           </div>
           <div className="PrototypesPage__headerActions shrink-0">
