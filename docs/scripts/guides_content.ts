@@ -577,6 +577,75 @@ export const GUIDES: GuideSource[] = [
   },
 
   {
+    slug: 'design-prototypes',
+    title: 'Design Prototypes',
+    description:
+      'Design and iterate on new pages and components with Root AI, gather team feedback, and turn approved mocks into production-ready code.',
+    eyebrow: 'Design Prototypes',
+    heading: 'From first concept to production-ready components',
+    intro: richtext(
+      'Planning a new landing page or component usually means bouncing between slide decks, static mockups, and long handoff threads before anyone sees how the idea fits the real site. Design Prototypes brings that exploration into Root.js.',
+      'Your team can sketch and iterate on new pages on a shared artboard with Root AI—which already understands your site’s design system—or update prototypes from external agent harnesses like Antigravity and Claude Code. Once a concept is reviewed and approved, your harness can convert it straight into production-ready components.'
+    ),
+    heroImage: 'cms-design-prototypes',
+    takeaways: [
+      'Design new pages and components with Root AI using your existing design system.',
+      'Compare desktop and mobile concepts side by side on a shared artboard.',
+      'Update prototypes in the CMS or from agent harnesses like Antigravity and Claude Code.',
+      'Collect and resolve team feedback directly on the prototype.',
+      'Convert approved mocks into production-ready components.',
+    ],
+    sections: [
+      {
+        id: 'design-system-aware',
+        title: 'Built around your design system',
+        body: richtext(
+          'Instead of starting from generic wireframes, Root AI understands your site’s existing styles, layout patterns, and components. Teams can combine real site sections with proposed new components on the same artboard, so stakeholders immediately see how a new page or feature fits the rest of the website.'
+        ),
+      },
+      {
+        id: 'iterate-anywhere',
+        title: 'Iterate in the CMS or your favorite agent harness',
+        body: richtext(
+          'Designers, marketers, and product owners can prompt Root AI directly in the CMS to adjust layouts, try copy variations, or compare desktop and mobile views side by side.',
+          'Developers and designers who prefer working in their own AI coding tools—such as Antigravity or Claude Code—can update the exact same prototype boards from their local workflow, keeping everyone looking at the latest concept in one place.'
+        ),
+      },
+      {
+        id: 'review-together',
+        title: 'Review and align before building',
+        body: richtext(
+          'Anyone with access to the CMS can open a prototype, leave feedback directly on a frame or section, and resolve comments as decisions are made. Because prototypes stay separate from your live pages, teams can explore bold ideas freely without risking live content.'
+        ),
+      },
+      {
+        id: 'ship-to-production',
+        title: 'Turn approved mocks into production components',
+        body: richtext(
+          'Once a mock is reviewed and approved, nothing has to be rebuilt from scratch from screenshots. Agent harnesses like Antigravity and Claude Code can read the approved prototype and convert it into production-ready Root.js templates, schemas, and styles for your team to review and ship.'
+        ),
+      },
+    ],
+    faq: [
+      {
+        question: 'Can prototypes affect our live website?',
+        answer:
+          'No. Prototypes live in their own workspace, separate from your site’s published pages and drafts. Nothing goes live until your team builds and publishes it through your normal workflow.',
+      },
+      {
+        question: 'Can we update prototypes outside the CMS?',
+        answer:
+          'Yes. Non-technical teammates can iterate with Root AI directly in the CMS, while developers can update the same prototype boards from external agent harnesses like Antigravity or Claude Code.',
+      },
+      {
+        question: 'How do approved prototypes become real pages?',
+        answer:
+          'Once your team signs off on a prototype, a developer can point an agent harness at the approved board to generate the matching Root.js components and schemas, review the code in a pull request, and ship it like any other site update.',
+      },
+    ],
+  },
+
+  {
     slug: 'governance',
     title: 'Roles, permissions, and governance',
     description:
