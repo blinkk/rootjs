@@ -158,4 +158,4 @@ npx root-cms prototypes.comments pricing-refresh --resolve <threadId>
 
 - **Self-contained markup**: Do not import `.tsx` modules or external JS. Write clean semantic HTML styled with Tailwind v4 utilities, inline `svg` icons, and optional `--css <file.css>`.
 - **Sanitized automatically**: `<script>`, `<iframe>`, inline `on*` attributes, `javascript:` URLs, and CSS `@import` are stripped on save; `100vh` is rewritten against `--proto-vh` (`900px` desktop / `844px` mobile) so frames size cleanly to their content height without infinite resize loops.
-- **Allowed external assets**: `https:` images (`<img>`) and `https://fonts.googleapis.com` font URLs (configured via `prototypes.update --theme`).
+- **Allowed external assets**: `<img>` may only load the project's own CMS assets (`https://lh3.googleusercontent.com/...` or `https://storage.googleapis.com/<project bucket>/...`) and `data:` URIs; images from any other host are blocked, so use an inline `svg` or a styled placeholder block instead. Fonts load from `https://fonts.googleapis.com` URLs (configured via `prototypes.update --theme`).

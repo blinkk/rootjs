@@ -11,7 +11,6 @@ import type {
   PrototypeComponentSpec,
   PrototypeFrame,
   PrototypeProjectContext,
-  PrototypeTurnSnapshot,
   SiteSchemaSummary,
 } from '../../../shared/prototypes.js';
 import {getOrderedBlocks} from '../../../shared/prototypes.js';
@@ -238,8 +237,8 @@ export interface UsePrototypeBoardResult {
   applyFrameMutated: (frame: PrototypeFrame) => void;
   /** Integrates a component spec mutation performed by Root AI into local state. */
   applyComponentMutated: (spec: PrototypeComponentSpec) => void;
-  /** Integrates an AI turn snapshot creation or revert into local state. */
-  applyTurnMutated: (turn?: PrototypeTurnSnapshot) => void;
+  /** Reloads the board after an AI turn finishes so local state stays in sync. */
+  refreshAfterAiTurn: () => void;
 }
 
 /**
@@ -757,29 +756,11 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     });
   }, []);
 
-  const applyTurnMutated = useCallback(
-    (turn?: PrototypeTurnSnapshot) => {
-      if (turn) {
-        setBundle((prev) => {
-          if (!prev) {
-            return prev;
-          }
-          const exists = prev.turns.some((item) => item.id === turn.id);
-          return {
-            ...prev,
-            turns: exists
-              ? prev.turns.map((item) => (item.id === turn.id ? turn : item))
-              : [turn, ...prev.turns],
-          };
-        });
-      }
-      // Refresh the bundle so reverted or restored frames stay in sync.
-      reload().catch((err) => {
-        console.error('Failed to reload board after turn mutation:', err);
-      });
-    },
-    [reload]
-  );
+  const refreshAfterAiTurn = useCallback(() => {
+    reload().catch((err) => {
+      console.error('Failed to reload board after AI turn:', err);
+    });
+  }, [reload]);
 
   return {
     bundle,
@@ -807,6 +788,6 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     deleteComment,
     applyFrameMutated,
     applyComponentMutated,
-    applyTurnMutated,
+    refreshAfterAiTurn,
   };
 }

@@ -32,7 +32,6 @@ import {
   type PrototypeComponentSpec,
   type PrototypeFrame,
   type PrototypeTheme,
-  type PrototypeTurnSnapshot,
   sanitizePrototypeThemeValue,
 } from '../shared/prototypes.js';
 import {sanitizeBlockHtml} from '../shared/sanitize.js';
@@ -60,9 +59,6 @@ const SAFE_DOC_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 /** Maximum Firestore operations committed per WriteBatch. */
 const MAX_BATCH_OPS = 450;
-
-/** Maximum number of turns returned when hydrating a board bundle. */
-const MAX_RETURNED_TURNS = 50;
 
 /** Built-in AI prototyping skills exposed by `prototypes.ai.prepare`. */
 const BUILTIN_PROTOTYPE_AI_SKILLS: SerializedAiSkill[] = [
@@ -485,6 +481,7 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
       boardsCol.doc(boardId).collection('Components'),
     commentsCol: (boardId: string) =>
       boardsCol.doc(boardId).collection('Comments'),
+    // Legacy: AI turn snapshots are no longer written; only used for cleanup.
     turnsCol: (boardId: string) => boardsCol.doc(boardId).collection('Turns'),
   };
 }
@@ -574,6 +571,10 @@ function buildPrototypeSystemPrompt(options: {
     '  `var(--font-mono)`, `var(--radius-base)`, `var(--max-w-container)`.',
     '- Never include `<script>`, `<iframe>`, inline `on*` event handlers,',
     '  `javascript:` URLs, `@import`, or external CSS `url()` beacons.',
+    '- `<img>` may only load CMS asset URLs returned by the read-only doc',
+    '  tools or `data:` URIs. Images from any other host are blocked by the',
+    '  frame, so never hotlink stock photos or placeholder services; use an',
+    '  inline `svg` or a styled block as the image placeholder instead.',
     '- Reuse existing site components whenever they fit the user intent.',
     '  Call `component_inspect` before synthesizing a Visual Twin so your',
     '  HTML reflects the real component structure and visual hierarchy.',
@@ -763,17 +764,11 @@ export function registerPrototypesApi(
         projectComponentsSnap,
         boardComponentsSnap,
         commentsSnap,
-        turnsSnap,
       ] = await Promise.all([
         refs.framesCol(boardId).get(),
         refs.projectComponentsCol.get(),
         refs.componentsCol(boardId).get(),
         refs.commentsCol(boardId).get(),
-        refs
-          .turnsCol(boardId)
-          .orderBy('createdAt', 'desc')
-          .limit(MAX_RETURNED_TURNS)
-          .get(),
       ]);
 
       const frames = sortFrames(
@@ -800,17 +795,11 @@ export function registerPrototypesApi(
         }))
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
-      const turns = turnsSnap.docs.map((d) => ({
-        ...(d.data() as PrototypeTurnSnapshot),
-        id: d.id,
-      }));
-
       const bundle: PrototypeBoardBundle = {
         board,
         frames,
         components,
         comments,
-        turns,
       };
       res.setHeader('Cache-Control', 'no-store');
       res.status(200).json({success: true, data: bundle});
@@ -900,7 +889,6 @@ export function registerPrototypesApi(
           frames: [],
           components,
           comments: [],
-          turns: [],
         };
         res.status(200).json({success: true, data: bundle});
       } catch (err: any) {
@@ -1141,6 +1129,7 @@ export function registerPrototypesApi(
             listDocRefs(refs.framesCol(boardId)),
             listDocRefs(refs.componentsCol(boardId)),
             listDocRefs(refs.commentsCol(boardId)),
+            // Legacy cleanup for boards created before turn snapshots were removed.
             listDocRefs(refs.turnsCol(boardId)),
           ]);
 
@@ -1349,222 +1338,6 @@ export function registerPrototypesApi(
         res.status(200).json({success: true, data: savedSpec});
       } catch (err: any) {
         console.error('[prototypes.component.save] error:', err.stack || err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
-      }
-    }
-  );
-
-  /**
-   * Records a reversible AI mutation turn snapshot.
-   * POST /cms/api/prototypes.turn.save
-   */
-  server.use(
-    '/cms/api/prototypes.turn.save',
-    async (req: Request, res: Response) => {
-      if (!assertJsonPost(req, res)) return;
-      const rootConfig = resolveRootConfig(req);
-      const auth = await authenticateRequest(req, res, rootConfig, true);
-      if (!auth) return;
-
-      const boardId = req.body?.boardId;
-      const turnInput = req.body?.turn as
-        Omit<PrototypeTurnSnapshot, 'createdAt' | 'createdBy'> | undefined;
-      if (!isValidDocId(boardId)) {
-        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
-        return;
-      }
-      const turnId = turnInput?.id || generateId('turn');
-      if (!turnInput || !isValidDocId(turnId)) {
-        res.status(400).json({success: false, error: 'INVALID_TURN_ID'});
-        return;
-      }
-
-      try {
-        const db = auth.cmsClient.db;
-        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
-        const boardSnap = await refs.boardDoc(boardId).get();
-        if (!boardSnap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-
-        const now = Date.now();
-        const sanitizeFrameRecord = (
-          record: Record<string, PrototypeFrame | null> | undefined
-        ): Record<string, PrototypeFrame | null> => {
-          const out: Record<string, PrototypeFrame | null> = {};
-          if (!record || typeof record !== 'object') {
-            return out;
-          }
-          for (const [frameId, frame] of Object.entries(record)) {
-            if (!isValidDocId(frameId)) {
-              continue;
-            }
-            out[frameId] = frame
-              ? sanitizeFrameForStorage(
-                  {...frame, id: frameId},
-                  {boardId, existing: frame, email: auth.email, now}
-                )
-              : null;
-          }
-          return out;
-        };
-
-        const sanitizeComponentRecord = (
-          record: Record<string, PrototypeComponentSpec | null> | undefined
-        ): Record<string, PrototypeComponentSpec | null> | undefined => {
-          if (!record || typeof record !== 'object') {
-            return undefined;
-          }
-          const out: Record<string, PrototypeComponentSpec | null> = {};
-          for (const [name, spec] of Object.entries(record)) {
-            if (!isValidDocId(name)) {
-              continue;
-            }
-            out[name] = spec
-              ? sanitizeComponentSpec({...spec, name}, auth.email, now)
-              : null;
-          }
-          return Object.keys(out).length > 0 ? out : undefined;
-        };
-
-        const summaryLines = Array.isArray(turnInput.summaryLines)
-          ? turnInput.summaryLines
-              .map((line) => String(line || '').trim())
-              .filter(Boolean)
-              .slice(0, 20)
-          : [];
-
-        const componentsBefore = sanitizeComponentRecord(
-          turnInput.componentsBefore
-        );
-        const componentsAfter = sanitizeComponentRecord(
-          turnInput.componentsAfter
-        );
-
-        const savedTurn: PrototypeTurnSnapshot = {
-          id: turnId,
-          boardId,
-          summaryLines,
-          framesBefore: sanitizeFrameRecord(turnInput.framesBefore),
-          framesAfter: sanitizeFrameRecord(turnInput.framesAfter),
-          ...(componentsBefore ? {componentsBefore} : {}),
-          ...(componentsAfter ? {componentsAfter} : {}),
-          reverted: Boolean(turnInput.reverted),
-          createdAt: now,
-          createdBy: auth.email,
-        };
-
-        await refs
-          .turnsCol(boardId)
-          .doc(turnId)
-          .set(stripUndefinedDeep(savedTurn));
-        res.status(200).json({success: true, data: savedTurn});
-      } catch (err: any) {
-        console.error('[prototypes.turn.save] error:', err.stack || err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
-      }
-    }
-  );
-
-  /**
-   * Reverts or restores an AI mutation turn snapshot atomically.
-   * POST /cms/api/prototypes.turn.revert
-   */
-  server.use(
-    '/cms/api/prototypes.turn.revert',
-    async (req: Request, res: Response) => {
-      if (!assertJsonPost(req, res)) return;
-      const rootConfig = resolveRootConfig(req);
-      const auth = await authenticateRequest(req, res, rootConfig, true);
-      if (!auth) return;
-
-      const boardId = req.body?.boardId;
-      const turnId = req.body?.turnId;
-      const restore = Boolean(req.body?.restore);
-      if (!isValidDocId(boardId)) {
-        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
-        return;
-      }
-      if (!isValidDocId(turnId)) {
-        res.status(400).json({success: false, error: 'INVALID_TURN_ID'});
-        return;
-      }
-
-      try {
-        const db = auth.cmsClient.db;
-        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
-        const boardRef = refs.boardDoc(boardId);
-        const turnRef = refs.turnsCol(boardId).doc(turnId);
-        const [boardSnap, turnSnap] = await Promise.all([
-          boardRef.get(),
-          turnRef.get(),
-        ]);
-        if (!boardSnap.exists || !turnSnap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-
-        const turn = {
-          ...(turnSnap.data() as PrototypeTurnSnapshot),
-          id: turnSnap.id,
-        };
-        const now = Date.now();
-        const targetFrames = restore ? turn.framesAfter : turn.framesBefore;
-        const targetComponents = restore
-          ? turn.componentsAfter
-          : turn.componentsBefore;
-        const counterpartComponents = restore
-          ? turn.componentsBefore
-          : turn.componentsAfter;
-
-        const batch = db.batch();
-        for (const [frameId, frame] of Object.entries(targetFrames || {})) {
-          if (!isValidDocId(frameId)) {
-            continue;
-          }
-          const frameRef = refs.framesCol(boardId).doc(frameId);
-          if (frame === null) {
-            batch.delete(frameRef);
-          } else {
-            const sanitized = sanitizeFrameForStorage(
-              {...frame, id: frameId},
-              {boardId, existing: frame, email: auth.email, now}
-            );
-            batch.set(frameRef, stripUndefinedDeep(sanitized));
-          }
-        }
-
-        for (const [name, spec] of Object.entries(targetComponents || {})) {
-          if (!isValidDocId(name)) {
-            continue;
-          }
-          const origin =
-            spec?.origin || counterpartComponents?.[name]?.origin || 'proposed';
-          const compRef =
-            origin === 'existing'
-              ? refs.projectComponentsCol.doc(name)
-              : refs.componentsCol(boardId).doc(name);
-          if (spec === null) {
-            batch.delete(compRef);
-          } else {
-            const sanitized = sanitizeComponentSpec(
-              {...spec, name},
-              auth.email,
-              now
-            );
-            batch.set(compRef, stripUndefinedDeep(sanitized));
-          }
-        }
-
-        const nextReverted = !restore;
-        batch.update(turnRef, {reverted: nextReverted});
-        batch.update(boardRef, {updatedAt: now, updatedBy: auth.email});
-        await batch.commit();
-
-        res.status(200).json({success: true, data: {reverted: nextReverted}});
-      } catch (err: any) {
-        console.error('[prototypes.turn.revert] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
     }
@@ -2197,11 +1970,13 @@ export function registerPrototypesApi(
         .trim();
       const cmsOrigin = host ? `${proto}://${host}` : '';
 
+      const previewCmsConfig = resolveCmsConfig(cmsClient);
       const {html, csp} = buildStandalonePreviewDocument({
         boardTitle: board.title,
         frame,
         theme: board.theme || {},
         cmsOrigin,
+        storageBucket: previewCmsConfig.firebaseConfig?.storageBucket,
       });
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

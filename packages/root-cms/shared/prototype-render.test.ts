@@ -170,12 +170,17 @@ describe('buildFrameSrcdoc', () => {
         'https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap',
         'https://evil.example/font.css',
       ],
+      storageBucket: 'my-project.appspot.com',
     });
 
     expect(doc).toContain(
       'script-src https://cms.example.com/cms/static/prototype-runtime.js'
     );
     expect(doc).toContain("connect-src 'none'");
+    // Images are limited to inline data and the project's own asset hosts.
+    expect(doc).toContain(
+      'img-src data: blob: https://lh3.googleusercontent.com https://storage.googleapis.com/my-project.appspot.com/ https://firebasestorage.googleapis.com/v0/b/my-project.appspot.com/;'
+    );
     expect(doc).toContain('<main id="proto-root"></main>');
     expect(doc).toContain(
       '<script type="module" src="https://cms.example.com/cms/static/prototype-runtime.js"></script>'

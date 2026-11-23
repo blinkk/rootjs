@@ -1481,7 +1481,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           '/cms/api/ai.edit.prepare',
           '/cms/api/prototypes.frame.save',
           '/cms/api/prototypes.component.save',
-          '/cms/api/prototypes.turn.save',
           '/cms/api/prototypes.ai.prepare',
         ],
         bodyParser.json({limit: '4mb'})

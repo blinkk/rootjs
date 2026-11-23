@@ -6,6 +6,7 @@
 
 import sanitizeHtml, {type IOptions} from 'sanitize-html';
 import {
+  buildPrototypeImgSrc,
   getOrderedBlocks,
   rewriteViewportUnits,
   sanitizePrototypeThemeValue,
@@ -535,6 +536,8 @@ export interface BuildFrameSrcdocOptions {
   runtimeUrl: string;
   /** Optional Google Fonts stylesheet URLs (`https://fonts.googleapis.com/...`). */
   fontUrls?: string[];
+  /** Project storage bucket whose assets frames may load as images. */
+  storageBucket?: string;
 }
 
 /** Sanitizes an origin string for safe interpolation inside a CSP directive. */
@@ -593,7 +596,7 @@ export function buildFrameSrcdoc(options: BuildFrameSrcdocOptions): string {
     `script-src ${scriptSrc}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
     'font-src https://fonts.gstatic.com data:',
-    'img-src https: data: blob:',
+    buildPrototypeImgSrc(options.storageBucket),
     "connect-src 'none'",
     "form-action 'none'",
     "frame-src 'none'",
@@ -640,6 +643,8 @@ export interface BuildStandalonePreviewOptions {
   theme: PrototypeTheme;
   /** Origin of the CMS server (e.g. `https://cms.example.com`). */
   cmsOrigin: string;
+  /** Project storage bucket whose assets frames may load as images. */
+  storageBucket?: string;
 }
 
 /**
@@ -659,7 +664,7 @@ export function buildStandalonePreviewDocument(
     `script-src ${runtimeUrl}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
     'font-src https://fonts.gstatic.com data:',
-    'img-src https: data: blob:',
+    buildPrototypeImgSrc(options.storageBucket),
     "connect-src 'none'",
     "form-action 'none'",
     "frame-src 'none'",

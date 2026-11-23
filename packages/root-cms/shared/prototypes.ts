@@ -250,30 +250,6 @@ export interface PrototypeCommentThread {
   resolvedBy?: string;
 }
 
-/** Snapshot recorded before an AI mutation turn to power "Revert this turn". */
-export interface PrototypeTurnSnapshot {
-  /** Unique turn id. */
-  id: string;
-  /** Parent board id. */
-  boardId: string;
-  /** Short bullet lines shown in the AI turn summary card. */
-  summaryLines: string[];
-  /** Previous frame states keyed by `frameId` (`null` if created in this turn). */
-  framesBefore: Record<string, PrototypeFrame | null>;
-  /** New frame states keyed by `frameId` (`null` if deleted in this turn). */
-  framesAfter: Record<string, PrototypeFrame | null>;
-  /** Previous board-local component specs keyed by `name` (`null` if created). */
-  componentsBefore?: Record<string, PrototypeComponentSpec | null>;
-  /** New board-local component specs keyed by `name`. */
-  componentsAfter?: Record<string, PrototypeComponentSpec | null>;
-  /** Whether this turn has currently been reverted. */
-  reverted?: boolean;
-  /** Creation epoch millis. */
-  createdAt: number;
-  /** Creator email address. */
-  createdBy: string;
-}
-
 /** Complete hydrated state of a single prototype board. */
 export interface PrototypeBoardBundle {
   /** Board metadata and pages. */
@@ -284,8 +260,6 @@ export interface PrototypeBoardBundle {
   components: Record<string, PrototypeComponentSpec>;
   /** Comment threads on the board. */
   comments: PrototypeCommentThread[];
-  /** Recent reversible AI turn snapshots. */
-  turns: PrototypeTurnSnapshot[];
 }
 
 /** Compact summary of an existing site schema discovered from the project. */
@@ -478,4 +452,24 @@ export function sanitizePrototypeThemeValue(
     return fallback;
   }
   return trimmed;
+}
+
+/**
+ * Builds the frame CSP `img-src` directive. Frames hold AI-authored markup, so
+ * images are limited to inline data and the project's own asset hosts: an
+ * arbitrary `https:` image URL would let a block send data to any server.
+ *
+ * `storage.googleapis.com` is shared by every bucket, so it is allowed only
+ * under the project's bucket path.
+ */
+export function buildPrototypeImgSrc(storageBucket?: string): string {
+  const sources = ['data:', 'blob:', 'https://lh3.googleusercontent.com'];
+  const bucket = String(storageBucket || '').trim();
+  if (/^[a-z0-9][a-z0-9._-]{1,220}$/.test(bucket)) {
+    sources.push(
+      `https://storage.googleapis.com/${bucket}/`,
+      `https://firebasestorage.googleapis.com/v0/b/${bucket}/`
+    );
+  }
+  return `img-src ${sources.join(' ')}`;
 }

@@ -1,6 +1,6 @@
 /**
- * Isomorphic AI UX prototyping toolset, built-in skills, and turn snapshot
- * tracker for Root CMS Prototypes (`/cms/prototypes/:boardId`).
+ * Isomorphic AI UX prototyping toolset and built-in skills for Root CMS
+ * Prototypes (`/cms/prototypes/:boardId`).
  *
  * Browser- and Node-safe: do not import server-only modules here.
  */
@@ -16,7 +16,6 @@ import {
   type PrototypeComponentSpec,
   type PrototypeFrame,
   type PrototypeProjectContext,
-  type PrototypeTurnSnapshot,
 } from '../prototypes.js';
 import type {SerializedAiSkill} from './extensions.js';
 
@@ -135,10 +134,6 @@ export interface ApplyFrameBlockOperationsResult {
   error?: string;
   /** Labels of blocks inserted or modified during the edit. */
   changedBlockLabels: string[];
-  /** Labels of existing (non-proposed) components inserted or placed. */
-  reusedLabels: string[];
-  /** Labels of proposed components inserted or placed. */
-  proposedLabels: string[];
 }
 
 /** Current hydrated state exposed by `PrototypeToolBackend.getState()`. */
@@ -168,8 +163,6 @@ export interface PrototypeToolBackend {
   saveComponent: (
     spec: Omit<PrototypeComponentSpec, 'updatedAt' | 'updatedBy'>
   ) => Promise<PrototypeComponentSpec>;
-  /** Optional turn tracker recording atomic before/after snapshots for the turn. */
-  turnTracker?: PrototypeTurnTracker;
   /** Optional id generator for newly created frames or blocks. */
   generateId?: (prefix: string) => string;
 }
@@ -393,8 +386,6 @@ export function applyFrameBlockOperations(
   let map = cloneBlockMap(currentBlocks);
   const usedKeys = new Set<string>(map._array);
   const changedBlockLabels: string[] = [];
-  const reusedLabels: string[] = [];
-  const proposedLabels: string[] = [];
 
   for (const operation of operations) {
     if (operation.op === 'replaceAll') {
@@ -404,11 +395,6 @@ export function applyFrameBlockOperations(
         usedKeys.add(key);
         const block = map[key] as PrototypeBlock;
         changedBlockLabels.push(block.label);
-        if (block.proposed) {
-          proposedLabels.push(block.label);
-        } else {
-          reusedLabels.push(block.label);
-        }
       }
       continue;
     }
@@ -429,8 +415,6 @@ export function applyFrameBlockOperations(
             blocks: map,
             error: `Block "${operation.beforeBlockKey}" not found for beforeBlockKey.`,
             changedBlockLabels,
-            reusedLabels,
-            proposedLabels,
           };
         }
         insertIndex = idx;
@@ -442,8 +426,6 @@ export function applyFrameBlockOperations(
             blocks: map,
             error: `Block "${operation.afterBlockKey}" not found for afterBlockKey.`,
             changedBlockLabels,
-            reusedLabels,
-            proposedLabels,
           };
         }
         insertIndex = idx + 1;
@@ -459,11 +441,6 @@ export function applyFrameBlockOperations(
       map._array.splice(insertIndex, 0, key);
       map[key] = block;
       changedBlockLabels.push(block.label);
-      if (block.proposed) {
-        proposedLabels.push(block.label);
-      } else {
-        reusedLabels.push(block.label);
-      }
       continue;
     }
 
@@ -475,8 +452,6 @@ export function applyFrameBlockOperations(
           blocks: map,
           error: `Block "${operation.blockKey}" not found.`,
           changedBlockLabels,
-          reusedLabels,
-          proposedLabels,
         };
       }
       const next: PrototypeBlock = {
@@ -508,8 +483,6 @@ export function applyFrameBlockOperations(
           blocks: map,
           error: `Block "${operation.blockKey}" not found.`,
           changedBlockLabels,
-          reusedLabels,
-          proposedLabels,
         };
       }
       const existing = map[operation.blockKey];
@@ -532,8 +505,6 @@ export function applyFrameBlockOperations(
               blocks: map,
               error: `Block "${key}" not found for reorder.`,
               changedBlockLabels,
-              reusedLabels,
-              proposedLabels,
             };
           }
           if (!seen.has(key)) {
@@ -560,8 +531,6 @@ export function applyFrameBlockOperations(
             blocks: map,
             error: `Block "${operation.blockKey}" not found for reorder.`,
             changedBlockLabels,
-            reusedLabels,
-            proposedLabels,
           };
         }
         const [moved] = map._array.splice(currentIdx, 1);
@@ -576,8 +545,6 @@ export function applyFrameBlockOperations(
           blocks: map,
           error: 'Reorder requires either `order` or `blockKey` + `toIndex`.',
           changedBlockLabels,
-          reusedLabels,
-          proposedLabels,
         };
       }
     }
@@ -587,157 +554,7 @@ export function applyFrameBlockOperations(
     ok: true,
     blocks: map,
     changedBlockLabels,
-    reusedLabels,
-    proposedLabels,
   };
-}
-
-/**
- * Accumulates frame and component mutations across all tool calls in a single
- * user turn to produce one atomic `PrototypeTurnSnapshot` for "Revert this turn".
- */
-export class PrototypeTurnTracker {
-  private framesBefore: Record<string, PrototypeFrame | null> = {};
-  private framesAfter: Record<string, PrototypeFrame | null> = {};
-  private componentsBefore: Record<string, PrototypeComponentSpec | null> = {};
-  private componentsAfter: Record<string, PrototypeComponentSpec | null> = {};
-  private createdFrameIds = new Set<string>();
-  private createdFrameTitles = new Map<string, string>();
-  private updatedFrameTitles = new Map<string, string>();
-  private proposedComponentLabels = new Set<string>();
-  private visualTwinLabels = new Set<string>();
-  private reusedComponentLabels = new Set<string>();
-
-  /** Clears all accumulated turn mutations. */
-  reset() {
-    this.framesBefore = {};
-    this.framesAfter = {};
-    this.componentsBefore = {};
-    this.componentsAfter = {};
-    this.createdFrameIds.clear();
-    this.createdFrameTitles.clear();
-    this.updatedFrameTitles.clear();
-    this.proposedComponentLabels.clear();
-    this.visualTwinLabels.clear();
-    this.reusedComponentLabels.clear();
-  }
-
-  /** Records a newly created (or duplicated) frame. */
-  recordFrameCreate(frame: PrototypeFrame) {
-    if (!(frame.id in this.framesBefore)) {
-      this.framesBefore[frame.id] = null;
-    }
-    this.framesAfter[frame.id] = cloneSnapshot(frame);
-    this.createdFrameIds.add(frame.id);
-    this.createdFrameTitles.set(frame.id, frame.title);
-    for (const {block} of getOrderedBlocks(frame.blocks)) {
-      if (block.proposed) {
-        this.proposedComponentLabels.add(block.label);
-      } else {
-        this.reusedComponentLabels.add(block.label);
-      }
-    }
-  }
-
-  /** Records an in-place edit to an existing frame. */
-  recordFrameEdit(
-    before: PrototypeFrame,
-    after: PrototypeFrame,
-    details?: {reusedLabels?: string[]; proposedLabels?: string[]}
-  ) {
-    if (!(after.id in this.framesBefore)) {
-      this.framesBefore[after.id] = cloneSnapshot(before);
-    }
-    this.framesAfter[after.id] = cloneSnapshot(after);
-    if (this.createdFrameIds.has(after.id)) {
-      this.createdFrameTitles.set(after.id, after.title);
-    } else {
-      this.updatedFrameTitles.set(after.id, after.title);
-    }
-    for (const label of details?.reusedLabels || []) {
-      this.reusedComponentLabels.add(label);
-    }
-    for (const label of details?.proposedLabels || []) {
-      this.proposedComponentLabels.add(label);
-    }
-  }
-
-  /** Records a saved component spec (Visual Twin or Proposed Component). */
-  recordComponentSave(
-    before: PrototypeComponentSpec | null,
-    after: PrototypeComponentSpec
-  ) {
-    if (!(after.name in this.componentsBefore)) {
-      this.componentsBefore[after.name] = before ? cloneSnapshot(before) : null;
-    }
-    this.componentsAfter[after.name] = cloneSnapshot(after);
-    if (after.origin === 'proposed') {
-      this.proposedComponentLabels.add(after.label || after.name);
-    } else {
-      this.visualTwinLabels.add(after.label || after.name);
-    }
-  }
-
-  /** Returns true if any frame or component was mutated in this turn. */
-  hasMutations(): boolean {
-    return (
-      Object.keys(this.framesAfter).length > 0 ||
-      Object.keys(this.componentsAfter).length > 0
-    );
-  }
-
-  /** Builds concise human-readable summary lines for the Turn Summary Card. */
-  buildSummaryLines(): string[] {
-    const lines: string[] = [];
-    for (const title of this.createdFrameTitles.values()) {
-      lines.push(`Created frame ${title}`);
-    }
-    for (const title of this.updatedFrameTitles.values()) {
-      lines.push(`Updated frame ${title}`);
-    }
-    for (const label of this.proposedComponentLabels) {
-      lines.push(`Proposed component ${label}`);
-    }
-    const reused = Array.from(this.reusedComponentLabels).filter(
-      (label) => !this.proposedComponentLabels.has(label)
-    );
-    if (reused.length > 0) {
-      lines.push(`Reused ${reused.join(', ')}`);
-    } else if (this.visualTwinLabels.size > 0 && lines.length === 0) {
-      lines.push(
-        `Saved visual twin ${Array.from(this.visualTwinLabels).join(', ')}`
-      );
-    }
-    return lines;
-  }
-
-  /**
-   * Builds a `PrototypeTurnSnapshot` payload ready for `apiSavePrototypeTurn`,
-   * or returns `null` if no mutations were recorded.
-   */
-  buildSnapshot(
-    turnId: string,
-    boardId: string
-  ): Omit<PrototypeTurnSnapshot, 'createdAt' | 'createdBy'> | null {
-    if (!this.hasMutations()) {
-      return null;
-    }
-    const hasComponentMutations = Object.keys(this.componentsAfter).length > 0;
-    return {
-      id: turnId,
-      boardId,
-      summaryLines: this.buildSummaryLines(),
-      framesBefore: cloneSnapshot(this.framesBefore),
-      framesAfter: cloneSnapshot(this.framesAfter),
-      ...(hasComponentMutations
-        ? {
-            componentsBefore: cloneSnapshot(this.componentsBefore),
-            componentsAfter: cloneSnapshot(this.componentsAfter),
-          }
-        : {}),
-      reverted: false,
-    };
-  }
 }
 
 /** Strips basic HTML tags when a comment item only has an HTML `body`. */
@@ -1156,8 +973,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
         css: z.string().optional().describe('Optional scoped CSS rules.'),
       }),
       execute: async (input) => {
-        const state = getEffectiveState();
-        const before = state.components[input.name] || null;
         const saved = await backend.saveComponent({
           name: input.name,
           label: input.label,
@@ -1168,7 +983,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           css: input.css,
         });
         committedComponents.set(saved.name, saved);
-        backend.turnTracker?.recordComponentSave(before, saved);
         return {
           saved: true,
           spec: {
@@ -1262,7 +1076,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             blocks,
           });
           committedFrames.set(saved.id, saved);
-          backend.turnTracker?.recordFrameCreate(saved);
           return {
             created: true,
             frame: summarizeFrame(saved, new Map()),
@@ -1369,7 +1182,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             blocks,
           });
           committedFrames.set(saved.id, saved);
-          backend.turnTracker?.recordFrameCreate(saved);
           return {
             duplicated: true,
             frame: summarizeFrame(saved, new Map()),
@@ -1427,9 +1239,8 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           }
 
           let nextBlocks = cloneBlockMap(existing.blocks);
-          let opResult: ApplyFrameBlockOperationsResult | null = null;
           if (input.operations && input.operations.length > 0) {
-            opResult = applyFrameBlockOperations(
+            const opResult = applyFrameBlockOperations(
               existing.blocks,
               input.operations,
               state.components
@@ -1452,7 +1263,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
               ? Math.round(input.y)
               : existing.y;
 
-          const before = cloneSnapshot(existing);
           const saved = await backend.saveFrame({
             id: existing.id,
             boardId: existing.boardId,
@@ -1464,10 +1274,6 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             blocks: nextBlocks,
           });
           committedFrames.set(saved.id, saved);
-          backend.turnTracker?.recordFrameEdit(before, saved, {
-            reusedLabels: opResult?.reusedLabels,
-            proposedLabels: opResult?.proposedLabels,
-          });
           return {
             updated: true,
             frame: summarizeFrame(saved, new Map()),

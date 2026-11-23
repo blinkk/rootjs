@@ -95,7 +95,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     deleteComment,
     applyFrameMutated,
     applyComponentMutated,
-    applyTurnMutated,
+    refreshAfterAiTurn,
   } = usePrototypeBoard(boardId);
 
   const {roles} = useProjectRoles();
@@ -876,7 +876,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               }
             }}
             onComponentMutated={applyComponentMutated}
-            onTurnMutated={applyTurnMutated}
+            onTurnFinished={refreshAfterAiTurn}
             onClose={() => setActivePanel(null)}
           />
         )}

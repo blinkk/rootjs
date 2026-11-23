@@ -37,7 +37,6 @@ import {
   type PrototypeComponentSpec,
   type PrototypeFrame,
   type PrototypeTheme,
-  type PrototypeTurnSnapshot,
 } from '../shared/prototypes.js';
 import {getCliUser} from './cli-user.js';
 
@@ -150,6 +149,7 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
       boardsCol.doc(boardId).collection('Components'),
     commentsCol: (boardId: string) =>
       boardsCol.doc(boardId).collection('Comments'),
+    // Legacy: AI turn snapshots are no longer written; only used for cleanup.
     turnsCol: (boardId: string) => boardsCol.doc(boardId).collection('Turns'),
   };
 }
@@ -673,19 +673,13 @@ export async function prototypesGet(
     id: boardSnap.id,
   };
 
-  const [
-    framesSnap,
-    boardComponentsSnap,
-    projectComponentsSnap,
-    commentsSnap,
-    turnsSnap,
-  ] = await Promise.all([
-    refs.framesCol(boardId).get(),
-    refs.componentsCol(boardId).get(),
-    refs.projectComponentsCol.get(),
-    refs.commentsCol(boardId).get(),
-    refs.turnsCol(boardId).orderBy('createdAt', 'desc').limit(50).get(),
-  ]);
+  const [framesSnap, boardComponentsSnap, projectComponentsSnap, commentsSnap] =
+    await Promise.all([
+      refs.framesCol(boardId).get(),
+      refs.componentsCol(boardId).get(),
+      refs.projectComponentsCol.get(),
+      refs.commentsCol(boardId).get(),
+    ]);
 
   const frames = sortFrames(
     framesSnap.docs.map((d) => ({
@@ -705,17 +699,12 @@ export async function prototypesGet(
   const comments = commentsSnap.docs
     .map((d) => ({...(d.data() as PrototypeCommentThread), id: d.id}))
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-  const turns = turnsSnap.docs.map((d) => ({
-    ...(d.data() as PrototypeTurnSnapshot),
-    id: d.id,
-  }));
 
   const bundle: PrototypeBoardBundle = {
     board,
     frames,
     components,
     comments,
-    turns,
   };
 
   if (outputDirArg) {
@@ -978,6 +967,7 @@ export async function prototypesDelete(
     deleteCollectionDocs(db, refs.framesCol(boardId)),
     deleteCollectionDocs(db, refs.componentsCol(boardId)),
     deleteCollectionDocs(db, refs.commentsCol(boardId)),
+    // Legacy cleanup for boards created before turn snapshots were removed.
     deleteCollectionDocs(db, refs.turnsCol(boardId)),
   ]);
   await boardRef.delete();

@@ -206,7 +206,6 @@ describe('PrototypesPage', () => {
       frames: [],
       components: {},
       comments: [],
-      turns: [],
     });
 
     const {findByText, getByLabelText, getByRole} = renderPage();

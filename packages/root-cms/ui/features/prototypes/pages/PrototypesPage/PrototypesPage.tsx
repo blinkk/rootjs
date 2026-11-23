@@ -274,8 +274,8 @@ export function PrototypesPage() {
         <Text as="p" size="body-sm" className="m-0">
           Are you sure you want to permanently delete{' '}
           <strong className="font-semibold text-strong">{board.title}</strong>?
-          All frames, comments, and AI turn history on this board will be
-          removed. This action cannot be undone.
+          All frames and comments on this board will be removed. This action
+          cannot be undone.
         </Text>
       ),
       labels: {confirm: 'Delete', cancel: 'Cancel'},

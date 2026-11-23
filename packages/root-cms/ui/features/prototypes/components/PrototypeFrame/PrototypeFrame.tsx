@@ -26,6 +26,7 @@ import type {
   PrototypeTheme,
 } from '../../../../../shared/prototypes.js';
 import {
+  buildPrototypeImgSrc,
   DEFAULT_FOLD_HEIGHT_DESKTOP,
   DEFAULT_FOLD_HEIGHT_MOBILE,
   getOrderedBlocks,
@@ -88,7 +89,7 @@ function buildSandboxedFrameSrcdoc(options: {
     `script-src ${runtimeUrl}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
     'font-src https://fonts.gstatic.com data:',
-    'img-src https: data: blob:',
+    buildPrototypeImgSrc(window.__ROOT_CTX.firebaseConfig?.storageBucket),
     "connect-src 'none'",
     "form-action 'none'",
     "frame-src 'none'",

@@ -14,7 +14,6 @@ import type {
   PrototypeFrame,
   PrototypeProjectContext,
   PrototypeTheme,
-  PrototypeTurnSnapshot,
 } from '../../../shared/prototypes.js';
 import type {ClientTurnConfig} from '../ai/components/RootAIChat/clientChatTransport.js';
 
@@ -56,7 +55,7 @@ export async function apiListPrototypeBoards(options?: {
   });
 }
 
-/** Loads the full bundle (board, frames, components, comments, turns) for `boardId`. */
+/** Loads the full bundle (board, frames, components, comments) for `boardId`. */
 export async function apiGetPrototypeBoard(
   boardId: string
 ): Promise<PrototypeBoardBundle> {
@@ -133,29 +132,6 @@ export async function apiSavePrototypeComponent(input: {
 }): Promise<PrototypeComponentSpec> {
   return postJson<PrototypeComponentSpec>(
     '/cms/api/prototypes.component.save',
-    input
-  );
-}
-
-/** Records a reversible AI mutation turn snapshot. */
-export async function apiSavePrototypeTurn(input: {
-  boardId: string;
-  turn: Omit<PrototypeTurnSnapshot, 'createdAt' | 'createdBy'>;
-}): Promise<PrototypeTurnSnapshot> {
-  return postJson<PrototypeTurnSnapshot>(
-    '/cms/api/prototypes.turn.save',
-    input
-  );
-}
-
-/** Toggles revert/restore of an AI mutation turn snapshot. */
-export async function apiRevertPrototypeTurn(input: {
-  boardId: string;
-  turnId: string;
-  restore?: boolean;
-}): Promise<{reverted: boolean}> {
-  return postJson<{reverted: boolean}>(
-    '/cms/api/prototypes.turn.revert',
     input
   );
 }

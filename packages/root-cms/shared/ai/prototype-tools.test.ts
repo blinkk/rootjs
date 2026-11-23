@@ -15,7 +15,6 @@ import {
   DEFAULT_FRAME_START_Y,
   FRAME_AUTO_LAYOUT_GAP,
   PROTOTYPE_AI_SKILLS,
-  PrototypeTurnTracker,
   type PrototypeToolBackend,
 } from './prototype-tools.js';
 
@@ -84,7 +83,6 @@ function makeTestBackend(options?: {
   frames?: PrototypeFrame[];
   components?: Record<string, PrototypeComponentSpec>;
   comments?: PrototypeCommentThread[];
-  tracker?: PrototypeTurnTracker;
 }): {
   backend: PrototypeToolBackend;
   frames: PrototypeFrame[];
@@ -174,7 +172,6 @@ function makeTestBackend(options?: {
       components[saved.name] = saved;
       return saved;
     },
-    turnTracker: options?.tracker,
     generateId: (prefix) => `${prefix}_${idCounter++}`,
   };
 
@@ -308,8 +305,6 @@ describe('applyFrameBlockOperations', () => {
       'cta_1',
       'footer_1',
     ]);
-    expect(result.proposedLabels).toEqual(['Pricing matrix']);
-    expect(result.reusedLabels).toEqual(['Navigation', 'Footer']);
   });
 
   test('supports update, remove, and reorder (by order array and by toIndex)', () => {
@@ -355,94 +350,8 @@ describe('applyFrameBlockOperations', () => {
   });
 });
 
-describe('PrototypeTurnTracker', () => {
-  test('generates concise summary lines and preserves atomic before/after snapshots', () => {
-    const tracker = new PrototypeTurnTracker();
-    expect(tracker.hasMutations()).toBe(false);
-    expect(tracker.buildSnapshot('turn_1', 'board_1')).toBeNull();
-
-    const spec: PrototypeComponentSpec = {
-      name: 'PricingMatrix',
-      label: 'Pricing matrix',
-      origin: 'proposed',
-      rationale: 'Three-tier comparison table not in existing schemas.',
-      defaultHtml: '<section>3 tiers</section>',
-      updatedAt: 2000,
-      updatedBy: 'alice@example.com',
-    };
-    tracker.recordComponentSave(null, spec);
-
-    const frameB = makeFrame({
-      id: 'frame_b',
-      title: 'Pricing B',
-      blocks: buildBlockMap([
-        {
-          key: 'h1',
-          component: 'TemplateHero',
-          label: 'Headline',
-          html: '<section>Hero</section>',
-        },
-        {
-          key: 'p1',
-          component: 'PricingMatrix',
-          label: 'Pricing matrix',
-          proposed: true,
-          html: '<section>3 tiers</section>',
-        },
-        {
-          key: 'g1',
-          component: 'FeatureGrid',
-          label: 'Feature grid',
-          html: '<section>Grid</section>',
-        },
-        {
-          key: 'c1',
-          component: 'CtaBand',
-          label: 'CTA band',
-          html: '<section>CTA</section>',
-        },
-      ]),
-    });
-    tracker.recordFrameCreate(frameB);
-
-    // Editing a frame created in the same turn must keep `framesBefore[id] = null`.
-    const frameBEdited = {...frameB, title: 'Pricing B'};
-    tracker.recordFrameEdit(frameB, frameBEdited);
-
-    const snapshot = tracker.buildSnapshot('turn_1', 'board_1');
-    expect(snapshot).not.toBeNull();
-    expect(snapshot!.framesBefore['frame_b']).toBeNull();
-    expect(snapshot!.framesAfter['frame_b']?.title).toBe('Pricing B');
-    expect(snapshot!.componentsBefore?.['PricingMatrix']).toBeNull();
-    expect(snapshot!.componentsAfter?.['PricingMatrix']?.origin).toBe(
-      'proposed'
-    );
-    expect(snapshot!.summaryLines).toEqual([
-      'Created frame Pricing B',
-      'Proposed component Pricing matrix',
-      'Reused Headline, Feature grid, CTA band',
-    ]);
-  });
-
-  test('keeps original pre-turn frame state across multiple edits to an existing frame', () => {
-    const tracker = new PrototypeTurnTracker();
-    const original = makeFrame({id: 'f1', title: 'Pricing A'});
-    const edit1 = {...original, title: 'Pricing A v1'};
-    const edit2 = {...edit1, title: 'Pricing A v2'};
-
-    tracker.recordFrameEdit(original, edit1);
-    tracker.recordFrameEdit(edit1, edit2);
-
-    const snapshot = tracker.buildSnapshot('turn_2', 'board_1');
-    expect(snapshot!.framesBefore['f1']?.title).toBe('Pricing A');
-    expect(snapshot!.framesAfter['f1']?.title).toBe('Pricing A v2');
-    expect(snapshot!.summaryLines).toEqual(['Updated frame Pricing A v2']);
-  });
-});
-
 describe('createPrototypeAiTools', () => {
   test('executes board, component, frame, and comment tools end-to-end', async () => {
-    const tracker = new PrototypeTurnTracker();
     const frameA = makeFrame({id: 'frame_a', title: 'Pricing A', x: 80, y: 80});
     const openComment: PrototypeCommentThread = {
       id: 'thread_1',
@@ -477,7 +386,6 @@ describe('createPrototypeAiTools', () => {
     const {backend, frames, getProjectContext} = makeTestBackend({
       frames: [frameA],
       comments: [openComment],
-      tracker,
     });
     const tools = createPrototypeAiTools(backend);
     const ctx = {toolCallId: 'tc_1', messages: []};
@@ -553,13 +461,6 @@ describe('createPrototypeAiTools', () => {
     expect(comments.comments[0].text).toBe(
       'Highlight the Pro tier more clearly.'
     );
-
-    const snapshot = tracker.buildSnapshot('turn_99', 'board_1');
-    expect(snapshot!.summaryLines).toEqual([
-      'Created frame Pricing B',
-      'Proposed component Pricing matrix',
-      'Reused Headline, Feature grid, CTA band',
-    ]);
   });
 
   test('places parallel frame_create calls side-by-side without stacking when network saves overlap', async () => {

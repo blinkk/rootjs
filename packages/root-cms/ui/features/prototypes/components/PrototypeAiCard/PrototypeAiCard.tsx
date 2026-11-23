@@ -1,7 +1,5 @@
 import {useChat} from '@ai-sdk/react';
 import {
-  IconArrowBackUp,
-  IconArrowForwardUp,
   IconArrowUp,
   IconCheck,
   IconChevronDown,
@@ -21,7 +19,6 @@ import {
   createPrototypeAiTools,
   prettyPrototypeToolLabel,
   PROTOTYPE_AI_SKILLS,
-  PrototypeTurnTracker,
 } from '../../../../../shared/ai/prototype-tools.js';
 import type {
   PrototypeBlock,
@@ -29,7 +26,6 @@ import type {
   PrototypeComponentSpec,
   PrototypeFrame,
   PrototypeProjectContext,
-  PrototypeTurnSnapshot,
 } from '../../../../../shared/prototypes.js';
 import {Markdown} from '../../../../components/Markdown/Markdown.js';
 import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
@@ -54,10 +50,8 @@ import {createReadOnlyClientCmsTools} from '../../../ai/components/RootAIChat/cl
 import {
   apiGetPrototypeContext,
   apiPreparePrototypeAiTurn,
-  apiRevertPrototypeTurn,
   apiSavePrototypeComponent,
   apiSavePrototypeFrame,
-  apiSavePrototypeTurn,
   apiUpdatePrototypeBoard,
 } from '../../prototypes-client.js';
 
@@ -83,8 +77,8 @@ export interface PrototypeAiCardProps {
   onFrameMutated?: (frame: PrototypeFrame) => void;
   /** Invoked when AI proposes/updates a component spec. */
   onComponentMutated?: (spec: PrototypeComponentSpec) => void;
-  /** Invoked when an AI turn snapshot is saved or reverted. */
-  onTurnMutated?: (turn?: PrototypeTurnSnapshot) => void;
+  /** Invoked when an AI turn finishes so the board can refresh. */
+  onTurnFinished?: () => void;
   /** Invoked when the AI streaming/running state changes. */
   onStreamingChange?: (streaming: boolean) => void;
   /** Invoked when the user closes the floating Root AI card. */
@@ -158,12 +152,6 @@ function generateChatId(): string {
     return `proto-${crypto.randomUUID()}`;
   }
   return `proto-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/** Normalizes a message id into a Firestore-safe turn document id. */
-function sanitizeTurnId(id: string): string {
-  const cleaned = id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 96);
-  return cleaned || `turn_${Date.now()}`;
 }
 
 function guessImageMimeType(filename: string): string {
@@ -535,59 +523,15 @@ function PrototypeAiChatSession({
   }, [props.bundle.components]);
 
   const projectContextCacheRef = useRef<PrototypeProjectContext | null>(null);
-  const turnTrackerRef = useRef<PrototypeTurnTracker>(
-    new PrototypeTurnTracker()
-  );
-
-  // Local turns saved or toggled during this session, merged with `bundle.turns`.
-  const [localTurnsById, setLocalTurnsById] = useState<
-    Record<string, PrototypeTurnSnapshot>
-  >({});
-  const [revertingTurnId, setRevertingTurnId] = useState<string | null>(null);
   const handledQueuedPromptIdRef = useRef<string | number | null>(null);
-
-  const turnsById = useMemo(() => {
-    const map = new Map<string, PrototypeTurnSnapshot>();
-    for (const turn of props.bundle.turns || []) {
-      map.set(turn.id, turn);
-    }
-    for (const [id, turn] of Object.entries(localTurnsById)) {
-      map.set(id, turn);
-    }
-    return map;
-  }, [props.bundle.turns, localTurnsById]);
 
   const handleTurnFinish = useCallback(
     async (finalMessages: UIMessage[]) => {
       const currentProps = propsRef.current;
       const boardId = currentProps.bundle.board.id;
-      const tracker = turnTrackerRef.current;
 
-      // Save atomic turn snapshot if any frame or component was mutated.
-      if (tracker.hasMutations()) {
-        const lastAssistant = [...finalMessages]
-          .reverse()
-          .find((m) => m.role === 'assistant');
-        const turnId = sanitizeTurnId(
-          lastAssistant?.id || `turn_${Date.now()}`
-        );
-        const snapshot = tracker.buildSnapshot(turnId, boardId);
-        tracker.reset();
-        if (snapshot) {
-          try {
-            const savedTurn = await apiSavePrototypeTurn({
-              boardId,
-              turn: snapshot,
-            });
-            setLocalTurnsById((prev) => ({...prev, [savedTurn.id]: savedTurn}));
-            currentProps.onTurnMutated?.(savedTurn);
-          } catch (err) {
-            console.error('failed to save prototype AI turn snapshot', err);
-          }
-        }
-      } else {
-        tracker.reset();
-      }
+      // Refresh the board so it reflects everything the AI changed this turn.
+      currentProps.onTurnFinished?.();
 
       // Persist conversation history to Firestore and link `aiChatId` on the board.
       try {
@@ -612,7 +556,6 @@ function PrototypeAiChatSession({
       createClientChatTransport({
         loadTurnConfig: async (): Promise<ClientTurnConfig> => {
           const currentProps = propsRef.current;
-          turnTrackerRef.current.reset();
           const config = await apiPreparePrototypeAiTurn({
             boardId: currentProps.bundle.board.id,
             modelId: selectedModelRef.current?.id,
@@ -686,7 +629,6 @@ function PrototypeAiChatSession({
                 currentProps.onComponentMutated?.(saved);
                 return saved;
               },
-              turnTracker: turnTrackerRef.current,
             }),
           };
         },
@@ -757,36 +699,11 @@ function PrototypeAiChatSession({
     send,
   ]);
 
-  const handleToggleRevertTurn = async (turn: PrototypeTurnSnapshot) => {
-    setRevertingTurnId(turn.id);
-    try {
-      const restore = Boolean(turn.reverted);
-      const res = await apiRevertPrototypeTurn({
-        boardId: props.bundle.board.id,
-        turnId: turn.id,
-        restore,
-      });
-      const updatedTurn: PrototypeTurnSnapshot = {
-        ...turn,
-        reverted: res.reverted,
-      };
-      setLocalTurnsById((prev) => ({...prev, [turn.id]: updatedTurn}));
-      props.onTurnMutated?.(updatedTurn);
-    } catch (err) {
-      showErrorNotification(err, {title: 'Failed to update turn'});
-    } finally {
-      setRevertingTurnId(null);
-    }
-  };
-
   return (
     <>
       <ConversationStream
         messages={messages}
         isStreaming={isStreaming}
-        turnsById={turnsById}
-        revertingTurnId={revertingTurnId}
-        onToggleRevertTurn={handleToggleRevertTurn}
         onSelectStarterPrompt={(prompt) => send(prompt)}
       />
 
@@ -822,9 +739,6 @@ function PrototypeAiChatSession({
 interface ConversationStreamProps {
   messages: UIMessage[];
   isStreaming: boolean;
-  turnsById: Map<string, PrototypeTurnSnapshot>;
-  revertingTurnId: string | null;
-  onToggleRevertTurn: (turn: PrototypeTurnSnapshot) => void;
   onSelectStarterPrompt: (prompt: string) => void;
 }
 
@@ -836,7 +750,7 @@ function ConversationStream(props: ConversationStreamProps) {
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [props.messages, props.isStreaming, props.turnsById.size]);
+  }, [props.messages, props.isStreaming]);
 
   if (props.messages.length === 0) {
     return (
@@ -893,21 +807,9 @@ function ConversationStream(props: ConversationStreamProps) {
       ref={scrollRef}
       className="PrototypeAiCard__stream flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 py-3"
     >
-      {props.messages.map((message) => {
-        const turn =
-          message.role === 'assistant'
-            ? props.turnsById.get(sanitizeTurnId(message.id)) || null
-            : null;
-        return (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            turn={turn}
-            reverting={Boolean(turn && props.revertingTurnId === turn.id)}
-            onToggleRevertTurn={props.onToggleRevertTurn}
-          />
-        );
-      })}
+      {props.messages.map((message) => (
+        <MessageBubble key={message.id} message={message} />
+      ))}
       {props.isStreaming && !lastHasVisibleStreamingPart && (
         <div
           className="PrototypeAiCard__toolStatus flex items-center gap-2 text-xs text-muted"
@@ -925,13 +827,8 @@ function ConversationStream(props: ConversationStreamProps) {
   );
 }
 
-function MessageBubble(props: {
-  message: UIMessage;
-  turn: PrototypeTurnSnapshot | null;
-  reverting: boolean;
-  onToggleRevertTurn: (turn: PrototypeTurnSnapshot) => void;
-}) {
-  const {message, turn} = props;
+function MessageBubble(props: {message: UIMessage}) {
+  const {message} = props;
   const parts = (message.parts || []) as any[];
 
   if (message.role === 'user') {
@@ -970,13 +867,6 @@ function MessageBubble(props: {
       {parts.map((part, index) => (
         <AssistantPart key={index} part={part} />
       ))}
-      {turn && turn.summaryLines.length > 0 && (
-        <TurnSummaryCard
-          turn={turn}
-          loading={props.reverting}
-          onToggleRevert={() => props.onToggleRevertTurn(turn)}
-        />
-      )}
     </div>
   );
 }
@@ -1056,56 +946,6 @@ function AssistantPart(props: {part: any}) {
   }
 
   return null;
-}
-
-function TurnSummaryCard(props: {
-  turn: PrototypeTurnSnapshot;
-  loading: boolean;
-  onToggleRevert: () => void;
-}) {
-  const {turn} = props;
-  const reverted = Boolean(turn.reverted);
-
-  return (
-    <div
-      className={cn(
-        'PrototypeAiCard__turnSummary flex flex-col gap-2 rounded-md border border-border bg-page p-2.5 text-xs text-muted',
-        reverted && 'PrototypeAiCard__turnSummary--reverted'
-      )}
-    >
-      <ul className="PrototypeAiCard__turnLines m-0 flex list-none flex-col gap-1 p-0">
-        {turn.summaryLines.map((line, idx) => (
-          <li
-            key={idx}
-            className={cn(
-              'flex items-start gap-1.5 leading-snug',
-              reverted && 'line-through opacity-70'
-            )}
-          >
-            <span
-              className="mt-1.5 size-1 shrink-0 rounded-full bg-border-strong"
-              aria-hidden="true"
-            />
-            <span>{line}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="PrototypeAiCard__turnActions flex items-center justify-between gap-2 pt-0.5">
-        <Button
-          variant="default"
-          size="xs"
-          loading={props.loading}
-          icon={reverted ? <IconArrowForwardUp /> : <IconArrowBackUp />}
-          onClick={props.onToggleRevert}
-        >
-          {reverted ? 'Redo turn' : 'Revert this turn'}
-        </Button>
-        {reverted && (
-          <span className="text-xs font-medium text-muted">Reverted</span>
-        )}
-      </div>
-    </div>
-  );
 }
 
 interface ComposerFooterProps {
