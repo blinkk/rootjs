@@ -691,49 +691,82 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       }
       if (thread.anchor.pageId !== activePage.id) {
         handleSelectPage(thread.anchor.pageId);
+        // Prevent the page-switch auto-fit effect from overriding this focus camera.
+        initialFitDoneRef.current = `${bundle.board.id}:${thread.anchor.pageId}`;
       }
       const el = viewportElRef.current;
+      const bounds = el?.getBoundingClientRect();
       const vw = el?.clientWidth || window.innerWidth || 1280;
       const vh = el?.clientHeight || window.innerHeight || 800;
+      const visibleVw =
+        activePanel !== null && vw >= 768 ? Math.max(360, vw - 376) : vw;
 
-      if (thread.anchor.frameId) {
-        const frame = bundle.frames.find(
-          (item) => item.id === thread.anchor.frameId
-        );
-        if (frame) {
-          setSelectedFrameId(frame.id);
-          setSelectedBlockKey(thread.anchor.blockKey || null);
-          const rects = blockRectsByFrameRef.current.get(frame.id) || [];
-          const blockRect = thread.anchor.blockKey
-            ? rects.find((r) => r.blockKey === thread.anchor.blockKey)
-            : null;
-          const targetBox = blockRect
-            ? {
-                x: frame.x + blockRect.left,
-                y: frame.y + blockRect.top,
-                width: Math.max(320, blockRect.width),
-                height: Math.max(240, blockRect.height),
-              }
-            : {
-                x: frame.x,
-                y: frame.y,
-                width: frame.width,
-                height: frame.cachedHeight || 760,
-              };
-          setCamera(fitCameraToBounds([targetBox], vw, vh, 120));
-          return;
+      let nextCamera: CanvasCamera;
+      let pinWorldX = thread.anchor.fallbackX;
+      let pinWorldY = thread.anchor.fallbackY;
+
+      const frame = thread.anchor.frameId
+        ? bundle.frames.find((item) => item.id === thread.anchor.frameId)
+        : null;
+
+      if (frame) {
+        setSelectedFrameId(frame.id);
+        setSelectedBlockKey(thread.anchor.blockKey || null);
+        const rects = blockRectsByFrameRef.current.get(frame.id) || [];
+        const blockRect = thread.anchor.blockKey
+          ? rects.find((r) => r.blockKey === thread.anchor.blockKey)
+          : null;
+        const frameHeight = Math.max(240, frame.cachedHeight || 760);
+        if (blockRect && blockRect.width > 0 && blockRect.height > 0) {
+          pinWorldX =
+            frame.x + blockRect.left + thread.anchor.relX * blockRect.width;
+          pinWorldY =
+            frame.y + blockRect.top + thread.anchor.relY * blockRect.height;
+        } else {
+          pinWorldX =
+            frame.x +
+            (thread.anchor.fallbackX ?? frame.width * thread.anchor.relX);
+          pinWorldY =
+            frame.y +
+            (thread.anchor.fallbackY ?? frameHeight * thread.anchor.relY);
         }
+        const targetBox = blockRect
+          ? {
+              x: frame.x + blockRect.left,
+              y: frame.y + blockRect.top,
+              width: Math.max(320, blockRect.width),
+              height: Math.max(240, blockRect.height),
+            }
+          : {
+              x: frame.x,
+              y: frame.y,
+              width: frame.width,
+              height: frameHeight,
+            };
+        nextCamera = fitCameraToBounds([targetBox], visibleVw, vh, 120);
+      } else {
+        // Free-floating canvas pin: center the visible viewport on its world coordinates.
+        const zoom = Math.max(camera.zoom, 0.75);
+        nextCamera = {
+          x: Math.round(visibleVw / 2 - pinWorldX * zoom),
+          y: Math.round(vh / 2 - pinWorldY * zoom),
+          zoom,
+        };
       }
 
-      // Free-floating canvas pin: center the viewport on its world coordinates.
-      const zoom = Math.max(camera.zoom, 0.75);
-      setCamera({
-        x: Math.round(vw / 2 - thread.anchor.fallbackX * zoom),
-        y: Math.round(vh / 2 - thread.anchor.fallbackY * zoom),
-        zoom,
+      userMovedCameraRef.current = true;
+      setCamera(nextCamera);
+      setPinPopover({
+        threadId: thread.id,
+        clientX: Math.round(
+          (bounds?.left || 0) + nextCamera.x + pinWorldX * nextCamera.zoom
+        ),
+        clientY: Math.round(
+          (bounds?.top || 0) + nextCamera.y + pinWorldY * nextCamera.zoom
+        ),
       });
     },
-    [bundle, activePage.id, handleSelectPage, camera.zoom]
+    [bundle, activePage.id, activePanel, handleSelectPage, camera.zoom]
   );
 
   const handleAddressCommentsInAi = useCallback(() => {

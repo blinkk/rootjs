@@ -19,6 +19,8 @@ import {
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {cn} from '../../../../utils/classes.js';
+import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
+import {useUserProfiles} from '../../../users/useUserProfile.js';
 import type {PrototypeExportPayload} from '../../prototype-export.js';
 import {PrototypeAnnotationView} from '../PrototypeAnnotation/PrototypeAnnotation.js';
 import {
@@ -415,6 +417,23 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     return map;
   }, [frames]);
 
+  const pinAuthorEmails = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          openThreads
+            .map(
+              (thread) =>
+                thread.comments.find((item) => item.type === 'comment')
+                  ?.createdBy || thread.createdBy
+            )
+            .filter(Boolean)
+        )
+      ),
+    [openThreads]
+  );
+  const {profiles: pinAuthorProfiles} = useUserProfiles(pinAuthorEmails);
+
   /** Computes the canvas world `(worldX, worldY)` coordinates for an open comment thread. */
   function getCommentWorldPosition(thread: PrototypeCommentThread): {
     worldX: number;
@@ -722,9 +741,12 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
 
         {/* Unified draggable comment bubbles across frames, blocks, and free canvas. */}
         {openThreads.map((thread) => {
-          const messageCount =
-            thread.comments.filter((item) => item.type === 'comment').length ||
-            1;
+          const authorEmail =
+            thread.comments.find((item) => item.type === 'comment')
+              ?.createdBy || thread.createdBy;
+          const authorProfile = authorEmail
+            ? pinAuthorProfiles.get(authorEmail.toLowerCase()) || null
+            : null;
           const isActivePin = thread.id === activeThreadId;
           const isDraggingPin = thread.id === draggingThreadId;
           const canMovePin =
@@ -739,7 +761,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
               key={thread.id}
               type="button"
               className={cn(
-                'PrototypeCanvas__commentPin absolute z-30 flex size-7 items-center justify-center rounded-full border-2 border-surface bg-button-blue-hover font-sans text-xs font-bold text-inverse shadow-md transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                'PrototypeCanvas__commentPin absolute z-30 flex size-8 items-center justify-center overflow-hidden rounded-full border-2 border-surface bg-surface p-0 shadow-md transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                 isDraggingPin
                   ? 'scale-110 cursor-grabbing ring-2 ring-focus'
                   : canMovePin && !effectivePanMode
@@ -752,7 +774,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
                 top: `${worldY}px`,
                 transform: `translate(-50%, -50%) scale(${hudScale})`,
               }}
-              aria-label={`Open comment thread on ${thread.anchorLabel}`}
+              aria-label={`Open comment by ${authorProfile?.displayName || authorEmail}`}
               onPointerDown={(e) =>
                 handlePinPointerDown(e, thread, worldX, worldY, canMovePin)
               }
@@ -771,7 +793,13 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
                 onSelectCommentThread(thread, e.clientX, e.clientY);
               }}
             >
-              {messageCount}
+              <UserAvatar
+                email={authorEmail}
+                profile={authorProfile}
+                size={28}
+                withTooltip={false}
+                className="pointer-events-none"
+              />
             </button>
           );
         })}

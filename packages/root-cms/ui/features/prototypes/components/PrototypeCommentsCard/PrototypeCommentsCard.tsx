@@ -278,6 +278,8 @@ function PrototypeThreadItem(props: {
   thread: PrototypeCommentThread;
   highlighted?: boolean;
   compact?: boolean;
+  hideHeader?: boolean;
+  onClose?: () => void;
   onNavigate?: () => void;
   onAddReply: (input: {
     threadId: string;
@@ -295,6 +297,8 @@ function PrototypeThreadItem(props: {
     thread,
     highlighted = false,
     compact = false,
+    hideHeader = false,
+    onClose,
     onNavigate,
     onAddReply,
     onSetThreadStatus,
@@ -375,45 +379,47 @@ function PrototypeThreadItem(props: {
         compact && 'border-0 p-0'
       )}
     >
-      {/* Anchor label & status actions. */}
-      <div className="flex items-center justify-between gap-2">
-        {onNavigate ? (
-          <button
-            type="button"
-            className="flex min-w-0 cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-left font-sans text-xs font-semibold text-strong hover:text-link focus-visible:outline-2 focus-visible:outline-focus"
-            onClick={onNavigate}
-            title="Pan to anchor"
-          >
-            <IconMessageCircle size={14} className="shrink-0 text-info" />
-            <span className="truncate">{thread.anchorLabel}</span>
-          </button>
-        ) : (
-          <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-strong">
-            <IconMessageCircle size={14} className="shrink-0 text-info" />
-            <span className="truncate">{thread.anchorLabel}</span>
-          </div>
-        )}
-
-        <div className="flex shrink-0 items-center gap-1">
-          {!isOpen && (
-            <Badge tone="success" size="xs">
-              Resolved
-            </Badge>
+      {/* Anchor label & status actions (shown in sidebar list, omitted in canvas popover). */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between gap-2">
+          {onNavigate ? (
+            <button
+              type="button"
+              className="flex min-w-0 cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent p-0 text-left font-sans text-xs font-semibold text-strong hover:text-link focus-visible:outline-2 focus-visible:outline-focus"
+              onClick={onNavigate}
+              title="Pan to anchor"
+            >
+              <IconMessageCircle size={14} className="shrink-0 text-info" />
+              <span className="truncate">{thread.anchorLabel}</span>
+            </button>
+          ) : (
+            <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-strong">
+              <IconMessageCircle size={14} className="shrink-0 text-info" />
+              <span className="truncate">{thread.anchorLabel}</span>
+            </div>
           )}
-          <IconButton
-            size="xs"
-            label={isOpen ? 'Mark as resolved' : 'Reopen thread'}
-            loading={statusPending}
-            onClick={handleToggleStatus}
-          >
-            {isOpen ? <IconCheck /> : <IconArrowBackUp />}
-          </IconButton>
+
+          <div className="flex shrink-0 items-center gap-1">
+            {!isOpen && (
+              <Badge tone="success" size="xs">
+                Resolved
+              </Badge>
+            )}
+            <IconButton
+              size="xs"
+              label={isOpen ? 'Mark as resolved' : 'Reopen thread'}
+              loading={statusPending}
+              onClick={handleToggleStatus}
+            >
+              {isOpen ? <IconCheck /> : <IconArrowBackUp />}
+            </IconButton>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Messages in thread. */}
       <div className="flex max-h-56 flex-col gap-2.5 overflow-y-auto">
-        {thread.comments.map((item) => {
+        {thread.comments.map((item, idx) => {
           if (item.type !== 'comment') {
             return (
               <div
@@ -438,6 +444,7 @@ function PrototypeThreadItem(props: {
           }
 
           const canDelete = item.createdBy.toLowerCase() === currentUserEmail;
+          const showInlineThreadControls = hideHeader && idx === 0;
           return (
             <div key={item.id} className="group/comment flex gap-2">
               <div className="shrink-0 pt-0.5">
@@ -449,16 +456,35 @@ function PrototypeThreadItem(props: {
                     <UserTag email={item.createdBy} />
                   </span>
                   <RelativeTime ts={item.createdAt} />
-                  {canDelete && (
-                    <IconButton
-                      size="xs"
-                      label="Delete comment"
-                      className="ml-auto opacity-0 transition-opacity group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 pointer-coarse:opacity-100"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <IconTrash />
-                    </IconButton>
-                  )}
+                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                    {canDelete && (
+                      <IconButton
+                        size="xs"
+                        label="Delete comment"
+                        className="opacity-0 transition-opacity group-focus-within/comment:opacity-100 group-hover/comment:opacity-100 pointer-coarse:opacity-100"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        <IconTrash />
+                      </IconButton>
+                    )}
+                    {showInlineThreadControls && (
+                      <>
+                        <IconButton
+                          size="xs"
+                          label={isOpen ? 'Mark as resolved' : 'Reopen thread'}
+                          loading={statusPending}
+                          onClick={handleToggleStatus}
+                        >
+                          {isOpen ? <IconCheck /> : <IconArrowBackUp />}
+                        </IconButton>
+                        {onClose && (
+                          <IconButton size="xs" label="Close" onClick={onClose}>
+                            <IconX />
+                          </IconButton>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <CommentBody
                   className="text-sm"
@@ -471,9 +497,9 @@ function PrototypeThreadItem(props: {
         })}
       </div>
 
-      {/* Reply composer when thread is open. */}
+      {/* Reply composer with overlaid send button when thread is open. */}
       {isOpen && (
-        <div className="flex flex-col gap-1.5 pt-1">
+        <div className="PrototypeCommentComposer relative pt-0.5">
           <CommentEditor
             key={editorKey}
             variant="minimal"
@@ -483,20 +509,19 @@ function PrototypeThreadItem(props: {
             onChange={setReplyBody}
             onSubmitShortcut={handleReply}
           />
-          <div className="flex justify-end">
-            <IconButton
-              size="xs"
-              variant="primary"
-              round
-              label="Send reply"
-              tooltip="Send (⌘ + Enter)"
-              disabled={!replyBody || submitting}
-              loading={submitting}
-              onClick={handleReply}
-            >
-              <IconSend2 />
-            </IconButton>
-          </div>
+          <IconButton
+            className="absolute right-1.5 bottom-1.5 z-10"
+            size="xs"
+            variant="primary"
+            round
+            label="Send reply"
+            tooltip="Send (⌘ + Enter)"
+            disabled={!replyBody || submitting}
+            loading={submitting}
+            onClick={handleReply}
+          >
+            <IconSend2 />
+          </IconButton>
         </div>
       )}
     </div>
@@ -619,16 +644,14 @@ export function PrototypeCommentPopover(props: PrototypeCommentPopoverProps) {
     <PrototypeThreadItem
       thread={thread}
       compact
+      hideHeader
+      onClose={isDesktop ? onClose : undefined}
       onAddReply={onAddReply}
       onSetThreadStatus={onSetThreadStatus}
       onDeleteComment={onDeleteComment}
     />
   ) : draft ? (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-strong">
-        <IconMessageCircle size={14} className="shrink-0 text-info" />
-        <span className="truncate">{draft.anchorLabel}</span>
-      </div>
+    <div className="PrototypeCommentComposer relative">
       <CommentEditor
         variant="minimal"
         mentions
@@ -638,20 +661,19 @@ export function PrototypeCommentPopover(props: PrototypeCommentPopoverProps) {
         onChange={setDraftBody}
         onSubmitShortcut={handleSubmitDraft}
       />
-      <div className="flex items-center justify-end gap-1.5">
-        <Button size="xs" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          size="xs"
-          variant="primary"
-          disabled={!draftBody || submitting}
-          loading={submitting}
-          onClick={handleSubmitDraft}
-        >
-          Post
-        </Button>
-      </div>
+      <IconButton
+        className="absolute right-1.5 bottom-1.5 z-10"
+        size="xs"
+        variant="primary"
+        round
+        label="Post comment"
+        tooltip="Send (⌘ + Enter)"
+        disabled={!draftBody || submitting}
+        loading={submitting}
+        onClick={handleSubmitDraft}
+      >
+        <IconSend2 />
+      </IconButton>
     </div>
   ) : null;
 
@@ -664,7 +686,7 @@ export function PrototypeCommentPopover(props: PrototypeCommentPopoverProps) {
       <Dialog
         open
         onClose={onClose}
-        title={thread ? 'Comment thread' : 'New comment'}
+        title={thread ? 'Comment' : 'New comment'}
         size="sm"
       >
         {content}
@@ -691,22 +713,12 @@ export function PrototypeCommentPopover(props: PrototypeCommentPopoverProps) {
     <div
       ref={popoverRef}
       role="dialog"
-      aria-label={
-        thread ? `Comment thread on ${thread.anchorLabel}` : 'New comment'
-      }
+      aria-label={thread ? `Comment on ${thread.anchorLabel}` : 'New comment'}
       className="PrototypeCommentPopover fixed z-30 w-80 rounded-lg border border-border bg-surface-raised p-3 shadow-lg"
       style={{left: `${left}px`, top: `${top}px`}}
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted">
-          {thread ? 'Comment thread' : 'New comment'}
-        </span>
-        <IconButton label="Close popover" size="xs" onClick={onClose}>
-          <IconX />
-        </IconButton>
-      </div>
       {content}
     </div>
   );

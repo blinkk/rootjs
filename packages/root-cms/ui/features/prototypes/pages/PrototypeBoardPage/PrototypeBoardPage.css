@@ -6,4 +6,19 @@
       transparent 1px
     );
   }
+
+  /* Match comment body text size and reserve space for the overlaid send icon. */
+  .PrototypeCommentComposer .LexicalEditor--comment .LexicalEditor__editor {
+    font-size: var(--cms-text-sm);
+    line-height: 1.45;
+    min-height: 40px;
+    padding: 8px 36px 8px 10px;
+  }
+
+  .PrototypeCommentComposer .LexicalEditor--comment .LexicalEditor__placeholder {
+    font-size: var(--cms-text-sm);
+    left: 10px;
+    line-height: 1.45;
+    top: 8px;
+  }
 }
