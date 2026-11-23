@@ -58,6 +58,9 @@ const FRAME_WIDTH_PRESETS = [
 /** Default height before an iframe reports its measured content height. */
 const FALLBACK_FRAME_HEIGHT = 760;
 
+/** Upper bound on a frame's auto-measured height, in CSS px. */
+const MAX_FRAME_HEIGHT = 20000;
+
 /** Timeout in ms when awaiting an export payload from a sandboxed iframe. */
 const EXPORT_PAYLOAD_TIMEOUT_MS = 2500;
 
@@ -84,7 +87,7 @@ function buildSandboxedFrameSrcdoc(options: {
     "default-src 'none'",
     `script-src ${runtimeUrl}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
-    'font-src https://fonts.gstatic.com https: data:',
+    'font-src https://fonts.gstatic.com data:',
     'img-src https: data: blob:',
     "connect-src 'none'",
     "form-action 'none'",
@@ -225,6 +228,12 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   const [measuredHeight, setMeasuredHeight] = useState(
     frame.cachedHeight || FALLBACK_FRAME_HEIGHT
   );
+  // Read through refs by the message bridge so a height change does not tear
+  // the bridge down (which would cancel in-flight export requests).
+  const measuredHeightRef = useRef(measuredHeight);
+  measuredHeightRef.current = measuredHeight;
+  const frameWidthRef = useRef(frame.width);
+  frameWidthRef.current = frame.width;
   const [blockRects, setBlockRects] = useState<PrototypeBlockRect[]>([]);
   const [hoveredBlockKey, setHoveredBlockKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -340,10 +349,21 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
         return;
       }
       if (data.type === 'proto:layout' && data.frameId === frame.id) {
-        const nextHeight = Math.max(
-          200,
-          Math.round(Number(data.height) || FALLBACK_FRAME_HEIGHT)
+        const nextHeight = Math.min(
+          MAX_FRAME_HEIGHT,
+          Math.max(
+            200,
+            Math.round(Number(data.height) || FALLBACK_FRAME_HEIGHT)
+          )
         );
+        // Ignore repeat reports so a frame stuck at the cap cannot re-render
+        // the board on every animation frame.
+        if (
+          nextHeight === measuredHeightRef.current &&
+          nextHeight === MAX_FRAME_HEIGHT
+        ) {
+          return;
+        }
         const rects = Array.isArray(data.blockRects)
           ? (data.blockRects as PrototypeBlockRect[])
           : [];
@@ -372,8 +392,8 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             frameId: frame.id,
             html: String(data.html || ''),
             compiledCss: String(data.compiledCss || ''),
-            width: Number(data.width) || frame.width,
-            height: Number(data.height) || measuredHeight,
+            width: Number(data.width) || frameWidthRef.current,
+            height: Number(data.height) || measuredHeightRef.current,
           });
         }
       }
@@ -410,7 +430,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       }
       pendingExportsRef.current.clear();
     };
-  }, [frame.id, isLive, frame.width, measuredHeight]);
+  }, [frame.id, isLive]);
 
   // Reset ready state if srcdoc changes (e.g. Google Fonts added).
   useEffect(() => {

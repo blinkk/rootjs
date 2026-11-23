@@ -222,3 +222,32 @@ export async function apiPreparePrototypeAiTurn(input: {
 }): Promise<ClientTurnConfig> {
   return postJson<ClientTurnConfig>('/cms/api/prototypes.ai.prepare', input);
 }
+
+/** Session storage key holding the initial AI prompt for a new board. */
+function initialPromptKey(boardId: string): string {
+  return `root-cms:prototype-initial-prompt:${boardId}`;
+}
+
+/**
+ * Hands the creation-time prompt to the board page. Kept in session storage
+ * rather than the URL so a shared or crafted link can never start an AI turn.
+ */
+export function storeInitialPrototypePrompt(boardId: string, prompt: string) {
+  try {
+    window.sessionStorage.setItem(initialPromptKey(boardId), prompt);
+  } catch {
+    // Storage unavailable; the board opens without an initial prompt.
+  }
+}
+
+/** Reads and clears the creation-time prompt for a board, if any. */
+export function takeInitialPrototypePrompt(boardId: string): string {
+  try {
+    const key = initialPromptKey(boardId);
+    const prompt = window.sessionStorage.getItem(key) || '';
+    window.sessionStorage.removeItem(key);
+    return prompt.trim();
+  } catch {
+    return '';
+  }
+}

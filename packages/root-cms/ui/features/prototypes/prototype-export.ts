@@ -6,6 +6,7 @@ import {
   DEFAULT_FOLD_HEIGHT_DESKTOP,
   DEFAULT_FOLD_HEIGHT_MOBILE,
   getOrderedBlocks,
+  sanitizePrototypeThemeValue,
 } from '../../../shared/prototypes.js';
 
 /** Export payload returned by a live `prototype-runtime.js` iframe. */
@@ -47,47 +48,30 @@ const EXPORT_SCALE = 2;
 /** Builds `:root` CSS custom properties from a `PrototypeTheme`. */
 export function buildPrototypeThemeCss(theme: PrototypeTheme): string {
   const vars: string[] = [];
-  if (theme.colorBg) {
-    vars.push(`--color-bg: ${theme.colorBg};`);
-  }
-  if (theme.colorSurface) {
-    vars.push(`--color-surface: ${theme.colorSurface};`);
-  }
-  if (theme.colorFg) {
-    vars.push(`--color-fg: ${theme.colorFg};`);
-  }
-  if (theme.colorMuted) {
-    vars.push(`--color-muted: ${theme.colorMuted};`);
-  }
-  if (theme.colorPrimary) {
-    vars.push(`--color-primary: ${theme.colorPrimary};`);
-  }
-  if (theme.colorOnPrimary) {
-    vars.push(`--color-on-primary: ${theme.colorOnPrimary};`);
-  }
-  if (theme.colorBorder) {
-    vars.push(`--color-border: ${theme.colorBorder};`);
-  }
-  if (theme.fontSans) {
-    vars.push(`--font-sans: ${theme.fontSans};`);
-  }
-  if (theme.fontHeading) {
-    vars.push(`--font-heading: ${theme.fontHeading};`);
-  }
-  if (theme.fontMono) {
-    vars.push(`--font-mono: ${theme.fontMono};`);
-  }
-  if (theme.radius) {
-    vars.push(`--radius-base: ${theme.radius};`);
-  }
-  if (theme.containerMaxWidth) {
-    vars.push(`--max-w-container: ${theme.containerMaxWidth};`);
-  }
-  const bodyBg = theme.colorBg || '#ffffff';
-  const bodyFg = theme.colorFg || '#111827';
-  const bodyFont =
-    theme.fontSans ||
-    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const pushVar = (name: string, value: string | undefined) => {
+    const safe = sanitizePrototypeThemeValue(value, '');
+    if (safe) {
+      vars.push(`${name}: ${safe};`);
+    }
+  };
+  pushVar('--color-bg', theme.colorBg);
+  pushVar('--color-surface', theme.colorSurface);
+  pushVar('--color-fg', theme.colorFg);
+  pushVar('--color-muted', theme.colorMuted);
+  pushVar('--color-primary', theme.colorPrimary);
+  pushVar('--color-on-primary', theme.colorOnPrimary);
+  pushVar('--color-border', theme.colorBorder);
+  pushVar('--font-sans', theme.fontSans);
+  pushVar('--font-heading', theme.fontHeading);
+  pushVar('--font-mono', theme.fontMono);
+  pushVar('--radius-base', theme.radius);
+  pushVar('--max-w-container', theme.containerMaxWidth);
+  const bodyBg = sanitizePrototypeThemeValue(theme.colorBg, '#ffffff');
+  const bodyFg = sanitizePrototypeThemeValue(theme.colorFg, '#111827');
+  const bodyFont = sanitizePrototypeThemeValue(
+    theme.fontSans,
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  );
   const varBlock = vars.join('\n  ');
   return [
     `:root {\n  ${varBlock}\n}`,
@@ -172,8 +156,8 @@ function loadFrameSvgImage(
   const height = Math.max(200, Math.round(payload.height));
   const foldHeight =
     width <= 480 ? DEFAULT_FOLD_HEIGHT_MOBILE : DEFAULT_FOLD_HEIGHT_DESKTOP;
-  const bodyBg = theme.colorBg || '#ffffff';
-  const bodyFg = theme.colorFg || '#111827';
+  const bodyBg = sanitizePrototypeThemeValue(theme.colorBg, '#ffffff');
+  const bodyFg = sanitizePrototypeThemeValue(theme.colorFg, '#111827');
   const bodyFont =
     theme.fontSans ||
     "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -191,7 +175,7 @@ function loadFrameSvgImage(
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     '<foreignObject width="100%" height="100%">',
-    `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;min-height:${height}px;background:${bodyBg};overflow:hidden;">`,
+    `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;min-height:${height}px;background:${escapeAttr(bodyBg)};overflow:hidden;">`,
     `<style>${escapeStyleForXhtml(css)}</style>`,
     xhtmlBody,
     '</div>',

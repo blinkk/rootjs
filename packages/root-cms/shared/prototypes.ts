@@ -434,3 +434,48 @@ export interface PrototypeBlockRect {
   /** Height in unscaled CSS px. */
   height: number;
 }
+
+/**
+ * Unsafe CSS value tokens stripped from inline styles, scoped stylesheets and
+ * theme tokens. Backslashes are rejected because CSS escapes (`\75rl(`) would
+ * otherwise spell a blocked token.
+ */
+export const UNSAFE_CSS_VALUE_RE =
+  /(?:url\s*\(|image-set\s*\(|expression\s*\(|@import\b|javascript\s*:|vbscript\s*:|behavior\s*:|-moz-binding\s*:|<\/style|\\)/i;
+
+/**
+ * Matches CSS viewport-relative block units (`vh`, `dvh`, `svh`, `lvh`, `vb`,
+ * `vmax`, `vmin` and their dynamic variants), including leading-dot decimals.
+ * Inside an auto-height frame these would resolve against the frame's own
+ * height and grow without bound.
+ */
+export const VIEWPORT_UNIT_RE =
+  /(?<![a-zA-Z0-9_-])(\d*\.?\d+)[dsl]?v(?:h|b|max|min)\b/gi;
+
+/** Rewrites viewport-relative block units to `calc(N * var(--proto-vh, 9px))`. */
+export function rewriteViewportUnits(css: string): string {
+  return css.replace(VIEWPORT_UNIT_RE, 'calc($1 * var(--proto-vh, 9px))');
+}
+
+/**
+ * Sanitizes a single theme token value before it is interpolated into CSS.
+ * Returns `fallback` when the value could close the declaration, open a new
+ * rule or reference an external resource.
+ */
+export function sanitizePrototypeThemeValue(
+  value: string | undefined,
+  fallback: string
+): string {
+  if (!value || typeof value !== 'string') {
+    return fallback;
+  }
+  const trimmed = value.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+  if (
+    !trimmed ||
+    /[;{}<>\r\n]/.test(trimmed) ||
+    UNSAFE_CSS_VALUE_RE.test(trimmed)
+  ) {
+    return fallback;
+  }
+  return trimmed;
+}

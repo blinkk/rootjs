@@ -1722,10 +1722,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         checks: options.checks,
         translations: options.translations,
       });
-      registerPrototypesApi(server, {
-        rootConfig: serverOptions.rootConfig,
-        cmsConfig: options,
-      });
+      if (options.experiments?.prototypes !== false) {
+        registerPrototypesApi(server, {
+          rootConfig: serverOptions.rootConfig,
+          cmsConfig: options,
+        });
+      }
 
       // The project's themes (`themes` option) and the built-in ones, each
       // served as its own stylesheet behind the same login as the page that

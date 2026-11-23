@@ -45,8 +45,10 @@ describe('sanitizePrototypeHtml', () => {
     ].join('\n');
 
     const clean = sanitizePrototypeHtml(input);
-    expect(clean).toContain('data-block-key="b1"');
-    expect(clean).toContain('data-component="Hero"');
+    // Block identity attributes belong to the wrapper added by the renderer;
+    // block HTML must not be able to claim another block's key.
+    expect(clean).not.toContain('data-block-key');
+    expect(clean).not.toContain('data-component');
     expect(clean).toContain('aria-label="Hero section"');
     expect(clean).toContain('role="region"');
     expect(clean).toContain('viewBox="0 0 24 24"');
@@ -84,12 +86,17 @@ describe('sanitizePrototypeCss', () => {
     const css = [
       '.hero { min-height: 100vh; padding-top: 12.5vh; }',
       '.keep { --custom-vh: 20px; width: 100%; }',
+      '.dynamic { min-height: 100dvh; height: 50svh; max-height: .5vh; }',
     ].join('\n');
 
     const clean = sanitizePrototypeCss(css);
     expect(clean).toContain('min-height: calc(100 * var(--proto-vh, 9px))');
     expect(clean).toContain('padding-top: calc(12.5 * var(--proto-vh, 9px))');
     expect(clean).toContain('--custom-vh: 20px');
+    expect(clean).toContain('min-height: calc(100 * var(--proto-vh, 9px))');
+    expect(clean).toContain('height: calc(50 * var(--proto-vh, 9px))');
+    expect(clean).toContain('max-height: calc(.5 * var(--proto-vh, 9px))');
+    expect(clean).not.toMatch(/\d[dsl]?vh\b/);
   });
 });
 

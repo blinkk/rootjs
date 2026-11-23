@@ -8,7 +8,10 @@
 
 import {compile} from 'tailwindcss';
 import TAILWIND_BASE_CSS from 'tailwindcss/index.css';
-import type {PrototypeBlockRect} from '../../../../shared/prototypes.js';
+import {
+  rewriteViewportUnits,
+  type PrototypeBlockRect,
+} from '../../../../shared/prototypes.js';
 
 interface RenderMessage {
   type: 'proto:render';
@@ -29,7 +32,6 @@ interface RequestExportMessage {
 
 type InboundMessage = RenderMessage | RequestExportMessage;
 
-const VH_UNIT_RE = /(?<![a-zA-Z0-9_-])(\d+(?:\.\d+)?)vh\b/gi;
 const UNSAFE_TAGS = new Set([
   'SCRIPT',
   'IFRAME',
@@ -50,18 +52,13 @@ let cachedCompiler: Awaited<ReturnType<typeof compile>> | null = null;
 let renderSeq = 0;
 let layoutRafId = 0;
 
-/** Rewrites CSS `vh` units against `--proto-vh` to avoid auto-height feedback loops. */
-function rewriteVhUnits(css: string): string {
-  return css.replace(VH_UNIT_RE, 'calc($1 * var(--proto-vh, 9px))');
-}
-
 /** Strips `@import`, `expression()`, and closing style tags defensively. */
 function sanitizeRuntimeCss(css: string): string {
   if (!css) {
     return '';
   }
   const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  return rewriteVhUnits(
+  return rewriteViewportUnits(
     withoutComments
       .replace(/@import\b[^;{}]*(?:;|\r?\n|$)/gi, '')
       .replace(/expression\s*\([^)]*\)/gi, '')
@@ -71,7 +68,9 @@ function sanitizeRuntimeCss(css: string): string {
 
 /** Ensures a `<style id="...">` element exists in `<head>` and returns it. */
 function ensureStyleTag(id: string): HTMLStyleElement {
-  let el = document.getElementById(id) as HTMLStyleElement | null;
+  // Looked up inside `<head>` only: block HTML may carry an element with the
+  // same id, which `getElementById` would return instead.
+  let el = document.head.querySelector<HTMLStyleElement>(`style#${id}`);
   if (!el) {
     el = document.createElement('style');
     el.id = id;
@@ -165,7 +164,7 @@ async function compileTailwindCss(
     cachedThemeKey = themeCss;
   }
   const built = cachedCompiler.build(candidates);
-  return rewriteVhUnits(built);
+  return rewriteViewportUnits(built);
 }
 
 /** Measures the rendered height and `[data-block-key]` rects and notifies parent. */
@@ -174,7 +173,9 @@ function postLayoutNow() {
     return;
   }
   const rootEl = ensureRootEl();
-  const blockEls = rootEl.querySelectorAll<HTMLElement>('[data-block-key]');
+  const blockEls = rootEl.querySelectorAll<HTMLElement>(
+    ':scope > section[data-block-key]'
+  );
   const blockRects: PrototypeBlockRect[] = [];
   for (let i = 0; i < blockEls.length; i++) {
     const el = blockEls[i];
@@ -349,7 +350,7 @@ function boot() {
     if (isStandalonePreview || window.parent === window) {
       return;
     }
-    const blockEl = target.closest('[data-block-key]');
+    const blockEl = target.closest('#proto-root > section[data-block-key]');
     const blockKey = blockEl?.getAttribute('data-block-key');
     if (blockKey && currentFrameId) {
       window.parent.postMessage(

@@ -1117,6 +1117,14 @@ export async function prototypesFrameSet(
     ? {x: existingFrame.x, y: existingFrame.y}
     : computeNextFramePosition(allFrames, pageId);
 
+  for (const axis of ['x', 'y'] as const) {
+    if (
+      options[axis] !== undefined &&
+      !Number.isFinite(Number(options[axis]))
+    ) {
+      throw new Error(`--${axis} must be a number, got "${options[axis]}".`);
+    }
+  }
   const x =
     options.x !== undefined
       ? Math.round(Number(options.x))

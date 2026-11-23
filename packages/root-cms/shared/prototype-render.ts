@@ -7,6 +7,9 @@
 import sanitizeHtml, {type IOptions} from 'sanitize-html';
 import {
   getOrderedBlocks,
+  rewriteViewportUnits,
+  sanitizePrototypeThemeValue,
+  UNSAFE_CSS_VALUE_RE,
   type PrototypeFrame,
   type PrototypeTheme,
   type SiteSchemaSummary,
@@ -70,8 +73,6 @@ const GLOBAL_ATTRIBUTES: string[] = [
   'aria-*',
   'role',
   'title',
-  'data-block-key',
-  'data-component',
 ];
 
 /** SVG geometry and stroke attributes permitted on inline SVG elements. */
@@ -104,13 +105,6 @@ const SVG_COMMON_ATTRIBUTES: string[] = [
 /** Allowed inline CSS property names for prototype elements. */
 const ALLOWED_INLINE_STYLE_PROP_RE =
   /^(?:color|background|background-color|border(?:-[a-z-]+)?|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|gap|max-width|min-height|--[a-z0-9_-]+)$/i;
-
-/** Unsafe CSS value tokens stripped from inline styles and scoped stylesheets. */
-const UNSAFE_CSS_VALUE_RE =
-  /(?:url\s*\(|expression\s*\(|@import\b|javascript\s*:|vbscript\s*:|behavior\s*:|-moz-binding\s*:|<\/style)/i;
-
-/** Matches CSS viewport-height units like `100vh` or `62.5vh`. */
-const VH_UNIT_RE = /(?<![a-zA-Z0-9_-])(\d+(?:\.\d+)?)vh\b/gi;
 
 /** Default design tokens applied when a board theme omits a property. */
 const DEFAULT_THEME_TOKENS = {
@@ -145,11 +139,6 @@ function escapeHtml(value: string): string {
   return escapeHtmlAttr(value).replace(/'/g, '&#39;');
 }
 
-/** Rewrites `Nvh` units to `calc(N * var(--proto-vh, 9px))`. */
-function rewriteVhUnits(css: string): string {
-  return css.replace(VH_UNIT_RE, 'calc($1 * var(--proto-vh, 9px))');
-}
-
 /** Sanitizes an inline `style` attribute value against the safe property list. */
 function sanitizeInlineStyle(rawStyle: string): string {
   if (!rawStyle) {
@@ -175,29 +164,10 @@ function sanitizeInlineStyle(rawStyle: string): string {
     if (UNSAFE_CSS_VALUE_RE.test(val)) {
       continue;
     }
-    safeParts.push(`${prop}: ${rewriteVhUnits(val)}`);
+    safeParts.push(`${prop}: ${rewriteViewportUnits(val)}`);
   }
 
   return safeParts.join('; ');
-}
-
-/** Sanitizes a single CSS custom property token value for `:root` / `@theme`. */
-function sanitizeThemeValue(
-  value: string | undefined,
-  fallback: string
-): string {
-  if (!value || typeof value !== 'string') {
-    return fallback;
-  }
-  const trimmed = value.replace(/\/\*[\s\S]*?\*\//g, '').trim();
-  if (
-    !trimmed ||
-    /[;{}<>\r\n]/.test(trimmed) ||
-    UNSAFE_CSS_VALUE_RE.test(trimmed)
-  ) {
-    return fallback;
-  }
-  return trimmed;
 }
 
 const SANITIZE_PROTOTYPE_HTML_OPTIONS: IOptions = {
@@ -316,7 +286,7 @@ export function sanitizePrototypeCss(css: string): string {
   // Guard against breaking out of an inline `<style>` tag.
   out = out.replace(/<\/style/gi, '');
   // Rewrite `vh` units against the simulated fold custom property.
-  out = rewriteVhUnits(out);
+  out = rewriteViewportUnits(out);
   return out.trim();
 }
 
@@ -325,51 +295,51 @@ export function sanitizePrototypeCss(css: string): string {
  * prototype board's design tokens.
  */
 export function buildThemeCss(theme: PrototypeTheme): string {
-  const colorBg = sanitizeThemeValue(
+  const colorBg = sanitizePrototypeThemeValue(
     theme.colorBg,
     DEFAULT_THEME_TOKENS.colorBg
   );
-  const colorSurface = sanitizeThemeValue(
+  const colorSurface = sanitizePrototypeThemeValue(
     theme.colorSurface,
     DEFAULT_THEME_TOKENS.colorSurface
   );
-  const colorFg = sanitizeThemeValue(
+  const colorFg = sanitizePrototypeThemeValue(
     theme.colorFg,
     DEFAULT_THEME_TOKENS.colorFg
   );
-  const colorMuted = sanitizeThemeValue(
+  const colorMuted = sanitizePrototypeThemeValue(
     theme.colorMuted,
     DEFAULT_THEME_TOKENS.colorMuted
   );
-  const colorPrimary = sanitizeThemeValue(
+  const colorPrimary = sanitizePrototypeThemeValue(
     theme.colorPrimary,
     DEFAULT_THEME_TOKENS.colorPrimary
   );
-  const colorOnPrimary = sanitizeThemeValue(
+  const colorOnPrimary = sanitizePrototypeThemeValue(
     theme.colorOnPrimary,
     DEFAULT_THEME_TOKENS.colorOnPrimary
   );
-  const colorBorder = sanitizeThemeValue(
+  const colorBorder = sanitizePrototypeThemeValue(
     theme.colorBorder,
     DEFAULT_THEME_TOKENS.colorBorder
   );
-  const fontSans = sanitizeThemeValue(
+  const fontSans = sanitizePrototypeThemeValue(
     theme.fontSans,
     DEFAULT_THEME_TOKENS.fontSans
   );
-  const fontHeading = sanitizeThemeValue(
+  const fontHeading = sanitizePrototypeThemeValue(
     theme.fontHeading || theme.fontSans,
     fontSans
   );
-  const fontMono = sanitizeThemeValue(
+  const fontMono = sanitizePrototypeThemeValue(
     theme.fontMono,
     DEFAULT_THEME_TOKENS.fontMono
   );
-  const radiusBase = sanitizeThemeValue(
+  const radiusBase = sanitizePrototypeThemeValue(
     theme.radius,
     DEFAULT_THEME_TOKENS.radius
   );
-  const maxWContainer = sanitizeThemeValue(
+  const maxWContainer = sanitizePrototypeThemeValue(
     theme.containerMaxWidth,
     DEFAULT_THEME_TOKENS.containerMaxWidth
   );
@@ -622,7 +592,7 @@ export function buildFrameSrcdoc(options: BuildFrameSrcdocOptions): string {
     "default-src 'none'",
     `script-src ${scriptSrc}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
-    'font-src https://fonts.gstatic.com https: data:',
+    'font-src https://fonts.gstatic.com data:',
     'img-src https: data: blob:',
     "connect-src 'none'",
     "form-action 'none'",
@@ -688,7 +658,7 @@ export function buildStandalonePreviewDocument(
     "default-src 'none'",
     `script-src ${runtimeUrl}`,
     "style-src 'unsafe-inline' https://fonts.googleapis.com",
-    'font-src https://fonts.gstatic.com https: data:',
+    'font-src https://fonts.gstatic.com data:',
     'img-src https: data: blob:',
     "connect-src 'none'",
     "form-action 'none'",

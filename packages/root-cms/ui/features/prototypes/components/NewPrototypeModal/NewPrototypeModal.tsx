@@ -10,7 +10,10 @@ import {Select} from '../../../../primitives/Select/Select.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showErrorNotification} from '../../../../utils/notifications.js';
-import {apiCreatePrototypeBoard} from '../../prototypes-client.js';
+import {
+  apiCreatePrototypeBoard,
+  storeInitialPrototypePrompt,
+} from '../../prototypes-client.js';
 
 const SELECTED_MODEL_STORAGE_KEY = 'root-cms.ai.selectedModel';
 
@@ -183,12 +186,10 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
       });
       props.onCreated?.(created);
       props.onClose();
-      const targetUrl = trimmedPrompt
-        ? `/cms/prototypes/${created.board.id}?prompt=${encodeURIComponent(
-            trimmedPrompt
-          )}`
-        : `/cms/prototypes/${created.board.id}`;
-      route(targetUrl);
+      if (trimmedPrompt) {
+        storeInitialPrototypePrompt(created.board.id, trimmedPrompt);
+      }
+      route(`/cms/prototypes/${created.board.id}`);
     } catch (err) {
       showErrorNotification(err, {
         title: 'Failed to create prototype',

@@ -15,6 +15,7 @@ import {
   apiDuplicatePrototypeBoard,
   apiListPrototypeBoards,
   apiUpdatePrototypeBoard,
+  storeInitialPrototypePrompt,
 } from '../../prototypes-client.js';
 import {PrototypesPage} from './PrototypesPage.js';
 
@@ -54,6 +55,7 @@ vi.mock('../../prototypes-client.js', () => ({
   apiUpdatePrototypeBoard: vi.fn(),
   apiDuplicatePrototypeBoard: vi.fn(),
   apiDeletePrototypeBoard: vi.fn(),
+  storeInitialPrototypePrompt: vi.fn(),
 }));
 
 const SAMPLE_BOARDS: PrototypeBoardSummary[] = [
@@ -238,9 +240,12 @@ describe('PrototypesPage', () => {
     expect(window.localStorage.getItem('root-cms.ai.selectedModel')).toBe(
       'claude-opus-5-5'
     );
-    expect(mockRoute).toHaveBeenCalledWith(
-      '/cms/prototypes/new-board-1?prompt=Explore%20two%20hero%20layouts'
+    // The prompt is handed over out of band, never in the URL.
+    expect(storeInitialPrototypePrompt).toHaveBeenCalledWith(
+      'new-board-1',
+      'Explore two hero layouts'
     );
+    expect(mockRoute).toHaveBeenCalledWith('/cms/prototypes/new-board-1');
   });
 
   it('supports duplicating, archiving, and deleting a board from its menu', async () => {

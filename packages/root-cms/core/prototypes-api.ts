@@ -33,6 +33,7 @@ import {
   type PrototypeFrame,
   type PrototypeTheme,
   type PrototypeTurnSnapshot,
+  sanitizePrototypeThemeValue,
 } from '../shared/prototypes.js';
 import {sanitizeBlockHtml} from '../shared/sanitize.js';
 import {findModel, getAiConfig, prepareClientModel} from './ai.js';
@@ -148,7 +149,11 @@ async function authenticateRequest(
 
 /** Checks that a string is a safe Firestore document ID. */
 function isValidDocId(id: unknown): id is string {
-  return typeof id === 'string' && SAFE_DOC_ID_RE.test(id);
+  // Firestore reserves ids of the form `__.*__`; as object keys they would
+  // also shadow `__proto__`.
+  return (
+    typeof id === 'string' && SAFE_DOC_ID_RE.test(id) && !/^__.*__$/.test(id)
+  );
 }
 
 /** Generates a short, URL-safe unique ID with an optional slug prefix. */
@@ -223,7 +228,14 @@ function sanitizeBlockMap(raw: unknown): PrototypeBlockMap {
   const seen = new Set<string>();
 
   for (const key of rawOrder) {
-    if (!key || key === '_array' || seen.has(key)) {
+    // `__.*__` keys are reserved by Firestore and would shadow `__proto__`.
+    if (
+      !key ||
+      key.length > 128 ||
+      /^__.*__$/.test(key) ||
+      key === '_array' ||
+      seen.has(key)
+    ) {
       continue;
     }
     const block = sanitizeBlock(record[key]);
@@ -357,8 +369,13 @@ function sanitizeTheme(raw: unknown): PrototypeTheme {
   const theme: PrototypeTheme = {};
   for (const key of stringKeys) {
     const val = obj[key];
-    if (typeof val === 'string' && val.trim()) {
-      theme[key] = val.trim().slice(0, 300);
+    if (typeof val === 'string') {
+      // Token values are interpolated into frame CSS, so drop any that could
+      // close the declaration or pull in an external resource.
+      const safe = sanitizePrototypeThemeValue(val.slice(0, 300), '');
+      if (safe) {
+        theme[key] = safe;
+      }
     }
   }
   if (Array.isArray(obj.fontUrls)) {
@@ -1152,7 +1169,8 @@ export function registerPrototypesApi(
     async (req: Request, res: Response) => {
       if (!assertJsonPost(req, res)) return;
       const rootConfig = resolveRootConfig(req);
-      const auth = await authenticateRequest(req, res, rootConfig, false);
+      // Source excerpts are for authoring; read-only roles don't need them.
+      const auth = await authenticateRequest(req, res, rootConfig, true);
       if (!auth) return;
 
       const componentNames = Array.isArray(req.body?.componentNames)
@@ -2128,10 +2146,16 @@ export function registerPrototypesApi(
     const rawPath = String(
       (req as any).path || String(req.originalUrl || '').split('?')[0] || ''
     ).replace(/^\/cms\/prototypes-preview\/?/, '');
-    const segments = rawPath
-      .split('/')
-      .map((part) => decodeURIComponent(part.trim()))
-      .filter(Boolean);
+    let segments: string[];
+    try {
+      segments = rawPath
+        .split('/')
+        .map((part) => decodeURIComponent(part.trim()))
+        .filter(Boolean);
+    } catch {
+      res.status(400).send('Invalid prototype preview path.');
+      return;
+    }
     const boardId = segments[0] || String(req.query?.boardId || '').trim();
     const frameId = segments[1] || String(req.query?.frameId || '').trim();
 

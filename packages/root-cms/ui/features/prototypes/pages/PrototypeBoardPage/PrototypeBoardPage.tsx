@@ -41,6 +41,7 @@ import {
   exportFramesToImage,
   type PrototypeExportPayload,
 } from '../../prototype-export.js';
+import {takeInitialPrototypePrompt} from '../../prototypes-client.js';
 import {usePrototypeBoard} from '../../usePrototypeBoard.js';
 
 /** Props accepted by `PrototypeBoardPage` via the CMS router. */
@@ -161,21 +162,18 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     }
   }, [bundle?.board.id, bundle?.board.pages.length]);
 
-  // Auto-open Root AI and queue `?prompt=` once when navigating from NewPrototypeModal.
+  // Auto-open Root AI and queue the prompt entered in NewPrototypeModal, once.
   useEffect(() => {
-    if (initialPromptHandledRef.current || !bundle) {
+    if (initialPromptHandledRef.current || !bundle || !aiAvailable) {
       return;
     }
-    const promptParam = (query.prompt as string | undefined)?.trim();
-    if (promptParam && aiAvailable) {
-      initialPromptHandledRef.current = true;
+    initialPromptHandledRef.current = true;
+    const initialPrompt = takeInitialPrototypePrompt(bundle.board.id);
+    if (initialPrompt) {
       setActivePanel('ai');
-      setQueuedPrompt({id: Date.now(), text: promptParam});
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.delete('prompt');
-      window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
+      setQueuedPrompt({id: Date.now(), text: initialPrompt});
     }
-  }, [bundle, query.prompt, aiAvailable]);
+  }, [bundle, aiAvailable]);
 
   const activePage = useMemo(() => {
     const pages = bundle?.board.pages || [];
@@ -223,11 +221,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     [pageFrames]
   );
 
-  const aiGenerating =
-    aiAvailable &&
-    (aiStreaming ||
-      Boolean(queuedPrompt) ||
-      Boolean((query.prompt as string | undefined)?.trim()));
+  const aiGenerating = aiAvailable && (aiStreaming || Boolean(queuedPrompt));
 
   // Fit frames to viewport on initial board load, when switching pages, and as
   // Root AI populates an initially empty page with side-by-side variants.
@@ -339,7 +333,14 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (expandedFrameId || isEditableTarget(e.target)) {
+      // Ignore key repeat (a held `F` would create a frame per repeat) and
+      // keys pressed while a modal dialog is open over the canvas.
+      if (
+        expandedFrameId ||
+        e.repeat ||
+        isEditableTarget(e.target) ||
+        document.querySelector('dialog[open]')
+      ) {
         return;
       }
       if (e.key === 'Escape') {
