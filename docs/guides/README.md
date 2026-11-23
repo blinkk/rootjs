@@ -61,10 +61,11 @@ The scenes show a fictional garden store, **Fernwood Market**. See
 | 4   | `localization`        | Localization and translation         | `cms-translations`, `cms-localization-modal`                   |
 | 5   | `collaboration`       | Collaboration and review             | `cms-field-comments`, `cms-tasks`                              |
 | 6   | `root-ai`             | Root AI                              | `cms-root-ai`, `cms-ai-edit`                                   |
-| 7   | `governance`          | Roles, permissions, and governance   | `cms-roles`, `cms-action-logs`                                 |
-| 8   | `assets-and-data`     | Assets and data                      | `cms-asset-library`, `cms-data-sources`                        |
-| 9   | `extensibility`       | Integrations and extensibility       | `cms-sidebar-tools`                                            |
-| 10  | `seo-and-performance` | SEO, accessibility, and performance  | `cms-publish-checks`, `cms-ai-edit`                            |
+| 7   | `design-prototypes`   | Design Prototypes                    | `cms-design-prototypes`                                        |
+| 8   | `governance`          | Roles, permissions, and governance   | `cms-roles`, `cms-action-logs`                                 |
+| 9   | `assets-and-data`     | Assets and data                      | `cms-asset-library`, `cms-data-sources`                        |
+| 10  | `extensibility`       | Integrations and extensibility       | `cms-sidebar-tools`                                            |
+| 11  | `seo-and-performance` | SEO, accessibility, and performance  | `cms-publish-checks`, `cms-ai-edit`                            |
 
 Each guide has an intro, an "At a glance" list of takeaways, sections with an
 optional screenshot and caption, and a "Frequently asked questions" list.

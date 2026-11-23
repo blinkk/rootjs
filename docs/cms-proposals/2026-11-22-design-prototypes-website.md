@@ -1,4 +1,4 @@
-# Feature Design Prototypes on the rootjs.dev homepage
+# Feature Design Prototypes on the rootjs.dev homepage and guides
 
 - **id:** `2026-11-22-design-prototypes-website`
 - **version:** 1
@@ -6,12 +6,12 @@
 
 ## Summary
 
-- Pages/index: Add a Design Prototypes feature spotlight right after Root AI, highlighting design-system-aware prototyping in the CMS UI or agent harnesses (like Antigravity and Claude Code) and converting approved mocks into production components.
-- Pages/index: Mention prototyping and agent harnesses in the Automate pillar and Agent-ready CLI feature card, and re-balance section themes/layouts.
+- Pages/index: Add a Design Prototypes feature spotlight right after Root AI (with a link to the new guide), update the Automate pillar and Agent-ready CLI card, and re-balance alternating section themes/layouts.
+- Guides/design-prototypes: Add a non-technical guide introducing Design Prototypes—design-system-aware iteration with Root AI in the CMS or external agent harnesses (Antigravity, Claude Code) and converting approved mocks into production components.
 
 ## Edit `Pages/index`
 
-Add the Design Prototypes spotlight module (note: attach cms-design-prototypes.png from the asset library after uploading the new screenshot scene) and update the Automate pillar and Agent-ready CLI card.
+Add the Design Prototypes spotlight module (attach cms-design-prototypes.png from the asset library after uploading the screenshot scene) and update the Automate pillar and Agent-ready CLI card.
 
 ### Set `content.modules`
 
@@ -90,12 +90,12 @@ Add the Design Prototypes spotlight module (note: attach cms-design-prototypes.p
        _arrayKey: "SRitf2"
      - bullets:
 -        - text: "Chat with docs and releases in the CMS"
-+        - text: "Prototype new pages and components on a shared canvas"
++        - text: "Design and iterate on new pages and components"
 +          _arrayKey: "pR0t01"
 +        - text: "Chat with docs, schemas, and releases in the CMS"
            _arrayKey: "zJuPYx"
 -        - text: "Bring your own model provider"
-+        - text: "Bring your own model provider or agent harness"
++        - text: "Bring your own model provider or AI coding tool"
            _arrayKey: "aAeby8"
 -        - text: "Review agent edits before they land"
 -          _arrayKey: "K0rj2G"
@@ -106,7 +106,7 @@ Add the Design Prototypes spotlight module (note: attach cms-design-prototypes.p
          href: "#root-ai"
          label: "See Root AI"
 -      body: "Use Root AI in the browser or connect external agents through the CLI to draft, translate, and update content under your team’s review."
-+      body: "Use Root AI in the CMS—or connect external agents like Antigravity or Claude Code—to prototype new pages, draft and translate content, and ship under your team’s review."
++      body: "Use Root AI in the CMS—or connect tools like Antigravity and Claude Code—to design new pages, draft and translate content, and ship under your team’s review."
        _arrayKey: "2fT3Ex"
    _arrayKey: "LoeXx7"
  - title: "Built-in AI that understands your schemas"
@@ -153,14 +153,20 @@ Add the Design Prototypes spotlight module (note: attach cms-design-prototypes.p
 +    blocks:
 +      - type: "paragraph"
 +        data:
-+          text: "Explore new pages and components on an isolated canvas with Root AI, which understands your site’s existing design system and templates. Update prototypes directly in the CMS or from your favorite agent harness—like Antigravity or Claude Code—gather pinned team feedback, and let your harness convert approved mocks straight into production-ready components."
++          text: "Explore new pages and components on a shared artboard with Root AI, which already understands your site’s design system. Update prototypes directly in the CMS or from your favorite agent harness—like Antigravity or Claude Code—gather feedback from your team, and turn approved mocks into production-ready components."
 +  highlights:
-+    - text: "Root AI builds with your site’s design tokens and existing components"
++    - text: "Root AI designs with your site’s styles and existing components"
 +      _arrayKey: "dpH1g1"
-+    - text: "Iterate in the CMS UI or from Antigravity, Claude Code, and other agent harnesses"
++    - text: "Iterate in the CMS or from Antigravity, Claude Code, and other agent harnesses"
 +      _arrayKey: "dpH1g2"
-+    - text: "Convert reviewed, approved mocks directly into production-ready components"
++    - text: "Turn reviewed, approved mocks directly into production-ready components"
 +      _arrayKey: "dpH1g3"
++  buttons:
++    - label: "Read the guide"
++      href: "/guides/design-prototypes/"
++      options:
++        - "variant:outline"
++      _arrayKey: "dpBtn1"
 +  _arrayKey: "dpSp0t"
 +- id: "schemas"
 +  body: "Define schemas in TypeScript to generate typed props automatically, then render them directly in your TSX components."
@@ -417,4 +423,92 @@ Add the Design Prototypes spotlight module (note: attach cms-design-prototypes.p
            text: "Root.js was handcrafted by the team at <a href=\"https://blinkk.com\">Blinkk</a>. We offer custom solutions and forward deployments, including full integration and maintenance of Root.js sites on infrastructure that you own."
      version: "lexical-0.31.2"
    _arrayKey: "qSV88L"
+```
+
+## Create `Guides/design-prototypes`
+
+New non-technical guide for Design Prototypes (attach cms-design-prototypes.png as heroImage/meta.image after uploading the screenshot scene).
+
+```yaml
+meta:
+  title: "Design Prototypes"
+  description: "Design and iterate on new pages and components with Root AI, gather team feedback, and turn approved mocks into production-ready code."
+content:
+  eyebrow: "Design Prototypes"
+  title: "From first concept to production-ready components"
+  intro:
+    blocks:
+      - type: "paragraph"
+        data:
+          text: "Planning a new landing page or component usually means bouncing between slide decks, static mockups, and long handoff threads before anyone sees how the idea fits the real site. Design Prototypes brings that exploration into Root.js."
+      - type: "paragraph"
+        data:
+          text: "Your team can sketch and iterate on new pages on a shared artboard with Root AI—which already understands your site’s design system—or update prototypes from external agent harnesses like Antigravity and Claude Code. Once a concept is reviewed and approved, your harness can convert it straight into production-ready components."
+    time: 1795401200000
+    version: "2.28.2"
+  takeaways:
+    - text: "Design new pages and components with Root AI using your existing design system."
+      _arrayKey: "dpTk01"
+    - text: "Compare desktop and mobile concepts side by side on a shared artboard."
+      _arrayKey: "dpTk02"
+    - text: "Update prototypes in the CMS or from agent harnesses like Antigravity and Claude Code."
+      _arrayKey: "dpTk03"
+    - text: "Collect and resolve team feedback directly on the prototype."
+      _arrayKey: "dpTk04"
+    - text: "Convert approved mocks into production-ready components."
+      _arrayKey: "dpTk05"
+  sections:
+    - id: "design-system-aware"
+      title: "Built around your design system"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Instead of starting from generic wireframes, Root AI understands your site’s existing styles, layout patterns, and components. Teams can combine real site sections with proposed new components on the same artboard, so stakeholders immediately see how a new page or feature fits the rest of the website."
+        time: 1795401200000
+        version: "2.28.2"
+      _arrayKey: "dpSc01"
+    - id: "iterate-anywhere"
+      title: "Iterate in the CMS or your favorite agent harness"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Designers, marketers, and product owners can prompt Root AI directly in the CMS to adjust layouts, try copy variations, or compare desktop and mobile views side by side."
+          - type: "paragraph"
+            data:
+              text: "Developers and designers who prefer working in their own AI coding tools—such as Antigravity or Claude Code—can update the exact same prototype boards from their local workflow, keeping everyone looking at the latest concept in one place."
+        time: 1795401200000
+        version: "2.28.2"
+      _arrayKey: "dpSc02"
+    - id: "review-together"
+      title: "Review and align before building"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Anyone with access to the CMS can open a prototype, leave feedback directly on a frame or section, and resolve comments as decisions are made. Because prototypes stay separate from your live pages, teams can explore bold ideas freely without risking live content."
+        time: 1795401200000
+        version: "2.28.2"
+      _arrayKey: "dpSc03"
+    - id: "ship-to-production"
+      title: "Turn approved mocks into production components"
+      body:
+        blocks:
+          - type: "paragraph"
+            data:
+              text: "Once a mock is reviewed and approved, nothing has to be rebuilt from scratch from screenshots. Agent harnesses like Antigravity and Claude Code can read the approved prototype and convert it into production-ready Root.js templates, schemas, and styles for your team to review and ship."
+        time: 1795401200000
+        version: "2.28.2"
+      _arrayKey: "dpSc04"
+  faq:
+    - question: "Can prototypes affect our live website?"
+      answer: "No. Prototypes live in their own workspace, separate from your site’s published pages and drafts. Nothing goes live until your team builds and publishes it through your normal workflow."
+      _arrayKey: "dpFq01"
+    - question: "Can we update prototypes outside the CMS?"
+      answer: "Yes. Non-technical teammates can iterate with Root AI directly in the CMS, while developers can update the same prototype boards from external agent harnesses like Antigravity or Claude Code."
+      _arrayKey: "dpFq02"
+    - question: "How do approved prototypes become real pages?"
+      answer: "Once your team signs off on a prototype, a developer can point an agent harness at the approved board to generate the matching Root.js components and schemas, review the code in a pull request, and ship it like any other site update."
+      _arrayKey: "dpFq03"
 ```
