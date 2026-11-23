@@ -143,6 +143,82 @@ async function authenticateRequest(
   return {cmsClient, email, role};
 }
 
+/** An error that carries the HTTP status and error code sent to the client. */
+class PrototypeApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string, message?: string) {
+    super(message || code);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Sends a `PrototypeApiError` as its JSON response. Returns false otherwise. */
+function sendApiError(res: Response, err: unknown): boolean {
+  if (!(err instanceof PrototypeApiError)) {
+    return false;
+  }
+  res.status(err.status).json({
+    success: false,
+    error: err.code,
+    ...(err.message !== err.code ? {message: err.message} : {}),
+  });
+  return true;
+}
+
+/**
+ * Largest serialized doc the API will write. Firestore rejects docs over
+ * 1 MiB with an opaque error, so anything close is refused first with a
+ * message the user can act on.
+ */
+const MAX_DOC_BYTES = 900_000;
+
+/** Maximum length of a comment's plain text and of its rich text HTML. */
+const MAX_COMMENT_CHARS = 10_000;
+
+/** Throws a 413 `PrototypeApiError` when `value` is too large to store. */
+function assertDocSize(value: unknown, code: string, message: string) {
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAX_DOC_BYTES) {
+    throw new PrototypeApiError(413, code, message);
+  }
+}
+
+/**
+ * Reads a comment thread and writes the result of `mutate` in one
+ * transaction, so concurrent replies, resolves and pin moves cannot overwrite
+ * each other. `mutate` returns the next thread, or `null` to delete it, and
+ * may throw a `PrototypeApiError` to reject the change.
+ */
+async function mutateThread(
+  db: Firestore,
+  threadRef: DocumentReference,
+  mutate: (existing: PrototypeCommentThread) => PrototypeCommentThread | null
+): Promise<PrototypeCommentThread | null> {
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(threadRef);
+    if (!snap.exists) {
+      throw new PrototypeApiError(404, 'NOT_FOUND');
+    }
+    const next = mutate({
+      ...(snap.data() as PrototypeCommentThread),
+      id: snap.id,
+    });
+    if (!next) {
+      tx.delete(threadRef);
+      return null;
+    }
+    assertDocSize(
+      next,
+      'THREAD_TOO_LARGE',
+      'This thread is full. Resolve it and start a new one.'
+    );
+    tx.set(threadRef, stripUndefinedDeep(next));
+    return next;
+  });
+}
+
 /** Checks that a string is a safe Firestore document ID. */
 function isValidDocId(id: unknown): id is string {
   // Firestore reserves ids of the form `__.*__`; as object keys they would
@@ -1212,31 +1288,45 @@ export function registerPrototypesApi(
         const db = auth.cmsClient.db;
         const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
         const boardRef = refs.boardDoc(boardId);
-        const frameRef = refs.framesCol(boardId).doc(frameInput.id);
-        const [boardSnap, existingSnap] = await Promise.all([
-          boardRef.get(),
-          frameRef.get(),
-        ]);
-        if (!boardSnap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        const existing = existingSnap.exists
-          ? {...(existingSnap.data() as PrototypeFrame), id: existingSnap.id}
-          : null;
+        const frameId = frameInput.id;
+        const frameRef = refs.framesCol(boardId).doc(frameId);
         const now = Date.now();
-        const savedFrame = sanitizeFrameForStorage(
-          {...frameInput, id: frameInput.id},
-          {boardId, existing, email: auth.email, now}
-        );
-
-        const batch = db.batch();
-        batch.set(frameRef, stripUndefinedDeep(savedFrame));
-        batch.update(boardRef, {updatedAt: now, updatedBy: auth.email});
-        await batch.commit();
+        // Read and write in one transaction: the client sends partial
+        // payloads (a drag sends only `x`/`y`), which are merged onto the
+        // stored frame and must not clobber a concurrent edit.
+        const savedFrame = await db.runTransaction(async (tx) => {
+          const [boardSnap, existingSnap] = await Promise.all([
+            tx.get(boardRef),
+            tx.get(frameRef),
+          ]);
+          if (!boardSnap.exists) {
+            throw new PrototypeApiError(404, 'NOT_FOUND');
+          }
+          const existing = existingSnap.exists
+            ? {...(existingSnap.data() as PrototypeFrame), id: existingSnap.id}
+            : null;
+          // A partial update for a frame that no longer exists (deleted
+          // while a drag was in flight) must not recreate it empty.
+          if (!existing && frameInput.blocks === undefined) {
+            throw new PrototypeApiError(404, 'FRAME_NOT_FOUND');
+          }
+          const frame = sanitizeFrameForStorage(
+            {...frameInput, id: frameId},
+            {boardId, existing, email: auth.email, now}
+          );
+          assertDocSize(
+            frame,
+            'FRAME_TOO_LARGE',
+            'This frame is too large to save. Remove inline (data:) images or split it into smaller frames.'
+          );
+          tx.set(frameRef, stripUndefinedDeep(frame));
+          tx.update(boardRef, {updatedAt: now, updatedBy: auth.email});
+          return frame;
+        });
 
         res.status(200).json({success: true, data: savedFrame});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.frame.save] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
@@ -1331,12 +1421,18 @@ export function registerPrototypesApi(
             : refs.componentsCol(boardId).doc(savedSpec.name);
 
         const batch = db.batch();
+        assertDocSize(
+          savedSpec,
+          'COMPONENT_TOO_LARGE',
+          'This component is too large to save. Remove inline (data:) images.'
+        );
         batch.set(targetRef, stripUndefinedDeep(savedSpec));
         batch.update(boardRef, {updatedAt: now, updatedBy: auth.email});
         await batch.commit();
 
         res.status(200).json({success: true, data: savedSpec});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.component.save] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
@@ -1365,6 +1461,17 @@ export function registerPrototypesApi(
       const rawBody = typeof req.body?.body === 'string' ? req.body.body : '';
       const content =
         typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+      if (
+        content.length > MAX_COMMENT_CHARS ||
+        rawBody.length > MAX_COMMENT_CHARS * 4
+      ) {
+        res.status(413).json({
+          success: false,
+          error: 'COMMENT_TOO_LONG',
+          message: 'This comment is too long.',
+        });
+        return;
+      }
       const sanitizedBody = sanitizeBlockHtml(rawBody);
       if (!sanitizedBody && !content) {
         res.status(400).json({
@@ -1378,7 +1485,7 @@ export function registerPrototypesApi(
       const mentions = Array.isArray(req.body?.mentions)
         ? req.body.mentions
             .filter((m: unknown): m is string => typeof m === 'string')
-            .map((m: string) => m.trim().toLowerCase())
+            .map((m: string) => m.trim().toLowerCase().slice(0, 320))
             .filter(Boolean)
             .slice(0, 50)
         : undefined;
@@ -1412,26 +1519,19 @@ export function registerPrototypesApi(
             return;
           }
           const threadRef = refs.commentsCol(boardId).doc(threadId);
-          const threadSnap = await threadRef.get();
-          if (!threadSnap.exists) {
-            res.status(404).json({success: false, error: 'NOT_FOUND'});
-            return;
-          }
-          const existing = {
-            ...(threadSnap.data() as PrototypeCommentThread),
-            id: threadSnap.id,
-          };
-          const participants = Array.from(
-            new Set([...(existing.participants || []), auth.email])
+          const updated = await mutateThread(
+            auth.cmsClient.db,
+            threadRef,
+            (existing) => ({
+              ...existing,
+              comments: [...(existing.comments || []), item],
+              participants: Array.from(
+                new Set([...(existing.participants || []), auth.email])
+              ),
+              updatedAt: now,
+              updatedBy: auth.email,
+            })
           );
-          const updated: PrototypeCommentThread = {
-            ...existing,
-            comments: [...(existing.comments || []), item],
-            participants,
-            updatedAt: now,
-            updatedBy: auth.email,
-          };
-          await threadRef.set(stripUndefinedDeep(updated));
           res.status(200).json({success: true, data: updated});
           return;
         }
@@ -1507,6 +1607,7 @@ export function registerPrototypesApi(
           .set(stripUndefinedDeep(newThread));
         res.status(200).json({success: true, data: newThread});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.comment.add] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
@@ -1548,15 +1649,6 @@ export function registerPrototypesApi(
           auth.cmsClient.projectId
         );
         const threadRef = refs.commentsCol(boardId).doc(threadId);
-        const snap = await threadRef.get();
-        if (!snap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        const existing = {
-          ...(snap.data() as PrototypeCommentThread),
-          id: snap.id,
-        };
         const now = Date.now();
         const lifecycleItem: PrototypeCommentItem = {
           id: generateId('c'),
@@ -1564,27 +1656,33 @@ export function registerPrototypesApi(
           createdAt: now,
           createdBy: auth.email,
         };
-        const updated: PrototypeCommentThread = {
-          ...existing,
-          status,
-          comments: [...(existing.comments || []), lifecycleItem],
-          participants: Array.from(
-            new Set([...(existing.participants || []), auth.email])
-          ),
-          updatedAt: now,
-          updatedBy: auth.email,
-        };
-        if (status === 'resolved') {
-          updated.resolvedAt = now;
-          updated.resolvedBy = auth.email;
-        } else {
-          delete updated.resolvedAt;
-          delete updated.resolvedBy;
-        }
-
-        await threadRef.set(stripUndefinedDeep(updated));
+        const updated = await mutateThread(
+          auth.cmsClient.db,
+          threadRef,
+          (existing) => {
+            const next: PrototypeCommentThread = {
+              ...existing,
+              status,
+              comments: [...(existing.comments || []), lifecycleItem],
+              participants: Array.from(
+                new Set([...(existing.participants || []), auth.email])
+              ),
+              updatedAt: now,
+              updatedBy: auth.email,
+            };
+            if (status === 'resolved') {
+              next.resolvedAt = now;
+              next.resolvedBy = auth.email;
+            } else {
+              delete next.resolvedAt;
+              delete next.resolvedBy;
+            }
+            return next;
+          }
+        );
         res.status(200).json({success: true, data: updated});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.comment.status] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
@@ -1635,20 +1733,6 @@ export function registerPrototypesApi(
           auth.cmsClient.projectId
         );
         const threadRef = refs.commentsCol(boardId).doc(threadId);
-        const snap = await threadRef.get();
-        if (!snap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        const existing = {
-          ...(snap.data() as PrototypeCommentThread),
-          id: snap.id,
-        };
-        if (existing.createdBy !== auth.email && !EDIT_ROLES.has(auth.role)) {
-          res.status(403).json({success: false, error: 'FORBIDDEN'});
-          return;
-        }
-
         const anchor: PrototypeCommentAnchor = {
           pageId: rawAnchor.pageId.trim().slice(0, 64),
           frameId:
@@ -1681,23 +1765,34 @@ export function registerPrototypesApi(
               : 0,
         };
 
-        const nextAnchorLabel =
+        const anchorLabel =
           typeof req.body?.anchorLabel === 'string' &&
           req.body.anchorLabel.trim()
             ? req.body.anchorLabel.trim().slice(0, 200)
-            : existing.anchorLabel;
+            : undefined;
 
-        const updated: PrototypeCommentThread = {
-          ...existing,
-          anchor,
-          anchorLabel: nextAnchorLabel,
-          updatedAt: Date.now(),
-          updatedBy: auth.email,
-        };
-
-        await threadRef.set(stripUndefinedDeep(updated));
+        const updated = await mutateThread(
+          auth.cmsClient.db,
+          threadRef,
+          (existing) => {
+            if (
+              existing.createdBy !== auth.email &&
+              !EDIT_ROLES.has(auth.role)
+            ) {
+              throw new PrototypeApiError(403, 'FORBIDDEN');
+            }
+            return {
+              ...existing,
+              anchor,
+              anchorLabel: anchorLabel ?? existing.anchorLabel,
+              updatedAt: Date.now(),
+              updatedBy: auth.email,
+            };
+          }
+        );
         res.status(200).json({success: true, data: updated});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.comment.move] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
@@ -1739,48 +1834,37 @@ export function registerPrototypesApi(
           auth.cmsClient.projectId
         );
         const threadRef = refs.commentsCol(boardId).doc(threadId);
-        const snap = await threadRef.get();
-        if (!snap.exists) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        const existing = {
-          ...(snap.data() as PrototypeCommentThread),
-          id: snap.id,
-        };
-        const items = existing.comments || [];
-        const idx = items.findIndex((item) => item.id === commentId);
-        if (idx === -1) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        const targetItem = items[idx];
-        if (
-          targetItem.createdBy !== auth.email &&
-          !MODERATOR_ROLES.has(auth.role)
-        ) {
-          res.status(403).json({success: false, error: 'FORBIDDEN'});
-          return;
-        }
-
-        const remaining = items.filter((item) => item.id !== commentId);
-        const hasRemainingComments = remaining.some(
-          (item) => item.type === 'comment'
-        );
-        if (idx === 0 || !hasRemainingComments) {
-          await threadRef.delete();
-        } else {
-          const updated: PrototypeCommentThread = {
+        await mutateThread(auth.cmsClient.db, threadRef, (existing) => {
+          const items = existing.comments || [];
+          const idx = items.findIndex((item) => item.id === commentId);
+          if (idx === -1) {
+            throw new PrototypeApiError(404, 'NOT_FOUND');
+          }
+          if (
+            items[idx].createdBy !== auth.email &&
+            !MODERATOR_ROLES.has(auth.role)
+          ) {
+            throw new PrototypeApiError(403, 'FORBIDDEN');
+          }
+          const remaining = items.filter((item) => item.id !== commentId);
+          const hasRemainingComments = remaining.some(
+            (item) => item.type === 'comment'
+          );
+          // Deleting the root comment, or the last one, removes the thread.
+          if (idx === 0 || !hasRemainingComments) {
+            return null;
+          }
+          return {
             ...existing,
             comments: remaining,
             updatedAt: Date.now(),
             updatedBy: auth.email,
           };
-          await threadRef.set(stripUndefinedDeep(updated));
-        }
+        });
 
         res.status(200).json({success: true, data: {deleted: true}});
       } catch (err: any) {
+        if (sendApiError(res, err)) return;
         console.error('[prototypes.comment.delete] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }

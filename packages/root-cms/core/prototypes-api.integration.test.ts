@@ -211,6 +211,65 @@ describe('registerPrototypesApi integration', () => {
     expect(savedHero.css).toContain('--proto-vh');
     expect(savedHero.css).not.toContain('@import');
 
+    // A partial save (a drag sends only the position) keeps the stored blocks.
+    const movedFrame = await callApi({
+      path: '/cms/api/prototypes.frame.save',
+      email: 'editor@example.com',
+      body: {boardId, frame: {id: frameId, x: 400, y: 200}},
+    });
+    expect(movedFrame.status).toBe(200);
+    expect(movedFrame.body.data.x).toBe(400);
+    expect(movedFrame.body.data.title).toBe('Pricing B');
+    expect(movedFrame.body.data.blocks._array).toEqual(['hero']);
+
+    // A partial save for a frame that no longer exists must not recreate it.
+    const ghostFrame = await callApi({
+      path: '/cms/api/prototypes.frame.save',
+      email: 'editor@example.com',
+      body: {boardId, frame: {id: 'deleted-frame', x: 10, y: 10}},
+    });
+    expect(ghostFrame.status).toBe(404);
+
+    // Simultaneous replies to one thread are both kept.
+    const raceThread = await callApi({
+      path: '/cms/api/prototypes.comment.add',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        anchor: {
+          pageId: 'explorations',
+          frameId: null,
+          fallbackX: 0,
+          fallbackY: 0,
+        },
+        content: 'Root',
+      },
+    });
+    const raceThreadId = raceThread.body.data.id as string;
+    const raceReplies = await Promise.all(
+      ['viewer@example.com', 'editor@example.com'].map((email) =>
+        callApi({
+          path: '/cms/api/prototypes.comment.add',
+          email,
+          body: {boardId, threadId: raceThreadId, content: `Reply by ${email}`},
+        })
+      )
+    );
+    expect(raceReplies.map((reply) => reply.status)).toEqual([200, 200]);
+    expect(
+      Math.max(...raceReplies.map((reply) => reply.body.data.comments.length))
+    ).toBe(3);
+    const raceCleanup = await callApi({
+      path: '/cms/api/prototypes.comment.delete',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        threadId: raceThreadId,
+        commentId: raceThread.body.data.comments[0].id,
+      },
+    });
+    expect(raceCleanup.status).toBe(200);
+
     // VIEWER can read the board and add comments, and delete their own comment,
     // but cannot delete an EDITOR's comment.
     const viewerGet = await callApi({

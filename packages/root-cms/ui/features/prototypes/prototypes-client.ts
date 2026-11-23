@@ -21,6 +21,8 @@ interface ApiEnvelope<T> {
   success: boolean;
   data?: T;
   error?: string;
+  /** Human-readable explanation, when the server has one. */
+  message?: string;
 }
 
 async function postJson<T>(
@@ -40,7 +42,9 @@ async function postJson<T>(
   }
   if (!res.ok || !payload?.success) {
     throw new Error(
-      payload?.error || `Request to ${endpoint} failed (${res.status})`
+      payload?.message ||
+        payload?.error ||
+        `Request to ${endpoint} failed (${res.status})`
     );
   }
   return payload.data as T;
