@@ -176,11 +176,11 @@ Add the Design Prototypes spotlight module with its screenshot, add "Read the gu
 +  image:
 +    assetId: "rxXoK0rvwfAq"
 +    filename: "cms-design-prototypes.png"
-+    src: "https://lh3.googleusercontent.com/v5Y8n3xAXCN47j85AcjmdKdCn9rYkfiG2aAhGqIT1Ui0IMdFIOV0MRo0XbWgyEtdSgcQM5PkiZX1kPw0v0QXalvzy0LuI5Os2WA"
++    src: "https://lh3.googleusercontent.com/RYcWRzpJGtbHia6XFtw2tMbEyYB5l4ZAkWU8q_gXIkMcFEYfxoMFPurMFLo5hawK0lqRXykSU9oaFJYozC6WGEor-GrL-JX9"
 +    width: 1920
 +    height: 1200
-+    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared canvas, with a pinned team comment and Root AI adding a new comparison component."
-+    gcsPath: "/rootjs-dev.appspot.com/www/uploads/5fd792f93c3ba2c49f60557a61dd7db1e3347df1.png"
++    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared artboard, with floating canvas tools, a team comment, and the floating Root AI card."
++    gcsPath: "/rootjs-dev.appspot.com/www/uploads/3586abcfaa181955b07421f23b02c0b7fbe196b5.png"
 +  _arrayKey: "dpSp0t"
 +- id: "schemas"
 +  body: "Define schemas in TypeScript to generate typed props automatically, then render them directly in your TSX components."
@@ -468,11 +468,11 @@ meta:
   image: &a1
     assetId: "rxXoK0rvwfAq"
     filename: "cms-design-prototypes.png"
-    src: "https://lh3.googleusercontent.com/v5Y8n3xAXCN47j85AcjmdKdCn9rYkfiG2aAhGqIT1Ui0IMdFIOV0MRo0XbWgyEtdSgcQM5PkiZX1kPw0v0QXalvzy0LuI5Os2WA"
+    src: "https://lh3.googleusercontent.com/RYcWRzpJGtbHia6XFtw2tMbEyYB5l4ZAkWU8q_gXIkMcFEYfxoMFPurMFLo5hawK0lqRXykSU9oaFJYozC6WGEor-GrL-JX9"
     width: 1920
     height: 1200
-    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared canvas, with a pinned team comment and Root AI adding a new comparison component."
-    gcsPath: "/rootjs-dev.appspot.com/www/uploads/5fd792f93c3ba2c49f60557a61dd7db1e3347df1.png"
+    alt: "Design Prototypes in the Root.js CMS: desktop and mobile page concepts for Fernwood Market on a shared artboard, with floating canvas tools, a team comment, and the floating Root AI card."
+    gcsPath: "/rootjs-dev.appspot.com/www/uploads/3586abcfaa181955b07421f23b02c0b7fbe196b5.png"
 content:
   eyebrow: "Design Prototypes"
   title: "From first concept to production-ready components"
