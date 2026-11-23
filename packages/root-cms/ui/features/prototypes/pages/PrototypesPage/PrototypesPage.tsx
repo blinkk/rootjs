@@ -311,7 +311,7 @@ export function PrototypesPage() {
   return (
     <Layout>
       <div className="PrototypesPage bg-page p-page">
-        <div className="PrototypesPage__header mb-6 flex max-w-7xl flex-wrap items-start justify-between gap-4">
+        <div className="PrototypesPage__header mb-8 flex max-w-7xl flex-wrap items-start justify-between gap-4">
           <div className="PrototypesPage__headerText min-w-0 grow basis-72">
             <Heading size="h1">Design Prototypes</Heading>
             <Text as="p" className="mb-0 mt-2 max-w-prose" color="gray">
@@ -326,7 +326,6 @@ export function PrototypesPage() {
             >
               <Button
                 variant="primary"
-                size="md"
                 icon={<IconPlus />}
                 disabled={!canEdit}
                 onClick={() => setNewModalOpen(true)}
@@ -354,7 +353,7 @@ export function PrototypesPage() {
         )}
 
         {showControls && (
-          <div className="PrototypesPage__controls mb-6 flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="PrototypesPage__controls mb-4 flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SegmentedControl
               aria-label="Prototype status filters"
               size="md"
