@@ -1,5 +1,11 @@
 # @blinkk/root-password-protect
 
+## 4.4.1
+
+### Patch Changes
+
+- @blinkk/root@4.4.1
+
 ## 4.3.7
 
 ### Patch Changes
