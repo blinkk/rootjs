@@ -1,10 +1,14 @@
 import {describe, expect, test, vi} from 'vitest';
-import type {
-  PrototypeBoard,
-  PrototypeCommentThread,
-  PrototypeComponentSpec,
-  PrototypeFrame,
-  PrototypeProjectContext,
+import {
+  computeSectionFramePosition,
+  type PrototypeAnnotation,
+  type PrototypeBoard,
+  type PrototypeCommentThread,
+  type PrototypeComponentSpec,
+  type PrototypeFrame,
+  type PrototypeProjectContext,
+  SECTION_LABEL_GAP,
+  SECTION_ROW_GAP,
 } from '../prototypes.js';
 import {
   applyFrameBlockOperations,
@@ -256,6 +260,123 @@ describe('computeNextFramePosition', () => {
       x: 1600 + 1440 + FRAME_AUTO_LAYOUT_GAP,
       y: 80,
     });
+  });
+});
+
+describe('computeSectionFramePosition', () => {
+  const label = (text: string, x: number, y: number) => ({
+    id: `label_${text}`,
+    pageId: 'explorations',
+    kind: 'label' as const,
+    text,
+    x,
+    y,
+  });
+
+  test('appends to the right of an existing section', () => {
+    const frames = [
+      makeFrame({id: 'a', x: 80, y: 176}),
+      makeFrame({id: 'b', x: 1600, y: 176}),
+      makeFrame({id: 'c', x: 9000, y: 2000}),
+    ];
+    const labels = [label('Round 1', 80, 80), label('Round 2', 80, 1904)];
+    expect(
+      computeSectionFramePosition(frames, labels, 'explorations', ' round 1 ')
+    ).toEqual({
+      x: 1600 + 1440 + FRAME_AUTO_LAYOUT_GAP,
+      y: 80 + SECTION_LABEL_GAP,
+      createLabels: [],
+    });
+  });
+
+  test('puts a new section below the tallest frame using cachedHeight', () => {
+    const frames = [
+      makeFrame({id: 'a', x: 80, y: 176, cachedHeight: 900}),
+      makeFrame({id: 'b', x: 1600, y: 176, cachedHeight: 3000}),
+    ];
+    const labelY = 176 + 3000 + SECTION_ROW_GAP;
+    expect(
+      computeSectionFramePosition(
+        frames,
+        [label('Round 1', 80, 80)],
+        'explorations',
+        'Round 2'
+      )
+    ).toEqual({
+      x: 80,
+      y: labelY + SECTION_LABEL_GAP,
+      createLabels: [{text: 'Round 2', x: 80, y: labelY}],
+    });
+  });
+
+  test('also labels earlier work "Round 1" on an unlabeled page', () => {
+    const frames = [makeFrame({id: 'a', x: 80, y: 80, cachedHeight: 900})];
+    const result = computeSectionFramePosition(
+      frames,
+      [],
+      'explorations',
+      'Round 2'
+    );
+    expect(result.createLabels).toEqual([
+      {text: 'Round 1', x: 80, y: 80 - SECTION_LABEL_GAP},
+      {text: 'Round 2', x: 80, y: 80 + 900 + SECTION_ROW_GAP},
+    ]);
+    expect(
+      computeSectionFramePosition(frames, [], 'explorations', 'Round 1')
+        .createLabels
+    ).toHaveLength(1);
+  });
+
+  test('parallel frame_create calls for a new section share one label', async () => {
+    const base = makeTestBackend({
+      frames: [makeFrame({id: 'a', x: 80, y: 80, cachedHeight: 900})],
+    });
+    const annotations: PrototypeAnnotation[] = [];
+    const tools = createPrototypeAiTools({
+      ...base.backend,
+      getState: () => ({...base.backend.getState(), annotations}),
+      saveAnnotation: async (input) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        const saved = {
+          ...input,
+          createdAt: 1,
+          createdBy: '',
+          updatedAt: 1,
+          updatedBy: '',
+        } as PrototypeAnnotation;
+        annotations.push(saved);
+        return saved;
+      },
+    });
+    const ctx = {toolCallId: 'tc_section', messages: []};
+    const create = (title: string) =>
+      (tools.frame_create as any).execute(
+        {title, section: 'Round 2', blocks: []},
+        ctx
+      );
+    const [resA, resB] = await Promise.all([create('A'), create('B')]);
+
+    const rowY = 80 + 900 + SECTION_ROW_GAP + SECTION_LABEL_GAP;
+    expect([resA.frame.x, resB.frame.x]).toEqual([
+      80,
+      80 + 1440 + FRAME_AUTO_LAYOUT_GAP,
+    ]);
+    expect([resA.frame.y, resB.frame.y]).toEqual([rowY, rowY]);
+    expect(annotations.map((item) => item.text).sort()).toEqual([
+      'Round 1',
+      'Round 2',
+    ]);
+
+    const overview = await (tools.board_overview as any).execute({}, ctx);
+    expect(overview.pages[0].sections.map((s: any) => s.frameIds)).toEqual([
+      ['a'],
+      [resA.frame.id, resB.frame.id],
+    ]);
+    const bad = await (tools.frame_create as any).execute(
+      {title: 'C', pageId: 'nope', blocks: []},
+      ctx
+    );
+    expect(bad.error).toContain('does not exist');
   });
 });
 

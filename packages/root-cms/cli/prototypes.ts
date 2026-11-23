@@ -25,6 +25,7 @@ import {
 import {
   DEFAULT_PROTOTYPE_PAGES,
   getOrderedBlocks,
+  type PrototypeAnnotation,
   type PrototypeBlock,
   type PrototypeBlockMap,
   type PrototypeBoard,
@@ -149,6 +150,8 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
       boardsCol.doc(boardId).collection('Components'),
     commentsCol: (boardId: string) =>
       boardsCol.doc(boardId).collection('Comments'),
+    annotationsCol: (boardId: string) =>
+      boardsCol.doc(boardId).collection('Annotations'),
     // Legacy: AI turn snapshots are no longer written; only used for cleanup.
     turnsCol: (boardId: string) => boardsCol.doc(boardId).collection('Turns'),
   };
@@ -673,13 +676,19 @@ export async function prototypesGet(
     id: boardSnap.id,
   };
 
-  const [framesSnap, boardComponentsSnap, projectComponentsSnap, commentsSnap] =
-    await Promise.all([
-      refs.framesCol(boardId).get(),
-      refs.componentsCol(boardId).get(),
-      refs.projectComponentsCol.get(),
-      refs.commentsCol(boardId).get(),
-    ]);
+  const [
+    framesSnap,
+    boardComponentsSnap,
+    projectComponentsSnap,
+    commentsSnap,
+    annotationsSnap,
+  ] = await Promise.all([
+    refs.framesCol(boardId).get(),
+    refs.componentsCol(boardId).get(),
+    refs.projectComponentsCol.get(),
+    refs.commentsCol(boardId).get(),
+    refs.annotationsCol(boardId).get(),
+  ]);
 
   const frames = sortFrames(
     framesSnap.docs.map((d) => ({
@@ -700,11 +709,16 @@ export async function prototypesGet(
     .map((d) => ({...(d.data() as PrototypeCommentThread), id: d.id}))
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
+  const annotations = annotationsSnap.docs
+    .map((d) => ({...(d.data() as PrototypeAnnotation), id: d.id}))
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
   const bundle: PrototypeBoardBundle = {
     board,
     frames,
     components,
     comments,
+    annotations,
   };
 
   if (outputDirArg) {
@@ -718,6 +732,10 @@ export async function prototypesGet(
     fs.writeFileSync(
       path.join(outDir, 'comments.json'),
       JSON.stringify(comments, null, 2) + '\n'
+    );
+    fs.writeFileSync(
+      path.join(outDir, 'annotations.json'),
+      JSON.stringify(annotations, null, 2) + '\n'
     );
     for (const frame of frames) {
       fs.writeFileSync(
@@ -967,6 +985,7 @@ export async function prototypesDelete(
     deleteCollectionDocs(db, refs.framesCol(boardId)),
     deleteCollectionDocs(db, refs.componentsCol(boardId)),
     deleteCollectionDocs(db, refs.commentsCol(boardId)),
+    deleteCollectionDocs(db, refs.annotationsCol(boardId)),
     // Legacy cleanup for boards created before turn snapshots were removed.
     deleteCollectionDocs(db, refs.turnsCol(boardId)),
   ]);

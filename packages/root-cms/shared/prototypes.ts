@@ -250,6 +250,53 @@ export interface PrototypeCommentThread {
   resolvedBy?: string;
 }
 
+/** Kind of a canvas annotation: a sticky note or a large text label. */
+export type PrototypeAnnotationKind = 'note' | 'label';
+
+/** Maximum plain-text length of a note annotation. */
+export const PROTOTYPE_NOTE_MAX_CHARS = 2000;
+
+/** Maximum plain-text length of a label annotation. */
+export const PROTOTYPE_LABEL_MAX_CHARS = 200;
+
+/** Default width of a note annotation in world px. */
+export const PROTOTYPE_NOTE_WIDTH = 240;
+
+/** Font size of a label annotation in world px. */
+export const PROTOTYPE_LABEL_FONT_SIZE = 48;
+
+/**
+ * A note or text label placed directly on the canvas, stored at
+ * `Projects/{pid}/Prototypes/{boardId}/Annotations/{id}`. A label doubles as
+ * the header of a section (a row of frames, e.g. `Round 1`).
+ */
+export interface PrototypeAnnotation {
+  /** Unique annotation id. */
+  id: string;
+  /** Parent board id. */
+  boardId: string;
+  /** Id of the `PrototypeBoardPage` this annotation sits on. */
+  pageId: string;
+  /** Sticky note or large text label. */
+  kind: PrototypeAnnotationKind;
+  /** Plain text only. */
+  text: string;
+  /** World X coordinate of the top-left corner. */
+  x: number;
+  /** World Y coordinate of the top-left corner. */
+  y: number;
+  /** Note width in world px (notes only). */
+  width?: number;
+  /** Creation epoch millis. */
+  createdAt: number;
+  /** Creator email address. */
+  createdBy: string;
+  /** Last modification epoch millis. */
+  updatedAt: number;
+  /** Last modifier email address. */
+  updatedBy: string;
+}
+
 /** Complete hydrated state of a single prototype board. */
 export interface PrototypeBoardBundle {
   /** Board metadata and pages. */
@@ -260,6 +307,170 @@ export interface PrototypeBoardBundle {
   components: Record<string, PrototypeComponentSpec>;
   /** Comment threads on the board. */
   comments: PrototypeCommentThread[];
+  /** Notes and text labels placed on the canvas. */
+  annotations: PrototypeAnnotation[];
+}
+
+/** Horizontal spacing in world px between auto-positioned frames on a page. */
+export const FRAME_AUTO_LAYOUT_GAP = 80;
+
+/** Vertical distance in world px from a section label to its row of frames. */
+export const SECTION_LABEL_GAP = 96;
+
+/** Vertical gap in world px between the tallest frame and the next section. */
+export const SECTION_ROW_GAP = 320;
+
+/** Frame height assumed for section layout before a frame is measured. */
+export const SECTION_ESTIMATED_FRAME_HEIGHT = 1200;
+
+/** Header given to earlier, unlabeled frames when a later section is added. */
+export const DEFAULT_FIRST_SECTION_LABEL = 'Round 1';
+
+/** Frame fields read by the section layout helpers. */
+export type SectionLayoutFrame = Pick<
+  PrototypeFrame,
+  'id' | 'pageId' | 'x' | 'y' | 'width' | 'cachedHeight'
+>;
+
+/** Annotation fields read by the section layout helpers. */
+export type SectionLayoutAnnotation = Pick<
+  PrototypeAnnotation,
+  'id' | 'pageId' | 'kind' | 'text' | 'x' | 'y'
+>;
+
+/** Normalizes a section label for case-insensitive comparison. */
+function normalizeSectionLabel(text: string): string {
+  return String(text || '')
+    .trim()
+    .toLowerCase();
+}
+
+/** Returns the `label` annotations on a page from top to bottom. */
+export function getPageSectionLabels<T extends SectionLayoutAnnotation>(
+  annotations: T[],
+  pageId: string
+): T[] {
+  return annotations
+    .filter((item) => item.kind === 'label' && item.pageId === pageId)
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/**
+ * Groups a page's frames into sections. A section is a `label` annotation; a
+ * frame belongs to the closest label above it (`label.y <= frame.y`), and
+ * frames above every label belong to no section.
+ */
+export function groupFramesBySection<
+  F extends SectionLayoutFrame,
+  A extends SectionLayoutAnnotation,
+>(
+  frames: F[],
+  annotations: A[],
+  pageId: string
+): {sections: Array<{label: A; frames: F[]}>; unsectioned: F[]} {
+  const sections = getPageSectionLabels(annotations, pageId).map((label) => ({
+    label,
+    frames: [] as F[],
+  }));
+  const unsectioned: F[] = [];
+  const pageFrames = frames
+    .filter((frame) => frame.pageId === pageId)
+    .sort((a, b) => a.x - b.x);
+  for (const frame of pageFrames) {
+    let owner: {label: A; frames: F[]} | null = null;
+    for (const section of sections) {
+      if (section.label.y <= frame.y) {
+        owner = section;
+      }
+    }
+    if (owner) {
+      owner.frames.push(frame);
+    } else {
+      unsectioned.push(frame);
+    }
+  }
+  return {sections, unsectioned};
+}
+
+/**
+ * Computes where a new frame in the section named `sectionLabel` goes, and
+ * which label annotations must be created first.
+ *
+ * An existing section (matched case-insensitively) gets the frame appended to
+ * the right of its row. A new section starts a row below everything on the
+ * page. When earlier frames have no label at all they also get a `Round 1`
+ * header, so every row on the page ends up labelled.
+ *
+ * Pass frames and labels that are reserved but not saved yet along with the
+ * stored ones, so parallel calls share one label and line up in one row.
+ */
+export function computeSectionFramePosition(
+  frames: SectionLayoutFrame[],
+  annotations: SectionLayoutAnnotation[],
+  pageId: string,
+  sectionLabel: string
+): {
+  x: number;
+  y: number;
+  createLabels: Array<{text: string; x: number; y: number}>;
+} {
+  const text = String(sectionLabel || '').trim();
+  const wanted = normalizeSectionLabel(text);
+  const {sections} = groupFramesBySection(frames, annotations, pageId);
+
+  const existing = sections.find(
+    (section) => normalizeSectionLabel(section.label.text) === wanted
+  );
+  if (existing) {
+    let x = existing.label.x;
+    if (existing.frames.length > 0) {
+      const rightEdge = Math.max(
+        ...existing.frames.map((frame) => frame.x + Math.max(1, frame.width))
+      );
+      x = rightEdge + FRAME_AUTO_LAYOUT_GAP;
+    }
+    return {
+      x: Math.round(x),
+      y: Math.round(existing.label.y + SECTION_LABEL_GAP),
+      createLabels: [],
+    };
+  }
+
+  const pageFrames = frames.filter((frame) => frame.pageId === pageId);
+  const createLabels: Array<{text: string; x: number; y: number}> = [];
+  let labelX = 0;
+  let labelY = 0;
+  if (pageFrames.length > 0 || sections.length > 0) {
+    // Empty sections count too, so a new row never lands on an older label.
+    const lefts = [
+      ...pageFrames.map((frame) => frame.x),
+      ...(pageFrames.length === 0 ? sections.map((s) => s.label.x) : []),
+    ];
+    const bottoms = [
+      ...pageFrames.map(
+        (frame) =>
+          frame.y + (frame.cachedHeight || SECTION_ESTIMATED_FRAME_HEIGHT)
+      ),
+      ...sections.map((s) => s.label.y + SECTION_LABEL_GAP),
+    ];
+    labelX = Math.round(Math.min(...lefts));
+    labelY = Math.round(Math.max(...bottoms) + SECTION_ROW_GAP);
+  }
+  if (
+    pageFrames.length > 0 &&
+    sections.length === 0 &&
+    wanted !== normalizeSectionLabel(DEFAULT_FIRST_SECTION_LABEL)
+  ) {
+    createLabels.push({
+      text: DEFAULT_FIRST_SECTION_LABEL,
+      x: labelX,
+      y: Math.round(
+        Math.min(...pageFrames.map((frame) => frame.y)) - SECTION_LABEL_GAP
+      ),
+    });
+  }
+  createLabels.push({text, x: labelX, y: labelY});
+  return {x: labelX, y: labelY + SECTION_LABEL_GAP, createLabels};
 }
 
 /** Compact summary of an existing site schema discovered from the project. */

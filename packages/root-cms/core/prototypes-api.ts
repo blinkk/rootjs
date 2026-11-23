@@ -19,6 +19,10 @@ import {
 import {
   DEFAULT_PROTOTYPE_PAGES,
   getOrderedBlocks,
+  PROTOTYPE_LABEL_MAX_CHARS,
+  PROTOTYPE_NOTE_MAX_CHARS,
+  PROTOTYPE_NOTE_WIDTH,
+  type PrototypeAnnotation,
   type PrototypeBlock,
   type PrototypeBlockMap,
   type PrototypeBoard,
@@ -385,6 +389,88 @@ function sanitizeFrameForStorage(
   return frame;
 }
 
+/**
+ * Sanitizes a `PrototypeAnnotation` payload, merging a partial payload onto
+ * the stored annotation. Text is stored as plain text and rendered as text.
+ */
+function sanitizeAnnotationForStorage(
+  raw: Partial<PrototypeAnnotation> & {id: string},
+  options: {
+    boardId: string;
+    existing?: PrototypeAnnotation | null;
+    email: string;
+    now: number;
+  }
+): PrototypeAnnotation {
+  const existing = options.existing;
+  if (raw.kind !== undefined && raw.kind !== 'note' && raw.kind !== 'label') {
+    throw new PrototypeApiError(400, 'INVALID_KIND');
+  }
+  // The kind is fixed at creation; a note and a label render differently.
+  const kind = existing?.kind ?? raw.kind;
+  if (!kind) {
+    throw new PrototypeApiError(400, 'INVALID_KIND');
+  }
+  const pageId =
+    typeof raw.pageId === 'string' && raw.pageId.trim()
+      ? raw.pageId.trim().slice(0, 64)
+      : existing?.pageId;
+  if (!pageId) {
+    throw new PrototypeApiError(400, 'MISSING_REQUIRED_FIELD', 'pageId');
+  }
+  for (const key of ['x', 'y'] as const) {
+    if (
+      raw[key] !== undefined &&
+      !(typeof raw[key] === 'number' && Number.isFinite(raw[key]))
+    ) {
+      throw new PrototypeApiError(400, 'INVALID_POSITION');
+    }
+  }
+  if (raw.text !== undefined && typeof raw.text !== 'string') {
+    throw new PrototypeApiError(400, 'INVALID_TEXT');
+  }
+  let text = raw.text !== undefined ? raw.text : existing?.text || '';
+  if (kind === 'label') {
+    // Labels are a single line.
+    text = text.replace(/\s+/g, ' ');
+  }
+  text = text
+    .trim()
+    .slice(
+      0,
+      kind === 'label' ? PROTOTYPE_LABEL_MAX_CHARS : PROTOTYPE_NOTE_MAX_CHARS
+    );
+  if (!text) {
+    throw new PrototypeApiError(400, 'INVALID_TEXT');
+  }
+  const annotation: PrototypeAnnotation = {
+    id: raw.id,
+    boardId: options.boardId,
+    pageId,
+    kind,
+    text,
+    x: Math.round(raw.x ?? existing?.x ?? 0),
+    y: Math.round(raw.y ?? existing?.y ?? 0),
+    createdAt: existing?.createdAt ?? options.now,
+    createdBy: existing?.createdBy ?? options.email,
+    updatedAt: options.now,
+    updatedBy: options.email,
+  };
+  if (kind === 'note') {
+    const rawWidth =
+      typeof raw.width === 'number' && Number.isFinite(raw.width)
+        ? raw.width
+        : (existing?.width ?? PROTOTYPE_NOTE_WIDTH);
+    annotation.width = Math.max(120, Math.min(960, Math.round(rawWidth)));
+  }
+  return annotation;
+}
+
+/** Sorts annotations by creation time so they render in a stable order. */
+function sortAnnotations(items: PrototypeAnnotation[]): PrototypeAnnotation[] {
+  return [...items].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+}
+
 /** Sanitizes a `PrototypeComponentSpec` before persistence. */
 function sanitizeComponentSpec(
   raw: Omit<PrototypeComponentSpec, 'updatedAt' | 'updatedBy'>,
@@ -557,6 +643,8 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
       boardsCol.doc(boardId).collection('Components'),
     commentsCol: (boardId: string) =>
       boardsCol.doc(boardId).collection('Comments'),
+    annotationsCol: (boardId: string) =>
+      boardsCol.doc(boardId).collection('Annotations'),
     // Legacy: AI turn snapshots are no longer written; only used for cleanup.
     turnsCol: (boardId: string) => boardsCol.doc(boardId).collection('Turns'),
   };
@@ -658,6 +746,21 @@ function buildPrototypeSystemPrompt(options: {
     '  net-new component (`proposed: true`) and save its reusable spec with',
     '  a short design rationale.',
     '- Keep text replies concise, structured, and focused on design decisions.',
+    '',
+    'Rounds:',
+    '- Mocks are organised into rounds, one row of frames per round, each row',
+    '  headed by a text label. The first set of explorations is "Round 1".',
+    '- When the user asks for major changes or a new direction after reviewing',
+    '  a round, start the next round ("Round 2", "Round 3", …): pass',
+    '  `section: "Round N"` to `frame_create` for EVERY frame in that round.',
+    '  This places the frames in a new row below the previous round and adds',
+    '  the header label for you.',
+    '- Small tweaks to an existing frame are edits (`frame_edit`), not a new',
+    '  round.',
+    '- Check `board_overview` for existing section labels to pick the next',
+    '  number. Never renumber or rename existing rounds.',
+    '- Use `annotation_add` to leave a short note next to a frame (pass',
+    '  `nearFrameId`) when a design decision needs explaining.',
     '',
     'Active board:',
     `- Project: ${options.projectName}`,
@@ -840,11 +943,13 @@ export function registerPrototypesApi(
         projectComponentsSnap,
         boardComponentsSnap,
         commentsSnap,
+        annotationsSnap,
       ] = await Promise.all([
         refs.framesCol(boardId).get(),
         refs.projectComponentsCol.get(),
         refs.componentsCol(boardId).get(),
         refs.commentsCol(boardId).get(),
+        refs.annotationsCol(boardId).get(),
       ]);
 
       const frames = sortFrames(
@@ -871,11 +976,19 @@ export function registerPrototypesApi(
         }))
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
+      const annotations = sortAnnotations(
+        annotationsSnap.docs.map((d) => ({
+          ...(d.data() as PrototypeAnnotation),
+          id: d.id,
+        }))
+      );
+
       const bundle: PrototypeBoardBundle = {
         board,
         frames,
         components,
         comments,
+        annotations,
       };
       res.setHeader('Cache-Control', 'no-store');
       res.status(200).json({success: true, data: bundle});
@@ -965,6 +1078,7 @@ export function registerPrototypesApi(
           frames: [],
           components,
           comments: [],
+          annotations: [],
         };
         res.status(200).json({success: true, data: bundle});
       } catch (err: any) {
@@ -1091,10 +1205,13 @@ export function registerPrototypesApi(
           ...(sourceSnap.data() as PrototypeBoard),
           id: sourceSnap.id,
         };
-        const [framesSnap, componentsSnap] = await Promise.all([
-          refs.framesCol(boardId).get(),
-          refs.componentsCol(boardId).get(),
-        ]);
+        const [framesSnap, componentsSnap, annotationsSnap] = await Promise.all(
+          [
+            refs.framesCol(boardId).get(),
+            refs.componentsCol(boardId).get(),
+            refs.annotationsCol(boardId).get(),
+          ]
+        );
 
         const now = Date.now();
         const nextTitle =
@@ -1155,6 +1272,25 @@ export function registerPrototypesApi(
           });
         }
 
+        for (const doc of annotationsSnap.docs) {
+          const src = {...(doc.data() as PrototypeAnnotation), id: doc.id};
+          let next: PrototypeAnnotation;
+          try {
+            next = sanitizeAnnotationForStorage(src, {
+              boardId: newBoardId,
+              email: auth.email,
+              now,
+            });
+          } catch {
+            // A malformed stored annotation is skipped, not fatal to the copy.
+            continue;
+          }
+          writes.push({
+            ref: refs.annotationsCol(newBoardId).doc(next.id),
+            data: stripUndefinedDeep(next),
+          });
+        }
+
         for (let i = 0; i < writes.length; i += MAX_BATCH_OPS) {
           const batch = db.batch();
           for (const op of writes.slice(i, i + MAX_BATCH_OPS)) {
@@ -1200,19 +1336,26 @@ export function registerPrototypesApi(
           return;
         }
 
-        const [frameRefs, componentRefs, commentRefs, turnRefs] =
-          await Promise.all([
-            listDocRefs(refs.framesCol(boardId)),
-            listDocRefs(refs.componentsCol(boardId)),
-            listDocRefs(refs.commentsCol(boardId)),
-            // Legacy cleanup for boards created before turn snapshots were removed.
-            listDocRefs(refs.turnsCol(boardId)),
-          ]);
+        const [
+          frameRefs,
+          componentRefs,
+          commentRefs,
+          annotationRefs,
+          turnRefs,
+        ] = await Promise.all([
+          listDocRefs(refs.framesCol(boardId)),
+          listDocRefs(refs.componentsCol(boardId)),
+          listDocRefs(refs.commentsCol(boardId)),
+          listDocRefs(refs.annotationsCol(boardId)),
+          // Legacy cleanup for boards created before turn snapshots were removed.
+          listDocRefs(refs.turnsCol(boardId)),
+        ]);
 
         await deleteAllDocs(db, [
           ...frameRefs,
           ...componentRefs,
           ...commentRefs,
+          ...annotationRefs,
           ...turnRefs,
           boardRef,
         ]);
@@ -1374,6 +1517,131 @@ export function registerPrototypesApi(
         res.status(200).json({success: true, data: {deleted: true}});
       } catch (err: any) {
         console.error('[prototypes.frame.delete] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Creates or updates a note or text label on a prototype board's canvas.
+   * POST /cms/api/prototypes.annotation.save
+   */
+  server.use(
+    '/cms/api/prototypes.annotation.save',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      const input = req.body?.annotation as
+        (Partial<PrototypeAnnotation> & {id?: string}) | undefined;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+      if (!input || typeof input !== 'object' || !isValidDocId(input.id)) {
+        res.status(400).json({success: false, error: 'INVALID_ANNOTATION_ID'});
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const boardRef = refs.boardDoc(boardId);
+        const annotationId = input.id;
+        const annotationRef = refs.annotationsCol(boardId).doc(annotationId);
+        const now = Date.now();
+        // Read and write in one transaction: a drag sends only `x`/`y`, which
+        // is merged onto the stored annotation.
+        const saved = await db.runTransaction(async (tx) => {
+          const [boardSnap, existingSnap] = await Promise.all([
+            tx.get(boardRef),
+            tx.get(annotationRef),
+          ]);
+          if (!boardSnap.exists) {
+            throw new PrototypeApiError(404, 'NOT_FOUND');
+          }
+          const existing = existingSnap.exists
+            ? {
+                ...(existingSnap.data() as PrototypeAnnotation),
+                id: existingSnap.id,
+              }
+            : null;
+          // A partial update for an annotation that no longer exists (deleted
+          // while a drag was in flight) must not recreate it.
+          if (
+            !existing &&
+            (input.kind === undefined ||
+              input.text === undefined ||
+              input.x === undefined ||
+              input.y === undefined)
+          ) {
+            throw new PrototypeApiError(404, 'ANNOTATION_NOT_FOUND');
+          }
+          const annotation = sanitizeAnnotationForStorage(
+            {...input, id: annotationId},
+            {boardId, existing, email: auth.email, now}
+          );
+          tx.set(annotationRef, stripUndefinedDeep(annotation));
+          tx.update(boardRef, {updatedAt: now, updatedBy: auth.email});
+          return annotation;
+        });
+
+        res.status(200).json({success: true, data: saved});
+      } catch (err: any) {
+        if (sendApiError(res, err)) return;
+        console.error('[prototypes.annotation.save] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Deletes a note or text label from a prototype board.
+   * POST /cms/api/prototypes.annotation.delete
+   */
+  server.use(
+    '/cms/api/prototypes.annotation.delete',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      const annotationId = req.body?.annotationId;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+      if (!isValidDocId(annotationId)) {
+        res.status(400).json({success: false, error: 'INVALID_ANNOTATION_ID'});
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const boardRef = refs.boardDoc(boardId);
+        const boardSnap = await boardRef.get();
+        if (!boardSnap.exists) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+        const now = Date.now();
+        const batch = db.batch();
+        batch.delete(refs.annotationsCol(boardId).doc(annotationId));
+        batch.update(boardRef, {updatedAt: now, updatedBy: auth.email});
+        await batch.commit();
+
+        res.status(200).json({success: true, data: {deleted: true}});
+      } catch (err: any) {
+        console.error(
+          '[prototypes.annotation.delete] error:',
+          err.stack || err
+        );
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
     }

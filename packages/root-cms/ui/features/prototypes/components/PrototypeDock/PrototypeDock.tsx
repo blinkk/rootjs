@@ -3,8 +3,10 @@ import {
   IconHandStop,
   IconMessagePlus,
   IconMinus,
+  IconNote,
   IconPlus,
   IconPointer,
+  IconTypography,
 } from '@tabler/icons-preact';
 import {useEffect, useRef} from 'preact/hooks';
 import {Button} from '../../../../primitives/Button/Button.js';
@@ -34,8 +36,8 @@ export interface PrototypeDockProps {
 }
 
 /**
- * Bottom-center floating canvas toolbar providing Select/Pan/New Frame/Comment
- * tools and zoom controls.
+ * Bottom-center floating canvas toolbar providing Select/Pan/New Frame/Comment/
+ * Note/Text tools and zoom controls.
  */
 export function PrototypeDock(props: PrototypeDockProps) {
   const {
@@ -195,6 +197,42 @@ export function PrototypeDock(props: PrototypeDockProps) {
             }
           >
             <IconMessagePlus />
+          </IconButton>
+
+          <IconButton
+            label="Note (N)"
+            size="sm"
+            pressed={tool === 'note'}
+            aria-disabled={!canEdit || undefined}
+            className={cn(
+              toolToggleClasses,
+              !canEdit && 'cursor-not-allowed opacity-50'
+            )}
+            onClick={() => {
+              if (canEdit) {
+                onChangeTool(tool === 'note' ? 'select' : 'note');
+              }
+            }}
+          >
+            <IconNote />
+          </IconButton>
+
+          <IconButton
+            label="Text (T)"
+            size="sm"
+            pressed={tool === 'text'}
+            aria-disabled={!canEdit || undefined}
+            className={cn(
+              toolToggleClasses,
+              !canEdit && 'cursor-not-allowed opacity-50'
+            )}
+            onClick={() => {
+              if (canEdit) {
+                onChangeTool(tool === 'text' ? 'select' : 'text');
+              }
+            }}
+          >
+            <IconTypography />
           </IconButton>
         </div>
 

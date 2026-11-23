@@ -47,7 +47,8 @@ import {
 } from '../../prototype-export.js';
 
 /** Canvas interaction tool modes. */
-export type PrototypeCanvasTool = 'select' | 'pan' | 'comment';
+export type PrototypeCanvasTool =
+  'select' | 'pan' | 'comment' | 'note' | 'text';
 
 /** Preset responsive widths offered in a frame's quick actions menu. */
 const FRAME_WIDTH_PRESETS = [

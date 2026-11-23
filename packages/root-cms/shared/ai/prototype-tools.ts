@@ -7,7 +7,15 @@
 import {tool, type ToolSet} from 'ai';
 import {z} from 'zod';
 import {
+  computeSectionFramePosition,
+  FRAME_AUTO_LAYOUT_GAP,
   getOrderedBlocks,
+  groupFramesBySection,
+  PROTOTYPE_LABEL_MAX_CHARS,
+  PROTOTYPE_NOTE_MAX_CHARS,
+  PROTOTYPE_NOTE_WIDTH,
+  type PrototypeAnnotation,
+  type PrototypeAnnotationKind,
   type PrototypeBlock,
   type PrototypeBlockMap,
   type PrototypeBoard,
@@ -19,8 +27,19 @@ import {
 } from '../prototypes.js';
 import type {SerializedAiSkill} from './extensions.js';
 
-/** Horizontal spacing in CSS px between auto-positioned frames on a page. */
-export const FRAME_AUTO_LAYOUT_GAP = 80;
+export {FRAME_AUTO_LAYOUT_GAP};
+
+/** Maximum length of a `section` label passed to the frame tools. */
+const MAX_SECTION_LABEL_CHARS = 60;
+
+/** Bound on canvas world coordinates accepted from the model. */
+const MAX_WORLD_COORD = 1_000_000;
+
+/** Gap in world px between a frame and a note placed beside it. */
+const NOTE_FRAME_GAP = 24;
+
+/** Length a note's text is cut to in `board_overview`. */
+const OVERVIEW_NOTE_CHARS = 140;
 
 /** Default starting canvas world coordinates for the first frame on a page. */
 export const DEFAULT_FRAME_START_X = 80;
@@ -145,6 +164,8 @@ export interface PrototypeToolBoardState {
   frames: PrototypeFrame[];
   components: Record<string, PrototypeComponentSpec>;
   comments: PrototypeCommentThread[];
+  /** Notes and text labels on the canvas. Optional for older callers. */
+  annotations?: PrototypeAnnotation[];
 }
 
 /** Data/API backend injected into `createPrototypeAiTools`. */
@@ -163,6 +184,13 @@ export interface PrototypeToolBackend {
   saveComponent: (
     spec: Omit<PrototypeComponentSpec, 'updatedAt' | 'updatedBy'>
   ) => Promise<PrototypeComponentSpec>;
+  /**
+   * Persists a new or updated canvas annotation and returns the saved
+   * annotation. Required for `annotation_add` and the `section` input.
+   */
+  saveAnnotation?: (
+    annotation: Partial<PrototypeAnnotation> & {id: string}
+  ) => Promise<PrototypeAnnotation>;
   /** Optional id generator for newly created frames or blocks. */
   generateId?: (prefix: string) => string;
 }
@@ -594,6 +622,35 @@ function summarizeFrame(
   };
 }
 
+/** Cuts `text` to `max` characters, marking the cut with an ellipsis. */
+function truncateText(text: string, max: number): string {
+  const value = String(text || '');
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+/** Rough rendered height in world px of a note, used to stack notes. */
+function estimateNoteHeight(text: string): number {
+  const lines = String(text || '')
+    .split('\n')
+    .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 30)), 0);
+  return 24 + lines * 20;
+}
+
+/** Zod schema for a canvas world coordinate supplied by the model. */
+const worldCoordSchema = z.number().min(-MAX_WORLD_COORD).max(MAX_WORLD_COORD);
+
+/** Zod schema for the `section` input shared by the frame tools. */
+const sectionSchema = z
+  .string()
+  .max(MAX_SECTION_LABEL_CHARS)
+  .optional()
+  .describe(
+    'Round/section label this frame belongs to, e.g. `Round 2`. The frame ' +
+      "is placed in that section's row: appended to the right when the " +
+      'label exists, otherwise in a new row below everything on the page ' +
+      'with a new header label. Ignored when `x`/`y` are given.'
+  );
+
 /** Zod schema for block inputs shared across frame creation and editing tools. */
 const blockInputSchema = z.object({
   key: z
@@ -693,6 +750,11 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
   const committedFrames = new Map<string, PrototypeFrame>();
   const committedComponents = new Map<string, PrototypeComponentSpec>();
   const frameEditQueues = new Map<string, Promise<unknown>>();
+  // Labels and notes follow the same pending → committed lifecycle, so
+  // parallel `frame_create` calls for one new section share a single label.
+  const pendingAnnotations = new Map<string, PrototypeAnnotation>();
+  const committedAnnotations = new Map<string, PrototypeAnnotation>();
+  const pendingLabelSaves = new Map<string, Promise<unknown>>();
 
   function getEffectiveState(): PrototypeToolBoardState {
     const raw = backend.getState();
@@ -728,11 +790,115 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
       }
     }
 
+    const annotationsById = new Map<string, PrototypeAnnotation>();
+    for (const annotation of raw.annotations || []) {
+      annotationsById.set(annotation.id, annotation);
+    }
+    for (const [id, committed] of committedAnnotations.entries()) {
+      const fromBackend = annotationsById.get(id);
+      if (!fromBackend) {
+        annotationsById.set(id, committed);
+      } else if ((fromBackend.updatedAt || 0) >= (committed.updatedAt || 0)) {
+        committedAnnotations.delete(id);
+      } else {
+        annotationsById.set(id, committed);
+      }
+    }
+    for (const [id, pending] of pendingAnnotations.entries()) {
+      annotationsById.set(id, pending);
+    }
+
     return {
       ...raw,
       frames: Array.from(framesById.values()),
       components,
+      annotations: Array.from(annotationsById.values()),
     };
+  }
+
+  /** Returns an `{error}` message when `pageId` is not a page on the board. */
+  function validatePageId(
+    state: PrototypeToolBoardState,
+    pageId: string
+  ): string | null {
+    if (state.board.pages.some((page) => page.id === pageId)) {
+      return null;
+    }
+    const known = state.board.pages.map((page) => page.id).join(', ');
+    return `Page "${pageId}" does not exist on this board. Known page ids: ${known}.`;
+  }
+
+  /**
+   * Reserves an annotation synchronously, then persists it. The reservation
+   * is visible to `getEffectiveState()` until the save settles.
+   */
+  function reserveAnnotation(
+    state: PrototypeToolBoardState,
+    input: {
+      pageId: string;
+      kind: PrototypeAnnotationKind;
+      text: string;
+      x: number;
+      y: number;
+    }
+  ): Promise<PrototypeAnnotation> {
+    const saveAnnotation = backend.saveAnnotation;
+    if (!saveAnnotation) {
+      return Promise.reject(new Error('Annotations are not available.'));
+    }
+    const id = generateId(input.kind);
+    const now = Date.now();
+    pendingAnnotations.set(id, {
+      id,
+      boardId: state.board.id,
+      ...input,
+      createdAt: now,
+      createdBy: '',
+      updatedAt: now,
+      updatedBy: '',
+    });
+    const save = saveAnnotation({id, boardId: state.board.id, ...input})
+      .then((saved) => {
+        committedAnnotations.set(saved.id, saved);
+        return saved;
+      })
+      .finally(() => {
+        pendingAnnotations.delete(id);
+        pendingLabelSaves.delete(id);
+      });
+    pendingLabelSaves.set(id, save);
+    return save;
+  }
+
+  /**
+   * Resolves the position of a new frame in `section`, reserving any section
+   * labels it needs. `ready` settles once every label this frame depends on
+   * (its own or a sibling call's) is saved.
+   */
+  function placeInSection(
+    state: PrototypeToolBoardState,
+    pageId: string,
+    section: string
+  ): {x: number; y: number; ready: Promise<unknown>} {
+    const placement = computeSectionFramePosition(
+      state.frames,
+      state.annotations || [],
+      pageId,
+      section
+    );
+    for (const label of placement.createLabels) {
+      // Failures surface through `ready` below.
+      reserveAnnotation(state, {pageId, kind: 'label', ...label}).catch(
+        () => undefined
+      );
+    }
+    const inFlight = Array.from(pendingLabelSaves.entries())
+      .filter(([id]) => {
+        const pending = pendingAnnotations.get(id);
+        return pending?.kind === 'label' && pending.pageId === pageId;
+      })
+      .map(([, save]) => save);
+    return {x: placement.x, y: placement.y, ready: Promise.all(inFlight)};
   }
 
   function runSerializedFrameEdit<T>(
@@ -756,8 +922,10 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
     board_overview: tool({
       description:
         'Inspect the prototype board structure: pages, frames on each page ' +
-        '(id, title, width, x, y, block keys/labels/proposed flags), active ' +
-        'selection, theme tokens, and open comment counts.',
+        '(id, title, width, x, y, block keys/labels/proposed flags), the ' +
+        'section labels (rounds) on each page from top to bottom with the ' +
+        'frame ids in each, notes, active selection, theme tokens, and open ' +
+        'comment counts.',
       inputSchema: z.object({
         pageId: z
           .string()
@@ -803,11 +971,34 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             const pageFrames = state.frames.filter(
               (frame) => frame.pageId === page.id
             );
+            const annotations = state.annotations || [];
+            const grouped = groupFramesBySection(
+              pageFrames,
+              annotations,
+              page.id
+            );
             return {
               id: page.id,
               name: page.name,
               frameCount: pageFrames.length,
               openCommentCount: openCommentsByPage.get(page.id) || 0,
+              sections: grouped.sections.map((section) => ({
+                label: section.label.text,
+                annotationId: section.label.id,
+                y: section.label.y,
+                frameIds: section.frames.map((frame) => frame.id),
+              })),
+              unsectionedFrameIds: grouped.unsectioned.map((frame) => frame.id),
+              notes: annotations
+                .filter(
+                  (item) => item.kind === 'note' && item.pageId === page.id
+                )
+                .map((note) => ({
+                  id: note.id,
+                  text: truncateText(note.text, OVERVIEW_NOTE_CHARS),
+                  x: note.x,
+                  y: note.y,
+                })),
               frames: pageFrames.map((frame) =>
                 summarizeFrame(frame, openCommentsByFrame)
               ),
@@ -1000,7 +1191,8 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
       description:
         'Create a new artboard frame on a page with an ordered list of ' +
         'component blocks. Omit `x` and `y` to auto-place without overlapping ' +
-        'existing frames (spaced horizontally by width + 80px).',
+        'existing frames (spaced horizontally by width + 80px). Pass ' +
+        '`section` to place the frame in a labelled round/section row.',
       inputSchema: z.object({
         title: z.string().min(1).describe('Display title, e.g. `Pricing B`.'),
         pageId: z
@@ -1024,6 +1216,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .number()
           .optional()
           .describe('Optional canvas world Y coordinate.'),
+        section: sectionSchema,
         blocks: z
           .array(blockInputSchema)
           .describe('Ordered list of component blocks from top to bottom.'),
@@ -1031,8 +1224,23 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
       execute: async (input) => {
         const state = getEffectiveState();
         const pageId = input.pageId || state.activePageId;
+        const pageError = validatePageId(state, pageId);
+        if (pageError) {
+          return {created: false, error: pageError};
+        }
         const width = input.width || DEFAULT_FRAME_WIDTH;
-        const autoPos = computeNextFramePosition(state.frames, pageId, width);
+        const section = input.section?.trim();
+        const hasExplicitPos =
+          typeof input.x === 'number' || typeof input.y === 'number';
+        if (section && !hasExplicitPos && !backend.saveAnnotation) {
+          return {created: false, error: 'Sections are not available.'};
+        }
+        const sectionPos =
+          section && !hasExplicitPos
+            ? placeInSection(state, pageId, section)
+            : null;
+        const autoPos =
+          sectionPos || computeNextFramePosition(state.frames, pageId, width);
         const x =
           typeof input.x === 'number' && Number.isFinite(input.x)
             ? Math.round(input.x)
@@ -1065,6 +1273,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
         });
 
         try {
+          await sectionPos?.ready;
           const saved = await backend.saveFrame({
             id,
             boardId: state.board.id,
@@ -1078,6 +1287,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           committedFrames.set(saved.id, saved);
           return {
             created: true,
+            ...(sectionPos ? {section} : {}),
             frame: summarizeFrame(saved, new Map()),
           };
         } finally {
@@ -1113,6 +1323,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           .describe('Optional viewport width override in CSS px.'),
         x: z.number().optional(),
         y: z.number().optional(),
+        section: sectionSchema,
         blocks: z
           .array(blockInputSchema)
           .optional()
@@ -1130,13 +1341,31 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
           };
         }
         const pageId = input.pageId || source.pageId;
+        // The source's own page is accepted as-is: only a page the model
+        // names is checked.
+        const pageError = input.pageId ? validatePageId(state, pageId) : null;
+        if (pageError) {
+          return {duplicated: false, error: pageError};
+        }
         const width = input.width || source.width || DEFAULT_FRAME_WIDTH;
-        const autoPos = computeNextFramePosition(
-          state.frames,
-          pageId,
-          width,
-          pageId === source.pageId ? source : null
-        );
+        const section = input.section?.trim();
+        const hasExplicitPos =
+          typeof input.x === 'number' || typeof input.y === 'number';
+        if (section && !hasExplicitPos && !backend.saveAnnotation) {
+          return {duplicated: false, error: 'Sections are not available.'};
+        }
+        const sectionPos =
+          section && !hasExplicitPos
+            ? placeInSection(state, pageId, section)
+            : null;
+        const autoPos =
+          sectionPos ||
+          computeNextFramePosition(
+            state.frames,
+            pageId,
+            width,
+            pageId === source.pageId ? source : null
+          );
         const x =
           typeof input.x === 'number' && Number.isFinite(input.x)
             ? Math.round(input.x)
@@ -1170,6 +1399,7 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
         });
 
         try {
+          await sectionPos?.ready;
           const saved = await backend.saveFrame({
             id,
             boardId: state.board.id,
@@ -1238,6 +1468,13 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             };
           }
 
+          const pageError = input.pageId
+            ? validatePageId(state, input.pageId)
+            : null;
+          if (pageError) {
+            return {updated: false, error: pageError};
+          }
+
           let nextBlocks = cloneBlockMap(existing.blocks);
           if (input.operations && input.operations.length > 0) {
             const opResult = applyFrameBlockOperations(
@@ -1279,6 +1516,153 @@ export function createPrototypeAiTools(backend: PrototypeToolBackend): ToolSet {
             frame: summarizeFrame(saved, new Map()),
           };
         }),
+    }),
+
+    annotation_add: tool({
+      description:
+        'Add a plain-text annotation to the canvas: a sticky `note` that ' +
+        'explains a decision (pass `nearFrameId` to put it beside a frame), ' +
+        'or a large `label` heading. Section labels for rounds are created ' +
+        'automatically by `frame_create` with `section`, so only add a ' +
+        'label for other headings.',
+      inputSchema: z.object({
+        kind: z
+          .enum(['note', 'label'] as [
+            PrototypeAnnotationKind,
+            PrototypeAnnotationKind,
+          ])
+          .describe('`note` for a sticky note, `label` for a heading.'),
+        text: z
+          .string()
+          .min(1)
+          .max(PROTOTYPE_NOTE_MAX_CHARS)
+          .describe(
+            `Plain text (no HTML or Markdown). Notes up to ${PROTOTYPE_NOTE_MAX_CHARS} characters; labels are one line up to ${PROTOTYPE_LABEL_MAX_CHARS}.`
+          ),
+        pageId: z
+          .string()
+          .max(64)
+          .optional()
+          .describe('Target page id; defaults to the currently active page.'),
+        x: worldCoordSchema
+          .optional()
+          .describe('Optional canvas world X coordinate of the top-left.'),
+        y: worldCoordSchema
+          .optional()
+          .describe('Optional canvas world Y coordinate of the top-left.'),
+        nearFrameId: z
+          .string()
+          .max(128)
+          .optional()
+          .describe(
+            'Place the annotation beside the top-right corner of this frame ' +
+              "(on that frame's page). Ignored when `x`/`y` are given."
+          ),
+      }),
+      execute: async (input) => {
+        if (!backend.saveAnnotation) {
+          return {added: false, error: 'Annotations are not available.'};
+        }
+        const state = getEffectiveState();
+        const text =
+          input.kind === 'label'
+            ? input.text.replace(/\s+/g, ' ').trim()
+            : input.text.trim();
+        if (!text) {
+          return {added: false, error: 'Annotation text is empty.'};
+        }
+        if (input.kind === 'label' && text.length > PROTOTYPE_LABEL_MAX_CHARS) {
+          return {
+            added: false,
+            error: `Labels are limited to ${PROTOTYPE_LABEL_MAX_CHARS} characters.`,
+          };
+        }
+        const hasExplicitPos =
+          typeof input.x === 'number' && typeof input.y === 'number';
+        let nearFrame: PrototypeFrame | undefined;
+        if (input.nearFrameId && !hasExplicitPos) {
+          nearFrame = state.frames.find(
+            (frame) => frame.id === input.nearFrameId
+          );
+          if (!nearFrame) {
+            return {
+              added: false,
+              error: `Frame "${input.nearFrameId}" not found.`,
+            };
+          }
+        }
+        const pageId = input.pageId || nearFrame?.pageId || state.activePageId;
+        const pageError = validatePageId(state, pageId);
+        if (pageError) {
+          return {added: false, error: pageError};
+        }
+        if (nearFrame && nearFrame.pageId !== pageId) {
+          return {
+            added: false,
+            error: `Frame "${nearFrame.id}" is not on page "${pageId}".`,
+          };
+        }
+
+        const pageAnnotations = (state.annotations || []).filter(
+          (item) => item.pageId === pageId
+        );
+        let x = 0;
+        let y = 0;
+        if (hasExplicitPos) {
+          x = Math.round(input.x as number);
+          y = Math.round(input.y as number);
+        } else if (nearFrame) {
+          x = Math.round(
+            nearFrame.x +
+              Math.max(1, nearFrame.width || DEFAULT_FRAME_WIDTH) +
+              NOTE_FRAME_GAP
+          );
+          y = Math.round(nearFrame.y);
+        } else {
+          // No anchor: start a column to the left of the page's content.
+          const pageFrames = state.frames.filter(
+            (frame) => frame.pageId === pageId
+          );
+          if (pageFrames.length > 0) {
+            x = Math.round(
+              Math.min(...pageFrames.map((frame) => frame.x)) -
+                PROTOTYPE_NOTE_WIDTH -
+                FRAME_AUTO_LAYOUT_GAP
+            );
+            y = Math.round(Math.min(...pageFrames.map((frame) => frame.y)));
+          }
+        }
+        if (!hasExplicitPos) {
+          // Stack below annotations already in this column.
+          for (const other of pageAnnotations
+            .filter((item) => Math.abs(item.x - x) < PROTOTYPE_NOTE_WIDTH)
+            .sort((a, b) => a.y - b.y)) {
+            const bottom = other.y + estimateNoteHeight(other.text);
+            if (other.y < y + estimateNoteHeight(text) && bottom > y) {
+              y = Math.round(bottom + 16);
+            }
+          }
+        }
+
+        const saved = await reserveAnnotation(state, {
+          pageId,
+          kind: input.kind,
+          text,
+          x,
+          y,
+        });
+        return {
+          added: true,
+          annotation: {
+            id: saved.id,
+            pageId: saved.pageId,
+            kind: saved.kind,
+            text: truncateText(saved.text, OVERVIEW_NOTE_CHARS),
+            x: saved.x,
+            y: saved.y,
+          },
+        };
+      },
     }),
 
     frame_comments_list: tool({
@@ -1388,6 +1772,8 @@ export function prettyPrototypeToolLabel(
       const firstLabel = ops[0]?.label || ops[0]?.block?.label || input?.title;
       return firstLabel ? `Editing ${firstLabel}…` : 'Editing frame…';
     }
+    case 'annotation_add':
+      return input?.kind === 'label' ? 'Adding label…' : 'Adding note…';
     case 'frame_comments_list':
       return 'Reading open comments…';
     case 'collections_list':

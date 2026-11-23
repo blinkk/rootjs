@@ -2,6 +2,8 @@ import {IconFrame, IconRobot} from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import type {
   CanvasCamera,
+  PrototypeAnnotation,
+  PrototypeAnnotationKind,
   PrototypeBlockRect,
   PrototypeBoardPage,
   PrototypeCommentAnchor,
@@ -18,6 +20,7 @@ import {Button} from '../../../../primitives/Button/Button.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {cn} from '../../../../utils/classes.js';
 import type {PrototypeExportPayload} from '../../prototype-export.js';
+import {PrototypeAnnotationView} from '../PrototypeAnnotation/PrototypeAnnotation.js';
 import {
   type PrototypeCanvasTool,
   PrototypeFrameView,
@@ -42,7 +45,13 @@ export interface PrototypeCanvasProps {
   onChangeCamera: (
     next: CanvasCamera | ((prev: CanvasCamera) => CanvasCamera)
   ) => void;
-  /** Active canvas tool (`select`, `pan`, `comment`). */
+  /** Notes and text labels on the active page. */
+  annotations: PrototypeAnnotation[];
+  /** Currently selected annotation id, if any. */
+  selectedAnnotationId: string | null;
+  /** Id of the annotation whose text is being edited, if any. */
+  editingAnnotationId: string | null;
+  /** Active canvas tool (`select`, `pan`, `comment`, `note`, `text`). */
   tool: PrototypeCanvasTool;
   /** Whether Spacebar temporary-pan is currently held. */
   spacePressed: boolean;
@@ -111,6 +120,27 @@ export interface PrototypeCanvasProps {
   onDeleteFrame: (frameId: string) => void;
   onNewFrame: () => void;
   onOpenAi: () => void;
+  /** Places a new annotation at a world point (Note and Text tools). */
+  onCreateAnnotation: (
+    kind: PrototypeAnnotationKind,
+    worldX: number,
+    worldY: number
+  ) => void;
+  /** Selects an annotation. */
+  onSelectAnnotation: (annotationId: string) => void;
+  /** Puts an annotation into edit mode. */
+  onEditAnnotation: (annotationId: string) => void;
+  /** Commits an annotation's edited text (empty text deletes it). */
+  onCommitAnnotation: (annotationId: string, text: string) => void;
+  /** Leaves edit mode without saving. */
+  onCancelAnnotationEdit: (annotationId: string) => void;
+  /** Moves an annotation during (`persist` false) or after a drag. */
+  onDragAnnotation: (
+    annotationId: string,
+    x: number,
+    y: number,
+    persist: boolean
+  ) => void;
 }
 
 /**
@@ -155,6 +185,15 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onDeleteFrame,
     onNewFrame,
     onOpenAi,
+    annotations,
+    selectedAnnotationId,
+    editingAnnotationId,
+    onCreateAnnotation,
+    onSelectAnnotation,
+    onEditAnnotation,
+    onCommitAnnotation,
+    onCancelAnnotationEdit,
+    onDragAnnotation,
   } = props;
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -283,6 +322,21 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
         `${activePage.name} canvas`,
         e.clientX,
         e.clientY
+      );
+      return;
+    }
+
+    if (tool === 'note' || tool === 'text') {
+      const el = viewportRef.current;
+      if (!el || !canEdit) {
+        return;
+      }
+      const bounds = el.getBoundingClientRect();
+      const {x, y, zoom} = cameraRef.current;
+      onCreateAnnotation(
+        tool === 'note' ? 'note' : 'label',
+        Math.round((e.clientX - bounds.left - x) / zoom),
+        Math.round((e.clientY - bounds.top - y) / zoom)
       );
       return;
     }
@@ -592,7 +646,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
           ? 'cursor-grabbing'
           : effectivePanMode
             ? 'cursor-grab'
-            : tool === 'comment'
+            : tool === 'comment' || tool === 'note' || tool === 'text'
               ? 'cursor-crosshair'
               : 'cursor-default'
       )}
@@ -644,6 +698,25 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             onMoveFrameToPage={onMoveFrameToPage}
             onExportFrame={onExportFrame}
             onDeleteFrame={onDeleteFrame}
+          />
+        ))}
+
+        {/* Notes and text labels, above frames and below comment pins. */}
+        {annotations.map((annotation) => (
+          <PrototypeAnnotationView
+            key={annotation.id}
+            annotation={annotation}
+            zoom={camera.zoom}
+            isSelected={selectedAnnotationId === annotation.id}
+            isEditing={editingAnnotationId === annotation.id}
+            interactive={canEdit && !effectivePanMode && tool !== 'comment'}
+            onSelect={() => onSelectAnnotation(annotation.id)}
+            onStartEdit={() => onEditAnnotation(annotation.id)}
+            onCommit={(text) => onCommitAnnotation(annotation.id, text)}
+            onCancel={() => onCancelAnnotationEdit(annotation.id)}
+            onDrag={(x, y, persist) =>
+              onDragAnnotation(annotation.id, x, y, persist)
+            }
           />
         ))}
 
@@ -705,7 +778,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
       </div>
 
       {/* Empty or AI-generating skeleton state centered over the canvas when the page has zero frames. */}
-      {frames.length === 0 && (
+      {frames.length === 0 && annotations.length === 0 && (
         <div
           className={cn(
             'PrototypeCanvas__empty pointer-events-none absolute inset-0 flex items-center justify-center p-4 pt-16 pb-16 transition-[padding]',

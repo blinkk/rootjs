@@ -3,6 +3,7 @@
  */
 
 import type {
+  PrototypeAnnotation,
   PrototypeBoard,
   PrototypeBoardBundle,
   PrototypeBoardPage,
@@ -127,6 +128,28 @@ export async function apiDeletePrototypeFrame(input: {
   frameId: string;
 }): Promise<void> {
   await postJson<{deleted: boolean}>('/cms/api/prototypes.frame.delete', input);
+}
+
+/** Creates or updates a note or text label on a prototype board. */
+export async function apiSavePrototypeAnnotation(input: {
+  boardId: string;
+  annotation: Partial<PrototypeAnnotation> & {id: string};
+}): Promise<PrototypeAnnotation> {
+  return postJson<PrototypeAnnotation>(
+    '/cms/api/prototypes.annotation.save',
+    input
+  );
+}
+
+/** Deletes a note or text label from a prototype board. */
+export async function apiDeletePrototypeAnnotation(input: {
+  boardId: string;
+  annotationId: string;
+}): Promise<void> {
+  await postJson<{deleted: boolean}>(
+    '/cms/api/prototypes.annotation.delete',
+    input
+  );
 }
 
 /** Saves a reusable component spec (either project Visual Twin or board Proposed spec). */

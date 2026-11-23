@@ -22,6 +22,7 @@ import {
   PROTOTYPE_AI_SKILLS,
 } from '../../../../../shared/ai/prototype-tools.js';
 import type {
+  PrototypeAnnotation,
   PrototypeBlock,
   PrototypeBoardBundle,
   PrototypeComponentSpec,
@@ -51,6 +52,7 @@ import {createReadOnlyClientCmsTools} from '../../../ai/components/RootAIChat/cl
 import {
   apiGetPrototypeContext,
   apiPreparePrototypeAiTurn,
+  apiSavePrototypeAnnotation,
   apiSavePrototypeComponent,
   apiSavePrototypeFrame,
   apiUpdatePrototypeBoard,
@@ -76,6 +78,8 @@ export interface PrototypeAiCardProps {
   onClearContext?: (kind: 'frame' | 'block') => void;
   /** Invoked when AI creates/updates a frame so optimistic UI & selection stay in sync. */
   onFrameMutated?: (frame: PrototypeFrame) => void;
+  /** Invoked when AI adds a note or section label to the canvas. */
+  onAnnotationMutated?: (annotation: PrototypeAnnotation) => void;
   /** Invoked when AI proposes/updates a component spec. */
   onComponentMutated?: (spec: PrototypeComponentSpec) => void;
   /** Invoked when an AI turn finishes so the board can refresh. */
@@ -643,6 +647,7 @@ function PrototypeAiChatSession({
                   frames: liveFramesRef.current,
                   components: liveComponentsRef.current,
                   comments: currentProps.bundle.comments,
+                  annotations: currentProps.bundle.annotations || [],
                 };
               },
               getProjectContext: async (options) => {
@@ -673,6 +678,15 @@ function PrototypeAiChatSession({
                   liveFramesRef.current = [...liveFramesRef.current, saved];
                 }
                 currentProps.onFrameMutated?.(saved);
+                return saved;
+              },
+              saveAnnotation: async (annotation) => {
+                const currentProps = propsRef.current;
+                const saved = await apiSavePrototypeAnnotation({
+                  boardId: currentProps.bundle.board.id,
+                  annotation,
+                });
+                currentProps.onAnnotationMutated?.(saved);
                 return saved;
               },
               saveComponent: async (spec) => {

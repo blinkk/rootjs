@@ -230,6 +230,69 @@ describe('registerPrototypesApi integration', () => {
     });
     expect(ghostFrame.status).toBe(404);
 
+    // Annotations: create, partial move, VIEWER forbidden, delete.
+    const annotationPath = '/cms/api/prototypes.annotation.save';
+    const savedNote = await callApi({
+      path: annotationPath,
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        annotation: {
+          id: 'note-1',
+          pageId: 'explorations',
+          kind: 'note',
+          text: '  <b>Ship</b> this  ',
+          x: 10.4,
+          y: 20,
+        },
+      },
+    });
+    expect(savedNote.status).toBe(200);
+    expect(savedNote.body.data).toMatchObject({
+      text: '<b>Ship</b> this',
+      x: 10,
+    });
+    const movedNote = await callApi({
+      path: annotationPath,
+      email: 'editor@example.com',
+      body: {boardId, annotation: {id: 'note-1', x: 300, y: 40}},
+    });
+    expect(movedNote.body.data).toMatchObject({
+      x: 300,
+      kind: 'note',
+      text: '<b>Ship</b> this',
+    });
+    const ghostNote = await callApi({
+      path: annotationPath,
+      email: 'editor@example.com',
+      body: {boardId, annotation: {id: 'gone', x: 1, y: 1}},
+    });
+    expect(ghostNote.status).toBe(404);
+    const viewerNote = await callApi({
+      path: annotationPath,
+      email: 'viewer@example.com',
+      body: {boardId, annotation: {id: 'note-1', x: 0, y: 0}},
+    });
+    expect(viewerNote.status).toBe(403);
+    const withNote = await callApi({
+      path: '/cms/api/prototypes.get',
+      email: 'viewer@example.com',
+      body: {boardId},
+    });
+    expect(withNote.body.data.annotations).toHaveLength(1);
+    const deletedNote = await callApi({
+      path: '/cms/api/prototypes.annotation.delete',
+      email: 'editor@example.com',
+      body: {boardId, annotationId: 'note-1'},
+    });
+    expect(deletedNote.status).toBe(200);
+    const withoutNote = await callApi({
+      path: '/cms/api/prototypes.get',
+      email: 'editor@example.com',
+      body: {boardId},
+    });
+    expect(withoutNote.body.data.annotations).toEqual([]);
+
     // Simultaneous replies to one thread are both kept.
     const raceThread = await callApi({
       path: '/cms/api/prototypes.comment.add',

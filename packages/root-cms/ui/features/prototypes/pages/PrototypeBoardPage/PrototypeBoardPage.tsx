@@ -5,11 +5,15 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation, useRoute} from 'preact-iso';
 import type {
   CanvasCamera,
+  PrototypeAnnotation,
+  PrototypeAnnotationKind,
   PrototypeBlockRect,
   PrototypeCommentThread,
 } from '../../../../../shared/prototypes.js';
 import {
   fitCameraToBounds,
+  PROTOTYPE_LABEL_FONT_SIZE,
+  PROTOTYPE_NOTE_WIDTH,
   zoomCameraAroundPoint,
 } from '../../../../../shared/prototypes.js';
 import {Layout} from '../../../../app/layout/Layout.js';
@@ -23,6 +27,7 @@ import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {isEditableTarget} from '../../../../utils/keyboard.js';
 import {errorMessage} from '../../../../utils/notifications.js';
+import {autokey} from '../../../../utils/rand.js';
 import {testAiEnabled} from '../../../ai/ai.js';
 import {testCanEdit} from '../../../users/permissions.js';
 import {useProjectRoles} from '../../../users/useProjectRoles.js';
@@ -95,7 +100,11 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     setCommentStatus,
     updateCommentAnchor,
     deleteComment,
+    createAnnotation,
+    updateAnnotation,
+    deleteAnnotation,
     applyFrameMutated,
+    applyAnnotationMutated,
     applyComponentMutated,
     refreshAfterAiTurn,
     setBoardAiChatId,
@@ -125,6 +134,15 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const [spacePressed, setSpacePressed] = useState(false);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
+    string | null
+  >(null);
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
+    null
+  );
+  // A just-placed annotation that is not saved until it has text.
+  const [draftAnnotation, setDraftAnnotation] =
+    useState<PrototypeAnnotation | null>(null);
   const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
   const modals = useModals();
   const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
@@ -193,6 +211,23 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     [bundle?.frames, activePage.id]
   );
 
+  const pageAnnotations = useMemo(() => {
+    const saved = (bundle?.annotations || []).filter(
+      (item) => item.pageId === activePage.id
+    );
+    return draftAnnotation && draftAnnotation.pageId === activePage.id
+      ? [...saved, draftAnnotation]
+      : saved;
+  }, [bundle?.annotations, activePage.id, draftAnnotation]);
+
+  // Selecting a frame or block deselects any annotation (and vice versa, in
+  // `handleSelectAnnotation`).
+  useEffect(() => {
+    if (selectedFrameId) {
+      setSelectedAnnotationId(null);
+    }
+  }, [selectedFrameId]);
+
   const openCommentCount = useMemo(
     () =>
       (bundle?.comments || []).filter((thread) => thread.status === 'open')
@@ -220,9 +255,27 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         width: frame.width,
         height: frame.cachedHeight || 760,
       }));
+      // Annotation sizes are estimates: they are laid out by the browser.
+      for (const item of pageAnnotations) {
+        boxes.push(
+          item.kind === 'note'
+            ? {
+                x: item.x,
+                y: item.y,
+                width: item.width || PROTOTYPE_NOTE_WIDTH,
+                height: 160,
+              }
+            : {
+                x: item.x,
+                y: item.y,
+                width: item.text.length * PROTOTYPE_LABEL_FONT_SIZE * 0.6,
+                height: PROTOTYPE_LABEL_FONT_SIZE * 1.25,
+              }
+        );
+      }
       setCamera(fitCameraToBounds(boxes, vw, vh, 96));
     },
-    [pageFrames]
+    [pageFrames, pageAnnotations]
   );
 
   const aiGenerating = aiAvailable && (aiStreaming || Boolean(queuedPrompt));
@@ -266,6 +319,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     setActivePageId(pageId);
     setSelectedFrameId(null);
     setSelectedBlockKey(null);
+    setSelectedAnnotationId(null);
+    setEditingAnnotationId(null);
+    setDraftAnnotation(null);
     setPinPopover(null);
     lastAutoFitCountRef.current = 0;
     userMovedCameraRef.current = false;
@@ -325,6 +381,126 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     }
   }, [canEdit, bundle, createFrame, activePage.id]);
 
+  const handleSelectAnnotation = useCallback((annotationId: string) => {
+    setSelectedAnnotationId(annotationId);
+    setSelectedFrameId(null);
+    setSelectedBlockKey(null);
+    setPinPopover(null);
+  }, []);
+
+  const handleCreateAnnotation = useCallback(
+    (kind: PrototypeAnnotationKind, worldX: number, worldY: number) => {
+      if (!canEdit) {
+        return;
+      }
+      const now = Date.now();
+      const id = `${kind}-${autokey(8).toLowerCase()}`;
+      setDraftAnnotation({
+        id,
+        boardId,
+        pageId: activePage.id,
+        kind,
+        text: '',
+        x: worldX,
+        y: worldY,
+        createdAt: now,
+        createdBy: currentUserEmail,
+        updatedAt: now,
+        updatedBy: currentUserEmail,
+      });
+      setTool('select');
+      handleSelectAnnotation(id);
+      setEditingAnnotationId(id);
+    },
+    [canEdit, boardId, activePage.id, currentUserEmail, handleSelectAnnotation]
+  );
+
+  const handleDeleteAnnotation = useCallback(
+    (annotationId: string) => {
+      setSelectedAnnotationId((prev) => (prev === annotationId ? null : prev));
+      deleteAnnotation(annotationId).catch((err) => {
+        showNotification({
+          title: 'Could not delete annotation',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      });
+    },
+    [deleteAnnotation]
+  );
+
+  const handleCommitAnnotation = useCallback(
+    (annotationId: string, text: string) => {
+      setEditingAnnotationId((prev) => (prev === annotationId ? null : prev));
+      const trimmed = text.trim();
+      if (draftAnnotation?.id === annotationId) {
+        setDraftAnnotation(null);
+        if (!trimmed) {
+          setSelectedAnnotationId((prev) =>
+            prev === annotationId ? null : prev
+          );
+          return;
+        }
+        createAnnotation({...draftAnnotation, text: trimmed}).catch((err) => {
+          showNotification({
+            title: 'Could not save annotation',
+            message: errorMessage(err),
+            color: 'red',
+          });
+        });
+        return;
+      }
+      if (!trimmed) {
+        handleDeleteAnnotation(annotationId);
+        return;
+      }
+      const existing = bundle?.annotations.find(
+        (item) => item.id === annotationId
+      );
+      if (!existing || existing.text === trimmed) {
+        return;
+      }
+      updateAnnotation({id: annotationId, text: trimmed}).catch((err) => {
+        showNotification({
+          title: 'Could not save annotation',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      });
+    },
+    [
+      bundle?.annotations,
+      draftAnnotation,
+      createAnnotation,
+      updateAnnotation,
+      handleDeleteAnnotation,
+    ]
+  );
+
+  const handleCancelAnnotationEdit = useCallback(
+    (annotationId: string) => {
+      setEditingAnnotationId((prev) => (prev === annotationId ? null : prev));
+      if (draftAnnotation?.id === annotationId) {
+        setDraftAnnotation(null);
+        setSelectedAnnotationId(null);
+      }
+    },
+    [draftAnnotation]
+  );
+
+  const handleDragAnnotation = useCallback(
+    (annotationId: string, x: number, y: number, persist: boolean) => {
+      updateAnnotation({id: annotationId, x, y}, {persist}).catch((err) => {
+        showNotification({
+          title: 'Could not move annotation',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      });
+    },
+    [updateAnnotation]
+  );
+
   const handleZoomBy = useCallback((factor: number) => {
     const el = viewportElRef.current;
     const cx = (el?.clientWidth || window.innerWidth || 1280) / 2;
@@ -334,7 +510,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     );
   }, []);
 
-  // Single-key canvas shortcuts (V, H, F, C, Space, Escape, 0, +, -).
+  // Single-key canvas shortcuts (V, H, F, C, N, T, Space, Escape, Delete, 0,
+  // +, -).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Ignore key repeat (a held `F` would create a frame per repeat) and
@@ -356,6 +533,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           setTool('select');
           return;
         }
+        setSelectedAnnotationId(null);
         setSelectedBlockKey(null);
         setSelectedFrameId(null);
         return;
@@ -366,6 +544,14 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       if (e.code === 'Space') {
         e.preventDefault();
         setSpacePressed(true);
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // The editor is an input, so this never fires while editing text.
+        if (canEdit && selectedAnnotationId) {
+          e.preventDefault();
+          handleDeleteAnnotation(selectedAnnotationId);
+        }
         return;
       }
       const key = e.key.toLowerCase();
@@ -381,6 +567,12 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       } else if (key === 'c') {
         e.preventDefault();
         setTool((prev) => (prev === 'comment' ? 'select' : 'comment'));
+      } else if (key === 'n' && canEdit) {
+        e.preventDefault();
+        setTool((prev) => (prev === 'note' ? 'select' : 'note'));
+      } else if (key === 't' && canEdit) {
+        e.preventDefault();
+        setTool((prev) => (prev === 'text' ? 'select' : 'text'));
       } else if (key === '0') {
         e.preventDefault();
         fitActivePageToScreen();
@@ -416,6 +608,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     expandedFrameId,
     pinPopover,
     tool,
+    selectedAnnotationId,
+    handleDeleteAnnotation,
     handleNewFrame,
     fitActivePageToScreen,
     handleZoomBy,
@@ -696,9 +890,22 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           onViewportElement={(el) => {
             viewportElRef.current = el;
           }}
+          annotations={pageAnnotations}
+          selectedAnnotationId={selectedAnnotationId}
+          editingAnnotationId={editingAnnotationId}
+          onCreateAnnotation={handleCreateAnnotation}
+          onSelectAnnotation={handleSelectAnnotation}
+          onEditAnnotation={(annotationId) => {
+            handleSelectAnnotation(annotationId);
+            setEditingAnnotationId(annotationId);
+          }}
+          onCommitAnnotation={handleCommitAnnotation}
+          onCancelAnnotationEdit={handleCancelAnnotationEdit}
+          onDragAnnotation={handleDragAnnotation}
           onSelect={(frameId, blockKey) => {
             setSelectedFrameId(frameId);
             setSelectedBlockKey(blockKey);
+            setSelectedAnnotationId(null);
             if (!frameId) {
               setPinPopover(null);
             }
@@ -903,6 +1110,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
                 setSelectedFrameId(frame.id);
               }
             }}
+            onAnnotationMutated={applyAnnotationMutated}
             onComponentMutated={applyComponentMutated}
             onTurnFinished={refreshAfterAiTurn}
             onChatLinked={setBoardAiChatId}

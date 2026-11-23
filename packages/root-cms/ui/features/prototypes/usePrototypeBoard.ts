@@ -1,5 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import type {
+  PrototypeAnnotation,
+  PrototypeAnnotationKind,
   PrototypeBlock,
   PrototypeBlockMap,
   PrototypeBoardBundle,
@@ -17,6 +19,7 @@ import {getOrderedBlocks} from '../../../shared/prototypes.js';
 import {autokey} from '../../utils/rand.js';
 import {
   apiAddPrototypeComment,
+  apiDeletePrototypeAnnotation,
   apiDeletePrototypeBoard,
   apiDeletePrototypeComment,
   apiDeletePrototypeFrame,
@@ -24,6 +27,7 @@ import {
   apiGetPrototypeBoard,
   apiGetPrototypeContext,
   apiMovePrototypeComment,
+  apiSavePrototypeAnnotation,
   apiSavePrototypeFrame,
   apiSetPrototypeCommentStatus,
   apiUpdatePrototypeBoard,
@@ -153,6 +157,13 @@ export function buildFallbackBlockHtml(schema: SiteSchemaSummary): string {
     .join('\n');
 }
 
+/** Defaults `annotations` for a bundle from a server that predates them. */
+function withAnnotations(bundle: PrototypeBoardBundle): PrototypeBoardBundle {
+  return Array.isArray(bundle.annotations)
+    ? bundle
+    : {...bundle, annotations: []};
+}
+
 /** Return shape of `usePrototypeBoard`. */
 export interface UsePrototypeBoardResult {
   /** Hydrated prototype board bundle, or `null` before first load. */
@@ -233,8 +244,30 @@ export interface UsePrototypeBoardResult {
   ) => void;
   /** Deletes a comment item (or thread if it was the first comment). */
   deleteComment: (threadId: string, commentId: string) => Promise<void>;
+  /** Adds a note or text label to the canvas, showing it before it saves. */
+  createAnnotation: (input: {
+    id?: string;
+    pageId: string;
+    kind: PrototypeAnnotationKind;
+    text: string;
+    x: number;
+    y: number;
+  }) => Promise<PrototypeAnnotation>;
+  /**
+   * Applies a partial change to an annotation right away. Unless
+   * `persist` is false (a drag in progress) the change is saved, and rolled
+   * back to the last saved state if the save fails.
+   */
+  updateAnnotation: (
+    patch: Partial<PrototypeAnnotation> & {id: string},
+    options?: {persist?: boolean}
+  ) => Promise<void>;
+  /** Deletes an annotation, restoring it if the delete fails. */
+  deleteAnnotation: (annotationId: string) => Promise<void>;
   /** Integrates a frame mutation performed by Root AI into local state. */
   applyFrameMutated: (frame: PrototypeFrame) => void;
+  /** Integrates an annotation saved by Root AI into local state. */
+  applyAnnotationMutated: (annotation: PrototypeAnnotation) => void;
   /** Integrates a component spec mutation performed by Root AI into local state. */
   applyComponentMutated: (spec: PrototypeComponentSpec) => void;
   /** Reloads the board after an AI turn finishes so local state stays in sync. */
@@ -262,7 +295,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     }
     try {
       const next = await apiGetPrototypeBoard(boardId);
-      setBundle(next);
+      setBundle(withAnnotations(next));
       setError(null);
     } catch (err) {
       setError(err);
@@ -283,7 +316,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     apiGetPrototypeBoard(boardId)
       .then((next) => {
         if (!cancelled) {
-          setBundle(next);
+          setBundle(withAnnotations(next));
         }
       })
       .catch((err) => {
@@ -728,6 +761,207 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     [boardId]
   );
 
+  const applyAnnotationMutated = useCallback(
+    (annotation: PrototypeAnnotation) => {
+      setBundle((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const exists = prev.annotations.some(
+          (item) => item.id === annotation.id
+        );
+        return {
+          ...prev,
+          annotations: exists
+            ? prev.annotations.map((item) =>
+                item.id === annotation.id ? annotation : item
+              )
+            : [...prev.annotations, annotation],
+        };
+      });
+    },
+    []
+  );
+
+  /** Removes an annotation from local state. */
+  const removeAnnotation = useCallback((annotationId: string) => {
+    setBundle((prev) =>
+      prev
+        ? {
+            ...prev,
+            annotations: prev.annotations.filter(
+              (item) => item.id !== annotationId
+            ),
+          }
+        : prev
+    );
+  }, []);
+
+  const createAnnotation = useCallback(
+    async (input: {
+      id?: string;
+      pageId: string;
+      kind: PrototypeAnnotationKind;
+      text: string;
+      x: number;
+      y: number;
+    }): Promise<PrototypeAnnotation> => {
+      const id = input.id || `${input.kind}-${autokey(8).toLowerCase()}`;
+      const now = Date.now();
+      const email = window.firebase?.user?.email || '';
+      const draft: PrototypeAnnotation = {
+        id,
+        boardId,
+        pageId: input.pageId,
+        kind: input.kind,
+        text: input.text,
+        x: Math.round(input.x),
+        y: Math.round(input.y),
+        createdAt: now,
+        createdBy: email,
+        updatedAt: now,
+        updatedBy: email,
+      };
+      applyAnnotationMutated(draft);
+      try {
+        const saved = await apiSavePrototypeAnnotation({
+          boardId,
+          annotation: {
+            id,
+            pageId: draft.pageId,
+            kind: draft.kind,
+            text: draft.text,
+            x: draft.x,
+            y: draft.y,
+          },
+        });
+        // Keep any change made while the save was in flight (e.g. a drag).
+        setBundle((prev) =>
+          prev
+            ? {
+                ...prev,
+                annotations: prev.annotations.map((item) =>
+                  item.id === id
+                    ? {...saved, x: item.x, y: item.y, text: item.text}
+                    : item
+                ),
+              }
+            : prev
+        );
+        return saved;
+      } catch (err) {
+        removeAnnotation(id);
+        throw err;
+      }
+    },
+    [boardId, applyAnnotationMutated, removeAnnotation]
+  );
+
+  // The last saved state of each annotation with unsaved local changes.
+  const annotationOriginsRef = useRef(new Map<string, PrototypeAnnotation>());
+
+  const updateAnnotation = useCallback(
+    async (
+      patch: Partial<PrototypeAnnotation> & {id: string},
+      options?: {persist?: boolean}
+    ): Promise<void> => {
+      const id = patch.id;
+      const current = bundleRef.current?.annotations.find(
+        (item) => item.id === id
+      );
+      if (!current) {
+        return;
+      }
+      const origins = annotationOriginsRef.current;
+      if (!origins.has(id)) {
+        origins.set(id, current);
+      }
+      const change: Partial<PrototypeAnnotation> = {...patch};
+      if (typeof change.x === 'number') {
+        change.x = Math.round(change.x);
+      }
+      if (typeof change.y === 'number') {
+        change.y = Math.round(change.y);
+      }
+      setBundle((prev) =>
+        prev
+          ? {
+              ...prev,
+              annotations: prev.annotations.map((item) =>
+                item.id === id ? {...item, ...change} : item
+              ),
+            }
+          : prev
+      );
+      if (options?.persist === false) {
+        return;
+      }
+      const origin = origins.get(id) as PrototypeAnnotation;
+      try {
+        const saved = await apiSavePrototypeAnnotation({
+          boardId,
+          annotation: {...change, id},
+        });
+        if (origins.get(id) === origin) {
+          origins.delete(id);
+        }
+        setBundle((prev) =>
+          prev
+            ? {
+                ...prev,
+                annotations: prev.annotations.map((item) =>
+                  item.id === id
+                    ? {
+                        ...item,
+                        updatedAt: saved.updatedAt,
+                        updatedBy: saved.updatedBy,
+                      }
+                    : item
+                ),
+              }
+            : prev
+        );
+      } catch (err) {
+        // Roll back, unless a newer change has started from this state.
+        if (origins.get(id) === origin) {
+          origins.delete(id);
+          setBundle((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  annotations: prev.annotations.map((item) =>
+                    item.id === id ? origin : item
+                  ),
+                }
+              : prev
+          );
+        }
+        throw err;
+      }
+    },
+    [boardId]
+  );
+
+  const deleteAnnotation = useCallback(
+    async (annotationId: string): Promise<void> => {
+      const existing = bundleRef.current?.annotations.find(
+        (item) => item.id === annotationId
+      );
+      if (!existing) {
+        return;
+      }
+      annotationOriginsRef.current.delete(annotationId);
+      removeAnnotation(annotationId);
+      try {
+        await apiDeletePrototypeAnnotation({boardId, annotationId});
+      } catch (err) {
+        applyAnnotationMutated(existing);
+        throw err;
+      }
+    },
+    [boardId, applyAnnotationMutated, removeAnnotation]
+  );
+
   const applyFrameMutated = useCallback((frame: PrototypeFrame) => {
     setBundle((prev) => {
       if (!prev) {
@@ -803,7 +1037,11 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     setCommentStatus,
     updateCommentAnchor,
     deleteComment,
+    createAnnotation,
+    updateAnnotation,
+    deleteAnnotation,
     applyFrameMutated,
+    applyAnnotationMutated,
     applyComponentMutated,
     refreshAfterAiTurn,
     setBoardAiChatId,
