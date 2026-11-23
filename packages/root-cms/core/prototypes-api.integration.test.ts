@@ -230,6 +230,20 @@ describe('registerPrototypesApi integration', () => {
     });
     expect(ghostFrame.status).toBe(404);
 
+    // Read-only roles get neither project source excerpts nor model
+    // credentials.
+    for (const path of [
+      '/cms/api/prototypes.context',
+      '/cms/api/prototypes.ai.prepare',
+    ]) {
+      const viewerCall = await callApi({
+        path,
+        email: 'viewer@example.com',
+        body: {boardId},
+      });
+      expect(viewerCall.status).toBe(403);
+    }
+
     // Annotations: create, partial move, VIEWER forbidden, delete.
     const annotationPath = '/cms/api/prototypes.annotation.save';
     const savedNote = await callApi({

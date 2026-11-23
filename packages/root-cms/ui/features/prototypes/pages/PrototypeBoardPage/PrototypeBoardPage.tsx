@@ -116,7 +116,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     () => testCanEdit(roles, currentUserEmail),
     [roles, currentUserEmail]
   );
-  const aiAvailable = testAiEnabled();
+  // Root AI only edits the board, so it is offered to editing roles only.
+  const aiAvailable = testAiEnabled() && canEdit;
 
   usePageTitle(
     bundle?.board.title ? `${bundle.board.title} · Prototypes` : 'Prototypes'

@@ -2148,7 +2148,10 @@ export function registerPrototypesApi(
     async (req: Request, res: Response) => {
       if (!assertJsonPost(req, res)) return;
       const rootConfig = resolveRootConfig(req);
-      const auth = await authenticateRequest(req, res, rootConfig, false);
+      // The response carries model credentials and a system prompt with
+      // project source excerpts, and every prototype AI tool writes, so
+      // read-only roles have no use for it.
+      const auth = await authenticateRequest(req, res, rootConfig, true);
       if (!auth) return;
 
       const aiConfig = getAiConfig(rootConfig);
@@ -2233,7 +2236,7 @@ export function registerPrototypesApi(
         });
       } catch (err: any) {
         console.error('[prototypes.ai.prepare] error:', err.stack || err);
-        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+        res.status(500).json({success: false, error: 'UNKNOWN'});
       }
     }
   );
