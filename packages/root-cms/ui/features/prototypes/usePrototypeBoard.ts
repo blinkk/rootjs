@@ -239,6 +239,8 @@ export interface UsePrototypeBoardResult {
   applyComponentMutated: (spec: PrototypeComponentSpec) => void;
   /** Reloads the board after an AI turn finishes so local state stays in sync. */
   refreshAfterAiTurn: () => void;
+  /** Records the board's linked AI chat locally (empty string unlinks it). */
+  setBoardAiChatId: (chatId: string) => void;
 }
 
 /**
@@ -756,6 +758,21 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     });
   }, []);
 
+  const setBoardAiChatId = useCallback((chatId: string) => {
+    setBundle((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const board = {...prev.board};
+      if (chatId) {
+        board.aiChatId = chatId;
+      } else {
+        delete board.aiChatId;
+      }
+      return {...prev, board};
+    });
+  }, []);
+
   const refreshAfterAiTurn = useCallback(() => {
     reload().catch((err) => {
       console.error('Failed to reload board after AI turn:', err);
@@ -789,5 +806,6 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     applyFrameMutated,
     applyComponentMutated,
     refreshAfterAiTurn,
+    setBoardAiChatId,
   };
 }

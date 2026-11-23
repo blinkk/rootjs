@@ -3,6 +3,7 @@ import {
   IconArrowUp,
   IconCheck,
   IconChevronDown,
+  IconMessagePlus,
   IconPaperclip,
   IconPlayerStop,
   IconRobot,
@@ -79,6 +80,11 @@ export interface PrototypeAiCardProps {
   onComponentMutated?: (spec: PrototypeComponentSpec) => void;
   /** Invoked when an AI turn finishes so the board can refresh. */
   onTurnFinished?: () => void;
+  /**
+   * Invoked when the board's linked chat changes: with the chat id once the
+   * first turn links one, or with an empty string when a new chat is started.
+   */
+  onChatLinked?: (chatId: string) => void;
   /** Invoked when the AI streaming/running state changes. */
   onStreamingChange?: (streaming: boolean) => void;
   /** Invoked when the user closes the floating Root AI card. */
@@ -274,8 +280,18 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
     };
   }, []);
 
+  // The chat this card opened with. It is read once per mount: the session
+  // links a new chat to the board after its first turn, and re-keying on that
+  // would remount the conversation mid-flight.
+  const [initialChatId, setInitialChatId] = useState(
+    () => props.bundle.board.aiChatId || ''
+  );
+  // Incremented by "New chat" to start a fresh session.
+  const [sessionNonce, setSessionNonce] = useState(0);
+  const [streaming, setStreaming] = useState(false);
+  const boardAiChatId = initialChatId;
+
   // Load persisted chat history for the board when `aiChatId` is linked.
-  const boardAiChatId = props.bundle.board.aiChatId || '';
   useEffect(() => {
     let active = true;
     if (!boardAiChatId) {
@@ -339,6 +355,32 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
     ? `Editing ${selectedFrame.title}`
     : `Editing ${props.bundle.board.title}`;
 
+  // Starts an empty conversation. The previous chat stays stored but is
+  // unlinked from the board, so reopening the panel no longer restores it.
+  const handleNewChat = async () => {
+    try {
+      await apiUpdatePrototypeBoard({
+        boardId: props.bundle.board.id,
+        aiChatId: '',
+      });
+    } catch (err) {
+      showErrorNotification(err, {title: 'Failed to start a new chat'});
+      return;
+    }
+    props.onChatLinked?.('');
+    setInitialChatId('');
+    setInitialMessages([]);
+    setSessionNonce((nonce) => nonce + 1);
+  };
+
+  const sessionProps: PrototypeAiCardProps = {
+    ...props,
+    onStreamingChange: (value) => {
+      setStreaming(value);
+      props.onStreamingChange?.(value);
+    },
+  };
+
   const handleSelectModel = (modelId: string) => {
     setSelectedModelId(modelId);
     persistSelectedModel(modelId);
@@ -362,6 +404,15 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
         <div className="PrototypeAiCard__headerActions flex shrink-0 items-center gap-1">
           <IconButton
             size="xs"
+            label="New chat"
+            tooltip={isDesktop}
+            disabled={streaming || !isEnabled}
+            onClick={handleNewChat}
+          >
+            <IconMessagePlus />
+          </IconButton>
+          <IconButton
+            size="xs"
             label="Close Root AI"
             tooltip={isDesktop}
             onClick={props.onClose}
@@ -379,8 +430,8 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
         <NotConfiguredNotice error={configError} />
       ) : (
         <PrototypeAiChatSession
-          key={`${props.bundle.board.id}:${boardAiChatId || 'new'}`}
-          props={props}
+          key={`${props.bundle.board.id}:${sessionNonce}`}
+          props={sessionProps}
           initialChatId={boardAiChatId}
           initialMessages={initialMessages}
           models={models}
@@ -530,20 +581,28 @@ function PrototypeAiChatSession({
       const currentProps = propsRef.current;
       const boardId = currentProps.bundle.board.id;
 
+      // Link the chat to the board first, so the refresh below (and a panel
+      // that is closed and reopened) sees it and restores this conversation.
+      try {
+        if (!linkedChatIdRef.current) {
+          await apiUpdatePrototypeBoard({boardId, aiChatId: chatId});
+          linkedChatIdRef.current = chatId;
+          currentProps.onChatLinked?.(chatId);
+        }
+      } catch (err) {
+        console.error('failed to link prototype AI chat', err);
+      }
+
       // Refresh the board so it reflects everything the AI changed this turn.
       currentProps.onTurnFinished?.();
 
-      // Persist conversation history to Firestore and link `aiChatId` on the board.
+      // Persist conversation history to Firestore.
       try {
         await saveStoredChat(chatId, {
           messages: finalMessages,
           modelId: selectedModelRef.current?.id,
           title: currentProps.bundle.board.title,
         });
-        if (!linkedChatIdRef.current) {
-          linkedChatIdRef.current = chatId;
-          await apiUpdatePrototypeBoard({boardId, aiChatId: chatId});
-        }
       } catch (err) {
         console.error('failed to persist prototype AI chat', err);
       }

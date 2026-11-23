@@ -96,6 +96,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     applyFrameMutated,
     applyComponentMutated,
     refreshAfterAiTurn,
+    setBoardAiChatId,
   } = usePrototypeBoard(boardId);
 
   const {roles} = useProjectRoles();
@@ -877,6 +878,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
             }}
             onComponentMutated={applyComponentMutated}
             onTurnFinished={refreshAfterAiTurn}
+            onChatLinked={setBoardAiChatId}
             onClose={() => setActivePanel(null)}
           />
         )}
