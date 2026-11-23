@@ -14,9 +14,11 @@ import {
 } from '../../../../../shared/prototypes.js';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
+import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
+import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {isEditableTarget} from '../../../../utils/keyboard.js';
@@ -124,6 +126,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
+  const modals = useModals();
   const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
   const [aiFocusKey, setAiFocusKey] = useState(0);
   const [queuedPrompt, setQueuedPrompt] = useState<{
@@ -544,11 +547,35 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     setQueuedPrompt({id: Date.now(), text: '/address-comments '});
   }, []);
 
+  // Switches the right-hand panel. Leaving Root AI mid-response stops that
+  // response, so ask first.
+  const changePanel = useCallback(
+    (next: PrototypeSidePanel) => {
+      if (activePanel !== 'ai' || next === 'ai' || !aiStreaming) {
+        setActivePanel(next);
+        return;
+      }
+      modals.openConfirmModal({
+        title: 'Root AI is still working',
+        centered: true,
+        children: (
+          <Text as="p" size="body-sm" className="m-0">
+            Closing Root AI now stops the response in progress. Changes it has
+            already made to the board are kept.
+          </Text>
+        ),
+        labels: {confirm: 'Stop and close', cancel: 'Keep working'},
+        onConfirm: () => setActivePanel(next),
+      });
+    },
+    [activePanel, aiStreaming, modals]
+  );
+
   const handleTogglePanel = useCallback(
     (panel: Exclude<PrototypeSidePanel, null>) => {
-      setActivePanel((prev) => (prev === panel ? null : panel));
+      changePanel(activePanel === panel ? null : panel);
     },
-    []
+    [activePanel, changePanel]
   );
 
   const activePopoverThread = useMemo(() => {
@@ -879,7 +906,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
             onComponentMutated={applyComponentMutated}
             onTurnFinished={refreshAfterAiTurn}
             onChatLinked={setBoardAiChatId}
-            onClose={() => setActivePanel(null)}
+            onClose={() => changePanel(null)}
           />
         )}
 

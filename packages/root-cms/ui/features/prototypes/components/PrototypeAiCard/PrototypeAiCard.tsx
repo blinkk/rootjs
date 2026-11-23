@@ -709,8 +709,13 @@ function PrototypeAiChatSession({
     propsRef.current.onStreamingChange?.(isStreaming);
   }, [isStreaming]);
 
+  // Closing the card stops any response in progress; left running, it would
+  // keep editing the board with no way to see or stop it.
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
   useEffect(() => {
     return () => {
+      stopRef.current();
       propsRef.current.onStreamingChange?.(false);
     };
   }, []);
