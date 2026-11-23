@@ -16,6 +16,7 @@ import {
   IconFolder,
   IconHome,
   IconLanguage,
+  IconLayoutDashboard,
   IconLayoutSidebarRightCollapse,
   IconMessageCircle,
   IconPhoto,
@@ -40,7 +41,8 @@ export type NavId =
   | 'data'
   | 'assets'
   | 'translations'
-  | 'ai';
+  | 'ai'
+  | 'prototypes';
 
 const NAV_ITEMS: Array<{id: NavId; label: string; icon: ComponentChildren}> = [
   {id: 'home', label: 'Home', icon: <IconHome />},
@@ -51,6 +53,7 @@ const NAV_ITEMS: Array<{id: NavId; label: string; icon: ComponentChildren}> = [
   {id: 'assets', label: 'Asset Library', icon: <IconPhoto />},
   {id: 'translations', label: 'Translations', icon: <IconLanguage />},
   {id: 'ai', label: 'Root AI', icon: <IconRobot />},
+  {id: 'prototypes', label: 'Design Prototypes', icon: <IconLayoutDashboard />},
 ];
 
 export interface CmsFrameProps {
