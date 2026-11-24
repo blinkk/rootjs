@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 4.5.1
+
+### Patch Changes
+
+- 4f7ab73: fix: update Firestore security rules and UI permissions for contributor role
+- 2587c8a: feat: add update-firebase-security-rules CLI command and dev startup check
+- 28af3d8: fix: only auto-replace unmodified legacy security rules and support named databases in storage rules
+  - @blinkk/root@4.5.1
+
 ## 4.4.1
 
 ### Patch Changes
