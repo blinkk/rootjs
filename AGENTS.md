@@ -103,7 +103,27 @@ Projects/{projectId}
 ```
 
 Roles on the project doc: `ADMIN`, `EDITOR`, `CONTRIBUTOR`, `VIEWER` (see
-`packages/root-cms/core/security.ts`).
+`packages/root-cms/shared/security-rules.ts` and `packages/root-cms/core/security.ts`).
+
+#### Firestore security rules
+
+- `packages/root-cms/shared/security-rules.ts` is the source of truth for
+  `FIRESTORE_RULES` and `FIRESTORE_RULES_VERSION`.
+- The default catch-all `Projects/{project}/{collection}/{document=**}` allows
+  reads for all project members (`userCanRead()`) and writes only for `ADMIN`
+  and `EDITOR` (`userCanPublish()`).
+- Before adding any new **client-side Firestore write** in `ui/`:
+  1. Account for every role (`ADMIN`, `EDITOR`, `CONTRIBUTOR`, `VIEWER`) that
+     can trigger it — including automatic/background writes (sign-in, presence,
+     preferences).
+  2. For `writeBatch()` and transactions, Firestore evaluates security rules on
+     **every** operation in the batch, even deletes of non-existent docs.
+  3. If `CONTRIBUTOR` or `VIEWER` can trigger the write, add an explicit `match`
+     rule in `FIRESTORE_RULES` (or gate the UI on `testCanPublish` /
+     `testIsAdmin`).
+- When changing `FIRESTORE_RULES` permissions, bump `FIRESTORE_RULES_VERSION`,
+  add emulator tests in `packages/root-cms/core/security.test.ts`, and update
+  `packages/root-cms/README.md` and `docs/`.
 
 ### Root project layout
 
