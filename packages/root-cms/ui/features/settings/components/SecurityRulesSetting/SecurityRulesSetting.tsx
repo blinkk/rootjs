@@ -9,8 +9,6 @@ import {useEffect, useState} from 'preact/hooks';
 import {
   FIRESTORE_RULES,
   FIRESTORE_RULES_VERSION,
-  ROOT_CMS_RULES_END,
-  ROOT_CMS_RULES_START,
 } from '../../../../../shared/security-rules.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
@@ -41,7 +39,7 @@ export function SecurityRulesSetting() {
   const gcpProjectId =
     status?.gcpProjectId || window.__ROOT_CTX?.firebaseConfig?.projectId || '';
   const consoleUrl = gcpProjectId
-    ? `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/rules`
+    ? `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/databases/-default-/security/rules`
     : '';
 
   async function onApply() {
@@ -120,11 +118,9 @@ export function SecurityRulesSetting() {
       </div>
       <Text size="body-sm" weight="semi-bold" color="gray">
         <p>
-          Root.js CMS manages the rules between{' '}
-          <code className="font-mono">{ROOT_CMS_RULES_START}</code> and{' '}
-          <code className="font-mono">{ROOT_CMS_RULES_END}</code> (latest: v
-          {FIRESTORE_RULES_VERSION}). Custom rules outside those comments are
-          preserved when updating.
+          Controls which roles can read and write content in Firestore. Keep
+          your rules up to date as new CMS features are added; any custom
+          project rules are preserved when updating.
         </p>
       </Text>
 

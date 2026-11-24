@@ -74,7 +74,7 @@ export async function setupFirestoreAccess(ctx: SetupContext) {
     releaseId: 'cloud.firestore',
     fileName: 'firestore.rules',
     source: FIRESTORE_RULES,
-    consoleUrl: `https://console.firebase.google.com/project/${projectId}/firestore/rules`,
+    consoleUrl: `https://console.firebase.google.com/project/${projectId}/firestore/databases/-default-/security/rules`,
   });
 
   const email = ctx.state.account!;

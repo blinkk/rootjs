@@ -113,13 +113,7 @@ export function Layout(props: LayoutProps) {
 
   return (
     <SidebarContext.Provider value={sidebar}>
-      <div
-        className={cn(
-          'Layout',
-          expanded && 'Layout--sidebar-expanded',
-          rulesBanner.visible && 'Layout--has-banner'
-        )}
-      >
+      <div className={cn('Layout', expanded && 'Layout--sidebar-expanded')}>
         <Layout.Top onOpenMenu={() => setDrawerOpen(true)} />
         {rulesBanner.visible && rulesBanner.status && (
           <SecurityRulesBanner

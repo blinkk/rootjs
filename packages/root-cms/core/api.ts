@@ -1202,7 +1202,10 @@ export function api(server: Server, options: ApiOptions) {
   server.use(
     '/cms/api/security.rules_apply',
     async (req: Request, res: Response) => {
-      if (req.method !== 'POST') {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }

@@ -39,7 +39,7 @@ export function SecurityRulesBanner(props: {
 
   return (
     <div
-      className="SecurityRulesBanner Layout__banner flex min-h-9 items-center gap-2 border-b border-warning-line bg-warning-soft px-3 py-1.5 text-sm text-fg"
+      className="SecurityRulesBanner absolute inset-x-2 top-1.5 z-(--cms-z-floating) flex items-center gap-2 rounded-md border border-warning-line bg-warning-soft px-3 py-1.5 text-sm text-fg shadow-md sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
       role="status"
     >
       <IconAlertTriangle

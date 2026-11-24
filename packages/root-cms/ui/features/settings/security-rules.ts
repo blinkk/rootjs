@@ -151,6 +151,8 @@ export function useSecurityRulesStatus() {
     try {
       const res = await fetch('/cms/api/security.rules_apply', {
         method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: '{}',
       });
       const json: ApplySecurityRulesResponse = await res.json().catch(() => ({
         success: false,
