@@ -4,6 +4,7 @@ import {
   applySecurityRules,
   SecurityRulesMergeError,
   stampSecurityRulesVersion,
+  writeCachedSecurityRulesVersion,
 } from '../core/security.js';
 
 export interface UpdateFirebaseSecurityRulesOptions {
@@ -52,6 +53,12 @@ export async function updateFirebaseSecurityRules(
   await stampSecurityRulesVersion(db, rootProjectId, {
     firestore: result.version,
   });
+  await writeCachedSecurityRulesVersion(
+    rootDir,
+    gcpProjectId,
+    rootProjectId,
+    result.version
+  );
 
   if (result.preservedCustomRules) {
     console.log(
