@@ -8,6 +8,7 @@
     /* No rail below `md`; pages size themselves with this. */
     --sidebar-width: 0px;
     --sidebar-border-width: 1px;
+    --banner-height: 0px;
     /**
      * Distance from the left edge of the rail to its icons. When collapsed,
      * the icons are centered within the rail's content box, which excludes
@@ -24,8 +25,13 @@
     display: grid;
     grid-template-areas:
       'top'
+      'banner'
       'main';
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .Layout--has-banner {
+    --banner-height: 36px;
   }
 
   @media (width >= 48rem) {
@@ -33,6 +39,7 @@
       --sidebar-width: var(--cms-sidebar-width-collapsed);
       grid-template-areas:
         'top top'
+        'banner banner'
         'side main';
       grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
     }
@@ -40,6 +47,10 @@
     .Layout--sidebar-expanded {
       --sidebar-width: var(--cms-sidebar-width-expanded);
     }
+  }
+
+  .Layout__banner {
+    grid-area: banner;
   }
 
   .Layout__top {
@@ -59,7 +70,7 @@
   .Layout__side {
     grid-area: side;
     border-right-width: var(--sidebar-border-width);
-    height: calc(100vh - var(--cms-header-height));
+    height: calc(100vh - var(--cms-header-height) - var(--banner-height));
   }
 
   .Layout__side__icon {
@@ -113,7 +124,7 @@
    */
   .Layout__main > *:first-child {
     width: calc(100vw - var(--sidebar-width, 48px));
-    height: calc(100vh - var(--cms-header-height));
+    height: calc(100vh - var(--cms-header-height) - var(--banner-height));
     overflow: auto;
   }
 
@@ -121,7 +132,8 @@
     .Layout__main > *:first-child {
       width: 100%;
       height: calc(
-        100dvh - var(--cms-header-height) - env(safe-area-inset-top)
+        100dvh - var(--cms-header-height) - var(--banner-height) -
+          env(safe-area-inset-top)
       );
     }
   }

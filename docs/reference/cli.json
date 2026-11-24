@@ -3,7 +3,7 @@
     {
       "bin": "create-root",
       "packageName": "@blinkk/create-root",
-      "version": "4.2.2",
+      "version": "4.4.1",
       "commands": [
         {
           "name": "create-root",
@@ -44,7 +44,7 @@
     {
       "bin": "root",
       "packageName": "@blinkk/root",
-      "version": "4.2.2",
+      "version": "4.4.1",
       "commands": [
         {
           "name": "root build",
@@ -429,7 +429,7 @@
     {
       "bin": "root-cms",
       "packageName": "@blinkk/root-cms",
-      "version": "4.2.2",
+      "version": "4.4.1",
       "commands": [
         {
           "name": "root-cms init-firebase",
@@ -449,6 +449,10 @@
             {
               "flags": "--admin <email>",
               "description": "adds an admin to the project"
+            },
+            {
+              "flags": "--force",
+              "description": "overwrite live Firestore rules even if custom rules lack Root CMS markers"
             }
           ],
           "subcommands": []
@@ -947,6 +951,354 @@
           "subcommands": []
         },
         {
+          "name": "root-cms prototypes.list",
+          "aliases": [],
+          "usage": "root-cms prototypes.list [options]",
+          "summary": "lists UX prototype boards stored in Root CMS",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.list",
+            "root-cms prototypes.list --status all --json"
+          ],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--status <status>",
+              "description": "filter by status: \"active\", \"archived\", or \"all\" (default: \"active\")"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.get",
+          "aliases": [],
+          "usage": "root-cms prototypes.get <boardId> [outputDir] [options]",
+          "summary": "fetches a UX prototype board bundle as JSON, or exports editable HTML/JSON frames to outputDir",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.get pricing-refresh",
+            "root-cms prototypes.get pricing-refresh ./tmp/pricing",
+            "root-cms prototypes.get pricing-refresh --json"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "outputDir",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.create",
+          "aliases": [],
+          "usage": "root-cms prototypes.create [boardId] [options]",
+          "summary": "creates a new UX prototype board in Root CMS",
+          "description": "Extracts default brand theme tokens from the local project styles/ directory automatically.",
+          "examples": [
+            "root-cms prototypes.create pricing-refresh --title \"Pricing page refresh\"",
+            "root-cms prototypes.create --title \"Homepage exploration\" --json"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--title <title>",
+              "description": "board display title"
+            },
+            {
+              "flags": "--description <text>",
+              "description": "optional summary shown on the list page"
+            },
+            {
+              "flags": "--page <name>",
+              "description": "initial page name (default: \"Page 1\")"
+            },
+            {
+              "flags": "--upsert",
+              "description": "update metadata if boardId already exists"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.update",
+          "aliases": [],
+          "usage": "root-cms prototypes.update <boardId> [options]",
+          "summary": "updates a UX prototype board title, status, pages, or theme tokens",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.update pricing-refresh --title \"Pricing v2\"",
+            "root-cms prototypes.update pricing-refresh --add-page \"Mobile\"",
+            "root-cms prototypes.update pricing-refresh --rename-page \"page-1:Desktop\"",
+            "root-cms prototypes.update pricing-refresh --theme ./theme.json"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--title <title>",
+              "description": "updated board title"
+            },
+            {
+              "flags": "--description <text>",
+              "description": "updated board description"
+            },
+            {
+              "flags": "--status <status>",
+              "description": "board status: \"active\" or \"archived\""
+            },
+            {
+              "flags": "--theme <jsonOrFile>",
+              "description": "JSON string or path to .json file with PrototypeTheme tokens"
+            },
+            {
+              "flags": "--add-page <name>",
+              "description": "append a new page to the board"
+            },
+            {
+              "flags": "--rename-page <spec>",
+              "description": "rename an existing page (\"<pageId>:<newName>\")"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.delete",
+          "aliases": [],
+          "usage": "root-cms prototypes.delete <boardId> [options]",
+          "summary": "permanently deletes a UX prototype board and its frames and comments",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.delete pricing-refresh"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.frame.set",
+          "aliases": [],
+          "usage": "root-cms prototypes.frame.set <boardId> <frameId> [filepath] [options]",
+          "summary": "creates or updates a prototype artboard frame from an .html file, .json file, or stdin",
+          "description": "HTML files may include `<!-- @block key=\"hero\" component=\"Hero\" label=\"Hero\" proposed=\"true\" -->` markers so each section becomes an individually selectable, commentable block on the CMS canvas.",
+          "examples": [
+            "root-cms prototypes.frame.set pricing-refresh variant-a ./variant-a.html --title \"Variant A\" --width 1440",
+            "root-cms prototypes.frame.set pricing-refresh variant-b ./variant-b.json",
+            "cat variant.html | root-cms prototypes.frame.set pricing-refresh variant-a - --html"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "frameId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "filepath",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--title <title>",
+              "description": "frame display title"
+            },
+            {
+              "flags": "--page <pageId>",
+              "description": "target page id on the board"
+            },
+            {
+              "flags": "--width <px>",
+              "description": "frame viewport width in px (e.g. 1440, 768, 390)"
+            },
+            {
+              "flags": "--x <px>",
+              "description": "world X coordinate (auto-placed if omitted on create)"
+            },
+            {
+              "flags": "--y <px>",
+              "description": "world Y coordinate"
+            },
+            {
+              "flags": "--html",
+              "description": "treat input as HTML markup instead of JSON"
+            },
+            {
+              "flags": "--css <filepath>",
+              "description": "optional companion CSS file for HTML input"
+            },
+            {
+              "flags": "--component <name>",
+              "description": "component name when uploading plain HTML without @block markers"
+            },
+            {
+              "flags": "--label <label>",
+              "description": "block label when uploading plain HTML without @block markers"
+            },
+            {
+              "flags": "--proposed",
+              "description": "mark plain HTML upload block as a proposed net-new component"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.frame.delete",
+          "aliases": [],
+          "usage": "root-cms prototypes.frame.delete <boardId> <frameId> [options]",
+          "summary": "deletes a single frame from a UX prototype board",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.frame.delete pricing-refresh variant-b"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "frameId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
+          "name": "root-cms prototypes.comments",
+          "aliases": [],
+          "usage": "root-cms prototypes.comments <boardId> [options]",
+          "summary": "lists or resolves reviewer comment threads on a UX prototype board",
+          "description": "",
+          "examples": [
+            "root-cms prototypes.comments pricing-refresh",
+            "root-cms prototypes.comments pricing-refresh --frame variant-a --json",
+            "root-cms prototypes.comments pricing-refresh --resolve thread-123"
+          ],
+          "arguments": [
+            {
+              "name": "boardId",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "options": [
+            {
+              "flags": "--page <pageId>",
+              "description": "filter comments by page id"
+            },
+            {
+              "flags": "--frame <frameId>",
+              "description": "filter comments by frame id"
+            },
+            {
+              "flags": "--all",
+              "description": "include resolved comment threads"
+            },
+            {
+              "flags": "--resolve <threadId>",
+              "description": "mark a comment thread as resolved"
+            },
+            {
+              "flags": "--modified-by <email>",
+              "description": "email attributed as the author"
+            },
+            {
+              "flags": "--json",
+              "description": "output machine-readable JSON"
+            }
+          ],
+          "subcommands": []
+        },
+        {
           "name": "root-cms skill.install",
           "aliases": [],
           "usage": "root-cms skill.install [dir] [options]",
@@ -1013,7 +1365,7 @@
     {
       "bin": "root-password-protect",
       "packageName": "@blinkk/root-password-protect",
-      "version": "4.2.2",
+      "version": "4.4.1",
       "commands": [
         {
           "name": "root-password-protect generate-hash",

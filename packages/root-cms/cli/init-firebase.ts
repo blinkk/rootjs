@@ -1,13 +1,19 @@
 import {loadRootConfig} from '@blinkk/root/node';
 import {Firestore} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
-import {applySecurityRules} from '../core/security.js';
+import {
+  applySecurityRules,
+  SecurityRulesMergeError,
+  stampSecurityRulesVersion,
+} from '../core/security.js';
 
 export interface InitFirebaseOptions {
   /** GCP project id. */
   project?: string;
   /** Adds an ADMIN to the security rules. */
   admin?: string;
+  /** Overwrites live rules even when custom rules lack START/END markers. */
+  force?: boolean;
 }
 
 export async function initFirebase(options: InitFirebaseOptions) {
@@ -24,11 +30,34 @@ export async function initFirebase(options: InitFirebaseOptions) {
 
   console.log(`gcp project: ${gcpProjectId}`);
   console.log('👮 updating security rules...');
-  await applySecurityRules(gcpProjectId);
+  let result;
+  try {
+    result = await applySecurityRules(gcpProjectId, {force: options.force});
+  } catch (err) {
+    if (err instanceof SecurityRulesMergeError) {
+      console.error(err.message);
+      console.error('Re-run with --force to replace the live ruleset anyway.');
+      process.exitCode = 1;
+      return;
+    }
+    throw err;
+  }
+
+  if (result.preservedCustomRules) {
+    console.log(
+      `✓ updated Root.js CMS security rules to v${result.version} (custom rules preserved)`
+    );
+  } else {
+    console.log(`✓ updated Root.js CMS security rules to v${result.version}`);
+  }
+
+  const db = cmsPlugin.getFirestore();
+  const rootProjectId = cmsPluginOptions.id || 'default';
+  await stampSecurityRulesVersion(db, rootProjectId, {
+    firestore: result.version,
+  });
 
   if (options.admin) {
-    const db = cmsPlugin.getFirestore();
-    const rootProjectId = cmsPluginOptions.id || 'default';
     await addAdmin(db, rootProjectId, options.admin);
   }
 

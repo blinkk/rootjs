@@ -41,6 +41,10 @@ import {IconButton} from '../../primitives/IconButton/IconButton.js';
 import {Menu, MenuDivider, MenuItem} from '../../primitives/Menu/Menu.js';
 import {Tooltip} from '../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../utils/classes.js';
+import {
+  SecurityRulesBanner,
+  useSecurityRulesBanner,
+} from './SecurityRulesBanner.js';
 
 const ICON_STROKE = '1.5';
 
@@ -91,6 +95,7 @@ export function Layout(props: LayoutProps) {
   const sidebar = useMemo(() => ({expanded, toggle}), [expanded, toggle]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const {url} = useLocation();
+  const rulesBanner = useSecurityRulesBanner();
 
   // Close the drawer on navigation, and when the window grows past `md`
   // (where the rail takes over).
@@ -108,8 +113,21 @@ export function Layout(props: LayoutProps) {
 
   return (
     <SidebarContext.Provider value={sidebar}>
-      <div className={cn('Layout', expanded && 'Layout--sidebar-expanded')}>
+      <div
+        className={cn(
+          'Layout',
+          expanded && 'Layout--sidebar-expanded',
+          rulesBanner.visible && 'Layout--has-banner'
+        )}
+      >
         <Layout.Top onOpenMenu={() => setDrawerOpen(true)} />
+        {rulesBanner.visible && rulesBanner.status && (
+          <SecurityRulesBanner
+            deployedVersion={rulesBanner.status.deployedVersion}
+            latestVersion={rulesBanner.status.latestVersion}
+            onDismiss={rulesBanner.dismiss}
+          />
+        )}
         <Layout.Side />
         <Layout.Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         <Layout.Main {...props}>{props.children}</Layout.Main>

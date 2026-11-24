@@ -1,3 +1,7 @@
+import {
+  hasRootCmsRulesMarkers,
+  mergeFirestoreRules,
+} from '../../core/security.js';
 import {mutate, reuse, SetupContext} from './context.js';
 import {isGcpError} from './gcp.js';
 
@@ -32,7 +36,24 @@ export async function applyRules(
     reuse(ctx, options.label);
     return;
   }
-  if (current !== null) {
+
+  // If the live Firestore rules have Root.js CMS START/END markers, replace
+  // only the managed block so custom rules outside it are preserved.
+  let nextSource = options.source;
+  if (
+    current !== null &&
+    options.releaseId === 'cloud.firestore' &&
+    hasRootCmsRulesMarkers(current)
+  ) {
+    const merged = mergeFirestoreRules(current);
+    if (merged.merged) {
+      if (normalize(current) === normalize(merged.merged)) {
+        reuse(ctx, options.label);
+        return;
+      }
+      nextSource = merged.merged;
+    }
+  } else if (current !== null) {
     ctx.log.warn(
       `${options.label} on ${projectId} differ from the Root CMS rules. They apply to every site on this project, so replacing them can affect other apps.`
     );
@@ -54,7 +75,7 @@ export async function applyRules(
       method: 'POST',
       url: `${RULES_API}/projects/${projectId}/rulesets`,
       body: {
-        source: {files: [{name: options.fileName, content: options.source}]},
+        source: {files: [{name: options.fileName, content: nextSource}]},
       },
       quotaProject: projectId,
     });
