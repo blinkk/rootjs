@@ -29,11 +29,13 @@ export interface ApplySecurityRulesResponse {
 }
 
 let cachedStatus: ClientSecurityRulesStatus | null = null;
+let hasCheckedSession = false;
 let inFlightPromise: Promise<ClientSecurityRulesStatus | null> | null = null;
 const listeners = new Set<(status: ClientSecurityRulesStatus | null) => void>();
 
 function notifyListeners(next: ClientSecurityRulesStatus | null) {
   cachedStatus = next;
+  hasCheckedSession = true;
   listeners.forEach((fn) => fn(next));
 }
 
@@ -41,7 +43,7 @@ function notifyListeners(next: ClientSecurityRulesStatus | null) {
 async function fetchSecurityRulesStatus(
   forceRefresh = false
 ): Promise<ClientSecurityRulesStatus | null> {
-  if (!forceRefresh && cachedStatus) {
+  if (!forceRefresh && hasCheckedSession) {
     return cachedStatus;
   }
   if (!forceRefresh && inFlightPromise) {
@@ -54,15 +56,18 @@ async function fetchSecurityRulesStatus(
     try {
       const res = await fetch(url);
       if (!res.ok) {
+        hasCheckedSession = true;
         return null;
       }
       const json = await res.json();
       if (!json?.success || !json?.data) {
+        hasCheckedSession = true;
         return null;
       }
       notifyListeners(json.data as ClientSecurityRulesStatus);
       return json.data as ClientSecurityRulesStatus;
     } catch {
+      hasCheckedSession = true;
       return null;
     } finally {
       if (inFlightPromise === promise) {
@@ -113,7 +118,7 @@ export function useSecurityRulesStatus() {
     if (isUpToDateFromDoc) {
       return;
     }
-    if (cachedStatus) {
+    if (hasCheckedSession) {
       setRemoteStatus(cachedStatus);
       return;
     }
