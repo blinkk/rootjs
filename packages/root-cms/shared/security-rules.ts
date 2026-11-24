@@ -61,7 +61,7 @@ export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
       }
 
       match /Counters/tasks {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanEdit();
       }
 
@@ -72,12 +72,12 @@ export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
       }
 
       match /UserProfiles/{email} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.token.email == email;
       }
 
       match /Users/{uid} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.uid == uid;
       }
 
@@ -95,14 +95,14 @@ export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
       }
 
       function getRoles() {
-        return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+        return get(/databases/$(database)/documents/Projects/$(project)).data.get('roles', {});
       }
 
       function hasRole(allowed) {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in allowed) || (roles[domain] in allowed);
+        return (roles.get(email, '') in allowed) || (roles.get(domain, '') in allowed);
       }
 
       function userCanRead() {
