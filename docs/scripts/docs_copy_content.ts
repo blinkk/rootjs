@@ -1760,7 +1760,7 @@ gcloud auth application-default login`
             ),
             copy(
               p(
-                `The CMS manages the rules between ${c('// [START root-cms]')} and ${c('// [END root-cms]')}. Place any custom app rules outside those comments so they are preserved when you re-run ${c('init-firebase')} or update the rules from <b>Settings → Site Admin</b>.`
+                `The CMS manages the rules inside the ${c('BEGIN ROOT CMS MANAGED RULES')} block. Place any custom app rules outside that block so they are preserved when you run ${c('update-firebase-security-rules')} or update the rules from <b>Settings → Site Admin</b>.`
               ),
               p(
                 'To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:'

@@ -11,10 +11,10 @@ export const FIRESTORE_RULES_VERSION = 2;
 export const STORAGE_RULES_VERSION = 1;
 
 /** Comment marker denoting the start of the Root.js CMS managed rules block. */
-export const ROOT_CMS_RULES_START = '// [START root-cms]';
+export const ROOT_CMS_RULES_START = `// === BEGIN ROOT CMS MANAGED RULES (version: ${FIRESTORE_RULES_VERSION}) — DO NOT EDIT ===`;
 
 /** Comment marker denoting the end of the Root.js CMS managed rules block. */
-export const ROOT_CMS_RULES_END = '// [END root-cms]';
+export const ROOT_CMS_RULES_END = '// === END ROOT CMS MANAGED RULES ===';
 
 /**
  * The Root.js CMS managed block inside `match /databases/{database}/documents`.
@@ -22,101 +22,82 @@ export const ROOT_CMS_RULES_END = '// [END root-cms]';
  * updating the Root.js CMS rules.
  */
 export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: ${FIRESTORE_RULES_VERSION}
     match /{document=**} {
       allow read, write: if false;
     }
 
     match /Projects/{project} {
-      allow write:
-        if isSignedIn() && userIsAdmin();
-      allow read:
-        if isSignedIn() && userCanRead();
+      allow read: if isSignedIn() && userCanRead();
+      allow write: if isSignedIn() && userIsAdmin();
 
       // Default for shared CMS collections (Published, Scheduled, Releases,
       // DataSources, Assets, Translations, etc.).
       match /{collection}/{document=**} {
-        allow write:
-          if isSignedIn() && userCanPublish();
-        allow read:
-          if isSignedIn() && userCanRead();
+        allow read: if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanPublish();
       }
 
       // Draft and collaborative collections (CONTRIBUTOR+).
       match /Collections/{collectionId}/Drafts/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /TranslationsManager/draft/Translations/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Tasks/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Counters/tasks {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow create, update: if isSignedIn() && userCanEdit();
       }
 
       // Presence and per-user collections (all signed-in project members).
       match /Viewers/{viewerDoc} {
-        allow write:
-          if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanRead();
       }
-
       match /UserProfiles/{email} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.token.email == email;
       }
-
       match /Users/{uid} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.uid == uid;
       }
-
       match /AiChats/{chatId} {
         allow create:
-          if isSignedIn() && userCanRead() && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && request.resource.data.createdBy == request.auth.token.email;
         allow update:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email
+          && request.resource.data.createdBy == request.auth.token.email;
         allow delete:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email;
       }
 
+      // Role helpers.
       function isSignedIn() {
         return request.auth != null && request.auth.token.email != null;
       }
-
       function getRoles() {
-        return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+        return get(/databases/$(database)/documents/Projects/$(project)).data.get('roles', {});
       }
-
       function hasRole(allowed) {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in allowed) || (roles[domain] in allowed);
+        return (roles.get(email, '') in allowed) || (roles.get(domain, '') in allowed);
       }
-
       function userCanRead() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
-
       function userCanEdit() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
       }
-
       function userCanPublish() {
         return hasRole(['ADMIN', 'EDITOR']);
       }
-
       function userIsAdmin() {
         return hasRole(['ADMIN']);
       }
@@ -141,10 +122,7 @@ ${FIRESTORE_RULES_MANAGED_BLOCK}
 export const STORAGE_RULES = `rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    ${ROOT_CMS_RULES_START}
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: ${STORAGE_RULES_VERSION}
+    // === BEGIN ROOT CMS MANAGED RULES (version: ${STORAGE_RULES_VERSION}) — DO NOT EDIT ===
     match /{allPaths=**} {
       allow read, write: if false;
     }
@@ -207,7 +185,10 @@ export function parseRulesVersion(
   if (!source) {
     return null;
   }
-  const match = source.match(/\/\/\s*root-cms-rules-version:\s*(\d+)/);
+  const match =
+    source.match(
+      /BEGIN ROOT CMS MANAGED RULES\s*\(\s*version:\s*(\d+)\s*\)/i
+    ) || source.match(/\/\/\s*root-cms-rules-version:\s*(\d+)/);
   if (!match) {
     return null;
   }
@@ -244,6 +225,19 @@ export function mergeFirestoreRules(
       merged: FIRESTORE_RULES,
       previousVersion: null,
       preservedCustomRules: false,
+    };
+  }
+
+  if (hasAmbiguousMarkers(existingSource)) {
+    return {
+      status: 'needs_manual_merge',
+      merged: null,
+      previousVersion,
+      preservedCustomRules: false,
+      reason:
+        'Existing Firestore rules contain multiple or mismatched ' +
+        `${ROOT_CMS_RULES_START} / ${ROOT_CMS_RULES_END} markers. ` +
+        'Ensure there is only one START/END block before updating.',
     };
   }
 
@@ -284,16 +278,41 @@ export function mergeFirestoreRules(
   };
 }
 
-/** Finds the line-aligned start/end offsets of the START/END marker block. */
+const BEGIN_MARKER_GLOBAL_RE =
+  /^[ \t]*\/\/\s*(?:===\s*BEGIN ROOT CMS MANAGED RULES\b[^\n]*|\[START root-cms\])[ \t]*$/gm;
+const END_MARKER_GLOBAL_RE =
+  /^[ \t]*\/\/\s*(?:===\s*END ROOT CMS MANAGED RULES\s*===|\[END root-cms\])[ \t]*$/gm;
+const BEGIN_MARKER_RE =
+  /^[ \t]*\/\/\s*(?:===\s*BEGIN ROOT CMS MANAGED RULES\b[^\n]*|\[START root-cms\])[ \t]*$/m;
+const END_MARKER_RE =
+  /^[ \t]*\/\/\s*(?:===\s*END ROOT CMS MANAGED RULES\s*===|\[END root-cms\])[ \t]*$/m;
+
+/**
+ * Returns true if `source` has more than one BEGIN/END marker or an unmatched
+ * marker (e.g. BEGIN without END, END without BEGIN, or END before BEGIN).
+ */
+function hasAmbiguousMarkers(source: string): boolean {
+  const startMatches = source.match(BEGIN_MARKER_GLOBAL_RE);
+  const endMatches = source.match(END_MARKER_GLOBAL_RE);
+  const startCount = startMatches ? startMatches.length : 0;
+  const endCount = endMatches ? endMatches.length : 0;
+  if (startCount === 0 && endCount === 0) {
+    return false;
+  }
+  if (startCount !== 1 || endCount !== 1) {
+    return true;
+  }
+  return findMarkerRange(source) === null;
+}
+
+/** Finds the line-aligned start/end offsets of the BEGIN/END marker block. */
 function findMarkerRange(source: string): {start: number; end: number} | null {
-  const startRegex = /^[ \t]*\/\/\s*\[START root-cms\][ \t]*$/m;
-  const endRegex = /^[ \t]*\/\/\s*\[END root-cms\][ \t]*$/m;
-  const startMatch = startRegex.exec(source);
+  const startMatch = BEGIN_MARKER_RE.exec(source);
   if (!startMatch) {
     return null;
   }
   const rest = source.slice(startMatch.index + startMatch[0].length);
-  const endMatch = endRegex.exec(rest);
+  const endMatch = END_MARKER_RE.exec(rest);
   if (!endMatch) {
     return null;
   }
@@ -373,8 +392,56 @@ function isLegacyRootCmsFirestoreRules(source: string): boolean {
   );
 }
 
+/** Strips `//` and `/* ... * /` comments while preserving string literals. */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  let out = '';
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    const next = i + 1 < source.length ? source[i + 1] : '';
+    const prev = i > 0 ? source[i - 1] : '';
+    if (inSingle) {
+      out += ch;
+      if (ch === "'" && prev !== '\\') {
+        inSingle = false;
+      }
+      continue;
+    }
+    if (inDouble) {
+      out += ch;
+      if (ch === '"' && prev !== '\\') {
+        inDouble = false;
+      }
+      continue;
+    }
+    if (ch === "'") {
+      inSingle = true;
+      out += ch;
+    } else if (ch === '"') {
+      inDouble = true;
+      out += ch;
+    } else if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') {
+        i++;
+      }
+      if (i < source.length && source[i] === '\n') {
+        out += '\n';
+      }
+    } else if (ch === '/' && next === '*') {
+      i += 2;
+      while (
+        i < source.length &&
+        !(source[i] === '*' && source[i + 1] === '/')
+      ) {
+        i++;
+      }
+      i++;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }
 
 function findMatchingBrace(source: string, openIndex: number): number {
@@ -414,4 +481,35 @@ function findMatchingBrace(source: string, openIndex: number): number {
 
 function normalizeWhitespace(source: string): string {
   return source.replace(/\s+/g, ' ').trim();
+}
+
+/** Normalizes a Firestore database ID, defaulting empty values to `'(default)'`. */
+export function normalizeFirestoreDatabaseId(
+  databaseId?: string | null
+): string {
+  const trimmed = databaseId?.trim();
+  return trimmed ? trimmed : '(default)';
+}
+
+/**
+ * Returns the Firebase Security Rules release ID for a Firestore database:
+ * `'cloud.firestore'` for `'(default)'`, or `'cloud.firestore/<databaseId>'`
+ * for a named database.
+ */
+export function getFirestoreRulesReleaseId(databaseId?: string | null): string {
+  const id = normalizeFirestoreDatabaseId(databaseId);
+  return id === '(default)' ? 'cloud.firestore' : `cloud.firestore/${id}`;
+}
+
+/**
+ * Returns the Firebase Console Firestore Security Rules URL for the given
+ * project and database ID (`-default-` in the URL path for `'(default)'`).
+ */
+export function getFirestoreConsoleRulesUrl(
+  gcpProjectId: string,
+  databaseId?: string | null
+): string {
+  const id = normalizeFirestoreDatabaseId(databaseId);
+  const dbSegment = id === '(default)' ? '-default-' : encodeURIComponent(id);
+  return `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/databases/${dbSegment}/security/rules`;
 }

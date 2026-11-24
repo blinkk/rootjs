@@ -11,6 +11,8 @@ import {
 export interface InitFirebaseOptions {
   /** GCP project id. */
   project?: string;
+  /** Firestore database id (defaults to `firebaseConfig.databaseId` or `'(default)'`). */
+  database?: string;
   /** Adds an ADMIN to the security rules. */
   admin?: string;
   /** Overwrites live rules even when custom rules lack START/END markers. */
@@ -24,16 +26,23 @@ export async function initFirebase(options: InitFirebaseOptions) {
   const cmsPluginOptions = cmsPlugin.getConfig();
   const gcpProjectId =
     options.project || cmsPluginOptions.firebaseConfig.projectId;
+  const databaseId =
+    options.database ||
+    cmsPluginOptions.firebaseConfig.databaseId ||
+    '(default)';
 
   if (!gcpProjectId) {
     throw new Error('firebaseConfig.projectId not set in cms plugin options');
   }
 
-  console.log(`gcp project: ${gcpProjectId}`);
+  console.log(`gcp project: ${gcpProjectId} (database: ${databaseId})`);
   console.log('👮 updating security rules...');
   let result;
   try {
-    result = await applySecurityRules(gcpProjectId, {force: options.force});
+    result = await applySecurityRules(gcpProjectId, {
+      force: options.force,
+      databaseId,
+    });
   } catch (err) {
     if (err instanceof SecurityRulesMergeError) {
       console.error(err.message);
@@ -52,7 +61,7 @@ export async function initFirebase(options: InitFirebaseOptions) {
     console.log(`✓ updated Root.js CMS security rules to v${result.version}`);
   }
 
-  const db = cmsPlugin.getFirestore();
+  const db = cmsPlugin.getFirestore({databaseId});
   const rootProjectId = cmsPluginOptions.id || 'default';
   await stampSecurityRulesVersion(db, rootProjectId, {
     firestore: result.version,
@@ -61,7 +70,8 @@ export async function initFirebase(options: InitFirebaseOptions) {
     rootDir,
     gcpProjectId,
     rootProjectId,
-    result.version
+    result.version,
+    databaseId
   );
 
   if (options.admin) {

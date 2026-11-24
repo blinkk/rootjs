@@ -1483,6 +1483,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         options.firebaseConfig?.projectId
       ) {
         const gcpProjectId = options.firebaseConfig.projectId;
+        const databaseId = options.firebaseConfig.databaseId || '(default)';
         const rootProjectId = options.id || 'default';
         const rootDir = serverOptions.rootConfig.rootDir;
         (async () => {
@@ -1496,7 +1497,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           const cachedVersion = await readCachedSecurityRulesVersion(
             rootDir,
             gcpProjectId,
-            rootProjectId
+            rootProjectId,
+            databaseId
           );
           if (
             cachedVersion !== null &&
@@ -1504,7 +1506,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           ) {
             return;
           }
-          const db = getFirestore();
+          const db = getFirestore(app, databaseId);
           // Firestore doc fast path: skip the Rules API when the project doc
           // already records the latest securityRulesVersion.
           const snap = await db
@@ -1519,12 +1521,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               rootDir,
               gcpProjectId,
               rootProjectId,
-              storedVersion
+              storedVersion,
+              databaseId
             );
             return;
           }
           const status = await getSecurityRulesStatus({
             gcpProjectId,
+            databaseId,
             db,
             rootProjectId,
           });
@@ -1533,7 +1537,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               rootDir,
               gcpProjectId,
               rootProjectId,
-              status.deployedVersion ?? FIRESTORE_RULES_VERSION
+              status.deployedVersion ?? FIRESTORE_RULES_VERSION,
+              databaseId
             );
           } else if (status.status === 'outdated') {
             console.warn(

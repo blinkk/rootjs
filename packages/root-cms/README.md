@@ -8,107 +8,88 @@ Firestore read/writes will need to be locked down by adding the following to the
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // [START root-cms]
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: 2
+    // === BEGIN ROOT CMS MANAGED RULES (version: 2) — DO NOT EDIT ===
     match /{document=**} {
       allow read, write: if false;
     }
 
     match /Projects/{project} {
-      allow write:
-        if isSignedIn() && userIsAdmin();
-      allow read:
-        if isSignedIn() && userCanRead();
+      allow read: if isSignedIn() && userCanRead();
+      allow write: if isSignedIn() && userIsAdmin();
 
       // Default for shared CMS collections (Published, Scheduled, Releases,
       // DataSources, Assets, Translations, etc.).
       match /{collection}/{document=**} {
-        allow write:
-          if isSignedIn() && userCanPublish();
-        allow read:
-          if isSignedIn() && userCanRead();
+        allow read: if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanPublish();
       }
 
       // Draft and collaborative collections (CONTRIBUTOR+).
       match /Collections/{collectionId}/Drafts/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /TranslationsManager/draft/Translations/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Tasks/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Counters/tasks {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow create, update: if isSignedIn() && userCanEdit();
       }
 
       // Presence and per-user collections (all signed-in project members).
       match /Viewers/{viewerDoc} {
-        allow write:
-          if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanRead();
       }
-
       match /UserProfiles/{email} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.token.email == email;
       }
-
       match /Users/{uid} {
-        allow write:
+        allow create, update:
           if isSignedIn() && userCanRead() && request.auth.uid == uid;
       }
-
       match /AiChats/{chatId} {
         allow create:
-          if isSignedIn() && userCanRead() && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && request.resource.data.createdBy == request.auth.token.email;
         allow update:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email
+          && request.resource.data.createdBy == request.auth.token.email;
         allow delete:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email;
       }
 
+      // Role helpers.
       function isSignedIn() {
         return request.auth != null && request.auth.token.email != null;
       }
-
       function getRoles() {
-        return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+        return get(/databases/$(database)/documents/Projects/$(project)).data.get('roles', {});
       }
-
       function hasRole(allowed) {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in allowed) || (roles[domain] in allowed);
+        return (roles.get(email, '') in allowed) || (roles.get(domain, '') in allowed);
       }
-
       function userCanRead() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
-
       function userCanEdit() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
       }
-
       function userCanPublish() {
         return hasRole(['ADMIN', 'EDITOR']);
       }
-
       function userIsAdmin() {
         return hasRole(['ADMIN']);
       }
     }
-    // [END root-cms]
+    // === END ROOT CMS MANAGED RULES ===
   }
 }
 ```

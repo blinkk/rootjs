@@ -362,7 +362,7 @@ test('should allow signed-in members to write presence, own profile, preferences
       {merge: true}
     )
   );
-  // Cannot write another user's preferences.
+  // Cannot write another user's preferences, or delete UserProfiles / Users.
   await assertFails(
     setDoc(
       doc(connieDb, 'Projects/foo/Users/victor-uid'),
@@ -370,6 +370,10 @@ test('should allow signed-in members to write presence, own profile, preferences
       {merge: true}
     )
   );
+  await assertFails(
+    deleteDoc(doc(connieDb, 'Projects/foo/UserProfiles/connie@example.com'))
+  );
+  await assertFails(deleteDoc(doc(connieDb, 'Projects/foo/Users/connie-uid')));
 
   // Own AI chats (`AiChats/{chatId}`).
   const connieChat = doc(connieDb, 'Projects/foo/AiChats/chat-1');
@@ -441,6 +445,7 @@ test('should allow contributors to edit draft translations and tasks, but not pu
   await assertSucceeds(
     setDoc(doc(connieDb, 'Projects/foo/Counters/tasks'), {lastTaskId: 1})
   );
+  await assertFails(deleteDoc(doc(connieDb, 'Projects/foo/Counters/tasks')));
   await assertFails(
     setDoc(doc(victorDb, 'Projects/foo/Tasks/2'), {title: 'Viewer task'})
   );

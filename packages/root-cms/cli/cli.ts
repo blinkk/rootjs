@@ -60,6 +60,7 @@ class CliRunner {
       .alias('init')
       .description('inits the firebase project proper security rules')
       .option('--project <project>', 'gcp project id')
+      .option('--database <databaseId>', 'firestore database id')
       .option('--admin <email>', 'adds an admin to the project')
       .option(
         '--force',
@@ -72,6 +73,7 @@ class CliRunner {
         'updates the project firestore security rules while preserving custom rules'
       )
       .option('--project <project>', 'gcp project id')
+      .option('--database <databaseId>', 'firestore database id')
       .option(
         '--force',
         'overwrite live Firestore rules even if custom rules lack Root CMS markers'

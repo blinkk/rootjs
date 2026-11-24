@@ -9,8 +9,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {
   FIRESTORE_RULES,
   FIRESTORE_RULES_VERSION,
-  ROOT_CMS_RULES_END,
-  ROOT_CMS_RULES_START,
+  getFirestoreConsoleRulesUrl,
 } from '../../../../../shared/security-rules.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
@@ -40,8 +39,12 @@ export function SecurityRulesSetting() {
 
   const gcpProjectId =
     status?.gcpProjectId || window.__ROOT_CTX?.firebaseConfig?.projectId || '';
+  const databaseId =
+    status?.databaseId ||
+    window.__ROOT_CTX?.firebaseConfig?.databaseId ||
+    '(default)';
   const consoleUrl = gcpProjectId
-    ? `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/rules`
+    ? getFirestoreConsoleRulesUrl(gcpProjectId, databaseId)
     : '';
 
   async function onApply() {
@@ -120,11 +123,9 @@ export function SecurityRulesSetting() {
       </div>
       <Text size="body-sm" weight="semi-bold" color="gray">
         <p>
-          Root.js CMS manages the rules between{' '}
-          <code className="font-mono">{ROOT_CMS_RULES_START}</code> and{' '}
-          <code className="font-mono">{ROOT_CMS_RULES_END}</code> (latest: v
-          {FIRESTORE_RULES_VERSION}). Custom rules outside those comments are
-          preserved when updating.
+          Controls which roles can read and write content in Firestore. Keep
+          your rules up to date as new CMS features are added; any custom
+          project rules are preserved when updating.
         </p>
       </Text>
 
@@ -188,29 +189,30 @@ export function SecurityRulesSetting() {
         )}
       </div>
 
-      <div className="SecurityRulesSetting__cli mt-2 flex flex-col gap-1">
-        <Text size="body-sm" color="gray">
-          Or update from your terminal (fetches live rules and preserves custom
-          rules outside the markers):
-        </Text>
-        <div className="SecurityRulesSetting__cliBox flex items-center justify-between gap-2 rounded-md border border-border bg-chip px-3 py-1.5 font-mono text-xs text-fg">
-          <code className="SecurityRulesSetting__cliCode min-w-0 truncate">
-            {CLI_COMMAND}
-          </code>
-          <IconButton
-            className="SecurityRulesSetting__cliCopy shrink-0"
-            label={copiedCommand ? 'Copied' : 'Copy command'}
-            size="xs"
-            onClick={onCopyCommand}
-          >
-            {copiedCommand ? (
-              <IconCheck size={14} stroke={1.75} />
-            ) : (
-              <IconCopy size={14} stroke={1.75} />
-            )}
-          </IconButton>
+      {status?.status !== 'up_to_date' && (
+        <div className="SecurityRulesSetting__cli mt-2 flex flex-col gap-1">
+          <Text size="body-sm" color="gray">
+            Or run from your terminal:
+          </Text>
+          <div className="SecurityRulesSetting__cliBox flex items-center justify-between gap-2 rounded-md border border-border bg-chip px-3 py-1.5 font-mono text-xs text-fg">
+            <code className="SecurityRulesSetting__cliCode min-w-0 truncate">
+              {CLI_COMMAND}
+            </code>
+            <IconButton
+              className="SecurityRulesSetting__cliCopy shrink-0"
+              label={copiedCommand ? 'Copied' : 'Copy command'}
+              size="xs"
+              onClick={onCopyCommand}
+            >
+              {copiedCommand ? (
+                <IconCheck size={14} stroke={1.75} />
+              ) : (
+                <IconCopy size={14} stroke={1.75} />
+              )}
+            </IconButton>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
