@@ -8,10 +8,7 @@ Firestore read/writes will need to be locked down by adding the following to the
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // [START root-cms]
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: 2
+    // === BEGIN ROOT CMS MANAGED RULES (version: 2) — DO NOT EDIT ===
     match /{document=**} {
       allow read, write: if false;
     }
@@ -108,7 +105,7 @@ service cloud.firestore {
         return hasRole(['ADMIN']);
       }
     }
-    // [END root-cms]
+    // === END ROOT CMS MANAGED RULES ===
   }
 }
 ```

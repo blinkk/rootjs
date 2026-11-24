@@ -36,8 +36,7 @@ service cloud.firestore {
       allow read, write: if request.auth.uid == userId;
     }
 
-    ${ROOT_CMS_RULES_START}
-    // root-cms-rules-version: 1
+    // === BEGIN ROOT CMS MANAGED RULES (version: 1) — DO NOT EDIT ===
     match /{document=**} {
       allow read, write: if false;
     }
@@ -59,9 +58,7 @@ service cloud.firestore {
     expect(res.preservedCustomRules).toBe(true);
     expect(res.merged).toContain('match /AppUsers/{userId}');
     expect(res.merged).toContain('match /PublicConfig/{docId}');
-    expect(res.merged).toContain(
-      `// root-cms-rules-version: ${FIRESTORE_RULES_VERSION}`
-    );
+    expect(res.merged).toContain(ROOT_CMS_RULES_START);
     expect(res.merged).toContain('match /Viewers/{viewerDoc}');
     expect(parseRulesVersion(res.merged)).toBe(FIRESTORE_RULES_VERSION);
   });

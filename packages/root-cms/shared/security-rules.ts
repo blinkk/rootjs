@@ -11,10 +11,10 @@ export const FIRESTORE_RULES_VERSION = 2;
 export const STORAGE_RULES_VERSION = 1;
 
 /** Comment marker denoting the start of the Root.js CMS managed rules block. */
-export const ROOT_CMS_RULES_START = '// [START root-cms]';
+export const ROOT_CMS_RULES_START = `// === BEGIN ROOT CMS MANAGED RULES (version: ${FIRESTORE_RULES_VERSION}) — DO NOT EDIT ===`;
 
 /** Comment marker denoting the end of the Root.js CMS managed rules block. */
-export const ROOT_CMS_RULES_END = '// [END root-cms]';
+export const ROOT_CMS_RULES_END = '// === END ROOT CMS MANAGED RULES ===';
 
 /**
  * The Root.js CMS managed block inside `match /databases/{database}/documents`.
@@ -22,9 +22,6 @@ export const ROOT_CMS_RULES_END = '// [END root-cms]';
  * updating the Root.js CMS rules.
  */
 export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: ${FIRESTORE_RULES_VERSION}
     match /{document=**} {
       allow read, write: if false;
     }
@@ -141,10 +138,7 @@ ${FIRESTORE_RULES_MANAGED_BLOCK}
 export const STORAGE_RULES = `rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    ${ROOT_CMS_RULES_START}
-    // Managed by Root.js CMS. Do not edit between START and END comments;
-    // add custom rules outside this block so they are preserved on updates.
-    // root-cms-rules-version: ${STORAGE_RULES_VERSION}
+    // === BEGIN ROOT CMS MANAGED RULES (version: ${STORAGE_RULES_VERSION}) — DO NOT EDIT ===
     match /{allPaths=**} {
       allow read, write: if false;
     }
@@ -207,7 +201,10 @@ export function parseRulesVersion(
   if (!source) {
     return null;
   }
-  const match = source.match(/\/\/\s*root-cms-rules-version:\s*(\d+)/);
+  const match =
+    source.match(
+      /BEGIN ROOT CMS MANAGED RULES\s*\(\s*version:\s*(\d+)\s*\)/i
+    ) || source.match(/\/\/\s*root-cms-rules-version:\s*(\d+)/);
   if (!match) {
     return null;
   }
@@ -297,15 +294,22 @@ export function mergeFirestoreRules(
   };
 }
 
+const BEGIN_MARKER_GLOBAL_RE =
+  /^[ \t]*\/\/\s*(?:===\s*BEGIN ROOT CMS MANAGED RULES\b[^\n]*|\[START root-cms\])[ \t]*$/gm;
+const END_MARKER_GLOBAL_RE =
+  /^[ \t]*\/\/\s*(?:===\s*END ROOT CMS MANAGED RULES\s*===|\[END root-cms\])[ \t]*$/gm;
+const BEGIN_MARKER_RE =
+  /^[ \t]*\/\/\s*(?:===\s*BEGIN ROOT CMS MANAGED RULES\b[^\n]*|\[START root-cms\])[ \t]*$/m;
+const END_MARKER_RE =
+  /^[ \t]*\/\/\s*(?:===\s*END ROOT CMS MANAGED RULES\s*===|\[END root-cms\])[ \t]*$/m;
+
 /**
- * Returns true if `source` has more than one START/END marker or an unmatched
- * marker (e.g. START without END, END without START, or END before START).
+ * Returns true if `source` has more than one BEGIN/END marker or an unmatched
+ * marker (e.g. BEGIN without END, END without BEGIN, or END before BEGIN).
  */
 function hasAmbiguousMarkers(source: string): boolean {
-  const startMatches = source.match(
-    /^[ \t]*\/\/\s*\[START root-cms\][ \t]*$/gm
-  );
-  const endMatches = source.match(/^[ \t]*\/\/\s*\[END root-cms\][ \t]*$/gm);
+  const startMatches = source.match(BEGIN_MARKER_GLOBAL_RE);
+  const endMatches = source.match(END_MARKER_GLOBAL_RE);
   const startCount = startMatches ? startMatches.length : 0;
   const endCount = endMatches ? endMatches.length : 0;
   if (startCount === 0 && endCount === 0) {
@@ -317,16 +321,14 @@ function hasAmbiguousMarkers(source: string): boolean {
   return findMarkerRange(source) === null;
 }
 
-/** Finds the line-aligned start/end offsets of the START/END marker block. */
+/** Finds the line-aligned start/end offsets of the BEGIN/END marker block. */
 function findMarkerRange(source: string): {start: number; end: number} | null {
-  const startRegex = /^[ \t]*\/\/\s*\[START root-cms\][ \t]*$/m;
-  const endRegex = /^[ \t]*\/\/\s*\[END root-cms\][ \t]*$/m;
-  const startMatch = startRegex.exec(source);
+  const startMatch = BEGIN_MARKER_RE.exec(source);
   if (!startMatch) {
     return null;
   }
   const rest = source.slice(startMatch.index + startMatch[0].length);
-  const endMatch = endRegex.exec(rest);
+  const endMatch = END_MARKER_RE.exec(rest);
   if (!endMatch) {
     return null;
   }
