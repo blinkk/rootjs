@@ -1,3 +1,5 @@
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Firestore} from 'firebase-admin/firestore';
 import {getSecurityRules} from 'firebase-admin/security-rules';
@@ -231,4 +233,66 @@ export async function getSecurityRulesStatus(options: {
   };
   RULES_STATUS_CACHE.set(gcpProjectId, {checkedAt: Date.now(), value: result});
   return result;
+}
+
+function getSecurityRulesCachePath(rootDir: string): string {
+  return path.join(
+    rootDir,
+    'node_modules',
+    '.cache',
+    'root-cms',
+    'security-rules.json'
+  );
+}
+
+/**
+ * Reads the locally cached Firestore security rules version for a project
+ * from `node_modules/.cache/root-cms/security-rules.json`, or returns `null`
+ * if not cached.
+ */
+export async function readCachedSecurityRulesVersion(
+  rootDir: string,
+  gcpProjectId: string,
+  rootProjectId: string
+): Promise<number | null> {
+  try {
+    const raw = await fs.readFile(getSecurityRulesCachePath(rootDir), 'utf8');
+    const data = JSON.parse(raw) as Record<string, {firestore?: number}>;
+    const version = data?.[`${gcpProjectId}/${rootProjectId}`]?.firestore;
+    return typeof version === 'number' ? version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists the verified Firestore security rules version to
+ * `node_modules/.cache/root-cms/security-rules.json` so subsequent dev server
+ * startups can skip Firestore and Firebase Rules API checks until
+ * `FIRESTORE_RULES_VERSION` increases.
+ */
+export async function writeCachedSecurityRulesVersion(
+  rootDir: string,
+  gcpProjectId: string,
+  rootProjectId: string,
+  firestoreVersion: number
+): Promise<void> {
+  const filePath = getSecurityRulesCachePath(rootDir);
+  let data: Record<string, {firestore?: number}> = {};
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      data = parsed;
+    }
+  } catch {
+    // Cache file doesn't exist yet or is invalid; start fresh.
+  }
+  data[`${gcpProjectId}/${rootProjectId}`] = {firestore: firestoreVersion};
+  try {
+    await fs.mkdir(path.dirname(filePath), {recursive: true});
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  } catch {
+    // Non-fatal if cache directory isn't writable.
+  }
 }

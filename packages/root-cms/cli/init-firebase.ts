@@ -5,6 +5,7 @@ import {
   applySecurityRules,
   SecurityRulesMergeError,
   stampSecurityRulesVersion,
+  writeCachedSecurityRulesVersion,
 } from '../core/security.js';
 
 export interface InitFirebaseOptions {
@@ -56,6 +57,12 @@ export async function initFirebase(options: InitFirebaseOptions) {
   await stampSecurityRulesVersion(db, rootProjectId, {
     firestore: result.version,
   });
+  await writeCachedSecurityRulesVersion(
+    rootDir,
+    gcpProjectId,
+    rootProjectId,
+    result.version
+  );
 
   if (options.admin) {
     await addAdmin(db, rootProjectId, options.admin);

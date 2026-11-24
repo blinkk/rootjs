@@ -19,7 +19,7 @@ import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
 import {useSecurityRulesStatus} from '../../security-rules.js';
 
-const CLI_COMMAND = 'npx root-cms init-firebase';
+const CLI_COMMAND = 'npx root-cms update-firebase-security-rules';
 
 /**
  * Admin-only setting in Settings → Site Admin that displays the deployed
