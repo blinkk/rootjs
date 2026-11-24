@@ -414,6 +414,25 @@ describe('root-cms setup', () => {
     expect(state.todo.join('\n')).toContain('Firestore security rules');
   });
 
+  it('asks before replacing rules whose Root CMS markers are ambiguous', async () => {
+    // Two BEGIN markers: the managed block can't be located safely.
+    const ambiguous = FIRESTORE_RULES.replace(
+      '    match /{document=**} {',
+      '    // [START root-cms]\n    match /{document=**} {'
+    );
+    const gcp = finishedProject('www').on(
+      `GET ${RULES}/projects/${PROJECT}/rulesets/`,
+      {source: {files: [{content: ambiguous}]}}
+    );
+    gcp.adcQuotaProject = PROJECT;
+    const prompt = new FakePrompter({'Site id': 'www'});
+    await run(gcp, prompt, {project: PROJECT});
+    expect(prompt.asked).toContain(
+      'Replace the live Firestore security rules with the Root CMS rules?'
+    );
+    expect(gcp.mutations.filter((m) => m.includes('rulesets'))).toEqual([]);
+  });
+
   it('asks for another site id when the id belongs to someone else', async () => {
     const gcp = finishedProject('blog')
       .on(`GET ${SITE_DOC('www')}`, {

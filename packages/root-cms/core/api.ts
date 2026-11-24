@@ -1197,7 +1197,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /**
    * Updates the project's Firestore security rules to the latest Root.js CMS
-   * managed block while preserving custom rules outside the START/END markers.
+   * managed block while preserving custom rules outside the BEGIN/END markers.
    * ADMIN-only.
    */
   server.use(

@@ -7,6 +7,7 @@ import {
   stampSecurityRulesVersion,
   writeCachedSecurityRulesVersion,
 } from '../core/security.js';
+import {updateStorageSecurityRules} from './update-firebase-security-rules.js';
 
 export interface InitFirebaseOptions {
   /** GCP project id. */
@@ -15,7 +16,7 @@ export interface InitFirebaseOptions {
   database?: string;
   /** Adds an ADMIN to the security rules. */
   admin?: string;
-  /** Overwrites live rules even when custom rules lack START/END markers. */
+  /** Overwrites live rules even when custom rules lack BEGIN/END markers. */
   force?: boolean;
 }
 
@@ -73,6 +74,18 @@ export async function initFirebase(options: InitFirebaseOptions) {
     result.version,
     databaseId
   );
+
+  const storageVersion = await updateStorageSecurityRules({
+    gcpProjectId,
+    bucket: cmsPluginOptions.firebaseConfig.storageBucket,
+    databaseId,
+    force: options.force,
+  });
+  if (storageVersion !== null) {
+    await stampSecurityRulesVersion(db, rootProjectId, {
+      storage: storageVersion,
+    });
+  }
 
   if (options.admin) {
     await addAdmin(db, rootProjectId, options.admin);

@@ -1,7 +1,4 @@
-import {
-  hasRootCmsRulesMarkers,
-  mergeFirestoreRules,
-} from '../../core/security.js';
+import type {MergeRulesResult} from '../../core/security.js';
 import {mutate, reuse, SetupContext} from './context.js';
 import {isGcpError} from './gcp.js';
 
@@ -15,14 +12,20 @@ export interface ApplyRulesOptions {
   /** Filename recorded in the ruleset, e.g. `firestore.rules`. */
   fileName: string;
   source: string;
+  /**
+   * Merges `source` into the live rules, preserving custom rules outside the
+   * Root CMS BEGIN/END markers.
+   */
+  merge: (current: string) => MergeRulesResult;
   /** Console URL where the user can review the live rules. */
   consoleUrl: string;
 }
 
 /**
  * Releases `source` as the project's rules. Rules shared by every site on the
- * project are only replaced without asking when none are released yet; if
- * different rules are live, the user confirms first.
+ * project are only updated without asking when none are released yet or when
+ * the Root CMS rules can be merged in without touching custom rules; otherwise
+ * the user confirms before the live rules are replaced.
  */
 export async function applyRules(
   ctx: SetupContext,
@@ -37,23 +40,23 @@ export async function applyRules(
     return;
   }
 
-  // If the live Firestore rules have Root.js CMS START/END markers, replace
-  // only the managed block so custom rules outside it are preserved.
+  // Update only the Root CMS managed block when the live rules have its
+  // BEGIN/END markers (or are an unmodified older Root CMS ruleset). Anything
+  // that can't be merged safely is only replaced after the user confirms.
   let nextSource = options.source;
-  if (
-    current !== null &&
-    options.releaseId === 'cloud.firestore' &&
-    hasRootCmsRulesMarkers(current)
-  ) {
-    const merged = mergeFirestoreRules(current);
-    if (merged.merged) {
-      if (normalize(current) === normalize(merged.merged)) {
-        reuse(ctx, options.label);
-        return;
-      }
+  let confirmReplace = false;
+  if (current !== null) {
+    const merged = options.merge(current);
+    if (merged.merged === null) {
+      confirmReplace = true;
+    } else if (normalize(current) === normalize(merged.merged)) {
+      reuse(ctx, options.label);
+      return;
+    } else {
       nextSource = merged.merged;
     }
-  } else if (current !== null) {
+  }
+  if (confirmReplace) {
     ctx.log.warn(
       `${options.label} on ${projectId} differ from the Root CMS rules. They apply to every site on this project, so replacing them can affect other apps.`
     );
