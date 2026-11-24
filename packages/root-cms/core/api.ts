@@ -1172,7 +1172,8 @@ export function api(server: Server, options: ApiOptions) {
       if (!adminEmail) {
         return;
       }
-      const gcpProjectId = cmsClient.cmsPluginOptions.firebaseConfig?.projectId;
+      const gcpProjectId =
+        cmsClient.cmsPlugin.getConfig().firebaseConfig?.projectId;
       if (!gcpProjectId) {
         res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
         return;
@@ -1210,7 +1211,8 @@ export function api(server: Server, options: ApiOptions) {
       if (!adminEmail) {
         return;
       }
-      const gcpProjectId = cmsClient.cmsPluginOptions.firebaseConfig?.projectId;
+      const gcpProjectId =
+        cmsClient.cmsPlugin.getConfig().firebaseConfig?.projectId;
       if (!gcpProjectId) {
         res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
         return;
