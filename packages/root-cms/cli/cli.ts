@@ -22,6 +22,7 @@ import {
 import {setup} from './setup/setup.js';
 import {installSkill} from './skill.js';
 import {translationsMigrate} from './translations.js';
+import {updateFirebaseSecurityRules} from './update-firebase-security-rules.js';
 
 class CliRunner {
   private name: string;
@@ -65,6 +66,17 @@ class CliRunner {
         'overwrite live Firestore rules even if custom rules lack Root CMS markers'
       )
       .action(initFirebase);
+    program
+      .command('update-firebase-security-rules')
+      .description(
+        'updates the project firestore security rules while preserving custom rules'
+      )
+      .option('--project <project>', 'gcp project id')
+      .option(
+        '--force',
+        'overwrite live Firestore rules even if custom rules lack Root CMS markers'
+      )
+      .action(updateFirebaseSecurityRules);
     program
       .command('setup')
       .description(

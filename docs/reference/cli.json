@@ -458,6 +458,26 @@
           "subcommands": []
         },
         {
+          "name": "root-cms update-firebase-security-rules",
+          "aliases": [],
+          "usage": "root-cms update-firebase-security-rules [options]",
+          "summary": "updates the project firestore security rules while preserving custom rules",
+          "description": "",
+          "examples": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--project <project>",
+              "description": "gcp project id"
+            },
+            {
+              "flags": "--force",
+              "description": "overwrite live Firestore rules even if custom rules lack Root CMS markers"
+            }
+          ],
+          "subcommands": []
+        },
+        {
           "name": "root-cms setup",
           "aliases": [],
           "usage": "root-cms setup [options]",

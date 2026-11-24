@@ -1471,6 +1471,48 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           });
       }
 
+      // Check whether the project's Firestore security rules are up to date on
+      // dev server startup. Fire-and-forget so startup isn't blocked.
+      if (
+        serverOptions.type === 'dev' &&
+        !process.env.FIRESTORE_EMULATOR_HOST &&
+        !isPlaceholderFirebaseProject(options.firebaseConfig) &&
+        options.firebaseConfig?.projectId
+      ) {
+        const gcpProjectId = options.firebaseConfig.projectId;
+        const rootProjectId = options.id || 'default';
+        (async () => {
+          const {FIRESTORE_RULES_VERSION, getSecurityRulesStatus} =
+            await import('./security.js');
+          const db = getFirestore();
+          // Fast path: skip the Rules API when the project doc already records
+          // the latest securityRulesVersion.
+          const snap = await db
+            .doc(`Projects/${encodeURIComponent(rootProjectId)}`)
+            .get();
+          const storedVersion = snap.data()?.securityRulesVersion?.firestore;
+          if (
+            typeof storedVersion === 'number' &&
+            storedVersion >= FIRESTORE_RULES_VERSION
+          ) {
+            return;
+          }
+          const status = await getSecurityRulesStatus({
+            gcpProjectId,
+            db,
+            rootProjectId,
+          });
+          if (status.status === 'outdated') {
+            console.warn(
+              '\n⚠ Firestore security rules are out of date.\n' +
+                '  Run `npx root-cms update-firebase-security-rules` to update.\n'
+            );
+          }
+        })().catch(() => {
+          // Ignore offline or IAM errors during dev startup.
+        });
+      }
+
       // The AI "prepare" routes can carry a moderately large body (the edit
       // flow sends the JSON object being edited). Use a larger limit for those
       // routes only; body-parser short-circuits when `req._body` is already
