@@ -27,93 +27,77 @@ export const FIRESTORE_RULES_MANAGED_BLOCK = `    ${ROOT_CMS_RULES_START}
     }
 
     match /Projects/{project} {
-      allow write:
-        if isSignedIn() && userIsAdmin();
-      allow read:
-        if isSignedIn() && userCanRead();
+      allow read: if isSignedIn() && userCanRead();
+      allow write: if isSignedIn() && userIsAdmin();
 
       // Default for shared CMS collections (Published, Scheduled, Releases,
       // DataSources, Assets, Translations, etc.).
       match /{collection}/{document=**} {
-        allow write:
-          if isSignedIn() && userCanPublish();
-        allow read:
-          if isSignedIn() && userCanRead();
+        allow read: if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanPublish();
       }
 
       // Draft and collaborative collections (CONTRIBUTOR+).
       match /Collections/{collectionId}/Drafts/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /TranslationsManager/draft/Translations/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Tasks/{document=**} {
-        allow write:
-          if isSignedIn() && userCanEdit();
+        allow write: if isSignedIn() && userCanEdit();
       }
-
       match /Counters/tasks {
-        allow create, update:
-          if isSignedIn() && userCanEdit();
+        allow create, update: if isSignedIn() && userCanEdit();
       }
 
       // Presence and per-user collections (all signed-in project members).
       match /Viewers/{viewerDoc} {
-        allow write:
-          if isSignedIn() && userCanRead();
+        allow write: if isSignedIn() && userCanRead();
       }
-
       match /UserProfiles/{email} {
         allow create, update:
           if isSignedIn() && userCanRead() && request.auth.token.email == email;
       }
-
       match /Users/{uid} {
         allow create, update:
           if isSignedIn() && userCanRead() && request.auth.uid == uid;
       }
-
       match /AiChats/{chatId} {
         allow create:
-          if isSignedIn() && userCanRead() && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && request.resource.data.createdBy == request.auth.token.email;
         allow update:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email && request.resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email
+          && request.resource.data.createdBy == request.auth.token.email;
         allow delete:
-          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email;
+          if isSignedIn() && userCanRead()
+          && resource.data.createdBy == request.auth.token.email;
       }
 
+      // Role helpers.
       function isSignedIn() {
         return request.auth != null && request.auth.token.email != null;
       }
-
       function getRoles() {
         return get(/databases/$(database)/documents/Projects/$(project)).data.get('roles', {});
       }
-
       function hasRole(allowed) {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
         return (roles.get(email, '') in allowed) || (roles.get(domain, '') in allowed);
       }
-
       function userCanRead() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
-
       function userCanEdit() {
         return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
       }
-
       function userCanPublish() {
         return hasRole(['ADMIN', 'EDITOR']);
       }
-
       function userIsAdmin() {
         return hasRole(['ADMIN']);
       }
