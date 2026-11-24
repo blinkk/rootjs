@@ -60,6 +60,10 @@ class CliRunner {
       .description('inits the firebase project proper security rules')
       .option('--project <project>', 'gcp project id')
       .option('--admin <email>', 'adds an admin to the project')
+      .option(
+        '--force',
+        'overwrite live Firestore rules even if custom rules lack Root CMS markers'
+      )
       .action(initFirebase);
     program
       .command('setup')

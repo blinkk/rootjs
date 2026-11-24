@@ -13,6 +13,7 @@
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {FIRESTORE_RULES as RAW_FIRESTORE_RULES} from '../../packages/root-cms/shared/security-rules.ts';
 
 const REPO_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -20,17 +21,7 @@ const REPO_DIR = path.resolve(
 );
 
 /** The Firestore security rules applied by `root-cms init-firebase`. */
-const FIRESTORE_RULES = (() => {
-  const source = readFileSync(
-    path.join(REPO_DIR, 'packages/root-cms/core/security.ts'),
-    'utf8'
-  );
-  const match = source.match(/FIRESTORE_RULES = `([\s\S]*?)`;/);
-  if (!match) {
-    throw new Error('failed to read FIRESTORE_RULES from security.ts');
-  }
-  return match[1].trim();
-})();
+const FIRESTORE_RULES = RAW_FIRESTORE_RULES.trim();
 
 // Helpers for building field values.
 
@@ -1768,6 +1759,9 @@ gcloud auth application-default login`
               'pnpm exec root-cms init-firebase --admin=you@example.com'
             ),
             copy(
+              p(
+                `The CMS manages the rules between ${c('// [START root-cms]')} and ${c('// [END root-cms]')}. Place any custom app rules outside those comments so they are preserved when you re-run ${c('init-firebase')} or update the rules from <b>Settings → Site Admin</b>.`
+              ),
               p(
                 'To apply the rules by hand, paste them into the <b>Rules</b> tab of the Firestore page in the Firebase console:'
               )

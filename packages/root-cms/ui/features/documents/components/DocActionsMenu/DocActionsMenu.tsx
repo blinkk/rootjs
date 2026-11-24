@@ -540,7 +540,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <MenuItem
             icon={<IconArchive />}
             onClick={() => onArchiveDoc()}
-            disabled={!canEdit}
+            disabled={!canEdit || (!canPublish && testIsScheduled(data))}
           >
             Archive
           </MenuItem>
@@ -549,7 +549,10 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       <MenuItem
         icon={<IconTrash />}
         onClick={() => onDeleteDoc()}
-        disabled={!canEdit}
+        disabled={
+          !canEdit ||
+          (!canPublish && (Boolean(sys.publishedAt) || testIsScheduled(data)))
+        }
       >
         Delete
       </MenuItem>

@@ -6,6 +6,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -278,4 +279,172 @@ test('should restrict creating/editing releases', async () => {
 
   // Contributor cannot create/edit releases.
   await assertFails(setDoc(doc(connieDb, releasePath), {desc: 'release'}));
+});
+
+test('should allow signed-in members to write presence, own profile, preferences, and own AI chats', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'connie@example.com': 'CONTRIBUTOR',
+        'victor@example.com': 'VIEWER',
+      },
+    });
+  });
+
+  const connieDb = testEnv
+    .authenticatedContext('connie-uid', {email: 'connie@example.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('victor-uid', {email: 'victor@example.com'})
+    .firestore();
+  const outsiderDb = testEnv
+    .authenticatedContext('outsider-uid', {email: 'outsider@example.com'})
+    .firestore();
+
+  // Presence (`Viewers`).
+  const viewerPath = 'Projects/foo/Viewers/doc--Pages--home';
+  await assertSucceeds(
+    setDoc(
+      doc(connieDb, viewerPath),
+      {'connie@example.com': {email: 'connie@example.com'}},
+      {merge: true}
+    )
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(victorDb, viewerPath),
+      {'victor@example.com': {email: 'victor@example.com'}},
+      {merge: true}
+    )
+  );
+  await assertFails(
+    setDoc(doc(outsiderDb, viewerPath), {
+      'outsider@example.com': {email: 'outsider@example.com'},
+    })
+  );
+
+  // Own user profile (`UserProfiles/{email}`).
+  await assertSucceeds(
+    setDoc(
+      doc(connieDb, 'Projects/foo/UserProfiles/connie@example.com'),
+      {email: 'connie@example.com'},
+      {merge: true}
+    )
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(victorDb, 'Projects/foo/UserProfiles/victor@example.com'),
+      {email: 'victor@example.com'},
+      {merge: true}
+    )
+  );
+  // Cannot write another user's profile.
+  await assertFails(
+    setDoc(
+      doc(connieDb, 'Projects/foo/UserProfiles/victor@example.com'),
+      {email: 'victor@example.com'},
+      {merge: true}
+    )
+  );
+
+  // Own user preferences (`Users/{uid}`).
+  await assertSucceeds(
+    setDoc(
+      doc(connieDb, 'Projects/foo/Users/connie-uid'),
+      {theme: 'dark'},
+      {merge: true}
+    )
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(victorDb, 'Projects/foo/Users/victor-uid'),
+      {theme: 'light'},
+      {merge: true}
+    )
+  );
+  // Cannot write another user's preferences.
+  await assertFails(
+    setDoc(
+      doc(connieDb, 'Projects/foo/Users/victor-uid'),
+      {theme: 'dark'},
+      {merge: true}
+    )
+  );
+
+  // Own AI chats (`AiChats/{chatId}`).
+  const connieChat = doc(connieDb, 'Projects/foo/AiChats/chat-1');
+  await assertSucceeds(
+    setDoc(connieChat, {createdBy: 'connie@example.com', title: 'Hi'})
+  );
+  await assertSucceeds(
+    updateDoc(connieChat, {createdBy: 'connie@example.com', title: 'Updated'})
+  );
+  // Cannot impersonate another user on create or update, nor overwrite/delete another user's chat.
+  await assertFails(
+    setDoc(doc(connieDb, 'Projects/foo/AiChats/chat-2'), {
+      createdBy: 'victor@example.com',
+    })
+  );
+  await assertFails(
+    updateDoc(connieChat, {createdBy: 'victor@example.com', title: 'Hijack'})
+  );
+  await assertFails(
+    updateDoc(doc(victorDb, 'Projects/foo/AiChats/chat-1'), {
+      createdBy: 'victor@example.com',
+      title: 'Overwrite',
+    })
+  );
+  await assertFails(deleteDoc(doc(victorDb, 'Projects/foo/AiChats/chat-1')));
+  await assertSucceeds(deleteDoc(connieChat));
+});
+
+test('should allow contributors to edit draft translations and tasks, but not published translations', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
+        'victor@example.com': 'VIEWER',
+      },
+    });
+  });
+
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('victor', {email: 'victor@example.com'})
+    .firestore();
+
+  // Draft translations vs published translations.
+  const draftTranslation =
+    'Projects/foo/TranslationsManager/draft/Translations/Pages--home:es';
+  const publishedTranslation =
+    'Projects/foo/TranslationsManager/published/Translations/Pages--home:es';
+  await assertSucceeds(setDoc(doc(connieDb, draftTranslation), {strings: {}}));
+  await assertFails(setDoc(doc(victorDb, draftTranslation), {strings: {}}));
+  await assertSucceeds(
+    setDoc(doc(edithDb, publishedTranslation), {strings: {}})
+  );
+  await assertFails(setDoc(doc(connieDb, publishedTranslation), {strings: {}}));
+
+  // Tasks & task counter.
+  await assertSucceeds(
+    setDoc(doc(connieDb, 'Projects/foo/Tasks/1'), {title: 'Fix typo'})
+  );
+  await assertSucceeds(
+    setDoc(doc(connieDb, 'Projects/foo/Tasks/1/Comments/c1'), {content: 'Done'})
+  );
+  await assertSucceeds(
+    setDoc(doc(connieDb, 'Projects/foo/Counters/tasks'), {lastTaskId: 1})
+  );
+  await assertFails(
+    setDoc(doc(victorDb, 'Projects/foo/Tasks/2'), {title: 'Viewer task'})
+  );
+  await assertFails(
+    setDoc(doc(victorDb, 'Projects/foo/Counters/tasks'), {lastTaskId: 2})
+  );
 });

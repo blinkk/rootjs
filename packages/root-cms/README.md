@@ -8,6 +8,10 @@ Firestore read/writes will need to be locked down by adding the following to the
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // [START root-cms]
+    // Managed by Root.js CMS. Do not edit between START and END comments;
+    // add custom rules outside this block so they are preserved on updates.
+    // root-cms-rules-version: 2
     match /{document=**} {
       allow read, write: if false;
     }
@@ -28,6 +32,45 @@ service cloud.firestore {
       match /Collections/{collectionId}/Drafts/{document=**} {
         allow write:
           if isSignedIn() && userCanEdit();
+      }
+
+      match /TranslationsManager/draft/Translations/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Tasks/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Counters/tasks {
+        allow write:
+          if isSignedIn() && userCanEdit();
+      }
+
+      match /Viewers/{viewerDoc} {
+        allow write:
+          if isSignedIn() && userCanRead();
+      }
+
+      match /UserProfiles/{email} {
+        allow write:
+          if isSignedIn() && userCanRead() && request.auth.token.email == email;
+      }
+
+      match /Users/{uid} {
+        allow write:
+          if isSignedIn() && userCanRead() && request.auth.uid == uid;
+      }
+
+      match /AiChats/{chatId} {
+        allow create:
+          if isSignedIn() && userCanRead() && request.resource.data.createdBy == request.auth.token.email;
+        allow update:
+          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email && request.resource.data.createdBy == request.auth.token.email;
+        allow delete:
+          if isSignedIn() && userCanRead() && resource.data.createdBy == request.auth.token.email;
       }
 
       function isSignedIn() {
@@ -66,6 +109,7 @@ service cloud.firestore {
         return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
       }
     }
+    // [END root-cms]
   }
 }
 ```

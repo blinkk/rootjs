@@ -123,7 +123,9 @@ export function BulkActionBar(props: BulkActionBarProps) {
       ? docsAre(archived, 'already archived')
       : published
         ? `${docsAre(published, 'published')} Unpublish ${them(published)} before archiving.`
-        : '';
+        : !canPublish && scheduled
+          ? NO_PUBLISH_ACCESS
+          : '';
   const unarchiveBlocked = !canEdit
     ? NO_EDIT_ACCESS
     : archived < count
@@ -136,7 +138,11 @@ export function BulkActionBar(props: BulkActionBarProps) {
       : scheduled
         ? `${docsAre(scheduled, 'scheduled')} Unschedule ${them(scheduled)} first.`
         : '';
-  const deleteBlocked = !canEdit ? NO_EDIT_ACCESS : '';
+  const deleteBlocked = !canEdit
+    ? NO_EDIT_ACCESS
+    : !canPublish && (published || scheduled)
+      ? NO_PUBLISH_ACCESS
+      : '';
 
   // The More menu only lists an action when at least one selected doc is in a
   // state it applies to (e.g. Unarchive needs an archived doc). A listed action

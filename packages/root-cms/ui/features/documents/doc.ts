@@ -132,13 +132,25 @@ export async function cmsDeleteDoc(docId: string) {
     slug
   );
 
+  // Check whether published/scheduled copies exist before adding them to the
+  // batch so contributors (who only have write access to Drafts) can delete
+  // unpublished, unscheduled drafts without hitting permission errors.
+  const [publishedSnap, scheduledSnap] = await Promise.all([
+    getDoc(publishedDocRef),
+    getDoc(scheduledDocRef),
+  ]);
+
   const batch = writeBatch(db);
   // Delete the draft doc.
   batch.delete(draftDocRef);
-  // Delete the published doc.
-  batch.delete(publishedDocRef);
-  // Delete any scheduled doc.
-  batch.delete(scheduledDocRef);
+  // Delete the published doc if it exists.
+  if (publishedSnap.exists()) {
+    batch.delete(publishedDocRef);
+  }
+  // Delete any scheduled doc if it exists.
+  if (scheduledSnap.exists()) {
+    batch.delete(scheduledDocRef);
+  }
   // Delete the doc's translations (draft and published) in the same batch.
   if (testV2TranslationsEnabled()) {
     const [draftTranslations, publishedTranslations] = await Promise.all([
@@ -689,16 +701,21 @@ export async function cmsArchiveDoc(docId: string) {
     'Scheduled',
     slug
   );
+  const scheduledSnap = await getDoc(scheduledDocRef);
   const batch = writeBatch(db);
   // Archived docs can't be published, so archiving also cancels any pending
-  // scheduled publish.
+  // scheduled publish. Only delete the scheduled doc when it exists so
+  // contributors (who only have write access to Drafts) can archive
+  // unscheduled drafts.
   batch.update(getDraftDocRef(docId), {
     'sys.archivedAt': serverTimestamp(),
     'sys.archivedBy': window.firebase.user.email,
     'sys.scheduledAt': deleteField(),
     'sys.scheduledBy': deleteField(),
   });
-  batch.delete(scheduledDocRef);
+  if (scheduledSnap.exists()) {
+    batch.delete(scheduledDocRef);
+  }
   await batch.commit();
   logAction('doc.archive', {metadata: {docId}});
 }

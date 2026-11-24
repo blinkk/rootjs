@@ -126,18 +126,22 @@ export class ViewersController extends EventListener {
       console.log('no user email:', user);
       return;
     }
-    await setDoc(
-      this.docRef,
-      {
-        [user.email]: {
-          email: user.email,
-          photoURL: user.photoURL,
-          lastViewedAt: serverTimestamp(),
-          focusedField: this.focusedField,
+    try {
+      await setDoc(
+        this.docRef,
+        {
+          [user.email]: {
+            email: user.email,
+            photoURL: user.photoURL,
+            lastViewedAt: serverTimestamp(),
+            focusedField: this.focusedField,
+          },
         },
-      },
-      {merge: true}
-    );
+        {merge: true}
+      );
+    } catch (err) {
+      console.warn('failed to update viewer presence:', err);
+    }
   }
 
   private async onIdle() {
@@ -167,13 +171,17 @@ export class ViewersController extends EventListener {
       console.log('no user email:', user);
       return;
     }
-    await updateDoc(
-      this.docRef,
-      new FieldPath(user.email, 'disconnectedAt'),
-      serverTimestamp(),
-      new FieldPath(user.email, 'focusedField'),
-      null
-    );
+    try {
+      await updateDoc(
+        this.docRef,
+        new FieldPath(user.email, 'disconnectedAt'),
+        serverTimestamp(),
+        new FieldPath(user.email, 'focusedField'),
+        null
+      );
+    } catch (err) {
+      console.warn('failed to disconnect viewer presence:', err);
+    }
   }
 
   async dispose() {

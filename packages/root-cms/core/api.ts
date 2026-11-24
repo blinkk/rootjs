@@ -47,6 +47,12 @@ import {
 import {normalizeErrorReport, resolveStack} from './error-logs.js';
 import * as schema from './schema.js';
 import {SearchIndexService} from './search-index.js';
+import {
+  applySecurityRules,
+  getSecurityRulesStatus,
+  SecurityRulesMergeError,
+  stampSecurityRulesVersion,
+} from './security.js';
 import {CMS_VERSION} from './server-version.js';
 import {type CMSTranslationService} from './translations.js';
 import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
@@ -1145,6 +1151,103 @@ export function api(server: Server, options: ApiOptions) {
       } catch (err) {
         console.error(err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Returns whether the project's deployed Firestore security rules are up to
+   * date with this version of Root.js CMS. Cached in server memory for 1 hour
+   * unless `?refresh=1` is passed. ADMIN-only.
+   */
+  server.use(
+    '/cms/api/security.rules_status',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'GET') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const adminEmail = await verifyAdminRequest(req, res, cmsClient);
+      if (!adminEmail) {
+        return;
+      }
+      const gcpProjectId = cmsClient.cmsPluginOptions.firebaseConfig?.projectId;
+      if (!gcpProjectId) {
+        res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
+        return;
+      }
+      const forceRefresh = req.query?.refresh === '1';
+      try {
+        const data = await getSecurityRulesStatus({
+          gcpProjectId,
+          db: cmsClient.db,
+          rootProjectId: cmsClient.projectId,
+          forceRefresh,
+        });
+        res.status(200).json({success: true, data});
+      } catch (err: any) {
+        console.error(err?.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Updates the project's Firestore security rules to the latest Root.js CMS
+   * managed block while preserving custom rules outside the START/END markers.
+   * ADMIN-only.
+   */
+  server.use(
+    '/cms/api/security.rules_apply',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const adminEmail = await verifyAdminRequest(req, res, cmsClient);
+      if (!adminEmail) {
+        return;
+      }
+      const gcpProjectId = cmsClient.cmsPluginOptions.firebaseConfig?.projectId;
+      if (!gcpProjectId) {
+        res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
+        return;
+      }
+      try {
+        const result = await applySecurityRules(gcpProjectId);
+        await stampSecurityRulesVersion(cmsClient.db, cmsClient.projectId, {
+          firestore: result.version,
+        });
+        await cmsClient.logAction('security_rules.update', {
+          by: adminEmail,
+          metadata: {
+            version: result.version,
+            previousVersion: result.previousVersion,
+            preservedCustomRules: result.preservedCustomRules,
+          },
+        });
+        res.status(200).json({success: true, data: result});
+      } catch (err: any) {
+        if (err instanceof SecurityRulesMergeError) {
+          res.status(409).json({
+            success: false,
+            error: err.code,
+            message: err.message,
+          });
+          return;
+        }
+        const message = err?.message || 'Failed to update security rules.';
+        const isPermission =
+          String(err?.code || '').includes('permission') ||
+          /permission|403|forbidden/i.test(message);
+        console.error(err?.stack || err);
+        res.status(isPermission ? 403 : 500).json({
+          success: false,
+          error: isPermission ? 'PERMISSION_DENIED' : 'UNKNOWN',
+          message,
+        });
       }
     }
   );

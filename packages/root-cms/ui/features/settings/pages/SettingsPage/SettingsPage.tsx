@@ -37,6 +37,7 @@ import {resetUserSignIn} from '../../../users/users.js';
 import {UserSelect} from '../../../users/UserSelect/UserSelect.js';
 import {useSignInStatuses} from '../../../users/useSignInStatus.js';
 import {PermissionGroupsBox} from '../../components/PermissionGroupsBox/PermissionGroupsBox.js';
+import {SecurityRulesSetting} from '../../components/SecurityRulesSetting/SecurityRulesSetting.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {
   PermissionGroup,
@@ -416,6 +417,7 @@ function SiteAdminSection() {
           </Text>
           <CronFailures />
         </div>
+        <SecurityRulesSetting />
         <ResetSignInSetting />
       </Surface>
     </div>

@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "@blinkk/root-cms",
-      "version": "4.2.2",
+      "version": "4.4.1",
       "entryPoints": [
         {
           "importPath": "@blinkk/root-cms",
@@ -1289,6 +1289,22 @@
               "examples": []
             },
             {
+              "name": "formatGsheetApiError",
+              "kind": "function",
+              "signature": "function formatGsheetApiError(options: {\n    status: number;\n    errJson: any;\n    errText: string;\n    dataSource: DataSource;\n    spreadsheetId: string;\n    auth: GsheetAuthInfo;\n    configuredProjectId?: string;\n}): string;",
+              "members": [],
+              "doc": "Formats a user-friendly, actionable error message when a Google Sheets API\nrequest fails.",
+              "examples": []
+            },
+            {
+              "name": "GCLOUD_GSHEET_LOGIN_COMMAND",
+              "kind": "variable",
+              "signature": "const GCLOUD_GSHEET_LOGIN_COMMAND = \"gcloud auth application-default login --scopes=\\\"https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly\\\"\";",
+              "members": [],
+              "doc": "Recommended `gcloud` command for authenticating local Application Default\nCredentials with both Google Cloud and Google Sheets read access.",
+              "examples": []
+            },
+            {
               "name": "generateKeyAfter",
               "kind": "function",
               "signature": "function generateKeyAfter(a: string | null): string;",
@@ -1434,6 +1450,51 @@
               "signature": "function getTranslationsMigrationState(cmsClient: RootCMSClient): Promise<TranslationsMigrationState | null>;",
               "members": [],
               "doc": "Returns the state of the v1 -> v2 translations migration, or `null` if it\nhas never run for the project.",
+              "examples": []
+            },
+            {
+              "name": "GsheetAuthInfo",
+              "kind": "interface",
+              "signature": "interface GsheetAuthInfo",
+              "members": [
+                {
+                  "name": "accessToken",
+                  "signature": "accessToken: string;",
+                  "doc": "OAuth2 access token.",
+                  "examples": []
+                },
+                {
+                  "name": "accountEmail",
+                  "signature": "accountEmail?: string;",
+                  "doc": "Email of the authenticated gcloud user or service account, if known.",
+                  "examples": []
+                },
+                {
+                  "name": "quotaProjectId",
+                  "signature": "quotaProjectId?: string;",
+                  "doc": "Primary GCP project id for the `x-goog-user-project` quota header.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbackQuotaProjectId",
+                  "signature": "fallbackQuotaProjectId?: string;",
+                  "doc": "Fallback GCP project id if the primary quota project is rejected.",
+                  "examples": []
+                },
+                {
+                  "name": "isUserCredential",
+                  "signature": "isUserCredential: boolean;",
+                  "doc": "Whether the credential belongs to an end user rather than a service account.",
+                  "examples": []
+                },
+                {
+                  "name": "source",
+                  "signature": "source: 'adc' | 'gcloud' | 'app-credential';",
+                  "doc": "Where the credential was obtained from.",
+                  "examples": []
+                }
+              ],
+              "doc": "Resolved Google Cloud credentials used to fetch a Google Sheet.",
               "examples": []
             },
             {
@@ -1911,6 +1972,14 @@
               "signature": "type ParseProposalResult = {\n    ok: true;\n    proposal: Proposal;\n} | {\n    ok: false;\n    errors: ProposalParseError[];\n};",
               "members": [],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "parseSpreadsheetUrl",
+              "kind": "function",
+              "signature": "function parseSpreadsheetUrl(url: string): {\n    spreadsheetId: string;\n    gid: number;\n} | null;",
+              "members": [],
+              "doc": "Parses a Google Sheets URL and returns the spreadsheetId and gid.\n\nExpects a URL in the format:\n`https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit#gid=<gid>`",
               "examples": []
             },
             {
@@ -3030,6 +3099,12 @@
                   "examples": []
                 },
                 {
+                  "name": "listDataSources",
+                  "signature": "listDataSources(): Promise<DataSource[]>;",
+                  "doc": "Lists all data sources configured in the project.",
+                  "examples": []
+                },
+                {
                   "name": "getDataSource",
                   "signature": "getDataSource(dataSourceId: string): Promise<DataSource | null>;",
                   "doc": "Returns a data source configuration object.",
@@ -3050,13 +3125,13 @@
                 {
                   "name": "syncDataSource",
                   "signature": "syncDataSource(dataSourceId: string, options?: {\n    syncedBy?: string;\n}): Promise<void>;",
-                  "doc": "Syncs a data source to draft state.",
+                  "doc": "Syncs a data source (`http` or `gsheet`) from its external source into\ndraft state.\n\nFor Google Sheets (`gsheet`) data sources, credentials are resolved from\nApplication Default Credentials (including a logged-in `gcloud` user\nlocally or the runtime service account in production), falling back to the\n`gcloud` CLI session.\n\nLocal `gcloud` setup for Google Sheets:\n1. Enable the Google Sheets API on your GCP project:\n   `gcloud services enable sheets.googleapis.com --project=<PROJECT_ID>`\n2. Authenticate Application Default Credentials with the Sheets scope:\n   `gcloud auth application-default login --scopes=\"https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly\"`\n3. Ensure the Google Sheet is shared (at least \"Viewer\") with your\n   logged-in `gcloud` email (or the service account email in production).",
                   "examples": []
                 },
                 {
                   "name": "publishDataSource",
                   "signature": "publishDataSource(dataSourceId: string, options?: {\n    publishedBy?: string;\n}): Promise<void>;",
-                  "doc": "",
+                  "doc": "Publishes previously synced draft data for a data source to published state.",
                   "examples": []
                 },
                 {
@@ -5592,6 +5667,22 @@
               "examples": []
             },
             {
+              "name": "formatGsheetApiError",
+              "kind": "function",
+              "signature": "function formatGsheetApiError(options: {\n    status: number;\n    errJson: any;\n    errText: string;\n    dataSource: DataSource;\n    spreadsheetId: string;\n    auth: GsheetAuthInfo;\n    configuredProjectId?: string;\n}): string;",
+              "members": [],
+              "doc": "Formats a user-friendly, actionable error message when a Google Sheets API\nrequest fails.",
+              "examples": []
+            },
+            {
+              "name": "GCLOUD_GSHEET_LOGIN_COMMAND",
+              "kind": "variable",
+              "signature": "const GCLOUD_GSHEET_LOGIN_COMMAND = \"gcloud auth application-default login --scopes=\\\"https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly\\\"\";",
+              "members": [],
+              "doc": "Recommended `gcloud` command for authenticating local Application Default\nCredentials with both Google Cloud and Google Sheets read access.",
+              "examples": []
+            },
+            {
               "name": "getCmsPlugin",
               "kind": "function",
               "signature": "function getCmsPlugin(rootConfig: RootConfig): CMSPlugin;",
@@ -5633,6 +5724,51 @@
                 }
               ],
               "doc": "",
+              "examples": []
+            },
+            {
+              "name": "GsheetAuthInfo",
+              "kind": "interface",
+              "signature": "interface GsheetAuthInfo",
+              "members": [
+                {
+                  "name": "accessToken",
+                  "signature": "accessToken: string;",
+                  "doc": "OAuth2 access token.",
+                  "examples": []
+                },
+                {
+                  "name": "accountEmail",
+                  "signature": "accountEmail?: string;",
+                  "doc": "Email of the authenticated gcloud user or service account, if known.",
+                  "examples": []
+                },
+                {
+                  "name": "quotaProjectId",
+                  "signature": "quotaProjectId?: string;",
+                  "doc": "Primary GCP project id for the `x-goog-user-project` quota header.",
+                  "examples": []
+                },
+                {
+                  "name": "fallbackQuotaProjectId",
+                  "signature": "fallbackQuotaProjectId?: string;",
+                  "doc": "Fallback GCP project id if the primary quota project is rejected.",
+                  "examples": []
+                },
+                {
+                  "name": "isUserCredential",
+                  "signature": "isUserCredential: boolean;",
+                  "doc": "Whether the credential belongs to an end user rather than a service account.",
+                  "examples": []
+                },
+                {
+                  "name": "source",
+                  "signature": "source: 'adc' | 'gcloud' | 'app-credential';",
+                  "doc": "Where the credential was obtained from.",
+                  "examples": []
+                }
+              ],
+              "doc": "Resolved Google Cloud credentials used to fetch a Google Sheet.",
               "examples": []
             },
             {
@@ -5855,6 +5991,14 @@
               "signature": "function parseDocId(docId: string): {\n    collection: string;\n    slug: string;\n};",
               "members": [],
               "doc": "Parses a docId (e.g. `Pages/foo`) and returns the `collection` and `slug`.",
+              "examples": []
+            },
+            {
+              "name": "parseSpreadsheetUrl",
+              "kind": "function",
+              "signature": "function parseSpreadsheetUrl(url: string): {\n    spreadsheetId: string;\n    gid: number;\n} | null;",
+              "members": [],
+              "doc": "Parses a Google Sheets URL and returns the spreadsheetId and gid.\n\nExpects a URL in the format:\n`https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit#gid=<gid>`",
               "examples": []
             },
             {
@@ -6485,6 +6629,12 @@
                   "examples": []
                 },
                 {
+                  "name": "listDataSources",
+                  "signature": "listDataSources(): Promise<DataSource[]>;",
+                  "doc": "Lists all data sources configured in the project.",
+                  "examples": []
+                },
+                {
                   "name": "getDataSource",
                   "signature": "getDataSource(dataSourceId: string): Promise<DataSource | null>;",
                   "doc": "Returns a data source configuration object.",
@@ -6505,13 +6655,13 @@
                 {
                   "name": "syncDataSource",
                   "signature": "syncDataSource(dataSourceId: string, options?: {\n    syncedBy?: string;\n}): Promise<void>;",
-                  "doc": "Syncs a data source to draft state.",
+                  "doc": "Syncs a data source (`http` or `gsheet`) from its external source into\ndraft state.\n\nFor Google Sheets (`gsheet`) data sources, credentials are resolved from\nApplication Default Credentials (including a logged-in `gcloud` user\nlocally or the runtime service account in production), falling back to the\n`gcloud` CLI session.\n\nLocal `gcloud` setup for Google Sheets:\n1. Enable the Google Sheets API on your GCP project:\n   `gcloud services enable sheets.googleapis.com --project=<PROJECT_ID>`\n2. Authenticate Application Default Credentials with the Sheets scope:\n   `gcloud auth application-default login --scopes=\"https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/spreadsheets.readonly\"`\n3. Ensure the Google Sheet is shared (at least \"Viewer\") with your\n   logged-in `gcloud` email (or the service account email in production).",
                   "examples": []
                 },
                 {
                   "name": "publishDataSource",
                   "signature": "publishDataSource(dataSourceId: string, options?: {\n    publishedBy?: string;\n}): Promise<void>;",
-                  "doc": "",
+                  "doc": "Publishes previously synced draft data for a data source to published state.",
                   "examples": []
                 },
                 {
@@ -7450,7 +7600,7 @@
             {
               "name": "CMSBuiltInSidebarTool",
               "kind": "type",
-              "signature": "type CMSBuiltInSidebarTool = 'home' | 'content' | 'releases' | 'data' | 'assets' | 'translations' | 'ai' | 'settings';",
+              "signature": "type CMSBuiltInSidebarTool = 'home' | 'content' | 'releases' | 'data' | 'assets' | 'translations' | 'prototypes' | 'ai' | 'settings';",
               "members": [],
               "doc": "Built-in sidebar tools that can be toggled on/off in the CMS UI.",
               "examples": []
@@ -7549,7 +7699,7 @@
             {
               "name": "CMSPluginOptions",
               "kind": "type",
-              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    resolveSite?: (req: Request) => ResolvedSite | null | Promise<ResolvedSite | null>;\n    isUserAuthorized?: (req: Request, user: CMSUser, site: ResolvedSite) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig & AiExtensions;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
+              "signature": "type CMSPluginOptions = {\n    id?: string;\n    name?: string;\n    firebaseConfig: {\n        [key: string]: string | undefined;\n        apiKey: string;\n        authDomain: string;\n        projectId: string;\n        storageBucket: string;\n        databaseId?: string;\n    };\n    gapi?: {\n        apiKey: string;\n        clientId: string;\n    };\n    cookieSecret?: string | string[];\n    resolveSite?: (req: Request) => ResolvedSite | null | Promise<ResolvedSite | null>;\n    isUserAuthorized?: (req: Request, user: CMSUser, site: ResolvedSite) => boolean | Promise<boolean>;\n    isLoginRequired?: (req: Request) => boolean;\n    allowedIframeOrigins?: string[];\n    gci?: string | boolean;\n    sidebar?: {\n        tools?: Record<string, CMSSidebarTool>;\n        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];\n    };\n    favicon?: string;\n    minimalBranding?: boolean;\n    themes?: CMSTheme[];\n    defaultTheme?: string;\n    onAction?: (action: Action) => any;\n    ai?: AiConfig & AiExtensions;\n    experiments?: {\n        ai?: boolean | CMSAIConfig;\n        v2TranslationsManager?: boolean;\n        taskManager?: boolean;\n        prototypes?: boolean;\n    };\n    logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';\n    watch?: boolean;\n    preview?: {\n        channel: boolean | 'to-preview' | 'from-preview';\n    };\n    checks?: CMSCheck[];\n    translations?: CMSTranslationService[];\n    notifications?: CMSNotificationService[];\n    searchIndex?: CMSSearchIndexConfig;\n    dependencyGraph?: boolean | CMSDependencyGraphConfig;\n    defaultOneOfVariant?: 'dropdown' | 'picker';\n    excludeLocalesFromTranslations?: string[];\n};",
               "members": [],
               "doc": "",
               "examples": []

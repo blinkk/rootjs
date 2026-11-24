@@ -1,0 +1,202 @@
+import {useCallback, useEffect, useState} from 'preact/hooks';
+import {FIRESTORE_RULES_VERSION} from '../../../shared/security-rules.js';
+import {useSiteSettings} from '../../hooks/useSiteSettings.js';
+import {testIsAdmin} from '../users/permissions.js';
+import {useProjectRoles} from '../users/useProjectRoles.js';
+
+/** Status returned by `GET /cms/api/security.rules_status`. */
+export interface ClientSecurityRulesStatus {
+  status: 'up_to_date' | 'outdated' | 'unavailable';
+  deployedVersion: number | null;
+  latestVersion: number;
+  hasMarkers: boolean;
+  canAutoMerge: boolean;
+  gcpProjectId: string;
+  reason?: string;
+}
+
+/** Response from `POST /cms/api/security.rules_apply`. */
+export interface ApplySecurityRulesResponse {
+  success: boolean;
+  data?: {
+    version: number;
+    previousVersion: number | null;
+    preservedCustomRules: boolean;
+    status: string;
+  };
+  error?: string;
+  message?: string;
+}
+
+let cachedStatus: ClientSecurityRulesStatus | null = null;
+let inFlightPromise: Promise<ClientSecurityRulesStatus | null> | null = null;
+const listeners = new Set<(status: ClientSecurityRulesStatus | null) => void>();
+
+function notifyListeners(next: ClientSecurityRulesStatus | null) {
+  cachedStatus = next;
+  listeners.forEach((fn) => fn(next));
+}
+
+/** Fetches the live security rules status from the server (deduplicated). */
+async function fetchSecurityRulesStatus(
+  forceRefresh = false
+): Promise<ClientSecurityRulesStatus | null> {
+  if (!forceRefresh && cachedStatus) {
+    return cachedStatus;
+  }
+  if (!forceRefresh && inFlightPromise) {
+    return inFlightPromise;
+  }
+  const url = forceRefresh
+    ? '/cms/api/security.rules_status?refresh=1'
+    : '/cms/api/security.rules_status';
+  const promise = (async () => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        return null;
+      }
+      const json = await res.json();
+      if (!json?.success || !json?.data) {
+        return null;
+      }
+      notifyListeners(json.data as ClientSecurityRulesStatus);
+      return json.data as ClientSecurityRulesStatus;
+    } catch {
+      return null;
+    } finally {
+      if (inFlightPromise === promise) {
+        inFlightPromise = null;
+      }
+    }
+  })();
+  inFlightPromise = promise;
+  return promise;
+}
+
+/**
+ * Tracks whether the project's deployed Firestore security rules are up to
+ * date. Only runs for ADMIN users. Uses `Projects/{projectId}.securityRulesVersion`
+ * as a zero-overhead fast path so the server API is only called when the
+ * stored version is missing or older than `FIRESTORE_RULES_VERSION`.
+ */
+export function useSecurityRulesStatus() {
+  const {roles, loading: rolesLoading} = useProjectRoles();
+  const {securityRulesVersion, loaded: siteLoaded} = useSiteSettings();
+  const email = window.firebase?.user?.email || '';
+  const isAdmin = !rolesLoading && testIsAdmin(roles, email);
+
+  const storedFirestoreVersion = securityRulesVersion?.firestore;
+  const isUpToDateFromDoc =
+    typeof storedFirestoreVersion === 'number' &&
+    storedFirestoreVersion >= FIRESTORE_RULES_VERSION;
+
+  const [remoteStatus, setRemoteStatus] =
+    useState<ClientSecurityRulesStatus | null>(cachedStatus);
+  const [loading, setLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  useEffect(() => {
+    const onUpdate = (next: ClientSecurityRulesStatus | null) => {
+      setRemoteStatus(next);
+    };
+    listeners.add(onUpdate);
+    return () => {
+      listeners.delete(onUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin || !siteLoaded) {
+      return;
+    }
+    if (isUpToDateFromDoc) {
+      return;
+    }
+    if (cachedStatus) {
+      setRemoteStatus(cachedStatus);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    fetchSecurityRulesStatus(false).finally(() => {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, siteLoaded, isUpToDateFromDoc]);
+
+  const refresh = useCallback(async () => {
+    if (!isAdmin) {
+      return null;
+    }
+    setLoading(true);
+    try {
+      return await fetchSecurityRulesStatus(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAdmin]);
+
+  const apply = useCallback(async (): Promise<ApplySecurityRulesResponse> => {
+    setApplying(true);
+    try {
+      const res = await fetch('/cms/api/security.rules_apply', {
+        method: 'POST',
+      });
+      const json: ApplySecurityRulesResponse = await res.json().catch(() => ({
+        success: false,
+        error: 'UNKNOWN',
+        message: `HTTP ${res.status}`,
+      }));
+      if (json.success && json.data) {
+        const gcpProjectId =
+          remoteStatus?.gcpProjectId ||
+          window.__ROOT_CTX?.firebaseConfig?.projectId ||
+          '';
+        notifyListeners({
+          status: 'up_to_date',
+          deployedVersion: json.data.version,
+          latestVersion: FIRESTORE_RULES_VERSION,
+          hasMarkers: true,
+          canAutoMerge: true,
+          gcpProjectId,
+        });
+      }
+      return json;
+    } finally {
+      setApplying(false);
+    }
+  }, [remoteStatus?.gcpProjectId]);
+
+  const gcpProjectId =
+    remoteStatus?.gcpProjectId ||
+    window.__ROOT_CTX?.firebaseConfig?.projectId ||
+    '';
+
+  let status: ClientSecurityRulesStatus | null = remoteStatus;
+  if (!isAdmin) {
+    status = null;
+  } else if (!remoteStatus && isUpToDateFromDoc) {
+    status = {
+      status: 'up_to_date',
+      deployedVersion: storedFirestoreVersion!,
+      latestVersion: FIRESTORE_RULES_VERSION,
+      hasMarkers: true,
+      canAutoMerge: true,
+      gcpProjectId,
+    };
+  }
+
+  return {
+    isAdmin,
+    status,
+    loading,
+    applying,
+    refresh,
+    apply,
+  };
+}
