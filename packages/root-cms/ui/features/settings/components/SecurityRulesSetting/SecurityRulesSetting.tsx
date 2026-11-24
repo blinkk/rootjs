@@ -9,6 +9,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {
   FIRESTORE_RULES,
   FIRESTORE_RULES_VERSION,
+  getFirestoreConsoleRulesUrl,
 } from '../../../../../shared/security-rules.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
@@ -38,8 +39,12 @@ export function SecurityRulesSetting() {
 
   const gcpProjectId =
     status?.gcpProjectId || window.__ROOT_CTX?.firebaseConfig?.projectId || '';
+  const databaseId =
+    status?.databaseId ||
+    window.__ROOT_CTX?.firebaseConfig?.databaseId ||
+    '(default)';
   const consoleUrl = gcpProjectId
-    ? `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/databases/-default-/security/rules`
+    ? getFirestoreConsoleRulesUrl(gcpProjectId, databaseId)
     : '';
 
   async function onApply() {

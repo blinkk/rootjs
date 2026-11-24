@@ -1172,8 +1172,8 @@ export function api(server: Server, options: ApiOptions) {
       if (!adminEmail) {
         return;
       }
-      const gcpProjectId =
-        cmsClient.cmsPlugin.getConfig().firebaseConfig?.projectId;
+      const firebaseConfig = cmsClient.cmsPlugin.getConfig().firebaseConfig;
+      const gcpProjectId = firebaseConfig?.projectId;
       if (!gcpProjectId) {
         res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
         return;
@@ -1182,6 +1182,7 @@ export function api(server: Server, options: ApiOptions) {
       try {
         const data = await getSecurityRulesStatus({
           gcpProjectId,
+          databaseId: firebaseConfig?.databaseId,
           db: cmsClient.db,
           rootProjectId: cmsClient.projectId,
           forceRefresh,
@@ -1214,14 +1215,16 @@ export function api(server: Server, options: ApiOptions) {
       if (!adminEmail) {
         return;
       }
-      const gcpProjectId =
-        cmsClient.cmsPlugin.getConfig().firebaseConfig?.projectId;
+      const firebaseConfig = cmsClient.cmsPlugin.getConfig().firebaseConfig;
+      const gcpProjectId = firebaseConfig?.projectId;
       if (!gcpProjectId) {
         res.status(400).json({success: false, error: 'MISSING_PROJECT_ID'});
         return;
       }
       try {
-        const result = await applySecurityRules(gcpProjectId);
+        const result = await applySecurityRules(gcpProjectId, {
+          databaseId: firebaseConfig?.databaseId,
+        });
         await stampSecurityRulesVersion(cmsClient.db, cmsClient.projectId, {
           firestore: result.version,
         });
@@ -1231,6 +1234,7 @@ export function api(server: Server, options: ApiOptions) {
             version: result.version,
             previousVersion: result.previousVersion,
             preservedCustomRules: result.preservedCustomRules,
+            databaseId: result.databaseId,
           },
         });
         res.status(200).json({success: true, data: result});

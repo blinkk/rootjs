@@ -12,6 +12,7 @@ export interface ClientSecurityRulesStatus {
   hasMarkers: boolean;
   canAutoMerge: boolean;
   gcpProjectId: string;
+  databaseId: string;
   reason?: string;
 }
 
@@ -164,6 +165,10 @@ export function useSecurityRulesStatus() {
           remoteStatus?.gcpProjectId ||
           window.__ROOT_CTX?.firebaseConfig?.projectId ||
           '';
+        const databaseId =
+          remoteStatus?.databaseId ||
+          window.__ROOT_CTX?.firebaseConfig?.databaseId ||
+          '(default)';
         notifyListeners({
           status: 'up_to_date',
           deployedVersion: json.data.version,
@@ -171,18 +176,23 @@ export function useSecurityRulesStatus() {
           hasMarkers: true,
           canAutoMerge: true,
           gcpProjectId,
+          databaseId,
         });
       }
       return json;
     } finally {
       setApplying(false);
     }
-  }, [remoteStatus?.gcpProjectId]);
+  }, [remoteStatus?.gcpProjectId, remoteStatus?.databaseId]);
 
   const gcpProjectId =
     remoteStatus?.gcpProjectId ||
     window.__ROOT_CTX?.firebaseConfig?.projectId ||
     '';
+  const databaseId =
+    remoteStatus?.databaseId ||
+    window.__ROOT_CTX?.firebaseConfig?.databaseId ||
+    '(default)';
 
   let status: ClientSecurityRulesStatus | null = remoteStatus;
   if (!isAdmin) {
@@ -195,6 +205,7 @@ export function useSecurityRulesStatus() {
       hasMarkers: true,
       canAutoMerge: true,
       gcpProjectId,
+      databaseId,
     };
   }
 

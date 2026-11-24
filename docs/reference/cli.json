@@ -447,6 +447,10 @@
               "description": "gcp project id"
             },
             {
+              "flags": "--database <databaseId>",
+              "description": "firestore database id"
+            },
+            {
               "flags": "--admin <email>",
               "description": "adds an admin to the project"
             },
@@ -469,6 +473,10 @@
             {
               "flags": "--project <project>",
               "description": "gcp project id"
+            },
+            {
+              "flags": "--database <databaseId>",
+              "description": "firestore database id"
             },
             {
               "flags": "--force",

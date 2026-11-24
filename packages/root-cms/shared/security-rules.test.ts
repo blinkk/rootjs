@@ -4,8 +4,11 @@ import {
   FIRESTORE_RULES_VERSION,
   ROOT_CMS_RULES_END,
   ROOT_CMS_RULES_START,
+  getFirestoreConsoleRulesUrl,
+  getFirestoreRulesReleaseId,
   hasRootCmsRulesMarkers,
   mergeFirestoreRules,
+  normalizeFirestoreDatabaseId,
   parseRulesVersion,
 } from './security-rules.js';
 
@@ -107,5 +110,28 @@ service cloud.firestore {
     expect(res.status).toBe('needs_manual_merge');
     expect(res.merged).toBeNull();
     expect(res.reason).toContain(ROOT_CMS_RULES_START);
+  });
+
+  it('resolves release IDs and Firebase Console URLs for default and named databases', () => {
+    expect(normalizeFirestoreDatabaseId()).toBe('(default)');
+    expect(normalizeFirestoreDatabaseId('')).toBe('(default)');
+    expect(normalizeFirestoreDatabaseId('(default)')).toBe('(default)');
+    expect(normalizeFirestoreDatabaseId('staging-db')).toBe('staging-db');
+
+    expect(getFirestoreRulesReleaseId()).toBe('cloud.firestore');
+    expect(getFirestoreRulesReleaseId('(default)')).toBe('cloud.firestore');
+    expect(getFirestoreRulesReleaseId('staging-db')).toBe(
+      'cloud.firestore/staging-db'
+    );
+
+    expect(getFirestoreConsoleRulesUrl('my-proj')).toBe(
+      'https://console.firebase.google.com/project/my-proj/firestore/databases/-default-/security/rules'
+    );
+    expect(getFirestoreConsoleRulesUrl('my-proj', '(default)')).toBe(
+      'https://console.firebase.google.com/project/my-proj/firestore/databases/-default-/security/rules'
+    );
+    expect(getFirestoreConsoleRulesUrl('my-proj', 'staging-db')).toBe(
+      'https://console.firebase.google.com/project/my-proj/firestore/databases/staging-db/security/rules'
+    );
   });
 });

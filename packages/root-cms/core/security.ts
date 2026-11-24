@@ -2,7 +2,7 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Firestore} from 'firebase-admin/firestore';
-import {getSecurityRules} from 'firebase-admin/security-rules';
+import {getSecurityRules, type Ruleset} from 'firebase-admin/security-rules';
 import {
   FIRESTORE_RULES,
   FIRESTORE_RULES_MANAGED_BLOCK,
@@ -13,8 +13,11 @@ import {
   STORAGE_RULES,
   STORAGE_RULES_VERSION,
   SecurityRulesVersionDoc,
+  getFirestoreConsoleRulesUrl,
+  getFirestoreRulesReleaseId,
   hasRootCmsRulesMarkers,
   mergeFirestoreRules,
+  normalizeFirestoreDatabaseId,
   parseRulesVersion,
 } from '../shared/security-rules.js';
 
@@ -26,8 +29,11 @@ export {
   ROOT_CMS_RULES_START,
   STORAGE_RULES,
   STORAGE_RULES_VERSION,
+  getFirestoreConsoleRulesUrl,
+  getFirestoreRulesReleaseId,
   hasRootCmsRulesMarkers,
   mergeFirestoreRules,
+  normalizeFirestoreDatabaseId,
   parseRulesVersion,
 };
 export type {MergeFirestoreRulesResult, SecurityRulesVersionDoc};
@@ -55,6 +61,8 @@ export interface SecurityRulesStatus {
   canAutoMerge: boolean;
   /** GCP project id whose rules were checked. */
   gcpProjectId: string;
+  /** Firestore database ID whose rules were checked (e.g. `'(default)'`). */
+  databaseId: string;
   /** Reason if `status === 'unavailable'` or `!canAutoMerge`. */
   reason?: string;
 }
@@ -64,6 +72,7 @@ export interface ApplySecurityRulesResult {
   version: number;
   previousVersion: number | null;
   preservedCustomRules: boolean;
+  databaseId: string;
   status: MergeFirestoreRulesResult['status'] | 'forced';
 }
 
@@ -85,18 +94,34 @@ function getSecurityRulesApp(projectId: string) {
   );
 }
 
+function getRulesStatusCacheKey(projectId: string, databaseId: string): string {
+  return `${projectId}/${normalizeFirestoreDatabaseId(databaseId)}`;
+}
+
 /**
  * Fetches the currently released Firestore security rules source for
- * `projectId`, or returns `null` if no ruleset has been released yet.
+ * `projectId` and `databaseId` (defaults to `'(default)'`), or returns `null`
+ * if no ruleset has been released yet.
  */
 export async function getLiveFirestoreRulesSource(
-  projectId: string
+  projectId: string,
+  options?: {databaseId?: string}
 ): Promise<string | null> {
+  const databaseId = normalizeFirestoreDatabaseId(options?.databaseId);
+  const releaseId = getFirestoreRulesReleaseId(databaseId);
   const app = getSecurityRulesApp(projectId);
   const securityRules = getSecurityRules(app);
   try {
-    const ruleset = await securityRules.getFirestoreRuleset();
-    const files = ruleset.source?.files || [];
+    // `getFirestoreRuleset()` hardcodes `'cloud.firestore'` (the default DB).
+    // For named databases, use `getRulesetForRelease('cloud.firestore/<db>')`
+    // (the same helper `getStorageRuleset` uses for `'firebase.storage/<b>'`).
+    const ruleset: Ruleset =
+      databaseId === '(default)'
+        ? await securityRules.getFirestoreRuleset()
+        : await (securityRules as any).getRulesetForRelease(releaseId);
+    const files = Array.isArray(ruleset.source)
+      ? ruleset.source
+      : (ruleset.source as any)?.files || [];
     if (files.length === 0) {
       return null;
     }
@@ -111,19 +136,24 @@ export async function getLiveFirestoreRulesSource(
 }
 
 /**
- * Updates the project's Firestore security rules to the latest Root.js CMS
- * rules. If the live rules contain `// [START root-cms]` .. `// [END root-cms]`
- * markers, only the managed block is replaced and custom rules outside it are
- * preserved. Throws {@link SecurityRulesMergeError} if custom rules are
- * detected without markers unless `options.force` is true.
+ * Updates the project's Firestore security rules for `options.databaseId`
+ * (defaults to `'(default)'`) to the latest Root.js CMS rules. If the live
+ * rules contain `// [START root-cms]` .. `// [END root-cms]` markers, only the
+ * managed block is replaced and custom rules outside it are preserved. Throws
+ * {@link SecurityRulesMergeError} if custom rules are detected without markers
+ * unless `options.force` is true.
  */
 export async function applySecurityRules(
   projectId: string,
-  options?: {force?: boolean}
+  options?: {force?: boolean; databaseId?: string}
 ): Promise<ApplySecurityRulesResult> {
+  const databaseId = normalizeFirestoreDatabaseId(options?.databaseId);
+  const releaseId = getFirestoreRulesReleaseId(databaseId);
   const app = getSecurityRulesApp(projectId);
   const securityRules = getSecurityRules(app);
-  const currentSource = await getLiveFirestoreRulesSource(projectId);
+  const currentSource = await getLiveFirestoreRulesSource(projectId, {
+    databaseId,
+  });
   const mergeResult = mergeFirestoreRules(currentSource);
 
   let nextSource: string;
@@ -140,13 +170,24 @@ export async function applySecurityRules(
     );
   }
 
-  await securityRules.releaseFirestoreRulesetFromSource(nextSource);
-  RULES_STATUS_CACHE.delete(projectId);
+  if (databaseId === '(default)') {
+    await securityRules.releaseFirestoreRulesetFromSource(nextSource);
+  } else {
+    const rulesFile = securityRules.createRulesFileFromSource(
+      'firestore.rules',
+      nextSource
+    );
+    const ruleset = await securityRules.createRuleset(rulesFile);
+    await (securityRules as any).releaseRuleset(ruleset, releaseId);
+  }
+
+  RULES_STATUS_CACHE.delete(getRulesStatusCacheKey(projectId, databaseId));
 
   return {
     version: FIRESTORE_RULES_VERSION,
     previousVersion: mergeResult.previousVersion,
     preservedCustomRules: mergeResult.preservedCustomRules,
+    databaseId,
     status: resultStatus,
   };
 }
@@ -170,12 +211,15 @@ export async function stampSecurityRulesVersion(
  */
 export async function getSecurityRulesStatus(options: {
   gcpProjectId: string;
+  databaseId?: string;
   db?: Firestore;
   rootProjectId?: string;
   forceRefresh?: boolean;
 }): Promise<SecurityRulesStatus> {
   const {gcpProjectId, db, rootProjectId, forceRefresh} = options;
-  const cached = RULES_STATUS_CACHE.get(gcpProjectId);
+  const databaseId = normalizeFirestoreDatabaseId(options.databaseId);
+  const cacheKey = getRulesStatusCacheKey(gcpProjectId, databaseId);
+  const cached = RULES_STATUS_CACHE.get(cacheKey);
   if (
     !forceRefresh &&
     cached &&
@@ -186,7 +230,7 @@ export async function getSecurityRulesStatus(options: {
 
   let liveSource: string | null;
   try {
-    liveSource = await getLiveFirestoreRulesSource(gcpProjectId);
+    liveSource = await getLiveFirestoreRulesSource(gcpProjectId, {databaseId});
   } catch (err: any) {
     const result: SecurityRulesStatus = {
       status: 'unavailable',
@@ -195,11 +239,12 @@ export async function getSecurityRulesStatus(options: {
       hasMarkers: false,
       canAutoMerge: false,
       gcpProjectId,
+      databaseId,
       reason:
         err?.message ||
         'Server credentials do not have permission to read Firebase Security Rules.',
     };
-    RULES_STATUS_CACHE.set(gcpProjectId, {
+    RULES_STATUS_CACHE.set(cacheKey, {
       checkedAt: Date.now(),
       value: result,
     });
@@ -229,9 +274,10 @@ export async function getSecurityRulesStatus(options: {
     hasMarkers,
     canAutoMerge: mergeResult.merged !== null,
     gcpProjectId,
+    databaseId,
     ...(mergeResult.reason ? {reason: mergeResult.reason} : {}),
   };
-  RULES_STATUS_CACHE.set(gcpProjectId, {checkedAt: Date.now(), value: result});
+  RULES_STATUS_CACHE.set(cacheKey, {checkedAt: Date.now(), value: result});
   return result;
 }
 
@@ -245,6 +291,14 @@ function getSecurityRulesCachePath(rootDir: string): string {
   );
 }
 
+function getLocalCacheKey(
+  gcpProjectId: string,
+  databaseId: string,
+  rootProjectId: string
+): string {
+  return `${gcpProjectId}/${normalizeFirestoreDatabaseId(databaseId)}/${rootProjectId}`;
+}
+
 /**
  * Reads the locally cached Firestore security rules version for a project
  * from `node_modules/.cache/root-cms/security-rules.json`, or returns `null`
@@ -253,12 +307,18 @@ function getSecurityRulesCachePath(rootDir: string): string {
 export async function readCachedSecurityRulesVersion(
   rootDir: string,
   gcpProjectId: string,
-  rootProjectId: string
+  rootProjectId: string,
+  databaseId?: string
 ): Promise<number | null> {
   try {
     const raw = await fs.readFile(getSecurityRulesCachePath(rootDir), 'utf8');
     const data = JSON.parse(raw) as Record<string, {firestore?: number}>;
-    const version = data?.[`${gcpProjectId}/${rootProjectId}`]?.firestore;
+    const key = getLocalCacheKey(
+      gcpProjectId,
+      databaseId || '(default)',
+      rootProjectId
+    );
+    const version = data?.[key]?.firestore;
     return typeof version === 'number' ? version : null;
   } catch {
     return null;
@@ -275,7 +335,8 @@ export async function writeCachedSecurityRulesVersion(
   rootDir: string,
   gcpProjectId: string,
   rootProjectId: string,
-  firestoreVersion: number
+  firestoreVersion: number,
+  databaseId?: string
 ): Promise<void> {
   const filePath = getSecurityRulesCachePath(rootDir);
   let data: Record<string, {firestore?: number}> = {};
@@ -288,7 +349,12 @@ export async function writeCachedSecurityRulesVersion(
   } catch {
     // Cache file doesn't exist yet or is invalid; start fresh.
   }
-  data[`${gcpProjectId}/${rootProjectId}`] = {firestore: firestoreVersion};
+  const key = getLocalCacheKey(
+    gcpProjectId,
+    databaseId || '(default)',
+    rootProjectId
+  );
+  data[key] = {firestore: firestoreVersion};
   try {
     await fs.mkdir(path.dirname(filePath), {recursive: true});
     await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');

@@ -415,3 +415,34 @@ function findMatchingBrace(source: string, openIndex: number): number {
 function normalizeWhitespace(source: string): string {
   return source.replace(/\s+/g, ' ').trim();
 }
+
+/** Normalizes a Firestore database ID, defaulting empty values to `'(default)'`. */
+export function normalizeFirestoreDatabaseId(
+  databaseId?: string | null
+): string {
+  const trimmed = databaseId?.trim();
+  return trimmed ? trimmed : '(default)';
+}
+
+/**
+ * Returns the Firebase Security Rules release ID for a Firestore database:
+ * `'cloud.firestore'` for `'(default)'`, or `'cloud.firestore/<databaseId>'`
+ * for a named database.
+ */
+export function getFirestoreRulesReleaseId(databaseId?: string | null): string {
+  const id = normalizeFirestoreDatabaseId(databaseId);
+  return id === '(default)' ? 'cloud.firestore' : `cloud.firestore/${id}`;
+}
+
+/**
+ * Returns the Firebase Console Firestore Security Rules URL for the given
+ * project and database ID (`-default-` in the URL path for `'(default)'`).
+ */
+export function getFirestoreConsoleRulesUrl(
+  gcpProjectId: string,
+  databaseId?: string | null
+): string {
+  const id = normalizeFirestoreDatabaseId(databaseId);
+  const dbSegment = id === '(default)' ? '-default-' : encodeURIComponent(id);
+  return `https://console.firebase.google.com/project/${encodeURIComponent(gcpProjectId)}/firestore/databases/${dbSegment}/security/rules`;
+}
