@@ -31,6 +31,7 @@ export interface ApplySecurityRulesResponse {
 
 let cachedStatus: ClientSecurityRulesStatus | null = null;
 let hasCheckedSession = false;
+let manualRefreshOutdatedAtDocVersion: number | undefined | null = null;
 let inFlightPromise: Promise<ClientSecurityRulesStatus | null> | null = null;
 const listeners = new Set<(status: ClientSecurityRulesStatus | null) => void>();
 
@@ -42,7 +43,8 @@ function notifyListeners(next: ClientSecurityRulesStatus | null) {
 
 /** Fetches the live security rules status from the server (deduplicated). */
 async function fetchSecurityRulesStatus(
-  forceRefresh = false
+  forceRefresh = false,
+  currentDocVersion?: number
 ): Promise<ClientSecurityRulesStatus | null> {
   if (!forceRefresh && hasCheckedSession) {
     return cachedStatus;
@@ -64,6 +66,10 @@ async function fetchSecurityRulesStatus(
       if (!json?.success || !json?.data) {
         hasCheckedSession = true;
         return null;
+      }
+      if (forceRefresh) {
+        manualRefreshOutdatedAtDocVersion =
+          json.data.status !== 'up_to_date' ? currentDocVersion : null;
       }
       notifyListeners(json.data as ClientSecurityRulesStatus);
       return json.data as ClientSecurityRulesStatus;
@@ -112,11 +118,21 @@ export function useSecurityRulesStatus() {
     };
   }, []);
 
+  const manualRefreshOverrodeDoc =
+    manualRefreshOutdatedAtDocVersion !== null &&
+    manualRefreshOutdatedAtDocVersion === storedFirestoreVersion;
+
   useEffect(() => {
     if (!isAdmin || !siteLoaded) {
       return;
     }
     if (isUpToDateFromDoc) {
+      // If `Projects/{projectId}.securityRulesVersion` updated live (e.g. after
+      // running `npx root-cms update-firebase-security-rules`), clear any stale
+      // `outdated` status unless a manual Re-check just found a rollback.
+      if (!manualRefreshOverrodeDoc && cachedStatus?.status === 'outdated') {
+        notifyListeners(null);
+      }
       return;
     }
     if (hasCheckedSession) {
@@ -133,7 +149,7 @@ export function useSecurityRulesStatus() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, siteLoaded, isUpToDateFromDoc]);
+  }, [isAdmin, siteLoaded, isUpToDateFromDoc, manualRefreshOverrodeDoc]);
 
   const refresh = useCallback(async () => {
     if (!isAdmin) {
@@ -141,11 +157,11 @@ export function useSecurityRulesStatus() {
     }
     setLoading(true);
     try {
-      return await fetchSecurityRulesStatus(true);
+      return await fetchSecurityRulesStatus(true, storedFirestoreVersion);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, storedFirestoreVersion]);
 
   const apply = useCallback(async (): Promise<ApplySecurityRulesResponse> => {
     setApplying(true);
@@ -161,6 +177,7 @@ export function useSecurityRulesStatus() {
         message: `HTTP ${res.status}`,
       }));
       if (json.success && json.data) {
+        manualRefreshOutdatedAtDocVersion = null;
         const gcpProjectId =
           remoteStatus?.gcpProjectId ||
           window.__ROOT_CTX?.firebaseConfig?.projectId ||
@@ -197,7 +214,7 @@ export function useSecurityRulesStatus() {
   let status: ClientSecurityRulesStatus | null = remoteStatus;
   if (!isAdmin) {
     status = null;
-  } else if (!remoteStatus && isUpToDateFromDoc) {
+  } else if (isUpToDateFromDoc && !manualRefreshOverrodeDoc) {
     status = {
       status: 'up_to_date',
       deployedVersion: storedFirestoreVersion!,

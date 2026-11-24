@@ -27,16 +27,7 @@ export function useSecurityRulesBanner() {
  * Admin-only dismissible banner alerting when deployed Firestore security
  * rules are behind the latest version bundled with Root.js CMS.
  */
-export function SecurityRulesBanner(props: {
-  deployedVersion: number | null;
-  latestVersion: number;
-  onDismiss: () => void;
-}) {
-  const versionDetail =
-    props.deployedVersion !== null
-      ? `v${props.deployedVersion} → v${props.latestVersion}`
-      : `unversioned → v${props.latestVersion}`;
-
+export function SecurityRulesBanner(props: {onDismiss: () => void}) {
   return (
     <div
       className="SecurityRulesBanner absolute inset-x-2 top-1.5 z-(--cms-z-floating) flex items-center gap-2 rounded-md border border-warning-line bg-warning-soft px-3 py-1.5 text-sm text-fg shadow-md sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
@@ -49,12 +40,12 @@ export function SecurityRulesBanner(props: {
         aria-hidden="true"
       />
       <span className="SecurityRulesBanner__message min-w-0 flex-1 truncate">
-        Firestore security rules are out of date ({versionDetail}).{' '}
+        Firestore security rules are out of date.{' '}
         <a
           className="SecurityRulesBanner__link font-semibold text-strong underline hover:text-link"
           href="/cms/settings#security-rules"
         >
-          Review &amp; update in Settings
+          Review &amp; update
         </a>
       </span>
       <IconButton

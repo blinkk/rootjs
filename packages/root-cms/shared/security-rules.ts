@@ -247,6 +247,19 @@ export function mergeFirestoreRules(
     };
   }
 
+  if (hasAmbiguousMarkers(existingSource)) {
+    return {
+      status: 'needs_manual_merge',
+      merged: null,
+      previousVersion,
+      preservedCustomRules: false,
+      reason:
+        'Existing Firestore rules contain multiple or mismatched ' +
+        `${ROOT_CMS_RULES_START} / ${ROOT_CMS_RULES_END} markers. ` +
+        'Ensure there is only one START/END block before updating.',
+    };
+  }
+
   const range = findMarkerRange(existingSource);
   if (range) {
     const before = existingSource.slice(0, range.start);
@@ -282,6 +295,26 @@ export function mergeFirestoreRules(
       'Wrap the Root.js CMS section in those comments (or merge manually in ' +
       'the Firebase Console) so future updates preserve your custom rules.',
   };
+}
+
+/**
+ * Returns true if `source` has more than one START/END marker or an unmatched
+ * marker (e.g. START without END, END without START, or END before START).
+ */
+function hasAmbiguousMarkers(source: string): boolean {
+  const startMatches = source.match(
+    /^[ \t]*\/\/\s*\[START root-cms\][ \t]*$/gm
+  );
+  const endMatches = source.match(/^[ \t]*\/\/\s*\[END root-cms\][ \t]*$/gm);
+  const startCount = startMatches ? startMatches.length : 0;
+  const endCount = endMatches ? endMatches.length : 0;
+  if (startCount === 0 && endCount === 0) {
+    return false;
+  }
+  if (startCount !== 1 || endCount !== 1) {
+    return true;
+  }
+  return findMarkerRange(source) === null;
 }
 
 /** Finds the line-aligned start/end offsets of the START/END marker block. */
@@ -373,8 +406,56 @@ function isLegacyRootCmsFirestoreRules(source: string): boolean {
   );
 }
 
+/** Strips `//` and `/* ... * /` comments while preserving string literals. */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  let out = '';
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    const next = i + 1 < source.length ? source[i + 1] : '';
+    const prev = i > 0 ? source[i - 1] : '';
+    if (inSingle) {
+      out += ch;
+      if (ch === "'" && prev !== '\\') {
+        inSingle = false;
+      }
+      continue;
+    }
+    if (inDouble) {
+      out += ch;
+      if (ch === '"' && prev !== '\\') {
+        inDouble = false;
+      }
+      continue;
+    }
+    if (ch === "'") {
+      inSingle = true;
+      out += ch;
+    } else if (ch === '"') {
+      inDouble = true;
+      out += ch;
+    } else if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') {
+        i++;
+      }
+      if (i < source.length && source[i] === '\n') {
+        out += '\n';
+      }
+    } else if (ch === '/' && next === '*') {
+      i += 2;
+      while (
+        i < source.length &&
+        !(source[i] === '*' && source[i + 1] === '/')
+      ) {
+        i++;
+      }
+      i++;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }
 
 function findMatchingBrace(source: string, openIndex: number): number {

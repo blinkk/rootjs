@@ -1,6 +1,6 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {getApps, initializeApp} from 'firebase-admin/app';
+import {applicationDefault, getApps, initializeApp} from 'firebase-admin/app';
 import {Firestore} from 'firebase-admin/firestore';
 import {getSecurityRules, type Ruleset} from 'firebase-admin/security-rules';
 import {
@@ -81,6 +81,7 @@ const RULES_STATUS_CACHE_TTL_MS = 60 * 60 * 1000;
 interface CachedRulesStatus {
   checkedAt: number;
   value: SecurityRulesStatus;
+  stampedRootProjectIds: Set<string>;
 }
 
 const RULES_STATUS_CACHE = new Map<string, CachedRulesStatus>();
@@ -90,7 +91,7 @@ function getSecurityRulesApp(projectId: string) {
   return (
     getApps().find((app) => app.name === name) ||
     getApps().find((app) => app.options.projectId === projectId) ||
-    initializeApp({projectId}, name)
+    initializeApp({projectId, credential: applicationDefault()}, name)
   );
 }
 
@@ -225,6 +226,21 @@ export async function getSecurityRulesStatus(options: {
     cached &&
     Date.now() - cached.checkedAt < RULES_STATUS_CACHE_TTL_MS
   ) {
+    if (
+      cached.value.status === 'up_to_date' &&
+      db &&
+      rootProjectId &&
+      !cached.stampedRootProjectIds.has(rootProjectId)
+    ) {
+      try {
+        await stampSecurityRulesVersion(db, rootProjectId, {
+          firestore: cached.value.deployedVersion ?? FIRESTORE_RULES_VERSION,
+        });
+        cached.stampedRootProjectIds.add(rootProjectId);
+      } catch (err) {
+        console.warn('failed to stamp securityRulesVersion:', err);
+      }
+    }
     return cached.value;
   }
 
@@ -247,6 +263,7 @@ export async function getSecurityRulesStatus(options: {
     RULES_STATUS_CACHE.set(cacheKey, {
       checkedAt: Date.now(),
       value: result,
+      stampedRootProjectIds: new Set(),
     });
     return result;
   }
@@ -256,12 +273,14 @@ export async function getSecurityRulesStatus(options: {
   const mergeResult = mergeFirestoreRules(liveSource);
   const isUpToDate =
     deployedVersion !== null && deployedVersion >= FIRESTORE_RULES_VERSION;
+  const stampedRootProjectIds = new Set<string>();
 
   if (isUpToDate && db && rootProjectId) {
     try {
       await stampSecurityRulesVersion(db, rootProjectId, {
         firestore: deployedVersion,
       });
+      stampedRootProjectIds.add(rootProjectId);
     } catch (err) {
       console.warn('failed to stamp securityRulesVersion:', err);
     }
@@ -277,7 +296,11 @@ export async function getSecurityRulesStatus(options: {
     databaseId,
     ...(mergeResult.reason ? {reason: mergeResult.reason} : {}),
   };
-  RULES_STATUS_CACHE.set(cacheKey, {checkedAt: Date.now(), value: result});
+  RULES_STATUS_CACHE.set(cacheKey, {
+    checkedAt: Date.now(),
+    value: result,
+    stampedRootProjectIds,
+  });
   return result;
 }
 

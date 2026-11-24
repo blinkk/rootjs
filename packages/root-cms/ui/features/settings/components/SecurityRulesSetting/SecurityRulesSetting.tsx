@@ -189,29 +189,30 @@ export function SecurityRulesSetting() {
         )}
       </div>
 
-      <div className="SecurityRulesSetting__cli mt-2 flex flex-col gap-1">
-        <Text size="body-sm" color="gray">
-          Or update from your terminal (fetches live rules and preserves custom
-          rules outside the markers):
-        </Text>
-        <div className="SecurityRulesSetting__cliBox flex items-center justify-between gap-2 rounded-md border border-border bg-chip px-3 py-1.5 font-mono text-xs text-fg">
-          <code className="SecurityRulesSetting__cliCode min-w-0 truncate">
-            {CLI_COMMAND}
-          </code>
-          <IconButton
-            className="SecurityRulesSetting__cliCopy shrink-0"
-            label={copiedCommand ? 'Copied' : 'Copy command'}
-            size="xs"
-            onClick={onCopyCommand}
-          >
-            {copiedCommand ? (
-              <IconCheck size={14} stroke={1.75} />
-            ) : (
-              <IconCopy size={14} stroke={1.75} />
-            )}
-          </IconButton>
+      {status?.status !== 'up_to_date' && (
+        <div className="SecurityRulesSetting__cli mt-2 flex flex-col gap-1">
+          <Text size="body-sm" color="gray">
+            Or run from your terminal:
+          </Text>
+          <div className="SecurityRulesSetting__cliBox flex items-center justify-between gap-2 rounded-md border border-border bg-chip px-3 py-1.5 font-mono text-xs text-fg">
+            <code className="SecurityRulesSetting__cliCode min-w-0 truncate">
+              {CLI_COMMAND}
+            </code>
+            <IconButton
+              className="SecurityRulesSetting__cliCopy shrink-0"
+              label={copiedCommand ? 'Copied' : 'Copy command'}
+              size="xs"
+              onClick={onCopyCommand}
+            >
+              {copiedCommand ? (
+                <IconCheck size={14} stroke={1.75} />
+              ) : (
+                <IconCopy size={14} stroke={1.75} />
+              )}
+            </IconButton>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

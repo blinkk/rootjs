@@ -134,4 +134,35 @@ service cloud.firestore {
       'https://console.firebase.google.com/project/my-proj/firestore/databases/staging-db/security/rules'
     );
   });
+
+  it('handles URLs in string literals and rejects duplicate START/END markers', () => {
+    const legacyWithUrlString = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /Projects/{project} {
+      allow read: if request.resource.data.url == 'https://example.com/path';
+    }
+  }
+}
+`;
+    expect(mergeFirestoreRules(legacyWithUrlString).status).toBe('upgraded');
+
+    const duplicateMarkers = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    ${ROOT_CMS_RULES_START}
+    ${ROOT_CMS_RULES_END}
+    ${ROOT_CMS_RULES_START}
+    ${ROOT_CMS_RULES_END}
+  }
+}
+`;
+    const dupRes = mergeFirestoreRules(duplicateMarkers);
+    expect(dupRes.status).toBe('needs_manual_merge');
+    expect(dupRes.merged).toBeNull();
+  });
 });
