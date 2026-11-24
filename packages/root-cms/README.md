@@ -22,6 +22,8 @@ service cloud.firestore {
       allow read:
         if isSignedIn() && userCanRead();
 
+      // Default for shared CMS collections (Published, Scheduled, Releases,
+      // DataSources, Assets, Translations, etc.).
       match /{collection}/{document=**} {
         allow write:
           if isSignedIn() && userCanPublish();
@@ -29,6 +31,7 @@ service cloud.firestore {
           if isSignedIn() && userCanRead();
       }
 
+      // Draft and collaborative collections (CONTRIBUTOR+).
       match /Collections/{collectionId}/Drafts/{document=**} {
         allow write:
           if isSignedIn() && userCanEdit();
@@ -49,6 +52,7 @@ service cloud.firestore {
           if isSignedIn() && userCanEdit();
       }
 
+      // Presence and per-user collections (all signed-in project members).
       match /Viewers/{viewerDoc} {
         allow write:
           if isSignedIn() && userCanRead();
@@ -74,39 +78,34 @@ service cloud.firestore {
       }
 
       function isSignedIn() {
-        return request.auth != null;
+        return request.auth != null && request.auth.token.email != null;
       }
 
       function getRoles() {
         return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
       }
 
-      function userCanRead() {
+      function hasRole(allowed) {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
+        return (roles[email] in allowed) || (roles[domain] in allowed);
       }
 
-      function userCanPublish() {
-        let roles = getRoles();
-        let email = request.auth.token.email;
-        let domain = '*@' + email.split('@')[1];
-        return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+      function userCanRead() {
+        return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
 
       function userCanEdit() {
-        let roles = getRoles();
-        let email = request.auth.token.email;
-        let domain = '*@' + email.split('@')[1];
-        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+        return hasRole(['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
+      }
+
+      function userCanPublish() {
+        return hasRole(['ADMIN', 'EDITOR']);
       }
 
       function userIsAdmin() {
-        let roles = getRoles();
-        let email = request.auth.token.email;
-        let domain = '*@' + email.split('@')[1];
-        return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
+        return hasRole(['ADMIN']);
       }
     }
     // [END root-cms]
