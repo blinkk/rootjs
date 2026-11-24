@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {STORAGE_RULES} from '../../core/security.js';
+import {STORAGE_RULES, mergeStorageRules} from '../../core/security.js';
 import {mutate, reuse, SetupContext} from './context.js';
 import {gcloudJson, isGcpError} from './gcp.js';
 import {addProjectBinding, hasBinding} from './iam.js';
@@ -58,6 +58,7 @@ export async function setupStorage(ctx: SetupContext, options: {gci: boolean}) {
     releaseId: `firebase.storage/${bucket}`,
     fileName: 'storage.rules',
     source: STORAGE_RULES,
+    merge: mergeStorageRules,
     consoleUrl: `https://console.firebase.google.com/project/${projectId}/storage/${bucket}/rules`,
   });
 

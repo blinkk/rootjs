@@ -94,6 +94,17 @@ service cloud.firestore {
 }
 ```
 
+`npx root-cms update-firebase-security-rules` keeps these rules up to date. It
+only replaces the block between the `BEGIN` / `END` comments, so put any custom
+rules outside of it. Rules without the comments are only replaced automatically
+when they exactly match the rules from an earlier Root.js CMS version;
+otherwise merge them by hand or pass `--force` to overwrite them.
+
+The same command updates the Firebase Storage rules for
+`firebaseConfig.storageBucket`, which authorize uploads against the site's
+`roles`. When `firebaseConfig.databaseId` is set, the Storage rules read the
+roles from that database instead of `(default)`.
+
 In Firestore, add a document at `Projects/<yourprojectid>` with a value of `{roles: {"youremail@yourdomain.tld": "ADMIN"}}`.
 
 Using Firestore Studio:

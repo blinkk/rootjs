@@ -23,7 +23,7 @@ const CLI_COMMAND = 'npx root-cms update-firebase-security-rules';
 /**
  * Admin-only setting in Settings → Site Admin that displays the deployed
  * Firestore security rules version and lets admins apply or copy updates while
- * preserving custom rules outside the Root.js CMS START/END markers.
+ * preserving custom rules outside the Root.js CMS BEGIN/END markers.
  */
 export function SecurityRulesSetting() {
   const {status, loading, applying, refresh, apply} = useSecurityRulesStatus();

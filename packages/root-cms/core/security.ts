@@ -2,12 +2,17 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {applicationDefault, getApps, initializeApp} from 'firebase-admin/app';
 import {Firestore} from 'firebase-admin/firestore';
-import {getSecurityRules, type Ruleset} from 'firebase-admin/security-rules';
+import {
+  getSecurityRules,
+  type Ruleset,
+  type SecurityRules,
+} from 'firebase-admin/security-rules';
 import {
   FIRESTORE_RULES,
   FIRESTORE_RULES_MANAGED_BLOCK,
   FIRESTORE_RULES_VERSION,
   MergeFirestoreRulesResult,
+  MergeRulesResult,
   ROOT_CMS_RULES_END,
   ROOT_CMS_RULES_START,
   STORAGE_RULES,
@@ -15,8 +20,10 @@ import {
   SecurityRulesVersionDoc,
   getFirestoreConsoleRulesUrl,
   getFirestoreRulesReleaseId,
+  getStorageRules,
   hasRootCmsRulesMarkers,
   mergeFirestoreRules,
+  mergeStorageRules,
   normalizeFirestoreDatabaseId,
   parseRulesVersion,
 } from '../shared/security-rules.js';
@@ -31,14 +38,20 @@ export {
   STORAGE_RULES_VERSION,
   getFirestoreConsoleRulesUrl,
   getFirestoreRulesReleaseId,
+  getStorageRules,
   hasRootCmsRulesMarkers,
   mergeFirestoreRules,
+  mergeStorageRules,
   normalizeFirestoreDatabaseId,
   parseRulesVersion,
 };
-export type {MergeFirestoreRulesResult, SecurityRulesVersionDoc};
+export type {
+  MergeFirestoreRulesResult,
+  MergeRulesResult,
+  SecurityRulesVersionDoc,
+};
 
-/** Error thrown when live rules have custom sections without START/END markers. */
+/** Error thrown when live rules have custom sections without BEGIN/END markers. */
 export class SecurityRulesMergeError extends Error {
   readonly code = 'NEEDS_MANUAL_MERGE';
   constructor(message: string) {
@@ -55,7 +68,7 @@ export interface SecurityRulesStatus {
   deployedVersion: number | null;
   /** Latest Root.js CMS Firestore rules version bundled with this package. */
   latestVersion: number;
-  /** Whether the live rules contain `// [START root-cms]`..`// [END root-cms]`. */
+  /** Whether the live rules contain the Root.js CMS BEGIN/END markers. */
   hasMarkers: boolean;
   /** Whether the rules can be updated automatically without clobbering custom rules. */
   canAutoMerge: boolean;
@@ -119,17 +132,14 @@ export async function getLiveFirestoreRulesSource(
     const ruleset: Ruleset =
       databaseId === '(default)'
         ? await securityRules.getFirestoreRuleset()
-        : await (securityRules as any).getRulesetForRelease(releaseId);
-    const files = Array.isArray(ruleset.source)
-      ? ruleset.source
-      : (ruleset.source as any)?.files || [];
-    if (files.length === 0) {
-      return null;
-    }
-    return files.map((f) => f.content).join('\n');
+        : await callNamedDatabaseRulesApi(
+            securityRules,
+            'getRulesetForRelease',
+            releaseId
+          );
+    return getRulesetSource(ruleset);
   } catch (err: any) {
-    const code = String(err?.code || err?.errorInfo?.code || '');
-    if (code.includes('not-found')) {
+    if (isRulesNotFoundError(err)) {
       return null;
     }
     throw err;
@@ -137,12 +147,50 @@ export async function getLiveFirestoreRulesSource(
 }
 
 /**
+ * Calls a firebase-admin `SecurityRules` method that isn't part of its public
+ * API. The public API only covers the `(default)` Firestore database, so
+ * named databases rely on these internals; fail with a clear message if a
+ * firebase-admin upgrade removes them.
+ */
+async function callNamedDatabaseRulesApi(
+  securityRules: SecurityRules,
+  method: 'getRulesetForRelease' | 'releaseRuleset',
+  ...args: unknown[]
+): Promise<any> {
+  const fn = (securityRules as any)[method];
+  if (typeof fn !== 'function') {
+    throw new Error(
+      `firebase-admin no longer provides SecurityRules.${method}(), which ` +
+        'Root.js CMS needs to manage rules for a named Firestore database. ' +
+        'Update the rules in the Firebase Console instead.'
+    );
+  }
+  return fn.apply(securityRules, args);
+}
+
+function getRulesetSource(ruleset: Ruleset): string | null {
+  const files = Array.isArray(ruleset.source)
+    ? ruleset.source
+    : (ruleset.source as any)?.files || [];
+  if (files.length === 0) {
+    return null;
+  }
+  return files.map((f: {content: string}) => f.content).join('\n');
+}
+
+function isRulesNotFoundError(err: any): boolean {
+  const code = String(err?.code || err?.errorInfo?.code || '');
+  return code.includes('not-found');
+}
+
+/**
  * Updates the project's Firestore security rules for `options.databaseId`
  * (defaults to `'(default)'`) to the latest Root.js CMS rules. If the live
- * rules contain `// [START root-cms]` .. `// [END root-cms]` markers, only the
- * managed block is replaced and custom rules outside it are preserved. Throws
- * {@link SecurityRulesMergeError} if custom rules are detected without markers
- * unless `options.force` is true.
+ * rules contain the Root.js CMS BEGIN/END markers, only the managed block is
+ * replaced and custom rules outside it are preserved. Unmarked rules are only
+ * replaced when they exactly match a ruleset shipped by an earlier Root.js CMS
+ * version; otherwise this throws {@link SecurityRulesMergeError} unless
+ * `options.force` is true.
  */
 export async function applySecurityRules(
   projectId: string,
@@ -179,7 +227,12 @@ export async function applySecurityRules(
       nextSource
     );
     const ruleset = await securityRules.createRuleset(rulesFile);
-    await (securityRules as any).releaseRuleset(ruleset, releaseId);
+    await callNamedDatabaseRulesApi(
+      securityRules,
+      'releaseRuleset',
+      ruleset,
+      releaseId
+    );
   }
 
   RULES_STATUS_CACHE.delete(getRulesStatusCacheKey(projectId, databaseId));
@@ -190,6 +243,73 @@ export async function applySecurityRules(
     preservedCustomRules: mergeResult.preservedCustomRules,
     databaseId,
     status: resultStatus,
+  };
+}
+
+/** Result returned by {@link applyStorageSecurityRules}. */
+export interface ApplyStorageSecurityRulesResult {
+  version: number;
+  previousVersion: number | null;
+  preservedCustomRules: boolean;
+  bucket: string;
+  /** Firestore database the released rules read site roles from. */
+  databaseId: string;
+  status: MergeRulesResult['status'] | 'forced' | 'unchanged';
+}
+
+/**
+ * Updates the Firebase Storage security rules for `options.bucket` to the
+ * latest Root.js CMS rules, which read site roles from the Firestore database
+ * `options.databaseId` (defaults to `'(default)'`). Custom rules are handled
+ * the same way as in {@link applySecurityRules}.
+ */
+export async function applyStorageSecurityRules(
+  projectId: string,
+  options: {bucket: string; databaseId?: string; force?: boolean}
+): Promise<ApplyStorageSecurityRulesResult> {
+  const {bucket} = options;
+  const databaseId = normalizeFirestoreDatabaseId(options.databaseId);
+  const securityRules = getSecurityRules(getSecurityRulesApp(projectId));
+  let currentSource: string | null;
+  try {
+    currentSource = getRulesetSource(
+      await securityRules.getStorageRuleset(bucket)
+    );
+  } catch (err: any) {
+    if (!isRulesNotFoundError(err)) {
+      throw err;
+    }
+    currentSource = null;
+  }
+  const mergeResult = mergeStorageRules(currentSource, {databaseId});
+
+  let nextSource: string;
+  let status: ApplyStorageSecurityRulesResult['status'] = mergeResult.status;
+  if (mergeResult.merged !== null) {
+    nextSource = mergeResult.merged;
+  } else if (options.force) {
+    nextSource = getStorageRules(databaseId);
+    status = 'forced';
+  } else {
+    throw new SecurityRulesMergeError(
+      mergeResult.reason ||
+        'Existing Storage rules contain custom rules without Root.js CMS markers.'
+    );
+  }
+
+  if (currentSource !== null && currentSource === nextSource) {
+    status = 'unchanged';
+  } else {
+    await securityRules.releaseStorageRulesetFromSource(nextSource, bucket);
+  }
+
+  return {
+    version: STORAGE_RULES_VERSION,
+    previousVersion: mergeResult.previousVersion,
+    preservedCustomRules: mergeResult.preservedCustomRules,
+    bucket,
+    databaseId,
+    status,
   };
 }
 

@@ -1,3 +1,5 @@
+import {hashStr} from './strings.js';
+
 /**
  * Current version of the Root.js CMS Firestore security rules. Increment this
  * whenever `FIRESTORE_RULES` changes so the CMS can notify admins to update
@@ -6,12 +8,18 @@
 export const FIRESTORE_RULES_VERSION = 2;
 
 /**
- * Current version of the Root.js CMS Firebase Storage security rules.
+ * Current version of the Root.js CMS Firebase Storage security rules. Increment
+ * this whenever the permissions in `getStorageRules()` change. The version is
+ * recorded in the rules' BEGIN marker and stamped on the project doc by the
+ * CLI; the CMS UI does not check it yet.
  */
 export const STORAGE_RULES_VERSION = 1;
 
 /** Comment marker denoting the start of the Root.js CMS managed rules block. */
 export const ROOT_CMS_RULES_START = `// === BEGIN ROOT CMS MANAGED RULES (version: ${FIRESTORE_RULES_VERSION}) — DO NOT EDIT ===`;
+
+/** BEGIN marker for the Root.js CMS managed block in the Storage rules. */
+export const ROOT_CMS_STORAGE_RULES_START = `// === BEGIN ROOT CMS MANAGED RULES (version: ${STORAGE_RULES_VERSION}) — DO NOT EDIT ===`;
 
 /** Comment marker denoting the end of the Root.js CMS managed rules block. */
 export const ROOT_CMS_RULES_END = '// === END ROOT CMS MANAGED RULES ===';
@@ -114,15 +122,20 @@ ${FIRESTORE_RULES_MANAGED_BLOCK}
 `;
 
 /**
- * Firebase Storage rules for CMS uploads. Files are stored under
- * `{siteId}/uploads/...` and anyone who can edit drafts on that site can
- * upload. Reading the site's roles from Firestore requires the Firebase
- * Storage service agent to have `roles/firebaserules.firestoreServiceAgent`.
+ * Returns the Root.js CMS managed block inside `match /b/{bucket}/o` of the
+ * Firebase Storage rules. Site roles are read from the Firestore database
+ * `databaseId` (defaults to `'(default)'`).
  */
-export const STORAGE_RULES = `rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    // === BEGIN ROOT CMS MANAGED RULES (version: ${STORAGE_RULES_VERSION}) — DO NOT EDIT ===
+export function getStorageRulesManagedBlock(
+  databaseId?: string | null
+): string {
+  const id = normalizeFirestoreDatabaseId(databaseId);
+  // The id is interpolated into the rules source, so only allow the characters
+  // Firestore permits in a database id.
+  if (id !== '(default)' && !/^[a-z][a-z0-9-]{2,61}[a-z0-9]$/.test(id)) {
+    throw new Error(`invalid Firestore database id: ${id}`);
+  }
+  return `    ${ROOT_CMS_STORAGE_RULES_START}
     match /{allPaths=**} {
       allow read, write: if false;
     }
@@ -134,15 +147,33 @@ service firebase.storage {
     }
 
     function userCanEdit(site) {
-      let roles = firestore.get(/databases/(default)/documents/Projects/$(site)).data.roles;
+      let roles = firestore.get(/databases/${id}/documents/Projects/$(site)).data.roles;
       let email = request.auth.token.email;
       let domain = '*@' + email.split('@')[1];
       return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
     }
-    ${ROOT_CMS_RULES_END}
+    ${ROOT_CMS_RULES_END}`;
+}
+
+/**
+ * Returns the full Firebase Storage rules file for CMS uploads. Files are
+ * stored under `{siteId}/uploads/...` and anyone who can edit drafts on that
+ * site can upload. Site roles are read from the Firestore database
+ * `databaseId` (defaults to `'(default)'`), which requires the Firebase
+ * Storage service agent to have `roles/firebaserules.firestoreServiceAgent`.
+ */
+export function getStorageRules(databaseId?: string | null): string {
+  return `rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+${getStorageRulesManagedBlock(databaseId)}
   }
 }
 `;
+}
+
+/** Firebase Storage rules for projects using the `(default)` database. */
+export const STORAGE_RULES = getStorageRules();
 
 /**
  * Stored on `Projects/{projectId}.securityRulesVersion` so the CMS can verify
@@ -156,12 +187,13 @@ export interface SecurityRulesVersionDoc {
   storage?: number;
 }
 
-/** Result of merging the latest Root.js CMS Firestore rules into existing rules. */
-export interface MergeFirestoreRulesResult {
+/** Result of merging the latest Root.js CMS rules into existing rules. */
+export interface MergeRulesResult {
   /**
-   * - `created`: no existing rules; returning the full `FIRESTORE_RULES`.
-   * - `merged`: replaced the `// [START root-cms]`..`// [END root-cms]` block.
-   * - `upgraded`: existing rules were an unmodified legacy Root.js CMS ruleset.
+   * - `created`: no existing rules; returning the full Root.js CMS rules.
+   * - `merged`: replaced the block between the BEGIN/END markers.
+   * - `upgraded`: existing rules exactly matched a ruleset shipped by an
+   *   earlier Root.js CMS version, from before the markers existed.
    * - `needs_manual_merge`: existing rules contain custom rules without markers.
    */
   status: 'created' | 'merged' | 'upgraded' | 'needs_manual_merge';
@@ -174,6 +206,9 @@ export interface MergeFirestoreRulesResult {
   /** Explanation when `status === 'needs_manual_merge'`. */
   reason?: string;
 }
+
+/** Result of `mergeFirestoreRules()`. */
+export type MergeFirestoreRulesResult = MergeRulesResult;
 
 /**
  * Extracts the Root.js CMS rules version from a Firestore or Storage rules
@@ -197,8 +232,8 @@ export function parseRulesVersion(
 }
 
 /**
- * Returns true if `source` contains a valid `// [START root-cms]` ...
- * `// [END root-cms]` marker pair.
+ * Returns true if `source` contains a Root.js CMS BEGIN/END marker pair (see
+ * `ROOT_CMS_RULES_START` and `ROOT_CMS_RULES_END`).
  */
 export function hasRootCmsRulesMarkers(
   source: string | null | undefined
@@ -212,17 +247,79 @@ export function hasRootCmsRulesMarkers(
 
 /**
  * Merges the latest Root.js CMS Firestore security rules into `existingSource`,
- * preserving any custom rules outside `// [START root-cms]` ...
- * `// [END root-cms]`.
+ * preserving any custom rules outside the BEGIN/END markers.
  */
 export function mergeFirestoreRules(
   existingSource: string | null | undefined
 ): MergeFirestoreRulesResult {
+  return mergeManagedRules(existingSource, {
+    label: 'Firestore',
+    fullSource: FIRESTORE_RULES,
+    managedBlock: FIRESTORE_RULES_MANAGED_BLOCK,
+    legacyHashes: LEGACY_FIRESTORE_RULES_HASHES,
+  });
+}
+
+/**
+ * Merges the latest Root.js CMS Storage security rules into `existingSource`,
+ * preserving any custom rules outside the BEGIN/END markers. Site roles are
+ * read from the Firestore database `options.databaseId`.
+ */
+export function mergeStorageRules(
+  existingSource: string | null | undefined,
+  options?: {databaseId?: string | null}
+): MergeRulesResult {
+  return mergeManagedRules(existingSource, {
+    label: 'Storage',
+    fullSource: getStorageRules(options?.databaseId),
+    managedBlock: getStorageRulesManagedBlock(options?.databaseId),
+    legacyHashes: LEGACY_STORAGE_RULES_HASHES,
+  });
+}
+
+/**
+ * Fingerprints (see `fingerprintRules()`) of every Firestore ruleset shipped
+ * by Root.js CMS before the BEGIN/END markers existed. Only an exact match is
+ * safe to replace wholesale; anything else may hold custom rules.
+ */
+const LEGACY_FIRESTORE_RULES_HASHES = new Set([
+  // 2023-03 (#95): per-project and per-collection role maps.
+  '844a3255ddd0f',
+  // 2024-03 (#276): ADMIN, EDITOR and VIEWER roles.
+  '1958ceece34ee',
+  // 2026-01 (#887) through v4.4.1: adds the CONTRIBUTOR role.
+  '6e8ab4087efb5',
+]);
+
+/** Like `LEGACY_FIRESTORE_RULES_HASHES`, for the Storage rules. */
+const LEGACY_STORAGE_RULES_HASHES = new Set([
+  // 2026-09 (#1462) through v4.4.1.
+  '4ae05b2b2bedd',
+]);
+
+/**
+ * Returns a fingerprint of a rules source that ignores comments and
+ * whitespace differences.
+ */
+function fingerprintRules(source: string): string {
+  return hashStr(normalizeWhitespace(stripComments(source)) || ' ');
+}
+
+function mergeManagedRules(
+  existingSource: string | null | undefined,
+  options: {
+    label: string;
+    fullSource: string;
+    managedBlock: string;
+    legacyHashes: Set<string>;
+  }
+): MergeRulesResult {
+  const {label, fullSource, managedBlock} = options;
   const previousVersion = parseRulesVersion(existingSource);
   if (!existingSource || !existingSource.trim()) {
     return {
       status: 'created',
-      merged: FIRESTORE_RULES,
+      merged: fullSource,
       previousVersion: null,
       preservedCustomRules: false,
     };
@@ -235,9 +332,9 @@ export function mergeFirestoreRules(
       previousVersion,
       preservedCustomRules: false,
       reason:
-        'Existing Firestore rules contain multiple or mismatched ' +
-        `${ROOT_CMS_RULES_START} / ${ROOT_CMS_RULES_END} markers. ` +
-        'Ensure there is only one START/END block before updating.',
+        `Existing ${label} rules contain multiple or mismatched ` +
+        `${MARKERS_LABEL} markers. ` +
+        'Ensure there is only one BEGIN/END block before updating.',
     };
   }
 
@@ -245,9 +342,9 @@ export function mergeFirestoreRules(
   if (range) {
     const before = existingSource.slice(0, range.start);
     const after = existingSource.slice(range.end);
-    const merged = `${before}${FIRESTORE_RULES_MANAGED_BLOCK}${after}`;
+    const merged = `${before}${managedBlock}${after}`;
     const preservedCustomRules =
-      normalizeWhitespace(merged) !== normalizeWhitespace(FIRESTORE_RULES);
+      normalizeWhitespace(merged) !== normalizeWhitespace(fullSource);
     return {
       status: 'merged',
       merged,
@@ -256,10 +353,10 @@ export function mergeFirestoreRules(
     };
   }
 
-  if (isLegacyRootCmsFirestoreRules(existingSource)) {
+  if (options.legacyHashes.has(fingerprintRules(existingSource))) {
     return {
       status: 'upgraded',
-      merged: FIRESTORE_RULES,
+      merged: fullSource,
       previousVersion,
       preservedCustomRules: false,
     };
@@ -271,12 +368,17 @@ export function mergeFirestoreRules(
     previousVersion,
     preservedCustomRules: false,
     reason:
-      'Existing Firestore rules contain custom rules without ' +
-      `${ROOT_CMS_RULES_START} / ${ROOT_CMS_RULES_END} markers. ` +
+      `Existing ${label} rules contain custom rules without ` +
+      `${MARKERS_LABEL} markers. ` +
       'Wrap the Root.js CMS section in those comments (or merge manually in ' +
       'the Firebase Console) so future updates preserve your custom rules.',
   };
 }
+
+/** Version-less marker names used in user-facing messages. */
+const MARKERS_LABEL =
+  '"// === BEGIN ROOT CMS MANAGED RULES (version: N) — DO NOT EDIT ===" / ' +
+  `"${ROOT_CMS_RULES_END}"`;
 
 const BEGIN_MARKER_GLOBAL_RE =
   /^[ \t]*\/\/\s*(?:===\s*BEGIN ROOT CMS MANAGED RULES\b[^\n]*|\[START root-cms\])[ \t]*$/gm;
@@ -324,72 +426,6 @@ function findMarkerRange(source: string): {start: number; end: number} | null {
       endMatch.index +
       endMatch[0].length,
   };
-}
-
-/**
- * Returns true if `source` appears to be an unmodified legacy (pre-marker)
- * Root.js CMS Firestore ruleset: inside `match /databases/{database}/documents`,
- * the only top-level `match` blocks are `/{document=**}` and `/Projects/{project}`
- * and there are no other sibling statements.
- */
-function isLegacyRootCmsFirestoreRules(source: string): boolean {
-  const stripped = stripComments(source).trim();
-  const docMatch = /match\s+\/databases\/\{database\}\/documents\s*\{/.exec(
-    stripped
-  );
-  if (!docMatch) {
-    return false;
-  }
-  const bodyStart = docMatch.index + docMatch[0].length;
-  const bodyEnd = findMatchingBrace(stripped, bodyStart - 1);
-  if (bodyEnd === -1) {
-    return false;
-  }
-
-  // Ensure nothing custom sits outside `match /databases/{database}/documents`.
-  const outer = (
-    stripped.slice(0, docMatch.index) + stripped.slice(bodyEnd + 1)
-  )
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (
-    outer !== "rules_version = '2'; service cloud.firestore { }" &&
-    outer !== 'rules_version = "2"; service cloud.firestore { }'
-  ) {
-    return false;
-  }
-
-  // Inspect top-level blocks inside `match /databases/{database}/documents`.
-  const body = stripped.slice(bodyStart, bodyEnd);
-  const topLevelPaths: string[] = [];
-  let i = 0;
-  while (i < body.length) {
-    while (i < body.length && /\s/.test(body[i])) {
-      i++;
-    }
-    if (i >= body.length) {
-      break;
-    }
-    const rest = body.slice(i);
-    const m = /^match\s+(\S+)\s*\{/.exec(rest);
-    if (!m) {
-      // Unexpected top-level function or statement outside `match /Projects/{project}`.
-      return false;
-    }
-    topLevelPaths.push(m[1]);
-    const openBrace = i + m[0].length - 1;
-    const closeBrace = findMatchingBrace(body, openBrace);
-    if (closeBrace === -1) {
-      return false;
-    }
-    i = closeBrace + 1;
-  }
-
-  const allowed = new Set(['/{document=**}', '/Projects/{project}']);
-  return (
-    topLevelPaths.includes('/Projects/{project}') &&
-    topLevelPaths.every((p) => allowed.has(p))
-  );
 }
 
 /** Strips `//` and `/* ... * /` comments while preserving string literals. */
@@ -442,41 +478,6 @@ function stripComments(source: string): string {
     }
   }
   return out;
-}
-
-function findMatchingBrace(source: string, openIndex: number): number {
-  let depth = 0;
-  let inSingle = false;
-  let inDouble = false;
-  for (let i = openIndex; i < source.length; i++) {
-    const ch = source[i];
-    const prev = i > 0 ? source[i - 1] : '';
-    if (inSingle) {
-      if (ch === "'" && prev !== '\\') {
-        inSingle = false;
-      }
-      continue;
-    }
-    if (inDouble) {
-      if (ch === '"' && prev !== '\\') {
-        inDouble = false;
-      }
-      continue;
-    }
-    if (ch === "'") {
-      inSingle = true;
-    } else if (ch === '"') {
-      inDouble = true;
-    } else if (ch === '{') {
-      depth++;
-    } else if (ch === '}') {
-      depth--;
-      if (depth === 0) {
-        return i;
-      }
-    }
-  }
-  return -1;
 }
 
 function normalizeWhitespace(source: string): string {

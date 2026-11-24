@@ -1,4 +1,4 @@
-import {FIRESTORE_RULES} from '../../core/security.js';
+import {FIRESTORE_RULES, mergeFirestoreRules} from '../../core/security.js';
 import {mutate, reuse, SetupContext} from './context.js';
 import {gcloudJson, isGcpError} from './gcp.js';
 import {validateSiteId} from './project.js';
@@ -74,6 +74,7 @@ export async function setupFirestoreAccess(ctx: SetupContext) {
     releaseId: 'cloud.firestore',
     fileName: 'firestore.rules',
     source: FIRESTORE_RULES,
+    merge: mergeFirestoreRules,
     consoleUrl: `https://console.firebase.google.com/project/${projectId}/firestore/databases/-default-/security/rules`,
   });
 
