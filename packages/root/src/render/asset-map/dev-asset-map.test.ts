@@ -191,3 +191,51 @@ test('collects CSS and JS deps safely across cyclic module graphs', async () => 
     '/elements/el-a/el-a.ts',
   ]);
 });
+
+test('clears memoized assets across event-loop turns when ModuleNode mutates', async () => {
+  const initialCss = createModuleNode(
+    path.join(rootDir, 'styles/initial.scss'),
+    '/styles/initial.scss'
+  );
+  const addedCss = createModuleNode(
+    path.join(rootDir, 'styles/added.scss'),
+    '/styles/added.scss'
+  );
+  const addedEl = createModuleNode(
+    path.join(rootDir, 'elements/added-el/added-el.ts'),
+    '/elements/added-el/added-el.ts'
+  );
+  const rootEl = createModuleNode(
+    path.join(rootDir, 'elements/root-el/root-el.ts'),
+    '/elements/root-el/root-el.ts',
+    [initialCss]
+  );
+
+  const byFile = new Map<string, Set<ModuleNode>>([
+    [rootEl.file!, new Set([rootEl])],
+  ]);
+  const graph = {
+    getModulesByFile: (file: string) => byFile.get(file),
+  } as unknown as ModuleGraph;
+  const map = new DevServerAssetMap({rootDir} as RootConfig, graph);
+
+  const first = map.get('elements/root-el/root-el.ts')!;
+  expect(await first.getCssDeps()).toEqual(['/styles/initial.scss']);
+  expect(await first.getJsDeps()).toEqual(['/elements/root-el/root-el.ts']);
+
+  // Simulate Vite mutating `importedModules` in-place on HMR or late transform.
+  rootEl.importedModules.add(addedCss);
+  rootEl.importedModules.add(addedEl);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const second = map.get('elements/root-el/root-el.ts')!;
+  expect(second).not.toBe(first);
+  expect(await second.getCssDeps()).toEqual([
+    '/styles/initial.scss',
+    '/styles/added.scss',
+  ]);
+  expect(await second.getJsDeps()).toEqual([
+    '/elements/root-el/root-el.ts',
+    '/elements/added-el/added-el.ts',
+  ]);
+});

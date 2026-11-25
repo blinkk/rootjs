@@ -21,7 +21,11 @@ import {
 } from '../middleware/middleware.js';
 import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
-import {getElements, getElementsDirs} from '../node/element-graph.js';
+import {
+  getElements,
+  getElementsDirs,
+  resolveRealPathSync,
+} from '../node/element-graph.js';
 import {loadRootConfigWithDeps} from '../node/load-config.js';
 import {collectPods} from '../node/pod-collector.js';
 import {createViteServer} from '../node/vite.js';
@@ -246,10 +250,18 @@ async function createViteMiddleware(options: {
 
   // Watch for file changes and re-generate the elements graph if any elements
   // are added or deleted, or invalidate cached deps when an element changes.
-  const elementsDirs = getElementsDirs(rootConfig, pods).map((dirPath) => {
-    const resolved = path.resolve(dirPath);
-    return resolved.endsWith(path.sep) ? resolved : `${resolved}${path.sep}`;
-  });
+  const elementsDirPrefixSet = new Set<string>();
+  for (const dirPath of getElementsDirs(rootConfig, pods)) {
+    for (const candidate of [
+      path.resolve(dirPath),
+      resolveRealPathSync(dirPath),
+    ]) {
+      elementsDirPrefixSet.add(
+        candidate.endsWith(path.sep) ? candidate : `${candidate}${path.sep}`
+      );
+    }
+  }
+  const elementsDirs = Array.from(elementsDirPrefixSet);
   function isInElementsDir(changedFilePath: string) {
     const filePath = path.resolve(changedFilePath);
     return elementsDirs.some((dirPrefix) => filePath.startsWith(dirPrefix));

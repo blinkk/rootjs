@@ -216,7 +216,7 @@ export async function getElements(
  * existing ancestor and appends the remaining relative segments so non-existent
  * paths under symlinked roots compare consistently.
  */
-function resolveRealPathSync(targetPath: string): string {
+export function resolveRealPathSync(targetPath: string): string {
   const resolved = path.resolve(targetPath);
   const tail: string[] = [];
   let current = resolved;

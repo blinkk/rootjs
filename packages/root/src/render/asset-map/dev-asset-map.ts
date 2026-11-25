@@ -11,6 +11,7 @@ export class DevServerAssetMap implements AssetMap {
   private moduleGraph: ModuleGraph;
   private workspaceRoot?: string;
   private assets = new Map<ModuleNode, DevServerAsset>();
+  private clearScheduled = false;
 
   constructor(rootConfig: RootConfig, moduleGraph: ModuleGraph) {
     this.rootConfig = rootConfig;
@@ -56,7 +57,9 @@ export class DevServerAssetMap implements AssetMap {
 
   /**
    * Returns the memoized `DevServerAsset` for a Vite `ModuleNode`, creating it
-   * on first access.
+   * on first access. Entries are cleared at the end of the event-loop turn so
+   * HMR edits or late-transformed modules are never served stale if this map
+   * is reused across requests.
    */
   getOrCreateAsset(viteModule: ModuleNode, src?: string): DevServerAsset {
     let asset = this.assets.get(viteModule);
@@ -68,8 +71,22 @@ export class DevServerAssetMap implements AssetMap {
         viteModule: viteModule,
       });
       this.assets.set(viteModule, asset);
+      if (!this.clearScheduled) {
+        this.clearScheduled = true;
+        setImmediate(() => {
+          this.clearScheduled = false;
+          this.assets.clear();
+        }).unref();
+      }
     }
     return asset;
+  }
+
+  /**
+   * Clears memoized `DevServerAsset` instances.
+   */
+  clear(): void {
+    this.assets.clear();
   }
 
   filePathToSrc(file: string) {
@@ -85,7 +102,11 @@ export class DevServerAssetMap implements AssetMap {
 /** Returns true when a path is contained by a directory. */
 function directoryContains(dir: string, file: string): boolean {
   const relativePath = path.relative(dir, file);
-  return relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`);
+  return (
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
 }
 
 export class DevServerAsset implements Asset {
