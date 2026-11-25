@@ -8,6 +8,7 @@ import {
   apiGetPrototypeBoard,
   apiGetPrototypeContext,
   apiMovePrototypeItems,
+  apiSavePrototypeFrame,
   takeInitialPrototypePrompt,
 } from '../../prototypes-client.js';
 import {PrototypeBoardPage} from './PrototypeBoardPage.js';
@@ -441,5 +442,138 @@ describe('PrototypeBoardPage', () => {
       expect(apiClearPrototypeAiChat).toHaveBeenCalledWith('pricing-board');
       expect(returnVisit.getByText('Design with Root AI')).not.toBeNull();
     });
+  });
+
+  it('renames a frame inline and supports Cmd+Z / Cmd+Shift+Z canvas undo and redo', async () => {
+    vi.mocked(apiSavePrototypeFrame).mockImplementation(async (input) => ({
+      id: input.frame.id || 'frame-a',
+      boardId: input.boardId,
+      pageId: input.frame.pageId || 'page-1',
+      title: input.frame.title || 'Pricing A',
+      width: input.frame.width || 400,
+      x: input.frame.x ?? 100,
+      y: input.frame.y ?? 100,
+      cachedHeight: 300,
+      blocks: input.frame.blocks || {_array: []},
+      createdAt: 1700000000000,
+      createdBy: 'editor@example.com',
+      updatedAt: 1700000009000,
+      updatedBy: 'editor@example.com',
+    }));
+
+    const view = render(
+      <ModalsProvider>
+        <PrototypeBoardPage boardId="pricing-board" />
+      </ModalsProvider>
+    );
+
+    await waitFor(() => {
+      expect(view.getByText('Pricing A')).not.toBeNull();
+    });
+
+    // Double-click the frame header title to rename inline.
+    fireEvent.dblClick(view.getByText('Pricing A'));
+    const titleInput = view.getByLabelText('Frame title') as HTMLInputElement;
+    expect(titleInput.value).toBe('Pricing A');
+
+    fireEvent.input(titleInput, {target: {value: 'Pricing Enterprise'}});
+    fireEvent.keyDown(titleInput, {key: 'Enter'});
+
+    await waitFor(() => {
+      expect(apiSavePrototypeFrame).toHaveBeenCalledWith({
+        boardId: 'pricing-board',
+        frame: {id: 'frame-a', title: 'Pricing Enterprise'},
+      });
+      expect(view.getByText('Pricing Enterprise')).not.toBeNull();
+    });
+
+    // Undo (Cmd+Z) restores "Pricing A".
+    fireEvent.keyDown(window, {key: 'z', metaKey: true});
+    await waitFor(() => {
+      expect(view.getByText('Pricing A')).not.toBeNull();
+      expect(apiSavePrototypeFrame).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          boardId: 'pricing-board',
+          frame: expect.objectContaining({id: 'frame-a', title: 'Pricing A'}),
+        })
+      );
+    });
+
+    // Redo (Cmd+Shift+Z) reapplies "Pricing Enterprise".
+    fireEvent.keyDown(window, {key: 'z', metaKey: true, shiftKey: true});
+    await waitFor(() => {
+      expect(view.getByText('Pricing Enterprise')).not.toBeNull();
+      expect(apiSavePrototypeFrame).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          boardId: 'pricing-board',
+          frame: expect.objectContaining({
+            id: 'frame-a',
+            title: 'Pricing Enterprise',
+          }),
+        })
+      );
+    });
+  });
+
+  it('steps between frames with ArrowRight/ArrowLeft and switches viewport width in full-screen preview', async () => {
+    const view = render(
+      <ModalsProvider>
+        <PrototypeBoardPage boardId="pricing-board" />
+      </ModalsProvider>
+    );
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('[data-frame-id="frame-a"]')
+      ).not.toBeNull();
+    });
+
+    const frameAEl = view.container.querySelector(
+      '[data-frame-id="frame-a"]'
+    ) as HTMLElement;
+    const expandBtn = frameAEl.querySelector(
+      'button[aria-label="Expand"]'
+    ) as HTMLButtonElement;
+    fireEvent.click(expandBtn);
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('.PrototypeBoardPage__fullscreenBar')
+      ).not.toBeNull();
+      expect(
+        document.querySelector('.PrototypeBoardPage__fullscreenCounter')
+          ?.textContent
+      ).toContain('1 / 2');
+    });
+
+    // ArrowRight steps to the second frame ("Pricing B") on the active page.
+    fireEvent.keyDown(window, {key: 'ArrowRight'});
+    await waitFor(() => {
+      expect(
+        document.querySelector('.PrototypeBoardPage__fullscreenCounter')
+          ?.textContent
+      ).toContain('2 / 2');
+      const iframe = document.querySelector(
+        '.PrototypeBoardPage__fullscreenStage iframe'
+      ) as HTMLIFrameElement;
+      expect(iframe.getAttribute('title')).toBe('Pricing B');
+      expect(window.location.search).toContain('frame=frame-b');
+    });
+
+    // Toggle viewport width between Tablet (768px) and Desktop (100%).
+    const tabletBtn = document.querySelector(
+      'button[aria-label="Tablet (768px)"]'
+    ) as HTMLButtonElement;
+    fireEvent.click(tabletBtn);
+    const iframe = document.querySelector(
+      '.PrototypeBoardPage__fullscreenStage iframe'
+    ) as HTMLIFrameElement;
+    expect(iframe.style.width).toBe('768px');
+
+    const desktopBtn = document.querySelector(
+      'button[aria-label="Desktop"]'
+    ) as HTMLButtonElement;
+    fireEvent.click(desktopBtn);
+    expect(iframe.style.width).toBe('100%');
   });
 });

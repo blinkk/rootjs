@@ -900,6 +900,12 @@ function buildPrototypeSystemPrompt(options: {
     lines.push(`- Description: ${options.board.description}`);
   }
 
+  if (options.board.seedDocId) {
+    lines.push(
+      `- Seed CMS document: "${options.board.seedDocId}" (read its live draft content via \`doc_get\` when referencing the existing page)`
+    );
+  }
+
   if (options.selectedFrameId) {
     const selectedFrame = options.frames.find(
       (f) => f.id === options.selectedFrameId
@@ -1150,6 +1156,19 @@ export function registerPrototypesApi(
         typeof req.body?.description === 'string' && req.body.description.trim()
           ? req.body.description.trim().slice(0, 1000)
           : undefined;
+      const rawSeedDocId =
+        typeof req.body?.seedDocId === 'string'
+          ? req.body.seedDocId.trim()
+          : '';
+      if (
+        rawSeedDocId &&
+        (!/^[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_/-]{1,160}$/.test(rawSeedDocId) ||
+          rawSeedDocId.includes('..'))
+      ) {
+        res.status(400).json({success: false, error: 'INVALID_SEED_DOC_ID'});
+        return;
+      }
+      const seedDocId = rawSeedDocId || undefined;
 
       try {
         const now = Date.now();
@@ -1174,6 +1193,7 @@ export function registerPrototypesApi(
           id,
           title: title.slice(0, 200),
           ...(description ? {description} : {}),
+          ...(seedDocId ? {seedDocId} : {}),
           status: 'active',
           pages: DEFAULT_PROTOTYPE_PAGES.map((p) => ({...p})),
           theme: defaultTheme,

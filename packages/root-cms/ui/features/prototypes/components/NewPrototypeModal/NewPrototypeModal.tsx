@@ -1,15 +1,17 @@
-import {IconSparkles} from '@tabler/icons-preact';
+import {IconFileText, IconSparkles, IconX} from '@tabler/icons-preact';
 import type {JSX} from 'preact';
-import {useEffect, useId, useState} from 'preact/hooks';
+import {useEffect, useId, useMemo, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import type {PrototypeBoardBundle} from '../../../../../shared/prototypes.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {Dialog} from '../../../../primitives/Dialog/Dialog.js';
+import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {Select} from '../../../../primitives/Select/Select.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {TextInput} from '../../../../primitives/TextInput/TextInput.js';
 import {showErrorNotification} from '../../../../utils/notifications.js';
+import {useDocPickerModal} from '../../../collections/components/DocPickerModal/useDocPickerModal.js';
 import {
   apiCreatePrototypeBoard,
   storeInitialPrototypePrompt,
@@ -62,6 +64,33 @@ function resolvePreferredModelId(
   return models[0].id;
 }
 
+/**
+ * Builds the initial Root AI prompt queued when creating a board, grounding
+ * generation on `seedDocId` when an existing CMS page was selected.
+ */
+export function buildSeededPrototypePrompt(
+  seedDocId: string,
+  userPrompt: string
+): string {
+  const docId = seedDocId.trim();
+  const trimmed = userPrompt.trim();
+  if (!docId) {
+    return trimmed;
+  }
+  if (!trimmed) {
+    return `/explore-variants Start from existing CMS document \`${docId}\` (read its live draft content via \`doc_get\` and inspect its site components via \`component_inspect\`), then generate 2–3 distinct layout explorations grounded in its real copy and structure.`;
+  }
+  if (trimmed.includes(docId)) {
+    return trimmed;
+  }
+  const skillMatch = trimmed.match(/^(\/[a-zA-Z0-9_-]+)(?:\s+([\s\S]*))?$/);
+  if (skillMatch) {
+    const [, skill, rest] = skillMatch;
+    return `${skill} Starting from existing CMS document \`${docId}\` (read its live draft content via \`doc_get\` and inspect its components via \`component_inspect\`): ${rest || 'explore layout variants.'}`;
+  }
+  return `Starting from existing CMS document \`${docId}\` (read its live draft content via \`doc_get\` and inspect its components via \`component_inspect\`): ${trimmed}`;
+}
+
 /** Props for `NewPrototypeModal`. */
 export interface NewPrototypeModalProps {
   /** Whether the modal dialog is open. */
@@ -73,14 +102,17 @@ export interface NewPrototypeModalProps {
 }
 
 /**
- * Modal dialog for creating a new UX prototype board, with AI model selection
- * and an optional initial Root AI prompt that auto-queues when the board opens.
+ * Modal dialog for creating a new UX prototype board, with optional seeding
+ * from an existing CMS document, AI model selection, and an initial Root AI
+ * prompt that auto-queues when the board opens.
  */
 export function NewPrototypeModal(props: NewPrototypeModalProps) {
   const {route} = useLocation();
+  const docPickerModal = useDocPickerModal();
   const formId = useId();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [seedDocId, setSeedDocId] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
   const [models, setModels] = useState<ModalModelOption[]>(
     () => getInitialCtxModels().models
@@ -92,6 +124,13 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
   const [titleError, setTitleError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const availableCollections = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+    return Object.keys(window.__ROOT_CTX?.collections || {});
+  }, [props.open]);
+
   // Reset form fields and sync available AI models each time the dialog opens.
   useEffect(() => {
     if (!props.open) {
@@ -99,6 +138,7 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
     }
     setTitle('');
     setDescription('');
+    setSeedDocId('');
     setInitialPrompt('');
     setTitleError('');
     setSubmitting(false);
@@ -150,6 +190,34 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
     props.onClose();
   }
 
+  function openSeedDocPicker() {
+    docPickerModal.open({
+      enableSearch: true,
+      enableSort: true,
+      enableStatusBadges: true,
+      enableCreate: false,
+      initialCollection: availableCollections.includes('Pages')
+        ? 'Pages'
+        : undefined,
+      selectedDocIds: seedDocId ? [seedDocId] : undefined,
+      onChange: (docId: string) => {
+        setSeedDocId(docId);
+        setTitle((prev) => {
+          if (prev.trim()) {
+            return prev;
+          }
+          const rawSlug = docId.split('/').slice(1).join('/') || docId;
+          const humanized = rawSlug.replace(/[-_/]+/g, ' ').trim();
+          return humanized
+            ? humanized.charAt(0).toUpperCase() + humanized.slice(1)
+            : prev;
+        });
+        setTitleError('');
+        docPickerModal.close();
+      },
+    });
+  }
+
   async function handleSubmit(e: JSX.TargetedEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) {
@@ -163,7 +231,11 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
     }
 
     const trimmedDescription = description.trim();
-    const trimmedPrompt = initialPrompt.trim();
+    const trimmedSeedDocId = seedDocId.trim();
+    const effectivePrompt =
+      models.length > 0
+        ? buildSeededPrototypePrompt(trimmedSeedDocId, initialPrompt)
+        : initialPrompt.trim();
 
     if (selectedModelId && typeof window !== 'undefined') {
       try {
@@ -182,12 +254,13 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
       const created = await apiCreatePrototypeBoard({
         title: trimmedTitle,
         description: trimmedDescription || undefined,
-        initialPrompt: trimmedPrompt || undefined,
+        seedDocId: trimmedSeedDocId || undefined,
+        initialPrompt: effectivePrompt || undefined,
       });
       props.onCreated?.(created);
       props.onClose();
-      if (trimmedPrompt) {
-        storeInitialPrototypePrompt(created.board.id, trimmedPrompt);
+      if (effectivePrompt) {
+        storeInitialPrototypePrompt(created.board.id, effectivePrompt);
       }
       route(`/cms/prototypes/${created.board.id}`);
     } catch (err) {
@@ -268,6 +341,63 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
           value={description}
           onInput={(e) => setDescription(e.currentTarget.value)}
         />
+        {availableCollections.length > 0 && (
+          <div className="NewPrototypeModal__seedField flex flex-col gap-1.5">
+            <div className="text-sm font-medium text-strong">
+              Start from existing page
+            </div>
+            <div className="text-xs text-muted">
+              Optional. Grounds Root AI on an existing CMS document&apos;s live
+              draft copy and components.
+            </div>
+            {seedDocId ? (
+              <div className="NewPrototypeModal__seedSelected flex items-center justify-between gap-2 rounded-md border border-border bg-page px-3 py-1.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <IconFileText
+                    size={16}
+                    className="shrink-0 text-muted"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 truncate font-mono text-sm text-strong">
+                    {seedDocId}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="subtle"
+                    size="xs"
+                    disabled={submitting}
+                    onClick={openSeedDocPicker}
+                  >
+                    Change
+                  </Button>
+                  <IconButton
+                    size="xs"
+                    variant="subtle"
+                    label="Clear seed page"
+                    disabled={submitting}
+                    onClick={() => setSeedDocId('')}
+                  >
+                    <IconX />
+                  </IconButton>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="default"
+                size="md"
+                className="NewPrototypeModal__seedPickerButton self-start"
+                icon={<IconFileText />}
+                disabled={submitting}
+                onClick={openSeedDocPicker}
+              >
+                Choose CMS document…
+              </Button>
+            )}
+          </div>
+        )}
         {models.length > 0 && (
           <Select
             className="NewPrototypeModal__modelSelect"
@@ -298,7 +428,11 @@ export function NewPrototypeModal(props: NewPrototypeModalProps) {
               </Badge>
             </span>
           }
-          description="Optional. Queues automatically in Root AI as soon as the board opens."
+          description={
+            seedDocId
+              ? 'Optional. Leave blank to explore layout variants directly from the selected CMS page.'
+              : 'Optional. Queues automatically in Root AI as soon as the board opens.'
+          }
           placeholder="Explore two pricing page layouts with a 3-tier comparison matrix and FAQ band..."
           size="md"
           autosize

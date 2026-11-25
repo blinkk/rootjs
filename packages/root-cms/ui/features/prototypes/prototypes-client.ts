@@ -74,6 +74,7 @@ export async function apiGetPrototypeBoard(
 export async function apiCreatePrototypeBoard(input: {
   title: string;
   description?: string;
+  seedDocId?: string;
   initialPrompt?: string;
 }): Promise<PrototypeBoardBundle> {
   return postJson<PrototypeBoardBundle>('/cms/api/prototypes.create', input);

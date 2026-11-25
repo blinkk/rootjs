@@ -165,13 +165,26 @@ describe('registerPrototypesApi integration', () => {
     });
     expect(viewerCreate.status).toBe(403);
 
-    // EDITOR creates the board (seeded with a single "Page 1").
+    // Invalid seedDocId format is rejected with 400.
+    const badSeed = await callApi({
+      path: '/cms/api/prototypes.create',
+      email: 'editor@example.com',
+      body: {title: 'Bad Seed', seedDocId: '../Pages/pricing'},
+    });
+    expect(badSeed.status).toBe(400);
+
+    // EDITOR creates the board (seeded with a single "Page 1" and optional seedDocId).
     const created = await callApi({
       path: '/cms/api/prototypes.create',
       email: 'editor@example.com',
-      body: {title: 'Pricing Page Refresh', description: 'Q4 pricing options'},
+      body: {
+        title: 'Pricing Page Refresh',
+        description: 'Q4 pricing options',
+        seedDocId: 'Pages/pricing',
+      },
     });
     expect(created.status).toBe(200);
+    expect(created.body.data.board.seedDocId).toBe('Pages/pricing');
     expect(created.body.data.board.pages).toEqual([
       {id: 'page-1', name: 'Page 1'},
     ]);

@@ -49,6 +49,17 @@ vi.mock('../../../users/useUserProfile.js', () => ({
   useUserProfiles: () => ({profiles: new Map(), loading: false}),
 }));
 
+const mockOpenDocPicker = vi.fn();
+vi.mock(
+  '../../../collections/components/DocPickerModal/useDocPickerModal.js',
+  () => ({
+    useDocPickerModal: vi.fn(() => ({
+      open: mockOpenDocPicker,
+      close: vi.fn(),
+    })),
+  })
+);
+
 vi.mock('../../prototypes-client.js', () => ({
   apiListPrototypeBoards: vi.fn(),
   apiCreatePrototypeBoard: vi.fn(),
@@ -246,6 +257,74 @@ describe('PrototypesPage', () => {
       'Explore two hero layouts'
     );
     expect(mockRoute).toHaveBeenCalledWith('/cms/prototypes/new-board-1');
+  });
+
+  it('seeds a new prototype from an existing CMS document and grounds the initial prompt', async () => {
+    (window as any).__ROOT_CTX = {
+      collections: {
+        Pages: {id: 'Pages', name: 'Pages'},
+      },
+      ai: {
+        defaultModel: 'claude-sonnet-5',
+        models: [
+          {
+            id: 'claude-sonnet-5',
+            label: 'Claude Sonnet 5',
+            provider: 'anthropic',
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+        ],
+      },
+    };
+    mockOpenDocPicker.mockImplementation(
+      (opts?: {onChange?: (docId: string) => void}) => {
+        opts?.onChange?.('Pages/pricing');
+      }
+    );
+    vi.mocked(apiCreatePrototypeBoard).mockResolvedValue({
+      board: {
+        id: 'seeded-board',
+        title: 'Pricing refresh',
+        seedDocId: 'Pages/pricing',
+        status: 'active',
+        pages: [{id: 'page-1', name: 'Page 1'}],
+        theme: {},
+        createdAt: 1700004000000,
+        createdBy: 'editor@example.com',
+        updatedAt: 1700004000000,
+        updatedBy: 'editor@example.com',
+      },
+      frames: [],
+      components: {},
+      comments: [],
+      annotations: [],
+    });
+
+    const {findByText, getByRole} = renderPage();
+    await findByText('Pricing page refresh');
+
+    fireEvent.click(getByRole('button', {name: 'New prototype'}));
+    fireEvent.click(getByRole('button', {name: 'Choose CMS document…'}));
+    await findByText('Pages/pricing');
+
+    await act(async () => {
+      fireEvent.click(getByRole('button', {name: 'Create prototype'}));
+    });
+
+    await waitFor(() => {
+      expect(apiCreatePrototypeBoard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Pricing',
+          seedDocId: 'Pages/pricing',
+          initialPrompt: expect.stringContaining('Pages/pricing'),
+        })
+      );
+    });
+    expect(storeInitialPrototypePrompt).toHaveBeenCalledWith(
+      'seeded-board',
+      expect.stringContaining('Pages/pricing')
+    );
+    expect(mockRoute).toHaveBeenCalledWith('/cms/prototypes/seeded-board');
   });
 
   it('supports duplicating, archiving, and deleting a board from its menu', async () => {
