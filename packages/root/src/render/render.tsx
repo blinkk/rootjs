@@ -386,7 +386,7 @@ export class Renderer {
     route: Route,
     options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
-    const routeParams = options.routeParams;
+    const routeParams = {...options.routeParams};
     if (route.locale) {
       routeParams.$locale = route.locale;
     }

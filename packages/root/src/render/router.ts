@@ -181,7 +181,14 @@ export class Router {
         staticPathsPromise = routeModule.getStaticPaths({
           rootConfig: this.rootConfig,
         });
-        cache?.set(routeModule, staticPathsPromise);
+        if (cache) {
+          cache.set(routeModule, staticPathsPromise);
+          staticPathsPromise.catch(() => {
+            if (cache.get(routeModule) === staticPathsPromise) {
+              cache.delete(routeModule);
+            }
+          });
+        }
       }
       const staticPaths = await staticPathsPromise;
       if (staticPaths.paths) {
@@ -198,7 +205,7 @@ export class Router {
             } else {
               urlPaths.push({
                 urlPath: normalizeUrlPath(urlPath, {trailingSlash}),
-                params: pathParams.params || {},
+                params: {...(pathParams.params || {})},
               });
             }
           }
