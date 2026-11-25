@@ -182,4 +182,54 @@ describe('BatchResponse.getTranslations', () => {
     expect(Object.hasOwn(result, 'valueOf')).toBe(true);
     expect(result.valueOf).toBe('valueOf');
   });
+
+  it('preserves first-seen source when docs share a hash with whitespace variants', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      generic: {
+        en: {
+          id: 'generic',
+          locale: 'en',
+          strings: {
+            h1: {source: 'Hello', translation: 'Hello'},
+          },
+        },
+      },
+      'Pages/a': {
+        fr: {
+          id: 'Pages/a',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Hello ', translation: 'Bonjour'},
+          },
+        },
+      },
+    };
+    expect(res.getTranslations(['fr', 'en'])).toEqual({Hello: 'Bonjour'});
+  });
+
+  it('does not let a fallback locale in a tagged doc clobber a target locale from generic', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      generic: {
+        fr: {
+          id: 'generic',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Hello', translation: 'Salut'},
+          },
+        },
+      },
+      'Pages/a': {
+        en: {
+          id: 'Pages/a',
+          locale: 'en',
+          strings: {
+            h1: {source: 'Hello', translation: 'Hi'},
+          },
+        },
+      },
+    };
+    expect(res.getTranslations(['fr', 'en'])).toEqual({Hello: 'Salut'});
+  });
 });

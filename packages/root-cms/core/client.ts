@@ -5049,54 +5049,52 @@ export class BatchResponse {
       return {};
     }
 
-    // Accumulate into a Map so keys like `__proto__`, `constructor`, and
-    // `toString` are handled safely without prototype collisions, then convert
-    // back to a plain object via `Object.fromEntries()`.
-    const entries = new Map<string, string>();
-
-    // Apply translations in reverse fallback order (lowest priority first) and
-    // forward doc precedence order (generic first, doc-specific last) so that
-    // higher-priority locales and later docs override earlier ones without
-    // allocating intermediate hash maps.
-    for (let i = fallbackLocales.length - 1; i >= 0; i--) {
-      const fallbackLocale = fallbackLocales[i];
-      for (let g = 0; g < translationDocGroups.length; g++) {
-        const strings = translationDocGroups[g][fallbackLocale]?.strings;
-        if (!strings) {
-          continue;
-        }
-        for (const hash in strings) {
-          const entry = strings[hash];
-          if (entry.translation) {
-            entries.set(entry.source, entry.translation);
-          } else if (!entries.has(entry.source)) {
-            entries.set(entry.source, entry.source);
-          }
-        }
-      }
-    }
-
-    // Ensure strings that only appear in locale docs outside `fallbackLocales`
-    // still fall back to their source string.
+    // Merge strings keyed by hash in first-seen doc order so legacy/imported
+    // docs sharing a normalized hash preserve the first-seen source string and
+    // key order. Tracking the best fallback rank per hash avoids allocating a
+    // nested per-locale map for every string while preserving exact fallback
+    // priority and later-doc override semantics.
+    const byHash = new Map<
+      string,
+      {source: string; bestRank: number; translation: string}
+    >();
     for (let g = 0; g < translationDocGroups.length; g++) {
       const localeDocs = translationDocGroups[g];
       for (const localeKey in localeDocs) {
-        if (fallbackLocales.includes(localeKey)) {
-          continue;
-        }
-        const strings = localeDocs[localeKey]?.strings;
+        const localeDoc = localeDocs[localeKey];
+        const strings = localeDoc?.strings;
         if (!strings) {
           continue;
         }
+        const rank = fallbackLocales.indexOf(localeDoc.locale);
         for (const hash in strings) {
-          const source = strings[hash].source;
-          if (!entries.has(source)) {
-            entries.set(source, source);
+          const entry = strings[hash];
+          const item = byHash.get(hash);
+          if (!item) {
+            const hasMatch = rank !== -1 && Boolean(entry.translation);
+            byHash.set(hash, {
+              source: entry.source,
+              bestRank: hasMatch ? rank : Infinity,
+              translation: hasMatch ? entry.translation : entry.source,
+            });
+          } else if (
+            rank !== -1 &&
+            entry.translation &&
+            rank <= item.bestRank
+          ) {
+            item.bestRank = rank;
+            item.translation = entry.translation;
           }
         }
       }
     }
 
+    // Convert via a Map + `Object.fromEntries()` so keys like `__proto__`,
+    // `constructor`, and `toString` are defined as own properties safely.
+    const entries = new Map<string, string>();
+    for (const item of byHash.values()) {
+      entries.set(item.source, item.translation);
+    }
     return Object.fromEntries(entries);
   }
 }
