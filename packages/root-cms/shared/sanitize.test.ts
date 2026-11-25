@@ -71,6 +71,13 @@ describe('sanitizeInlineHtml', () => {
     expect(out).not.toContain('<img');
     expect(out).not.toContain('onerror');
   });
+
+  it('preserves plain text verbatim and still escapes lone <, >, and &', () => {
+    const plain = 'Plain "quotes", \'apostrophes\', café 日本語 —\nnewlines.';
+    expect(sanitizeInlineHtml(plain)).toBe(plain);
+    expect(sanitizeInlineHtml('a < b > c & d')).toBe('a &lt; b &gt; c &amp; d');
+    expect(sanitizeInlineHtml('AT&amp;T &nbsp;')).toBe('AT&amp;T \u00a0');
+  });
 });
 
 describe('sanitizeBlockHtml', () => {

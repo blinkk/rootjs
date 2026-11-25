@@ -74,6 +74,31 @@ const COMMON_OPTIONS: IOptions = {
   },
 };
 
+const INLINE_OPTIONS: IOptions = {
+  ...COMMON_OPTIONS,
+  allowedTags: INLINE_TAGS,
+  allowedAttributes: ALLOWED_ATTRIBUTES,
+};
+
+const BLOCK_OPTIONS: IOptions = {
+  ...COMMON_OPTIONS,
+  allowedTags: BLOCK_TAGS,
+  allowedAttributes: ALLOWED_ATTRIBUTES,
+};
+
+/**
+ * Returns true if the input contains no HTML syntax or entity characters
+ * (`<`, `>`, `&`), in which case `sanitize-html` returns the string verbatim.
+ */
+function isPlainText(html: string): boolean {
+  return (
+    typeof html === 'string' &&
+    !html.includes('<') &&
+    !html.includes('&') &&
+    !html.includes('>')
+  );
+}
+
 /**
  * Sanitizes a string of HTML intended for inline formatting contexts
  * (paragraph text, list items, headings). Strips scripts, event handlers
@@ -83,11 +108,10 @@ export function sanitizeInlineHtml(html: string): string {
   if (!html) {
     return '';
   }
-  return sanitizeHtml(html, {
-    ...COMMON_OPTIONS,
-    allowedTags: INLINE_TAGS,
-    allowedAttributes: ALLOWED_ATTRIBUTES,
-  });
+  if (isPlainText(html)) {
+    return html;
+  }
+  return sanitizeHtml(html, INLINE_OPTIONS);
 }
 
 /**
@@ -99,9 +123,8 @@ export function sanitizeBlockHtml(html: string): string {
   if (!html) {
     return '';
   }
-  return sanitizeHtml(html, {
-    ...COMMON_OPTIONS,
-    allowedTags: BLOCK_TAGS,
-    allowedAttributes: ALLOWED_ATTRIBUTES,
-  });
+  if (isPlainText(html)) {
+    return html;
+  }
+  return sanitizeHtml(html, BLOCK_OPTIONS);
 }
