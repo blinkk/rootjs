@@ -5050,6 +5050,22 @@ export class BatchResponse {
       return localeTranslations;
     }
 
+    // Use `Object.defineProperty` for `__proto__` so assigning a source string
+    // named `__proto__` defines an own property instead of invoking the
+    // `Object.prototype.__proto__` setter.
+    const setLocaleTranslation = (key: string, value: string) => {
+      if (key === '__proto__') {
+        Object.defineProperty(localeTranslations, key, {
+          value,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      } else {
+        localeTranslations[key] = value;
+      }
+    };
+
     // Apply translations in reverse fallback order (lowest priority first) and
     // forward doc precedence order (generic first, doc-specific last) so that
     // higher-priority locales and later docs override earlier ones without
@@ -5064,9 +5080,9 @@ export class BatchResponse {
         for (const hash in strings) {
           const entry = strings[hash];
           if (entry.translation) {
-            localeTranslations[entry.source] = entry.translation;
+            setLocaleTranslation(entry.source, entry.translation);
           } else if (!Object.hasOwn(localeTranslations, entry.source)) {
-            localeTranslations[entry.source] = entry.source;
+            setLocaleTranslation(entry.source, entry.source);
           }
         }
       }
@@ -5087,7 +5103,7 @@ export class BatchResponse {
         for (const hash in strings) {
           const source = strings[hash].source;
           if (!Object.hasOwn(localeTranslations, source)) {
-            localeTranslations[source] = source;
+            setLocaleTranslation(source, source);
           }
         }
       }

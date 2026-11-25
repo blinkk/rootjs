@@ -147,4 +147,39 @@ describe('BatchResponse.getTranslations', () => {
     };
     expect(res.getTranslations('fr-CA')).toEqual({Save: 'Enregistrer'});
   });
+
+  it('handles Object.prototype and __proto__ source strings safely', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      common: {
+        fr: {
+          id: 'common',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'constructor', translation: ''},
+            h2: {source: 'toString', translation: 'enChaîne'},
+            h3: {source: '__proto__', translation: 'proto-fr'},
+          },
+        },
+        de: {
+          id: 'common',
+          locale: 'de',
+          strings: {
+            h4: {source: 'valueOf', translation: 'WertVon'},
+          },
+        },
+      },
+    };
+    const result = res.getTranslations(['fr']);
+    expect(Object.hasOwn(result, 'constructor')).toBe(true);
+    expect(result.constructor).toBe('constructor');
+    expect(Object.hasOwn(result, 'toString')).toBe(true);
+    expect(result.toString).toBe('enChaîne');
+    expect(Object.hasOwn(result, '__proto__')).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(result, '__proto__')?.value).toBe(
+      'proto-fr'
+    );
+    expect(Object.hasOwn(result, 'valueOf')).toBe(true);
+    expect(result.valueOf).toBe('valueOf');
+  });
 });

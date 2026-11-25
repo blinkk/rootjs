@@ -48,7 +48,10 @@ export function useTranslations() {
     for (let i = 0; i < beforeTranslateFns.length; i++) {
       input = beforeTranslateFns[i](input);
     }
-    let translation = translations[input] ?? input ?? '';
+    const mapped = Object.hasOwn(translations, input)
+      ? translations[input]
+      : undefined;
+    let translation = mapped ?? input ?? '';
     for (let i = 0; i < afterTranslateFns.length; i++) {
       translation = afterTranslateFns[i](translation);
     }
@@ -161,7 +164,7 @@ function replaceStringParams(
   params: Record<string, string | number>
 ): string {
   return str.replace(/{([^}]+)}/g, (match, key) => {
-    if (key in params) {
+    if (Object.hasOwn(params, key)) {
       return String(params[key]);
     }
     return match;

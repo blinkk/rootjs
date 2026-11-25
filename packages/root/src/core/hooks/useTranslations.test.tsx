@@ -94,4 +94,33 @@ describe('useTranslations', () => {
 
     expect(html).toBe('<p>[Hi Bob!]</p>');
   });
+
+  it('handles Object.prototype keys safely for source strings and params', () => {
+    function Sample() {
+      const t = useTranslations();
+      return (
+        <div>
+          <span>{t('constructor')}</span>
+          <span>{t('toString')}</span>
+          <span>{t('__proto__')}</span>
+          <span>{t('Class {constructor} for {name}', {name: 'Bob'})}</span>
+        </div>
+      );
+    }
+
+    const html = renderToString(
+      <I18N_CONTEXT.Provider value={{locale: 'en', translations: {}}}>
+        <Sample />
+      </I18N_CONTEXT.Provider>
+    );
+
+    expect(html).toBe(
+      '<div>' +
+        '<span>constructor</span>' +
+        '<span>toString</span>' +
+        '<span>__proto__</span>' +
+        '<span>Class {constructor} for Bob</span>' +
+        '</div>'
+    );
+  });
 });
