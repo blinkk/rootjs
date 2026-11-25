@@ -214,8 +214,22 @@ export interface Route {
   /** The relative path to the route file, e.g. `routes/index.tsx`. */
   src: string;
 
-  /** The imported route module. */
+  /**
+   * The imported route module. Eagerly populated in production builds and for
+   * routes that export `config`. In dev mode (`root dev`), routes without a
+   * `config` export start as `{}` and are lazily populated via
+   * `ensureRouteModule(route)` (or `route.loadModule()`) before rendering.
+   */
   module: RouteModule;
+
+  /**
+   * Lazy loader for the route module, set in dev mode (`root dev`) to defer
+   * importing route modules until they are actually requested. Call
+   * `ensureRouteModule(route)` from `@blinkk/root/render` (or invoke
+   * `route.loadModule()` directly) before inspecting `route.module` in custom
+   * dev middleware.
+   */
+  loadModule?: () => Promise<RouteModule>;
 
   /** The locale used for the route. */
   locale: string;
