@@ -2,7 +2,7 @@ import {AsyncLocalStorage} from 'node:async_hooks';
 import crypto from 'node:crypto';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {
   ConfigureServerOptions,
@@ -13,7 +13,6 @@ import {
   RootConfig,
   Server,
 } from '@blinkk/root';
-import {viteSsrLoadModule} from '@blinkk/root/node';
 import bodyParser from 'body-parser';
 import {
   App,
@@ -157,12 +156,17 @@ interface DevViteServer {
   ssrLoadModule: (url: string) => Promise<Record<string, any>>;
 }
 
-async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
-  const modulePath = path.resolve(__dirname, './project.js');
-  const project = await viteSsrLoadModule<ProjectModule>(
-    rootConfig,
-    modulePath
-  );
+/**
+ * Writes collection schema JSON files to `dist/collections/*.schema.json`
+ * from the already-bundled `dist/server/project.js` module, avoiding a
+ * throwaway Vite dev server boot during `root build`.
+ */
+async function writeCollectionSchemasToJson(
+  rootConfig: RootConfig,
+  projectBundlePath: string
+) {
+  const projectUrl = `${pathToFileURL(projectBundlePath).href}?t=${Date.now()}`;
+  const project = (await import(projectUrl)) as ProjectModule;
 
   const outDir = path.join(rootConfig.rootDir, 'dist', 'collections');
   await fs.mkdir(outDir, {recursive: true});
@@ -1298,6 +1302,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     res.redirect(`/cms/login?${params.toString()}`);
   }
 
+  // Captured in `preBuild` and consumed by the `writeBundle` vite plugin hook
+  // once `dist/server/project.js` is written, so schemas and v2 translations
+  // migration finish before SSG renders pages without booting a throwaway
+  // Vite dev server.
+  let buildRootConfig: RootConfig | null = null;
+
   const plugin: CMSPlugin = {
     name: 'root-cms',
 
@@ -1353,51 +1363,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
     hooks: {
       /**
-       * Saves collection schema files from `collections/*.schema.ts` to
-       * `dist/collections/*.schema.json` for prod builds.
+       * Captures `rootConfig` so the `writeBundle` vite plugin hook can emit
+       * `dist/collections/*.schema.json` and run any build-time migrations
+       * once `dist/server/project.js` is bundled.
        */
       preBuild: async (rootConfig: RootConfig) => {
-        await writeCollectionSchemasToJson(rootConfig);
-
-        // When the v2 translations manager is enabled, migrate v1
-        // translations before the build (SSG reads translations at build
-        // time). A failure fails the build. Projects that haven't been
-        // connected to Firebase yet (e.g. a new project from the starter
-        // template) have nothing to migrate, so they're skipped.
-        if (
-          options.experiments?.v2TranslationsManager &&
-          !isPlaceholderFirebaseProject(options.firebaseConfig)
-        ) {
-          const {migrateV1TranslationsIfNeeded} =
-            await import('./translations-migration.js');
-          const cmsClient = new RootCMSClient(rootConfig);
-          try {
-            await migrateV1TranslationsIfNeeded(cmsClient, {
-              trigger: 'build',
-              // Schemas were written to `dist/collections` above.
-              getCollectionSchema: (collectionId) =>
-                readBuiltCollectionSchema(rootConfig.rootDir, collectionId),
-              cacheDir: translationsMigrationCacheDir(rootConfig.rootDir),
-            });
-          } catch (err) {
-            const {isFirestoreAuthError} =
-              await import('./translations-migration.js');
-            let message = '[root cms] v1 -> v2 translations migration failed.';
-            if (isFirestoreAuthError(err)) {
-              message +=
-                ' the build requires Firestore access when ' +
-                '`v2TranslationsManager` is enabled — ensure application ' +
-                'default credentials (ADC) are available, e.g. run ' +
-                '`gcloud auth application-default login` or set ' +
-                'GOOGLE_APPLICATION_CREDENTIALS.';
-            }
-            message +=
-              ' to use the legacy v1 translations system, remove ' +
-              '`{experiments: {v2TranslationsManager: true}}`.';
-            console.error(message);
-            throw err;
-          }
-        }
+        buildRootConfig = rootConfig;
       },
 
       /**
@@ -1415,8 +1386,71 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     ssrInput: () => {
       return {
         cms: path.resolve(__dirname, './app.js'),
+        project: path.resolve(__dirname, './project.js'),
       };
     },
+
+    vitePlugins: [
+      {
+        name: 'root-cms:write-collection-schemas',
+        async writeBundle(outputOptions, bundle) {
+          if (!buildRootConfig || !('project.js' in bundle)) {
+            return;
+          }
+          const outDir = outputOptions.dir;
+          if (!outDir) {
+            return;
+          }
+          const rootConfig = buildRootConfig;
+          buildRootConfig = null;
+          await writeCollectionSchemasToJson(
+            rootConfig,
+            path.join(outDir, 'project.js')
+          );
+
+          // When the v2 translations manager is enabled, migrate v1
+          // translations before SSG renders pages (SSG reads translations at
+          // build time). A failure fails the build. Projects that haven't been
+          // connected to Firebase yet (e.g. a new project from the starter
+          // template) have nothing to migrate, so they're skipped.
+          if (
+            options.experiments?.v2TranslationsManager &&
+            !isPlaceholderFirebaseProject(options.firebaseConfig)
+          ) {
+            const {migrateV1TranslationsIfNeeded} =
+              await import('./translations-migration.js');
+            const cmsClient = new RootCMSClient(rootConfig);
+            try {
+              await migrateV1TranslationsIfNeeded(cmsClient, {
+                trigger: 'build',
+                // Schemas were written to `dist/collections` above.
+                getCollectionSchema: (collectionId) =>
+                  readBuiltCollectionSchema(rootConfig.rootDir, collectionId),
+                cacheDir: translationsMigrationCacheDir(rootConfig.rootDir),
+              });
+            } catch (err) {
+              const {isFirestoreAuthError} =
+                await import('./translations-migration.js');
+              let message =
+                '[root cms] v1 -> v2 translations migration failed.';
+              if (isFirestoreAuthError(err)) {
+                message +=
+                  ' the build requires Firestore access when ' +
+                  '`v2TranslationsManager` is enabled — ensure application ' +
+                  'default credentials (ADC) are available, e.g. run ' +
+                  '`gcloud auth application-default login` or set ' +
+                  'GOOGLE_APPLICATION_CREDENTIALS.';
+              }
+              message +=
+                ' to use the legacy v1 translations system, remove ' +
+                '`{experiments: {v2TranslationsManager: true}}`.';
+              console.error(message);
+              throw err;
+            }
+          }
+        },
+      },
+    ],
 
     /**
      * Attaches CMS-specific middleware to the Root.js server.
