@@ -323,6 +323,9 @@ async function createViteMiddleware(options: {
   let cachedInvalidationTimestamp = -1;
   let cachedHmrTimestamp = -1;
   let inFlightRenderer: Promise<Renderer> | null = null;
+  let inFlightElementGraph: ElementGraph | null = null;
+  let inFlightInvalidationTimestamp = 0;
+  let inFlightHmrTimestamp = 0;
 
   /**
    * Lazily loads `render.js` through Vite's SSR loader and returns a cached
@@ -353,7 +356,16 @@ async function createViteMiddleware(options: {
       return cachedRenderer;
     }
 
-    if (inFlightRenderer) {
+    // Only join an in-flight load if nothing was invalidated after it started,
+    // otherwise a request made after an edit would be served the stale module.
+    const startInvalidationTimestamp = ssrMod?.lastInvalidationTimestamp ?? 0;
+    const startHmrTimestamp = ssrMod?.lastHMRTimestamp ?? 0;
+    if (
+      inFlightRenderer &&
+      inFlightElementGraph === elementGraph &&
+      inFlightInvalidationTimestamp === startInvalidationTimestamp &&
+      inFlightHmrTimestamp === startHmrTimestamp
+    ) {
       return inFlightRenderer;
     }
 
@@ -411,6 +423,9 @@ async function createViteMiddleware(options: {
     })();
 
     inFlightRenderer = loadPromise;
+    inFlightElementGraph = elementGraph;
+    inFlightInvalidationTimestamp = startInvalidationTimestamp;
+    inFlightHmrTimestamp = startHmrTimestamp;
     try {
       return await loadPromise;
     } finally {

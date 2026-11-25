@@ -135,6 +135,56 @@ test('dev server defers SSR renderer for Vite and public assets, caches it, and 
   expect(missingAsset.body).toBe('404');
 });
 
+test('request made after an invalidation does not join a stale in-flight renderer load', async () => {
+  const viteServer = app.get('viteServer');
+  const ssrGraph = viteServer.environments.ssr.moduleGraph;
+  const invalidateRoute = () => {
+    const mods = ssrGraph.getModulesByFile(
+      path.join(tempDir, 'routes/index.tsx')
+    );
+    expect(mods?.size).toBeGreaterThan(0);
+    mods.forEach((mod: any) => ssrGraph.invalidateModule(mod));
+  };
+
+  // Drop spies left by earlier tests so the real loader is wrapped below.
+  vi.restoreAllMocks();
+
+  // Hold the first load open after it has evaluated the render module.
+  let releaseFirstLoad = () => {};
+  const firstLoadGate = new Promise<void>((resolve) => {
+    releaseFirstLoad = resolve;
+  });
+  const ssrLoadModule = viteServer.ssrLoadModule.bind(viteServer);
+  let loads = 0;
+  const ssrLoadSpy = vi
+    .spyOn(viteServer, 'ssrLoadModule')
+    .mockImplementation(async (...args: any[]) => {
+      const isFirstLoad = ++loads === 1;
+      const mod = await ssrLoadModule(...args);
+      if (isFirstLoad) {
+        await firstLoadGate;
+      }
+      return mod;
+    });
+
+  try {
+    invalidateRoute();
+    const first = fetchPath('/');
+    await vi.waitFor(() => expect(loads).toBe(1));
+
+    // A request arriving after a second invalidation must start its own load.
+    invalidateRoute();
+    const second = fetchPath('/');
+    await vi.waitFor(() => expect(loads).toBe(2));
+    expect((await second).status).toBe(200);
+    releaseFirstLoad();
+    expect((await first).status).toBe(200);
+  } finally {
+    releaseFirstLoad();
+    ssrLoadSpy.mockRestore();
+  }
+});
+
 test('dev server exposes req.renderer to plugin.configureServer and server.middlewares while skipping Vite assets', async () => {
   const customDir = await fs.mkdtemp(
     path.join(os.tmpdir(), 'root-dev-lazy-renderer-custom-')
