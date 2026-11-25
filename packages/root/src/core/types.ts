@@ -171,7 +171,7 @@ export type Handler = (
 ) => void | Promise<void>;
 
 export interface StaticContentResult {
-  body: string;
+  body: string | Buffer;
   contentType?: string;
 }
 
@@ -185,7 +185,11 @@ export interface StaticContentResult {
  */
 export type GetStaticContent = (
   props: any
-) => Promise<StaticContentResult | string> | StaticContentResult | string;
+) =>
+  | Promise<StaticContentResult | string | Buffer>
+  | StaticContentResult
+  | string
+  | Buffer;
 
 /**
  * Route-level config that a route module can export to override the site-wide

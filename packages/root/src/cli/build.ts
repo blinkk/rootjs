@@ -519,21 +519,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     if (activeLogMode !== 'quiet') {
       console.log('\nhtml output:');
     }
-    const hasExplicitConcurrency =
-      options?.concurrency !== undefined && options.concurrency !== '';
     const concurrency = Number(options?.concurrency || 10);
     const resolvedThreads = resolveNumThreads(
       options?.threads,
       sitemapEntries.length
     );
     const numThreads = resolvedThreads.count;
-    // Keep a per-worker I/O concurrency floor when `--concurrency` is unset so
-    // high thread counts don't collapse to 1 page/worker and stall on async I/O.
-    const minWorkerConcurrency = hasExplicitConcurrency ? 1 : 4;
     const workerConcurrency =
-      numThreads > 0
-        ? Math.max(Math.ceil(concurrency / numThreads), minWorkerConcurrency)
-        : 0;
+      numThreads > 0 ? Math.max(Math.ceil(concurrency / numThreads), 1) : 0;
     // Log the render parallelism (helps troubleshoot what `--threads=auto`
     // resolved to, e.g. when investigating OOM issues on CI builders).
     if (activeLogMode !== 'quiet') {
