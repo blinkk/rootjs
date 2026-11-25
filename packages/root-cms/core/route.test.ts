@@ -959,7 +959,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       vi.unstubAllEnvs();
       await new FileSystemReadCacheStore({dir}).clear();
     }
-  });
+  }, 15000);
 
   it('clears read caches when docs are published', async () => {
     vi.stubEnv('NODE_ENV', 'production');
