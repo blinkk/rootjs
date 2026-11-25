@@ -8,7 +8,7 @@ import {dim} from 'kleur/colors';
 import sirv from 'sirv';
 import glob from 'tiny-glob';
 
-import {ViteDevServer} from 'vite';
+import {normalizePath, ViteDevServer} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {configureServerPlugins} from '../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../core/types.js';
@@ -288,6 +288,7 @@ async function createViteMiddleware(options: {
 
   const assetMap = new DevServerAssetMap(rootConfig, viteServer.moduleGraph);
   const renderModulePath = path.resolve(__dirname, './render.js');
+  const renderModuleId = normalizePath(renderModulePath);
 
   let cachedRenderModule: RenderModule | null = null;
   let cachedElementGraph: ElementGraph | null = null;
@@ -301,7 +302,7 @@ async function createViteMiddleware(options: {
    */
   async function getRenderer(): Promise<Renderer> {
     const ssrGraph = viteServer.environments?.ssr?.moduleGraph;
-    const ssrMod = ssrGraph?.getModuleById(renderModulePath);
+    const ssrMod = ssrGraph?.getModuleById(renderModuleId);
     if (
       cachedRenderer &&
       elementGraph === cachedElementGraph &&
@@ -315,7 +316,7 @@ async function createViteMiddleware(options: {
     const render = (await viteServer.ssrLoadModule(
       renderModulePath
     )) as RenderModule;
-    const updatedSsrMod = ssrGraph?.getModuleById(renderModulePath);
+    const updatedSsrMod = ssrGraph?.getModuleById(renderModuleId);
     const invalidationTimestamp =
       updatedSsrMod?.lastInvalidationTimestamp ?? -1;
 
