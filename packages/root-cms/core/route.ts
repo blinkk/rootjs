@@ -1140,14 +1140,12 @@ export function createRoute(options: CreateRouteOptions): Route {
       }
       const mode = options.ssgMode || 'published';
       const cmsClient = getCmsClient(ctx.rootConfig, mode);
-      const res = await cmsClient.listDocs<{slug: string}>(options.collection, {
-        mode,
-      });
+      const slugs = await cmsClient.listDocSlugs(options.collection, {mode});
       const ssgPaths: Array<{params: Record<string, string>}> = [];
       const slugParam = options.slugParam || 'slug';
-      res.docs.forEach((doc) => {
+      slugs.forEach((slug) => {
         const params: Record<string, string> = {};
-        params[slugParam] = doc.slug.replaceAll('--', '/');
+        params[slugParam] = slug.replaceAll('--', '/');
         ssgPaths.push({params});
       });
       return {paths: ssgPaths};

@@ -342,6 +342,12 @@ export interface ListDocsOptions {
   raw?: boolean;
 }
 
+/** Options for `RootCMSClient.listDocSlugs()`. */
+export interface ListDocSlugsOptions {
+  /** Mode, either "draft" or "published". */
+  mode: DocMode;
+}
+
 export interface GetCountOptions {
   mode: DocMode;
   query?: (query: Query) => Query;
@@ -1503,6 +1509,44 @@ export class RootCMSClient {
     const start = options.offset || 0;
     const end = options.limit ? start + options.limit : undefined;
     return {docs: merged.slice(start, end)};
+  }
+
+  /**
+   * Lists doc slugs in a Root.js CMS collection using an empty Firestore field
+   * mask projection (`.select()`) so only document IDs are transferred without
+   * fetching or unmarshaling doc field payloads.
+   */
+  async listDocSlugs(
+    collectionId: string,
+    options: ListDocSlugsOptions
+  ): Promise<string[]> {
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
+    const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
+    const cacheKey = options.mode === 'published' ? ['docSlugs', dbPath] : null;
+    const slugs = await this.cachedRead(
+      cacheKey,
+      async () => {
+        const snapshot = await this.db.collection(dbPath).select().get();
+        return snapshot.docs.map((doc) => doc.id);
+      },
+      'query'
+    );
+    if (!this.proposal?.hasNewDocsInCollection(collectionId)) {
+      return slugs;
+    }
+    const existingIds = new Set(slugs.map((slug) => `${collectionId}/${slug}`));
+    const proposedSlugs = this.proposedDocsInCollection(
+      collectionId,
+      existingIds
+    ).map((doc) => doc.slug);
+    if (proposedSlugs.length === 0) {
+      return slugs;
+    }
+    return [...slugs, ...proposedSlugs].sort();
   }
 
   /**

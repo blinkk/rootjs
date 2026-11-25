@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {ROUTE_MODULES, POD_ROUTE_MODULES} from 'virtual:root/routes';
 import {RootConfig} from '../core/config.js';
-import {Route, RouteModule} from '../core/types.js';
+import {GetStaticPaths, Route, RouteModule} from '../core/types.js';
 import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
 import {RouteTrie} from './route-trie.js';
 
@@ -10,6 +10,12 @@ const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<
   string,
   {module: RouteModule; podName: string; routePath: string; src: string}
 >;
+
+/**
+ * Cache of `getStaticPaths()` promises keyed by `RouteModule`, shared across
+ * all localized entries of the same route within a single `getSitemap()` call.
+ */
+export type StaticPathsCache = Map<RouteModule, ReturnType<GetStaticPaths>>;
 
 export class Router {
   private rootConfig: RootConfig;
@@ -155,7 +161,8 @@ export class Router {
 
   async getAllPathsForRoute(
     urlPathFormat: string,
-    route: Route
+    route: Route,
+    options?: {staticPathsCache?: StaticPathsCache}
   ): Promise<Array<{urlPath: string; params: Record<string, string>}>> {
     const routeModule = route.module;
     if (!routeModule.default && !routeModule.getStaticContent) {
@@ -168,9 +175,15 @@ export class Router {
       [];
     const pathHasParams = testPathHasParams(urlPathFormat);
     if (pathHasParams && routeModule.getStaticPaths) {
-      const staticPaths = await routeModule.getStaticPaths({
-        rootConfig: this.rootConfig,
-      });
+      const cache = options?.staticPathsCache;
+      let staticPathsPromise = cache?.get(routeModule);
+      if (!staticPathsPromise) {
+        staticPathsPromise = routeModule.getStaticPaths({
+          rootConfig: this.rootConfig,
+        });
+        cache?.set(routeModule, staticPathsPromise);
+      }
+      const staticPaths = await staticPathsPromise;
       if (staticPaths.paths) {
         staticPaths.paths.forEach(
           (pathParams: {params: Record<string, string>}) => {

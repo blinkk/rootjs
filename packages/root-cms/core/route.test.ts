@@ -8,6 +8,7 @@ import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {parseProposal} from '../shared/proposal.js';
 import {RootCMSClient} from './client.js';
 import {FileSystemReadCacheStore} from './read-cache-fs-store.js';
 import {ReadCache} from './read-cache.js';
@@ -981,5 +982,69 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it('lists doc slugs with projection, ReadCache, and proposal overlay', async () => {
+    await seedDoc(cmsClient, 'Pages/about');
+    await seedDoc(cmsClient, 'Pages/blog--hello');
+    await seedDoc(cmsClient, 'Pages/draft-only', {mode: 'draft'});
+
+    // Published mode returns only published slugs.
+    const cache = new ReadCache();
+    const cachedClient = new RootCMSClient(rootConfig, {cache});
+    const collectionSpy = vi.spyOn(cachedClient.db, 'collection');
+    const published1 = await cachedClient.listDocSlugs('Pages', {
+      mode: 'published',
+    });
+    const published2 = await cachedClient.listDocSlugs('Pages', {
+      mode: 'published',
+    });
+    expect(published1).toEqual(['about', 'blog--hello']);
+    expect(published2).toEqual(['about', 'blog--hello']);
+    // Second published read is served from ReadCache.
+    expect(collectionSpy).toHaveBeenCalledTimes(1);
+
+    // Draft mode bypasses ReadCache and returns draft slugs.
+    const drafts = await cachedClient.listDocSlugs('Pages', {mode: 'draft'});
+    expect(drafts).toEqual(['draft-only']);
+    expect(collectionSpy).toHaveBeenCalledTimes(2);
+    vi.restoreAllMocks();
+
+    // Proposal overlay merges newly created docs without duplicating existing
+    // docs or mutating the cached array.
+    const parsed = parseProposal(
+      [
+        'version: 1',
+        'id: p-slugs',
+        'changes:',
+        '  - kind: doc.create',
+        '    docId: Pages/about',
+        '    after: {}',
+        '  - kind: doc.create',
+        '    docId: Pages/aaa-new',
+        '    after: {}',
+      ].join('\n')
+    );
+    if (!parsed.ok) {
+      throw new Error(`bad proposal: ${JSON.stringify(parsed.errors)}`);
+    }
+    const proposalClient = new RootCMSClient(rootConfig, {
+      cache,
+      proposal: parsed.proposal,
+    });
+    const withProposal = await proposalClient.listDocSlugs('Pages', {
+      mode: 'published',
+    });
+    expect(withProposal).toEqual(['aaa-new', 'about', 'blog--hello']);
+    // Cached published array remains unmutated.
+    expect(published1).toEqual(['about', 'blog--hello']);
+
+    // `createRoute` maps `--` to `/` in `getStaticPaths()`.
+    const route = createRoute({collection: 'Pages', ssg: true});
+    const staticPaths = await route.getStaticPaths!({rootConfig});
+    expect(staticPaths.paths).toEqual([
+      {params: {slug: 'about'}},
+      {params: {slug: 'blog/hello'}},
+    ]);
   });
 });
