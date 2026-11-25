@@ -61,6 +61,7 @@ import {
   apiSavePrototypeAnnotation,
   apiSavePrototypeComponent,
   apiSavePrototypeFrame,
+  type PrototypePromptAttachment,
 } from '../../prototypes-client.js';
 
 /** Props for the floating Root AI prototyping assistant card. */
@@ -73,8 +74,12 @@ export interface PrototypeAiCardProps {
   selectedFrameId: string | null;
   /** Currently selected block key within `selectedFrameId`, if any. */
   selectedBlockKey: string | null;
-  /** Optional external prompt queued from another UI control (e.g. Comments). */
-  queuedPrompt?: {id: string | number; text: string} | null;
+  /** Optional external prompt queued from another UI control (e.g. Comments or New Prototype). */
+  queuedPrompt?: {
+    id: string | number;
+    text: string;
+    attachments?: PrototypePromptAttachment[];
+  } | null;
   /** Monotonic key incremented to focus the prompt textarea on demand. */
   focusKey?: number;
   /** Invoked once `queuedPrompt` has been dispatched into the chat session. */
@@ -865,15 +870,17 @@ function PrototypeAiChatSession({
       return;
     }
     const text = queued.text.trim();
-    if (!text) {
+    const attachments = queued.attachments || [];
+    if (!text && attachments.length === 0) {
       return;
     }
     handledQueuedPromptIdRef.current = queued.id;
-    send(text);
+    send(text, attachments);
     propsRef.current.onQueuedPromptHandled?.();
   }, [
     props.queuedPrompt?.id,
     props.queuedPrompt?.text,
+    props.queuedPrompt?.attachments,
     selectedModel?.id,
     isStreaming,
     send,
@@ -1013,9 +1020,7 @@ function MessageBubble(props: {message: UIMessage}) {
   const parts = (message.parts || []) as any[];
 
   if (message.role === 'user') {
-    const fileParts = parts.filter(
-      (part) => part.type === 'file' && part.mediaType?.startsWith('image/')
-    );
+    const fileParts = parts.filter((part) => part.type === 'file');
     const textParts = parts
       .filter((part) => part.type === 'text' && part.text)
       .map((part) => part.text as string);
@@ -1025,14 +1030,33 @@ function MessageBubble(props: {message: UIMessage}) {
         <div className="PrototypeAiCard__userBubble ml-8 flex flex-col gap-2 rounded-lg bg-surface-subtle px-3 py-2 text-sm leading-snug text-fg wrap-break-word">
           {fileParts.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {fileParts.map((part, i) => (
-                <img
-                  key={i}
-                  src={part.url}
-                  alt={part.filename || 'Attached wireframe'}
-                  className="block max-h-36 max-w-full rounded-md border border-border object-cover"
-                />
-              ))}
+              {fileParts.map((part, i) =>
+                part.mediaType?.startsWith('image/') ? (
+                  <img
+                    key={i}
+                    src={part.url}
+                    alt={part.filename || 'Attached image'}
+                    className="block max-h-36 max-w-full rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <a
+                    key={i}
+                    href={part.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-xs font-medium text-fg no-underline hover:bg-surface-hover"
+                  >
+                    <IconPaperclip
+                      size={12}
+                      className="shrink-0 text-muted"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">
+                      {part.filename || 'Attached file'}
+                    </span>
+                  </a>
+                )
+              )}
             </div>
           )}
           {textParts.length > 0 && (

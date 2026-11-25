@@ -68,7 +68,10 @@ import {
   writePrototypeAiUiState,
   writePrototypeTabState,
 } from '../../prototype-session.js';
-import {takeInitialPrototypePrompt} from '../../prototypes-client.js';
+import {
+  type PrototypePromptAttachment,
+  takeInitialPrototypePrompt,
+} from '../../prototypes-client.js';
 import {usePrototypeBoard} from '../../usePrototypeBoard.js';
 
 /** Props accepted by `PrototypeBoardPage` via the CMS router. */
@@ -222,6 +225,7 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
   const [queuedPrompt, setQueuedPrompt] = useState<{
     id: string | number;
     text: string;
+    attachments?: PrototypePromptAttachment[];
   } | null>(null);
   const [aiStreaming, setAiStreaming] = useState(false);
   const [pinPopover, setPinPopover] = useState<OpenPinPopover | null>(null);
@@ -415,7 +419,11 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
     if (initialPrompt) {
       setActivePanel('ai');
       writePrototypeAiUiState(boardId, {panelOpen: true});
-      setQueuedPrompt({id: Date.now(), text: initialPrompt});
+      setQueuedPrompt({
+        id: Date.now(),
+        text: initialPrompt.text,
+        attachments: initialPrompt.attachments,
+      });
     }
   }, [bundle, aiAvailable, boardId]);
 
