@@ -278,31 +278,88 @@ export async function apiClearPrototypeAiChat(
   });
 }
 
+/** File attachment queued alongside a prototype Root AI prompt. */
+export interface PrototypePromptAttachment {
+  url: string;
+  filename: string;
+  mediaType: string;
+}
+
+/** Creation-time Root AI prompt handed off to the board page. */
+export interface InitialPrototypePrompt {
+  text: string;
+  attachments?: PrototypePromptAttachment[];
+}
+
 /** Session storage key holding the initial AI prompt for a new board. */
 function initialPromptKey(boardId: string): string {
   return `root-cms:prototype-initial-prompt:${boardId}`;
 }
 
 /**
- * Hands the creation-time prompt to the board page. Kept in session storage
- * rather than the URL so a shared or crafted link can never start an AI turn.
+ * Hands the creation-time prompt (and any uploaded attachments) to the board
+ * page. Kept in session storage rather than the URL so a shared or crafted link
+ * can never start an AI turn.
  */
-export function storeInitialPrototypePrompt(boardId: string, prompt: string) {
+export function storeInitialPrototypePrompt(
+  boardId: string,
+  prompt: string,
+  attachments?: PrototypePromptAttachment[]
+) {
   try {
-    window.sessionStorage.setItem(initialPromptKey(boardId), prompt);
+    const payload: InitialPrototypePrompt = {
+      text: prompt,
+      ...(attachments && attachments.length > 0 ? {attachments} : {}),
+    };
+    window.sessionStorage.setItem(
+      initialPromptKey(boardId),
+      JSON.stringify(payload)
+    );
   } catch {
     // Storage unavailable; the board opens without an initial prompt.
   }
 }
 
 /** Reads and clears the creation-time prompt for a board, if any. */
-export function takeInitialPrototypePrompt(boardId: string): string {
+export function takeInitialPrototypePrompt(
+  boardId: string
+): InitialPrototypePrompt | null {
   try {
     const key = initialPromptKey(boardId);
-    const prompt = window.sessionStorage.getItem(key) || '';
+    const raw = window.sessionStorage.getItem(key) || '';
     window.sessionStorage.removeItem(key);
-    return prompt.trim();
+    if (!raw) {
+      return null;
+    }
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw) as Partial<InitialPrototypePrompt>;
+        const text = typeof parsed.text === 'string' ? parsed.text.trim() : '';
+        const attachments = Array.isArray(parsed.attachments)
+          ? parsed.attachments.filter(
+              (item): item is PrototypePromptAttachment =>
+                Boolean(
+                  item &&
+                  typeof item.url === 'string' &&
+                  typeof item.filename === 'string' &&
+                  typeof item.mediaType === 'string'
+                )
+            )
+          : [];
+        if (!text && attachments.length === 0) {
+          return null;
+        }
+        return {
+          text,
+          ...(attachments.length > 0 ? {attachments} : {}),
+        };
+      } catch {
+        // Fall through to legacy plain-string handling.
+      }
+    }
+    const text = raw.trim();
+    return text ? {text} : null;
   } catch {
-    return '';
+    return null;
   }
 }

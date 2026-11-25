@@ -68,7 +68,7 @@ vi.mock('../../prototypes-client.js', () => ({
   apiDuplicatePrototypeBoard: vi.fn(),
   apiDeletePrototypeBoard: vi.fn(),
   apiPreparePrototypeAiTurn: vi.fn(),
-  takeInitialPrototypePrompt: vi.fn(() => ''),
+  takeInitialPrototypePrompt: vi.fn(() => null),
 }));
 
 function makeSampleBundle(): PrototypeBoardBundle {
@@ -205,7 +205,7 @@ describe('PrototypeBoardPage', () => {
     });
     vi.mocked(apiGetPrototypeAiChat).mockResolvedValue({session: null});
     vi.mocked(apiClearPrototypeAiChat).mockResolvedValue({cleared: true});
-    vi.mocked(takeInitialPrototypePrompt).mockReturnValue('');
+    vi.mocked(takeInitialPrototypePrompt).mockReturnValue(null);
     vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
       if (String(input).includes('/cms/api/ai.config')) {
         return new Response(
