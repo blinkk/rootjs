@@ -1047,4 +1047,67 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       {params: {slug: 'blog/hello'}},
     ]);
   });
+
+  it('enables shared build cache by default during root build', async () => {
+    const dir = path.join(
+      os.tmpdir(),
+      `root-cms-build-cache-test-${Date.now()}-${Math.random()}`
+    );
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
+    try {
+      await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de']});
+      await seedDoc(cmsClient, 'Global/header', {locales: ['en', 'de']});
+      const getAll = vi.spyOn(cmsClient.db, 'getAll');
+
+      // Default `createRoute()` (without `cache: true`) shares reads across
+      // locales during `root build`.
+      const route = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const headerReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(headerReads).toHaveLength(1);
+
+      // Passing `{cache: false}` opts out of the default build cache.
+      getAll.mockClear();
+      const uncachedRoute = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: false,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await uncachedRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await uncachedRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const uncachedHeaderReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(uncachedHeaderReads).toHaveLength(2);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      await new FileSystemReadCacheStore({
+        dir: path.join(dir, 'root-cms'),
+      }).clear();
+    }
+  });
 });

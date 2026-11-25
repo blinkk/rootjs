@@ -39,19 +39,32 @@ export interface FileSystemReadCacheStoreOptions {
  * });
  * ```
  *
- * During `root build`, `createRoute({cache: true})` uses this store
- * automatically (under `dist/.cache/`, which is deleted at the start and end
- * of each build).
+ * During `root build`, `createRoute()` uses this store automatically (under
+ * `dist/.cache/`, which is deleted at the start and end of each build).
  */
 export class FileSystemReadCacheStore implements ReadCacheStore {
   private readonly dir: string;
   private readonly lockTimeout: number;
   private readonly pollInterval: number;
+  private dirReady?: Promise<void>;
 
   constructor(options: FileSystemReadCacheStoreOptions) {
     this.dir = options.dir;
     this.lockTimeout = options.lockTimeout ?? 30 * 1000;
     this.pollInterval = options.pollInterval ?? 20;
+  }
+
+  private ensureDir(): Promise<void> {
+    if (!this.dirReady) {
+      this.dirReady = fs
+        .mkdir(this.dir, {recursive: true})
+        .then(() => undefined)
+        .catch((err) => {
+          this.dirReady = undefined;
+          throw err;
+        });
+    }
+    return this.dirReady;
   }
 
   async get(key: string): Promise<ReadCacheStoreEntry | undefined> {
@@ -66,7 +79,7 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
       // Claim the key so that other processes wait for this process to fetch
       // it (the lock is removed by `set()` or `delete()`).
       try {
-        await fs.mkdir(this.dir, {recursive: true});
+        await this.ensureDir();
         await fs.writeFile(lockPath, '', {flag: 'wx'});
         return undefined;
       } catch (err: any) {
@@ -85,7 +98,7 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
 
   async set(key: string, entry: ReadCacheStoreEntry): Promise<void> {
     const filePath = this.filePath(key);
-    await fs.mkdir(this.dir, {recursive: true});
+    await this.ensureDir();
     // Write to a temp file and rename it so that readers never see a
     // partially written file.
     const tmpPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
@@ -101,7 +114,9 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   }
 
   async clear(): Promise<void> {
+    this.dirReady = undefined;
     await fs.rm(this.dir, {recursive: true, force: true});
+    this.dirReady = undefined;
   }
 
   private filePath(key: string) {

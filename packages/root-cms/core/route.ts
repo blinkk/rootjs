@@ -66,25 +66,31 @@ const BUILD_CACHE_TTL = 24 * 60 * 60 * 1000;
 let sharedReadCache: ReadCache | undefined;
 
 /**
- * Read cache shared by every route created with `{cache: true}` during
- * `root build`, which is backed by the filesystem so that it's shared by the
- * build's worker threads.
+ * Read cache shared by routes during `root build`, which is backed by the
+ * filesystem so that it's shared by the build's worker threads.
  */
 let sharedBuildReadCache: ReadCache | undefined;
 
+/** The `ROOT_BUILD_CACHE_DIR` that `sharedBuildReadCache` was created for. */
+let sharedBuildReadCacheDir: string | undefined;
+
 /**
- * Returns the read cache shared by every route created with `{cache: true}`.
+ * Returns the read cache shared by routes (by default during `root build`, or
+ * when `{cache: true}` is passed at runtime).
  */
 function getSharedReadCache(): ReadCache {
   // `root build` sets `ROOT_BUILD_CACHE_DIR` while rendering SSG pages.
   const buildCacheDir = process.env.ROOT_BUILD_CACHE_DIR;
   if (buildCacheDir) {
-    sharedBuildReadCache ??= new ReadCache({
-      ttl: BUILD_CACHE_TTL,
-      store: new FileSystemReadCacheStore({
-        dir: path.join(buildCacheDir, 'root-cms'),
-      }),
-    });
+    if (!sharedBuildReadCache || sharedBuildReadCacheDir !== buildCacheDir) {
+      sharedBuildReadCacheDir = buildCacheDir;
+      sharedBuildReadCache = new ReadCache({
+        ttl: BUILD_CACHE_TTL,
+        store: new FileSystemReadCacheStore({
+          dir: path.join(buildCacheDir, 'root-cms'),
+        }),
+      });
+    }
     return sharedBuildReadCache;
   }
   sharedReadCache ??= new ReadCache();
@@ -464,9 +470,11 @@ export interface CreateRouteOptions {
    * "production"). Caches are cleared when docs are published or unpublished
    * in the same process, or manually with `clearReadCaches()`.
    *
-   * During `root build`, the shared cache (`true`) is backed by the
+   * During `root build` (when `ROOT_BUILD_CACHE_DIR` is set), the shared cache
+   * is enabled by default (pass `{cache: false}` to disable) and backed by the
    * filesystem (see `FileSystemReadCacheStore`), so reads are shared by the
-   * build's worker threads (`--threads`) and cached for the whole build.
+   * build's worker threads (`--threads`) and cached for the whole build. At SSR
+   * runtime, caching defaults to `false`.
    */
   cache?: boolean | ReadCache;
 
@@ -580,13 +588,22 @@ export function createRoute(options: CreateRouteOptions): Route {
   let dependencyGraphService: DependencyGraphService | undefined;
 
   function getReadCache(): ReadCache | undefined {
-    if (!options.cache || process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || options.cache === false) {
       return undefined;
     }
     if (options.cache === true) {
       return getSharedReadCache();
     }
-    return options.cache;
+    if (options.cache) {
+      return options.cache;
+    }
+    // Enable the shared build cache by default during `root build` so SSG
+    // pages, locales, and worker threads share CMS reads without needing
+    // `{cache: true}` on every route.
+    if (process.env.ROOT_BUILD_CACHE_DIR) {
+      return getSharedReadCache();
+    }
+    return undefined;
   }
 
   function newCmsClient(

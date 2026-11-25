@@ -1,3 +1,4 @@
+import {promises as fs} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {Timestamp} from 'firebase-admin/firestore';
@@ -208,6 +209,30 @@ describe('FileSystemReadCacheStore', () => {
       await store.delete('key');
       expect(await store.get('key')).toBeUndefined();
     } finally {
+      await new FileSystemReadCacheStore({dir}).clear();
+    }
+  });
+
+  it('memoizes directory creation until clear() is called', async () => {
+    const dir = tmpDir();
+    const mkdirSpy = vi.spyOn(fs, 'mkdir');
+    try {
+      const store = new FileSystemReadCacheStore({dir});
+      await store.get('a');
+      await store.set('a', {expiresAt: Date.now() + 1000, value: 1});
+      await store.get('b');
+      await store.set('b', {expiresAt: Date.now() + 1000, value: 2});
+      expect(mkdirSpy).toHaveBeenCalledTimes(1);
+
+      await store.clear();
+      await store.set('c', {expiresAt: Date.now() + 1000, value: 3});
+      expect(mkdirSpy).toHaveBeenCalledTimes(2);
+      expect(await store.get('c')).toEqual({
+        expiresAt: expect.any(Number),
+        value: 3,
+      });
+    } finally {
+      mkdirSpy.mockRestore();
       await new FileSystemReadCacheStore({dir}).clear();
     }
   });
