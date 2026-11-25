@@ -17,11 +17,13 @@ export function parseTagNames(src: string): string[] {
   if (!src) {
     return [];
   }
+  const str = typeof src === 'string' ? src : String(src);
+  if (!str.includes('-')) {
+    return [];
+  }
   const tagNames = new Set<string>();
-  const matches = Array.from(String(src).matchAll(HTML_ELEMENTS_REGEX));
-  for (const match of matches) {
-    const tagName = match[1];
-    tagNames.add(tagName);
+  for (const match of str.matchAll(HTML_ELEMENTS_REGEX)) {
+    tagNames.add(match[1]);
   }
   return Array.from(tagNames);
 }

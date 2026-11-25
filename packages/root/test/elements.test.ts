@@ -1,6 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
+import {parseTagNames} from '../src/utils/elements.js';
 import {fileExists, loadJson} from '../src/utils/fsutils.js';
 import {Fixture, loadFixture} from './testutils.js';
 
@@ -136,4 +137,17 @@ test('exclude elements matching a certain pattern', async () => {
     </html>
     "
   `);
+});
+
+test('parseTagNames extracts deduplicated custom element tag names', () => {
+  expect(parseTagNames('')).toEqual([]);
+  expect(parseTagNames('<div><p>Hello world</p></div>')).toEqual([]);
+  expect(parseTagNames('<div class="foo-bar" data-x="1">a-b</div>')).toEqual(
+    []
+  );
+  expect(
+    parseTagNames(
+      '<div><root-counter start="1"></root-counter><ds-foo></ds-foo><root-counter start="2"></root-counter></div>'
+    )
+  ).toEqual(['root-counter', 'ds-foo']);
 });

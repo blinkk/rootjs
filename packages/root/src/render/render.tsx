@@ -7,7 +7,7 @@ import {
   options as preactOptions,
 } from 'preact';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
-import {RootConfig} from '../core/config.js';
+import {RootConfig, RootSecurityConfig} from '../core/config.js';
 import {ASSET_MAP_CONTEXT} from '../core/hooks/useAssetMap.js';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';
 import {
@@ -99,6 +99,12 @@ export class Renderer {
   private assetMap: AssetMap;
   private elementGraph: ElementGraph;
   private router: Router;
+  private configuredStyleEntries: string[];
+  private securityConfig: Required<RootSecurityConfig>;
+  private jsxRenderFns = new Map<
+    JsxRenderMode | 'default',
+    (vnode: any) => string
+  >();
 
   constructor(
     rootConfig: RootConfig,
@@ -109,6 +115,8 @@ export class Renderer {
     this.assetMap = options.assetMap;
     this.elementGraph = options.elementGraph;
     this.router = new Router(rootConfig);
+    this.configuredStyleEntries = this.getConfiguredStyleEntries();
+    this.securityConfig = getSecurityConfig(rootConfig);
   }
 
   /** Returns a route from the router. */
@@ -242,9 +250,9 @@ export class Renderer {
 
     // Merge user-configured stylesheet entries first. This allows global
     // entries to appear before auto-collected stylesheets.
-    this.getConfiguredStyleEntries().forEach((styleEntry) => {
+    for (const styleEntry of this.configuredStyleEntries) {
       cssDeps.add(styleEntry);
-    });
+    }
 
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
@@ -480,7 +488,7 @@ export class Renderer {
         render404();
         return;
       }
-      const securityConfig = getSecurityConfig(this.rootConfig);
+      const securityConfig = this.securityConfig;
       const cspEnabled = !!securityConfig.contentSecurityPolicy;
       const currentPath = req.path;
       const locale = options?.locale || route.locale;
@@ -698,17 +706,26 @@ export class Renderer {
     // Use the per-render mode override if provided, otherwise fall back to the
     // mode specified by the `jsxRenderer` config in `root.config.ts`.
     const mode = renderOptions?.mode ?? this.rootConfig.jsxRenderer?.mode;
+    const cacheKey = mode || 'default';
+    const cached = this.jsxRenderFns.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    let renderFn: (vnode: any) => string;
     if (mode) {
       const options = {...this.getJsxRenderOptions(), mode};
-      return (vnode: any) => renderJsxToString(vnode, options);
+      renderFn = (vnode: any) => renderJsxToString(vnode, options);
+    } else {
+      const {renderToString} = await import('preact-render-to-string');
+      if (!renderToString) {
+        throw new Error(
+          'failed to render jsx. either install preact-render-to-string or add the "jsxRenderer" config to root.config.ts'
+        );
+      }
+      renderFn = (vnode: any) => renderToString(vnode);
     }
-    const {renderToString} = await import('preact-render-to-string');
-    if (!renderToString) {
-      throw new Error(
-        'failed to render jsx. either install preact-render-to-string or add the "jsxRenderer" config to root.config.ts'
-      );
-    }
-    return (vnode: any) => renderToString(vnode);
+    this.jsxRenderFns.set(cacheKey, renderFn);
+    return renderFn;
   }
 
   /**
@@ -867,6 +884,9 @@ export class Renderer {
     preloadDeps?: Set<string> | null
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
     const elementsMap = this.elementGraph.sourceFiles;
+    if (Object.keys(elementsMap).length === 0) {
+      return {jsDeps, cssDeps};
+    }
     const assetMap = this.assetMap;
 
     const tagNames = new Set<string>();
@@ -877,6 +897,9 @@ export class Renderer {
           tagNames.add(depTagName);
         }
       }
+    }
+    if (tagNames.size === 0) {
+      return {jsDeps, cssDeps};
     }
 
     await Promise.all(
