@@ -877,7 +877,7 @@ export class Renderer {
       const routeModule = route.module;
       // Treat unloaded lazy routes as routable without invoking `loadModule()`.
       const isUnloadedLazyRoute =
-        typeof (route as {loadModule?: unknown}).loadModule === 'function' &&
+        typeof route.loadModule === 'function' &&
         (!routeModule || Object.keys(routeModule).length === 0);
       if (
         !isUnloadedLazyRoute &&

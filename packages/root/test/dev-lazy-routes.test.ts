@@ -52,6 +52,15 @@ function isSsrTransformed(filePath: string): boolean {
   return Array.from(mods).some((mod: any) => Boolean(mod.transformResult));
 }
 
+test('dev 404 page lists unloaded lazy routes without loading them', async () => {
+  const indexRouteFile = path.join(rootDir, 'routes/index.tsx');
+  const res = await fetchPath('/does-not-exist');
+  expect(res.status).toBe(404);
+  expect(res.body).toContain('routes/index.tsx');
+  expect(res.body).toContain('routes/limited.tsx');
+  expect(isSsrTransformed(indexRouteFile)).toBe(false);
+});
+
 test('dev mode lazily loads routes on demand while preserving route config.locales', async () => {
   const indexRouteFile = path.join(rootDir, 'routes/index.tsx');
   const limitedRouteFile = path.join(rootDir, 'routes/limited.tsx');
