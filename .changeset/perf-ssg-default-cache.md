@@ -1,4 +1,5 @@
 ---
+'@blinkk/root': patch
 '@blinkk/root-cms': patch
 ---
 

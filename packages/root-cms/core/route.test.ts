@@ -1103,6 +1103,29 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
         .flat()
         .filter((ref) => ref.path.endsWith('/Global/Published/header'));
       expect(uncachedHeaderReads).toHaveLength(2);
+
+      // Setting `ROOT_DISABLE_BUILD_CACHE=1` disables the default build cache
+      // globally.
+      getAll.mockClear();
+      vi.stubEnv('ROOT_DISABLE_BUILD_CACHE', '1');
+      const envDisabledRoute = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await envDisabledRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await envDisabledRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const envDisabledHeaderReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(envDisabledHeaderReads).toHaveLength(2);
     } finally {
       vi.restoreAllMocks();
       vi.unstubAllEnvs();
@@ -1112,7 +1135,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
     }
   });
 
-  it('resets build cache when ROOT_BUILD_CACHE_DIR is wiped between builds', async () => {
+  it('resets build cache across sequential builds in the same process', async () => {
     const dir = path.join(
       os.tmpdir(),
       `root-cms-build-cache-reset-${Date.now()}-${Math.random()}`
@@ -1138,9 +1161,10 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       } as any);
       expect(first.props.doc.fields.title).toBe('Title for Pages/about');
 
-      // Simulate a second build in the same process: `build.ts` removes
-      // `ROOT_BUILD_CACHE_DIR` without calling `clearReadCaches()`, and a doc
-      // was updated in Firestore between builds.
+      // Simulate `build.ts`'s `finally` block cleaning up after Build #1 and
+      // Build #2 starting with `getStaticPaths()` before re-setting the same
+      // `ROOT_BUILD_CACHE_DIR`.
+      delete process.env.ROOT_BUILD_CACHE_DIR;
       await fs.rm(dir, {recursive: true, force: true});
       await cmsClient.db
         .doc(
@@ -1148,6 +1172,8 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
         )
         .update({'fields.title': 'Updated for build 2'});
 
+      await route.getStaticPaths!({rootConfig});
+      vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
       const second: any = await route.getStaticProps!({
         rootConfig,
         params: {slug: 'about', $locale: 'en'},

@@ -278,7 +278,6 @@ describe('FileSystemReadCacheStore', () => {
     try {
       const store = new FileSystemReadCacheStore({dir});
       await store.set('a', {expiresAt: Date.now() + 1000, value: 1});
-      expect(store.hasCreatedDir()).toBe(true);
 
       // Simulate `root build` removing `dist/.cache` outside `store.clear()`.
       await fs.rm(dir, {recursive: true, force: true});
@@ -302,17 +301,20 @@ describe('FileSystemReadCacheStore', () => {
     try {
       const store = new FileSystemReadCacheStore({dir});
       const cache = new ReadCache({store});
+      let markFetchStarted!: () => void;
+      const fetchStarted = new Promise<void>((resolve) => {
+        markFetchStarted = resolve;
+      });
       let resolveFetch!: (val: string) => void;
-      const pending = cache.get(
-        'key',
-        () =>
-          new Promise<string>((resolve) => {
-            resolveFetch = resolve;
-          })
-      );
-      // Wait for `fill()` to reach `fetchMany()`, then clear before it
-      // resolves.
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      const pending = cache.get('key', () => {
+        markFetchStarted();
+        return new Promise<string>((resolve) => {
+          resolveFetch = resolve;
+        });
+      });
+      // Wait deterministically for `fill()` to invoke `fetchMany()`, then
+      // clear before it resolves.
+      await fetchStarted;
       await cache.clear();
       resolveFetch('stale');
       expect(await pending).toBe('stale');

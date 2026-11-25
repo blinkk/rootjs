@@ -594,6 +594,12 @@ export interface RootCMSClientOptions {
    * `listDocs()` (unless a `query` fn is used), `loadTranslations()` and
    * batch requests. Draft reads are never cached, but `loadTranslations()`
    * has no mode, so don't use a cached client to serve previews.
+   *
+   * When using `createRoute()`, omitting `cache` uses the shared cross-worker
+   * build cache during `root build` (unless `{cache: false}` or
+   * `ROOT_DISABLE_BUILD_CACHE=1` is set), whereas passing a custom `ReadCache`
+   * instance remains per-worker in-memory unless configured with a shared
+   * `ReadCacheStore`.
    */
   cache?: ReadCache;
 }
@@ -869,6 +875,18 @@ export class RootCMSClient {
   }
 
   /**
+   * Returns `[gcpProjectId, databaseId]` to scope cache keys so clients
+   * targeting different Firebase projects or Firestore databases with the same
+   * Root project `id` never collide in a shared `ReadCache`.
+   */
+  private getCacheKeyScope(): [string, string] {
+    const gcpProjectId = this.app?.options?.projectId || '';
+    const databaseId =
+      (this.db as {databaseId?: string})?.databaseId || '(default)';
+    return [gcpProjectId, databaseId];
+  }
+
+  /**
    * Reads data through the client's `cache`, if any. Pass a `null` key for
    * reads that shouldn't be cached (e.g. draft reads).
    */
@@ -881,7 +899,9 @@ export class RootCMSClient {
     if (!cache || !key) {
       return fetch();
     }
-    return cache.get(JSON.stringify(key), fetch, {type});
+    const [gcpProjectId, databaseId] = this.getCacheKeyScope();
+    const scopedKey = [key[0], gcpProjectId, databaseId, ...key.slice(1)];
+    return cache.get(JSON.stringify(scopedKey), fetch, {type});
   }
 
   /**
@@ -902,9 +922,10 @@ export class RootCMSClient {
       const snapshots = await this.db.getAll(...refs);
       return snapshots.map((snapshot) => snapshot.data());
     }
+    const [gcpProjectId, databaseId] = this.getCacheKeyScope();
     const refsByKey = new Map<string, DocumentReference>();
     const keys = refs.map((ref) => {
-      const key = JSON.stringify(['doc', ref.path]);
+      const key = JSON.stringify(['doc', gcpProjectId, databaseId, ref.path]);
       refsByKey.set(key, ref);
       return key;
     });

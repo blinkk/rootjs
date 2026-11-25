@@ -47,7 +47,6 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   private readonly lockTimeout: number;
   private readonly pollInterval: number;
   private dirReady?: Promise<void>;
-  private dirCreated = false;
   private generation = 0;
   private clearPromise?: Promise<void>;
 
@@ -55,14 +54,6 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
     this.dir = options.dir;
     this.lockTimeout = options.lockTimeout ?? 30 * 1000;
     this.pollInterval = options.pollInterval ?? 20;
-  }
-
-  /**
-   * Returns whether this store has created its cache directory since the last
-   * `clear()`.
-   */
-  hasCreatedDir(): boolean {
-    return this.dirCreated;
   }
 
   private ensureDir(): Promise<void> {
@@ -79,9 +70,7 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
           return;
         }
         await fs.mkdir(this.dir, {recursive: true});
-        if (this.generation === gen) {
-          this.dirCreated = true;
-        } else if (this.dirReady === ready) {
+        if (this.generation !== gen && this.dirReady === ready) {
           this.dirReady = undefined;
         }
       })().catch((err) => {
@@ -184,7 +173,6 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
           ) {
             retriedEnoent = true;
             this.dirReady = undefined;
-            this.dirCreated = false;
             continue;
           }
           if (err?.code !== 'EEXIST') {
@@ -234,7 +222,6 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
       }
       if (err?.code === 'ENOENT') {
         this.dirReady = undefined;
-        this.dirCreated = false;
         await this.ensureDir();
         if (this.generation !== gen) {
           return;
@@ -259,7 +246,6 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   async clear(): Promise<void> {
     this.generation += 1;
     this.dirReady = undefined;
-    this.dirCreated = false;
     const prev = this.clearPromise ?? Promise.resolve();
     const rm = prev
       .catch(() => {})
