@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import glob from 'tiny-glob';
 import type {Plugin as VitePlugin} from 'vite';
@@ -213,18 +214,62 @@ async function buildSchemasModule(
   ].join('\n');
 }
 
-async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
-  const excludeDirs = ['appengine', 'functions', 'gae', 'node_modules', 'dist'];
-  let files: string[];
-  try {
-    files = await glob('**/*.schema.ts', {cwd: rootDir});
-  } catch {
-    return [];
+/**
+ * Top-level directories skipped by `scanRootSchemaFiles()`.
+ * `collections` is excluded because `buildSchemasModule()` scans top-level
+ * `collections/` separately to track `userCollectionIds` for pod precedence,
+ * avoiding scanning `collections/` twice.
+ */
+const ROOT_SCHEMA_EXCLUDE_DIRS = new Set([
+  'appengine',
+  'collections',
+  'dist',
+  'functions',
+  'gae',
+  'node_modules',
+]);
+
+/**
+ * Recursively scans a Root.js project directory for `*.schema.ts` files,
+ * pruning excluded and hidden directories before descending into them.
+ *
+ * Results are returned depth-first with each directory's entries ordered by
+ * name (the order the previous glob-based scan produced), since the order of
+ * `SCHEMA_MODULES` determines the order of pattern-matched `oneOf` types.
+ */
+export async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
+  async function walk(dir: string, relDir: string): Promise<string[]> {
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(dir, {withFileTypes: true});
+    } catch {
+      return [];
+    }
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const pending: Array<string | Promise<string[]>> = [];
+    for (const entry of entries) {
+      const name = entry.name;
+      // Skip hidden files and directories (matching tiny-glob's default).
+      if (name.startsWith('.')) {
+        continue;
+      }
+      const relPath = relDir ? `${relDir}/${name}` : name;
+      if (entry.isDirectory()) {
+        if (
+          (!relDir && ROOT_SCHEMA_EXCLUDE_DIRS.has(name)) ||
+          name === 'node_modules'
+        ) {
+          continue;
+        }
+        pending.push(walk(path.join(dir, name), relPath));
+      } else if (name.endsWith('.schema.ts')) {
+        pending.push(relPath);
+      }
+    }
+    return (await Promise.all(pending)).flat();
   }
-  return files.filter((file) => {
-    const normalized = file.replace(/\\/g, '/');
-    return !excludeDirs.some((dir) => normalized.startsWith(dir + '/'));
-  });
+
+  return walk(rootDir, '');
 }
 
 async function buildTranslationsModule(
