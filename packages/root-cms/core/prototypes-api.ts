@@ -22,6 +22,7 @@ import {
   PROTOTYPE_LABEL_MAX_CHARS,
   PROTOTYPE_NOTE_MAX_CHARS,
   PROTOTYPE_NOTE_WIDTH,
+  type PrototypeAiChatSession,
   type PrototypeAnnotation,
   type PrototypeBlock,
   type PrototypeBlockMap,
@@ -637,6 +638,7 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
   return {
     boardsCol,
     projectComponentsCol,
+    aiChatsCol: projectDoc.collection('AiChats'),
     boardDoc: (boardId: string) => boardsCol.doc(boardId),
     framesCol: (boardId: string) => boardsCol.doc(boardId).collection('Frames'),
     componentsCol: (boardId: string) =>
@@ -645,9 +647,133 @@ function getPrototypeRefs(db: Firestore, projectId: string) {
       boardsCol.doc(boardId).collection('Comments'),
     annotationsCol: (boardId: string) =>
       boardsCol.doc(boardId).collection('Annotations'),
+    aiSessionsCol: (boardId: string) =>
+      boardsCol.doc(boardId).collection('AiSessions'),
     // Legacy: AI turn snapshots are no longer written; only used for cleanup.
     turnsCol: (boardId: string) => boardsCol.doc(boardId).collection('Turns'),
   };
+}
+
+/** Derives a stable, safe Firestore document ID for a user's AI session on a board. */
+function getUserAiSessionDocId(email: string): string {
+  const hash = crypto
+    .createHash('sha256')
+    .update(email.trim().toLowerCase())
+    .digest('hex')
+    .slice(0, 32);
+  return `user_${hash}`;
+}
+
+/** Target byte budget for stored chat transcripts (safely below `MAX_DOC_BYTES`). */
+const CHAT_SESSION_TARGET_BYTES = 750_000;
+
+/** Converts a Firestore timestamp or numeric epoch into milliseconds. */
+function toEpochMillis(value: unknown): number {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as {toMillis?: unknown}).toMillis === 'function'
+  ) {
+    return (value as {toMillis: () => number}).toMillis();
+  }
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/** Compacts bulky HTML/CSS/source payloads inside a single message's tool parts. */
+function compactMessageToolParts(rawMessage: unknown): unknown {
+  if (!rawMessage || typeof rawMessage !== 'object') {
+    return rawMessage;
+  }
+  const msg = rawMessage as Record<string, unknown>;
+  if (!Array.isArray(msg.parts)) {
+    return msg;
+  }
+  const nextParts = msg.parts.map((rawPart) => {
+    if (!rawPart || typeof rawPart !== 'object') {
+      return rawPart;
+    }
+    const part = rawPart as Record<string, unknown>;
+    const type = typeof part.type === 'string' ? part.type : '';
+    const isTool = type.startsWith('tool-') || type === 'dynamic-tool';
+    if (!isTool) {
+      return part;
+    }
+    const nextPart: Record<string, unknown> = {...part};
+    if (part.input && typeof part.input === 'object') {
+      const input = {...(part.input as Record<string, unknown>)};
+      for (const key of ['html', 'defaultHtml', 'css']) {
+        if (typeof input[key] === 'string' && input[key].length > 200) {
+          input[key] = '[omitted]';
+        }
+      }
+      if (Array.isArray(input.blocks)) {
+        input.blocks = input.blocks.map((b) =>
+          b && typeof b === 'object'
+            ? {
+                component: (b as Record<string, unknown>).component,
+                label: (b as Record<string, unknown>).label,
+                proposed: (b as Record<string, unknown>).proposed,
+              }
+            : b
+        );
+      }
+      if (Array.isArray(input.operations)) {
+        input.operations = input.operations.map((op) =>
+          op && typeof op === 'object'
+            ? {
+                op: (op as Record<string, unknown>).op,
+                blockKey: (op as Record<string, unknown>).blockKey,
+                label: (op as Record<string, unknown>).label,
+              }
+            : op
+        );
+      }
+      nextPart.input = input;
+    }
+    if (part.output && typeof part.output === 'object') {
+      const output = {...(part.output as Record<string, unknown>)};
+      for (const key of ['styleExcerpts', 'components', 'data', 'fields']) {
+        if (output[key] !== undefined) {
+          output[key] = '[omitted]';
+        }
+      }
+      nextPart.output = output;
+    }
+    return nextPart;
+  });
+  return {...msg, parts: nextParts};
+}
+
+/**
+ * Strips `undefined` values and trims bulky tool payloads on older messages if
+ * a prototype AI conversation approaches Firestore's 1 MiB document size limit.
+ */
+function compactChatMessagesForStorage(rawMessages: unknown[]): unknown[] {
+  let messages = stripUndefinedDeep(rawMessages.slice(-200));
+  if (
+    Buffer.byteLength(JSON.stringify(messages), 'utf8') <=
+    CHAT_SESSION_TARGET_BYTES
+  ) {
+    return messages;
+  }
+  messages = [...messages];
+  for (let i = 0; i < messages.length; i++) {
+    messages[i] = compactMessageToolParts(messages[i]);
+    if (
+      Buffer.byteLength(JSON.stringify(messages), 'utf8') <=
+      CHAT_SESSION_TARGET_BYTES
+    ) {
+      return messages;
+    }
+  }
+  while (
+    messages.length > 2 &&
+    Buffer.byteLength(JSON.stringify(messages), 'utf8') >
+      CHAT_SESSION_TARGET_BYTES
+  ) {
+    messages.shift();
+  }
+  return messages;
 }
 
 /** Deletes all documents in a collection using chunked WriteBatches. */
@@ -1341,12 +1467,14 @@ export function registerPrototypesApi(
           componentRefs,
           commentRefs,
           annotationRefs,
+          aiSessionRefs,
           turnRefs,
         ] = await Promise.all([
           listDocRefs(refs.framesCol(boardId)),
           listDocRefs(refs.componentsCol(boardId)),
           listDocRefs(refs.commentsCol(boardId)),
           listDocRefs(refs.annotationsCol(boardId)),
+          listDocRefs(refs.aiSessionsCol(boardId)),
           // Legacy cleanup for boards created before turn snapshots were removed.
           listDocRefs(refs.turnsCol(boardId)),
         ]);
@@ -1356,6 +1484,7 @@ export function registerPrototypesApi(
           ...componentRefs,
           ...commentRefs,
           ...annotationRefs,
+          ...aiSessionRefs,
           ...turnRefs,
           boardRef,
         ]);
@@ -2134,6 +2263,386 @@ export function registerPrototypesApi(
       } catch (err: any) {
         if (sendApiError(res, err)) return;
         console.error('[prototypes.comment.delete] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Batch-updates `(x, y)` world coordinates for multiple frames and/or
+   * annotations moved together as a group on a prototype board.
+   * POST /cms/api/prototypes.items.move
+   */
+  server.use(
+    '/cms/api/prototypes.items.move',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+
+      const parseCoordList = (
+        raw: unknown
+      ): Array<{id: string; x: number; y: number}> | null => {
+        if (raw === undefined) {
+          return [];
+        }
+        if (!Array.isArray(raw)) {
+          return null;
+        }
+        const seen = new Set<string>();
+        const parsed: Array<{id: string; x: number; y: number}> = [];
+        for (const entry of raw) {
+          if (!entry || typeof entry !== 'object') {
+            return null;
+          }
+          const item = entry as Record<string, unknown>;
+          if (
+            !isValidDocId(item.id) ||
+            typeof item.x !== 'number' ||
+            !Number.isFinite(item.x) ||
+            typeof item.y !== 'number' ||
+            !Number.isFinite(item.y)
+          ) {
+            return null;
+          }
+          if (seen.has(item.id)) {
+            continue;
+          }
+          seen.add(item.id);
+          parsed.push({
+            id: item.id,
+            x: Math.max(-1_000_000, Math.min(1_000_000, Math.round(item.x))),
+            y: Math.max(-1_000_000, Math.min(1_000_000, Math.round(item.y))),
+          });
+        }
+        return parsed;
+      };
+
+      const frameMoves = parseCoordList(req.body?.frames);
+      const annotationMoves = parseCoordList(req.body?.annotations);
+      if (!frameMoves || !annotationMoves) {
+        res.status(400).json({success: false, error: 'INVALID_ITEMS'});
+        return;
+      }
+      if (frameMoves.length + annotationMoves.length > 200) {
+        res.status(400).json({success: false, error: 'TOO_MANY_ITEMS'});
+        return;
+      }
+      if (frameMoves.length === 0 && annotationMoves.length === 0) {
+        res.status(200).json({
+          success: true,
+          data: {movedFrames: 0, movedAnnotations: 0},
+        });
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const boardRef = refs.boardDoc(boardId);
+        const now = Date.now();
+
+        const result = await db.runTransaction(async (tx) => {
+          const frameRefs = frameMoves.map((m) =>
+            refs.framesCol(boardId).doc(m.id)
+          );
+          const annotationRefs = annotationMoves.map((m) =>
+            refs.annotationsCol(boardId).doc(m.id)
+          );
+          const [boardSnap, frameSnaps, annotationSnaps] = await Promise.all([
+            tx.get(boardRef),
+            Promise.all(frameRefs.map((ref) => tx.get(ref))),
+            Promise.all(annotationRefs.map((ref) => tx.get(ref))),
+          ]);
+          if (!boardSnap.exists) {
+            throw new PrototypeApiError(404, 'NOT_FOUND');
+          }
+          let movedFrames = 0;
+          let movedAnnotations = 0;
+          frameSnaps.forEach((snap, idx) => {
+            if (snap.exists) {
+              movedFrames += 1;
+              tx.update(frameRefs[idx], {
+                x: frameMoves[idx].x,
+                y: frameMoves[idx].y,
+                updatedAt: now,
+                updatedBy: auth.email,
+              });
+            }
+          });
+          annotationSnaps.forEach((snap, idx) => {
+            if (snap.exists) {
+              movedAnnotations += 1;
+              tx.update(annotationRefs[idx], {
+                x: annotationMoves[idx].x,
+                y: annotationMoves[idx].y,
+                updatedAt: now,
+                updatedBy: auth.email,
+              });
+            }
+          });
+          if (movedFrames > 0 || movedAnnotations > 0) {
+            tx.update(boardRef, {updatedAt: now, updatedBy: auth.email});
+          }
+          return {movedFrames, movedAnnotations};
+        });
+
+        res.status(200).json({success: true, data: result});
+      } catch (err: any) {
+        if (sendApiError(res, err)) return;
+        console.error('[prototypes.items.move] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Loads the signed-in user's active Root AI chat session for a prototype board.
+   * POST /cms/api/prototypes.chat.get
+   */
+  server.use(
+    '/cms/api/prototypes.chat.get',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const sessionRef = refs
+          .aiSessionsCol(boardId)
+          .doc(getUserAiSessionDocId(auth.email));
+        const [boardSnap, sessionSnap] = await Promise.all([
+          refs.boardDoc(boardId).get(),
+          sessionRef.get(),
+        ]);
+        if (!boardSnap.exists) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+
+        if (sessionSnap.exists) {
+          const data = sessionSnap.data() as Record<string, unknown>;
+          const session: PrototypeAiChatSession = {
+            chatId: String(data.chatId || ''),
+            ...(typeof data.modelId === 'string' && data.modelId
+              ? {modelId: data.modelId}
+              : {}),
+            messages: Array.isArray(data.messages) ? data.messages : [],
+            createdAt: toEpochMillis(data.createdAt),
+            updatedAt: toEpochMillis(data.updatedAt),
+          };
+          res.setHeader('Cache-Control', 'no-store');
+          res.status(200).json({success: true, data: {session}});
+          return;
+        }
+
+        // Backwards-compatible fallback for legacy `board.aiChatId` chats owned
+        // by this user in `Projects/{projectId}/AiChats/{chatId}`.
+        const boardData = boardSnap.data() as PrototypeBoard;
+        if (boardData.aiChatId && isValidDocId(boardData.aiChatId)) {
+          const legacySnap = await refs.aiChatsCol
+            .doc(boardData.aiChatId)
+            .get();
+          if (legacySnap.exists) {
+            const legacy = legacySnap.data() as Record<string, unknown>;
+            const owner = String(legacy.createdBy || '')
+              .trim()
+              .toLowerCase();
+            if (owner === auth.email.trim().toLowerCase()) {
+              const session: PrototypeAiChatSession = {
+                chatId: boardData.aiChatId,
+                ...(typeof legacy.modelId === 'string' && legacy.modelId
+                  ? {modelId: legacy.modelId}
+                  : {}),
+                messages: Array.isArray(legacy.messages) ? legacy.messages : [],
+                createdAt: toEpochMillis(legacy.createdAt),
+                updatedAt: toEpochMillis(legacy.modifiedAt || legacy.updatedAt),
+              };
+              res.setHeader('Cache-Control', 'no-store');
+              res.status(200).json({success: true, data: {session}});
+              return;
+            }
+          }
+        }
+
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200).json({success: true, data: {session: null}});
+      } catch (err: any) {
+        console.error('[prototypes.chat.get] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Saves the signed-in user's active Root AI chat session on a prototype board.
+   * POST /cms/api/prototypes.chat.save
+   */
+  server.use(
+    '/cms/api/prototypes.chat.save',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      const chatId = req.body?.chatId;
+      const rawMessages = req.body?.messages;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+      if (!isValidDocId(chatId)) {
+        res.status(400).json({success: false, error: 'INVALID_CHAT_ID'});
+        return;
+      }
+      if (!Array.isArray(rawMessages)) {
+        res.status(400).json({success: false, error: 'INVALID_MESSAGES'});
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const boardRef = refs.boardDoc(boardId);
+        const sessionRef = refs
+          .aiSessionsCol(boardId)
+          .doc(getUserAiSessionDocId(auth.email));
+        const [boardSnap, existingSnap] = await Promise.all([
+          boardRef.get(),
+          sessionRef.get(),
+        ]);
+        if (!boardSnap.exists) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+
+        const now = Date.now();
+        const existingData = existingSnap.exists
+          ? (existingSnap.data() as Record<string, unknown>)
+          : null;
+        const modelId =
+          typeof req.body?.modelId === 'string' && req.body.modelId.trim()
+            ? req.body.modelId.trim().slice(0, 128)
+            : typeof existingData?.modelId === 'string'
+              ? existingData.modelId
+              : undefined;
+        const compacted = compactChatMessagesForStorage(rawMessages);
+        const createdAt =
+          existingData && existingData.chatId === chatId
+            ? toEpochMillis(existingData.createdAt) || now
+            : now;
+
+        const docData = stripUndefinedDeep({
+          chatId,
+          userEmail: auth.email.trim().toLowerCase(),
+          ...(modelId ? {modelId} : {}),
+          messages: compacted,
+          createdAt,
+          updatedAt: now,
+        });
+        assertDocSize(
+          docData,
+          'CHAT_TOO_LARGE',
+          'This conversation is too large to save. Start a new chat to continue.'
+        );
+        await sessionRef.set(docData);
+
+        const session: PrototypeAiChatSession = {
+          chatId,
+          ...(modelId ? {modelId} : {}),
+          messages: compacted,
+          createdAt,
+          updatedAt: now,
+        };
+        res.status(200).json({success: true, data: {session}});
+      } catch (err: any) {
+        if (sendApiError(res, err)) return;
+        console.error('[prototypes.chat.save] error:', err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Clears the signed-in user's active Root AI chat session on a prototype board
+   * (invoked when clicking "New chat").
+   * POST /cms/api/prototypes.chat.clear
+   */
+  server.use(
+    '/cms/api/prototypes.chat.clear',
+    async (req: Request, res: Response) => {
+      if (!assertJsonPost(req, res)) return;
+      const rootConfig = resolveRootConfig(req);
+      const auth = await authenticateRequest(req, res, rootConfig, true);
+      if (!auth) return;
+
+      const boardId = req.body?.boardId;
+      if (!isValidDocId(boardId)) {
+        res.status(400).json({success: false, error: 'INVALID_BOARD_ID'});
+        return;
+      }
+
+      try {
+        const db = auth.cmsClient.db;
+        const refs = getPrototypeRefs(db, auth.cmsClient.projectId);
+        const boardRef = refs.boardDoc(boardId);
+        const sessionRef = refs
+          .aiSessionsCol(boardId)
+          .doc(getUserAiSessionDocId(auth.email));
+        const boardSnap = await boardRef.get();
+        if (!boardSnap.exists) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+
+        await sessionRef.delete();
+
+        // Also unlink legacy `board.aiChatId` if it belonged to this user.
+        const boardData = boardSnap.data() as PrototypeBoard;
+        if (boardData.aiChatId && isValidDocId(boardData.aiChatId)) {
+          const legacySnap = await refs.aiChatsCol
+            .doc(boardData.aiChatId)
+            .get();
+          const legacyOwner = legacySnap.exists
+            ? String(
+                (legacySnap.data() as Record<string, unknown>).createdBy || ''
+              )
+                .trim()
+                .toLowerCase()
+            : '';
+          const normalizedUser = auth.email.trim().toLowerCase();
+          if (
+            legacyOwner === normalizedUser ||
+            (!legacySnap.exists &&
+              boardData.createdBy.trim().toLowerCase() === normalizedUser)
+          ) {
+            const updated: PrototypeBoard = {...boardData, id: boardSnap.id};
+            delete updated.aiChatId;
+            await boardRef.set(stripUndefinedDeep(updated));
+          }
+        }
+
+        res.status(200).json({success: true, data: {cleared: true}});
+      } catch (err: any) {
+        console.error('[prototypes.chat.clear] error:', err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
     }

@@ -27,6 +27,7 @@ import {
   apiGetPrototypeBoard,
   apiGetPrototypeContext,
   apiMovePrototypeComment,
+  apiMovePrototypeItems,
   apiSavePrototypeAnnotation,
   apiSavePrototypeFrame,
   apiSetPrototypeCommentStatus,
@@ -264,6 +265,14 @@ export interface UsePrototypeBoardResult {
   ) => Promise<void>;
   /** Deletes an annotation, restoring it if the delete fails. */
   deleteAnnotation: (annotationId: string) => Promise<void>;
+  /** Moves multiple frames and/or annotations together in a single batch. */
+  moveItems: (
+    moves: {
+      frames?: Array<{id: string; x: number; y: number}>;
+      annotations?: Array<{id: string; x: number; y: number}>;
+    },
+    persist?: boolean
+  ) => Promise<void>;
   /** Integrates a frame mutation performed by Root AI into local state. */
   applyFrameMutated: (frame: PrototypeFrame) => void;
   /** Integrates an annotation saved by Root AI into local state. */
@@ -962,6 +971,69 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     [boardId, applyAnnotationMutated, removeAnnotation]
   );
 
+  const moveItems = useCallback(
+    async (
+      moves: {
+        frames?: Array<{id: string; x: number; y: number}>;
+        annotations?: Array<{id: string; x: number; y: number}>;
+      },
+      persist = false
+    ): Promise<void> => {
+      const frameMoves = (moves.frames || []).map((item) => ({
+        id: item.id,
+        x: Math.round(item.x),
+        y: Math.round(item.y),
+      }));
+      const annotationMoves = (moves.annotations || []).map((item) => ({
+        id: item.id,
+        x: Math.round(item.x),
+        y: Math.round(item.y),
+      }));
+      if (frameMoves.length === 0 && annotationMoves.length === 0) {
+        return;
+      }
+
+      const frameMoveMap = new Map(frameMoves.map((m) => [m.id, m]));
+      const annotationMoveMap = new Map(annotationMoves.map((m) => [m.id, m]));
+
+      setBundle((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return {
+          ...prev,
+          frames:
+            frameMoveMap.size > 0
+              ? prev.frames.map((frame) => {
+                  const next = frameMoveMap.get(frame.id);
+                  return next ? {...frame, x: next.x, y: next.y} : frame;
+                })
+              : prev.frames,
+          annotations:
+            annotationMoveMap.size > 0
+              ? prev.annotations.map((annotation) => {
+                  const next = annotationMoveMap.get(annotation.id);
+                  return next
+                    ? {...annotation, x: next.x, y: next.y}
+                    : annotation;
+                })
+              : prev.annotations,
+        };
+      });
+
+      if (!persist) {
+        return;
+      }
+
+      await apiMovePrototypeItems({
+        boardId,
+        frames: frameMoves,
+        annotations: annotationMoves,
+      });
+    },
+    [boardId]
+  );
+
   const applyFrameMutated = useCallback((frame: PrototypeFrame) => {
     setBundle((prev) => {
       if (!prev) {
@@ -1040,6 +1112,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     createAnnotation,
     updateAnnotation,
     deleteAnnotation,
+    moveItems,
     applyFrameMutated,
     applyAnnotationMutated,
     applyComponentMutated,

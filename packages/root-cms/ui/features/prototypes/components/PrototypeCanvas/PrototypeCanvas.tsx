@@ -14,6 +14,8 @@ import type {
 import {
   getOrderedBlocks,
   MAX_LIVE_PROTOTYPE_IFRAMES,
+  PROTOTYPE_LABEL_FONT_SIZE,
+  PROTOTYPE_NOTE_WIDTH,
   zoomCameraAroundPoint,
 } from '../../../../../shared/prototypes.js';
 import {Button} from '../../../../primitives/Button/Button.js';
@@ -30,6 +32,17 @@ import {
 
 /** Base spacing in world px between background dot-grid dots. */
 const DOT_GRID_STEP = 24;
+
+/** Screen px the pointer must travel before a press becomes a marquee or drag. */
+const DRAG_THRESHOLD_PX = 4;
+
+/** Viewport-relative rectangle rendered during marquee drag selection. */
+interface MarqueeRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 /** Props for the infinite pan/zoom prototype artboard canvas. */
 export interface PrototypeCanvasProps {
@@ -51,6 +64,8 @@ export interface PrototypeCanvasProps {
   annotations: PrototypeAnnotation[];
   /** Currently selected annotation id, if any. */
   selectedAnnotationId: string | null;
+  /** All selected annotation ids when multi-selection is active. */
+  selectedAnnotationIds?: string[];
   /** Id of the annotation whose text is being edited, if any. */
   editingAnnotationId: string | null;
   /** Active canvas tool (`select`, `pan`, `comment`, `note`, `text`). */
@@ -59,6 +74,8 @@ export interface PrototypeCanvasProps {
   spacePressed: boolean;
   /** Currently selected frame id, if any. */
   selectedFrameId: string | null;
+  /** All selected frame ids when multi-selection is active. */
+  selectedFrameIds?: string[];
   /** Currently selected block key inside `selectedFrameId`, if any. */
   selectedBlockKey: string | null;
   /** Open comment threads on the active page. */
@@ -143,6 +160,18 @@ export interface PrototypeCanvasProps {
     y: number,
     persist: boolean
   ) => void;
+  /** Updates multi-item selection across frames and annotations. */
+  onSelectGroup?: (frameIds: string[], annotationIds: string[]) => void;
+  /** Batch-moves multiple frames and/or annotations together. */
+  onMoveItems?: (
+    moves: {
+      frames?: Array<{id: string; x: number; y: number}>;
+      annotations?: Array<{id: string; x: number; y: number}>;
+    },
+    persist: boolean
+  ) => void;
+  /** Copies a deeplink URL for a frame to the clipboard. */
+  onCopyFrameLink?: (frameId: string) => void;
 }
 
 /**
@@ -160,6 +189,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     tool,
     spacePressed,
     selectedFrameId,
+    selectedFrameIds,
     selectedBlockKey,
     openThreads,
     activeThreadId,
@@ -189,6 +219,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onOpenAi,
     annotations,
     selectedAnnotationId,
+    selectedAnnotationIds,
     editingAnnotationId,
     onCreateAnnotation,
     onSelectAnnotation,
@@ -196,12 +227,41 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onCommitAnnotation,
     onCancelAnnotationEdit,
     onDragAnnotation,
+    onSelectGroup,
+    onMoveItems,
+    onCopyFrameLink,
   } = props;
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportSize, setViewportSize] = useState({width: 1280, height: 800});
   const [panning, setPanning] = useState(false);
   const [draggingThreadId, setDraggingThreadId] = useState<string | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<MarqueeRect | null>(null);
+  const [draggingGroup, setDraggingGroup] = useState<{
+    frames: Set<string>;
+    annotations: Set<string>;
+  } | null>(null);
+
+  const effectiveSelectedFrameIds = useMemo(
+    () => selectedFrameIds ?? (selectedFrameId ? [selectedFrameId] : []),
+    [selectedFrameIds, selectedFrameId]
+  );
+  const effectiveSelectedAnnotationIds = useMemo(
+    () =>
+      selectedAnnotationIds ??
+      (selectedAnnotationId ? [selectedAnnotationId] : []),
+    [selectedAnnotationIds, selectedAnnotationId]
+  );
+  const selectedFrameSet = useMemo(
+    () => new Set(effectiveSelectedFrameIds),
+    [effectiveSelectedFrameIds]
+  );
+  const selectedAnnotationSet = useMemo(
+    () => new Set(effectiveSelectedAnnotationIds),
+    [effectiveSelectedAnnotationIds]
+  );
+  const totalSelectedCount =
+    effectiveSelectedFrameIds.length + effectiveSelectedAnnotationIds.length;
   const [layoutByFrame, setLayoutByFrame] = useState<
     Record<string, {height: number; blockRects: PrototypeBlockRect[]}>
   >({});
@@ -343,22 +403,180 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
       return;
     }
 
-    // Background click in Select mode clears selection and exits interactive mode.
-    onSelect(null, null);
+    // Background drag in Select mode draws a marquee selection box over frames,
+    // notes, and text labels; a plain click clears selection.
+    const el = viewportRef.current;
+    if (!el) {
+      onSelect(null, null);
+      return;
+    }
+    const bounds = el.getBoundingClientRect();
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const initialZoom = cameraRef.current.zoom;
+    const startWorldX =
+      (startClientX - bounds.left - cameraRef.current.x) / initialZoom;
+    const startWorldY =
+      (startClientY - bounds.top - cameraRef.current.y) / initialZoom;
+
+    const baseFrameIds = e.shiftKey ? [...effectiveSelectedFrameIds] : [];
+    const baseAnnotationIds = e.shiftKey
+      ? [...effectiveSelectedAnnotationIds]
+      : [];
+
+    const domAnnotationRects = new Map<string, DOMRect>();
+    for (const node of el.querySelectorAll<HTMLElement>(
+      '[data-annotation-id]'
+    )) {
+      const id = node.dataset.annotationId;
+      if (id) {
+        domAnnotationRects.set(id, node.getBoundingClientRect());
+      }
+    }
+
+    const frameBoxes = frames.map((frame) => ({
+      id: frame.id,
+      x: frame.x,
+      y: frame.y,
+      width: Math.max(1, frame.width),
+      height: Math.max(
+        240,
+        layoutByFrameRef.current[frame.id]?.height || frame.cachedHeight || 760
+      ),
+    }));
+
+    const annotationBoxes = annotations.map((item) => {
+      const domRect = domAnnotationRects.get(item.id);
+      if (domRect && domRect.width > 0 && domRect.height > 0) {
+        return {
+          id: item.id,
+          x: item.x,
+          y: item.y,
+          width: domRect.width / initialZoom,
+          height: domRect.height / initialZoom,
+        };
+      }
+      if (item.kind === 'note') {
+        return {
+          id: item.id,
+          x: item.x,
+          y: item.y,
+          width: item.width || PROTOTYPE_NOTE_WIDTH,
+          height: Math.max(
+            80,
+            Math.ceil(Math.max(1, item.text.length) / 28) * 22 + 24
+          ),
+        };
+      }
+      return {
+        id: item.id,
+        x: item.x,
+        y: item.y,
+        width: Math.max(
+          80,
+          Math.max(1, item.text.length) * PROTOTYPE_LABEL_FONT_SIZE * 0.6
+        ),
+        height: PROTOTYPE_LABEL_FONT_SIZE * 1.25,
+      };
+    });
+
+    const applyGroup = (nextFrames: string[], nextAnnotations: string[]) => {
+      if (onSelectGroup) {
+        onSelectGroup(nextFrames, nextAnnotations);
+      } else if (nextFrames.length === 1 && nextAnnotations.length === 0) {
+        onSelect(nextFrames[0], null);
+      } else if (nextAnnotations.length === 1 && nextFrames.length === 0) {
+        onSelectAnnotation(nextAnnotations[0]);
+      } else if (nextFrames.length === 0 && nextAnnotations.length === 0) {
+        onSelect(null, null);
+      }
+    };
+
+    let moved = false;
+    const onMove = (moveEvent: PointerEvent) => {
+      const screenDist = Math.hypot(
+        moveEvent.clientX - startClientX,
+        moveEvent.clientY - startClientY
+      );
+      if (!moved && screenDist < DRAG_THRESHOLD_PX) {
+        return;
+      }
+      moved = true;
+      const curLocalX = moveEvent.clientX - bounds.left;
+      const curLocalY = moveEvent.clientY - bounds.top;
+      const startLocalX = startClientX - bounds.left;
+      const startLocalY = startClientY - bounds.top;
+
+      setMarqueeRect({
+        left: Math.min(startLocalX, curLocalX),
+        top: Math.min(startLocalY, curLocalY),
+        width: Math.abs(curLocalX - startLocalX),
+        height: Math.abs(curLocalY - startLocalY),
+      });
+
+      const curCam = cameraRef.current;
+      const curWorldX = (curLocalX - curCam.x) / curCam.zoom;
+      const curWorldY = (curLocalY - curCam.y) / curCam.zoom;
+      const minX = Math.min(startWorldX, curWorldX);
+      const maxX = Math.max(startWorldX, curWorldX);
+      const minY = Math.min(startWorldY, curWorldY);
+      const maxY = Math.max(startWorldY, curWorldY);
+
+      const hitFrames = frameBoxes
+        .filter(
+          (b) =>
+            b.x < maxX &&
+            b.x + b.width > minX &&
+            b.y < maxY &&
+            b.y + b.height > minY
+        )
+        .map((b) => b.id);
+      const hitAnnotations = annotationBoxes
+        .filter(
+          (b) =>
+            b.x < maxX &&
+            b.x + b.width > minX &&
+            b.y < maxY &&
+            b.y + b.height > minY
+        )
+        .map((b) => b.id);
+
+      const mergedFrames = Array.from(new Set([...baseFrameIds, ...hitFrames]));
+      const mergedAnnotations = Array.from(
+        new Set([...baseAnnotationIds, ...hitAnnotations])
+      );
+      applyGroup(mergedFrames, mergedAnnotations);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      setMarqueeRect(null);
+      if (!moved && !e.shiftKey) {
+        applyGroup([], []);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   }
 
-  // Enforce MAX_LIVE_PROTOTYPE_IFRAMES (6): always keep the selected frame
+  // Enforce MAX_LIVE_PROTOTYPE_IFRAMES (6): always keep selected frames
   // live, then fill remaining slots with frames closest to viewport center.
   const liveFrameIds = useMemo(() => {
     if (frames.length <= MAX_LIVE_PROTOTYPE_IFRAMES) {
       return new Set(frames.map((frame) => frame.id));
     }
     const chosen = new Set<string>();
-    if (
-      selectedFrameId &&
-      frames.some((frame) => frame.id === selectedFrameId)
-    ) {
-      chosen.add(selectedFrameId);
+    for (const selectedId of effectiveSelectedFrameIds) {
+      if (chosen.size >= MAX_LIVE_PROTOTYPE_IFRAMES) {
+        break;
+      }
+      if (frames.some((frame) => frame.id === selectedId)) {
+        chosen.add(selectedId);
+      }
     }
 
     const viewLeft = -camera.x / camera.zoom;
@@ -401,7 +619,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     return chosen;
   }, [
     frames,
-    selectedFrameId,
+    effectiveSelectedFrameIds,
     camera.x,
     camera.y,
     camera.zoom,
@@ -649,6 +867,191 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     window.addEventListener('pointercancel', onUp);
   }
 
+  /**
+   * Handles pointer presses on frames and annotations, supporting Shift+click
+   * multi-select toggling and synchronized group dragging across selected
+   * frames, sticky notes, and text labels.
+   */
+  function handleItemPointerDown(
+    e: PointerEvent,
+    target:
+      | {
+          kind: 'frame';
+          id: string;
+          part: 'header' | 'body';
+          blockKey: string | null;
+        }
+      | {kind: 'annotation'; id: string}
+  ) {
+    if (e.button !== 0 || effectivePanMode) {
+      return;
+    }
+    e.stopPropagation();
+
+    let dragFrameIds: string[] = [];
+    let dragAnnotationIds: string[] = [];
+    let narrowOnClick: (() => void) | null = null;
+    let canDrag = false;
+
+    if (e.shiftKey) {
+      const nextFrames =
+        target.kind === 'frame'
+          ? selectedFrameSet.has(target.id)
+            ? effectiveSelectedFrameIds.filter((id) => id !== target.id)
+            : [...effectiveSelectedFrameIds, target.id]
+          : [...effectiveSelectedFrameIds];
+      const nextAnnotations =
+        target.kind === 'annotation'
+          ? selectedAnnotationSet.has(target.id)
+            ? effectiveSelectedAnnotationIds.filter((id) => id !== target.id)
+            : [...effectiveSelectedAnnotationIds, target.id]
+          : [...effectiveSelectedAnnotationIds];
+      if (onSelectGroup) {
+        onSelectGroup(nextFrames, nextAnnotations);
+      }
+      const stillSelected =
+        target.kind === 'frame'
+          ? nextFrames.includes(target.id)
+          : nextAnnotations.includes(target.id);
+      if (!stillSelected || !canEdit) {
+        return;
+      }
+      dragFrameIds = nextFrames;
+      dragAnnotationIds = nextAnnotations;
+      canDrag =
+        target.kind === 'annotation' ||
+        target.part === 'header' ||
+        nextFrames.length + nextAnnotations.length > 1;
+    } else {
+      const wasSelected =
+        target.kind === 'frame'
+          ? selectedFrameSet.has(target.id)
+          : selectedAnnotationSet.has(target.id);
+
+      if (wasSelected && totalSelectedCount > 1) {
+        dragFrameIds = [...effectiveSelectedFrameIds];
+        dragAnnotationIds = [...effectiveSelectedAnnotationIds];
+        canDrag = canEdit;
+        narrowOnClick = () => {
+          if (target.kind === 'frame') {
+            onSelect(
+              target.id,
+              target.part === 'body' ? target.blockKey : null
+            );
+          } else {
+            onSelectAnnotation(target.id);
+          }
+        };
+      } else if (target.kind === 'frame') {
+        onSelect(target.id, target.part === 'body' ? target.blockKey : null);
+        dragFrameIds = [target.id];
+        canDrag = canEdit && target.part === 'header';
+      } else {
+        onSelectAnnotation(target.id);
+        dragAnnotationIds = [target.id];
+        canDrag = canEdit;
+      }
+    }
+
+    if (!canDrag && !narrowOnClick) {
+      return;
+    }
+
+    const frameOrigins = dragFrameIds
+      .map((id) => framesById.get(id))
+      .filter((f): f is PrototypeFrame => Boolean(f))
+      .map((f) => ({id: f.id, x: f.x, y: f.y}));
+    const annotationById = new Map(annotations.map((a) => [a.id, a]));
+    const annotationOrigins = dragAnnotationIds
+      .map((id) => annotationById.get(id))
+      .filter((a): a is PrototypeAnnotation => Boolean(a))
+      .map((a) => ({id: a.id, x: a.x, y: a.y}));
+
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let moved = false;
+
+    const applyDelta = (dx: number, dy: number, persist: boolean) => {
+      const nextFrameMoves = frameOrigins.map((o) => ({
+        id: o.id,
+        x: o.x + dx,
+        y: o.y + dy,
+      }));
+      const nextAnnotationMoves = annotationOrigins.map((o) => ({
+        id: o.id,
+        x: o.x + dx,
+        y: o.y + dy,
+      }));
+      if (
+        onMoveItems &&
+        nextFrameMoves.length + nextAnnotationMoves.length > 1
+      ) {
+        onMoveItems(
+          {frames: nextFrameMoves, annotations: nextAnnotationMoves},
+          persist
+        );
+        return;
+      }
+      for (const fm of nextFrameMoves) {
+        onDragFramePosition(fm.id, fm.x, fm.y, persist);
+      }
+      for (const am of nextAnnotationMoves) {
+        onDragAnnotation(am.id, am.x, am.y, persist);
+      }
+    };
+
+    const onMove = (moveEvent: PointerEvent) => {
+      if (!canDrag) {
+        return;
+      }
+      const screenDist = Math.hypot(
+        moveEvent.clientX - startClientX,
+        moveEvent.clientY - startClientY
+      );
+      if (!moved && screenDist < DRAG_THRESHOLD_PX) {
+        return;
+      }
+      if (!moved) {
+        moved = true;
+        setDraggingGroup({
+          frames: new Set(frameOrigins.map((f) => f.id)),
+          annotations: new Set(annotationOrigins.map((a) => a.id)),
+        });
+      }
+      const zoom = cameraRef.current.zoom;
+      applyDelta(
+        (moveEvent.clientX - startClientX) / zoom,
+        (moveEvent.clientY - startClientY) / zoom,
+        false
+      );
+    };
+
+    const onUp = (upEvent: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      setDraggingGroup(null);
+      if (moved) {
+        if (upEvent.type === 'pointercancel') {
+          applyDelta(0, 0, false);
+        } else {
+          const zoom = cameraRef.current.zoom;
+          applyDelta(
+            (upEvent.clientX - startClientX) / zoom,
+            (upEvent.clientY - startClientY) / zoom,
+            true
+          );
+        }
+      } else if (narrowOnClick) {
+        narrowOnClick();
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
   // Scale dot-grid spacing cleanly so dots stay legible when zoomed far out.
   const gridStep = Math.max(12, DOT_GRID_STEP * camera.zoom);
   const hudScale = Math.min(
@@ -661,7 +1064,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
       ref={viewportRef}
       className={cn(
         'PrototypeCanvas relative size-full overflow-hidden select-none bg-page',
-        panning || draggingThreadId
+        panning || draggingThreadId || draggingGroup
           ? 'cursor-grabbing'
           : effectivePanMode
             ? 'cursor-grab'
@@ -677,7 +1080,10 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     >
       {/* World-space infinite transform layer. */}
       <div
-        className="PrototypeCanvas__world absolute left-0 top-0"
+        className={cn(
+          'PrototypeCanvas__world absolute left-0 top-0',
+          marqueeRect && 'pointer-events-none'
+        )}
         style={{
           transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.zoom})`,
           transformOrigin: '0 0',
@@ -692,15 +1098,30 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             tool={effectivePanMode ? 'pan' : tool}
             pages={pages}
             isLive={liveFrameIds.has(frame.id)}
-            isSelected={selectedFrameId === frame.id}
+            isSelected={selectedFrameSet.has(frame.id)}
+            isMultiSelected={
+              selectedFrameSet.has(frame.id) && totalSelectedCount > 1
+            }
+            isDraggingGroup={Boolean(draggingGroup?.frames.has(frame.id))}
             selectedBlockKey={
-              selectedFrameId === frame.id ? selectedBlockKey : null
+              totalSelectedCount === 1 && selectedFrameId === frame.id
+                ? selectedBlockKey
+                : null
             }
             canEdit={canEdit}
             aiAvailable={aiAvailable}
             onSelect={(frameId, blockKey) => onSelect(frameId, blockKey)}
+            onFramePointerDown={(e, part, blockKey) =>
+              handleItemPointerDown(e, {
+                kind: 'frame',
+                id: frame.id,
+                part,
+                blockKey,
+              })
+            }
             onExpandFrame={onExpandFrame}
             onOpenPreview={onOpenPreview}
+            onCopyFrameLink={onCopyFrameLink}
             onEditFrameWithAi={onEditFrameWithAi}
             onDragPosition={onDragFramePosition}
             onDropCommentPin={onDropCommentPin}
@@ -726,10 +1147,16 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
             key={annotation.id}
             annotation={annotation}
             zoom={camera.zoom}
-            isSelected={selectedAnnotationId === annotation.id}
+            isSelected={selectedAnnotationSet.has(annotation.id)}
             isEditing={editingAnnotationId === annotation.id}
+            isDraggingGroup={Boolean(
+              draggingGroup?.annotations.has(annotation.id)
+            )}
             interactive={canEdit && !effectivePanMode && tool !== 'comment'}
             onSelect={() => onSelectAnnotation(annotation.id)}
+            onAnnotationPointerDown={(e) =>
+              handleItemPointerDown(e, {kind: 'annotation', id: annotation.id})
+            }
             onStartEdit={() => onEditAnnotation(annotation.id)}
             onCommit={(text) => onCommitAnnotation(annotation.id, text)}
             onCancel={() => onCancelAnnotationEdit(annotation.id)}
@@ -804,6 +1231,19 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
           );
         })}
       </div>
+
+      {/* Marquee rubber-band selection rectangle in viewport screen space. */}
+      {marqueeRect && (
+        <div
+          className="PrototypeCanvas__marquee pointer-events-none absolute z-40 rounded-sm border border-focus bg-info-soft/25"
+          style={{
+            left: `${marqueeRect.left}px`,
+            top: `${marqueeRect.top}px`,
+            width: `${marqueeRect.width}px`,
+            height: `${marqueeRect.height}px`,
+          }}
+        />
+      )}
 
       {/* Empty or AI-generating skeleton state centered over the canvas when the page has zero frames. */}
       {frames.length === 0 && annotations.length === 0 && (

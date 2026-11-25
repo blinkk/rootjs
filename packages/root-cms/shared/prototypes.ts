@@ -311,6 +311,20 @@ export interface PrototypeBoardBundle {
   annotations: PrototypeAnnotation[];
 }
 
+/** Per-user persisted Root AI chat session on a prototype board. */
+export interface PrototypeAiChatSession {
+  /** Unique session/chat identifier used by `useChat`. */
+  chatId: string;
+  /** Selected AI model id, if any. */
+  modelId?: string;
+  /** Serialized `UIMessage[]` conversation history. */
+  messages: unknown[];
+  /** Creation epoch millis. */
+  createdAt: number;
+  /** Last modification epoch millis. */
+  updatedAt: number;
+}
+
 /** Horizontal spacing in world px between auto-positioned frames on a page. */
 export const FRAME_AUTO_LAYOUT_GAP = 80;
 
@@ -586,6 +600,43 @@ export function fitCameraToBounds(
   const y = Math.round(
     Math.max(padding, (viewportHeight - contentHeight * zoom) / 2) - minY * zoom
   );
+  return {x, y, zoom};
+}
+
+/**
+ * Computes a camera state that focuses a single target frame in the viewport
+ * (e.g. when opening a frame deeplink), keeping tall multi-section frames at a
+ * readable zoom level aligned near the top of the viewport rather than
+ * shrinking them into a tiny vertical strip.
+ */
+export function focusCameraOnFrame(
+  frame: {x: number; y: number; width: number; height?: number},
+  viewportWidth: number,
+  viewportHeight: number,
+  padding = 88
+): CanvasCamera {
+  if (viewportWidth <= 0 || viewportHeight <= 0) {
+    return {x: padding, y: padding, zoom: 0.65};
+  }
+  const frameWidth = Math.max(1, frame.width);
+  const fullHeight = Math.max(200, frame.height || 760);
+  const readableHeight = Math.min(
+    fullHeight,
+    Math.max(DEFAULT_FOLD_HEIGHT_DESKTOP, Math.round(frameWidth * 0.8))
+  );
+  const availW = Math.max(100, viewportWidth - padding * 2);
+  const availH = Math.max(100, viewportHeight - padding * 2);
+  const zoom = clampCanvasZoom(
+    Math.min(1, availW / frameWidth, availH / readableHeight)
+  );
+  const x = Math.round(
+    (viewportWidth - frameWidth * zoom) / 2 - frame.x * zoom
+  );
+  const scaledFullHeight = fullHeight * zoom;
+  const y =
+    scaledFullHeight <= availH
+      ? Math.round((viewportHeight - scaledFullHeight) / 2 - frame.y * zoom)
+      : Math.round(padding - frame.y * zoom);
   return {x, y, zoom};
 }
 

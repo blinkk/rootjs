@@ -36,6 +36,10 @@ export interface PrototypeAnnotationViewProps {
   onCancel: () => void;
   /** Reports a drag position; `persist` is true once on drop. */
   onDrag: (x: number, y: number, persist: boolean) => void;
+  /** Whether a canvas group drag including this annotation is active. */
+  isDraggingGroup?: boolean;
+  /** Optional canvas-level pointer-down handler supporting Shift-select and group drag. */
+  onAnnotationPointerDown?: (e: PointerEvent) => void;
 }
 
 /**
@@ -55,6 +59,9 @@ export function PrototypeAnnotationView(props: PrototypeAnnotationViewProps) {
   // True when the edit ended from the keyboard, so focus should return to
   // the annotation. A blur means focus has already moved somewhere else.
   const refocusRef = useRef(false);
+  // Suppresses `onFocus` auto-selection during pointer presses so Shift+click
+  // deselection and group drags are not overridden by browser button focus.
+  const pointerDownFocusRef = useRef(false);
 
   // Focus the editor when edit mode starts, and hand focus back to the
   // annotation when it ends so keyboard users keep their place.
@@ -114,6 +121,14 @@ export function PrototypeAnnotationView(props: PrototypeAnnotationViewProps) {
 
   function handlePointerDown(e: PointerEvent) {
     if (e.button !== 0) {
+      return;
+    }
+    pointerDownFocusRef.current = true;
+    window.setTimeout(() => {
+      pointerDownFocusRef.current = false;
+    }, 0);
+    if (props.onAnnotationPointerDown) {
+      props.onAnnotationPointerDown(e);
       return;
     }
     e.stopPropagation();
@@ -186,6 +201,7 @@ export function PrototypeAnnotationView(props: PrototypeAnnotationViewProps) {
         top: `${annotation.y}px`,
         width: width ? `${width}px` : undefined,
       }}
+      data-annotation-id={annotation.id}
     >
       {isEditing ? (
         isNote ? (
@@ -236,7 +252,9 @@ export function PrototypeAnnotationView(props: PrototypeAnnotationViewProps) {
           className={cn(
             surfaceClasses,
             'PrototypeAnnotation__button outline-focus',
-            dragging ? 'cursor-grabbing' : 'cursor-grab'
+            dragging || props.isDraggingGroup
+              ? 'cursor-grabbing'
+              : 'cursor-grab'
           )}
           style={{
             ...labelStyle,
@@ -250,7 +268,7 @@ export function PrototypeAnnotationView(props: PrototypeAnnotationViewProps) {
           onPointerDown={handlePointerDown}
           onFocus={() => {
             // Keyboard focus selects, so the ring and Delete follow focus.
-            if (!isSelected) {
+            if (!isSelected && !pointerDownFocusRef.current) {
               props.onSelect();
             }
           }}

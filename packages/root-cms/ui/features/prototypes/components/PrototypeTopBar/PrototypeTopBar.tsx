@@ -135,6 +135,7 @@ export function PrototypeTopBar(props: PrototypeTopBarProps) {
     const url = new URL(window.location.href);
     url.pathname = `/cms/prototypes/${board.id}`;
     url.searchParams.set('page', activePage.id);
+    url.searchParams.delete('frame');
     url.searchParams.delete('prompt');
     try {
       await navigator.clipboard.writeText(url.toString());
