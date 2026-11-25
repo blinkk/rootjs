@@ -4,7 +4,7 @@ import glob from 'tiny-glob';
 import {searchForWorkspaceRoot} from 'vite';
 import {ElementTagNameMatcher, RootConfig} from '../core/config.js';
 import {isValidTagName, parseTagNames} from '../utils/elements.js';
-import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils.js';
+import {isDirectory, isJsFile} from '../utils/fsutils.js';
 import type {ResolvedPod} from './pod-collector.js';
 
 interface ElementSourceFile {
@@ -84,6 +84,20 @@ export class ElementGraph {
       }
     }
     return Array.from(deps);
+  }
+
+  /**
+   * Clears cached dependencies for the element matching `filePath`, if any.
+   */
+  invalidateFile(filePath: string): boolean {
+    const resolved = path.resolve(filePath);
+    for (const tagName in this.sourceFiles) {
+      if (path.resolve(this.sourceFiles[tagName].filePath) === resolved) {
+        delete this.deps[tagName];
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -189,23 +203,48 @@ export async function getElements(
 }
 
 /**
+ * Returns true when `target` is inside (or equal to) `dir`, resolving symlinks
+ * when the paths exist on disk.
+ */
+function directoryContainsSync(dir: string, target: string): boolean {
+  let outer = path.resolve(dir);
+  let inner = path.resolve(target);
+  try {
+    outer = fs.realpathSync(outer);
+  } catch {
+    // Fall back to the resolved path if `dir` does not exist on disk.
+  }
+  try {
+    inner = fs.realpathSync(inner);
+  } catch {
+    // Fall back to the resolved path if `target` does not exist on disk.
+  }
+  const rel = path.relative(outer, inner);
+  return (
+    rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
+  );
+}
+
+/**
  * Get all element dirs.
  */
 export function getElementsDirs(rootConfig: RootConfig, pods?: ResolvedPod[]) {
   const rootDir = rootConfig.rootDir;
-  const workspaceRoot = searchForWorkspaceRoot(rootDir);
 
   const elementsDirs = [path.join(rootDir, 'elements')];
   const elementsInclude = rootConfig.elements?.include || [];
 
-  for (const dirPath of elementsInclude) {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!directoryContains(rootDir, elementsDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
-      );
+  if (elementsInclude.length > 0) {
+    const workspaceRoot = searchForWorkspaceRoot(rootDir);
+    for (const dirPath of elementsInclude) {
+      const elementsDir = path.resolve(rootDir, dirPath);
+      if (!directoryContainsSync(workspaceRoot, elementsDir)) {
+        throw new Error(
+          `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
+        );
+      }
+      elementsDirs.push(elementsDir);
     }
-    elementsDirs.push(elementsDir);
   }
 
   // Pod-contributed element dirs bypass the workspace containment check

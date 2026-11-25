@@ -245,16 +245,24 @@ async function createViteMiddleware(options: {
   });
 
   // Watch for file changes and re-generate the elements graph if any elements
-  // are added or deleted.
+  // are added or deleted, or invalidate cached deps when an element changes.
+  const elementsDirs = getElementsDirs(rootConfig, pods).map((dirPath) => {
+    const resolved = path.resolve(dirPath);
+    return resolved.endsWith(path.sep) ? resolved : `${resolved}${path.sep}`;
+  });
   function isInElementsDir(changedFilePath: string) {
     const filePath = path.resolve(changedFilePath);
-    const elementsDirs = getElementsDirs(rootConfig, pods);
-    return elementsDirs.some((dirPath) => filePath.startsWith(dirPath));
+    return elementsDirs.some((dirPrefix) => filePath.startsWith(dirPrefix));
   }
   viteServer.watcher.on('add', async (filePath: string) => {
     if (isInElementsDir(filePath)) {
       elementGraph = await getElements(rootConfig, pods);
       console.log(`element added: ${filePath}`);
+    }
+  });
+  viteServer.watcher.on('change', (filePath: string) => {
+    if (isInElementsDir(filePath)) {
+      elementGraph.invalidateFile(filePath);
     }
   });
   viteServer.watcher.on('unlink', async (filePath: string) => {

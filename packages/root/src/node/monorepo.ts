@@ -24,14 +24,15 @@ export function loadPackageJson(filepath: string): PackageInfo | null {
  * package.json path.
  */
 function getMonorepoPackages(
-  rootDir: string
+  rootDir: string,
+  monorepoRoot?: string
 ): Record<string, WorkspacePackage> {
-  const monorepoRoot = getWorkspaceManagerRoot(rootDir);
-  if (!monorepoRoot) {
+  const workspaceRoot = monorepoRoot ?? getWorkspaceManagerRoot(rootDir);
+  if (!workspaceRoot) {
     return {};
   }
 
-  const workspaces = getWorkspaceInfos(monorepoRoot) || [];
+  const workspaces = getWorkspaceInfos(workspaceRoot) || [];
   const packages: Record<string, WorkspacePackage> = {};
   workspaces.forEach((workspaceInfo) => {
     packages[workspaceInfo.name] = workspaceInfo;
@@ -43,16 +44,26 @@ function getMonorepoPackages(
  * Returns the top-level monorepo package's deps, if any.
  */
 export function getMonorepoPackageDeps(
-  rootDir: string
+  rootDir: string,
+  monorepoRoot?: string
 ): Record<string, string> {
-  const monorepoRoot = getWorkspaceManagerRoot(rootDir);
-  if (!monorepoRoot) {
+  const workspaceRoot = monorepoRoot ?? getWorkspaceManagerRoot(rootDir);
+  if (!workspaceRoot) {
     return {};
   }
 
-  const packageJsonPath = path.join(monorepoRoot, 'package.json');
+  const packageJsonPath = path.join(workspaceRoot, 'package.json');
   const packageJson = loadPackageJson(packageJsonPath);
   return packageJson?.dependencies || {};
+}
+
+export interface FlattenPackageDepsOptions {
+  /** Workspace package names already visited during recursion. */
+  ignore?: Set<string>;
+  /** Cached top-level monorepo dependencies. */
+  monorepoDeps?: Record<string, string>;
+  /** Cached map of monorepo workspace packages. */
+  workspacePackages?: Record<string, WorkspacePackage>;
 }
 
 /**
@@ -62,11 +73,24 @@ export function getMonorepoPackageDeps(
  */
 export function flattenPackageDepsFromMonorepo(
   rootDir: string,
-  options?: {ignore?: Set<string>}
+  options?: FlattenPackageDepsOptions
 ): Record<string, string> {
   const packageJsonPath = path.resolve(rootDir, 'package.json');
   const packageJson = loadPackageJson(packageJsonPath);
-  const monorepoDeps = getMonorepoPackageDeps(rootDir);
+
+  // Resolve the monorepo root once at the top-level call so recursive calls
+  // reuse `monorepoDeps` and `workspacePackages` without re-scanning the
+  // workspace.
+  let monorepoRoot: string | undefined;
+  const resolveMonorepoRoot = () => {
+    if (monorepoRoot === undefined) {
+      monorepoRoot = getWorkspaceManagerRoot(rootDir) || '';
+    }
+    return monorepoRoot;
+  };
+  const monorepoDeps =
+    options?.monorepoDeps ??
+    getMonorepoPackageDeps(rootDir, resolveMonorepoRoot());
 
   // Flatten `peerDependencies` and `dependencies`.
   const projectDeps = {
@@ -75,14 +99,20 @@ export function flattenPackageDepsFromMonorepo(
   };
 
   const allDeps: Record<string, string> = {};
-  const workspacePackages = getMonorepoPackages(rootDir);
+  let workspacePackages = options?.workspacePackages;
+  const getWorkspacePackages = () => {
+    if (!workspacePackages) {
+      workspacePackages = getMonorepoPackages(rootDir, resolveMonorepoRoot());
+    }
+    return workspacePackages;
+  };
   const ignore = options?.ignore || new Set();
   Object.entries(projectDeps).forEach(([depName, depVersion]) => {
     if (
       depName.startsWith('@blinkk/root') &&
       depVersion.startsWith('workspace:')
     ) {
-      const packageInfo = workspacePackages[depName];
+      const packageInfo = getWorkspacePackages()[depName];
       if (packageInfo) {
         allDeps[depName] = packageInfo.packageJson.version;
       }
@@ -93,11 +123,14 @@ export function flattenPackageDepsFromMonorepo(
         return;
       }
       ignore.add(depName);
-      const packageInfo = workspacePackages[depName];
+      const packages = getWorkspacePackages();
+      const packageInfo = packages[depName];
       if (packageInfo) {
         const workspacePackageDir = packageInfo.path;
         const deps = flattenPackageDepsFromMonorepo(workspacePackageDir, {
           ignore: ignore,
+          monorepoDeps: monorepoDeps,
+          workspacePackages: packages,
         });
         for (const key in deps) {
           const currentValue = allDeps[key];
