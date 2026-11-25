@@ -156,6 +156,9 @@ interface DevViteServer {
   ssrLoadModule: (url: string) => Promise<Record<string, any>>;
 }
 
+/** Monotonic counter for cache-busting dynamic imports of `dist/server/project.js`. */
+let schemaBundleImportId = 0;
+
 /**
  * Writes collection schema JSON files to `dist/collections/*.schema.json`
  * from the already-bundled `dist/server/project.js` module, avoiding a
@@ -165,7 +168,7 @@ async function writeCollectionSchemasToJson(
   rootConfig: RootConfig,
   projectBundlePath: string
 ) {
-  const projectUrl = `${pathToFileURL(projectBundlePath).href}?t=${Date.now()}`;
+  const projectUrl = `${pathToFileURL(projectBundlePath).href}?t=${Date.now()}-${++schemaBundleImportId}`;
   const project = (await import(projectUrl)) as ProjectModule;
 
   const outDir = path.join(rootConfig.rootDir, 'dist', 'collections');
@@ -1376,6 +1379,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
        * servers can report when they were built.
        */
       postBuild: async (rootConfig: RootConfig) => {
+        buildRootConfig = null;
         await writeBuildInfo(rootConfig.rootDir);
       },
     },
@@ -1393,12 +1397,18 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     vitePlugins: [
       {
         name: 'root-cms:write-collection-schemas',
+        apply: 'build',
         async writeBundle(outputOptions, bundle) {
           if (!buildRootConfig || !('project.js' in bundle)) {
             return;
           }
           const outDir = outputOptions.dir;
-          if (!outDir) {
+          const expectedOutDir = path.resolve(
+            buildRootConfig.rootDir,
+            'dist',
+            'server'
+          );
+          if (!outDir || path.resolve(outDir) !== expectedOutDir) {
             return;
           }
           const rootConfig = buildRootConfig;

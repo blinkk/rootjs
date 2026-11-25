@@ -140,8 +140,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     }
   }
 
-  // Create a fresh base config per concurrent `viteBuild` call so built-in
-  // plugins don't share mutable per-build state across parallel passes.
+  // Create a fresh base config per `viteBuild` pass so built-in plugins don't
+  // share mutable per-build state across passes.
   const createBaseConfig = (): UserConfig => ({
     ...viteConfig,
     root: rootDir,
