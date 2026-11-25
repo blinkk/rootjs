@@ -203,3 +203,17 @@ test('supports falsy route values without corrupting params on backtrack', async
     ]
   );
 });
+
+test('catch-all params preserve repeated slashes', () => {
+  routeTrie.add('/[locale]/[...path]', 'catchall');
+  routeTrie.add('/docs/[[...slug]]', 'docs');
+
+  assert.deepEqual(routeTrie.get('//en//a//b//'), [
+    'catchall',
+    {locale: 'en', path: 'a//b'},
+  ]);
+  assert.deepEqual(routeTrie.matchAll('/docs/a//b/'), [
+    ['docs', {slug: 'a//b'}],
+    ['catchall', {locale: 'docs', path: 'a//b'}],
+  ]);
+});

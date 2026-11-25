@@ -60,8 +60,7 @@ export class RouteTrie<T> {
    */
   get(path: string): [T | undefined, Record<string, string>] {
     const params: Record<string, string> = {};
-    const segments = splitSegments(path);
-    const route = this.getRoute(segments, 0, params);
+    const route = this.getRoute(splitSegments(path), 0, params);
     return [route, params];
   }
 
@@ -70,8 +69,7 @@ export class RouteTrie<T> {
    */
   matchAll(path: string): Array<[T, Record<string, string>]> {
     const matches: Array<[T, Record<string, string>]> = [];
-    const segments = splitSegments(path);
-    this.collectRoutes(segments, 0, {}, matches);
+    this.collectRoutes(splitSegments(path), 0, {}, matches);
     return matches;
   }
 
@@ -129,10 +127,11 @@ export class RouteTrie<T> {
   }
 
   private getRoute(
-    segments: string[],
+    urlPath: PathSegments,
     index: number,
     params: Record<string, string>
   ): T | undefined {
+    const segments = urlPath.segments;
     if (index === segments.length) {
       if (this.route !== undefined) {
         return this.route;
@@ -148,7 +147,7 @@ export class RouteTrie<T> {
 
     const child = this.children.get(head);
     if (child) {
-      const route = child.getRoute(segments, nextIndex, params);
+      const route = child.getRoute(urlPath, nextIndex, params);
       if (route !== undefined) {
         return route;
       }
@@ -156,7 +155,7 @@ export class RouteTrie<T> {
 
     if (this.paramNodes) {
       for (const paramChild of this.paramNodes.values()) {
-        const route = paramChild.trie.getRoute(segments, nextIndex, params);
+        const route = paramChild.trie.getRoute(urlPath, nextIndex, params);
         if (route !== undefined) {
           params[paramChild.name] = head;
           return route;
@@ -165,14 +164,12 @@ export class RouteTrie<T> {
     }
 
     if (this.catchAllNodes) {
-      params[this.catchAllNodes.name] =
-        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      params[this.catchAllNodes.name] = restOfPath(urlPath, index);
       return this.catchAllNodes.route;
     }
 
     if (this.optCatchAllNodes) {
-      params[this.optCatchAllNodes.name] =
-        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      params[this.optCatchAllNodes.name] = restOfPath(urlPath, index);
       return this.optCatchAllNodes.route;
     }
 
@@ -180,11 +177,12 @@ export class RouteTrie<T> {
   }
 
   private collectRoutes(
-    segments: string[],
+    urlPath: PathSegments,
     index: number,
     params: Record<string, string>,
     results: Array<[T, Record<string, string>]>
   ) {
+    const segments = urlPath.segments;
     if (index === segments.length) {
       if (this.route !== undefined) {
         results.push([this.route, {...params}]);
@@ -200,31 +198,24 @@ export class RouteTrie<T> {
 
     const child = this.children.get(head);
     if (child) {
-      child.collectRoutes(segments, nextIndex, params, results);
+      child.collectRoutes(urlPath, nextIndex, params, results);
     }
 
     if (this.paramNodes) {
       for (const paramChild of this.paramNodes.values()) {
         const paramParams = {...params, [paramChild.name]: head};
-        paramChild.trie.collectRoutes(
-          segments,
-          nextIndex,
-          paramParams,
-          results
-        );
+        paramChild.trie.collectRoutes(urlPath, nextIndex, paramParams, results);
       }
     }
 
     if (this.catchAllNodes) {
-      const rest =
-        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      const rest = restOfPath(urlPath, index);
       const caParams = {...params, [this.catchAllNodes.name]: rest};
       results.push([this.catchAllNodes.route, caParams]);
     }
 
     if (this.optCatchAllNodes) {
-      const rest =
-        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      const rest = restOfPath(urlPath, index);
       const ocParams = {...params, [this.optCatchAllNodes.name]: rest};
       results.push([this.optCatchAllNodes.route, ocParams]);
     }
@@ -255,13 +246,29 @@ export class RouteTrie<T> {
 const SLASH_CHAR_CODE = 47;
 
 /**
+ * A URL path that has been split into its non-empty path segments.
+ */
+interface PathSegments {
+  /** The original URL path. */
+  path: string;
+  /** The non-empty path segments. */
+  segments: string[];
+  /** The offset within `path` where each segment starts. */
+  starts: number[];
+  /** The offset within `path` where the last segment ends. */
+  end: number;
+}
+
+/**
  * Splits a URL path into non-empty path segments, stripping leading, trailing,
  * and repeated slashes without regex allocations.
  */
-function splitSegments(urlPath: string): string[] {
+function splitSegments(urlPath: string): PathSegments {
   const segments: string[] = [];
+  const starts: number[] = [];
   const len = urlPath.length;
   let start = 0;
+  let lastEnd = 0;
   while (start < len) {
     while (start < len && urlPath.charCodeAt(start) === SLASH_CHAR_CODE) {
       start++;
@@ -274,9 +281,20 @@ function splitSegments(urlPath: string): string[] {
       end = len;
     }
     segments.push(urlPath.slice(start, end));
+    starts.push(start);
+    lastEnd = end;
     start = end + 1;
   }
-  return segments;
+  return {path: urlPath, segments, starts, end: lastEnd};
+}
+
+/**
+ * Returns the remainder of the URL path starting at the given segment, used as
+ * the value of catch-all params. Repeated slashes between the remaining
+ * segments are preserved (e.g. `a//b`).
+ */
+function restOfPath(urlPath: PathSegments, index: number): string {
+  return urlPath.path.slice(urlPath.starts[index], urlPath.end);
 }
 
 /**
