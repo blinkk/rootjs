@@ -86,10 +86,18 @@ test('dev server defers SSR renderer for Vite and public assets, caches it, and 
   expect(publicAsset.body).toBe('hello from public');
   expect(ssrLoadSpy).toHaveBeenCalledTimes(0);
 
-  // First HTML request lazily loads render.js and caches the Renderer.
-  const firstHtml = await fetchPath('/');
-  expect(firstHtml.status).toBe(200);
-  expect(firstHtml.body).toContain('<h1>Version 1</h1>');
+  // Concurrent cold-start HTML requests coalesce into a single ssrLoadModule().
+  const concurrentResults = await Promise.all([
+    fetchPath('/'),
+    fetchPath('/'),
+    fetchPath('/'),
+    fetchPath('/'),
+    fetchPath('/'),
+  ]);
+  for (const result of concurrentResults) {
+    expect(result.status).toBe(200);
+    expect(result.body).toContain('<h1>Version 1</h1>');
+  }
   expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
 
   // Subsequent warm HTML requests reuse the cached Renderer without reloading.
@@ -125,4 +133,110 @@ test('dev server defers SSR renderer for Vite and public assets, caches it, and 
   const missingAsset = await fetchPath('/missing.png');
   expect(missingAsset.status).toBe(404);
   expect(missingAsset.body).toBe('404');
+});
+
+test('dev server exposes req.renderer to plugin.configureServer and server.middlewares while skipping Vite assets', async () => {
+  const customDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'root-dev-lazy-renderer-custom-')
+  );
+  const customPort = 14593;
+  let customApp: any;
+  let customHttpServer: http.Server | undefined;
+
+  try {
+    await fs.symlink(
+      path.resolve(__dirname, '../node_modules'),
+      path.join(customDir, 'node_modules')
+    );
+    await fs.mkdir(path.join(customDir, 'routes'), {recursive: true});
+    await fs.writeFile(
+      path.join(customDir, 'package.json'),
+      JSON.stringify({name: 'dev-lazy-renderer-custom-test', type: 'module'})
+    );
+    await fs.writeFile(
+      path.join(customDir, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: 'preact',
+        },
+      })
+    );
+    const corePath = path.resolve(__dirname, '../dist/core.js');
+    await fs.writeFile(
+      path.join(customDir, 'root.config.ts'),
+      `import {defineConfig} from ${JSON.stringify(corePath)};
+export default defineConfig({
+  plugins: [
+    {
+      name: 'custom-plugin',
+      configureServer(server) {
+        server.use((req, res, next) => {
+          if (req.path === '/plugin-check') {
+            const [route] = req.renderer ? req.renderer.getRoute('/') : [];
+            res.status(200).send(route ? 'plugin-has-renderer' : 'missing');
+            return;
+          }
+          next();
+        });
+      },
+    },
+  ],
+  server: {
+    middlewares: [
+      (req, res, next) => {
+        if (req.path === '/middleware-check') {
+          const [route] = req.renderer ? req.renderer.getRoute('/') : [];
+          res.status(200).send(route ? 'middleware-has-renderer' : 'missing');
+          return;
+        }
+        next();
+      },
+    ],
+  },
+});
+`
+    );
+    await fs.writeFile(
+      path.join(customDir, 'routes/index.tsx'),
+      'export default function Home() {\n  return <html><body><h1>Home</h1></body></html>;\n}\n'
+    );
+
+    customApp = await createDevServer({rootDir: customDir, port: customPort});
+    customHttpServer = customApp.listen(customPort);
+    const viteServer = customApp.get('viteServer');
+    const ssrLoadSpy = vi.spyOn(viteServer, 'ssrLoadModule');
+
+    // Vite client assets still never trigger ssrLoadModule().
+    const viteRes = await fetch(`http://localhost:${customPort}/@vite/client`);
+    expect(viteRes.status).toBe(200);
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(0);
+
+    // Cold-start request to plugin.configureServer middleware gets req.renderer.
+    const pluginRes = await fetch(
+      `http://localhost:${customPort}/plugin-check`
+    );
+    expect(pluginRes.status).toBe(200);
+    expect(await pluginRes.text()).toBe('plugin-has-renderer');
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+
+    // Request to server.middlewares gets the cached req.renderer.
+    const mwRes = await fetch(
+      `http://localhost:${customPort}/middleware-check`
+    );
+    expect(mwRes.status).toBe(200);
+    expect(await mwRes.text()).toBe('middleware-has-renderer');
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+  } finally {
+    if (customHttpServer) {
+      customHttpServer.close();
+    }
+    if (customApp) {
+      const viteServer = customApp.get('viteServer');
+      if (viteServer) {
+        await viteServer.close();
+      }
+    }
+    await fs.rm(customDir, {recursive: true, force: true});
+  }
 });

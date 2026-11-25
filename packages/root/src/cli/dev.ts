@@ -157,6 +157,33 @@ export async function createDevServer(options?: {
   server.use(sessionMiddleware());
 
   const plugins = rootConfig.plugins || [];
+  // When user middlewares or non-CMS plugins configure server middlewares that
+  // run before `rootDevServerMiddleware`, eagerly attach the cached renderer on
+  // non-CMS requests (after `viteMiddleware` has already handled Vite assets)
+  // so `req.renderer` remains available (e.g. for `root-password-protect`).
+  const hasCustomMiddleware =
+    (rootConfig.server?.middlewares?.length ?? 0) > 0 ||
+    plugins.some(
+      (plugin) => Boolean(plugin.configureServer) && plugin.name !== 'root-cms'
+    );
+  if (hasCustomMiddleware) {
+    server.use(async (req: Request, _res: Response, next: NextFunction) => {
+      if (req.path === '/cms' || req.path.startsWith('/cms/')) {
+        next();
+        return;
+      }
+      try {
+        if (!req.renderer) {
+          req.renderer = await getRenderer();
+        }
+        next();
+      } catch (err: any) {
+        req.viteServer?.ssrFixStacktrace(err);
+        next(err);
+      }
+    });
+  }
+
   await configureServerPlugins(
     server,
     async () => {
@@ -294,45 +321,103 @@ async function createViteMiddleware(options: {
   let cachedElementGraph: ElementGraph | null = null;
   let cachedRenderer: Renderer | null = null;
   let cachedInvalidationTimestamp = -1;
+  let cachedHmrTimestamp = -1;
+  let inFlightRenderer: Promise<Renderer> | null = null;
 
   /**
    * Lazily loads `render.js` through Vite's SSR loader and returns a cached
-   * `Renderer` instance, rebuilding it only when Vite invalidates/reloads the
-   * SSR render module or when `elementGraph` changes.
+   * `Renderer` instance, coalescing concurrent loads and rebuilding only when
+   * Vite invalidates/reloads the SSR render module or when `elementGraph`
+   * changes.
    */
   async function getRenderer(): Promise<Renderer> {
     const ssrGraph = viteServer.environments?.ssr?.moduleGraph;
-    const ssrMod = ssrGraph?.getModuleById(renderModuleId);
+    const ssrMod = ssrGraph?.getModuleById(renderModuleId) as
+      | {
+          transformResult?: unknown;
+          ssrModule?: unknown;
+          lastInvalidationTimestamp?: number;
+          lastHMRTimestamp?: number;
+        }
+      | undefined;
     if (
       cachedRenderer &&
       elementGraph === cachedElementGraph &&
       ssrMod &&
       ssrMod.transformResult &&
-      ssrMod.lastInvalidationTimestamp === cachedInvalidationTimestamp
+      ssrMod.ssrModule &&
+      ssrMod.ssrModule === cachedRenderModule &&
+      ssrMod.lastInvalidationTimestamp === cachedInvalidationTimestamp &&
+      ssrMod.lastHMRTimestamp === cachedHmrTimestamp
     ) {
       return cachedRenderer;
     }
 
-    const render = (await viteServer.ssrLoadModule(
-      renderModulePath
-    )) as RenderModule;
-    const updatedSsrMod = ssrGraph?.getModuleById(renderModuleId);
-    const invalidationTimestamp =
-      updatedSsrMod?.lastInvalidationTimestamp ?? -1;
-
-    if (
-      cachedRenderer &&
-      render === cachedRenderModule &&
-      elementGraph === cachedElementGraph
-    ) {
-      cachedInvalidationTimestamp = invalidationTimestamp;
-      return cachedRenderer;
+    if (inFlightRenderer) {
+      return inFlightRenderer;
     }
-    cachedRenderModule = render;
-    cachedElementGraph = elementGraph;
-    cachedInvalidationTimestamp = invalidationTimestamp;
-    cachedRenderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
-    return cachedRenderer;
+
+    const loadPromise = (async () => {
+      const targetElementGraph = elementGraph;
+      const render = (await viteServer.ssrLoadModule(
+        renderModulePath
+      )) as RenderModule;
+      const updatedSsrMod = ssrGraph?.getModuleById(renderModuleId) as
+        | {
+            transformResult?: unknown;
+            ssrModule?: unknown;
+            lastInvalidationTimestamp?: number;
+            lastHMRTimestamp?: number;
+          }
+        | undefined;
+      const invalidationTimestamp =
+        updatedSsrMod?.lastInvalidationTimestamp ?? -1;
+      const hmrTimestamp = updatedSsrMod?.lastHMRTimestamp ?? -1;
+
+      // Only cache the loaded module/renderer if Vite has not already
+      // invalidated it mid-flight and `elementGraph` has not changed.
+      const isFresh =
+        elementGraph === targetElementGraph &&
+        (!updatedSsrMod ||
+          Boolean(
+            updatedSsrMod.transformResult &&
+            updatedSsrMod.ssrModule &&
+            updatedSsrMod.ssrModule === render
+          ));
+
+      if (
+        isFresh &&
+        cachedRenderer &&
+        render === cachedRenderModule &&
+        targetElementGraph === cachedElementGraph
+      ) {
+        cachedInvalidationTimestamp = invalidationTimestamp;
+        cachedHmrTimestamp = hmrTimestamp;
+        return cachedRenderer;
+      }
+
+      const renderer = new render.Renderer(rootConfig, {
+        assetMap,
+        elementGraph: targetElementGraph,
+      });
+      if (isFresh) {
+        cachedRenderModule = render;
+        cachedElementGraph = targetElementGraph;
+        cachedInvalidationTimestamp = invalidationTimestamp;
+        cachedHmrTimestamp = hmrTimestamp;
+        cachedRenderer = renderer;
+      }
+      return renderer;
+    })();
+
+    inFlightRenderer = loadPromise;
+    try {
+      return await loadPromise;
+    } finally {
+      if (inFlightRenderer === loadPromise) {
+        inFlightRenderer = null;
+      }
+    }
   }
 
   const viteMiddleware = (req: Request, res: Response, next: NextFunction) => {
@@ -396,19 +481,25 @@ function rootDevServerMiddleware(getRenderer: () => Promise<Renderer>) {
 }
 
 function rootDevServer404Middleware(getRenderer: () => Promise<Renderer>) {
-  return async (req: Request, res: Response) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     if (!DEV_SERVER_404_LOG_IGNORE_PATHS.has(req.path)) {
       console.error(`❓ 404 ${req.originalUrl}`);
     }
     const url = req.path;
     const ext = path.extname(url);
     if (!ext) {
-      const renderer = req.renderer || (await getRenderer());
-      req.renderer = renderer;
-      const data = await renderer.renderDevServer404(req);
-      const html = data.html || '';
-      res.status(404).set({'Content-Type': 'text/html'}).end(html);
-      return;
+      try {
+        const renderer = req.renderer || (await getRenderer());
+        req.renderer = renderer;
+        const data = await renderer.renderDevServer404(req);
+        const html = data.html || '';
+        res.status(404).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      } catch (err: any) {
+        req.viteServer?.ssrFixStacktrace(err);
+        next(err);
+        return;
+      }
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
