@@ -1778,6 +1778,9 @@ export class RootCMSClient {
       await batch.commit();
     }
     await clearReadCaches();
+    if (depGraphOps.length > 0) {
+      await this.invalidateDependencyGraphCache();
+    }
     console.log(`published ${publishedDocs.length} docs!`);
     for (const doc of publishedDocs) {
       const metadata: Record<string, string> = {docId: doc.id};
@@ -1927,6 +1930,9 @@ export class RootCMSClient {
       await batch.commit();
     }
     await clearReadCaches();
+    if (depGraphOps.length > 0) {
+      await this.invalidateDependencyGraphCache();
+    }
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
     for (const doc of unpublishedDocs) {
       await this.logDocAction('doc.unpublish', unpublishedBy, {docId: doc.id});
@@ -2166,6 +2172,9 @@ export class RootCMSClient {
       await batch.commit();
     }
     await clearReadCaches();
+    if (depGraphOps.length > 0) {
+      await this.invalidateDependencyGraphCache();
+    }
     console.log(`published ${publishedDocs.length} docs!`);
 
     // Log an action for each published doc.
@@ -3820,6 +3829,20 @@ export class RootCMSClient {
       console.error('failed to build dependency graph updates:');
       console.error(String(err.stack || err));
       return [];
+    }
+  }
+
+  /**
+   * Invalidates the in-process dependency graph cache after publish or
+   * unpublish batch commits complete.
+   */
+  private async invalidateDependencyGraphCache(): Promise<void> {
+    try {
+      const service = await this.getDependencyGraphService();
+      service?.invalidateCache();
+    } catch (err) {
+      console.error('failed to invalidate dependency graph cache:');
+      console.error(String(err.stack || err));
     }
   }
 

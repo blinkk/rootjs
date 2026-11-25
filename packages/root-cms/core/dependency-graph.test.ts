@@ -544,6 +544,41 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(statusAfter.lastRun).toBe(statusBefore.lastRun);
     });
 
+    it('does not poison cache when getGraph runs during publishDocs commit', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
+      const service = createService();
+      await service.rebuildGraph();
+      expect((await service.getGraph('published')).edges).toEqual({});
+
+      // Update draft refs, then publish while a concurrent reader calls
+      // getGraph('published') right before batch.commit() lands in Firestore.
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/bob')});
+      const origBatch = cmsClient.db.batch.bind(cmsClient.db);
+      let concurrentRead: Promise<DependencyGraph> | null = null;
+      (cmsClient.db as any).batch = () => {
+        const batch = origBatch();
+        const origCommit = batch.commit.bind(batch);
+        batch.commit = async () => {
+          // Simulate a concurrent reader arriving after buildPublishBatchOps
+          // returned but before the commit is visible in Firestore.
+          concurrentRead = service.getGraph('published');
+          await concurrentRead;
+          return origCommit();
+        };
+        return batch;
+      };
+      try {
+        await cmsClient.publishDocs(['Pages/index'], {publishedBy: 'test'});
+      } finally {
+        (cmsClient.db as any).batch = origBatch;
+      }
+
+      expect(concurrentRead).not.toBe(null);
+      const afterCommit = await service.getGraph('published');
+      expect(afterCommit.edges).toEqual({'Pages/index': ['Authors/bob']});
+    });
+
     it('removes published edges in the unpublish batch (no cron)', async () => {
       const {cmsClient, createService} = project;
       await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
@@ -728,16 +763,20 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
 
 describe('DependencyGraphService caching and coalescing', () => {
   function createMockProject(options?: {
+    projectId?: string;
     delayMs?: number;
     metaCacheTtlMs?: number;
+    initialPublishedRefs?: Record<string, string[]>;
   }) {
-    const projectId = `mock-dep-cache-${Date.now()}-${projectCounter++}`;
+    const projectId =
+      options?.projectId ?? `mock-dep-cache-${Date.now()}-${projectCounter++}`;
     let metaReads = 0;
     let edgeQueries = 0;
     let lastRunMillis = 1_700_000_000_000;
-    let publishedRefs: Record<string, string[]> = {
-      index: ['Authors/alice'],
-    };
+    let publishedRefs: Record<string, string[]> =
+      options?.initialPublishedRefs ?? {
+        index: ['Authors/alice'],
+      };
     const draftRefs: Record<string, string[]> = {
       index: ['Authors/alice', 'Authors/bob'],
     };
@@ -904,5 +943,63 @@ describe('DependencyGraphService caching and coalescing', () => {
     // The next call must read the updated state instead of stale cached data.
     const next = await service.getGraph('published');
     expect(next.edges).toEqual({'Pages/index': ['Authors/updated']});
+  });
+
+  it('keeps metaCache consistent and bypasses cached-meta loads when metaCacheTtlMs is 0', async () => {
+    const mock = createMockProject({delayMs: 15, metaCacheTtlMs: 5_000});
+    const service = mock.createService();
+
+    // Warm the _meta cache (T1) and published graph cache.
+    const first = await service.getGraph('published');
+    expect(first.edges).toEqual({'Pages/index': ['Authors/alice']});
+    expect(mock.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
+
+    // Update remote state to T2, then start a cached-meta load for 'draft'
+    // (which reuses cached T1 _meta and queries draft edges) concurrently with
+    // a forced fresh read (metaCacheTtlMs: 0) for 'published'.
+    mock.setRemoteUpdate(1_700_000_005_000, {index: ['Authors/carol']});
+    const freshPublished = await service.getGraph('published', {
+      metaCacheTtlMs: 0,
+    });
+    expect(freshPublished.edges).toEqual({'Pages/index': ['Authors/carol']});
+    expect(mock.getCounts()).toEqual({metaReads: 2, edgeQueries: 2});
+
+    // Subsequent default-TTL call must hit the updated cache without
+    // regressing to T1 or re-querying Firestore.
+    const subsequent = await service.getGraph('published');
+    expect(subsequent).toBe(freshPublished);
+    expect(subsequent.edges).toEqual({'Pages/index': ['Authors/carol']});
+    expect(mock.getCounts()).toEqual({metaReads: 2, edgeQueries: 2});
+
+    // Start an in-flight load with default TTL (freshMeta: false) while
+    // updating remote state to T3; a concurrent metaCacheTtlMs: 0 call must
+    // NOT coalesce onto the cached-meta load.
+    service.invalidateCache();
+    const cachedLoad = service.getGraph('published');
+    mock.setRemoteUpdate(1_700_000_010_000, {index: ['Authors/dave']});
+    const forcedLoad = service.getGraph('published', {metaCacheTtlMs: 0});
+    const [, forcedGraph] = await Promise.all([cachedLoad, forcedLoad]);
+    expect(forcedGraph.edges).toEqual({'Pages/index': ['Authors/dave']});
+  });
+
+  it('isolates caches across distinct Firestore instances with the same projectId', async () => {
+    const dbOne = createMockProject({
+      projectId: 'default',
+      metaCacheTtlMs: 5_000,
+      initialPublishedRefs: {index: ['Authors/from-db-one']},
+    });
+    const dbTwo = createMockProject({
+      projectId: 'default',
+      metaCacheTtlMs: 5_000,
+      initialPublishedRefs: {index: ['Authors/from-db-two']},
+    });
+
+    const graphOne = await dbOne.createService().getGraph('published');
+    const graphTwo = await dbTwo.createService().getGraph('published');
+
+    expect(graphOne.edges).toEqual({'Pages/index': ['Authors/from-db-one']});
+    expect(graphTwo.edges).toEqual({'Pages/index': ['Authors/from-db-two']});
+    expect(dbOne.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
+    expect(dbTwo.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
   });
 });
