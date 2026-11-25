@@ -5,11 +5,31 @@ import {GetStaticPaths, Route, RouteModule} from '../core/types.js';
 import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
 import {RouteTrie} from './route-trie.js';
 
-const ROUTES_FILES = ROUTE_MODULES as Record<string, RouteModule>;
-const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<
-  string,
-  {module: RouteModule; podName: string; routePath: string; src: string}
->;
+type RouteModuleLoader = () => Promise<RouteModule>;
+type RouteModuleEntry = RouteModule | RouteModuleLoader;
+
+interface PodRouteEntry {
+  module?: RouteModule;
+  loadModule?: RouteModuleLoader;
+  podName: string;
+  routePath: string;
+  src: string;
+}
+
+const ROUTES_FILES = ROUTE_MODULES as Record<string, RouteModuleEntry>;
+const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<string, PodRouteEntry>;
+
+/**
+ * Ensures a route's module is loaded, invoking its lazy `loadModule` loader if
+ * present and caching the resolved module on `route.module`.
+ */
+export async function ensureRouteModule(route: Route): Promise<RouteModule> {
+  if (route.loadModule) {
+    route.module = await route.loadModule();
+    route.loadModule = undefined;
+  }
+  return route.module;
+}
 
 /**
  * Cache of `getStaticPaths()` promises keyed by `RouteModule`, shared across
@@ -77,11 +97,17 @@ export class Router {
 
       const routePath = formatUrl(urlFormat);
       const localeRoutePath = formatUrl(i18nUrlFormat);
-      const routeModule = ROUTES_FILES[modulePath];
+      const entry = ROUTES_FILES[modulePath];
+      const isLazy = typeof entry === 'function';
+      const routeModule: RouteModule = isLazy ? {} : entry;
+      const loadModule: RouteModuleLoader | undefined = isLazy
+        ? entry
+        : undefined;
 
       trie.add(routePath, {
         src,
         module: routeModule,
+        ...(loadModule ? {loadModule} : {}),
         locale: defaultLocale,
         isDefaultLocale: true,
         routePath: routePath,
@@ -99,6 +125,7 @@ export class Router {
             trie.add(localePath, {
               src,
               module: routeModule,
+              ...(loadModule ? {loadModule} : {}),
               locale: locale,
               isDefaultLocale: false,
               routePath,
@@ -114,6 +141,8 @@ export class Router {
     // added to the trie first.
     Object.keys(POD_ROUTES).forEach((key) => {
       const entry = POD_ROUTES[key];
+      const routeModule: RouteModule = entry.module || {};
+      const loadModule = entry.loadModule;
       const routePath = entry.routePath;
       const localeRoutePath = i18nUrlFormat.includes('[locale]')
         ? i18nUrlFormat
@@ -126,7 +155,8 @@ export class Router {
 
       trie.add(routePath, {
         src: entry.src,
-        module: entry.module,
+        module: routeModule,
+        ...(loadModule ? {loadModule} : {}),
         locale: defaultLocale,
         isDefaultLocale: true,
         routePath,
@@ -134,7 +164,7 @@ export class Router {
         podName: entry.podName,
       });
 
-      const podRouteLocales = entry.module.config?.locales || locales;
+      const podRouteLocales = routeModule.config?.locales || locales;
       if (i18nUrlFormat.includes('[locale]')) {
         podRouteLocales.forEach((locale) => {
           const localePath = normalizedLocaleRoutePath.replace(
@@ -144,7 +174,8 @@ export class Router {
           if (localePath !== routePath) {
             trie.add(localePath, {
               src: entry.src,
-              module: entry.module,
+              module: routeModule,
+              ...(loadModule ? {loadModule} : {}),
               locale: locale,
               isDefaultLocale: false,
               routePath,
@@ -164,7 +195,7 @@ export class Router {
     route: Route,
     options?: {staticPathsCache?: StaticPathsCache}
   ): Promise<Array<{urlPath: string; params: Record<string, string>}>> {
-    const routeModule = route.module;
+    const routeModule = await ensureRouteModule(route);
     if (!routeModule.default && !routeModule.getStaticContent) {
       return [];
     }

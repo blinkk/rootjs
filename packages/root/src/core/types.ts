@@ -217,6 +217,12 @@ export interface Route {
   /** The imported route module. */
   module: RouteModule;
 
+  /**
+   * Lazy loader for the route module, used in dev mode to defer importing
+   * route modules until they are actually requested.
+   */
+  loadModule?: () => Promise<RouteModule>;
+
   /** The locale used for the route. */
   locale: string;
 

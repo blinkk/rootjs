@@ -44,7 +44,12 @@ import {AssetMap} from './asset-map/asset-map.js';
 import {collectStyleDeps} from './asset-map/collect-style-deps.js';
 import {transformHtml} from './html-transform.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
-import {normalizeUrlPath, Router, StaticPathsCache} from './router.js';
+import {
+  ensureRouteModule,
+  normalizeUrlPath,
+  Router,
+  StaticPathsCache,
+} from './router.js';
 
 const CONTENT_TYPES: Record<string, string> = {
   html: 'text/html',
@@ -386,6 +391,7 @@ export class Renderer {
     route: Route,
     options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
+    await ensureRouteModule(route);
     const routeParams = {...options.routeParams};
     if (route.locale) {
       routeParams.$locale = route.locale;
@@ -455,6 +461,7 @@ export class Renderer {
     const defaultStatusCode = options?.defaultStatusCode || 200;
     const routeParams = options?.routeParams || {};
     const nextRouteHandler = options?.nextRouteHandler;
+    await ensureRouteModule(route);
 
     const fallbackLocales = route.isDefaultLocale
       ? getFallbackLocales(req)
@@ -792,13 +799,16 @@ export class Renderer {
     const notFoundPath = normalizeUrlPath(`${basePath}/404`);
     const currentPath = options?.currentPath || notFoundPath;
     const [route, routeParams] = this.router.get(notFoundPath);
-    if (route && route.src === 'routes/404.tsx' && route.module.default) {
-      const Component = route.module.default;
-      return this.renderComponent(
-        Component,
-        {},
-        {currentPath, route, routeParams, locale: 'en'}
-      );
+    if (route && route.src === 'routes/404.tsx') {
+      await ensureRouteModule(route);
+      if (route.module.default) {
+        const Component = route.module.default;
+        return this.renderComponent(
+          Component,
+          {},
+          {currentPath, route, routeParams, locale: 'en'}
+        );
+      }
     }
 
     const mainHtml = await this.renderJsx(
@@ -824,13 +834,16 @@ export class Renderer {
   async renderError(err: any, options?: {currentPath?: string}) {
     const currentPath = options?.currentPath || '/500';
     const [route, routeParams] = this.router.get('/500');
-    if (route && route.src === 'routes/500.tsx' && route.module.default) {
-      const Component = route.module.default;
-      return this.renderComponent(
-        Component,
-        {error: err},
-        {currentPath, route, routeParams, locale: 'en'}
-      );
+    if (route && route.src === 'routes/500.tsx') {
+      await ensureRouteModule(route);
+      if (route.module.default) {
+        const Component = route.module.default;
+        return this.renderComponent(
+          Component,
+          {error: err},
+          {currentPath, route, routeParams, locale: 'en'}
+        );
+      }
     }
 
     const mainHtml = await this.renderJsx(
