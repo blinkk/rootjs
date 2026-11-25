@@ -29,6 +29,11 @@ export class ElementGraph {
    */
   private deps: Record<string, string[]> = {};
 
+  /**
+   * Element tagName => memoized transitive element tagName dependencies.
+   */
+  private transitiveDeps: Record<string, string[]> = {};
+
   constructor(sourceFiles: {[tagName: string]: ElementSourceFile}) {
     this.sourceFiles = sourceFiles;
   }
@@ -46,25 +51,45 @@ export class ElementGraph {
   static fromJson(data: {deps: any; sourceFiles: any}) {
     const graph = new ElementGraph(data.sourceFiles);
     graph.deps = data.deps;
+    graph.transitiveDeps = {};
     return graph;
   }
 
   getDeps(tagName: string, visited?: Set<string>): string[] {
-    visited ??= new Set();
-    if (visited.has(tagName)) {
-      return [];
-    }
-
-    visited.add(tagName);
-    this.deps[tagName] ??= this.parseDepsFromSource(tagName);
-
-    const deps = new Set(this.deps[tagName]);
-    for (const depTagName of this.deps[tagName]) {
-      for (const childDep of this.getDeps(depTagName, visited)) {
-        deps.add(childDep);
+    if (!visited) {
+      if (Object.hasOwn(this.transitiveDeps, tagName)) {
+        return this.transitiveDeps[tagName];
       }
+      const deps = new Set<string>();
+      this.collectDeps(tagName, deps, new Set());
+      const result = Array.from(deps);
+      this.transitiveDeps[tagName] = result;
+      return result;
     }
+
+    const deps = new Set<string>();
+    this.collectDeps(tagName, deps, visited);
     return Array.from(deps);
+  }
+
+  /**
+   * Recursively collects transitive element dependencies into `deps`.
+   */
+  private collectDeps(
+    tagName: string,
+    deps: Set<string>,
+    visited: Set<string>
+  ) {
+    if (visited.has(tagName)) {
+      return;
+    }
+    visited.add(tagName);
+    const directDeps = (this.deps[tagName] ??=
+      this.parseDepsFromSource(tagName));
+    for (const depTagName of directDeps) {
+      deps.add(depTagName);
+      this.collectDeps(depTagName, deps, visited);
+    }
   }
 
   /**

@@ -31,10 +31,12 @@ export interface PodRouteAsset {
 export class BuildAssetMap implements AssetMap {
   private rootConfig: RootConfig;
   private srcToAsset: Map<string, BuildAsset>;
+  private resolvedCache: Map<string, BuildAsset | null>;
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
     this.srcToAsset = new Map();
+    this.resolvedCache = new Map();
   }
 
   get(src: string): Asset | null {
@@ -51,19 +53,26 @@ export class BuildAssetMap implements AssetMap {
     if (asset) {
       return asset;
     }
+    const cached = this.resolvedCache.get(src);
+    if (cached !== undefined) {
+      return cached ?? undefined;
+    }
     // Try resolving the realpath of the asset, following symlinks.
     const realSrc = realPathRelativeTo(this.rootConfig.rootDir, src);
     if (realSrc !== src) {
-      const asset = this.srcToAsset.get(realSrc);
-      if (asset) {
-        return asset;
+      const realAsset = this.srcToAsset.get(realSrc);
+      if (realAsset) {
+        this.resolvedCache.set(src, realAsset);
+        return realAsset;
       }
     }
+    this.resolvedCache.set(src, null);
     return undefined;
   }
 
   private add(asset: BuildAsset) {
     this.srcToAsset.set(asset.src, asset);
+    this.resolvedCache.delete(asset.src);
   }
 
   toJson(): BuildAssetManifest {
@@ -176,7 +185,7 @@ function realPathRelativeTo(rootDir: string, src: string) {
   if (!fs.existsSync(fullPath)) {
     return src;
   }
-  const realpath = fs.realpathSync(path.resolve(rootDir, src));
+  const realpath = fs.realpathSync(fullPath);
   return path.relative(rootDir, realpath);
 }
 
@@ -194,6 +203,9 @@ export class BuildAsset {
   private importedModules: string[];
   private importedCss: string[];
   isElement: boolean;
+  private cssDeps?: string[];
+  private jsDeps?: string[];
+  private modulePreloadDeps?: string[];
 
   constructor(
     assetMap: BuildAssetMap,
@@ -214,107 +226,100 @@ export class BuildAsset {
   }
 
   async getCssDeps(): Promise<string[]> {
-    const visited = new Set<string>();
-    const deps = new Set<string>();
-    await this.collectCss(this, deps, visited);
-    return Array.from(deps);
+    if (!this.cssDeps) {
+      const visited = new Set<string>();
+      const deps = new Set<string>();
+      this.collectCss(this, deps, visited);
+      this.cssDeps = Array.from(deps);
+    }
+    return this.cssDeps;
   }
 
   async getJsDeps(): Promise<string[]> {
-    const visited = new Set<string>();
-    const deps = new Set<string>();
-    await this.collectJs(this, deps, visited);
-    return Array.from(deps);
+    if (!this.jsDeps) {
+      const visited = new Set<string>();
+      const deps = new Set<string>();
+      this.collectJs(this, deps, visited);
+      this.jsDeps = Array.from(deps);
+    }
+    return this.jsDeps;
   }
 
   async getModulePreloadDeps(): Promise<string[]> {
-    // Seed `visited` with this asset so that the walk starts at the imported
-    // modules and this asset's own URL is left out of the results.
-    const visited = new Set<string>([this.src]);
-    const deps = new Set<string>();
-    await this.collectModulePreload(this.importedModules, deps, visited);
-    return Array.from(deps);
+    if (!this.modulePreloadDeps) {
+      // Seed `visited` with this asset so that the walk starts at the imported
+      // modules and this asset's own URL is left out of the results.
+      const visited = new Set<string>([this.src]);
+      const deps = new Set<string>();
+      this.collectModulePreload(this.importedModules, deps, visited);
+      this.modulePreloadDeps = Array.from(deps);
+    }
+    return this.modulePreloadDeps;
   }
 
-  private async collectJs(
+  private collectJs(
     asset: BuildAsset | null,
     urls: Set<string>,
     visited: Set<string>
   ) {
-    if (!asset) {
-      return;
-    }
-    if (!asset.src) {
-      return;
-    }
-    if (visited.has(asset.src)) {
+    if (!asset || !asset.src || visited.has(asset.src)) {
       return;
     }
     visited.add(asset.src);
     if (asset.isElement) {
       urls.add(asset.assetUrl);
     }
-    await Promise.all(
-      asset.importedModules.map(async (src) => {
-        const importedAsset = (await this.assetMap.get(src)) as BuildAsset;
-        this.collectJs(importedAsset, urls, visited);
-      })
-    );
+    for (const src of asset.importedModules) {
+      const importedAsset = this.assetMap.get(src) as BuildAsset | null;
+      this.collectJs(importedAsset, urls, visited);
+    }
   }
 
   /**
    * Walks `srcs` and their transitive imports, collecting the JS chunk URL of
    * every module along the way.
    */
-  private async collectModulePreload(
+  private collectModulePreload(
     srcs: string[],
     urls: Set<string>,
     visited: Set<string>
   ) {
-    await Promise.all(
-      srcs.map(async (src) => {
-        if (visited.has(src)) {
-          return;
-        }
-        visited.add(src);
-        const asset = (await this.assetMap.get(src)) as BuildAsset | null;
-        if (!asset || !asset.src) {
-          return;
-        }
-        // Route files have no asset URL of their own, and CSS deps are
-        // injected as stylesheets rather than preloaded.
-        if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
-          urls.add(asset.assetUrl);
-        }
-        await this.collectModulePreload(asset.importedModules, urls, visited);
-      })
-    );
+    for (const src of srcs) {
+      if (visited.has(src)) {
+        continue;
+      }
+      visited.add(src);
+      const asset = this.assetMap.get(src) as BuildAsset | null;
+      if (!asset || !asset.src) {
+        continue;
+      }
+      // Route files have no asset URL of their own, and CSS deps are
+      // injected as stylesheets rather than preloaded.
+      if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
+        urls.add(asset.assetUrl);
+      }
+      this.collectModulePreload(asset.importedModules, urls, visited);
+    }
   }
 
-  private async collectCss(
+  private collectCss(
     asset: BuildAsset | null,
     urls: Set<string>,
     visited: Set<string>
   ) {
-    if (!asset) {
-      return;
-    }
-    if (!asset.src) {
-      return;
-    }
-    if (visited.has(asset.src)) {
+    if (!asset || !asset.src || visited.has(asset.src)) {
       return;
     }
     visited.add(asset.src);
     if (asset.importedCss) {
-      asset.importedCss.forEach((cssUrl) => urls.add(cssUrl));
+      for (const cssUrl of asset.importedCss) {
+        urls.add(cssUrl);
+      }
     }
-    await Promise.all(
-      asset.importedModules.map(async (moduleId) => {
-        const importedAsset = (await this.assetMap.get(moduleId)) as BuildAsset;
-        this.collectCss(importedAsset, urls, visited);
-      })
-    );
+    for (const moduleId of asset.importedModules) {
+      const importedAsset = this.assetMap.get(moduleId) as BuildAsset | null;
+      this.collectCss(importedAsset, urls, visited);
+    }
   }
 
   toJson() {
