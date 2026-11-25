@@ -579,6 +579,68 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       expect(afterCommit.edges).toEqual({'Pages/index': ['Authors/bob']});
     });
 
+    it('invalidates cache if a later chunk fails after dep graph ops committed', async () => {
+      const multi = createTestProject({
+        collections: ['Col1', 'Col2', 'Col3', 'Col4'],
+      });
+      const {cmsClient, createService} = multi;
+      // 99 docs * 4 publish ops = 396 ops in chunk 1; 4 edge ops fill chunk 1
+      // to 400 and commit, while the 5th dep-graph op (_meta) lands in chunk 2.
+      const docIds: string[] = [];
+      const seedPromises: Array<Promise<void>> = [];
+      for (let i = 0; i < 96; i++) {
+        const id = `Col1/doc-${i}`;
+        docIds.push(id);
+        seedPromises.push(seedDoc(cmsClient, id, {title: `Doc ${i}`}));
+      }
+      for (const col of ['Col2', 'Col3', 'Col4']) {
+        const id = `${col}/item`;
+        docIds.push(id);
+        seedPromises.push(
+          seedDoc(cmsClient, id, {author: ref('Authors/alice')})
+        );
+      }
+      await Promise.all(seedPromises);
+
+      const service = createService();
+      await service.rebuildGraph();
+      expect((await service.getGraph('published')).edges).toEqual({});
+
+      // Intercept batch commits: allow chunk 1 (containing the edge ops) to
+      // commit, then fail chunk 2.
+      const origBatch = cmsClient.db.batch.bind(cmsClient.db);
+      let commitCount = 0;
+      (cmsClient.db as any).batch = () => {
+        const batch = origBatch();
+        const origCommit = batch.commit.bind(batch);
+        batch.commit = async () => {
+          commitCount += 1;
+          if (commitCount === 2) {
+            throw new Error('simulated chunk 2 commit failure');
+          }
+          return origCommit();
+        };
+        return batch;
+      };
+      try {
+        await expect(
+          cmsClient.publishDocs(docIds, {publishedBy: 'test'})
+        ).rejects.toThrow('simulated chunk 2 commit failure');
+      } finally {
+        (cmsClient.db as any).batch = origBatch;
+      }
+
+      expect(commitCount).toBe(2);
+      // Even though chunk 2 threw, chunk 1's edge writes committed, so the
+      // local cache must have been invalidated and reload the committed edges.
+      const afterPartialCommit = await service.getGraph('published');
+      expect(afterPartialCommit.edges).toEqual({
+        'Col2/item': ['Authors/alice'],
+        'Col3/item': ['Authors/alice'],
+        'Col4/item': ['Authors/alice'],
+      });
+    });
+
     it('removes published edges in the unpublish batch (no cron)', async () => {
       const {cmsClient, createService} = project;
       await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});

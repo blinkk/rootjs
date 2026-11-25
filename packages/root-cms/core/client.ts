@@ -1764,23 +1764,36 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
-    if (depGraphOps.length > 0) {
-      await this.invalidateDependencyGraphCache();
-    }
     console.log(`published ${publishedDocs.length} docs!`);
     for (const doc of publishedDocs) {
       const metadata: Record<string, string> = {docId: doc.id};
@@ -1916,23 +1929,36 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
-    if (depGraphOps.length > 0) {
-      await this.invalidateDependencyGraphCache();
-    }
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
     for (const doc of unpublishedDocs) {
       await this.logDocAction('doc.unpublish', unpublishedBy, {docId: doc.id});
@@ -2158,23 +2184,36 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
-    if (depGraphOps.length > 0) {
-      await this.invalidateDependencyGraphCache();
-    }
     console.log(`published ${publishedDocs.length} docs!`);
 
     // Log an action for each published doc.

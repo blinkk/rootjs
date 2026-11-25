@@ -619,11 +619,7 @@ export class DependencyGraphService {
       if (state.generation === generation) {
         const now = Date.now();
         if (ttlMs > 0) {
-          if (
-            !state.metaCache ||
-            now >= state.metaCache.expiresAt ||
-            getMetaCacheStamp(meta) >= getMetaCacheStamp(state.metaCache.meta)
-          ) {
+          if (!state.metaCache || now >= state.metaCache.expiresAt) {
             state.metaCache = {
               expiresAt: now + ttlMs,
               meta,
@@ -1218,9 +1214,7 @@ export class DependencyGraphService {
       if (!state.metaCache.meta) {
         return new DependencyGraph(mode, {}, null);
       }
-      const cacheStamp =
-        state.metaCache.meta.updatedAt?.toMillis() ??
-        state.metaCache.meta.lastRun.toMillis();
+      const cacheStamp = getMetaCacheStamp(state.metaCache.meta);
       const cached = state.graphCache.get(mode);
       if (cached && cached.lastRunMillis === cacheStamp) {
         return cached.graph;
@@ -1241,7 +1235,7 @@ export class DependencyGraphService {
       const lastRunMillis = meta.lastRun.toMillis();
       // Publish-time fast-path updates bump `updatedAt` without moving
       // `lastRun`, so the cache is validated against `updatedAt` when present.
-      const cacheStamp = meta.updatedAt?.toMillis() ?? lastRunMillis;
+      const cacheStamp = getMetaCacheStamp(meta);
       const cached = state.graphCache.get(mode);
       if (cached && cached.lastRunMillis === cacheStamp) {
         return cached.graph;
