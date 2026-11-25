@@ -97,6 +97,15 @@ export class ElementGraph {
         return true;
       }
     }
+    const realTarget = resolveRealPathSync(resolved);
+    for (const tagName in this.sourceFiles) {
+      if (
+        resolveRealPathSync(this.sourceFiles[tagName].filePath) === realTarget
+      ) {
+        delete this.deps[tagName];
+        return true;
+      }
+    }
     return false;
   }
 
@@ -203,22 +212,36 @@ export async function getElements(
 }
 
 /**
+ * Resolves symlinks for `targetPath` when it exists, or resolves its nearest
+ * existing ancestor and appends the remaining relative segments so non-existent
+ * paths under symlinked roots compare consistently.
+ */
+function resolveRealPathSync(targetPath: string): string {
+  const resolved = path.resolve(targetPath);
+  const tail: string[] = [];
+  let current = resolved;
+  while (true) {
+    try {
+      const real = fs.realpathSync(current);
+      return tail.length > 0 ? path.join(real, ...tail.reverse()) : real;
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        return resolved;
+      }
+      tail.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+/**
  * Returns true when `target` is inside (or equal to) `dir`, resolving symlinks
- * when the paths exist on disk.
+ * consistently even when `target` does not yet exist on disk.
  */
 function directoryContainsSync(dir: string, target: string): boolean {
-  let outer = path.resolve(dir);
-  let inner = path.resolve(target);
-  try {
-    outer = fs.realpathSync(outer);
-  } catch {
-    // Fall back to the resolved path if `dir` does not exist on disk.
-  }
-  try {
-    inner = fs.realpathSync(inner);
-  } catch {
-    // Fall back to the resolved path if `target` does not exist on disk.
-  }
+  const outer = resolveRealPathSync(dir);
+  const inner = resolveRealPathSync(target);
   const rel = path.relative(outer, inner);
   return (
     rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
