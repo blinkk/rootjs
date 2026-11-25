@@ -1266,8 +1266,21 @@ export class DependencyGraphService {
       });
       const graph = new DependencyGraph(mode, edges, lastRunMillis);
       if (state.generation === generation) {
+        // Don't clobber an entry that matches the latest known `_meta` with a
+        // graph validated against an older `_meta` read. Stamps are compared
+        // for equality only since they are not monotonic: a cron rebuild
+        // rewrites `_meta` without `updatedAt`, which can move the stamp
+        // backwards.
         const current = state.graphCache.get(mode);
-        if (!current || cacheStamp >= current.lastRunMillis) {
+        const latestStamp = state.metaCache
+          ? getMetaCacheStamp(state.metaCache.meta)
+          : null;
+        if (
+          !current ||
+          latestStamp === null ||
+          cacheStamp === latestStamp ||
+          current.lastRunMillis !== latestStamp
+        ) {
           state.graphCache.set(mode, {lastRunMillis: cacheStamp, graph});
         }
       }

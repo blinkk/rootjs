@@ -982,6 +982,22 @@ describe('DependencyGraphService caching and coalescing', () => {
     expect(forcedGraph.edges).toEqual({'Pages/index': ['Authors/dave']});
   });
 
+  it('caches a reloaded graph when the _meta stamp moves backwards', async () => {
+    // A cron rebuild rewrites `_meta` without `updatedAt`, so the stamp can
+    // regress after a publish fast-path update.
+    const mock = createMockProject({metaCacheTtlMs: 30});
+    const service = mock.createService();
+    await service.getGraph('published');
+    expect(mock.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
+    mock.setRemoteUpdate(1_699_999_999_000, {index: ['Authors/carol']});
+    await new Promise((r) => setTimeout(r, 40));
+    for (let i = 0; i < 5; i++) {
+      const g = await service.getGraph('published');
+      expect(g.edges).toEqual({'Pages/index': ['Authors/carol']});
+    }
+    expect(mock.getCounts()).toEqual({metaReads: 2, edgeQueries: 2});
+  });
+
   it('isolates caches across distinct Firestore instances with the same projectId', async () => {
     const dbOne = createMockProject({
       projectId: 'default',
