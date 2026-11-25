@@ -22,6 +22,7 @@ import {
 import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
 import {
+  ElementGraph,
   getElements,
   getElementsDirs,
   resolveRealPathSync,
@@ -30,6 +31,7 @@ import {loadRootConfigWithDeps} from '../node/load-config.js';
 import {collectPods} from '../node/pod-collector.js';
 import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
+import type {Renderer} from '../render/render.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
 import {findOpenPort} from '../utils/ports.js';
 import {getSessionCookieSecret} from '../utils/rand.js';
@@ -134,7 +136,7 @@ export async function createDevServer(options?: {
   server.disable('x-powered-by');
 
   // Create viteServer.
-  const {viteServer, viteMiddleware} = await createViteMiddleware({
+  const {viteServer, viteMiddleware, getRenderer} = await createViteMiddleware({
     rootConfig,
     port,
   });
@@ -187,7 +189,7 @@ export async function createDevServer(options?: {
       server.use(trailingSlashMiddleware({rootConfig}));
 
       // Add the root.js dev server middlewares.
-      server.use(rootDevServerMiddleware());
+      server.use(rootDevServerMiddleware(getRenderer));
 
       // Add any custom plugin 404 handlers.
       plugins.forEach((plugin) => {
@@ -197,8 +199,8 @@ export async function createDevServer(options?: {
       });
 
       // Add error handlers.
-      server.use(rootDevServer404Middleware());
-      server.use(rootDevServer500Middleware());
+      server.use(rootDevServer404Middleware(getRenderer));
+      server.use(rootDevServer500Middleware(getRenderer));
     },
     plugins,
     {type: 'dev', rootConfig}
@@ -284,35 +286,62 @@ async function createViteMiddleware(options: {
     }
   });
 
-  const viteMiddleware = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      // Add the viteServer to the req.
-      req.viteServer = viteServer;
-      // Dynamically import the render.js module using vite's SSR import loader.
-      const renderModulePath = path.resolve(__dirname, './render.js');
-      const render = (await viteServer.ssrLoadModule(
-        renderModulePath
-      )) as RenderModule;
-      // Create a dev asset map using Vite dev server's module graph.
-      const assetMap = new DevServerAssetMap(
-        rootConfig,
-        viteServer.moduleGraph
-      );
-      // Add a renderer object to the req for plugins and other middleware to
-      // use.
-      req.renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
-      // Run the viteServer middlewares to handle vite-specific endpoints.
-      viteServer.middlewares(req, res, next);
-    } catch (e) {
-      next(e);
+  const assetMap = new DevServerAssetMap(rootConfig, viteServer.moduleGraph);
+  const renderModulePath = path.resolve(__dirname, './render.js');
+
+  let cachedRenderModule: RenderModule | null = null;
+  let cachedElementGraph: ElementGraph | null = null;
+  let cachedRenderer: Renderer | null = null;
+  let cachedInvalidationTimestamp = -1;
+
+  /**
+   * Lazily loads `render.js` through Vite's SSR loader and returns a cached
+   * `Renderer` instance, rebuilding it only when Vite invalidates/reloads the
+   * SSR render module or when `elementGraph` changes.
+   */
+  async function getRenderer(): Promise<Renderer> {
+    const ssrGraph = viteServer.environments?.ssr?.moduleGraph;
+    const ssrMod = ssrGraph?.getModuleById(renderModulePath);
+    if (
+      cachedRenderer &&
+      elementGraph === cachedElementGraph &&
+      ssrMod &&
+      ssrMod.transformResult &&
+      ssrMod.lastInvalidationTimestamp === cachedInvalidationTimestamp
+    ) {
+      return cachedRenderer;
     }
+
+    const render = (await viteServer.ssrLoadModule(
+      renderModulePath
+    )) as RenderModule;
+    const updatedSsrMod = ssrGraph?.getModuleById(renderModulePath);
+    const invalidationTimestamp =
+      updatedSsrMod?.lastInvalidationTimestamp ?? -1;
+
+    if (
+      cachedRenderer &&
+      render === cachedRenderModule &&
+      elementGraph === cachedElementGraph
+    ) {
+      cachedInvalidationTimestamp = invalidationTimestamp;
+      return cachedRenderer;
+    }
+    cachedRenderModule = render;
+    cachedElementGraph = elementGraph;
+    cachedInvalidationTimestamp = invalidationTimestamp;
+    cachedRenderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
+    return cachedRenderer;
+  }
+
+  const viteMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // Add the viteServer to the req.
+    req.viteServer = viteServer;
+    // Run the viteServer middlewares to handle vite-specific endpoints.
+    viteServer.middlewares(req, res, next);
   };
 
-  return {viteServer, viteMiddleware};
+  return {viteServer, viteMiddleware, getRenderer};
 }
 
 function rootPublicDirMiddleware(options: {
@@ -349,11 +378,12 @@ function rootPublicDirMiddleware(options: {
   };
 }
 
-function rootDevServerMiddleware() {
+function rootDevServerMiddleware(getRenderer: () => Promise<Renderer>) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const renderer = req.renderer!;
     const viteServer = req.viteServer!;
     try {
+      const renderer = req.renderer || (await getRenderer());
+      req.renderer = renderer;
       await renderer.handle(req, res, next);
     } catch (err) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
@@ -364,35 +394,43 @@ function rootDevServerMiddleware() {
   };
 }
 
-function rootDevServer404Middleware() {
+function rootDevServer404Middleware(getRenderer: () => Promise<Renderer>) {
   return async (req: Request, res: Response) => {
     if (!DEV_SERVER_404_LOG_IGNORE_PATHS.has(req.path)) {
       console.error(`❓ 404 ${req.originalUrl}`);
     }
-    if (req.renderer) {
-      const url = req.path;
-      const ext = path.extname(url);
-      if (!ext) {
-        const renderer = req.renderer;
-        const data = await renderer.renderDevServer404(req);
-        const html = data.html || '';
-        res.status(404).set({'Content-Type': 'text/html'}).end(html);
-        return;
-      }
+    const url = req.path;
+    const ext = path.extname(url);
+    if (!ext) {
+      const renderer = req.renderer || (await getRenderer());
+      req.renderer = renderer;
+      const data = await renderer.renderDevServer404(req);
+      const html = data.html || '';
+      res.status(404).set({'Content-Type': 'text/html'}).end(html);
+      return;
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
 }
 
-function rootDevServer500Middleware() {
+function rootDevServer500Middleware(getRenderer: () => Promise<Renderer>) {
   return async (err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(`❗ 500 ${req.originalUrl}`);
     console.error(String(err.stack || err));
-    if (req.renderer) {
-      const url = req.path;
-      const ext = path.extname(url);
-      if (!ext) {
-        const renderer = req.renderer;
+    const url = req.path;
+    const ext = path.extname(url);
+    if (!ext) {
+      let renderer = req.renderer;
+      if (!renderer) {
+        try {
+          renderer = await getRenderer();
+          req.renderer = renderer;
+        } catch {
+          // If loading the renderer itself failed, fall through to Express's
+          // default error handler.
+        }
+      }
+      if (renderer) {
         const data = await renderer.renderDevServer500(req, err);
         const html = data.html || '';
         res.status(500).set({'Content-Type': 'text/html'}).end(html);
