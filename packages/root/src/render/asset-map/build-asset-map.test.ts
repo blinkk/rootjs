@@ -161,3 +161,26 @@ test('BuildAssetMap.get() caches resolved symlinks and negative misses', () => {
     fs.rmSync(tmpDir, {recursive: true, force: true});
   }
 });
+
+test('BuildAssetMap.get() resolves backslash src paths to forward-slash manifest keys', () => {
+  const assetMap = BuildAssetMap.fromRootManifest(rootConfig, {
+    'elements/root-foo/root-foo.ts': {
+      src: 'elements/root-foo/root-foo.ts',
+      assetUrl: '/assets/root-foo.js',
+      importedModules: [],
+      importedCss: [],
+      isElement: true,
+    },
+  });
+
+  const existsSpy = vi.spyOn(fs, 'existsSync');
+  try {
+    const asset = assetMap.get('elements\\root-foo\\root-foo.ts');
+    expect(asset?.assetUrl).toBe('/assets/root-foo.js');
+    // Repeat lookup continues to hit without negative caching or fs access.
+    expect(assetMap.get('elements\\root-foo\\root-foo.ts')).toBe(asset);
+    expect(existsSpy).not.toHaveBeenCalled();
+  } finally {
+    existsSpy.mockRestore();
+  }
+});

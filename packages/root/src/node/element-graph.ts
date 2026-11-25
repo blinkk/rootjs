@@ -32,7 +32,7 @@ export class ElementGraph {
   /**
    * Element tagName => memoized transitive element tagName dependencies.
    */
-  private transitiveDeps: Record<string, string[]> = {};
+  private transitiveDeps: Record<string, string[]> = Object.create(null);
 
   constructor(sourceFiles: {[tagName: string]: ElementSourceFile}) {
     this.sourceFiles = sourceFiles;
@@ -51,7 +51,7 @@ export class ElementGraph {
   static fromJson(data: {deps: any; sourceFiles: any}) {
     const graph = new ElementGraph(data.sourceFiles);
     graph.deps = data.deps;
-    graph.transitiveDeps = {};
+    graph.transitiveDeps = Object.create(null);
     return graph;
   }
 

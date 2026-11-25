@@ -53,6 +53,12 @@ export class BuildAssetMap implements AssetMap {
     if (asset) {
       return asset;
     }
+    if (src.includes('\\')) {
+      const normalizedAsset = this.srcToAsset.get(src.replace(/\\/g, '/'));
+      if (normalizedAsset) {
+        return normalizedAsset;
+      }
+    }
     const cached = this.resolvedCache.get(src);
     if (cached !== undefined) {
       return cached ?? undefined;
@@ -178,15 +184,16 @@ export class BuildAssetMap implements AssetMap {
 }
 
 /**
- * Returns the realpath of a src file, relative to the rootDir.
+ * Returns the realpath of a src file, relative to the rootDir, normalized to
+ * POSIX forward slashes to match Vite manifest keys.
  */
 function realPathRelativeTo(rootDir: string, src: string) {
   const fullPath = path.resolve(rootDir, src);
   if (!fs.existsSync(fullPath)) {
-    return src;
+    return src.replace(/\\/g, '/');
   }
   const realpath = fs.realpathSync(fullPath);
-  return path.relative(rootDir, realpath);
+  return path.relative(rootDir, realpath).replace(/\\/g, '/');
 }
 
 /**
