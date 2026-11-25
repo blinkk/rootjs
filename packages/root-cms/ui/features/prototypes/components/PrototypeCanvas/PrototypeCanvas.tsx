@@ -920,17 +920,14 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
       }
       dragFrameIds = nextFrames;
       dragAnnotationIds = nextAnnotations;
-      canDrag =
-        target.kind === 'annotation' ||
-        target.part === 'header' ||
-        nextFrames.length + nextAnnotations.length > 1;
+      canDrag = true;
     } else {
       const wasSelected =
         target.kind === 'frame'
           ? selectedFrameSet.has(target.id)
           : selectedAnnotationSet.has(target.id);
 
-      if (wasSelected && totalSelectedCount > 1) {
+      if (wasSelected) {
         dragFrameIds = [...effectiveSelectedFrameIds];
         dragAnnotationIds = [...effectiveSelectedAnnotationIds];
         canDrag = canEdit;
