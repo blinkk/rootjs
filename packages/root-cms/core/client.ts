@@ -5044,27 +5044,15 @@ export class BatchResponse {
       ? locale
       : resolveLocaleFallbacks(this.i18nConfig, locale);
 
-    const localeTranslations: LocaleTranslations = {};
     const translationDocGroups = Object.values(this.translations);
     if (translationDocGroups.length === 0) {
-      return localeTranslations;
+      return {};
     }
 
-    // Use `Object.defineProperty` for `__proto__` so assigning a source string
-    // named `__proto__` defines an own property instead of invoking the
-    // `Object.prototype.__proto__` setter.
-    const setLocaleTranslation = (key: string, value: string) => {
-      if (key === '__proto__') {
-        Object.defineProperty(localeTranslations, key, {
-          value,
-          writable: true,
-          enumerable: true,
-          configurable: true,
-        });
-      } else {
-        localeTranslations[key] = value;
-      }
-    };
+    // Accumulate into a Map so keys like `__proto__`, `constructor`, and
+    // `toString` are handled safely without prototype collisions, then convert
+    // back to a plain object via `Object.fromEntries()`.
+    const entries = new Map<string, string>();
 
     // Apply translations in reverse fallback order (lowest priority first) and
     // forward doc precedence order (generic first, doc-specific last) so that
@@ -5080,9 +5068,9 @@ export class BatchResponse {
         for (const hash in strings) {
           const entry = strings[hash];
           if (entry.translation) {
-            setLocaleTranslation(entry.source, entry.translation);
-          } else if (!Object.hasOwn(localeTranslations, entry.source)) {
-            setLocaleTranslation(entry.source, entry.source);
+            entries.set(entry.source, entry.translation);
+          } else if (!entries.has(entry.source)) {
+            entries.set(entry.source, entry.source);
           }
         }
       }
@@ -5102,13 +5090,13 @@ export class BatchResponse {
         }
         for (const hash in strings) {
           const source = strings[hash].source;
-          if (!Object.hasOwn(localeTranslations, source)) {
-            setLocaleTranslation(source, source);
+          if (!entries.has(source)) {
+            entries.set(source, source);
           }
         }
       }
     }
 
-    return localeTranslations;
+    return Object.fromEntries(entries);
   }
 }
