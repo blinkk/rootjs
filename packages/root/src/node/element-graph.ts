@@ -29,6 +29,11 @@ export class ElementGraph {
    */
   private deps: Record<string, string[]> = {};
 
+  /**
+   * Element tagName => memoized transitive element tagName dependencies.
+   */
+  private transitiveDeps: Record<string, string[]> = Object.create(null);
+
   constructor(sourceFiles: {[tagName: string]: ElementSourceFile}) {
     this.sourceFiles = sourceFiles;
   }
@@ -50,17 +55,31 @@ export class ElementGraph {
   }
 
   getDeps(tagName: string, visited?: Set<string>): string[] {
-    visited ??= new Set();
+    if (visited) {
+      // An explicit visited set bypasses the memo cache, since the result
+      // depends on which elements were already visited.
+      return this.walkDeps(tagName, visited);
+    }
+    if (!Object.hasOwn(this.transitiveDeps, tagName)) {
+      this.transitiveDeps[tagName] = this.walkDeps(tagName, new Set());
+    }
+    return this.transitiveDeps[tagName].slice();
+  }
+
+  /**
+   * Recursively collects transitive element dependencies. An element's direct
+   * deps are listed before the deps of its deps.
+   */
+  private walkDeps(tagName: string, visited: Set<string>): string[] {
     if (visited.has(tagName)) {
       return [];
     }
-
     visited.add(tagName);
-    this.deps[tagName] ??= this.parseDepsFromSource(tagName);
-
-    const deps = new Set(this.deps[tagName]);
-    for (const depTagName of this.deps[tagName]) {
-      for (const childDep of this.getDeps(depTagName, visited)) {
+    const directDeps = (this.deps[tagName] ??=
+      this.parseDepsFromSource(tagName));
+    const deps = new Set(directDeps);
+    for (const depTagName of directDeps) {
+      for (const childDep of this.walkDeps(depTagName, visited)) {
         deps.add(childDep);
       }
     }

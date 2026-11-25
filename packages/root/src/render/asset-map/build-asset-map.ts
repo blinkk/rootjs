@@ -31,10 +31,12 @@ export interface PodRouteAsset {
 export class BuildAssetMap implements AssetMap {
   private rootConfig: RootConfig;
   private srcToAsset: Map<string, BuildAsset>;
+  private resolvedCache: Map<string, BuildAsset | null>;
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
     this.srcToAsset = new Map();
+    this.resolvedCache = new Map();
   }
 
   get(src: string): Asset | null {
@@ -51,19 +53,32 @@ export class BuildAssetMap implements AssetMap {
     if (asset) {
       return asset;
     }
+    if (src.includes('\\')) {
+      const normalizedAsset = this.srcToAsset.get(src.replace(/\\/g, '/'));
+      if (normalizedAsset) {
+        return normalizedAsset;
+      }
+    }
+    const cached = this.resolvedCache.get(src);
+    if (cached !== undefined) {
+      return cached ?? undefined;
+    }
     // Try resolving the realpath of the asset, following symlinks.
     const realSrc = realPathRelativeTo(this.rootConfig.rootDir, src);
     if (realSrc !== src) {
-      const asset = this.srcToAsset.get(realSrc);
-      if (asset) {
-        return asset;
+      const realAsset = this.srcToAsset.get(realSrc);
+      if (realAsset) {
+        this.resolvedCache.set(src, realAsset);
+        return realAsset;
       }
     }
+    this.resolvedCache.set(src, null);
     return undefined;
   }
 
   private add(asset: BuildAsset) {
     this.srcToAsset.set(asset.src, asset);
+    this.resolvedCache.delete(asset.src);
   }
 
   toJson(): BuildAssetManifest {
@@ -169,15 +184,16 @@ export class BuildAssetMap implements AssetMap {
 }
 
 /**
- * Returns the realpath of a src file, relative to the rootDir.
+ * Returns the realpath of a src file, relative to the rootDir, normalized to
+ * POSIX forward slashes to match Vite manifest keys.
  */
 function realPathRelativeTo(rootDir: string, src: string) {
   const fullPath = path.resolve(rootDir, src);
   if (!fs.existsSync(fullPath)) {
-    return src;
+    return src.replace(/\\/g, '/');
   }
-  const realpath = fs.realpathSync(path.resolve(rootDir, src));
-  return path.relative(rootDir, realpath);
+  const realpath = fs.realpathSync(fullPath);
+  return path.relative(rootDir, realpath).replace(/\\/g, '/');
 }
 
 /**
@@ -194,6 +210,9 @@ export class BuildAsset {
   private importedModules: string[];
   private importedCss: string[];
   isElement: boolean;
+  private cssDeps?: string[];
+  private jsDeps?: string[];
+  private modulePreloadDeps?: string[];
 
   constructor(
     assetMap: BuildAssetMap,
@@ -214,107 +233,102 @@ export class BuildAsset {
   }
 
   async getCssDeps(): Promise<string[]> {
-    const visited = new Set<string>();
-    const deps = new Set<string>();
-    await this.collectCss(this, deps, visited);
-    return Array.from(deps);
+    if (!this.cssDeps) {
+      const deps = new Set<string>();
+      this.collectCss(deps);
+      this.cssDeps = Array.from(deps);
+    }
+    return this.cssDeps.slice();
   }
 
   async getJsDeps(): Promise<string[]> {
-    const visited = new Set<string>();
-    const deps = new Set<string>();
-    await this.collectJs(this, deps, visited);
-    return Array.from(deps);
+    if (!this.jsDeps) {
+      const deps = new Set<string>();
+      this.collectJs(deps);
+      this.jsDeps = Array.from(deps);
+    }
+    return this.jsDeps.slice();
   }
 
   async getModulePreloadDeps(): Promise<string[]> {
-    // Seed `visited` with this asset so that the walk starts at the imported
-    // modules and this asset's own URL is left out of the results.
-    const visited = new Set<string>([this.src]);
-    const deps = new Set<string>();
-    await this.collectModulePreload(this.importedModules, deps, visited);
-    return Array.from(deps);
-  }
-
-  private async collectJs(
-    asset: BuildAsset | null,
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    if (!asset) {
-      return;
+    if (!this.modulePreloadDeps) {
+      const deps = new Set<string>();
+      this.collectModulePreload(deps);
+      this.modulePreloadDeps = Array.from(deps);
     }
-    if (!asset.src) {
-      return;
-    }
-    if (visited.has(asset.src)) {
-      return;
-    }
-    visited.add(asset.src);
-    if (asset.isElement) {
-      urls.add(asset.assetUrl);
-    }
-    await Promise.all(
-      asset.importedModules.map(async (src) => {
-        const importedAsset = (await this.assetMap.get(src)) as BuildAsset;
-        this.collectJs(importedAsset, urls, visited);
-      })
-    );
+    return this.modulePreloadDeps.slice();
   }
 
   /**
-   * Walks `srcs` and their transitive imports, collecting the JS chunk URL of
-   * every module along the way.
+   * Walks the import graph breadth-first from `root`, calling `visit` once per
+   * reachable asset. Breadth-first order keeps the collected URLs in a stable
+   * order where an importer's deps are listed before its imports' deps, which
+   * matters for the CSS cascade.
    */
-  private async collectModulePreload(
-    srcs: string[],
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    await Promise.all(
-      srcs.map(async (src) => {
-        if (visited.has(src)) {
-          return;
-        }
-        visited.add(src);
-        const asset = (await this.assetMap.get(src)) as BuildAsset | null;
-        if (!asset || !asset.src) {
-          return;
-        }
-        // Route files have no asset URL of their own, and CSS deps are
-        // injected as stylesheets rather than preloaded.
-        if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
-          urls.add(asset.assetUrl);
-        }
-        await this.collectModulePreload(asset.importedModules, urls, visited);
-      })
-    );
+  private walkImports(root: BuildAsset, visit: (asset: BuildAsset) => void) {
+    const visited = new Set<string>();
+    const queue: Array<BuildAsset | null> = [root];
+    for (let i = 0; i < queue.length; i++) {
+      const asset = queue[i];
+      if (!asset || !asset.src || visited.has(asset.src)) {
+        continue;
+      }
+      visited.add(asset.src);
+      visit(asset);
+      for (const src of asset.importedModules) {
+        queue.push(this.assetMap.get(src) as BuildAsset | null);
+      }
+    }
   }
 
-  private async collectCss(
-    asset: BuildAsset | null,
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    if (!asset) {
-      return;
+  private collectJs(urls: Set<string>) {
+    this.walkImports(this, (asset) => {
+      if (asset.isElement) {
+        urls.add(asset.assetUrl);
+      }
+    });
+  }
+
+  /**
+   * Walks this asset's transitive imports breadth-first, collecting the JS
+   * chunk URL of every module along the way.
+   */
+  private collectModulePreload(urls: Set<string>) {
+    // Seed `visited` with this asset so that the walk starts at the imported
+    // modules and this asset's own URL is left out of the results.
+    const visited = new Set<string>([this.src]);
+    const queue: string[] = [];
+    const enqueue = (srcs: string[]) => {
+      for (const src of srcs) {
+        if (!visited.has(src)) {
+          visited.add(src);
+          queue.push(src);
+        }
+      }
+    };
+    enqueue(this.importedModules);
+    for (let i = 0; i < queue.length; i++) {
+      const asset = this.assetMap.get(queue[i]) as BuildAsset | null;
+      if (!asset || !asset.src) {
+        continue;
+      }
+      // Route files have no asset URL of their own, and CSS deps are
+      // injected as stylesheets rather than preloaded.
+      if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
+        urls.add(asset.assetUrl);
+      }
+      enqueue(asset.importedModules);
     }
-    if (!asset.src) {
-      return;
-    }
-    if (visited.has(asset.src)) {
-      return;
-    }
-    visited.add(asset.src);
-    if (asset.importedCss) {
-      asset.importedCss.forEach((cssUrl) => urls.add(cssUrl));
-    }
-    await Promise.all(
-      asset.importedModules.map(async (moduleId) => {
-        const importedAsset = (await this.assetMap.get(moduleId)) as BuildAsset;
-        this.collectCss(importedAsset, urls, visited);
-      })
-    );
+  }
+
+  private collectCss(urls: Set<string>) {
+    this.walkImports(this, (asset) => {
+      if (asset.importedCss) {
+        for (const cssUrl of asset.importedCss) {
+          urls.add(cssUrl);
+        }
+      }
+    });
   }
 
   toJson() {
