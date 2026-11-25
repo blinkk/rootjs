@@ -25,7 +25,12 @@ export function useTranslations() {
   }
   const translations = i18nContext?.translations || {};
   const stringParams = useStringParams();
+  const hasStringParams = Object.keys(stringParams).length > 0;
   const middleware = useTranslationMiddleware();
+  const beforeTranslateFns = middleware.beforeTranslateFns;
+  const afterTranslateFns = middleware.afterTranslateFns;
+  const beforeReplaceParamsFns = middleware.beforeReplaceParamsFns;
+  const afterReplaceParamsFns = middleware.afterReplaceParamsFns;
 
   function t(str: string, params?: Record<string, string | number>): string;
   function t(
@@ -36,31 +41,37 @@ export function useTranslations() {
     // using `useTranslations` with undefined values.
     if (typeof str === 'undefined' || str === null) {
       // Return `undefined` to suppress empty props, e.g.
-      // <a title={t(undefined)}>Learn more</a>
+      // <a title={t(undefined)}>Learn more</a>.
       return undefined;
     }
     let input = normalizeString(str);
-    middleware.beforeTranslateFns.forEach((fn) => {
-      input = fn(input);
-    });
+    for (let i = 0; i < beforeTranslateFns.length; i++) {
+      input = beforeTranslateFns[i](input);
+    }
     let translation = translations[input] ?? input ?? '';
-    middleware.afterTranslateFns.forEach((fn) => {
-      translation = fn(translation);
-    });
+    for (let i = 0; i < afterTranslateFns.length; i++) {
+      translation = afterTranslateFns[i](translation);
+    }
 
     // Replace string params, e.g. "Hello, {name}".
-    middleware.beforeReplaceParamsFns.forEach((fn) => {
-      translation = fn(translation);
-    });
-    if (testHasStringParams(translation)) {
-      translation = replaceStringParams(translation, {
-        ...stringParams,
-        ...params,
-      });
+    for (let i = 0; i < beforeReplaceParamsFns.length; i++) {
+      translation = beforeReplaceParamsFns[i](translation);
     }
-    middleware.afterReplaceParamsFns.forEach((fn) => {
-      translation = fn(translation);
-    });
+    if (testHasStringParams(translation)) {
+      if (params && hasStringParams) {
+        translation = replaceStringParams(translation, {
+          ...stringParams,
+          ...params,
+        });
+      } else if (params) {
+        translation = replaceStringParams(translation, params);
+      } else if (hasStringParams) {
+        translation = replaceStringParams(translation, stringParams);
+      }
+    }
+    for (let i = 0; i < afterReplaceParamsFns.length; i++) {
+      translation = afterReplaceParamsFns[i](translation);
+    }
 
     return translation;
   }
@@ -69,21 +80,68 @@ export function useTranslations() {
 
 /**
  * Cleans a string that's used for translations. Performs the following:
- * - Removes any leading/trailing whitespace
- * - Removes spaces at the end of any line
+ * - Removes any leading/trailing whitespace.
+ * - Removes spaces at the end of any line.
  */
 export function normalizeString(str: string) {
-  const lines = String(str)
-    .trim()
-    .split('\n')
-    .map((line) => removeTrailingWhitespace(line));
+  const value = typeof str === 'string' ? str : String(str);
+  const len = value.length;
+  if (len === 0) {
+    return '';
+  }
+
+  // Fast path for clean single-line strings without leading/trailing whitespace
+  // or a trailing `&nbsp;`.
+  if (value.indexOf('\n') === -1) {
+    const first = value.charCodeAt(0);
+    const last = value.charCodeAt(len - 1);
+    if (
+      isNonWhitespaceCharCode(first) &&
+      isNonWhitespaceCharCode(last) &&
+      (last !== 59 || !value.endsWith('&nbsp;'))
+    ) {
+      return value;
+    }
+    return stripTrailingNbsp(value.trim());
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length !== len && trimmed.indexOf('\n') === -1) {
+    return stripTrailingNbsp(trimmed);
+  }
+  const lines = trimmed.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    lines[i] = stripTrailingNbsp(lines[i].trimEnd());
+  }
   return lines.join('\n');
 }
 
-function removeTrailingWhitespace(str: string) {
-  return String(str)
-    .trimEnd()
-    .replace(/&nbsp;$/, '');
+function stripTrailingNbsp(str: string): string {
+  return str.length >= 6 &&
+    str.charCodeAt(str.length - 1) === 59 &&
+    str.endsWith('&nbsp;')
+    ? str.slice(0, -6)
+    : str;
+}
+
+function isNonWhitespaceCharCode(code: number): boolean {
+  if (code > 32 && code < 0x00a0) {
+    return true;
+  }
+  if (code <= 32) {
+    return false;
+  }
+  return !(
+    code === 0x00a0 ||
+    code === 0x1680 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x205f ||
+    code === 0x3000 ||
+    code === 0xfeff
+  );
 }
 
 function testHasStringParams(str: string) {

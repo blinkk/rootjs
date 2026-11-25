@@ -5044,39 +5044,55 @@ export class BatchResponse {
       ? locale
       : resolveLocaleFallbacks(this.i18nConfig, locale);
 
-    // Merge the strings from all of the translations docs. The docs are
-    // merged in precedence order (generic translations first, doc-specific
-    // translations last) so that later docs override earlier ones.
-    const merged: Record<
-      string,
-      {source: string; translations: Record<string, string>}
-    > = {};
-    for (const localeDocs of Object.values(this.translations)) {
-      for (const localeDoc of Object.values(localeDocs)) {
-        const strings = localeDoc.strings || {};
+    const localeTranslations: LocaleTranslations = {};
+    const translationDocGroups = Object.values(this.translations);
+    if (translationDocGroups.length === 0) {
+      return localeTranslations;
+    }
+
+    // Apply translations in reverse fallback order (lowest priority first) and
+    // forward doc precedence order (generic first, doc-specific last) so that
+    // higher-priority locales and later docs override earlier ones without
+    // allocating intermediate hash maps.
+    for (let i = fallbackLocales.length - 1; i >= 0; i--) {
+      const fallbackLocale = fallbackLocales[i];
+      for (let g = 0; g < translationDocGroups.length; g++) {
+        const strings = translationDocGroups[g][fallbackLocale]?.strings;
+        if (!strings) {
+          continue;
+        }
         for (const hash in strings) {
           const entry = strings[hash];
-          merged[hash] ??= {source: entry.source, translations: {}};
           if (entry.translation) {
-            merged[hash].translations[localeDoc.locale] = entry.translation;
+            localeTranslations[entry.source] = entry.translation;
+          } else if (!Object.hasOwn(localeTranslations, entry.source)) {
+            localeTranslations[entry.source] = entry.source;
           }
         }
       }
     }
 
-    // For each string, pick the first locale in the fallback chain with a
-    // non-empty translation, falling back to the source string.
-    const localeTranslations: LocaleTranslations = {};
-    for (const item of Object.values(merged)) {
-      let translation = item.source;
-      for (const fallbackLocale of fallbackLocales) {
-        if (item.translations[fallbackLocale]) {
-          translation = item.translations[fallbackLocale];
-          break;
+    // Ensure strings that only appear in locale docs outside `fallbackLocales`
+    // still fall back to their source string.
+    for (let g = 0; g < translationDocGroups.length; g++) {
+      const localeDocs = translationDocGroups[g];
+      for (const localeKey in localeDocs) {
+        if (fallbackLocales.includes(localeKey)) {
+          continue;
+        }
+        const strings = localeDocs[localeKey]?.strings;
+        if (!strings) {
+          continue;
+        }
+        for (const hash in strings) {
+          const source = strings[hash].source;
+          if (!Object.hasOwn(localeTranslations, source)) {
+            localeTranslations[source] = source;
+          }
         }
       }
-      localeTranslations[item.source] = translation;
     }
+
     return localeTranslations;
   }
 }
