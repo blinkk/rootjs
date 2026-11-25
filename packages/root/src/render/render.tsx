@@ -101,6 +101,7 @@ export class Renderer {
   private router: Router;
   private configuredStyleEntries: string[];
   private securityConfig: Required<RootSecurityConfig>;
+  private hasElements: boolean;
   private jsxRenderFns = new Map<
     JsxRenderMode | 'default',
     (vnode: any) => string
@@ -117,6 +118,10 @@ export class Renderer {
     this.router = new Router(rootConfig);
     this.configuredStyleEntries = this.getConfiguredStyleEntries();
     this.securityConfig = getSecurityConfig(rootConfig);
+    this.hasElements = Boolean(
+      options.elementGraph?.sourceFiles &&
+      Object.keys(options.elementGraph.sourceFiles).length > 0
+    );
   }
 
   /** Returns a route from the router. */
@@ -883,15 +888,15 @@ export class Renderer {
     cssDeps: Set<string>,
     preloadDeps?: Set<string> | null
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
-    const elementsMap = this.elementGraph.sourceFiles;
-    if (Object.keys(elementsMap).length === 0) {
+    const elementsMap = this.elementGraph?.sourceFiles;
+    if (!this.hasElements || !elementsMap) {
       return {jsDeps, cssDeps};
     }
     const assetMap = this.assetMap;
 
     const tagNames = new Set<string>();
     for (const tagName of parseTagNames(html)) {
-      if (tagName && tagName in elementsMap) {
+      if (tagName && Object.hasOwn(elementsMap, tagName)) {
         tagNames.add(tagName);
         for (const depTagName of this.elementGraph.getDeps(tagName)) {
           tagNames.add(depTagName);
