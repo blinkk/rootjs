@@ -238,7 +238,7 @@ export class BuildAsset {
       this.collectCss(deps);
       this.cssDeps = Array.from(deps);
     }
-    return this.cssDeps;
+    return this.cssDeps.slice();
   }
 
   async getJsDeps(): Promise<string[]> {
@@ -247,7 +247,7 @@ export class BuildAsset {
       this.collectJs(deps);
       this.jsDeps = Array.from(deps);
     }
-    return this.jsDeps;
+    return this.jsDeps.slice();
   }
 
   async getModulePreloadDeps(): Promise<string[]> {
@@ -256,7 +256,7 @@ export class BuildAsset {
       this.collectModulePreload(deps);
       this.modulePreloadDeps = Array.from(deps);
     }
-    return this.modulePreloadDeps;
+    return this.modulePreloadDeps.slice();
   }
 
   /**

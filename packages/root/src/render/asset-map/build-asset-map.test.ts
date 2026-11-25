@@ -103,10 +103,24 @@ test('BuildAsset resolves transitive deps across cycles and memoizes results', a
 
   getSpy.mockClear();
 
-  // Repeat calls return the memoized arrays without re-walking the graph.
-  expect(await routeAsset.getCssDeps()).toBe(cssDeps1);
-  expect(await routeAsset.getJsDeps()).toBe(jsDeps1);
-  expect(await routeAsset.getModulePreloadDeps()).toBe(preloadDeps1);
+  // Mutating returned arrays must not corrupt the memoized cache.
+  cssDeps1.push('/assets/mutated.css');
+  jsDeps1.push('/assets/mutated.js');
+  preloadDeps1.push('/assets/mutated-preload.js');
+
+  // Repeat calls return defensive copies without re-walking the graph.
+  expect(await routeAsset.getCssDeps()).toEqual([
+    '/assets/route.css',
+    '/assets/chunk-a.css',
+    '/assets/chunk-b.css',
+    '/assets/root-deep.css',
+  ]);
+  expect(await routeAsset.getJsDeps()).toEqual(['/assets/root-deep.js']);
+  expect(await routeAsset.getModulePreloadDeps()).toEqual([
+    '/assets/chunk-a.js',
+    '/assets/chunk-b.js',
+    '/assets/root-deep.js',
+  ]);
   expect(getSpy).not.toHaveBeenCalled();
 });
 

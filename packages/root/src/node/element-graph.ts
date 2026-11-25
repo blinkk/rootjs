@@ -51,7 +51,6 @@ export class ElementGraph {
   static fromJson(data: {deps: any; sourceFiles: any}) {
     const graph = new ElementGraph(data.sourceFiles);
     graph.deps = data.deps;
-    graph.transitiveDeps = Object.create(null);
     return graph;
   }
 
@@ -64,7 +63,7 @@ export class ElementGraph {
     if (!Object.hasOwn(this.transitiveDeps, tagName)) {
       this.transitiveDeps[tagName] = this.walkDeps(tagName, new Set());
     }
-    return this.transitiveDeps[tagName];
+    return this.transitiveDeps[tagName].slice();
   }
 
   /**
