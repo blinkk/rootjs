@@ -93,7 +93,7 @@ export class ElementGraph {
     const resolved = path.resolve(filePath);
     for (const tagName in this.sourceFiles) {
       if (path.resolve(this.sourceFiles[tagName].filePath) === resolved) {
-        delete this.deps[tagName];
+        this.invalidateTagName(tagName);
         return true;
       }
     }
@@ -102,11 +102,20 @@ export class ElementGraph {
       if (
         resolveRealPathSync(this.sourceFiles[tagName].filePath) === realTarget
       ) {
-        delete this.deps[tagName];
+        this.invalidateTagName(tagName);
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Clears the element's direct deps and the whole transitive deps memo, since
+   * any element that (transitively) depends on it may now be stale.
+   */
+  private invalidateTagName(tagName: string) {
+    delete this.deps[tagName];
+    this.transitiveDeps = Object.create(null);
   }
 
   /**
