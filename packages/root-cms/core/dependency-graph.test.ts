@@ -725,3 +725,184 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
     });
   }
 );
+
+describe('DependencyGraphService caching and coalescing', () => {
+  function createMockProject(options?: {
+    delayMs?: number;
+    metaCacheTtlMs?: number;
+  }) {
+    const projectId = `mock-dep-cache-${Date.now()}-${projectCounter++}`;
+    let metaReads = 0;
+    let edgeQueries = 0;
+    let lastRunMillis = 1_700_000_000_000;
+    let publishedRefs: Record<string, string[]> = {
+      index: ['Authors/alice'],
+    };
+    const draftRefs: Record<string, string[]> = {
+      index: ['Authors/alice', 'Authors/bob'],
+    };
+    const delayMs = options?.delayMs ?? 0;
+    const wait = () =>
+      delayMs > 0 ? new Promise((r) => setTimeout(r, delayMs)) : null;
+
+    const db: any = {
+      doc(docPath: string) {
+        return {
+          async get() {
+            if (docPath.endsWith('/DependencyGraph/_meta')) {
+              metaReads++;
+              await wait();
+              return {
+                exists: true,
+                data: () => ({
+                  lastRun: Timestamp.fromMillis(lastRunMillis),
+                  docCounts: {},
+                  refDocCounts: {draft: 1, published: 1},
+                  refCounts: {draft: 2, published: 1},
+                }),
+              };
+            }
+            throw new Error(`Unexpected doc.get(${docPath})`);
+          },
+        };
+      },
+      collection(colPath: string) {
+        return {
+          where(_field: string, _op: string, mode: string) {
+            return {
+              async get() {
+                if (colPath.endsWith('/DependencyGraph')) {
+                  edgeQueries++;
+                  await wait();
+                  const refs = mode === 'draft' ? draftRefs : publishedRefs;
+                  const docs = [
+                    {
+                      id: `${mode}--Pages`,
+                      data: () => ({mode, collection: 'Pages', refs}),
+                    },
+                  ];
+                  return {
+                    forEach(fn: (doc: any) => void) {
+                      docs.forEach(fn);
+                    },
+                  };
+                }
+                throw new Error(`Unexpected collection.where.get(${colPath})`);
+              },
+            };
+          },
+        };
+      },
+    };
+
+    const rootConfig: any = {
+      rootDir: os.tmpdir(),
+      i18n: {locales: ['en']},
+      plugins: [
+        {
+          name: 'root-cms',
+          getConfig: () => ({
+            id: projectId,
+            firebaseConfig: {projectId: 'mock'},
+            dependencyGraph: true,
+          }),
+          getFirestore: () => db,
+        },
+      ],
+    };
+
+    return {
+      createService: (serviceOptions?: {metaCacheTtlMs?: number}) =>
+        new DependencyGraphService(
+          rootConfig,
+          undefined,
+          serviceOptions ??
+            (options?.metaCacheTtlMs !== undefined
+              ? {metaCacheTtlMs: options.metaCacheTtlMs}
+              : undefined)
+        ),
+      setRemoteUpdate: (
+        nextLastRunMillis: number,
+        nextPublishedRefs: Record<string, string[]>
+      ) => {
+        lastRunMillis = nextLastRunMillis;
+        publishedRefs = nextPublishedRefs;
+      },
+      getCounts: () => ({metaReads, edgeQueries}),
+    };
+  }
+
+  it('caches _meta reads within TTL and supports explicit invalidation', async () => {
+    const mock = createMockProject({metaCacheTtlMs: 5_000});
+    const service = mock.createService();
+
+    const first = await service.getGraph('published');
+    expect(first.edges).toEqual({'Pages/index': ['Authors/alice']});
+    expect(mock.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
+
+    // Repeated calls within TTL reuse the cached graph with zero Firestore
+    // reads, even across new DependencyGraphService instances.
+    for (let i = 0; i < 10; i++) {
+      const next = await mock.createService().getGraph('published');
+      expect(next).toBe(first);
+    }
+    expect(mock.getCounts()).toEqual({metaReads: 1, edgeQueries: 1});
+
+    // Update remote data and verify metaCacheTtlMs: 0 bypasses the _meta cache.
+    mock.setRemoteUpdate(1_700_000_005_000, {index: ['Authors/carol']});
+    const fresh = await service.getGraph('published', {metaCacheTtlMs: 0});
+    expect(fresh.edges).toEqual({'Pages/index': ['Authors/carol']});
+    expect(mock.getCounts()).toEqual({metaReads: 2, edgeQueries: 2});
+
+    // Explicit invalidateCache() forces a fresh read on the next call.
+    mock.setRemoteUpdate(1_700_000_010_000, {index: ['Authors/dave']});
+    service.invalidateCache();
+    const afterInvalidate = await service.getGraph('published');
+    expect(afterInvalidate.edges).toEqual({'Pages/index': ['Authors/dave']});
+    expect(mock.getCounts()).toEqual({metaReads: 3, edgeQueries: 3});
+  });
+
+  it('coalesces concurrent cold getGraph() calls onto a single Firestore load', async () => {
+    const mock = createMockProject({delayMs: 15, metaCacheTtlMs: 5_000});
+
+    // Fire 20 concurrent published loads and 10 concurrent draft loads while
+    // cold: should issue 1 _meta read and 1 edge query per mode.
+    const [publishedGraphs, draftGraphs] = await Promise.all([
+      Promise.all(
+        Array.from({length: 20}, () =>
+          mock.createService().getGraph('published')
+        )
+      ),
+      Promise.all(
+        Array.from({length: 10}, () => mock.createService().getGraph('draft'))
+      ),
+    ]);
+
+    expect(mock.getCounts()).toEqual({metaReads: 1, edgeQueries: 2});
+    for (const graph of publishedGraphs) {
+      expect(graph).toBe(publishedGraphs[0]);
+      expect(graph.edges).toEqual({'Pages/index': ['Authors/alice']});
+    }
+    for (const graph of draftGraphs) {
+      expect(graph).toBe(draftGraphs[0]);
+      expect(graph.edges).toEqual({
+        'Pages/index': ['Authors/alice', 'Authors/bob'],
+      });
+    }
+  });
+
+  it('does not repopulate cache with stale data if invalidated mid-flight', async () => {
+    const mock = createMockProject({delayMs: 20, metaCacheTtlMs: 5_000});
+    const service = mock.createService();
+
+    const inFlight = service.getGraph('published');
+    // Invalidate and update remote state while the first load is in flight.
+    mock.setRemoteUpdate(1_700_000_005_000, {index: ['Authors/updated']});
+    service.invalidateCache();
+
+    await inFlight;
+    // The next call must read the updated state instead of stale cached data.
+    const next = await service.getGraph('published');
+    expect(next.edges).toEqual({'Pages/index': ['Authors/updated']});
+  });
+});
