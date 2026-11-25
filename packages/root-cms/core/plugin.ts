@@ -1601,11 +1601,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           type: ['text/plain', 'text/csv'],
         })
       );
-      server.use('/cms', bodyParser.json());
+      server.use(bodyParser.json());
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.
       server.use(
-        '/cms',
         (err: any, req: Request, res: Response, next: NextFunction) => {
           if (err.type === 'entity.too.large' || err.status === 413) {
             res.status(413).json({error: 'Payload too large'});
@@ -1761,11 +1760,51 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       // Inject the current user into the req object and check if login is
       // required, sending unauthenticated users to the login page.
+      function handleAuthError(
+        err: unknown,
+        req: Request,
+        res: Response,
+        next: NextFunction
+      ) {
+        // A failure here is an infra error (e.g. a stuck Firestore channel
+        // or expired server credentials), not an invalid session. Respond
+        // with an explicit 503 on paths that require login so the request
+        // fails fast and visibly. Without this, the rejected middleware
+        // promise would leave the request hanging forever and the CMS stuck
+        // on its loading screen until the server restarts.
+        console.error('failed to fetch the current user:');
+        console.error(err);
+        if (isGcloudReauthError(err)) {
+          logGcloudReauthHint();
+        }
+        if (loginRequired(req)) {
+          res.setHeader('cache-control', 'no-store');
+          if (String(req.originalUrl).toLowerCase().startsWith('/cms/api')) {
+            res.status(503).json({success: false, error: 'AUTH_UNAVAILABLE'});
+          } else {
+            res
+              .status(503)
+              .send(
+                'Root.js was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
+              );
+          }
+          return;
+        }
+        // Public paths that don't require login proceed without a user.
+        next();
+      }
+
       server.use((req: Request, res: Response, next: NextFunction) => {
         // Fast path: when there is no session cookie, skip `getCurrentUser()`
         // and `withTimeout()` completely to avoid Promise and timer
         // allocations on unauthenticated public requests.
-        const sessionCookie = getSessionCookie(req);
+        let sessionCookie: string | null;
+        try {
+          sessionCookie = getSessionCookie(req);
+        } catch (err) {
+          handleAuthError(err, req, res, next);
+          return;
+        }
         if (!sessionCookie) {
           if (logLevel === 'debug') {
             console.log('no login session cookie');
@@ -1811,34 +1850,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             next();
           },
           (err) => {
-            // A failure here is an infra error (e.g. a stuck Firestore channel
-            // or expired server credentials), not an invalid session. Respond
-            // with an explicit 503 on paths that require login so the request
-            // fails fast and visibly. Without this, the rejected middleware
-            // promise would leave the request hanging forever and the CMS stuck
-            // on its loading screen until the server restarts.
-            console.error('failed to fetch the current user:');
-            console.error(err);
-            if (isGcloudReauthError(err)) {
-              logGcloudReauthHint();
-            }
-            if (loginRequired(req)) {
-              res.setHeader('cache-control', 'no-store');
-              if (urlPath.startsWith('/cms/api')) {
-                res
-                  .status(503)
-                  .json({success: false, error: 'AUTH_UNAVAILABLE'});
-              } else {
-                res
-                  .status(503)
-                  .send(
-                    'Root.js was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
-                  );
-              }
-              return;
-            }
-            // Public paths that don't require login proceed without a user.
-            next();
+            handleAuthError(err, req, res, next);
           }
         );
       });
