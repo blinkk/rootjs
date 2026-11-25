@@ -21,12 +21,13 @@ const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<string, PodRouteEntry>;
 
 /**
  * Ensures a route's module is loaded, invoking its lazy `loadModule` loader if
- * present and caching the resolved module on `route.module`.
+ * present and updating `route.module`. The loader is retained so Vite SSR HMR
+ * updates are picked up on subsequent requests even when a `Router` instance is
+ * reused across requests.
  */
 export async function ensureRouteModule(route: Route): Promise<RouteModule> {
   if (route.loadModule) {
     route.module = await route.loadModule();
-    route.loadModule = undefined;
   }
   return route.module;
 }

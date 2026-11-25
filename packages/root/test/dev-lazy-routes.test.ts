@@ -85,3 +85,32 @@ test('dev mode lazily loads routes on demand while preserving route config.local
   const limitedDeRes = await fetchPath('/intl/de/limited');
   expect(limitedDeRes.status).toBe(404);
 });
+
+test('lazy route loader is retained for HMR updates across reused Route instances', async () => {
+  const viteServer = app.get('viteServer');
+  const renderMod = await viteServer.ssrLoadModule(
+    path.resolve(__dirname, '../dist/render.js')
+  );
+  const rootConfig = app.get('rootConfig');
+  const renderer = new renderMod.Renderer(rootConfig, {
+    assetMap: {get: () => null},
+    elementGraph: {sourceFiles: {}, getDeps: () => []},
+  });
+
+  const [route] = renderer.getRoute('/');
+  expect(route).toBeDefined();
+  expect(typeof route.loadModule).toBe('function');
+
+  let version = 1;
+  route.loadModule = async () => ({
+    default: () => `v${version}`,
+  });
+
+  const res1 = await renderer.renderRoute(route, {routeParams: {}});
+  expect(res1.html).toContain('v1');
+  expect(typeof route.loadModule).toBe('function');
+
+  version = 2;
+  const res2 = await renderer.renderRoute(route, {routeParams: {}});
+  expect(res2.html).toContain('v2');
+});
