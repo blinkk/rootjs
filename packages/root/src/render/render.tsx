@@ -51,6 +51,8 @@ import {
   StaticPathsCache,
 } from './router.js';
 
+export {ensureRouteModule} from './router.js';
+
 const CONTENT_TYPES: Record<string, string> = {
   html: 'text/html',
   htm: 'text/html',

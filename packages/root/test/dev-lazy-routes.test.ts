@@ -161,6 +161,11 @@ test('dev mode handles live HMR edits, syntax error recovery, and adding config.
     locales: ['en', 'fr', 'de'],
     urlFormat: '/intl/[locale]/[path]',
   },
+  vite: {
+    server: {
+      hmr: {port: 0},
+    },
+  },
 };
 `
     );
@@ -173,8 +178,33 @@ test('dev mode handles live HMR edits, syntax error recovery, and adding config.
 }
 `
     );
+    const multiConfigRouteFile = path.join(tmpDir, 'routes/multi.tsx');
+    await fs.writeFile(
+      multiConfigRouteFile,
+      `export const a = 1, config = {locales: ['de']};
+export default function MultiPage() {
+  return <h1>Multi</h1>;
+}
+`
+    );
+    const errorRouteFile = path.join(tmpDir, 'routes/500.tsx');
+    await fs.writeFile(
+      errorRouteFile,
+      `export default function Custom500(props: {error?: Error}) {
+  return <h1>Custom 500: {props.error?.message}</h1>;
+}
+`
+    );
+    const concurrentRouteFile = path.join(tmpDir, 'routes/concurrent.tsx');
+    await fs.writeFile(
+      concurrentRouteFile,
+      `export default function ConcurrentPage() {
+  return <h1>Concurrent OK</h1>;
+}
+`
+    );
 
-    tmpApp = await createDevServer({rootDir: tmpDir, port: 14589});
+    tmpApp = await createDevServer({rootDir: tmpDir, port: 0});
     let tmpPort = 0;
     await new Promise<void>((resolve) => {
       tmpHttpServer = tmpApp.listen(0, () => {
@@ -263,6 +293,39 @@ export default function FooPage() {
     expect(deRes.status).toBe(200);
     expect(deRes.body).toContain('Foo de only');
     expect((await fetchTmp('/intl/en/foo')).status).toBe(404);
+
+    // (d) Multi-declarator `export const a = 1, config = {locales: ['de']}` is
+    // detected as eager by AST parsing.
+    const multiDeRes = await fetchTmp('/intl/de/multi');
+    expect(multiDeRes.status).toBe(200);
+    expect(multiDeRes.body).toContain('Multi');
+    expect((await fetchTmp('/intl/fr/multi')).status).toBe(404);
+
+    // (e) Concurrent cold requests sharing a single `Renderer` instance and
+    // lazy `routes/500.tsx` rendering via `renderError()`.
+    const renderMod = await viteServer.ssrLoadModule(
+      path.resolve(__dirname, '../dist/render.js')
+    );
+    expect(typeof renderMod.ensureRouteModule).toBe('function');
+    const sharedRenderer = new renderMod.Renderer(tmpApp.get('rootConfig'), {
+      assetMap: {get: () => null},
+      elementGraph: {sourceFiles: {}, getDeps: () => []},
+    });
+    const [sharedRoute] = sharedRenderer.getRoute('/concurrent');
+    expect(typeof sharedRoute.loadModule).toBe('function');
+    const concurrentResults = await Promise.all(
+      Array.from({length: 8}, () =>
+        sharedRenderer.renderRoute(sharedRoute, {routeParams: {}})
+      )
+    );
+    for (const result of concurrentResults) {
+      expect(result.html).toContain('Concurrent OK');
+    }
+
+    const [errorRoute] = sharedRenderer.getRoute('/500');
+    expect(typeof errorRoute.loadModule).toBe('function');
+    const errorResult = await sharedRenderer.renderError(new Error('boom'));
+    expect(errorResult.html).toContain('Custom 500: boom');
   } finally {
     if (tmpHttpServer) {
       tmpHttpServer.close();

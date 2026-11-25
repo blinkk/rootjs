@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import glob from 'tiny-glob';
+import {parseSync} from 'vite';
 import type {Plugin as VitePlugin} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {isDirectory, isJsFile} from '../utils/fsutils.js';
@@ -14,19 +15,10 @@ const RESOLVED_VIRTUAL_ROUTES = '\0' + VIRTUAL_ROUTES_ID;
 const RESOLVED_VIRTUAL_SCHEMAS = '\0' + VIRTUAL_SCHEMAS_ID;
 const RESOLVED_VIRTUAL_TRANSLATIONS = '\0' + VIRTUAL_TRANSLATIONS_ID;
 
-/**
- * Matches route files that export a `config` binding (e.g.
- * `export const config = {locales: [...]}`) or re-export all bindings via
- * `export * from ...`. Those routes are eagerly imported even in dev mode so
- * `Router.initRouteTrie()` can read `routeModule.config?.locales` synchronously.
- */
-const ROUTE_CONFIG_EXPORT_RE =
-  /\bexport\s*(?:(?:const|let|var)\s+(?:config\b|\{[^}]*\bconfig\b)|\{[^}]*\bconfig\b[^}]*\}|\*(?:\s+as\s+config\b|\s*from\b))/;
-
 export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
   let podsPromise: Promise<ResolvedPod[]> | null = null;
   let isDev = false;
-  const routeEagerState = new Map<string, boolean>();
+  let routeEagerState = new Map<string, boolean>();
 
   const getPods = () => {
     if (!podsPromise) {
@@ -52,12 +44,15 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
 
     async load(id) {
       if (id === RESOLVED_VIRTUAL_ROUTES) {
-        return buildRoutesModule(
+        const result = await buildRoutesModule(
           rootConfig,
           await getPods(),
-          isDev,
-          routeEagerState
+          isDev
         );
+        if (isDev) {
+          routeEagerState = result.routeEagerState;
+        }
+        return result.code;
       }
       if (id === RESOLVED_VIRTUAL_SCHEMAS) {
         return buildSchemasModule(rootConfig, await getPods());
@@ -177,7 +172,25 @@ function isInPodDir(filePath: string, watchDirs: string[]): boolean {
 async function hasRouteConfigExport(filePath: string): Promise<boolean> {
   try {
     const content = await fs.promises.readFile(filePath, 'utf-8');
-    return ROUTE_CONFIG_EXPORT_RE.test(content);
+    if (!content.includes('config') && !content.includes('*')) {
+      return false;
+    }
+    const parsed = parseSync(filePath, content);
+    if (parsed.errors.length > 0) {
+      return true;
+    }
+    for (const staticExport of parsed.module.staticExports) {
+      for (const entry of staticExport.entries) {
+        if (
+          !entry.isType &&
+          (entry.exportName.name === 'config' ||
+            entry.importName.kind === 'AllButDefault')
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
   } catch {
     return true;
   }
@@ -186,18 +199,14 @@ async function hasRouteConfigExport(filePath: string): Promise<boolean> {
 async function buildRoutesModule(
   rootConfig: RootConfig,
   pods: ResolvedPod[],
-  isDev: boolean,
-  routeEagerState: Map<string, boolean>
-): Promise<string> {
+  isDev: boolean
+): Promise<{code: string; routeEagerState: Map<string, boolean>}> {
   const rootDir = rootConfig.rootDir;
   const imports: string[] = [];
   const userEntries: string[] = [];
   const podEntries: string[] = [];
+  const nextRouteEagerState = new Map<string, boolean>();
   let idx = 0;
-
-  if (isDev) {
-    routeEagerState.clear();
-  }
 
   // User project routes.
   const routesDir = path.join(rootDir, 'routes');
@@ -217,7 +226,7 @@ async function buildRoutesModule(
     for (let i = 0; i < routeFiles.length; i++) {
       const file = routeFiles[i];
       if (isDev) {
-        routeEagerState.set(path.resolve(routesDir, file), eagerFlags[i]);
+        nextRouteEagerState.set(path.resolve(routesDir, file), eagerFlags[i]);
       }
       const modulePath = `/routes/${file.replace(/\\/g, '/')}`;
       if (eagerFlags[i]) {
@@ -242,7 +251,7 @@ async function buildRoutesModule(
   for (let i = 0; i < podRouteItems.length; i++) {
     const {pod, route} = podRouteItems[i];
     if (isDev) {
-      routeEagerState.set(path.resolve(route.filePath), podEagerFlags[i]);
+      nextRouteEagerState.set(path.resolve(route.filePath), podEagerFlags[i]);
     }
     const meta = `podName: ${JSON.stringify(pod.name)}, routePath: ${JSON.stringify(route.routePath)}, src: ${JSON.stringify(`pod/${pod.name}/${route.relPath}`)}`;
     if (podEagerFlags[i]) {
@@ -256,7 +265,7 @@ async function buildRoutesModule(
     }
   }
 
-  return [
+  const code = [
     ...imports,
     '',
     'export const ROUTE_MODULES = {',
@@ -267,6 +276,8 @@ async function buildRoutesModule(
     ...podEntries,
     '};',
   ].join('\n');
+
+  return {code, routeEagerState: nextRouteEagerState};
 }
 
 async function buildSchemasModule(
