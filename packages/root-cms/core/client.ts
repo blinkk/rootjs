@@ -1764,18 +1764,34 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
     console.log(`published ${publishedDocs.length} docs!`);
@@ -1913,18 +1929,34 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
     console.log(`unpublished ${unpublishedDocs.length} docs!`);
@@ -2152,18 +2184,34 @@ export class RootCMSClient {
       }
     }
 
-    for (const op of depGraphOps) {
-      if (batchCount >= 400) {
-        await batch.commit();
-        batch = this.db.batch();
-        batchCount = 0;
+    let batchHasDepGraphOps = false;
+    let committedDepGraphOps = false;
+    try {
+      for (const op of depGraphOps) {
+        if (batchCount >= 400) {
+          await batch.commit();
+          if (batchHasDepGraphOps) {
+            committedDepGraphOps = true;
+            batchHasDepGraphOps = false;
+          }
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+        op(batch);
+        batchCount += 1;
+        batchHasDepGraphOps = true;
       }
-      op(batch);
-      batchCount += 1;
-    }
 
-    if (batchCount > 0) {
-      await batch.commit();
+      if (batchCount > 0) {
+        await batch.commit();
+        if (batchHasDepGraphOps) {
+          committedDepGraphOps = true;
+        }
+      }
+    } finally {
+      if (committedDepGraphOps) {
+        await this.invalidateDependencyGraphCache();
+      }
     }
     await clearReadCaches();
     console.log(`published ${publishedDocs.length} docs!`);
@@ -3820,6 +3868,20 @@ export class RootCMSClient {
       console.error('failed to build dependency graph updates:');
       console.error(String(err.stack || err));
       return [];
+    }
+  }
+
+  /**
+   * Invalidates the in-process dependency graph cache after publish or
+   * unpublish batch commits complete.
+   */
+  private async invalidateDependencyGraphCache(): Promise<void> {
+    try {
+      const service = await this.getDependencyGraphService();
+      service?.invalidateCache();
+    } catch (err) {
+      console.error('failed to invalidate dependency graph cache:');
+      console.error(String(err.stack || err));
     }
   }
 

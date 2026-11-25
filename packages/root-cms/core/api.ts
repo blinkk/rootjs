@@ -614,7 +614,7 @@ export function api(server: Server, options: ApiOptions) {
           res.status(404).json({success: false, error: 'NOT_ENABLED'});
           return;
         }
-        const graph = await service.getGraph(mode);
+        const graph = await service.getGraph(mode, {metaCacheTtlMs: 0});
         const deps = graph.getDependencies(docIds, {transitive});
         res.setHeader('Cache-Control', 'no-store');
         res.status(200).json({

@@ -151,6 +151,31 @@ export interface GetDependenciesOptions {
 }
 
 /**
+ * Options for `DependencyGraphService`.
+ */
+export interface DependencyGraphServiceOptions {
+  /**
+   * Default TTL (in ms) for caching `_meta` validation reads in `getGraph()`.
+   * Defaults to `5_000` (5 seconds) in normal server mode, or `86_400_000`
+   * (24 hours) when `ROOT_BUILD_CACHE_DIR` is set during `root build`. Pass
+   * `0` to disable `_meta` TTL caching.
+   */
+  metaCacheTtlMs?: number;
+}
+
+/**
+ * Options for `DependencyGraphService.getGraph()`.
+ */
+export interface GetGraphOptions {
+  /**
+   * How long (in ms) a cached `_meta` read is reused before re-validating
+   * against Firestore. Overrides the service default; pass `0` to force a
+   * fresh `_meta` read.
+   */
+  metaCacheTtlMs?: number;
+}
+
+/**
  * Normalized dependency graph filters. Empty arrays are treated as "unset" so
  * a defensively-passed empty list doesn't accidentally exclude everything.
  */
@@ -381,15 +406,88 @@ export class DependencyGraph {
   }
 }
 
+/** Default TTL (in ms) for caching `_meta` reads in `getGraph()`. */
+const DEFAULT_META_CACHE_TTL_MS = 5_000;
+
 /**
- * In-process cache of loaded graphs, keyed by `<projectId>::<mode>`. Entries
- * are invalidated when the persisted `_meta.lastRun` changes (checked on every
- * `getGraph()` call) or when a rebuild runs in this process.
+ * TTL (in ms) for caching `_meta` reads during `root build` (SSG), when
+ * `ROOT_BUILD_CACHE_DIR` is set.
  */
-const graphCache = new Map<
-  string,
-  {lastRunMillis: number; graph: DependencyGraph}
->();
+const BUILD_META_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function getDefaultMetaCacheTtlMs(): number {
+  return process.env.ROOT_BUILD_CACHE_DIR
+    ? BUILD_META_CACHE_TTL_MS
+    : DEFAULT_META_CACHE_TTL_MS;
+}
+
+interface CachedMeta {
+  /** Timestamp (in ms) when this cached `_meta` entry expires. */
+  expiresAt: number;
+  /** The `_meta` document data, or `null` if `_meta` does not exist. */
+  meta: DependencyGraphMeta | null;
+}
+
+interface ProjectGraphCacheState {
+  /** Monotonic invalidation counter guarding against mid-flight stale writes. */
+  generation: number;
+  /** Cached `_meta` read, or `null` if not cached. */
+  metaCache: CachedMeta | null;
+  /** In-flight `_meta` read promise, if any. */
+  inFlightMetaRead: Promise<DependencyGraphMeta | null> | null;
+  /** Cached graphs, keyed by mode. */
+  graphCache: Map<DocMode, {lastRunMillis: number; graph: DependencyGraph}>;
+  /** In-flight graph loads, keyed by mode. */
+  inFlightGraphLoads: Map<
+    DocMode,
+    {promise: Promise<DependencyGraph>; freshMeta: boolean}
+  >;
+}
+
+/**
+ * Process-wide cache store on `globalThis`, keyed first by `Firestore`
+ * instance (`WeakMap` for isolation across apps/databaseIds and automatic GC)
+ * and then by `projectId` (for multi-site `resolveSite` isolation). Sharing
+ * via `Symbol.for` ensures server bundles and CMS plugin copies observe the
+ * same cache and invalidations.
+ */
+const DEPENDENCY_GRAPH_CACHE_KEY = Symbol.for(
+  '@blinkk/root-cms/dependencyGraphCache'
+);
+const dbGraphCaches: WeakMap<
+  Firestore,
+  Map<string, ProjectGraphCacheState>
+> = ((globalThis as any)[DEPENDENCY_GRAPH_CACHE_KEY] ??= new WeakMap());
+
+function getProjectCacheState(
+  db: Firestore,
+  projectId: string
+): ProjectGraphCacheState {
+  let projectMap = dbGraphCaches.get(db);
+  if (!projectMap) {
+    projectMap = new Map();
+    dbGraphCaches.set(db, projectMap);
+  }
+  let state = projectMap.get(projectId);
+  if (!state) {
+    state = {
+      generation: 0,
+      metaCache: null,
+      inFlightMetaRead: null,
+      graphCache: new Map(),
+      inFlightGraphLoads: new Map(),
+    };
+    projectMap.set(projectId, state);
+  }
+  return state;
+}
+
+function getMetaCacheStamp(meta: DependencyGraphMeta | null): number {
+  if (!meta) {
+    return -1;
+  }
+  return meta.updatedAt?.toMillis() ?? meta.lastRun.toMillis();
+}
 
 interface CmsDocData {
   fields?: any;
@@ -405,10 +503,12 @@ export class DependencyGraphService {
   private readonly db: Firestore;
   private readonly config: CMSDependencyGraphConfig | null;
   private readonly filters: ResolvedFilters;
+  private readonly metaCacheTtlMs?: number;
 
   constructor(
     rootConfig: RootConfig,
-    configOverride?: boolean | CMSDependencyGraphConfig
+    configOverride?: boolean | CMSDependencyGraphConfig,
+    options?: DependencyGraphServiceOptions
   ) {
     this.rootConfig = rootConfig;
     const cmsPlugin = getCmsPlugin(rootConfig);
@@ -419,6 +519,7 @@ export class DependencyGraphService {
       configOverride ?? cmsPluginOptions.dependencyGraph
     );
     this.filters = resolveDependencyGraphFilters(this.config || undefined);
+    this.metaCacheTtlMs = options?.metaCacheTtlMs;
   }
 
   /** Returns true if the dependency graph feature is enabled. */
@@ -488,6 +589,64 @@ export class DependencyGraphService {
       return null;
     }
     return (snap.data() as DependencyGraphMeta) || null;
+  }
+
+  /**
+   * Reads `_meta` with short-lived TTL caching and in-flight request
+   * coalescing so concurrent callers share a single Firestore round-trip.
+   */
+  private async readMetaCached(
+    ttlMs: number
+  ): Promise<DependencyGraphMeta | null> {
+    const state = getProjectCacheState(this.db, this.projectId);
+    const forceFresh = ttlMs <= 0;
+
+    if (
+      !forceFresh &&
+      state.metaCache &&
+      Date.now() < state.metaCache.expiresAt
+    ) {
+      return state.metaCache.meta;
+    }
+
+    if (!forceFresh && state.inFlightMetaRead) {
+      return state.inFlightMetaRead;
+    }
+
+    const generation = state.generation;
+    const promise = (async () => {
+      const meta = await this.readMeta();
+      if (state.generation === generation) {
+        const now = Date.now();
+        if (ttlMs > 0) {
+          if (!state.metaCache || now >= state.metaCache.expiresAt) {
+            state.metaCache = {
+              expiresAt: now + ttlMs,
+              meta,
+            };
+          }
+        } else if (state.metaCache) {
+          // Avoid retaining an older cached `_meta` after a forced fresh read
+          // observed newer state from Firestore.
+          state.metaCache =
+            now < state.metaCache.expiresAt
+              ? {expiresAt: state.metaCache.expiresAt, meta}
+              : null;
+        }
+      }
+      return meta;
+    })();
+
+    if (!forceFresh) {
+      state.inFlightMetaRead = promise;
+    }
+    try {
+      return await promise;
+    } finally {
+      if (state.inFlightMetaRead === promise) {
+        state.inFlightMetaRead = null;
+      }
+    }
   }
 
   /** Reads every edge doc in the DependencyGraph subcollection. */
@@ -693,7 +852,8 @@ export class DependencyGraphService {
    * Builds the writes that sync the published-mode edges for docs being
    * published, so new references are queryable immediately (without waiting
    * for the next cron tick). Callers weave the returned ops into the same
-   * batch as the publish writes. Returns an empty list when the feature is
+   * batch as the publish writes and should call `invalidateCache()` after
+   * `batch.commit()` completes. Returns an empty list when the feature is
    * disabled, no tracked docs are affected, or the graph has never been
    * built.
    */
@@ -729,7 +889,8 @@ export class DependencyGraphService {
 
   /**
    * Builds the writes that remove the published-mode edges for docs being
-   * unpublished. See `buildPublishBatchOps()`.
+   * unpublished. Callers should call `invalidateCache()` after
+   * `batch.commit()` completes. See `buildPublishBatchOps()`.
    */
   async buildUnpublishBatchOps(
     docs: Array<{collection: string; slug: string}>
@@ -814,6 +975,7 @@ export class DependencyGraphService {
     });
     const ops = this.buildPublishedRefsOps(entries);
     await this.commitInChunks(ops);
+    this.invalidateCache();
     return {synced: targets.length};
   }
 
@@ -1006,60 +1168,128 @@ export class DependencyGraphService {
     };
     ops.push((batch) => batch.set(metaRef, meta));
     await this.commitInChunks(ops);
-    if (!skipped) {
-      this.invalidateCache();
-    }
+    this.invalidateCache();
     return {skipped};
   }
 
-  private invalidateCache() {
-    for (const mode of MODES) {
-      graphCache.delete(`${this.projectId}::${mode}`);
-    }
+  /**
+   * Invalidates the in-process `_meta` and graph caches for this project so
+   * subsequent `getGraph()` calls re-validate against Firestore immediately.
+   */
+  invalidateCache() {
+    const state = getProjectCacheState(this.db, this.projectId);
+    state.generation += 1;
+    state.metaCache = null;
+    state.inFlightMetaRead = null;
+    state.graphCache.clear();
+    state.inFlightGraphLoads.clear();
   }
 
   /**
    * Returns the dependency graph for the given mode, loading it from
-   * Firestore if necessary. Loaded graphs are cached in-process and
-   * re-validated against `_meta.lastRun` on every call, so repeated calls
-   * only cost a single meta doc read until the graph changes.
+   * Firestore if necessary. Loaded graphs and `_meta` validation checks are
+   * cached in-process (subject to `metaCacheTtlMs`), and concurrent in-flight
+   * calls for the same project and mode coalesce onto a single Firestore
+   * round-trip.
    */
-  async getGraph(mode: DocMode): Promise<DependencyGraph> {
+  async getGraph(
+    mode: DocMode,
+    options?: GetGraphOptions
+  ): Promise<DependencyGraph> {
     this.assertEnabled();
-    const meta = await this.readMeta();
-    if (!meta) {
-      return new DependencyGraph(mode, {}, null);
-    }
-    const lastRunMillis = meta.lastRun.toMillis();
-    // Publish-time fast-path updates bump `updatedAt` without moving
-    // `lastRun`, so the cache is validated against `updatedAt` when present.
-    const cacheStamp = meta.updatedAt?.toMillis() ?? lastRunMillis;
-    const cacheKey = `${this.projectId}::${mode}`;
-    const cached = graphCache.get(cacheKey);
-    if (cached && cached.lastRunMillis === cacheStamp) {
-      return cached.graph;
-    }
-    const snap = await this.db
-      .collection(this.graphCollectionPath())
-      .where('mode', '==', mode)
-      .get();
-    const edges: Record<string, string[]> = {};
-    snap.forEach((doc) => {
-      const data = doc.data() as DependencyGraphEdgeDoc;
-      if (!data?.collection) {
-        return;
+    const metaCacheTtlMs =
+      options?.metaCacheTtlMs ??
+      this.metaCacheTtlMs ??
+      getDefaultMetaCacheTtlMs();
+    const forceFresh = metaCacheTtlMs <= 0;
+    const state = getProjectCacheState(this.db, this.projectId);
+
+    // Fast path: reuse the cached graph without any Firestore RPC while the
+    // cached `_meta` entry is still fresh.
+    if (
+      !forceFresh &&
+      state.metaCache &&
+      Date.now() < state.metaCache.expiresAt
+    ) {
+      if (!state.metaCache.meta) {
+        return new DependencyGraph(mode, {}, null);
       }
-      const refs = data.refs || {};
-      for (const slug of Object.keys(refs)) {
-        const refIds = refs[slug];
-        if (Array.isArray(refIds) && refIds.length > 0) {
-          edges[`${data.collection}/${slug}`] = refIds.map(String);
+      const cacheStamp = getMetaCacheStamp(state.metaCache.meta);
+      const cached = state.graphCache.get(mode);
+      if (cached && cached.lastRunMillis === cacheStamp) {
+        return cached.graph;
+      }
+    }
+
+    const existing = state.inFlightGraphLoads.get(mode);
+    if (existing && (!forceFresh || existing.freshMeta)) {
+      return existing.promise;
+    }
+
+    const generation = state.generation;
+    const loadPromise = (async () => {
+      const meta = await this.readMetaCached(metaCacheTtlMs);
+      if (!meta) {
+        return new DependencyGraph(mode, {}, null);
+      }
+      const lastRunMillis = meta.lastRun.toMillis();
+      // Publish-time fast-path updates bump `updatedAt` without moving
+      // `lastRun`, so the cache is validated against `updatedAt` when present.
+      const cacheStamp = getMetaCacheStamp(meta);
+      const cached = state.graphCache.get(mode);
+      if (cached && cached.lastRunMillis === cacheStamp) {
+        return cached.graph;
+      }
+      const snap = await this.db
+        .collection(this.graphCollectionPath())
+        .where('mode', '==', mode)
+        .get();
+      const edges: Record<string, string[]> = {};
+      snap.forEach((doc) => {
+        const data = doc.data() as DependencyGraphEdgeDoc;
+        if (!data?.collection) {
+          return;
+        }
+        const refs = data.refs || {};
+        for (const slug of Object.keys(refs)) {
+          const refIds = refs[slug];
+          if (Array.isArray(refIds) && refIds.length > 0) {
+            edges[`${data.collection}/${slug}`] = refIds.map(String);
+          }
+        }
+      });
+      const graph = new DependencyGraph(mode, edges, lastRunMillis);
+      if (state.generation === generation) {
+        // Don't clobber an entry that matches the latest known `_meta` with a
+        // graph validated against an older `_meta` read. Stamps are compared
+        // for equality only since they are not monotonic: a cron rebuild
+        // rewrites `_meta` without `updatedAt`, which can move the stamp
+        // backwards.
+        const current = state.graphCache.get(mode);
+        const latestStamp = state.metaCache
+          ? getMetaCacheStamp(state.metaCache.meta)
+          : null;
+        if (
+          !current ||
+          latestStamp === null ||
+          cacheStamp === latestStamp ||
+          current.lastRunMillis !== latestStamp
+        ) {
+          state.graphCache.set(mode, {lastRunMillis: cacheStamp, graph});
         }
       }
-    });
-    const graph = new DependencyGraph(mode, edges, lastRunMillis);
-    graphCache.set(cacheKey, {lastRunMillis: cacheStamp, graph});
-    return graph;
+      return graph;
+    })();
+
+    const entry = {promise: loadPromise, freshMeta: forceFresh};
+    state.inFlightGraphLoads.set(mode, entry);
+    try {
+      return await loadPromise;
+    } finally {
+      if (state.inFlightGraphLoads.get(mode) === entry) {
+        state.inFlightGraphLoads.delete(mode);
+      }
+    }
   }
 
   /** Lightweight metadata read for status endpoints. */
