@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 4.5.2
+
+### Patch Changes
+
+- deae3d6: feat: add frame deeplinks, group selection, and session persistence to prototypes
+- beb599a: feat: support file attachments and update Root AI badge in NewPrototypeModal
+- fab8f32: feat: add frame rename, undo/redo, page seeding, and preview controls to prototypes
+  - @blinkk/root@4.5.2
+
 ## 4.5.1
 
 ### Patch Changes
