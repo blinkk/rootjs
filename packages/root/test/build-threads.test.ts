@@ -70,5 +70,17 @@ test(
     for (const relPath of Object.keys(baseline)) {
       expect(auto[relPath], relPath).toEqual(baseline[relPath]);
     }
+
+    // Explicit concurrency should be respected with threaded builds and
+    // produce identical output.
+    await fixture.cleanup();
+    await fixture.build({threads: '2', concurrency: '2'});
+    const explicitConcurrency = await collectOutput(htmlDir);
+    expect(Object.keys(explicitConcurrency).sort()).toEqual(
+      Object.keys(baseline).sort()
+    );
+    for (const relPath of Object.keys(baseline)) {
+      expect(explicitConcurrency[relPath], relPath).toEqual(baseline[relPath]);
+    }
   }
 );

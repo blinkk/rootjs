@@ -140,6 +140,8 @@ class BuildWorker {
    * is cumulative), which is why the message says "while rendering".
    */
   private failAll(err: Error) {
+    this.isReady = false;
+    this.pool.markBusy(this);
     const pendingTasks = Array.from(this.inFlight.values());
     this.inFlight.clear();
     pendingTasks.forEach((pending) =>
@@ -164,6 +166,7 @@ class BuildWorker {
     while (this.inFlight.size < this.concurrency) {
       const pending = this.pool.dequeue();
       if (!pending) {
+        this.pool.markIdle(this);
         return;
       }
       this.inFlight.set(pending.id, pending);
@@ -188,7 +191,9 @@ class BuildWorker {
  */
 export class BuildWorkerPool {
   private workers: BuildWorker[] = [];
-  private queue: PendingTask[] = [];
+  private idleWorkers = new Set<BuildWorker>();
+  private queue: Array<PendingTask | undefined> = [];
+  private queueHead = 0;
   private nextTaskId = 0;
 
   constructor(options: BuildWorkerPoolOptions) {
@@ -206,13 +211,52 @@ export class BuildWorkerPool {
   run(task: BuildPageTask): Promise<BuildPageResult> {
     return new Promise<BuildPageResult>((resolve, reject) => {
       this.queue.push({id: this.nextTaskId++, task, resolve, reject});
-      // Wake up any workers with spare capacity.
-      this.workers.forEach((worker) => worker.next());
+      this.wakeWorker();
     });
   }
 
+  /** Marks a worker as having spare capacity for queued tasks. */
+  markIdle(worker: BuildWorker) {
+    this.idleWorkers.add(worker);
+  }
+
+  /** Removes a worker from the idle set (e.g. after a worker failure). */
+  markBusy(worker: BuildWorker) {
+    this.idleWorkers.delete(worker);
+  }
+
+  /** Wakes a worker with spare capacity to pick up queued tasks. */
+  private wakeWorker() {
+    if (this.idleWorkers.size === 0) {
+      return;
+    }
+    for (const worker of this.idleWorkers) {
+      this.idleWorkers.delete(worker);
+      worker.next();
+      if (this.queueHead >= this.queue.length) {
+        return;
+      }
+    }
+  }
+
   dequeue(): PendingTask | undefined {
-    return this.queue.shift();
+    if (this.queueHead >= this.queue.length) {
+      return undefined;
+    }
+    const pending = this.queue[this.queueHead];
+    this.queue[this.queueHead] = undefined;
+    this.queueHead++;
+    if (this.queueHead === this.queue.length) {
+      this.queue.length = 0;
+      this.queueHead = 0;
+    } else if (
+      this.queueHead > 1024 &&
+      this.queueHead * 2 >= this.queue.length
+    ) {
+      this.queue = this.queue.slice(this.queueHead);
+      this.queueHead = 0;
+    }
+    return pending;
   }
 
   async terminate() {
