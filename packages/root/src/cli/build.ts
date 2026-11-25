@@ -247,7 +247,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           cssCodeSplit: true,
           target: 'esnext',
           minify: false,
-          cssMinify: true,
+          // Default to minified CSS, but respect a user-provided
+          // `vite.build.cssMinify` (e.g. `false` or `'esbuild'`).
+          cssMinify: viteConfig?.build?.cssMinify ?? true,
           modulePreload: {polyfill: false},
           reportCompressedSize: false,
         },
