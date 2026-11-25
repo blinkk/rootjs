@@ -8,6 +8,7 @@ import {
   IconExternalLink,
   IconFolderSymlink,
   IconLink,
+  IconPencil,
   IconPhoto,
   IconRobot,
   IconTrash,
@@ -184,6 +185,7 @@ export interface PrototypeFrameProps {
     exporter: (() => Promise<PrototypeExportPayload | null>) | null
   ) => void;
   /** Frame action callbacks. */
+  onRenameFrame?: (frameId: string, title: string) => void;
   onDuplicateFrame: (frameId: string) => void;
   onResizeFrame: (frameId: string, width: number) => void;
   onMoveFrameToPage: (frameId: string, pageId: string) => void;
@@ -228,6 +230,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     onDropCommentPin,
     onLayout,
     onRegisterExporter,
+    onRenameFrame,
     onDuplicateFrame,
     onResizeFrame,
     onMoveFrameToPage,
@@ -256,8 +259,45 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   const [blockRects, setBlockRects] = useState<PrototypeBlockRect[]>([]);
   const [hoveredBlockKey, setHoveredBlockKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(frame.title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameDoneRef = useRef(false);
   const titleRef = useRef<HTMLSpanElement>(null);
   const [titleNaturalWidth, setTitleNaturalWidth] = useState(0);
+
+  function startRenaming() {
+    if (!canEdit || !onRenameFrame) {
+      return;
+    }
+    renameDoneRef.current = false;
+    setDraftTitle(frame.title);
+    setRenaming(true);
+    // Defer focus past Menu's close focus-return so both double-click and
+    // "Rename frame" menu selection focus and select the input cleanly.
+    window.setTimeout(() => {
+      const el = renameInputRef.current;
+      if (el) {
+        el.focus({preventScroll: true});
+        el.select();
+      }
+    }, 0);
+  }
+
+  function finishRenaming(commit: boolean) {
+    if (renameDoneRef.current) {
+      return;
+    }
+    renameDoneRef.current = true;
+    setRenaming(false);
+    if (!commit) {
+      return;
+    }
+    const trimmed = draftTitle.trim();
+    if (trimmed && trimmed !== frame.title) {
+      onRenameFrame?.(frame.id, trimmed);
+    }
+  }
 
   useLayoutEffect(() => {
     const el = titleRef.current;
@@ -504,8 +544,8 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     if (e.button !== 0 || tool === 'pan') {
       return;
     }
-    // Let clicks on buttons or links inside the header act normally.
-    if ((e.target as HTMLElement).closest('button, a, [role="menu"]')) {
+    // Let clicks on buttons, inputs, or links inside the header act normally.
+    if ((e.target as HTMLElement).closest('button, a, input, [role="menu"]')) {
       return;
     }
     if (onFramePointerDown) {
@@ -666,15 +706,52 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
         }}
         onPointerDown={handleHeaderPointerDown}
       >
-        <span
-          ref={titleRef}
-          className={cn(
-            'PrototypeFrame__title min-w-0 truncate text-sm font-semibold',
-            isSelected ? 'text-info' : 'text-fg'
-          )}
-        >
-          {frame.title}
-        </span>
+        {renaming ? (
+          <input
+            ref={renameInputRef}
+            type="text"
+            aria-label="Frame title"
+            maxLength={160}
+            value={draftTitle}
+            style={{
+              width: `${Math.max(10, Math.min(32, draftTitle.length + 2))}ch`,
+            }}
+            className="PrototypeFrame__titleInput min-w-0 rounded-sm border border-focus bg-surface px-1.5 py-0.5 text-sm font-semibold text-strong outline-none select-text"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onInput={(e) => setDraftTitle(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.isComposing) {
+                return;
+              }
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                finishRenaming(true);
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                finishRenaming(false);
+              }
+            }}
+            onBlur={() => finishRenaming(true)}
+          />
+        ) : (
+          <span
+            ref={titleRef}
+            className={cn(
+              'PrototypeFrame__title min-w-0 truncate text-sm font-semibold',
+              isSelected ? 'text-info' : 'text-fg'
+            )}
+            onDblClick={(e) => {
+              if (canEdit && tool !== 'pan' && onRenameFrame) {
+                e.stopPropagation();
+                startRenaming();
+              }
+            }}
+          >
+            {frame.title}
+          </span>
+        )}
         <div
           className={cn(
             'PrototypeFrame__actions flex shrink-0 items-center gap-0.5',
@@ -724,6 +801,11 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             {canEdit && (
               <>
                 <MenuDivider />
+                {onRenameFrame && (
+                  <MenuItem icon={<IconPencil />} onClick={startRenaming}>
+                    Rename frame
+                  </MenuItem>
+                )}
                 <MenuGroup label="Viewport width">
                   {FRAME_WIDTH_PRESETS.map((preset) => (
                     <MenuItem

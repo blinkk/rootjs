@@ -1,6 +1,15 @@
 import './PrototypeBoardPage.css';
 
-import {IconExternalLink, IconLink, IconX} from '@tabler/icons-preact';
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconDeviceDesktop,
+  IconDeviceMobile,
+  IconDeviceTablet,
+  IconExternalLink,
+  IconLink,
+  IconX,
+} from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation, useRoute} from 'preact-iso';
 import type {
@@ -14,6 +23,7 @@ import type {
 import {
   fitCameraToBounds,
   focusCameraOnFrame,
+  groupFramesBySection,
   PROTOTYPE_LABEL_FONT_SIZE,
   PROTOTYPE_NOTE_WIDTH,
   zoomCameraAroundPoint,
@@ -27,6 +37,7 @@ import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {showNotification} from '../../../../primitives/Toast/toastStore.js';
+import {cn} from '../../../../utils/classes.js';
 import {isEditableTarget} from '../../../../utils/keyboard.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {autokey} from '../../../../utils/rand.js';
@@ -130,8 +141,12 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
     deleteComment,
     createAnnotation,
     updateAnnotation,
-    deleteAnnotation,
+    deleteAnnotations,
     moveItems,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
     applyFrameMutated,
     applyAnnotationMutated,
     applyComponentMutated,
@@ -192,6 +207,9 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
   const [draftAnnotation, setDraftAnnotation] =
     useState<PrototypeAnnotation | null>(null);
   const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
+  const [previewViewport, setPreviewViewport] = useState<
+    'desktop' | 'tablet' | 'mobile'
+  >('desktop');
   const modals = useModals();
   const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(() => {
     const tabPanel = initialTabStateRef.current?.activePanel;
@@ -333,6 +351,31 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
       setActivePageId(pages[0].id);
     }
   }, [bundle?.board.pages, hydrated, activePageId]);
+
+  // Prune stale frame/annotation selections if undo/redo removes items.
+  useEffect(() => {
+    if (!bundle) {
+      return;
+    }
+    const validFrames = new Set(bundle.frames.map((frame) => frame.id));
+    setSelectedFrameIds((prev) =>
+      prev.every((id) => validFrames.has(id))
+        ? prev
+        : prev.filter((id) => validFrames.has(id))
+    );
+    if (expandedFrameId && !validFrames.has(expandedFrameId)) {
+      setExpandedFrameId(null);
+    }
+    const validAnnotations = new Set(bundle.annotations.map((item) => item.id));
+    if (draftAnnotation) {
+      validAnnotations.add(draftAnnotation.id);
+    }
+    setSelectedAnnotationIds((prev) =>
+      prev.every((id) => validAnnotations.has(id))
+        ? prev
+        : prev.filter((id) => validAnnotations.has(id))
+    );
+  }, [bundle, draftAnnotation, expandedFrameId]);
 
   // Handle external `?frame=` deeplink navigations (e.g. Back/Forward) after
   // initial mount.
@@ -725,18 +768,42 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
       setSelectedAnnotationIds((prev) =>
         prev.filter((id) => !toDelete.has(id))
       );
-      for (const annotationId of annotationIds) {
-        deleteAnnotation(annotationId).catch((err) => {
-          showNotification({
-            title: 'Could not delete annotation',
-            message: errorMessage(err),
-            color: 'red',
-          });
+      deleteAnnotations(annotationIds).catch((err) => {
+        showNotification({
+          title: 'Could not delete annotation',
+          message: errorMessage(err),
+          color: 'red',
         });
-      }
+      });
     },
-    [deleteAnnotation]
+    [deleteAnnotations]
   );
+
+  const handleUndo = useCallback(() => {
+    if (!canEdit) {
+      return;
+    }
+    undo().catch((err) => {
+      showNotification({
+        title: 'Could not undo',
+        message: errorMessage(err),
+        color: 'red',
+      });
+    });
+  }, [canEdit, undo]);
+
+  const handleRedo = useCallback(() => {
+    if (!canEdit) {
+      return;
+    }
+    redo().catch((err) => {
+      showNotification({
+        title: 'Could not redo',
+        message: errorMessage(err),
+        color: 'red',
+      });
+    });
+  }, [canEdit, redo]);
 
   const handleCommitAnnotation = useCallback(
     (annotationId: string, text: string) => {
@@ -840,7 +907,8 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
     );
   }, []);
 
-  // Single-key canvas shortcuts (V, H, F, C, N, T, Space, Escape, Delete, 0,
+  // Canvas keyboard shortcuts: Cmd/Ctrl+Z (undo), Cmd/Ctrl+Shift+Z or Ctrl+Y
+  // (redo), and single-key tools (V, H, F, C, N, T, Space, Escape, Delete, 0,
   // +, -).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -853,6 +921,22 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
         document.querySelector('dialog[open]')
       ) {
         return;
+      }
+      if (canEdit && (e.metaKey || e.ctrlKey) && !e.altKey) {
+        const lowerKey = e.key.toLowerCase();
+        if (lowerKey === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          handleUndo();
+          return;
+        }
+        if (
+          (lowerKey === 'z' && e.shiftKey) ||
+          (!e.metaKey && lowerKey === 'y')
+        ) {
+          e.preventDefault();
+          handleRedo();
+          return;
+        }
       }
       if (e.key === 'Escape') {
         if (pinPopover) {
@@ -947,6 +1031,8 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
     selectedAnnotationIds,
     selectedFrameIds,
     handleDeleteAnnotations,
+    handleUndo,
+    handleRedo,
     handleNewFrame,
     fitActivePageToScreen,
     handleZoomBy,
@@ -1166,6 +1252,105 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
   const effectiveActivePanel =
     activePanel === 'ai' && !aiAvailable ? null : activePanel;
 
+  const expandedFrame = useMemo(
+    () =>
+      expandedFrameId && bundle
+        ? bundle.frames.find((frame) => frame.id === expandedFrameId) || null
+        : null,
+    [expandedFrameId, bundle]
+  );
+
+  useEffect(() => {
+    if (!expandedFrame) {
+      return;
+    }
+    if (expandedFrame.width <= 480) {
+      setPreviewViewport('mobile');
+    } else if (expandedFrame.width <= 900) {
+      setPreviewViewport('tablet');
+    } else {
+      setPreviewViewport('desktop');
+    }
+  }, [expandedFrame?.id]);
+
+  const orderedPreviewFrames = useMemo(() => {
+    if (!expandedFrame || !bundle) {
+      return [];
+    }
+    const {unsectioned, sections} = groupFramesBySection(
+      bundle.frames,
+      bundle.annotations,
+      expandedFrame.pageId
+    );
+    return [...unsectioned, ...sections.flatMap((section) => section.frames)];
+  }, [expandedFrame?.pageId, bundle?.frames, bundle?.annotations]);
+
+  const expandedFrameIndex = useMemo(
+    () =>
+      expandedFrame
+        ? orderedPreviewFrames.findIndex(
+            (frame) => frame.id === expandedFrame.id
+          )
+        : -1,
+    [expandedFrame, orderedPreviewFrames]
+  );
+  const prevPreviewFrame =
+    expandedFrameIndex > 0
+      ? orderedPreviewFrames[expandedFrameIndex - 1]
+      : null;
+  const nextPreviewFrame =
+    expandedFrameIndex >= 0 &&
+    expandedFrameIndex < orderedPreviewFrames.length - 1
+      ? orderedPreviewFrames[expandedFrameIndex + 1]
+      : null;
+
+  const handleStepPreviewFrame = useCallback(
+    (target: PrototypeFrame | null) => {
+      if (!target) {
+        return;
+      }
+      setExpandedFrameId(target.id);
+      setSelectedFrameIds([target.id]);
+      setSelectedAnnotationIds([]);
+      setSelectedBlockKey(null);
+    },
+    []
+  );
+
+  // ArrowLeft / ArrowRight step between frames in full-screen presentation mode.
+  useEffect(() => {
+    if (!expandedFrame) {
+      return;
+    }
+    function onPreviewKeyDown(e: KeyboardEvent) {
+      if (
+        e.repeat ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        isEditableTarget(e.target)
+      ) {
+        return;
+      }
+      if (e.key === 'ArrowLeft' && prevPreviewFrame) {
+        e.preventDefault();
+        handleStepPreviewFrame(prevPreviewFrame);
+      } else if (e.key === 'ArrowRight' && nextPreviewFrame) {
+        e.preventDefault();
+        handleStepPreviewFrame(nextPreviewFrame);
+      }
+    }
+    window.addEventListener('keydown', onPreviewKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onPreviewKeyDown);
+    };
+  }, [
+    expandedFrame,
+    prevPreviewFrame,
+    nextPreviewFrame,
+    handleStepPreviewFrame,
+  ]);
+
   if (loading) {
     return (
       <Layout>
@@ -1342,6 +1527,15 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
                 });
               });
           }}
+          onRenameFrame={(frameId, title) => {
+            saveFrame({id: frameId, title}).catch((err) => {
+              showNotification({
+                title: 'Could not rename frame',
+                message: errorMessage(err),
+                color: 'red',
+              });
+            });
+          }}
           onResizeFrame={(frameId, width) => {
             saveFrame({id: frameId, width}).catch((err) => {
               showNotification({
@@ -1416,6 +1610,10 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
           tool={spacePressed ? 'pan' : tool}
           zoom={camera.zoom}
           canEdit={canEdit}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
           onChangeTool={(nextTool) => {
             setTool(nextTool);
           }}
@@ -1520,13 +1718,15 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
 
         {/* Full-screen interactive frame preview modal (Esc to exit). */}
         {(() => {
-          const expandedFrame = expandedFrameId
-            ? bundle.frames.find((frame) => frame.id === expandedFrameId) ||
-              null
-            : null;
           const expandedPreviewUrl = expandedFrame
             ? `/cms/prototypes-preview/${encodeURIComponent(boardId)}/${encodeURIComponent(expandedFrame.id)}`
             : '';
+          const previewWidth =
+            previewViewport === 'mobile'
+              ? '390px'
+              : previewViewport === 'tablet'
+                ? '768px'
+                : '100%';
           return (
             <Dialog
               open={Boolean(expandedFrame)}
@@ -1549,9 +1749,80 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
               {expandedFrame && (
                 <>
                   <div className="PrototypeBoardPage__fullscreenBar flex h-11 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
-                    <div className="min-w-0 truncate text-sm font-semibold text-strong">
-                      {expandedFrame.title}
+                    <div className="PrototypeBoardPage__fullscreenNav flex min-w-0 items-center gap-1.5">
+                      {orderedPreviewFrames.length > 1 && (
+                        <>
+                          <IconButton
+                            size="xs"
+                            variant="subtle"
+                            label="Previous frame (←)"
+                            disabled={!prevPreviewFrame}
+                            onClick={() =>
+                              handleStepPreviewFrame(prevPreviewFrame)
+                            }
+                          >
+                            <IconChevronLeft />
+                          </IconButton>
+                          <span className="PrototypeBoardPage__fullscreenCounter shrink-0 font-mono text-xs tabular-nums text-muted">
+                            {expandedFrameIndex + 1} /{' '}
+                            {orderedPreviewFrames.length}
+                          </span>
+                          <IconButton
+                            size="xs"
+                            variant="subtle"
+                            label="Next frame (→)"
+                            disabled={!nextPreviewFrame}
+                            onClick={() =>
+                              handleStepPreviewFrame(nextPreviewFrame)
+                            }
+                          >
+                            <IconChevronRight />
+                          </IconButton>
+                          <div className="mx-1 h-4 w-px shrink-0 bg-border" />
+                        </>
+                      )}
+                      <div className="min-w-0 truncate text-sm font-semibold text-strong">
+                        {expandedFrame.title}
+                      </div>
                     </div>
+
+                    <div
+                      role="group"
+                      aria-label="Preview viewport"
+                      className="PrototypeBoardPage__fullscreenViewports hidden shrink-0 items-center gap-0.5 sm:flex"
+                    >
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        label="Desktop"
+                        pressed={previewViewport === 'desktop'}
+                        className="aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text"
+                        onClick={() => setPreviewViewport('desktop')}
+                      >
+                        <IconDeviceDesktop />
+                      </IconButton>
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        label="Tablet (768px)"
+                        pressed={previewViewport === 'tablet'}
+                        className="aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text"
+                        onClick={() => setPreviewViewport('tablet')}
+                      >
+                        <IconDeviceTablet />
+                      </IconButton>
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        label="Mobile (390px)"
+                        pressed={previewViewport === 'mobile'}
+                        className="aria-pressed:bg-button-blue-soft aria-pressed:text-button-blue-soft-text"
+                        onClick={() => setPreviewViewport('mobile')}
+                      >
+                        <IconDeviceMobile />
+                      </IconButton>
+                    </div>
+
                     <div className="flex shrink-0 items-center gap-1">
                       <IconButton
                         size="xs"
@@ -1582,12 +1853,19 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
                       </IconButton>
                     </div>
                   </div>
-                  <iframe
-                    src={expandedPreviewUrl}
-                    sandbox="allow-scripts"
-                    title={expandedFrame.title}
-                    className="block min-h-0 w-full flex-1 border-0 bg-surface"
-                  />
+                  <div className="PrototypeBoardPage__fullscreenStage flex min-h-0 flex-1 justify-center overflow-hidden bg-page">
+                    <iframe
+                      src={expandedPreviewUrl}
+                      sandbox="allow-scripts"
+                      title={expandedFrame.title}
+                      style={{width: previewWidth, maxWidth: '100%'}}
+                      className={cn(
+                        'block h-full min-h-0 border-0 bg-surface',
+                        previewViewport !== 'desktop' &&
+                          'border-x border-border shadow-sm'
+                      )}
+                    />
+                  </div>
                 </>
               )}
             </Dialog>

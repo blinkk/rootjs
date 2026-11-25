@@ -1,4 +1,6 @@
 import {
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconFrame,
   IconHandStop,
   IconMessagePlus,
@@ -33,6 +35,14 @@ export interface PrototypeDockProps {
   onFitToScreen: () => void;
   /** Zooms in one step. */
   onZoomIn: () => void;
+  /** Whether an undo checkpoint is available. */
+  canUndo?: boolean;
+  /** Whether a redo checkpoint is available. */
+  canRedo?: boolean;
+  /** Reverts the last canvas mutation. */
+  onUndo?: () => void;
+  /** Reapplies the last undone canvas mutation. */
+  onRedo?: () => void;
 }
 
 /**
@@ -49,6 +59,10 @@ export function PrototypeDock(props: PrototypeDockProps) {
     onZoomOut,
     onFitToScreen,
     onZoomIn,
+    canUndo = false,
+    canRedo = false,
+    onUndo,
+    onRedo,
   } = props;
 
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -64,7 +78,7 @@ export function PrototypeDock(props: PrototypeDockProps) {
     const getToolbarButtons = () =>
       Array.from(
         bar.querySelectorAll<HTMLButtonElement>(
-          ':scope > button, :scope > [role="group"] > button'
+          ':scope > button:not(:disabled), :scope > [role="group"] > button:not(:disabled)'
         )
       );
 
@@ -235,6 +249,42 @@ export function PrototypeDock(props: PrototypeDockProps) {
             <IconTypography />
           </IconButton>
         </div>
+
+        {canEdit && (onUndo || onRedo) && (
+          <>
+            <span
+              role="separator"
+              aria-orientation="vertical"
+              className="PrototypeDock__divider mx-1 h-5 w-0 shrink-0 border-l border-border"
+            />
+            <div
+              role="group"
+              aria-label="History"
+              className="PrototypeDock__group flex items-center gap-0.5"
+            >
+              {onUndo && (
+                <IconButton
+                  label="Undo (⌘Z)"
+                  size="sm"
+                  disabled={!canUndo}
+                  onClick={onUndo}
+                >
+                  <IconArrowBackUp />
+                </IconButton>
+              )}
+              {onRedo && (
+                <IconButton
+                  label="Redo (⌘⇧Z)"
+                  size="sm"
+                  disabled={!canRedo}
+                  onClick={onRedo}
+                >
+                  <IconArrowForwardUp />
+                </IconButton>
+              )}
+            </div>
+          </>
+        )}
 
         <span
           role="separator"

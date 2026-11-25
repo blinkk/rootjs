@@ -132,6 +132,7 @@ export interface PrototypeCanvasProps {
     frameId: string,
     exporter: (() => Promise<PrototypeExportPayload | null>) | null
   ) => void;
+  onRenameFrame?: (frameId: string, title: string) => void;
   onDuplicateFrame: (frameId: string) => void;
   onResizeFrame: (frameId: string, width: number) => void;
   onMoveFrameToPage: (frameId: string, pageId: string) => void;
@@ -210,6 +211,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
     onStartDragComment,
     onFrameLayout,
     onRegisterExporter,
+    onRenameFrame,
     onDuplicateFrame,
     onResizeFrame,
     onMoveFrameToPage,
@@ -1133,6 +1135,7 @@ export function PrototypeCanvas(props: PrototypeCanvasProps) {
               onFrameLayout(frameId, height, blockRects);
             }}
             onRegisterExporter={onRegisterExporter}
+            onRenameFrame={onRenameFrame}
             onDuplicateFrame={onDuplicateFrame}
             onResizeFrame={onResizeFrame}
             onMoveFrameToPage={onMoveFrameToPage}

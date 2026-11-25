@@ -46,6 +46,86 @@ const DEFAULT_FRAME_Y = 80;
 /** Default initial X coordinate in world px for frames on an empty page. */
 const DEFAULT_FRAME_X = 80;
 
+/** Maximum number of canvas undo checkpoints retained in memory per board. */
+const MAX_UNDO_HISTORY = 40;
+
+/** Immutable snapshot of canvas frames and annotations used for undo/redo. */
+interface BoardHistorySnapshot {
+  frames: PrototypeFrame[];
+  annotations: PrototypeAnnotation[];
+}
+
+function cloneHistorySnapshot(
+  snapshot: BoardHistorySnapshot
+): BoardHistorySnapshot {
+  return JSON.parse(JSON.stringify(snapshot)) as BoardHistorySnapshot;
+}
+
+function extractHistorySnapshot(
+  bundle: PrototypeBoardBundle
+): BoardHistorySnapshot {
+  return cloneHistorySnapshot({
+    frames: bundle.frames || [],
+    annotations: bundle.annotations || [],
+  });
+}
+
+function frameContentSignature(frame: PrototypeFrame): string {
+  return JSON.stringify({
+    pageId: frame.pageId,
+    title: frame.title,
+    width: frame.width,
+    blocks: frame.blocks,
+    sortOrder: frame.sortOrder || '',
+  });
+}
+
+function annotationContentSignature(annotation: PrototypeAnnotation): string {
+  return JSON.stringify({
+    pageId: annotation.pageId,
+    kind: annotation.kind,
+    text: annotation.text,
+    width: annotation.width || 0,
+  });
+}
+
+function snapshotsMateriallyEqual(
+  a: BoardHistorySnapshot,
+  b: BoardHistorySnapshot
+): boolean {
+  if (
+    a.frames.length !== b.frames.length ||
+    a.annotations.length !== b.annotations.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.frames.length; i++) {
+    const fa = a.frames[i];
+    const fb = b.frames[i];
+    if (
+      fa.id !== fb.id ||
+      fa.x !== fb.x ||
+      fa.y !== fb.y ||
+      frameContentSignature(fa) !== frameContentSignature(fb)
+    ) {
+      return false;
+    }
+  }
+  for (let i = 0; i < a.annotations.length; i++) {
+    const aa = a.annotations[i];
+    const ab = b.annotations[i];
+    if (
+      aa.id !== ab.id ||
+      aa.x !== ab.x ||
+      aa.y !== ab.y ||
+      annotationContentSignature(aa) !== annotationContentSignature(ab)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** Computes a non-overlapping `(x, y)` coordinate to the right of existing frames on a page. */
 export function computeNextFramePosition(
   frames: PrototypeFrame[],
@@ -265,6 +345,8 @@ export interface UsePrototypeBoardResult {
   ) => Promise<void>;
   /** Deletes an annotation, restoring it if the delete fails. */
   deleteAnnotation: (annotationId: string) => Promise<void>;
+  /** Deletes multiple annotations as a single undoable step. */
+  deleteAnnotations: (annotationIds: string[]) => Promise<void>;
   /** Moves multiple frames and/or annotations together in a single batch. */
   moveItems: (
     moves: {
@@ -273,6 +355,14 @@ export interface UsePrototypeBoardResult {
     },
     persist?: boolean
   ) => Promise<void>;
+  /** True when at least one canvas mutation can be undone. */
+  canUndo: boolean;
+  /** True when at least one undone canvas mutation can be redone. */
+  canRedo: boolean;
+  /** Reverts the last canvas frame/annotation mutation. */
+  undo: () => Promise<void>;
+  /** Reapplies the most recently undone canvas mutation. */
+  redo: () => Promise<void>;
   /** Integrates a frame mutation performed by Root AI into local state. */
   applyFrameMutated: (frame: PrototypeFrame) => void;
   /** Integrates an annotation saved by Root AI into local state. */
@@ -295,16 +385,64 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
   const [error, setError] = useState<unknown>(null);
   const [projectContext, setProjectContext] =
     useState<PrototypeProjectContext | null>(null);
+  const [historyCounts, setHistoryCounts] = useState({undo: 0, redo: 0});
   const bundleRef = useRef<PrototypeBoardBundle | null>(null);
   bundleRef.current = bundle;
+  const committedSnapshotRef = useRef<BoardHistorySnapshot | null>(null);
+  const undoStackRef = useRef<BoardHistorySnapshot[]>([]);
+  const redoStackRef = useRef<BoardHistorySnapshot[]>([]);
+  const aiTurnCapturedRef = useRef(false);
+
+  const syncHistoryCounts = useCallback(() => {
+    setHistoryCounts({
+      undo: undoStackRef.current.length,
+      redo: redoStackRef.current.length,
+    });
+  }, []);
+
+  const commitNextSnapshot = useCallback(
+    (nextSnapshot: BoardHistorySnapshot) => {
+      const prevCommitted = committedSnapshotRef.current;
+      if (
+        prevCommitted &&
+        !snapshotsMateriallyEqual(prevCommitted, nextSnapshot)
+      ) {
+        undoStackRef.current.push(cloneHistorySnapshot(prevCommitted));
+        if (undoStackRef.current.length > MAX_UNDO_HISTORY) {
+          undoStackRef.current.shift();
+        }
+        redoStackRef.current = [];
+        syncHistoryCounts();
+      }
+      committedSnapshotRef.current = cloneHistorySnapshot(nextSnapshot);
+    },
+    [syncHistoryCounts]
+  );
+
+  const captureAiTurnCheckpoint = useCallback(() => {
+    if (aiTurnCapturedRef.current || !committedSnapshotRef.current) {
+      return;
+    }
+    aiTurnCapturedRef.current = true;
+    undoStackRef.current.push(
+      cloneHistorySnapshot(committedSnapshotRef.current)
+    );
+    if (undoStackRef.current.length > MAX_UNDO_HISTORY) {
+      undoStackRef.current.shift();
+    }
+    redoStackRef.current = [];
+    syncHistoryCounts();
+  }, [syncHistoryCounts]);
 
   const reload = useCallback(async () => {
     if (!boardId) {
       return;
     }
     try {
-      const next = await apiGetPrototypeBoard(boardId);
-      setBundle(withAnnotations(next));
+      const next = withAnnotations(await apiGetPrototypeBoard(boardId));
+      setBundle(next);
+      committedSnapshotRef.current = extractHistorySnapshot(next);
+      aiTurnCapturedRef.current = false;
       setError(null);
     } catch (err) {
       setError(err);
@@ -321,11 +459,18 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    committedSnapshotRef.current = null;
+    aiTurnCapturedRef.current = false;
+    syncHistoryCounts();
 
     apiGetPrototypeBoard(boardId)
-      .then((next) => {
+      .then((raw) => {
         if (!cancelled) {
-          setBundle(withAnnotations(next));
+          const next = withAnnotations(raw);
+          setBundle(next);
+          committedSnapshotRef.current = extractHistorySnapshot(next);
         }
       })
       .catch((err) => {
@@ -458,24 +603,25 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
           return prev;
         }
         const exists = prev.frames.some((frame) => frame.id === saved.id);
+        const nextFrames = exists
+          ? prev.frames.map((frame) => (frame.id === saved.id ? saved : frame))
+          : [...prev.frames, saved];
+        commitNextSnapshot({frames: nextFrames, annotations: prev.annotations});
         return {
           ...prev,
-          frames: exists
-            ? prev.frames.map((frame) =>
-                frame.id === saved.id ? saved : frame
-              )
-            : [...prev.frames, saved],
+          frames: nextFrames,
         };
       });
       return saved;
     },
-    [boardId]
+    [boardId, commitNextSnapshot]
   );
 
   const saveFrame = useCallback(
     async (
       frameUpdate: Partial<PrototypeFrame> & {id: string}
     ): Promise<PrototypeFrame> => {
+      const prevFrames = bundleRef.current?.frames || [];
       // Optimistically apply changes for snappy canvas feedback.
       setBundle((prev) => {
         if (!prev) {
@@ -488,24 +634,37 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
           ),
         };
       });
-      const saved = await apiSavePrototypeFrame({boardId, frame: frameUpdate});
-      setBundle((prev) => {
-        if (!prev) {
-          return prev;
-        }
-        const exists = prev.frames.some((frame) => frame.id === saved.id);
-        return {
-          ...prev,
-          frames: exists
+      try {
+        const saved = await apiSavePrototypeFrame({
+          boardId,
+          frame: frameUpdate,
+        });
+        setBundle((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          const exists = prev.frames.some((frame) => frame.id === saved.id);
+          const nextFrames = exists
             ? prev.frames.map((frame) =>
                 frame.id === saved.id ? saved : frame
               )
-            : [...prev.frames, saved],
-        };
-      });
-      return saved;
+            : [...prev.frames, saved];
+          commitNextSnapshot({
+            frames: nextFrames,
+            annotations: prev.annotations,
+          });
+          return {
+            ...prev,
+            frames: nextFrames,
+          };
+        });
+        return saved;
+      } catch (err) {
+        setBundle((prev) => (prev ? {...prev, frames: prevFrames} : prev));
+        throw err;
+      }
     },
-    [boardId]
+    [boardId, commitNextSnapshot]
   );
 
   const duplicateFrame = useCallback(
@@ -547,12 +706,19 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
       );
       try {
         await apiDeletePrototypeFrame({boardId, frameId});
+        const latest = bundleRef.current;
+        if (latest) {
+          commitNextSnapshot({
+            frames: latest.frames,
+            annotations: latest.annotations,
+          });
+        }
       } catch (err) {
         setBundle((prev) => (prev ? {...prev, frames: prevFrames} : prev));
         throw err;
       }
     },
-    [boardId]
+    [boardId, commitNextSnapshot]
   );
 
   const moveFrameToPage = useCallback(
@@ -576,11 +742,18 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         if (!prev) {
           return prev;
         }
+        const nextFrames = prev.frames.map((frame) =>
+          frame.id === frameId ? {...frame, x: roundedX, y: roundedY} : frame
+        );
+        if (persist) {
+          commitNextSnapshot({
+            frames: nextFrames,
+            annotations: prev.annotations,
+          });
+        }
         return {
           ...prev,
-          frames: prev.frames.map((frame) =>
-            frame.id === frameId ? {...frame, x: roundedX, y: roundedY} : frame
-          ),
+          frames: nextFrames,
         };
       });
       if (persist) {
@@ -592,12 +765,20 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         });
       }
     },
-    [boardId]
+    [boardId, commitNextSnapshot]
   );
 
   const updateFrameCachedHeight = useCallback(
     (frameId: string, height: number) => {
       const rounded = Math.max(120, Math.round(height));
+      if (committedSnapshotRef.current) {
+        committedSnapshotRef.current = {
+          ...committedSnapshotRef.current,
+          frames: committedSnapshotRef.current.frames.map((frame) =>
+            frame.id === frameId ? {...frame, cachedHeight: rounded} : frame
+          ),
+        };
+      }
       setBundle((prev) => {
         if (!prev) {
           return prev;
@@ -770,7 +951,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     [boardId]
   );
 
-  const applyAnnotationMutated = useCallback(
+  const upsertAnnotationState = useCallback(
     (annotation: PrototypeAnnotation) => {
       setBundle((prev) => {
         if (!prev) {
@@ -790,6 +971,34 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
       });
     },
     []
+  );
+
+  const applyAnnotationMutated = useCallback(
+    (annotation: PrototypeAnnotation) => {
+      captureAiTurnCheckpoint();
+      setBundle((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const exists = prev.annotations.some(
+          (item) => item.id === annotation.id
+        );
+        const nextAnnotations = exists
+          ? prev.annotations.map((item) =>
+              item.id === annotation.id ? annotation : item
+            )
+          : [...prev.annotations, annotation];
+        committedSnapshotRef.current = cloneHistorySnapshot({
+          frames: prev.frames,
+          annotations: nextAnnotations,
+        });
+        return {
+          ...prev,
+          annotations: nextAnnotations,
+        };
+      });
+    },
+    [captureAiTurnCheckpoint]
   );
 
   /** Removes an annotation from local state. */
@@ -831,7 +1040,7 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         updatedAt: now,
         updatedBy: email,
       };
-      applyAnnotationMutated(draft);
+      upsertAnnotationState(draft);
       try {
         const saved = await apiSavePrototypeAnnotation({
           boardId,
@@ -845,25 +1054,31 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
           },
         });
         // Keep any change made while the save was in flight (e.g. a drag).
-        setBundle((prev) =>
-          prev
-            ? {
-                ...prev,
-                annotations: prev.annotations.map((item) =>
-                  item.id === id
-                    ? {...saved, x: item.x, y: item.y, text: item.text}
-                    : item
-                ),
-              }
-            : prev
-        );
+        setBundle((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          const nextAnnotations = prev.annotations.map((item) =>
+            item.id === id
+              ? {...saved, x: item.x, y: item.y, text: item.text}
+              : item
+          );
+          commitNextSnapshot({
+            frames: prev.frames,
+            annotations: nextAnnotations,
+          });
+          return {
+            ...prev,
+            annotations: nextAnnotations,
+          };
+        });
         return saved;
       } catch (err) {
         removeAnnotation(id);
         throw err;
       }
     },
-    [boardId, applyAnnotationMutated, removeAnnotation]
+    [boardId, upsertAnnotationState, removeAnnotation, commitNextSnapshot]
   );
 
   // The last saved state of each annotation with unsaved local changes.
@@ -914,22 +1129,28 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         if (origins.get(id) === origin) {
           origins.delete(id);
         }
-        setBundle((prev) =>
-          prev
-            ? {
-                ...prev,
-                annotations: prev.annotations.map((item) =>
-                  item.id === id
-                    ? {
-                        ...item,
-                        updatedAt: saved.updatedAt,
-                        updatedBy: saved.updatedBy,
-                      }
-                    : item
-                ),
-              }
-            : prev
-        );
+        setBundle((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          const nextAnnotations = prev.annotations.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  updatedAt: saved.updatedAt,
+                  updatedBy: saved.updatedBy,
+                }
+              : item
+          );
+          commitNextSnapshot({
+            frames: prev.frames,
+            annotations: nextAnnotations,
+          });
+          return {
+            ...prev,
+            annotations: nextAnnotations,
+          };
+        });
       } catch (err) {
         // Roll back, unless a newer change has started from this state.
         if (origins.get(id) === origin) {
@@ -948,27 +1169,59 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         throw err;
       }
     },
-    [boardId]
+    [boardId, commitNextSnapshot]
+  );
+
+  const deleteAnnotations = useCallback(
+    async (annotationIds: string[]): Promise<void> => {
+      const targetSet = new Set(annotationIds);
+      const removed = (bundleRef.current?.annotations || []).filter((item) =>
+        targetSet.has(item.id)
+      );
+      if (removed.length === 0) {
+        return;
+      }
+      for (const item of removed) {
+        annotationOriginsRef.current.delete(item.id);
+      }
+      setBundle((prev) =>
+        prev
+          ? {
+              ...prev,
+              annotations: prev.annotations.filter(
+                (item) => !targetSet.has(item.id)
+              ),
+            }
+          : prev
+      );
+      try {
+        await Promise.all(
+          removed.map((item) =>
+            apiDeletePrototypeAnnotation({boardId, annotationId: item.id})
+          )
+        );
+        const latest = bundleRef.current;
+        if (latest) {
+          commitNextSnapshot({
+            frames: latest.frames,
+            annotations: latest.annotations,
+          });
+        }
+      } catch (err) {
+        for (const item of removed) {
+          upsertAnnotationState(item);
+        }
+        throw err;
+      }
+    },
+    [boardId, upsertAnnotationState, commitNextSnapshot]
   );
 
   const deleteAnnotation = useCallback(
     async (annotationId: string): Promise<void> => {
-      const existing = bundleRef.current?.annotations.find(
-        (item) => item.id === annotationId
-      );
-      if (!existing) {
-        return;
-      }
-      annotationOriginsRef.current.delete(annotationId);
-      removeAnnotation(annotationId);
-      try {
-        await apiDeletePrototypeAnnotation({boardId, annotationId});
-      } catch (err) {
-        applyAnnotationMutated(existing);
-        throw err;
-      }
+      await deleteAnnotations([annotationId]);
     },
-    [boardId, applyAnnotationMutated, removeAnnotation]
+    [deleteAnnotations]
   );
 
   const moveItems = useCallback(
@@ -1000,24 +1253,32 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         if (!prev) {
           return prev;
         }
+        const nextFrames =
+          frameMoveMap.size > 0
+            ? prev.frames.map((frame) => {
+                const next = frameMoveMap.get(frame.id);
+                return next ? {...frame, x: next.x, y: next.y} : frame;
+              })
+            : prev.frames;
+        const nextAnnotations =
+          annotationMoveMap.size > 0
+            ? prev.annotations.map((annotation) => {
+                const next = annotationMoveMap.get(annotation.id);
+                return next
+                  ? {...annotation, x: next.x, y: next.y}
+                  : annotation;
+              })
+            : prev.annotations;
+        if (persist) {
+          commitNextSnapshot({
+            frames: nextFrames,
+            annotations: nextAnnotations,
+          });
+        }
         return {
           ...prev,
-          frames:
-            frameMoveMap.size > 0
-              ? prev.frames.map((frame) => {
-                  const next = frameMoveMap.get(frame.id);
-                  return next ? {...frame, x: next.x, y: next.y} : frame;
-                })
-              : prev.frames,
-          annotations:
-            annotationMoveMap.size > 0
-              ? prev.annotations.map((annotation) => {
-                  const next = annotationMoveMap.get(annotation.id);
-                  return next
-                    ? {...annotation, x: next.x, y: next.y}
-                    : annotation;
-                })
-              : prev.annotations,
+          frames: nextFrames,
+          annotations: nextAnnotations,
         };
       });
 
@@ -1031,23 +1292,175 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
         annotations: annotationMoves,
       });
     },
+    [boardId, commitNextSnapshot]
+  );
+
+  const syncSnapshotDiff = useCallback(
+    async (
+      fromSnapshot: BoardHistorySnapshot,
+      toSnapshot: BoardHistorySnapshot
+    ): Promise<void> => {
+      const fromFrames = new Map(fromSnapshot.frames.map((f) => [f.id, f]));
+      const toFrames = new Map(toSnapshot.frames.map((f) => [f.id, f]));
+      const fromAnnotations = new Map(
+        fromSnapshot.annotations.map((a) => [a.id, a])
+      );
+      const toAnnotations = new Map(
+        toSnapshot.annotations.map((a) => [a.id, a])
+      );
+
+      const frameDeletes: string[] = [];
+      for (const id of fromFrames.keys()) {
+        if (!toFrames.has(id)) {
+          frameDeletes.push(id);
+        }
+      }
+      const annotationDeletes: string[] = [];
+      for (const id of fromAnnotations.keys()) {
+        if (!toAnnotations.has(id)) {
+          annotationDeletes.push(id);
+        }
+      }
+
+      const frameSaves: PrototypeFrame[] = [];
+      const frameMoves: Array<{id: string; x: number; y: number}> = [];
+      for (const nextFrame of toSnapshot.frames) {
+        const prevFrame = fromFrames.get(nextFrame.id);
+        if (
+          !prevFrame ||
+          frameContentSignature(prevFrame) !== frameContentSignature(nextFrame)
+        ) {
+          frameSaves.push(nextFrame);
+        } else if (prevFrame.x !== nextFrame.x || prevFrame.y !== nextFrame.y) {
+          frameMoves.push({
+            id: nextFrame.id,
+            x: nextFrame.x,
+            y: nextFrame.y,
+          });
+        }
+      }
+
+      const annotationSaves: PrototypeAnnotation[] = [];
+      const annotationMoves: Array<{id: string; x: number; y: number}> = [];
+      for (const nextAnn of toSnapshot.annotations) {
+        const prevAnn = fromAnnotations.get(nextAnn.id);
+        if (
+          !prevAnn ||
+          annotationContentSignature(prevAnn) !==
+            annotationContentSignature(nextAnn)
+        ) {
+          annotationSaves.push(nextAnn);
+        } else if (prevAnn.x !== nextAnn.x || prevAnn.y !== nextAnn.y) {
+          annotationMoves.push({
+            id: nextAnn.id,
+            x: nextAnn.x,
+            y: nextAnn.y,
+          });
+        }
+      }
+
+      await Promise.all([
+        ...frameDeletes.map((frameId) =>
+          apiDeletePrototypeFrame({boardId, frameId})
+        ),
+        ...annotationDeletes.map((annotationId) =>
+          apiDeletePrototypeAnnotation({boardId, annotationId})
+        ),
+        ...frameSaves.map((frame) => apiSavePrototypeFrame({boardId, frame})),
+        ...annotationSaves.map((annotation) =>
+          apiSavePrototypeAnnotation({boardId, annotation})
+        ),
+        frameMoves.length + annotationMoves.length > 0
+          ? apiMovePrototypeItems({
+              boardId,
+              frames: frameMoves,
+              annotations: annotationMoves,
+            })
+          : Promise.resolve(),
+      ]);
+    },
     [boardId]
   );
 
-  const applyFrameMutated = useCallback((frame: PrototypeFrame) => {
-    setBundle((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const exists = prev.frames.some((item) => item.id === frame.id);
-      return {
-        ...prev,
-        frames: exists
+  const undo = useCallback(async () => {
+    const currentBundle = bundleRef.current;
+    if (!currentBundle || undoStackRef.current.length === 0) {
+      return;
+    }
+    const fromSnapshot =
+      committedSnapshotRef.current || extractHistorySnapshot(currentBundle);
+    const targetSnapshot = undoStackRef.current.pop()!;
+    redoStackRef.current.push(cloneHistorySnapshot(fromSnapshot));
+    aiTurnCapturedRef.current = false;
+    committedSnapshotRef.current = cloneHistorySnapshot(targetSnapshot);
+    annotationOriginsRef.current.clear();
+    syncHistoryCounts();
+
+    const restored = cloneHistorySnapshot(targetSnapshot);
+    setBundle((prev) =>
+      prev
+        ? {
+            ...prev,
+            frames: restored.frames,
+            annotations: restored.annotations,
+          }
+        : prev
+    );
+
+    await syncSnapshotDiff(fromSnapshot, targetSnapshot);
+  }, [syncHistoryCounts, syncSnapshotDiff]);
+
+  const redo = useCallback(async () => {
+    const currentBundle = bundleRef.current;
+    if (!currentBundle || redoStackRef.current.length === 0) {
+      return;
+    }
+    const fromSnapshot =
+      committedSnapshotRef.current || extractHistorySnapshot(currentBundle);
+    const targetSnapshot = redoStackRef.current.pop()!;
+    undoStackRef.current.push(cloneHistorySnapshot(fromSnapshot));
+    aiTurnCapturedRef.current = false;
+    committedSnapshotRef.current = cloneHistorySnapshot(targetSnapshot);
+    annotationOriginsRef.current.clear();
+    syncHistoryCounts();
+
+    const restored = cloneHistorySnapshot(targetSnapshot);
+    setBundle((prev) =>
+      prev
+        ? {
+            ...prev,
+            frames: restored.frames,
+            annotations: restored.annotations,
+          }
+        : prev
+    );
+
+    await syncSnapshotDiff(fromSnapshot, targetSnapshot);
+  }, [syncHistoryCounts, syncSnapshotDiff]);
+
+  const applyFrameMutated = useCallback(
+    (frame: PrototypeFrame) => {
+      captureAiTurnCheckpoint();
+      setBundle((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const exists = prev.frames.some((item) => item.id === frame.id);
+        const nextFrames = exists
           ? prev.frames.map((item) => (item.id === frame.id ? frame : item))
-          : [...prev.frames, frame],
-      };
-    });
-  }, []);
+          : [...prev.frames, frame];
+        committedSnapshotRef.current = cloneHistorySnapshot({
+          frames: nextFrames,
+          annotations: prev.annotations,
+        });
+        return {
+          ...prev,
+          frames: nextFrames,
+        };
+      });
+    },
+    [captureAiTurnCheckpoint]
+  );
 
   const applyComponentMutated = useCallback((spec: PrototypeComponentSpec) => {
     setBundle((prev) => {
@@ -1112,7 +1525,12 @@ export function usePrototypeBoard(boardId: string): UsePrototypeBoardResult {
     createAnnotation,
     updateAnnotation,
     deleteAnnotation,
+    deleteAnnotations,
     moveItems,
+    canUndo: historyCounts.undo > 0,
+    canRedo: historyCounts.redo > 0,
+    undo,
+    redo,
     applyFrameMutated,
     applyAnnotationMutated,
     applyComponentMutated,

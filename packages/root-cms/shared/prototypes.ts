@@ -71,6 +71,8 @@ export interface PrototypeBoard {
   pages: PrototypeBoardPage[];
   /** Extracted or customized brand theme tokens applied inside frames. */
   theme: PrototypeTheme;
+  /** Optional CMS document id (`<collection>/<slug>`) this board was seeded from. */
+  seedDocId?: string;
   /** Optional linked AI chat document id. */
   aiChatId?: string;
   /** Creation epoch millis. */
