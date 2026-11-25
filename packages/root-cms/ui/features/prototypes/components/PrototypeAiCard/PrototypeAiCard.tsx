@@ -39,10 +39,6 @@ import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {cn} from '../../../../utils/classes.js';
 import {showErrorNotification} from '../../../../utils/notifications.js';
-import {
-  getChat as getStoredChat,
-  saveChat as saveStoredChat,
-} from '../../../ai/ai-chats.js';
 import {ChatErrorNotice} from '../../../ai/components/ChatErrorNotice/ChatErrorNotice.js';
 import {
   type ClientTurnConfig,
@@ -50,12 +46,21 @@ import {
 } from '../../../ai/components/RootAIChat/clientChatTransport.js';
 import {createReadOnlyClientCmsTools} from '../../../ai/components/RootAIChat/clientCmsTools.js';
 import {
+  clearCachedPrototypeAiSession,
+  readCachedPrototypeAiSession,
+  readPrototypeAiUiState,
+  writeCachedPrototypeAiSession,
+  writePrototypeAiUiState,
+} from '../../prototype-session.js';
+import {
+  apiClearPrototypeAiChat,
+  apiGetPrototypeAiChat,
   apiGetPrototypeContext,
   apiPreparePrototypeAiTurn,
+  apiSavePrototypeAiChat,
   apiSavePrototypeAnnotation,
   apiSavePrototypeComponent,
   apiSavePrototypeFrame,
-  apiUpdatePrototypeBoard,
 } from '../../prototypes-client.js';
 
 /** Props for the floating Root AI prototyping assistant card. */
@@ -284,47 +289,63 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
     };
   }, []);
 
-  // The chat this card opened with. It is read once per mount: the session
-  // links a new chat to the board after its first turn, and re-keying on that
-  // would remount the conversation mid-flight.
+  const boardId = props.bundle.board.id;
   const [initialChatId, setInitialChatId] = useState(
-    () => props.bundle.board.aiChatId || ''
+    () => readCachedPrototypeAiSession(boardId)?.chatId || ''
   );
   // Incremented by "New chat" to start a fresh session.
   const [sessionNonce, setSessionNonce] = useState(0);
   const [streaming, setStreaming] = useState(false);
-  const boardAiChatId = initialChatId;
+  // Suppresses unmount saves on the outgoing session when "New chat" is clicked.
+  const sessionClearedRef = useRef(false);
 
-  // Load persisted chat history for the board when `aiChatId` is linked.
+  // Load persisted per-user chat history for this board on mount.
   useEffect(() => {
     let active = true;
-    if (!boardAiChatId) {
-      setInitialMessages([]);
-      return () => {
-        active = false;
-      };
-    }
+    const cached = readCachedPrototypeAiSession(boardId);
     setInitialMessages(null);
-    getStoredChat(boardAiChatId)
-      .then((stored) => {
+    apiGetPrototypeAiChat(boardId)
+      .then(({session: serverSession}) => {
         if (!active) {
           return;
         }
-        setInitialMessages(stored?.messages || []);
-        if (stored?.modelId) {
-          setSelectedModelId((prev) => prev || stored.modelId || '');
+        const chosen =
+          cached &&
+          (!serverSession || cached.updatedAt > serverSession.updatedAt)
+            ? cached
+            : serverSession;
+        if (chosen) {
+          writeCachedPrototypeAiSession(boardId, chosen);
+          setInitialChatId(chosen.chatId || '');
+          setInitialMessages((chosen.messages as UIMessage[]) || []);
+          if (chosen.modelId) {
+            setSelectedModelId((prev) => prev || chosen.modelId || '');
+          }
+          props.onChatLinked?.(chosen.chatId || '');
+        } else {
+          setInitialChatId('');
+          setInitialMessages([]);
         }
       })
       .catch((err) => {
         console.error('failed to load prototype AI chat history', err);
-        if (active) {
+        if (!active) {
+          return;
+        }
+        if (cached) {
+          setInitialChatId(cached.chatId || '');
+          setInitialMessages((cached.messages as UIMessage[]) || []);
+          if (cached.modelId) {
+            setSelectedModelId((prev) => prev || cached.modelId || '');
+          }
+        } else {
           setInitialMessages([]);
         }
       });
     return () => {
       active = false;
     };
-  }, [boardAiChatId]);
+  }, [boardId]);
 
   const models = config?.models || [];
   const selectedModel =
@@ -359,15 +380,16 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
     ? `Editing ${selectedFrame.title}`
     : `Editing ${props.bundle.board.title}`;
 
-  // Starts an empty conversation. The previous chat stays stored but is
-  // unlinked from the board, so reopening the panel no longer restores it.
+  // Starts an empty conversation, clearing the user's persisted session for
+  // this board so returning to the page starts fresh until a new message is sent.
   const handleNewChat = async () => {
+    sessionClearedRef.current = true;
+    clearCachedPrototypeAiSession(boardId);
+    writePrototypeAiUiState(boardId, {draftText: ''});
     try {
-      await apiUpdatePrototypeBoard({
-        boardId: props.bundle.board.id,
-        aiChatId: '',
-      });
+      await apiClearPrototypeAiChat(boardId);
     } catch (err) {
+      sessionClearedRef.current = false;
       showErrorNotification(err, {title: 'Failed to start a new chat'});
       return;
     }
@@ -434,10 +456,11 @@ export function PrototypeAiCard(props: PrototypeAiCardProps) {
         <NotConfiguredNotice error={configError} />
       ) : (
         <PrototypeAiChatSession
-          key={`${props.bundle.board.id}:${sessionNonce}`}
+          key={`${boardId}:${sessionNonce}`}
           props={sessionProps}
-          initialChatId={boardAiChatId}
+          initialChatId={initialChatId}
           initialMessages={initialMessages}
+          sessionClearedRef={sessionClearedRef}
           models={models}
           selectedModel={selectedModel}
           onSelectModel={handleSelectModel}
@@ -517,6 +540,7 @@ interface PrototypeAiChatSessionProps {
   props: PrototypeAiCardProps;
   initialChatId: string;
   initialMessages: UIMessage[];
+  sessionClearedRef: {current: boolean};
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   onSelectModel: (modelId: string) => void;
@@ -529,6 +553,7 @@ function PrototypeAiChatSession({
   props,
   initialChatId,
   initialMessages,
+  sessionClearedRef,
   models,
   selectedModel,
   onSelectModel,
@@ -537,11 +562,17 @@ function PrototypeAiChatSession({
   skills,
 }: PrototypeAiChatSessionProps) {
   const [chatId] = useState(() => initialChatId || generateChatId());
+  const sessionCreatedAtRef = useRef<number>(Date.now());
   const linkedChatIdRef = useRef<string>(initialChatId);
   const propsRef = useRef(props);
   propsRef.current = props;
   const selectedModelRef = useRef(selectedModel);
   selectedModelRef.current = selectedModel;
+
+  // Reset `sessionClearedRef` when a fresh session mounts.
+  useEffect(() => {
+    sessionClearedRef.current = false;
+  }, [sessionClearedRef]);
 
   // Keep a mutable live view of frames and components so multi-step tool calls
   // within a single turn always see mutations from previous steps immediately
@@ -579,39 +610,61 @@ function PrototypeAiChatSession({
 
   const projectContextCacheRef = useRef<PrototypeProjectContext | null>(null);
   const handledQueuedPromptIdRef = useRef<string | number | null>(null);
+  const needsServerSaveRef = useRef(false);
+
+  const persistSession = useCallback(
+    async (
+      messagesToSave: UIMessage[],
+      options?: {keepalive?: boolean}
+    ): Promise<void> => {
+      if (sessionClearedRef.current || messagesToSave.length === 0) {
+        return;
+      }
+      const currentProps = propsRef.current;
+      const boardId = currentProps.bundle.board.id;
+      const modelId = selectedModelRef.current?.id;
+      const now = Date.now();
+
+      writeCachedPrototypeAiSession(boardId, {
+        chatId,
+        ...(modelId ? {modelId} : {}),
+        messages: messagesToSave,
+        createdAt: sessionCreatedAtRef.current,
+        updatedAt: now,
+      });
+
+      if (!linkedChatIdRef.current) {
+        linkedChatIdRef.current = chatId;
+        currentProps.onChatLinked?.(chatId);
+      }
+
+      needsServerSaveRef.current = false;
+      try {
+        await apiSavePrototypeAiChat(
+          {
+            boardId,
+            chatId,
+            modelId,
+            messages: messagesToSave,
+          },
+          options
+        );
+      } catch (err) {
+        needsServerSaveRef.current = true;
+        console.error('failed to persist prototype AI chat', err);
+      }
+    },
+    [chatId, sessionClearedRef]
+  );
 
   const handleTurnFinish = useCallback(
     async (finalMessages: UIMessage[]) => {
       const currentProps = propsRef.current;
-      const boardId = currentProps.bundle.board.id;
-
-      // Link the chat to the board first, so the refresh below (and a panel
-      // that is closed and reopened) sees it and restores this conversation.
-      try {
-        if (!linkedChatIdRef.current) {
-          await apiUpdatePrototypeBoard({boardId, aiChatId: chatId});
-          linkedChatIdRef.current = chatId;
-          currentProps.onChatLinked?.(chatId);
-        }
-      } catch (err) {
-        console.error('failed to link prototype AI chat', err);
-      }
-
       // Refresh the board so it reflects everything the AI changed this turn.
       currentProps.onTurnFinished?.();
-
-      // Persist conversation history to Firestore.
-      try {
-        await saveStoredChat(chatId, {
-          messages: finalMessages,
-          modelId: selectedModelRef.current?.id,
-          title: currentProps.bundle.board.title,
-        });
-      } catch (err) {
-        console.error('failed to persist prototype AI chat', err);
-      }
+      await persistSession(finalMessages);
     },
-    [chatId]
+    [persistSession]
   );
 
   const transport = useMemo(
@@ -718,21 +771,70 @@ function PrototypeAiChatSession({
     });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+  const messagesRef = useRef<UIMessage[]>(messages);
+  messagesRef.current = messages;
+  const initialMessageCountRef = useRef(initialMessages.length);
+  const wasStreamingRef = useRef(false);
 
+  // Write-through cache whenever messages update, and persist to the server
+  // right away when a new user prompt is submitted.
+  useEffect(() => {
+    if (sessionClearedRef.current || messages.length === 0) {
+      return;
+    }
+    if (
+      messages === initialMessages &&
+      messages.length === initialMessageCountRef.current
+    ) {
+      return;
+    }
+    const boardId = propsRef.current.bundle.board.id;
+    const modelId = selectedModelRef.current?.id;
+    writeCachedPrototypeAiSession(boardId, {
+      chatId,
+      ...(modelId ? {modelId} : {}),
+      messages,
+      createdAt: sessionCreatedAtRef.current,
+      updatedAt: Date.now(),
+    });
+    needsServerSaveRef.current = true;
+    const last = messages[messages.length - 1];
+    if (last?.role === 'user') {
+      void persistSession(messages);
+    }
+  }, [messages, initialMessages, chatId, persistSession, sessionClearedRef]);
+
+  // Save partial/stopped turns when streaming ends without `onFinish` (e.g.
+  // user clicked Stop or the stream errored).
   useEffect(() => {
     propsRef.current.onStreamingChange?.(isStreaming);
-  }, [isStreaming]);
+    if (wasStreamingRef.current && !isStreaming) {
+      if (needsServerSaveRef.current && messagesRef.current.length > 0) {
+        void persistSession(messagesRef.current);
+      }
+    }
+    wasStreamingRef.current = isStreaming;
+  }, [isStreaming, persistSession]);
 
-  // Closing the card stops any response in progress; left running, it would
-  // keep editing the board with no way to see or stop it.
+  // Closing the card or leaving the page stops any response in progress and
+  // flushes any unsaved conversation state with `keepalive`.
   const stopRef = useRef(stop);
   stopRef.current = stop;
+  const persistSessionRef = useRef(persistSession);
+  persistSessionRef.current = persistSession;
   useEffect(() => {
     return () => {
       stopRef.current();
       propsRef.current.onStreamingChange?.(false);
+      if (
+        !sessionClearedRef.current &&
+        needsServerSaveRef.current &&
+        messagesRef.current.length > 0
+      ) {
+        void persistSessionRef.current(messagesRef.current, {keepalive: true});
+      }
     };
-  }, []);
+  }, [sessionClearedRef]);
 
   const send = useCallback(
     (text: string, attachments: ImageAttachment[] = []) => {
@@ -796,6 +898,7 @@ function PrototypeAiChatSession({
       )}
 
       <ComposerFooter
+        boardId={props.bundle.board.id}
         disabled={!selectedModel}
         canAttach={Boolean(selectedModel?.capabilities.attachments)}
         isStreaming={isStreaming}
@@ -1027,6 +1130,7 @@ function AssistantPart(props: {part: any}) {
 }
 
 interface ComposerFooterProps {
+  boardId: string;
   disabled: boolean;
   canAttach: boolean;
   isStreaming: boolean;
@@ -1043,7 +1147,9 @@ interface ComposerFooterProps {
 }
 
 function ComposerFooter(props: ComposerFooterProps) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(
+    () => readPrototypeAiUiState(props.boardId)?.draftText || ''
+  );
   const [skillIndex, setSkillIndex] = useState(0);
   const [skillMenuDismissed, setSkillMenuDismissed] = useState(false);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
@@ -1082,6 +1188,7 @@ function ComposerFooter(props: ComposerFooterProps) {
 
   const updateText = (value: string) => {
     setText(value);
+    writePrototypeAiUiState(props.boardId, {draftText: value});
     setSkillIndex(0);
     setSkillMenuDismissed(false);
   };
@@ -1101,6 +1208,7 @@ function ComposerFooter(props: ComposerFooterProps) {
     }
     props.onSend(text, attachments);
     setText('');
+    writePrototypeAiUiState(props.boardId, {draftText: ''});
     setAttachments([]);
     if (fileRef.current) {
       fileRef.current.value = '';

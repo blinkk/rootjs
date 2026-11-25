@@ -53,6 +53,7 @@ describe('registerPrototypesApi integration', () => {
     await db.doc(`Projects/${projectId}`).set({
       roles: {
         'editor@example.com': 'EDITOR',
+        'contributor@example.com': 'CONTRIBUTOR',
         'viewer@example.com': 'VIEWER',
       },
     });
@@ -474,5 +475,220 @@ describe('registerPrototypesApi integration', () => {
       email: 'stranger@example.com',
     });
     expect(strangerPreview.status).toBe(403);
+  });
+
+  it('batch-moves multiple frames and annotations and enforces edit permissions', async () => {
+    const created = await callApi({
+      path: '/cms/api/prototypes.create',
+      email: 'editor@example.com',
+      body: {title: 'Group Drag Board'},
+    });
+    const boardId = created.body.data.board.id as string;
+
+    await callApi({
+      path: '/cms/api/prototypes.frame.save',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        frame: {
+          id: 'frame-1',
+          pageId: 'page-1',
+          title: 'Frame 1',
+          width: 1440,
+          x: 100,
+          y: 80,
+          blocks: {_array: []},
+        },
+      },
+    });
+    await callApi({
+      path: '/cms/api/prototypes.frame.save',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        frame: {
+          id: 'frame-2',
+          pageId: 'page-1',
+          title: 'Frame 2',
+          width: 390,
+          x: 1620,
+          y: 80,
+          blocks: {_array: []},
+        },
+      },
+    });
+    await callApi({
+      path: '/cms/api/prototypes.annotation.save',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        annotation: {
+          id: 'note-1',
+          pageId: 'page-1',
+          kind: 'note',
+          text: 'Keep CTA prominent',
+          x: 200,
+          y: 960,
+        },
+      },
+    });
+
+    const viewerDenied = await callApi({
+      path: '/cms/api/prototypes.items.move',
+      email: 'viewer@example.com',
+      body: {
+        boardId,
+        frames: [{id: 'frame-1', x: 300, y: 200}],
+      },
+    });
+    expect(viewerDenied.status).toBe(403);
+
+    const moved = await callApi({
+      path: '/cms/api/prototypes.items.move',
+      email: 'contributor@example.com',
+      body: {
+        boardId,
+        frames: [
+          {id: 'frame-1', x: 300.4, y: 200.6},
+          {id: 'frame-2', x: 1820, y: 201},
+        ],
+        annotations: [{id: 'note-1', x: 400, y: 1081}],
+      },
+    });
+    expect(moved.status).toBe(200);
+    expect(moved.body.data).toEqual({movedFrames: 2, movedAnnotations: 1});
+
+    const loaded = await callApi({
+      path: '/cms/api/prototypes.get',
+      email: 'viewer@example.com',
+      body: {boardId},
+    });
+    const framesById = new Map(
+      loaded.body.data.frames.map((f: any) => [f.id, f])
+    );
+    expect(framesById.get('frame-1')).toMatchObject({x: 300, y: 201});
+    expect(framesById.get('frame-2')).toMatchObject({x: 1820, y: 201});
+    expect(loaded.body.data.annotations[0]).toMatchObject({
+      id: 'note-1',
+      x: 400,
+      y: 1081,
+    });
+  });
+
+  it('persists per-user Root AI chat sessions until cleared and compacts large tool payloads', async () => {
+    const created = await callApi({
+      path: '/cms/api/prototypes.create',
+      email: 'editor@example.com',
+      body: {title: 'AI Persistence Board'},
+    });
+    const boardId = created.body.data.board.id as string;
+
+    // VIEWER cannot access AI chat sessions.
+    const viewerGet = await callApi({
+      path: '/cms/api/prototypes.chat.get',
+      email: 'viewer@example.com',
+      body: {boardId},
+    });
+    expect(viewerGet.status).toBe(403);
+
+    // Editor saves a conversation with a bulky >750KB tool payload.
+    const hugeHtml = `<section>${'x'.repeat(800_000)}</section>`;
+    const saveEditor = await callApi({
+      path: '/cms/api/prototypes.chat.save',
+      email: 'editor@example.com',
+      body: {
+        boardId,
+        chatId: 'proto-editor-1',
+        modelId: 'claude-sonnet-5',
+        messages: [
+          {
+            id: 'm1',
+            role: 'user',
+            parts: [{type: 'text', text: 'Explore 2 variants'}],
+          },
+          {
+            id: 'm2',
+            role: 'assistant',
+            parts: [
+              {
+                type: 'tool-frame_create',
+                state: 'output-available',
+                input: {
+                  title: 'Variant A',
+                  blocks: [{component: 'Hero', label: 'Hero', html: hugeHtml}],
+                },
+                output: {created: true},
+              },
+              {type: 'text', text: 'Created Variant A.'},
+            ],
+          },
+        ],
+      },
+    });
+    expect(saveEditor.status).toBe(200);
+
+    // Contributor on the same board starts with an empty session of their own.
+    const contributorInitial = await callApi({
+      path: '/cms/api/prototypes.chat.get',
+      email: 'contributor@example.com',
+      body: {boardId},
+    });
+    expect(contributorInitial.status).toBe(200);
+    expect(contributorInitial.body.data.session).toBeNull();
+
+    // Contributor saves their own session without overwriting Editor's.
+    await callApi({
+      path: '/cms/api/prototypes.chat.save',
+      email: 'contributor@example.com',
+      body: {
+        boardId,
+        chatId: 'proto-contrib-1',
+        messages: [
+          {
+            id: 'c1',
+            role: 'user',
+            parts: [{type: 'text', text: 'Make a mobile frame'}],
+          },
+        ],
+      },
+    });
+
+    // Editor retrieves their persisted conversation intact.
+    const editorLoaded = await callApi({
+      path: '/cms/api/prototypes.chat.get',
+      email: 'editor@example.com',
+      body: {boardId},
+    });
+    expect(editorLoaded.status).toBe(200);
+    expect(editorLoaded.body.data.session.chatId).toBe('proto-editor-1');
+    expect(editorLoaded.body.data.session.modelId).toBe('claude-sonnet-5');
+    expect(editorLoaded.body.data.session.messages).toHaveLength(2);
+    expect(editorLoaded.body.data.session.messages[1].parts[1].text).toBe(
+      'Created Variant A.'
+    );
+
+    // Editor hits "New chat", clearing only Editor's session while Contributor's stays.
+    const cleared = await callApi({
+      path: '/cms/api/prototypes.chat.clear',
+      email: 'editor@example.com',
+      body: {boardId},
+    });
+    expect(cleared.status).toBe(200);
+
+    const editorAfterClear = await callApi({
+      path: '/cms/api/prototypes.chat.get',
+      email: 'editor@example.com',
+      body: {boardId},
+    });
+    expect(editorAfterClear.body.data.session).toBeNull();
+
+    const contributorStillThere = await callApi({
+      path: '/cms/api/prototypes.chat.get',
+      email: 'contributor@example.com',
+      body: {boardId},
+    });
+    expect(contributorStillThere.body.data.session.chatId).toBe(
+      'proto-contrib-1'
+    );
   });
 });

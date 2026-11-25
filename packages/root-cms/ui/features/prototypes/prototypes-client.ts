@@ -3,6 +3,7 @@
  */
 
 import type {
+  PrototypeAiChatSession,
   PrototypeAnnotation,
   PrototypeBoard,
   PrototypeBoardBundle,
@@ -28,12 +29,14 @@ interface ApiEnvelope<T> {
 
 async function postJson<T>(
   endpoint: string,
-  body: Record<string, unknown> = {}
+  body: Record<string, unknown> = {},
+  init?: {keepalive?: boolean}
 ): Promise<T> {
   const res = await window.fetch(endpoint, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(body),
+    ...(init?.keepalive ? {keepalive: true} : {}),
   });
   let payload: ApiEnvelope<T> | null = null;
   try {
@@ -152,6 +155,18 @@ export async function apiDeletePrototypeAnnotation(input: {
   );
 }
 
+/** Batch-moves multiple frames and/or annotations on a prototype board. */
+export async function apiMovePrototypeItems(input: {
+  boardId: string;
+  frames?: Array<{id: string; x: number; y: number}>;
+  annotations?: Array<{id: string; x: number; y: number}>;
+}): Promise<{movedFrames: number; movedAnnotations: number}> {
+  return postJson<{movedFrames: number; movedAnnotations: number}>(
+    '/cms/api/prototypes.items.move',
+    input
+  );
+}
+
 /** Saves a reusable component spec (either project Visual Twin or board Proposed spec). */
 export async function apiSavePrototypeComponent(input: {
   boardId: string;
@@ -224,6 +239,42 @@ export async function apiPreparePrototypeAiTurn(input: {
   selectedBlockKey?: string | null;
 }): Promise<ClientTurnConfig> {
   return postJson<ClientTurnConfig>('/cms/api/prototypes.ai.prepare', input);
+}
+
+/** Loads the signed-in user's persisted Root AI chat session for `boardId`. */
+export async function apiGetPrototypeAiChat(
+  boardId: string
+): Promise<{session: PrototypeAiChatSession | null}> {
+  return postJson<{session: PrototypeAiChatSession | null}>(
+    '/cms/api/prototypes.chat.get',
+    {boardId}
+  );
+}
+
+/** Saves the signed-in user's active Root AI chat session for `boardId`. */
+export async function apiSavePrototypeAiChat(
+  input: {
+    boardId: string;
+    chatId: string;
+    modelId?: string;
+    messages: unknown[];
+  },
+  options?: {keepalive?: boolean}
+): Promise<{session: PrototypeAiChatSession}> {
+  return postJson<{session: PrototypeAiChatSession}>(
+    '/cms/api/prototypes.chat.save',
+    input,
+    options
+  );
+}
+
+/** Clears the signed-in user's active Root AI chat session for `boardId`. */
+export async function apiClearPrototypeAiChat(
+  boardId: string
+): Promise<{cleared: boolean}> {
+  return postJson<{cleared: boolean}>('/cms/api/prototypes.chat.clear', {
+    boardId,
+  });
 }
 
 /** Session storage key holding the initial AI prompt for a new board. */

@@ -1,6 +1,6 @@
 import './PrototypeBoardPage.css';
 
-import {IconExternalLink, IconX} from '@tabler/icons-preact';
+import {IconExternalLink, IconLink, IconX} from '@tabler/icons-preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation, useRoute} from 'preact-iso';
 import type {
@@ -9,9 +9,11 @@ import type {
   PrototypeAnnotationKind,
   PrototypeBlockRect,
   PrototypeCommentThread,
+  PrototypeFrame,
 } from '../../../../../shared/prototypes.js';
 import {
   fitCameraToBounds,
+  focusCameraOnFrame,
   PROTOTYPE_LABEL_FONT_SIZE,
   PROTOTYPE_NOTE_WIDTH,
   zoomCameraAroundPoint,
@@ -48,6 +50,13 @@ import {
   exportFramesToImage,
   type PrototypeExportPayload,
 } from '../../prototype-export.js';
+import {
+  type PrototypeTabState,
+  readPrototypeAiUiState,
+  readPrototypeTabState,
+  writePrototypeAiUiState,
+  writePrototypeTabState,
+} from '../../prototype-session.js';
 import {takeInitialPrototypePrompt} from '../../prototypes-client.js';
 import {usePrototypeBoard} from '../../usePrototypeBoard.js';
 
@@ -68,16 +77,35 @@ interface OpenPinPopover {
 /** Zoom multiplier per button click or keyboard zoom step. */
 const ZOOM_STEP_FACTOR = 1.25;
 
+/** Reads a query parameter from `useLocation().query` with `window.location.search` fallback. */
+function readUrlParam(
+  query: Record<string, string | undefined>,
+  name: string
+): string {
+  const fromRouter = query[name];
+  if (typeof fromRouter === 'string' && fromRouter) {
+    return fromRouter;
+  }
+  if (typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search).get(name) || '';
+  }
+  return '';
+}
+
 /**
  * Full-bleed infinite canvas workspace for `/cms/prototypes/:boardId`.
- * Orchestrates the floating top bar, infinite dot-grid artboard, sandboxed
- * frames, bottom tool/zoom dock, floating Comments card & pin popovers, and
- * floating Root AI assistant card.
+ * Keyed per `boardId` so navigating between boards resets local workspace state.
  */
 export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const {params} = useRoute();
-  const {query, route} = useLocation();
   const boardId = props.boardId || params.boardId || '';
+  return <PrototypeBoardWorkspace key={boardId} boardId={boardId} />;
+}
+
+/** Inner stateful board workspace scoped to a single `boardId`. */
+function PrototypeBoardWorkspace(props: {boardId: string}) {
+  const {boardId} = props;
+  const {query, route} = useLocation();
 
   const {
     bundle,
@@ -103,6 +131,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     createAnnotation,
     updateAnnotation,
     deleteAnnotation,
+    moveItems,
     applyFrameMutated,
     applyAnnotationMutated,
     applyComponentMutated,
@@ -123,21 +152,39 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     bundle?.board.title ? `${bundle.board.title} · Prototypes` : 'Prototypes'
   );
 
-  const [activePageId, setActivePageId] = useState<string>(
-    () => (query.page as string) || ''
+  const initialTabStateRef = useRef<PrototypeTabState | null>(
+    readPrototypeTabState(boardId)
   );
-  const [camera, setCamera] = useState<CanvasCamera>({
-    x: 80,
-    y: 80,
-    zoom: 0.65,
+  const camerasByPageRef = useRef<Record<string, CanvasCamera>>({
+    ...(initialTabStateRef.current?.camerasByPage || {}),
   });
+
+  const [activePageId, setActivePageId] = useState<string>(() => {
+    return (
+      readUrlParam(query as Record<string, string | undefined>, 'page') ||
+      initialTabStateRef.current?.activePageId ||
+      ''
+    );
+  });
+  const [camera, setCamera] = useState<CanvasCamera>(() => {
+    const startPage =
+      readUrlParam(query as Record<string, string | undefined>, 'page') ||
+      initialTabStateRef.current?.activePageId ||
+      '';
+    const saved = startPage
+      ? initialTabStateRef.current?.camerasByPage[startPage]
+      : undefined;
+    return saved || {x: 80, y: 80, zoom: 0.65};
+  });
+  const [hydrated, setHydrated] = useState(false);
+
   const [tool, setTool] = useState<PrototypeCanvasTool>('select');
   const [spacePressed, setSpacePressed] = useState(false);
-  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
+  const [selectedFrameIds, setSelectedFrameIds] = useState<string[]>([]);
+  const [selectedAnnotationIds, setSelectedAnnotationIds] = useState<string[]>(
+    []
+  );
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
-    string | null
-  >(null);
   const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
     null
   );
@@ -146,7 +193,13 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     useState<PrototypeAnnotation | null>(null);
   const [expandedFrameId, setExpandedFrameId] = useState<string | null>(null);
   const modals = useModals();
-  const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(null);
+  const [activePanel, setActivePanel] = useState<PrototypeSidePanel>(() => {
+    const tabPanel = initialTabStateRef.current?.activePanel;
+    if (tabPanel !== undefined) {
+      return tabPanel;
+    }
+    return readPrototypeAiUiState(boardId)?.panelOpen ? 'ai' : null;
+  });
   const [aiFocusKey, setAiFocusKey] = useState(0);
   const [queuedPrompt, setQueuedPrompt] = useState<{
     id: string | number;
@@ -165,25 +218,149 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   const lastAutoFitCountRef = useRef(0);
   const userMovedCameraRef = useRef(false);
   const initialPromptHandledRef = useRef(false);
+  const handledUrlFrameRef = useRef<string | null>(null);
 
-  // Sync active page once the board loads (respecting `?page=` when valid).
+  const selectedFrameId =
+    selectedFrameIds.length === 1 && selectedAnnotationIds.length === 0
+      ? selectedFrameIds[0]
+      : null;
+  const selectedAnnotationId =
+    selectedAnnotationIds.length === 1 && selectedFrameIds.length === 0
+      ? selectedAnnotationIds[0]
+      : null;
+
+  const computeFrameFocusCamera = useCallback(
+    (
+      frame: PrototypeFrame,
+      panelOverride?: PrototypeSidePanel
+    ): CanvasCamera => {
+      const el = viewportElRef.current;
+      const vw = el?.clientWidth || window.innerWidth || 1280;
+      const vh = el?.clientHeight || window.innerHeight || 800;
+      const panel = panelOverride !== undefined ? panelOverride : activePanel;
+      const visibleVw =
+        panel !== null && vw >= 768 ? Math.max(360, vw - 376) : vw;
+      return focusCameraOnFrame(
+        {
+          x: frame.x,
+          y: frame.y,
+          width: frame.width,
+          height: frame.cachedHeight || 760,
+        },
+        visibleVw,
+        vh,
+        88
+      );
+    },
+    [activePanel]
+  );
+
+  // Hydrate initial page, frame deeplink (`?frame=`), or saved tab-session
+  // scroll/zoom once `bundle` loads and the canvas viewport is mounted.
   useEffect(() => {
-    if (!bundle) {
+    if (!bundle || hydrated) {
       return;
     }
     const pages = bundle.board.pages;
-    if (pages.length === 0) {
+    const savedTab = initialTabStateRef.current;
+    const queryFrame = readUrlParam(
+      query as Record<string, string | undefined>,
+      'frame'
+    );
+    const queryPage = readUrlParam(
+      query as Record<string, string | undefined>,
+      'page'
+    );
+
+    const targetFrame = queryFrame
+      ? bundle.frames.find((frame) => frame.id === queryFrame) || null
+      : null;
+
+    if (targetFrame) {
+      const isSameTabReload = Boolean(
+        savedTab &&
+        savedTab.urlFrameId === targetFrame.id &&
+        savedTab.camerasByPage[targetFrame.pageId]
+      );
+      const nextCam = isSameTabReload
+        ? savedTab!.camerasByPage[targetFrame.pageId]
+        : computeFrameFocusCamera(targetFrame);
+      setActivePageId(targetFrame.pageId);
+      setSelectedFrameIds([targetFrame.id]);
+      setSelectedAnnotationIds([]);
+      setSelectedBlockKey(null);
+      setCamera(nextCam);
+      camerasByPageRef.current[targetFrame.pageId] = nextCam;
+      handledUrlFrameRef.current = targetFrame.id;
+      initialFitDoneRef.current = `${bundle.board.id}:${targetFrame.pageId}`;
+      userMovedCameraRef.current = true;
+      setHydrated(true);
       return;
     }
-    const queryPage = query.page as string | undefined;
+
+    let resolvedPageId = pages[0]?.id || 'page-1';
     if (queryPage && pages.some((page) => page.id === queryPage)) {
-      setActivePageId(queryPage);
+      resolvedPageId = queryPage;
+    } else if (
+      savedTab?.activePageId &&
+      pages.some((page) => page.id === savedTab.activePageId)
+    ) {
+      resolvedPageId = savedTab.activePageId;
+    } else if (activePageId && pages.some((page) => page.id === activePageId)) {
+      resolvedPageId = activePageId;
+    }
+
+    setActivePageId(resolvedPageId);
+    handledUrlFrameRef.current = null;
+
+    const savedCam = savedTab?.camerasByPage[resolvedPageId];
+    if (savedCam) {
+      setCamera(savedCam);
+      camerasByPageRef.current[resolvedPageId] = savedCam;
+      initialFitDoneRef.current = `${bundle.board.id}:${resolvedPageId}`;
+      userMovedCameraRef.current = true;
+    }
+    setHydrated(true);
+  }, [bundle, hydrated, activePageId, computeFrameFocusCamera, query]);
+
+  // Keep `activePageId` valid if pages change on the board.
+  useEffect(() => {
+    if (!bundle || !hydrated) {
       return;
     }
-    if (!activePageId || !pages.some((page) => page.id === activePageId)) {
+    const pages = bundle.board.pages;
+    if (pages.length > 0 && !pages.some((page) => page.id === activePageId)) {
       setActivePageId(pages[0].id);
     }
-  }, [bundle?.board.id, bundle?.board.pages.length]);
+  }, [bundle?.board.pages, hydrated, activePageId]);
+
+  // Handle external `?frame=` deeplink navigations (e.g. Back/Forward) after
+  // initial mount.
+  const externalFrameParam = query.frame as string | undefined;
+  useEffect(() => {
+    if (!bundle || !hydrated || !externalFrameParam) {
+      return;
+    }
+    if (externalFrameParam === handledUrlFrameRef.current) {
+      return;
+    }
+    const targetFrame = bundle.frames.find(
+      (frame) => frame.id === externalFrameParam
+    );
+    if (!targetFrame) {
+      return;
+    }
+    handledUrlFrameRef.current = targetFrame.id;
+    setActivePageId(targetFrame.pageId);
+    setSelectedFrameIds([targetFrame.id]);
+    setSelectedAnnotationIds([]);
+    setSelectedBlockKey(null);
+    const focused = computeFrameFocusCamera(targetFrame);
+    setCamera(focused);
+    camerasByPageRef.current[targetFrame.pageId] = focused;
+    initialFitDoneRef.current = `${bundle.board.id}:${targetFrame.pageId}`;
+    userMovedCameraRef.current = true;
+  }, [bundle, hydrated, externalFrameParam, computeFrameFocusCamera]);
 
   // Auto-open Root AI and queue the prompt entered in NewPrototypeModal, once.
   useEffect(() => {
@@ -194,9 +371,10 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     const initialPrompt = takeInitialPrototypePrompt(bundle.board.id);
     if (initialPrompt) {
       setActivePanel('ai');
+      writePrototypeAiUiState(boardId, {panelOpen: true});
       setQueuedPrompt({id: Date.now(), text: initialPrompt});
     }
-  }, [bundle, aiAvailable]);
+  }, [bundle, aiAvailable, boardId]);
 
   const activePage = useMemo(() => {
     const pages = bundle?.board.pages || [];
@@ -220,14 +398,6 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       ? [...saved, draftAnnotation]
       : saved;
   }, [bundle?.annotations, activePage.id, draftAnnotation]);
-
-  // Selecting a frame or block deselects any annotation (and vice versa, in
-  // `handleSelectAnnotation`).
-  useEffect(() => {
-    if (selectedFrameId) {
-      setSelectedAnnotationId(null);
-    }
-  }, [selectedFrameId]);
 
   const openCommentCount = useMemo(
     () =>
@@ -274,17 +444,20 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               }
         );
       }
-      setCamera(fitCameraToBounds(boxes, vw, vh, 96));
+      const fitted = fitCameraToBounds(boxes, vw, vh, 96);
+      camerasByPageRef.current[activePage.id] = fitted;
+      setCamera(fitted);
     },
-    [pageFrames, pageAnnotations]
+    [pageFrames, pageAnnotations, activePage.id]
   );
 
   const aiGenerating = aiAvailable && (aiStreaming || Boolean(queuedPrompt));
 
-  // Fit frames to viewport on initial board load, when switching pages, and as
-  // Root AI populates an initially empty page with side-by-side variants.
+  // Fit frames to viewport on initial board load (when no deeplink or saved
+  // tab camera applies), when switching to an unvisited page, and as Root AI
+  // populates an initially empty page with side-by-side variants.
   useEffect(() => {
-    if (!bundle || !activePage.id) {
+    if (!bundle || !hydrated || !activePage.id) {
       return;
     }
     const fitKey = `${bundle.board.id}:${activePage.id}`;
@@ -310,26 +483,110 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     }
   }, [
     bundle?.board.id,
+    hydrated,
     activePage.id,
     pageFrames,
     aiGenerating,
     fitActivePageToScreen,
   ]);
 
-  const handleSelectPage = useCallback((pageId: string) => {
-    setActivePageId(pageId);
-    setSelectedFrameId(null);
-    setSelectedBlockKey(null);
-    setSelectedAnnotationId(null);
-    setEditingAnnotationId(null);
-    setDraftAnnotation(null);
-    setPinPopover(null);
-    lastAutoFitCountRef.current = 0;
-    userMovedCameraRef.current = false;
+  // Sync `?page=` and `?frame=` query parameters to the URL bar.
+  useEffect(() => {
+    if (!bundle || !hydrated || typeof window === 'undefined') {
+      return;
+    }
+    handledUrlFrameRef.current = selectedFrameId;
     const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set('page', pageId);
-    window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
-  }, []);
+    nextUrl.searchParams.set('page', activePage.id);
+    if (selectedFrameId) {
+      nextUrl.searchParams.set('frame', selectedFrameId);
+    } else {
+      nextUrl.searchParams.delete('frame');
+    }
+    const nextHref = nextUrl.pathname + nextUrl.search + nextUrl.hash;
+    const curHref =
+      window.location.pathname + window.location.search + window.location.hash;
+    if (nextHref !== curHref) {
+      window.history.replaceState(null, '', nextHref);
+    }
+  }, [bundle, hydrated, activePage.id, selectedFrameId]);
+
+  // Persist tab-scoped camera (scroll/zoom), active page, URL frame, and side
+  // panel in `sessionStorage` so returning in the same tab or reloading keeps
+  // the user's exact viewport position.
+  const latestTabStateRef = useRef<PrototypeTabState | null>(null);
+  useEffect(() => {
+    if (!bundle || !hydrated) {
+      return;
+    }
+    camerasByPageRef.current[activePage.id] = camera;
+    const snapshot: PrototypeTabState = {
+      activePageId: activePage.id,
+      camerasByPage: {...camerasByPageRef.current},
+      urlFrameId: selectedFrameId,
+      activePanel,
+    };
+    latestTabStateRef.current = snapshot;
+    const rafId = window.requestAnimationFrame(() => {
+      if (latestTabStateRef.current) {
+        writePrototypeTabState(boardId, latestTabStateRef.current);
+      }
+    });
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [
+    bundle,
+    hydrated,
+    boardId,
+    activePage.id,
+    camera,
+    selectedFrameId,
+    activePanel,
+  ]);
+
+  useEffect(() => {
+    const flushTabState = () => {
+      if (latestTabStateRef.current) {
+        writePrototypeTabState(boardId, latestTabStateRef.current);
+      }
+    };
+    window.addEventListener('pagehide', flushTabState);
+    return () => {
+      window.removeEventListener('pagehide', flushTabState);
+      flushTabState();
+    };
+  }, [boardId]);
+
+  // Persist per-user Root AI open/closed panel preference on this board.
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    writePrototypeAiUiState(boardId, {panelOpen: activePanel === 'ai'});
+  }, [boardId, hydrated, activePanel]);
+
+  const handleSelectPage = useCallback(
+    (pageId: string) => {
+      setActivePageId(pageId);
+      setSelectedFrameIds([]);
+      setSelectedAnnotationIds([]);
+      setSelectedBlockKey(null);
+      setEditingAnnotationId(null);
+      setDraftAnnotation(null);
+      setPinPopover(null);
+      const savedPageCam = camerasByPageRef.current[pageId];
+      if (savedPageCam && bundle) {
+        setCamera(savedPageCam);
+        initialFitDoneRef.current = `${bundle.board.id}:${pageId}`;
+        userMovedCameraRef.current = true;
+      } else {
+        lastAutoFitCountRef.current = 0;
+        userMovedCameraRef.current = false;
+      }
+    },
+    [bundle]
+  );
 
   const handleOpenFramePreview = useCallback(
     (frameId: string) => {
@@ -339,8 +596,38 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     [boardId]
   );
 
+  const handleCopyFrameLink = useCallback(
+    async (frameId: string) => {
+      const frame = bundle?.frames.find((item) => item.id === frameId);
+      if (!frame) {
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.pathname = `/cms/prototypes/${boardId}`;
+      url.searchParams.set('page', frame.pageId);
+      url.searchParams.set('frame', frame.id);
+      url.searchParams.delete('prompt');
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        showNotification({
+          title: 'Link copied to clipboard',
+          message: `Share link for "${frame.title}".`,
+          color: 'green',
+        });
+      } catch (err) {
+        showNotification({
+          title: 'Could not copy link',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      }
+    },
+    [boardId, bundle?.frames]
+  );
+
   const handleEditFrameWithAi = useCallback((frameId: string) => {
-    setSelectedFrameId(frameId);
+    setSelectedFrameIds([frameId]);
+    setSelectedAnnotationIds([]);
     setSelectedBlockKey(null);
     setActivePanel('ai');
     setAiFocusKey((prev) => prev + 1);
@@ -352,27 +639,28 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     }
     try {
       const created = await createFrame({pageId: activePage.id});
-      setSelectedFrameId(created.id);
+      setSelectedFrameIds([created.id]);
+      setSelectedAnnotationIds([]);
       setSelectedBlockKey(null);
       // Pan camera smoothly to center on the newly created frame.
       const el = viewportElRef.current;
       const vw = el?.clientWidth || window.innerWidth || 1280;
       const vh = el?.clientHeight || window.innerHeight || 800;
-      setCamera(
-        fitCameraToBounds(
-          [
-            {
-              x: created.x,
-              y: created.y,
-              width: created.width,
-              height: created.cachedHeight || 760,
-            },
-          ],
-          vw,
-          vh,
-          96
-        )
+      const nextCam = fitCameraToBounds(
+        [
+          {
+            x: created.x,
+            y: created.y,
+            width: created.width,
+            height: created.cachedHeight || 760,
+          },
+        ],
+        vw,
+        vh,
+        96
       );
+      userMovedCameraRef.current = true;
+      setCamera(nextCam);
     } catch (err) {
       showNotification({
         title: 'Could not create frame',
@@ -383,11 +671,23 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
   }, [canEdit, bundle, createFrame, activePage.id]);
 
   const handleSelectAnnotation = useCallback((annotationId: string) => {
-    setSelectedAnnotationId(annotationId);
-    setSelectedFrameId(null);
+    setSelectedAnnotationIds([annotationId]);
+    setSelectedFrameIds([]);
     setSelectedBlockKey(null);
     setPinPopover(null);
   }, []);
+
+  const handleSelectGroup = useCallback(
+    (frameIds: string[], annotationIds: string[]) => {
+      setSelectedFrameIds(frameIds);
+      setSelectedAnnotationIds(annotationIds);
+      setSelectedBlockKey(null);
+      if (frameIds.length === 0 && annotationIds.length === 0) {
+        setPinPopover(null);
+      }
+    },
+    []
+  );
 
   const handleCreateAnnotation = useCallback(
     (kind: PrototypeAnnotationKind, worldX: number, worldY: number) => {
@@ -416,16 +716,24 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     [canEdit, boardId, activePage.id, currentUserEmail, handleSelectAnnotation]
   );
 
-  const handleDeleteAnnotation = useCallback(
-    (annotationId: string) => {
-      setSelectedAnnotationId((prev) => (prev === annotationId ? null : prev));
-      deleteAnnotation(annotationId).catch((err) => {
-        showNotification({
-          title: 'Could not delete annotation',
-          message: errorMessage(err),
-          color: 'red',
+  const handleDeleteAnnotations = useCallback(
+    (annotationIds: string[]) => {
+      if (annotationIds.length === 0) {
+        return;
+      }
+      const toDelete = new Set(annotationIds);
+      setSelectedAnnotationIds((prev) =>
+        prev.filter((id) => !toDelete.has(id))
+      );
+      for (const annotationId of annotationIds) {
+        deleteAnnotation(annotationId).catch((err) => {
+          showNotification({
+            title: 'Could not delete annotation',
+            message: errorMessage(err),
+            color: 'red',
+          });
         });
-      });
+      }
     },
     [deleteAnnotation]
   );
@@ -437,8 +745,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       if (draftAnnotation?.id === annotationId) {
         setDraftAnnotation(null);
         if (!trimmed) {
-          setSelectedAnnotationId((prev) =>
-            prev === annotationId ? null : prev
+          setSelectedAnnotationIds((prev) =>
+            prev.filter((id) => id !== annotationId)
           );
           return;
         }
@@ -452,7 +760,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         return;
       }
       if (!trimmed) {
-        handleDeleteAnnotation(annotationId);
+        handleDeleteAnnotations([annotationId]);
         return;
       }
       const existing = bundle?.annotations.find(
@@ -474,7 +782,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       draftAnnotation,
       createAnnotation,
       updateAnnotation,
-      handleDeleteAnnotation,
+      handleDeleteAnnotations,
     ]
   );
 
@@ -483,7 +791,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       setEditingAnnotationId((prev) => (prev === annotationId ? null : prev));
       if (draftAnnotation?.id === annotationId) {
         setDraftAnnotation(null);
-        setSelectedAnnotationId(null);
+        setSelectedAnnotationIds((prev) =>
+          prev.filter((id) => id !== annotationId)
+        );
       }
     },
     [draftAnnotation]
@@ -500,6 +810,25 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       });
     },
     [updateAnnotation]
+  );
+
+  const handleMoveItems = useCallback(
+    (
+      moves: {
+        frames?: Array<{id: string; x: number; y: number}>;
+        annotations?: Array<{id: string; x: number; y: number}>;
+      },
+      persist: boolean
+    ) => {
+      moveItems(moves, persist).catch((err) => {
+        showNotification({
+          title: 'Could not move selection',
+          message: errorMessage(err),
+          color: 'red',
+        });
+      });
+    },
+    [moveItems]
   );
 
   const handleZoomBy = useCallback((factor: number) => {
@@ -534,9 +863,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           setTool('select');
           return;
         }
-        setSelectedAnnotationId(null);
+        setSelectedAnnotationIds([]);
         setSelectedBlockKey(null);
-        setSelectedFrameId(null);
+        setSelectedFrameIds([]);
         return;
       }
       if (e.metaKey || e.ctrlKey || e.altKey) {
@@ -549,9 +878,13 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         // The editor is an input, so this never fires while editing text.
-        if (canEdit && selectedAnnotationId) {
+        if (
+          canEdit &&
+          selectedAnnotationIds.length > 0 &&
+          selectedFrameIds.length === 0
+        ) {
           e.preventDefault();
-          handleDeleteAnnotation(selectedAnnotationId);
+          handleDeleteAnnotations(selectedAnnotationIds);
         }
         return;
       }
@@ -579,9 +912,11 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         fitActivePageToScreen();
       } else if (key === '=' || key === '+') {
         e.preventDefault();
+        userMovedCameraRef.current = true;
         handleZoomBy(ZOOM_STEP_FACTOR);
       } else if (key === '-') {
         e.preventDefault();
+        userMovedCameraRef.current = true;
         handleZoomBy(1 / ZOOM_STEP_FACTOR);
       }
     }
@@ -609,8 +944,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     expandedFrameId,
     pinPopover,
     tool,
-    selectedAnnotationId,
-    handleDeleteAnnotation,
+    selectedAnnotationIds,
+    selectedFrameIds,
+    handleDeleteAnnotations,
     handleNewFrame,
     fitActivePageToScreen,
     handleZoomBy,
@@ -643,12 +979,22 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
       if (!bundle) {
         return;
       }
-      const chosenId = targetFrameId || selectedFrameId;
-      const chosenFrame = chosenId
-        ? pageFrames.find((frame) => frame.id === chosenId) ||
-          bundle.frames.find((frame) => frame.id === chosenId)
-        : null;
-      const framesToExport = chosenFrame ? [chosenFrame] : pageFrames;
+      let framesToExport: PrototypeFrame[] = [];
+      if (targetFrameId) {
+        const chosen =
+          pageFrames.find((frame) => frame.id === targetFrameId) ||
+          bundle.frames.find((frame) => frame.id === targetFrameId);
+        if (chosen) {
+          framesToExport = [chosen];
+        }
+      } else if (selectedFrameIds.length > 0) {
+        const selectedSet = new Set(selectedFrameIds);
+        framesToExport = pageFrames.filter((frame) =>
+          selectedSet.has(frame.id)
+        );
+      } else {
+        framesToExport = pageFrames;
+      }
       if (framesToExport.length === 0) {
         showNotification({
           title: 'Nothing to export',
@@ -681,7 +1027,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         setExporting(false);
       }
     },
-    [bundle, selectedFrameId, pageFrames, activePage.name]
+    [bundle, selectedFrameIds, pageFrames, activePage.name]
   );
 
   const handleNavigateToThread = useCallback(
@@ -710,7 +1056,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         : null;
 
       if (frame) {
-        setSelectedFrameId(frame.id);
+        setSelectedFrameIds([frame.id]);
+        setSelectedAnnotationIds([]);
         setSelectedBlockKey(thread.anchor.blockKey || null);
         const rects = blockRectsByFrameRef.current.get(frame.id) || [];
         const blockRect = thread.anchor.blockKey
@@ -816,6 +1163,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
     );
   }, [pinPopover?.threadId, bundle]);
 
+  const effectiveActivePanel =
+    activePanel === 'ai' && !aiAvailable ? null : activePanel;
+
   if (loading) {
     return (
       <Layout>
@@ -848,7 +1198,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           frames={bundle.frames}
           activePageId={activePage.id}
           openCommentCount={openCommentCount}
-          activePanel={activePanel}
+          activePanel={effectiveActivePanel}
           aiAvailable={aiAvailable}
           canEdit={canEdit}
           exporting={exporting}
@@ -913,6 +1263,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           tool={tool}
           spacePressed={spacePressed}
           selectedFrameId={selectedFrameId}
+          selectedFrameIds={selectedFrameIds}
           selectedBlockKey={selectedBlockKey}
           openThreads={openPageThreads}
           activeThreadId={pinPopover?.threadId || null}
@@ -920,15 +1271,17 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           currentUserEmail={currentUserEmail}
           aiAvailable={aiAvailable}
           aiGenerating={aiGenerating}
-          sidePanelOpen={activePanel !== null}
+          sidePanelOpen={effectiveActivePanel !== null}
           onViewportElement={(el) => {
             viewportElRef.current = el;
           }}
           annotations={pageAnnotations}
           selectedAnnotationId={selectedAnnotationId}
+          selectedAnnotationIds={selectedAnnotationIds}
           editingAnnotationId={editingAnnotationId}
           onCreateAnnotation={handleCreateAnnotation}
           onSelectAnnotation={handleSelectAnnotation}
+          onSelectGroup={handleSelectGroup}
           onEditAnnotation={(annotationId) => {
             handleSelectAnnotation(annotationId);
             setEditingAnnotationId(annotationId);
@@ -936,16 +1289,22 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           onCommitAnnotation={handleCommitAnnotation}
           onCancelAnnotationEdit={handleCancelAnnotationEdit}
           onDragAnnotation={handleDragAnnotation}
+          onMoveItems={handleMoveItems}
           onSelect={(frameId, blockKey) => {
-            setSelectedFrameId(frameId);
-            setSelectedBlockKey(blockKey);
-            setSelectedAnnotationId(null);
             if (!frameId) {
+              setSelectedFrameIds([]);
+              setSelectedAnnotationIds([]);
+              setSelectedBlockKey(null);
               setPinPopover(null);
+              return;
             }
+            setSelectedFrameIds([frameId]);
+            setSelectedAnnotationIds([]);
+            setSelectedBlockKey(blockKey);
           }}
           onExpandFrame={(frameId) => setExpandedFrameId(frameId)}
           onOpenPreview={handleOpenFramePreview}
+          onCopyFrameLink={handleCopyFrameLink}
           onEditFrameWithAi={handleEditFrameWithAi}
           onDragFramePosition={updateFramePosition}
           onDropCommentPin={(anchor, anchorLabel, clientX, clientY) => {
@@ -970,7 +1329,8 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
             duplicateFrame(frameId)
               .then((created) => {
                 if (created) {
-                  setSelectedFrameId(created.id);
+                  setSelectedFrameIds([created.id]);
+                  setSelectedAnnotationIds([]);
                   setSelectedBlockKey(null);
                 }
               })
@@ -994,6 +1354,9 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           onMoveFrameToPage={(frameId, targetPageId) => {
             moveFrameToPage(frameId, targetPageId)
               .then(() => {
+                setSelectedFrameIds((prev) =>
+                  prev.filter((id) => id !== frameId)
+                );
                 const targetPage = bundle.board.pages.find(
                   (page) => page.id === targetPageId
                 );
@@ -1023,8 +1386,10 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
           onDeleteFrame={(frameId) => {
             deleteFrame(frameId)
               .then(() => {
+                setSelectedFrameIds((prev) =>
+                  prev.filter((id) => id !== frameId)
+                );
                 if (selectedFrameId === frameId) {
-                  setSelectedFrameId(null);
                   setSelectedBlockKey(null);
                 }
                 if (expandedFrameId === frameId) {
@@ -1100,7 +1465,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         )}
 
         {/* Right-hand floating Comments card (or mobile Dialog sheet below md). */}
-        {activePanel === 'comments' && (
+        {effectiveActivePanel === 'comments' && (
           <PrototypeCommentsCard
             threads={bundle.comments}
             activePageId={activePage.id}
@@ -1120,7 +1485,7 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
         )}
 
         {/* Right-hand floating Root AI card (only one right panel open at a time). */}
-        {activePanel === 'ai' && aiAvailable && (
+        {effectiveActivePanel === 'ai' && aiAvailable && (
           <PrototypeAiCard
             bundle={bundle}
             activePageId={activePage.id}
@@ -1134,14 +1499,15 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
               if (kind === 'block') {
                 setSelectedBlockKey(null);
               } else {
-                setSelectedFrameId(null);
+                setSelectedFrameIds([]);
                 setSelectedBlockKey(null);
               }
             }}
             onFrameMutated={(frame) => {
               applyFrameMutated(frame);
               if (frame.pageId === activePage.id) {
-                setSelectedFrameId(frame.id);
+                setSelectedFrameIds([frame.id]);
+                setSelectedAnnotationIds([]);
               }
             }}
             onAnnotationMutated={applyAnnotationMutated}
@@ -1187,6 +1553,14 @@ export function PrototypeBoardPage(props: PrototypeBoardPageProps) {
                       {expandedFrame.title}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                      <IconButton
+                        size="xs"
+                        variant="subtle"
+                        label="Copy link to frame"
+                        onClick={() => handleCopyFrameLink(expandedFrame.id)}
+                      >
+                        <IconLink />
+                      </IconButton>
                       <IconButton
                         size="xs"
                         variant="subtle"

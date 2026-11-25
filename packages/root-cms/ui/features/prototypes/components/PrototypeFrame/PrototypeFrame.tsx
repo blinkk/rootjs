@@ -7,6 +7,7 @@ import {
   IconDotsVertical,
   IconExternalLink,
   IconFolderSymlink,
+  IconLink,
   IconPhoto,
   IconRobot,
   IconTrash,
@@ -188,6 +189,18 @@ export interface PrototypeFrameProps {
   onMoveFrameToPage: (frameId: string, pageId: string) => void;
   onExportFrame: (frameId: string) => void;
   onDeleteFrame: (frameId: string) => void;
+  /** Copies a deeplink URL targeting this frame to the clipboard. */
+  onCopyFrameLink?: (frameId: string) => void;
+  /** Whether this frame is currently part of a multi-item selection. */
+  isMultiSelected?: boolean;
+  /** Whether a canvas group drag including this frame is active. */
+  isDraggingGroup?: boolean;
+  /** Optional canvas-level pointer-down handler supporting Shift-select and group drag. */
+  onFramePointerDown?: (
+    e: PointerEvent,
+    part: 'header' | 'body',
+    blockKey: string | null
+  ) => void;
 }
 
 /**
@@ -220,6 +233,10 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     onMoveFrameToPage,
     onExportFrame,
     onDeleteFrame,
+    onCopyFrameLink,
+    isMultiSelected = false,
+    isDraggingGroup = false,
+    onFramePointerDown,
   } = props;
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -491,6 +508,10 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     if ((e.target as HTMLElement).closest('button, a, [role="menu"]')) {
       return;
     }
+    if (onFramePointerDown) {
+      onFramePointerDown(e, 'header', null);
+      return;
+    }
     e.stopPropagation();
     onSelect(frame.id, null);
     if (!canEdit) {
@@ -531,7 +552,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
   }
 
   function handleShieldPointerMove(e: PointerEvent) {
-    if (tool === 'pan') {
+    if (tool === 'pan' || isMultiSelected) {
       if (hoveredBlockKey) {
         setHoveredBlockKey(null);
       }
@@ -546,11 +567,11 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
     if (e.button !== 0 || tool === 'pan') {
       return;
     }
-    e.stopPropagation();
     const local = getLocalFrameCoords(e);
     const hit = findBlockAtPoint(local.x, local.y);
 
     if (tool === 'comment') {
+      e.stopPropagation();
       const hitBlock = hit ? blockMap.get(hit.blockKey) : null;
       const relX =
         hit && hit.width > 0
@@ -577,6 +598,12 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
       return;
     }
 
+    if (onFramePointerDown) {
+      onFramePointerDown(e, 'body', hit ? hit.blockKey : null);
+      return;
+    }
+
+    e.stopPropagation();
     onSelect(frame.id, hit ? hit.blockKey : null);
   }
 
@@ -628,7 +655,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
           'PrototypeFrame__header absolute bottom-full left-0 mb-2 flex items-center gap-1.5 pb-1',
           rightJustifyActions ? 'justify-between' : 'w-max',
           canEdit && tool !== 'pan' && 'cursor-grab',
-          dragging && 'cursor-grabbing'
+          (dragging || isDraggingGroup) && 'cursor-grabbing'
         )}
         style={{
           transform: `scale(${hudScale})`,
@@ -686,6 +713,14 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
             >
               Open preview in new tab
             </MenuItem>
+            {onCopyFrameLink && (
+              <MenuItem
+                icon={<IconLink />}
+                onClick={() => onCopyFrameLink(frame.id)}
+              >
+                Copy link to frame
+              </MenuItem>
+            )}
             {canEdit && (
               <>
                 <MenuDivider />
@@ -802,7 +837,11 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
                 ? 'cursor-crosshair'
                 : tool === 'pan'
                   ? 'pointer-events-none'
-                  : 'cursor-default'
+                  : isDraggingGroup
+                    ? 'cursor-grabbing'
+                    : isMultiSelected && canEdit
+                      ? 'cursor-grab'
+                      : 'cursor-default'
             )}
             onPointerMove={handleShieldPointerMove}
             onPointerLeave={() => setHoveredBlockKey(null)}
