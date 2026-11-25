@@ -140,22 +140,22 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     }
   }
 
-  const vitePlugins = [
-    preactToRootJsxPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
-    rootPodsVitePlugin(rootConfig),
-    ...(viteConfig.plugins || []),
-    ...getVitePlugins(rootPlugins),
-    pruneEmptyChunksPlugin(),
-  ];
-
-  const baseConfig: UserConfig = {
+  // Create a fresh base config per `viteBuild` pass so built-in plugins don't
+  // share mutable per-build state across passes.
+  const createBaseConfig = (): UserConfig => ({
     ...viteConfig,
     root: rootDir,
     mode: mode,
-    plugins: vitePlugins,
+    plugins: [
+      preactToRootJsxPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
+      rootPodsVitePlugin(rootConfig),
+      ...(viteConfig.plugins || []),
+      ...getVitePlugins(rootPlugins),
+      pruneEmptyChunksPlugin(),
+    ],
     // In quiet mode, only surface vite warnings and errors.
     logLevel: activeLogMode === 'quiet' ? 'warn' : viteConfig.logLevel,
-  };
+  });
 
   // Bundle the render.js file with vite along with any plugins `ssrInput()`
   // config values. These inputs are bundled through vite and support things
@@ -177,109 +177,122 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       noExternal.push(noExternalConfig as string | RegExp);
     }
   }
-  await viteBuild({
-    ...baseConfig,
-    publicDir: false,
-    build: {
-      ...viteConfig?.build,
-      rolldownOptions: {
-        ...viteConfig?.build?.rolldownOptions,
-        input: ssrInput,
-        output: {
-          format: 'esm',
-          chunkFileNames: 'chunks/[hash].min.js',
-          assetFileNames: 'assets/[hash][extname]',
-          sanitizeFileName: sanitizeFileName,
-        },
-      },
-      outDir: path.join(distDir, 'server'),
-      ssr: true,
-      ssrManifest: false,
-      cssCodeSplit: true,
-      target: 'esnext',
-      minify: false,
-      modulePreload: {polyfill: false},
-      reportCompressedSize: false,
-      sourcemap: 'inline',
-    },
-    ssr: {
-      ...viteConfig.ssr,
-      target: 'node',
-      noExternal: ['@blinkk/root', /^virtual:/, ...noExternal],
-    },
-  });
 
-  // Pre-render CSS deps from /routes/.
-  await viteBuild({
-    ...baseConfig,
-    publicDir: false,
-    build: {
-      ...viteConfig?.build,
-      rolldownOptions: {
-        ...viteConfig?.build?.rolldownOptions,
-        input: [...routeFiles],
-        output: {
-          format: 'esm',
-          entryFileNames: 'assets/[hash].min.js',
-          assetFileNames: 'assets/[hash][extname]',
-          chunkFileNames: 'chunks/[hash].min.js',
-          sanitizeFileName: sanitizeFileName,
-          ...viteConfig?.build?.rolldownOptions?.output,
-        },
-      },
-      outDir: path.join(distDir, '.build/routes'),
-      ssr: true,
-      ssrManifest: false,
-      ssrEmitAssets: true,
-      manifest: true,
-      cssCodeSplit: true,
-      target: 'esnext',
-      minify: true,
-      modulePreload: {polyfill: false},
-      reportCompressedSize: false,
-    },
-  });
-
-  // Pre-render /elements/ and /bundles/.
   const clientInput = [...elements, ...bundleScripts];
-  if (clientInput.length > 0) {
-    await viteBuild({
-      ...baseConfig,
-      publicDir: false,
-      build: {
-        ...viteConfig?.build,
-        rolldownOptions: {
-          ...viteConfig?.build?.rolldownOptions,
-          input: [...elements, ...bundleScripts],
-          output: {
-            format: 'esm',
-            entryFileNames: 'assets/[hash].min.js',
-            assetFileNames: 'assets/[hash][extname]',
-            chunkFileNames: 'chunks/[hash].min.js',
-            sanitizeFileName: sanitizeFileName,
-            ...viteConfig?.build?.rolldownOptions?.output,
-          },
-        },
-        outDir: path.join(distDir, '.build/client'),
-        ssr: false,
-        ssrManifest: false,
-        manifest: true,
-        cssCodeSplit: true,
-        target: 'esnext',
-        minify: true,
-        modulePreload: {polyfill: false},
-        reportCompressedSize: false,
-      },
-    });
-  } else {
-    await writeFile(
-      path.join(distDir, '.build/client/.vite/manifest.json'),
-      '{}'
-    );
-  }
 
-  // Bundle the root.config.ts file to dist/root.config.js.
-  await bundleRootConfig(rootDir, path.join(distDir, 'root.config.js'));
+  // Bundle `root.config.ts` via esbuild concurrently with the Vite builds.
+  // Keep the Vite 8 (Rolldown) builds sequential: Rolldown already saturates
+  // CPU cores via its Rayon thread pool, and running multiple `viteBuild()`
+  // calls concurrently in the same process causes thread/event-loop contention
+  // that makes the combined Vite phase slower than sequential execution.
+  await Promise.all([
+    bundleRootConfig(rootDir, path.join(distDir, 'root.config.js')),
+    (async () => {
+      await viteBuild({
+        ...createBaseConfig(),
+        publicDir: false,
+        build: {
+          ...viteConfig?.build,
+          rolldownOptions: {
+            ...viteConfig?.build?.rolldownOptions,
+            input: ssrInput,
+            output: {
+              format: 'esm',
+              chunkFileNames: 'chunks/[hash].min.js',
+              assetFileNames: 'assets/[hash][extname]',
+              sanitizeFileName: sanitizeFileName,
+            },
+          },
+          outDir: path.join(distDir, 'server'),
+          ssr: true,
+          ssrManifest: false,
+          cssCodeSplit: true,
+          target: 'esnext',
+          minify: false,
+          modulePreload: {polyfill: false},
+          reportCompressedSize: false,
+          sourcemap: viteConfig?.build?.sourcemap ?? true,
+        },
+        ssr: {
+          ...viteConfig.ssr,
+          target: 'node',
+          noExternal: ['@blinkk/root', /^virtual:/, ...noExternal],
+        },
+      });
+
+      // Pre-render CSS deps from /routes/. Route JS chunks are discarded after
+      // CSS extraction, so skip JS minification while keeping CSS minified.
+      await viteBuild({
+        ...createBaseConfig(),
+        publicDir: false,
+        build: {
+          ...viteConfig?.build,
+          rolldownOptions: {
+            ...viteConfig?.build?.rolldownOptions,
+            input: [...routeFiles],
+            output: {
+              format: 'esm',
+              entryFileNames: 'assets/[hash].min.js',
+              assetFileNames: 'assets/[hash][extname]',
+              chunkFileNames: 'chunks/[hash].min.js',
+              sanitizeFileName: sanitizeFileName,
+              ...viteConfig?.build?.rolldownOptions?.output,
+            },
+          },
+          outDir: path.join(distDir, '.build/routes'),
+          ssr: true,
+          ssrManifest: false,
+          ssrEmitAssets: true,
+          manifest: true,
+          cssCodeSplit: true,
+          target: 'esnext',
+          minify: false,
+          // Default to minified CSS, but respect a user-provided
+          // `vite.build.cssMinify` (e.g. `false` or `'esbuild'`).
+          cssMinify: viteConfig?.build?.cssMinify ?? true,
+          modulePreload: {polyfill: false},
+          reportCompressedSize: false,
+        },
+      });
+
+      // Pre-render /elements/ and /bundles/.
+      if (clientInput.length > 0) {
+        await viteBuild({
+          ...createBaseConfig(),
+          publicDir: false,
+          build: {
+            ...viteConfig?.build,
+            rolldownOptions: {
+              ...viteConfig?.build?.rolldownOptions,
+              input: [...elements, ...bundleScripts],
+              output: {
+                format: 'esm',
+                entryFileNames: 'assets/[hash].min.js',
+                assetFileNames: 'assets/[hash][extname]',
+                chunkFileNames: 'chunks/[hash].min.js',
+                sanitizeFileName: sanitizeFileName,
+                ...viteConfig?.build?.rolldownOptions?.output,
+              },
+            },
+            outDir: path.join(distDir, '.build/client'),
+            ssr: false,
+            ssrManifest: false,
+            manifest: true,
+            cssCodeSplit: true,
+            target: 'esnext',
+            minify: true,
+            modulePreload: {polyfill: false},
+            reportCompressedSize: false,
+          },
+        });
+      } else {
+        await writeFile(
+          path.join(distDir, '.build/client/.vite/manifest.json'),
+          '{}'
+        );
+      }
+    })(),
+  ]);
 
   // Copy CSS files from `dist/.build/routes/**/*.css` to
   // `dist/.build/client/` and flatten the routes manifest to ignore any

@@ -358,8 +358,8 @@ export class SearchIndexService {
 
   /**
    * Default schema loader: reads `dist/collections/<id>.schema.json`. These
-   * files are produced by the CMS plugin's `preBuild` hook during a real
-   * `root build`. In dev there is no JSON file on disk, so callers should
+   * files are emitted by the CMS plugin during the `root build` server bundle
+   * step. In dev there is no JSON file on disk, so callers should
    * pass a dev-aware `loadSchema` callback to the constructor (the API
    * endpoints do this — they delegate to the same Vite SSR path used by
    * `/cms/api/collection.get`).

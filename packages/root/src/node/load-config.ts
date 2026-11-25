@@ -65,8 +65,7 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
     minify: true,
     platform: 'node',
     outfile: outPath,
-    sourcemap: 'inline',
-    metafile: true,
+    sourcemap: true,
     format: 'esm',
     plugins: [esbuildExternalsPlugin({rootDir})],
   });
