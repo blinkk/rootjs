@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import glob from 'tiny-glob';
 import type {Plugin as VitePlugin} from 'vite';
@@ -213,18 +214,57 @@ async function buildSchemasModule(
   ].join('\n');
 }
 
-async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
-  const excludeDirs = ['appengine', 'functions', 'gae', 'node_modules', 'dist'];
-  let files: string[];
-  try {
-    files = await glob('**/*.schema.ts', {cwd: rootDir});
-  } catch {
-    return [];
+const ROOT_SCHEMA_EXCLUDE_DIRS = new Set([
+  'appengine',
+  'collections',
+  'dist',
+  'functions',
+  'gae',
+  'node_modules',
+]);
+
+/**
+ * Recursively scans a Root.js project directory for `*.schema.ts` files,
+ * pruning excluded and hidden directories before descending into them.
+ */
+export async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
+  const results: string[] = [];
+
+  async function walk(dir: string, relDir: string): Promise<void> {
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(dir, {withFileTypes: true});
+    } catch {
+      return;
+    }
+    const subdirs: Array<{fullPath: string; relPath: string}> = [];
+    for (const entry of entries) {
+      const name = entry.name;
+      // Skip hidden files and directories (matching tiny-glob's default).
+      if (name.startsWith('.')) {
+        continue;
+      }
+      const relPath = relDir ? `${relDir}/${name}` : name;
+      if (entry.isDirectory()) {
+        if (
+          (!relDir && ROOT_SCHEMA_EXCLUDE_DIRS.has(name)) ||
+          name === 'node_modules'
+        ) {
+          continue;
+        }
+        subdirs.push({fullPath: path.join(dir, name), relPath});
+      } else if (name.endsWith('.schema.ts')) {
+        results.push(relPath);
+      }
+    }
+    if (subdirs.length > 0) {
+      await Promise.all(subdirs.map((sub) => walk(sub.fullPath, sub.relPath)));
+    }
   }
-  return files.filter((file) => {
-    const normalized = file.replace(/\\/g, '/');
-    return !excludeDirs.some((dir) => normalized.startsWith(dir + '/'));
-  });
+
+  await walk(rootDir, '');
+  results.sort();
+  return results;
 }
 
 async function buildTranslationsModule(
