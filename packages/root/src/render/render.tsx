@@ -44,7 +44,7 @@ import {AssetMap} from './asset-map/asset-map.js';
 import {collectStyleDeps} from './asset-map/collect-style-deps.js';
 import {transformHtml} from './html-transform.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
-import {normalizeUrlPath, Router} from './router.js';
+import {normalizeUrlPath, Router, StaticPathsCache} from './router.js';
 
 const CONTENT_TYPES: Record<string, string> = {
   html: 'text/html',
@@ -386,7 +386,7 @@ export class Renderer {
     route: Route,
     options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
-    const routeParams = options.routeParams;
+    const routeParams = {...options.routeParams};
     if (route.locale) {
       routeParams.$locale = route.locale;
     }
@@ -631,8 +631,12 @@ export class Renderer {
     > = {};
     const trailingSlash = this.rootConfig.server?.trailingSlash || false;
 
+    const staticPathsCache: StaticPathsCache = new Map();
+
     await this.router.walk(async (urlPath: string, route: Route) => {
-      const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
+      const routePaths = await this.router.getAllPathsForRoute(urlPath, route, {
+        staticPathsCache,
+      });
       routePaths.forEach((routePath) => {
         const routeLocale = route.isDefaultLocale ? 'x-default' : route.locale;
         const hrefLang = route.isDefaultLocale

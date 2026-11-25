@@ -1,6 +1,8 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {assert, beforeEach, test, expect, afterEach} from 'vitest';
+import {assert, beforeEach, test, expect, afterEach, vi} from 'vitest';
+import type {Route, RouteModule} from '../src/core/types.js';
+import type {StaticPathsCache} from '../src/render/router.js';
 import {fileExists} from '../src/utils/fsutils.js';
 import {Fixture, loadFixture} from './testutils.js';
 
@@ -278,4 +280,122 @@ test('build sitemap project', async () => {
     </url>
     </urlset>"
   `);
+});
+
+test('deduplicates getStaticPaths across locales, isolates params under concurrent renderRoute, and evicts rejected cache entries', async () => {
+  const getStaticPaths = vi.fn(async () => ({
+    paths: [{params: {slug: 'hello'}}],
+  }));
+  const observedLocales: Array<{before: string; after: string}> = [];
+  const routeModule: RouteModule = {
+    default: ((props: any) => props.locale) as any,
+    getStaticPaths,
+    getStaticProps: async ({params}) => {
+      const before = params.$locale;
+      // Yield so concurrent renders interleave before reading `$locale` again.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const after = params.$locale;
+      observedLocales.push({before, after});
+      return {props: {locale: after}, locale: after};
+    },
+  };
+
+  vi.resetModules();
+  vi.doMock('virtual:root/routes', () => ({
+    ROUTE_MODULES: {'/routes/blog/[slug].tsx': routeModule},
+    POD_ROUTE_MODULES: {},
+  }));
+  try {
+    const {Renderer} = await import('../src/render/render.js');
+    const {Router} = await import('../src/render/router.js');
+
+    const rootConfig: any = {
+      rootDir: '/test',
+      i18n: {
+        locales: ['en', 'de', 'fr'],
+        defaultLocale: 'en',
+        urlFormat: '/[locale]/[base]/[path]',
+      },
+    };
+
+    const renderer = new Renderer(rootConfig, {
+      assetMap: {get: async () => undefined} as any,
+      elementGraph: {sourceFiles: {}} as any,
+    });
+    const sitemap = await renderer.getSitemap();
+
+    // `getStaticPaths()` is called once across x-default + 3 locales.
+    expect(getStaticPaths).toHaveBeenCalledTimes(1);
+
+    const items = Object.values(sitemap);
+    expect(items).toHaveLength(4);
+    // Every localized SitemapItem has its own isolated `params` object.
+    const uniqueParams = new Set(items.map((item) => item.params));
+    expect(uniqueParams.size).toBe(4);
+
+    // Concurrent `renderRoute()` calls do not clobber each other's `$locale`
+    // or mutate `SitemapItem.params`.
+    const rendered = await Promise.all(
+      items.map((item) =>
+        renderer.renderRoute(item.route, {routeParams: item.params})
+      )
+    );
+    expect(rendered).toHaveLength(4);
+    for (const entry of observedLocales) {
+      expect(entry.before).toBe(entry.after);
+    }
+    expect(observedLocales.map((e) => e.after).sort()).toEqual([
+      'de',
+      'en',
+      'en',
+      'fr',
+    ]);
+    for (const item of items) {
+      expect(item.params.$locale).toBeUndefined();
+    }
+
+    // Rejected `getStaticPaths()` promises are evicted from `StaticPathsCache`.
+    let attempts = 0;
+    const flakyModule: RouteModule = {
+      default: (() => null) as any,
+      getStaticPaths: async () => {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error('transient error');
+        }
+        return {paths: [{params: {slug: 'recovered'}}]};
+      },
+    };
+    const flakyRoute: Route = {
+      src: 'routes/blog/[slug].tsx',
+      module: flakyModule,
+      locale: 'en',
+      isDefaultLocale: true,
+      routePath: '/blog/[slug]',
+      localeRoutePath: '/[locale]/blog/[slug]',
+    };
+    const router = new Router(rootConfig);
+    const cache: StaticPathsCache = new Map();
+    await expect(
+      router.getAllPathsForRoute('/blog/[slug]', flakyRoute, {
+        staticPathsCache: cache,
+      })
+    ).rejects.toThrow('transient error');
+    // Wait a microtask for the `.catch()` eviction handler to run.
+    await Promise.resolve();
+    expect(cache.has(flakyModule)).toBe(false);
+
+    const recovered = await router.getAllPathsForRoute(
+      '/blog/[slug]',
+      flakyRoute,
+      {staticPathsCache: cache}
+    );
+    expect(recovered).toEqual([
+      {urlPath: '/blog/recovered', params: {slug: 'recovered'}},
+    ]);
+    expect(attempts).toBe(2);
+  } finally {
+    vi.doUnmock('virtual:root/routes');
+    vi.resetModules();
+  }
 });
