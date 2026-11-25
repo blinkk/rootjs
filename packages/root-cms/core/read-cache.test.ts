@@ -213,6 +213,42 @@ describe('FileSystemReadCacheStore', () => {
     }
   });
 
+  it('does not stall when caches miss overlapping keys', async () => {
+    const dir = tmpDir();
+    try {
+      for (let round = 0; round < 20; round++) {
+        const keys = ['a', 'b', 'c', 'd'].map((key) => `${key}${round}`);
+        const fetchMany = vi.fn(async (uncached: string[]) => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return uncached;
+        });
+        // Each cache (and store) simulates a separate worker thread.
+        const caches = Array.from(
+          {length: 4},
+          () =>
+            new ReadCache({
+              store: new FileSystemReadCacheStore({dir, lockTimeout: 5000}),
+            })
+        );
+        const start = Date.now();
+        const values = await Promise.all(
+          caches.map((cache, i) =>
+            cache.getMany(i % 2 ? keys : [...keys].reverse(), fetchMany)
+          )
+        );
+        // A cache that claims one key never waits (until the lock timeout)
+        // for a cache that claimed another key and is waiting on the first.
+        expect(Date.now() - start).toBeLessThan(2500);
+        expect(fetchMany.mock.calls.flat(2).sort()).toEqual(keys);
+        values.forEach((value, i) => {
+          expect(value).toEqual(i % 2 ? keys : [...keys].reverse());
+        });
+      }
+    } finally {
+      await new FileSystemReadCacheStore({dir}).clear();
+    }
+  });
+
   it('memoizes directory creation until clear() is called', async () => {
     const dir = tmpDir();
     const mkdirSpy = vi.spyOn(fs, 'mkdir');

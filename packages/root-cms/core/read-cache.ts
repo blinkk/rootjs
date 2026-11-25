@@ -33,6 +33,12 @@ export interface ReadCacheStoreEntry {
 export interface ReadCacheStore {
   /** Returns the entry for `key`, or `undefined` if it isn't stored. */
   get(key: string): Promise<ReadCacheStoreEntry | undefined>;
+  /**
+   * Returns the entries for `keys`, in order. Optional, for stores that
+   * coordinate concurrent misses (e.g. with locks) and need to see the keys
+   * of a read together. Defaults to calling `get()` for each key.
+   */
+  getMany?(keys: string[]): Promise<Array<ReadCacheStoreEntry | undefined>>;
   /** Stores the entry for `key`. */
   set(key: string, entry: ReadCacheStoreEntry): Promise<void>;
   /** Removes the entry for `key`, e.g. when a fetch fails. */
@@ -221,9 +227,11 @@ export class ReadCache {
     let remaining = misses;
     try {
       if (store) {
-        const stored = await Promise.all(
-          misses.map((read) => store.get(read.key).catch(() => undefined))
-        );
+        const stored = store.getMany
+          ? await store.getMany(misses.map((read) => read.key)).catch(() => [])
+          : await Promise.all(
+              misses.map((read) => store.get(read.key).catch(() => undefined))
+            );
         const now = Date.now();
         remaining = [];
         misses.forEach((read, i) => {

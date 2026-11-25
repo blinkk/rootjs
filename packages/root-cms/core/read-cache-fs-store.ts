@@ -96,9 +96,49 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   }
 
   async get(key: string): Promise<ReadCacheStoreEntry | undefined> {
+    return this.getUntil(key, Date.now() + this.lockTimeout);
+  }
+
+  /**
+   * Like `get()`, but for multiple keys. Missing keys are claimed one at a
+   * time in sorted order, so that two processes that miss overlapping keys
+   * can't each claim one and then wait on the other until `lockTimeout`.
+   */
+  async getMany(
+    keys: string[]
+  ): Promise<Array<ReadCacheStoreEntry | undefined>> {
+    const deadline = Date.now() + this.lockTimeout;
+    const gen = this.generation;
+    const now = Date.now();
+    const results = new Map<string, ReadCacheStoreEntry | undefined>();
+    const uniqueKeys = Array.from(new Set(keys));
+    const entries = await Promise.all(
+      uniqueKeys.map((key) => readEntry(this.filePath(key)))
+    );
+    const misses: string[] = [];
+    uniqueKeys.forEach((key, i) => {
+      const entry = entries[i];
+      if (entry && entry.expiresAt > now && this.generation === gen) {
+        results.set(key, entry);
+      } else {
+        misses.push(key);
+      }
+    });
+    for (const key of misses.sort()) {
+      results.set(
+        key,
+        await this.getUntil(key, deadline).catch(() => undefined)
+      );
+    }
+    return keys.map((key) => results.get(key));
+  }
+
+  private async getUntil(
+    key: string,
+    deadline: number
+  ): Promise<ReadCacheStoreEntry | undefined> {
     const filePath = this.filePath(key);
     const lockPath = `${filePath}.lock`;
-    const deadline = Date.now() + this.lockTimeout;
     const gen = this.generation;
     for (;;) {
       if (this.generation !== gen) {
@@ -126,6 +166,14 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
           await fs.writeFile(lockPath, '', {flag: 'wx'});
           if (this.generation !== gen) {
             await fs.rm(lockPath, {force: true});
+            return undefined;
+          }
+          // Another process may have stored the key (and released its lock)
+          // between the read above and the claim.
+          const stored = await readEntry(filePath);
+          if (stored && stored.expiresAt > Date.now()) {
+            await fs.rm(lockPath, {force: true});
+            return this.generation === gen ? stored : undefined;
           }
           return undefined;
         } catch (err: any) {
