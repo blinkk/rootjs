@@ -3,12 +3,12 @@ import './Layout.css';
 import {
   IconAlertTriangle,
   IconCarrot,
+  IconCircleSquare,
   IconClipboardList,
   IconDatabase,
   IconFolder,
   IconHome,
   IconLanguage,
-  IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
@@ -432,7 +432,7 @@ Layout.NavLinks = (props: {expanded: boolean}) => {
             }
             expanded={expanded}
           >
-            <IconLayoutDashboard stroke={ICON_STROKE} />
+            <IconCircleSquare stroke={ICON_STROKE} />
           </Layout.SideButton>
         )}
 
