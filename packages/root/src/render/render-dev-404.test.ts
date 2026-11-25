@@ -94,4 +94,43 @@ describe('renderDevServer404', () => {
     expect(html).toContain('=>  /about\n');
     expect(html).toContain('=>  /blog/[slug]\n');
   });
+
+  test('lists unloaded lazy routes without invoking loadModule', async () => {
+    const loadModuleSpy = vi.fn(async () => ({default: DummyPage}));
+    const rootConfig = {
+      rootDir: '/tmp/test-project',
+    } as RootConfig;
+
+    const renderer = new Renderer(rootConfig, {
+      assetMap: {} as AssetMap,
+      elementGraph: {} as ElementGraph,
+    });
+
+    // Simulate an unloaded lazy route (`module: {}` with a `loadModule` loader).
+    (
+      renderer as unknown as {
+        router: {routeTrie: {add: (path: string, route: unknown) => void}};
+      }
+    ).router.routeTrie.add('/lazy/[id]', {
+      src: 'routes/lazy/[id].tsx',
+      module: {},
+      loadModule: loadModuleSpy,
+      locale: 'en',
+      isDefaultLocale: true,
+      routePath: '/lazy/[id]',
+      localeRoutePath: '/[locale]/lazy/[id]',
+    });
+
+    const req = {
+      originalUrl: '/missing-lazy',
+      path: '/missing-lazy',
+    } as Request;
+
+    const {html} = await renderer.renderDevServer404(req);
+
+    expect(loadModuleSpy).not.toHaveBeenCalled();
+    expect(html).toContain('routes/lazy/[id].tsx');
+    expect(html).toContain('/lazy/[id]/');
+    expect(html).not.toContain('routes/helper.ts');
+  });
 });

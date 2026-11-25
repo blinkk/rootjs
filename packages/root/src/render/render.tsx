@@ -855,10 +855,16 @@ export class Renderer {
     // Walk registered route patterns directly instead of calling `getSitemap()`
     // so rendering a dev 404 page does not execute `getStaticPaths()` queries.
     await this.router.walk((urlPath: string, route: Route) => {
+      const routeModule = route.module;
+      // Treat unloaded lazy routes as routable without invoking `loadModule()`.
+      const isUnloadedLazyRoute =
+        typeof (route as {loadModule?: unknown}).loadModule === 'function' &&
+        (!routeModule || Object.keys(routeModule).length === 0);
       if (
-        !route.module.default &&
-        !route.module.getStaticContent &&
-        !route.module.handle
+        !isUnloadedLazyRoute &&
+        !routeModule?.default &&
+        !routeModule?.getStaticContent &&
+        !routeModule?.handle
       ) {
         return;
       }
