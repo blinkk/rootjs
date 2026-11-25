@@ -131,7 +131,10 @@ class BuildWorker {
       this.failAll(err);
     });
     this.worker.on('exit', (code) => {
-      if (code !== 0 && !this.isTerminating) {
+      // Any exit before `terminate()` is unexpected, including a clean exit
+      // (e.g. site code calling `process.exit(0)`), and would otherwise leave
+      // the worker's in-flight pages unresolved.
+      if (!this.isTerminating) {
         const err = new Error(`build worker exited with code ${code}`);
         onFailed(err);
         this.failAll(err);
