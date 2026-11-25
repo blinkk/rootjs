@@ -21,18 +21,30 @@ export function useI18nContext() {
   return context;
 }
 
-export function getTranslations(locale: string): Record<string, string> {
-  const translations: Record<string, Record<string, string>> = {};
+let cachedTranslationsByLocale: Record<string, Record<string, string>> | null =
+  null;
+
+function getTranslationsByLocale(): Record<string, Record<string, string>> {
+  if (cachedTranslationsByLocale) {
+    return cachedTranslationsByLocale;
+  }
+  const translations: Record<string, Record<string, string>> = Object.create(
+    null
+  );
   const translationsFiles = import.meta.glob(['/translations/*.json'], {
     eager: true,
   }) as Record<string, {default?: Record<string, string>}>;
-  Object.keys(translationsFiles).forEach((translationPath) => {
+  for (const translationPath of Object.keys(translationsFiles)) {
     const parts = path.parse(translationPath);
-    const locale = parts.name;
     const module = translationsFiles[translationPath];
     if (module && module.default) {
-      translations[locale] = module.default;
+      translations[parts.name] = module.default;
     }
-  });
-  return translations[locale] || {};
+  }
+  cachedTranslationsByLocale = translations;
+  return translations;
+}
+
+export function getTranslations(locale: string): Record<string, string> {
+  return getTranslationsByLocale()[locale] || {};
 }

@@ -5044,39 +5044,57 @@ export class BatchResponse {
       ? locale
       : resolveLocaleFallbacks(this.i18nConfig, locale);
 
-    // Merge the strings from all of the translations docs. The docs are
-    // merged in precedence order (generic translations first, doc-specific
-    // translations last) so that later docs override earlier ones.
-    const merged: Record<
+    const translationDocGroups = Object.values(this.translations);
+    if (translationDocGroups.length === 0) {
+      return {};
+    }
+
+    // Merge strings keyed by hash in first-seen doc order so legacy/imported
+    // docs sharing a normalized hash preserve the first-seen source string and
+    // key order. Tracking the best fallback rank per hash avoids allocating a
+    // nested per-locale map for every string while preserving exact fallback
+    // priority and later-doc override semantics.
+    const byHash = new Map<
       string,
-      {source: string; translations: Record<string, string>}
-    > = {};
-    for (const localeDocs of Object.values(this.translations)) {
-      for (const localeDoc of Object.values(localeDocs)) {
-        const strings = localeDoc.strings || {};
+      {source: string; bestRank: number; translation: string}
+    >();
+    for (let g = 0; g < translationDocGroups.length; g++) {
+      const localeDocs = translationDocGroups[g];
+      for (const localeKey in localeDocs) {
+        const localeDoc = localeDocs[localeKey];
+        const strings = localeDoc?.strings;
+        if (!strings) {
+          continue;
+        }
+        const rank = fallbackLocales.indexOf(localeDoc.locale);
         for (const hash in strings) {
           const entry = strings[hash];
-          merged[hash] ??= {source: entry.source, translations: {}};
-          if (entry.translation) {
-            merged[hash].translations[localeDoc.locale] = entry.translation;
+          const item = byHash.get(hash);
+          if (!item) {
+            const hasMatch = rank !== -1 && Boolean(entry.translation);
+            byHash.set(hash, {
+              source: entry.source,
+              bestRank: hasMatch ? rank : Infinity,
+              translation: hasMatch ? entry.translation : entry.source,
+            });
+          } else if (
+            rank !== -1 &&
+            entry.translation &&
+            rank <= item.bestRank
+          ) {
+            item.bestRank = rank;
+            item.translation = entry.translation;
           }
         }
       }
     }
 
-    // For each string, pick the first locale in the fallback chain with a
-    // non-empty translation, falling back to the source string.
-    const localeTranslations: LocaleTranslations = {};
-    for (const item of Object.values(merged)) {
-      let translation = item.source;
-      for (const fallbackLocale of fallbackLocales) {
-        if (item.translations[fallbackLocale]) {
-          translation = item.translations[fallbackLocale];
-          break;
-        }
-      }
-      localeTranslations[item.source] = translation;
+    // Convert via a Map + `Object.fromEntries()` so keys like `__proto__`,
+    // `constructor`, and `toString` are defined as own properties safely.
+    const entries = new Map<string, string>();
+    for (const item of byHash.values()) {
+      entries.set(item.source, item.translation);
     }
-    return localeTranslations;
+    return Object.fromEntries(entries);
   }
 }

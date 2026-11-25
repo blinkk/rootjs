@@ -58,3 +58,178 @@ describe('BatchResponse getters', () => {
     expect(res.getDataSource('missing')).toBeNull();
   });
 });
+
+describe('BatchResponse.getTranslations', () => {
+  it('returns an empty object when no translations exist', () => {
+    const res = new BatchResponse();
+    expect(res.getTranslations(['fr-CA', 'fr', 'en'])).toEqual({});
+  });
+
+  it('resolves fallback locales, doc precedence, and source fallbacks', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      common: {
+        'fr-CA': {
+          id: 'common',
+          locale: 'fr-CA',
+          strings: {
+            h1: {source: 'Hello', translation: 'Allô (common)'},
+            h2: {source: 'Goodbye', translation: ''},
+            h3: {source: 'Title', translation: 'Titre CA (common)'},
+          },
+        },
+        fr: {
+          id: 'common',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Hello', translation: 'Bonjour (common)'},
+            h2: {source: 'Goodbye', translation: 'Au revoir (common)'},
+            h3: {source: 'Title', translation: 'Titre FR (common)'},
+            h4: {source: 'Untranslated', translation: ''},
+          },
+        },
+        de: {
+          id: 'common',
+          locale: 'de',
+          strings: {
+            h5: {source: 'German only', translation: 'Nur Deutsch'},
+          },
+        },
+      },
+      'Pages/home': {
+        'fr-CA': {
+          id: 'Pages/home',
+          locale: 'fr-CA',
+          strings: {
+            // Empty translation in later doc must not clobber earlier doc.
+            h1: {source: 'Hello', translation: ''},
+            // Non-empty translation in later doc overrides earlier doc.
+            h3: {source: 'Title', translation: 'Titre CA (home)'},
+          },
+        },
+        fr: {
+          id: 'Pages/home',
+          locale: 'fr',
+          strings: {
+            // Lower-priority locale in later doc must not beat higher-priority
+            // locale (`fr-CA`) from earlier doc.
+            h1: {source: 'Hello', translation: 'Salut (home)'},
+            h2: {source: 'Goodbye', translation: 'À bientôt (home)'},
+          },
+        },
+      },
+    };
+
+    expect(res.getTranslations(['fr-CA', 'fr', 'en'])).toEqual({
+      Hello: 'Allô (common)',
+      Goodbye: 'À bientôt (home)',
+      Title: 'Titre CA (home)',
+      Untranslated: 'Untranslated',
+      'German only': 'German only',
+    });
+  });
+
+  it('expands a single locale via i18nConfig fallbacks', () => {
+    const res = new BatchResponse({
+      locales: ['en', 'fr', 'fr-CA'],
+      fallbacks: {'fr-CA': ['fr', 'en']},
+    });
+    res.translations = {
+      common: {
+        fr: {
+          id: 'common',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Save', translation: 'Enregistrer'},
+          },
+        },
+      },
+    };
+    expect(res.getTranslations('fr-CA')).toEqual({Save: 'Enregistrer'});
+  });
+
+  it('handles Object.prototype and __proto__ source strings safely', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      common: {
+        fr: {
+          id: 'common',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'constructor', translation: ''},
+            h2: {source: 'toString', translation: 'enChaîne'},
+            h3: {source: '__proto__', translation: 'proto-fr'},
+          },
+        },
+        de: {
+          id: 'common',
+          locale: 'de',
+          strings: {
+            h4: {source: 'valueOf', translation: 'WertVon'},
+          },
+        },
+      },
+    };
+    const result = res.getTranslations(['fr']);
+    expect(Object.hasOwn(result, 'constructor')).toBe(true);
+    expect(result.constructor).toBe('constructor');
+    expect(Object.hasOwn(result, 'toString')).toBe(true);
+    expect(result.toString).toBe('enChaîne');
+    expect(Object.hasOwn(result, '__proto__')).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(result, '__proto__')?.value).toBe(
+      'proto-fr'
+    );
+    expect(Object.hasOwn(result, 'valueOf')).toBe(true);
+    expect(result.valueOf).toBe('valueOf');
+  });
+
+  it('preserves first-seen source when docs share a hash with whitespace variants', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      generic: {
+        en: {
+          id: 'generic',
+          locale: 'en',
+          strings: {
+            h1: {source: 'Hello', translation: 'Hello'},
+          },
+        },
+      },
+      'Pages/a': {
+        fr: {
+          id: 'Pages/a',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Hello ', translation: 'Bonjour'},
+          },
+        },
+      },
+    };
+    expect(res.getTranslations(['fr', 'en'])).toEqual({Hello: 'Bonjour'});
+  });
+
+  it('does not let a fallback locale in a tagged doc clobber a target locale from generic', () => {
+    const res = new BatchResponse();
+    res.translations = {
+      generic: {
+        fr: {
+          id: 'generic',
+          locale: 'fr',
+          strings: {
+            h1: {source: 'Hello', translation: 'Salut'},
+          },
+        },
+      },
+      'Pages/a': {
+        en: {
+          id: 'Pages/a',
+          locale: 'en',
+          strings: {
+            h1: {source: 'Hello', translation: 'Hi'},
+          },
+        },
+      },
+    };
+    expect(res.getTranslations(['fr', 'en'])).toEqual({Hello: 'Salut'});
+  });
+});
