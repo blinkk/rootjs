@@ -8,18 +8,17 @@ export function isJsFile(filename: string) {
   return !!filename.match(/\.(j|t)sx?$/);
 }
 
-export async function writeFile(filepath: string, content: string) {
+export async function writeFile(
+  filepath: string,
+  content: string | Uint8Array
+) {
   const dirPath = path.dirname(filepath);
   await makeDir(dirPath);
   await fs.promises.writeFile(filepath, content);
 }
 
 export async function makeDir(dirpath: string) {
-  try {
-    await fs.promises.access(dirpath);
-  } catch {
-    await fs.promises.mkdir(dirpath, {recursive: true});
-  }
+  await fs.promises.mkdir(dirpath, {recursive: true});
 }
 
 export async function copyDir(srcdir: string, dstdir: string) {
@@ -43,13 +42,15 @@ export async function copyGlob(
   srcdir: string,
   dstdir: string
 ) {
-  const files = await glob(pattern, {cwd: srcdir});
+  const files = await glob(pattern, {cwd: srcdir, filesOnly: true});
   if (files.length > 0) {
     await makeDir(dstdir);
   }
-  files.forEach((file) => {
-    fsExtra.copySync(path.resolve(srcdir, file), path.resolve(dstdir, file));
-  });
+  await Promise.all(
+    files.map((file) =>
+      fsExtra.copy(path.resolve(srcdir, file), path.resolve(dstdir, file))
+    )
+  );
 }
 
 export async function rmDir(dirpath: string) {

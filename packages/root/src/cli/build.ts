@@ -363,8 +363,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Recursively copy files from `public` to `dist/html`.
   const publicDir = path.join(rootDir, 'public');
-  if (fsExtra.existsSync(path.join(rootDir, 'public'))) {
-    fsExtra.copySync(publicDir, buildDir, {dereference: true});
+  if (await fileExists(publicDir)) {
+    await fsExtra.copy(publicDir, buildDir, {dereference: true});
   } else {
     await makeDir(buildDir);
   }
@@ -498,10 +498,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       if (!result.staticContent) {
         addSitemapXmlItem(result.urlPath, sitemapItem, result.outFilePath);
       }
-      progress.add(
-        result.outFilePath,
-        fileSizeBytes(path.join(buildDir, result.outFilePath))
-      );
+      const sizeBytes =
+        result.sizeBytes ??
+        fileSizeBytes(path.join(buildDir, result.outFilePath));
+      progress.add(result.outFilePath, sizeBytes);
     };
 
     // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in

@@ -3,7 +3,7 @@ import path from 'node:path';
 import {RootConfig} from '../core/config.js';
 import {Route} from '../core/types.js';
 import {transformHtml} from '../render/html-transform.js';
-import {makeDir, writeFile} from '../utils/fsutils.js';
+import {writeFile} from '../utils/fsutils.js';
 
 type Renderer = import('../render/render.js').Renderer;
 
@@ -27,6 +27,8 @@ export interface BuildPageResult {
   urlPath: string;
   /** Output file path relative to the build dir. Unset when `notFound`. */
   outFilePath?: string;
+  /** Output file size in bytes. Unset when `notFound`. */
+  sizeBytes?: number;
   notFound?: boolean;
   /** Whether the output was generated via `getStaticContent()`. */
   staticContent?: boolean;
@@ -80,19 +82,26 @@ export async function buildPage(
       props = {rootConfig, params};
     }
     const result = await routeModule.getStaticContent(props);
-    let body: string;
-    if (typeof result === 'string') {
+    let body: string | Buffer;
+    if (typeof result === 'string' || Buffer.isBuffer(result)) {
       body = result;
     } else if (result && typeof result === 'object') {
-      body = result.body;
+      body = result.body ?? '';
     } else {
       body = '';
     }
     const outFilePath = urlPath.slice(1);
     const outPath = path.join(buildDir, outFilePath);
-    await makeDir(path.dirname(outPath));
-    await writeFile(outPath, normalizeLineEndings(body));
-    return {urlPath, outFilePath, staticContent: true};
+    const output = Buffer.isBuffer(body) ? body : normalizeLineEndings(body);
+    await writeFile(outPath, output);
+    return {
+      urlPath,
+      outFilePath,
+      sizeBytes: Buffer.isBuffer(output)
+        ? output.byteLength
+        : Buffer.byteLength(output, 'utf8'),
+      staticContent: true,
+    };
   }
 
   const data = await renderer.renderRoute(route, {
@@ -109,8 +118,13 @@ export async function buildPage(
   const outPath = path.join(buildDir, outFilePath);
 
   const html = await transformHtml(data.html || '', rootConfig);
-  await writeFile(outPath, normalizeLineEndings(html));
-  return {urlPath, outFilePath};
+  const output = normalizeLineEndings(html);
+  await writeFile(outPath, output);
+  return {
+    urlPath,
+    outFilePath,
+    sizeBytes: Buffer.byteLength(output, 'utf8'),
+  };
 }
 
 export function normalizeLineEndings(str: string): string {
