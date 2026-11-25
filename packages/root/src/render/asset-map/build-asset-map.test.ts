@@ -110,6 +110,46 @@ test('BuildAsset resolves transitive deps across cycles and memoizes results', a
   expect(getSpy).not.toHaveBeenCalled();
 });
 
+test('BuildAsset collects deps breadth-first, including deeply nested imports', async () => {
+  const chunk = (name: string, importedModules: string[]) => ({
+    src: `_${name}.js`,
+    assetUrl: `/assets/${name}.js`,
+    importedModules,
+    importedCss: [`/assets/${name}.css`],
+    isElement: true,
+  });
+  const assetMap = BuildAssetMap.fromRootManifest(rootConfig, {
+    'routes/index.tsx': {
+      src: 'routes/index.tsx',
+      assetUrl: '',
+      importedModules: ['_a.js', '_b.js'],
+      importedCss: ['/assets/route.css'],
+      isElement: false,
+    },
+    '_a.js': chunk('a', ['_c.js']),
+    '_b.js': chunk('b', []),
+    '_c.js': chunk('c', ['_d.js']),
+    '_d.js': chunk('d', ['_e.js']),
+    '_e.js': chunk('e', ['_f.js']),
+    '_f.js': chunk('f', ['_a.js']),
+  });
+
+  // An importer's direct imports are listed before their nested imports, so
+  // the stylesheet order (and the CSS cascade) stays stable.
+  const routeAsset = assetMap.get('routes/index.tsx')!;
+  const names = ['a', 'b', 'c', 'd', 'e', 'f'];
+  expect(await routeAsset.getCssDeps()).toEqual([
+    '/assets/route.css',
+    ...names.map((name) => `/assets/${name}.css`),
+  ]);
+  expect(await routeAsset.getJsDeps()).toEqual(
+    names.map((name) => `/assets/${name}.js`)
+  );
+  expect(await routeAsset.getModulePreloadDeps()).toEqual(
+    names.map((name) => `/assets/${name}.js`)
+  );
+});
+
 test('BuildAssetMap.get() caches resolved symlinks and negative misses', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'root-bam-cache-'));
   const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

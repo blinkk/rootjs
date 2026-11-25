@@ -29,6 +29,18 @@ test('ElementGraph.getDeps() resolves transitive deps across cycles and memoizes
   // Repeat calls return the cached array reference.
   expect(graph.getDeps('root-a')).toBe(depsA);
 
+  // Direct deps are listed before the deps of deps.
+  const ordered = ElementGraph.fromJson({
+    sourceFiles: {},
+    deps: {
+      'root-a': ['root-b', 'root-c'],
+      'root-b': ['root-d'],
+      'root-c': [],
+      'root-d': [],
+    },
+  });
+  expect(ordered.getDeps('root-a')).toEqual(['root-b', 'root-c', 'root-d']);
+
   // Explicit visited set bypasses and does not pollute the top-level memo cache.
   const partialB = graph.getDeps('root-b', new Set(['root-c']));
   expect(partialB).toEqual(['root-c']);

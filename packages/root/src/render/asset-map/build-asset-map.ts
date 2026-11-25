@@ -234,9 +234,8 @@ export class BuildAsset {
 
   async getCssDeps(): Promise<string[]> {
     if (!this.cssDeps) {
-      const visited = new Set<string>();
       const deps = new Set<string>();
-      this.collectCss(this, deps, visited);
+      this.collectCss(deps);
       this.cssDeps = Array.from(deps);
     }
     return this.cssDeps;
@@ -244,9 +243,8 @@ export class BuildAsset {
 
   async getJsDeps(): Promise<string[]> {
     if (!this.jsDeps) {
-      const visited = new Set<string>();
       const deps = new Set<string>();
-      this.collectJs(this, deps, visited);
+      this.collectJs(deps);
       this.jsDeps = Array.from(deps);
     }
     return this.jsDeps;
@@ -254,49 +252,63 @@ export class BuildAsset {
 
   async getModulePreloadDeps(): Promise<string[]> {
     if (!this.modulePreloadDeps) {
-      // Seed `visited` with this asset so that the walk starts at the imported
-      // modules and this asset's own URL is left out of the results.
-      const visited = new Set<string>([this.src]);
       const deps = new Set<string>();
-      this.collectModulePreload(this.importedModules, deps, visited);
+      this.collectModulePreload(deps);
       this.modulePreloadDeps = Array.from(deps);
     }
     return this.modulePreloadDeps;
   }
 
-  private collectJs(
-    asset: BuildAsset | null,
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    if (!asset || !asset.src || visited.has(asset.src)) {
-      return;
-    }
-    visited.add(asset.src);
-    if (asset.isElement) {
-      urls.add(asset.assetUrl);
-    }
-    for (const src of asset.importedModules) {
-      const importedAsset = this.assetMap.get(src) as BuildAsset | null;
-      this.collectJs(importedAsset, urls, visited);
+  /**
+   * Walks the import graph breadth-first from `root`, calling `visit` once per
+   * reachable asset. Breadth-first order keeps the collected URLs in a stable
+   * order where an importer's deps are listed before its imports' deps, which
+   * matters for the CSS cascade.
+   */
+  private walkImports(root: BuildAsset, visit: (asset: BuildAsset) => void) {
+    const visited = new Set<string>();
+    const queue: Array<BuildAsset | null> = [root];
+    for (let i = 0; i < queue.length; i++) {
+      const asset = queue[i];
+      if (!asset || !asset.src || visited.has(asset.src)) {
+        continue;
+      }
+      visited.add(asset.src);
+      visit(asset);
+      for (const src of asset.importedModules) {
+        queue.push(this.assetMap.get(src) as BuildAsset | null);
+      }
     }
   }
 
-  /**
-   * Walks `srcs` and their transitive imports, collecting the JS chunk URL of
-   * every module along the way.
-   */
-  private collectModulePreload(
-    srcs: string[],
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    for (const src of srcs) {
-      if (visited.has(src)) {
-        continue;
+  private collectJs(urls: Set<string>) {
+    this.walkImports(this, (asset) => {
+      if (asset.isElement) {
+        urls.add(asset.assetUrl);
       }
-      visited.add(src);
-      const asset = this.assetMap.get(src) as BuildAsset | null;
+    });
+  }
+
+  /**
+   * Walks this asset's transitive imports breadth-first, collecting the JS
+   * chunk URL of every module along the way.
+   */
+  private collectModulePreload(urls: Set<string>) {
+    // Seed `visited` with this asset so that the walk starts at the imported
+    // modules and this asset's own URL is left out of the results.
+    const visited = new Set<string>([this.src]);
+    const queue: string[] = [];
+    const enqueue = (srcs: string[]) => {
+      for (const src of srcs) {
+        if (!visited.has(src)) {
+          visited.add(src);
+          queue.push(src);
+        }
+      }
+    };
+    enqueue(this.importedModules);
+    for (let i = 0; i < queue.length; i++) {
+      const asset = this.assetMap.get(queue[i]) as BuildAsset | null;
       if (!asset || !asset.src) {
         continue;
       }
@@ -305,28 +317,18 @@ export class BuildAsset {
       if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
         urls.add(asset.assetUrl);
       }
-      this.collectModulePreload(asset.importedModules, urls, visited);
+      enqueue(asset.importedModules);
     }
   }
 
-  private collectCss(
-    asset: BuildAsset | null,
-    urls: Set<string>,
-    visited: Set<string>
-  ) {
-    if (!asset || !asset.src || visited.has(asset.src)) {
-      return;
-    }
-    visited.add(asset.src);
-    if (asset.importedCss) {
-      for (const cssUrl of asset.importedCss) {
-        urls.add(cssUrl);
+  private collectCss(urls: Set<string>) {
+    this.walkImports(this, (asset) => {
+      if (asset.importedCss) {
+        for (const cssUrl of asset.importedCss) {
+          urls.add(cssUrl);
+        }
       }
-    }
-    for (const moduleId of asset.importedModules) {
-      const importedAsset = this.assetMap.get(moduleId) as BuildAsset | null;
-      this.collectCss(importedAsset, urls, visited);
-    }
+    });
   }
 
   toJson() {

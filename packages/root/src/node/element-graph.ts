@@ -56,40 +56,35 @@ export class ElementGraph {
   }
 
   getDeps(tagName: string, visited?: Set<string>): string[] {
-    if (!visited) {
-      if (Object.hasOwn(this.transitiveDeps, tagName)) {
-        return this.transitiveDeps[tagName];
-      }
-      const deps = new Set<string>();
-      this.collectDeps(tagName, deps, new Set());
-      const result = Array.from(deps);
-      this.transitiveDeps[tagName] = result;
-      return result;
+    if (visited) {
+      // An explicit visited set bypasses the memo cache, since the result
+      // depends on which elements were already visited.
+      return this.walkDeps(tagName, visited);
     }
-
-    const deps = new Set<string>();
-    this.collectDeps(tagName, deps, visited);
-    return Array.from(deps);
+    if (!Object.hasOwn(this.transitiveDeps, tagName)) {
+      this.transitiveDeps[tagName] = this.walkDeps(tagName, new Set());
+    }
+    return this.transitiveDeps[tagName];
   }
 
   /**
-   * Recursively collects transitive element dependencies into `deps`.
+   * Recursively collects transitive element dependencies. An element's direct
+   * deps are listed before the deps of its deps.
    */
-  private collectDeps(
-    tagName: string,
-    deps: Set<string>,
-    visited: Set<string>
-  ) {
+  private walkDeps(tagName: string, visited: Set<string>): string[] {
     if (visited.has(tagName)) {
-      return;
+      return [];
     }
     visited.add(tagName);
     const directDeps = (this.deps[tagName] ??=
       this.parseDepsFromSource(tagName));
+    const deps = new Set(directDeps);
     for (const depTagName of directDeps) {
-      deps.add(depTagName);
-      this.collectDeps(depTagName, deps, visited);
+      for (const childDep of this.walkDeps(depTagName, visited)) {
+        deps.add(childDep);
+      }
     }
+    return Array.from(deps);
   }
 
   /**
