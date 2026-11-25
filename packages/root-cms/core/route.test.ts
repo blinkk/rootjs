@@ -3,6 +3,7 @@
  * translations-manager.test.ts for details on the emulator setup).
  */
 
+import {promises as fs} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
@@ -1108,6 +1109,54 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       await new FileSystemReadCacheStore({
         dir: path.join(dir, 'root-cms'),
       }).clear();
+    }
+  });
+
+  it('resets build cache when ROOT_BUILD_CACHE_DIR is wiped between builds', async () => {
+    const dir = path.join(
+      os.tmpdir(),
+      `root-cms-build-cache-reset-${Date.now()}-${Math.random()}`
+    );
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      await seedDoc(cmsClient, 'Pages/about', {locales: ['en']});
+
+      // Simulate `getStaticPaths()` running before `ROOT_BUILD_CACHE_DIR` is
+      // set (with `{cache: true}`), then `getStaticProps()` running after
+      // `ROOT_BUILD_CACHE_DIR` is set.
+      const route = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: true,
+      });
+      await route.getStaticPaths!({rootConfig});
+
+      vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
+      const first: any = await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      expect(first.props.doc.fields.title).toBe('Title for Pages/about');
+
+      // Simulate a second build in the same process: `build.ts` removes
+      // `ROOT_BUILD_CACHE_DIR` without calling `clearReadCaches()`, and a doc
+      // was updated in Firestore between builds.
+      await fs.rm(dir, {recursive: true, force: true});
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/Pages/Published/about`
+        )
+        .update({'fields.title': 'Updated for build 2'});
+
+      const second: any = await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      expect(second.props.doc.fields.title).toBe('Updated for build 2');
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      await fs.rm(dir, {recursive: true, force: true});
     }
   });
 });

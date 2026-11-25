@@ -132,6 +132,7 @@ export class ReadCache {
   private readonly maxEntries: number;
   private readonly store?: ReadCacheStore;
   private readonly entries = new Map<string, CacheEntry>();
+  private generation = 0;
 
   constructor(options?: ReadCacheOptions) {
     const ttl = options?.ttl ?? DEFAULT_TTL;
@@ -199,8 +200,9 @@ export class ReadCache {
     while (this.entries.size > this.maxEntries) {
       this.entries.delete(this.entries.keys().next().value!);
     }
+    const gen = this.generation;
     if (misses.length > 0) {
-      this.fill(misses, fetchMany, ttl);
+      this.fill(misses, fetchMany, ttl, gen);
     }
     const values = await Promise.all(entries.map((entry) => entry.value));
     return values.map((value) => cloneData(value as T));
@@ -212,7 +214,8 @@ export class ReadCache {
   private async fill<T>(
     misses: PendingRead[],
     fetchMany: (keys: string[]) => Promise<T[]>,
-    ttl: number
+    ttl: number,
+    gen: number
   ) {
     const store = this.store;
     let remaining = misses;
@@ -237,7 +240,7 @@ export class ReadCache {
       }
       const values = await fetchMany(remaining.map((read) => read.key));
       remaining.forEach((read, i) => read.resolve(values[i]));
-      if (store) {
+      if (store && this.generation === gen) {
         const expiresAt = Date.now() + ttl;
         await Promise.all(
           remaining.map((read, i) =>
@@ -249,7 +252,7 @@ export class ReadCache {
       }
     } catch (err) {
       remaining.forEach((read) => read.reject(err));
-      if (store) {
+      if (store && this.generation === gen) {
         await Promise.all(
           remaining.map((read) => store.delete(read.key).catch(() => {}))
         );
@@ -265,6 +268,7 @@ export class ReadCache {
    * Removes all cached reads, including the ones in the store.
    */
   async clear() {
+    this.generation += 1;
     this.entries.clear();
     await this.store?.clear();
   }

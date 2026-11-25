@@ -236,4 +236,56 @@ describe('FileSystemReadCacheStore', () => {
       await new FileSystemReadCacheStore({dir}).clear();
     }
   });
+
+  it('recovers when the cache directory is removed externally', async () => {
+    const dir = tmpDir();
+    try {
+      const store = new FileSystemReadCacheStore({dir});
+      await store.set('a', {expiresAt: Date.now() + 1000, value: 1});
+      expect(store.hasCreatedDir()).toBe(true);
+
+      // Simulate `root build` removing `dist/.cache` outside `store.clear()`.
+      await fs.rm(dir, {recursive: true, force: true});
+
+      // `get()` recreates the directory and claims the lock, and `set()`
+      // succeeds without throwing ENOENT.
+      expect(await store.get('b')).toBeUndefined();
+      await fs.rm(dir, {recursive: true, force: true});
+      await store.set('b', {expiresAt: Date.now() + 1000, value: 2});
+      expect(await store.get('b')).toEqual({
+        expiresAt: expect.any(Number),
+        value: 2,
+      });
+    } finally {
+      await new FileSystemReadCacheStore({dir}).clear();
+    }
+  });
+
+  it('does not write stale pre-clear data after clear()', async () => {
+    const dir = tmpDir();
+    try {
+      const store = new FileSystemReadCacheStore({dir});
+      const cache = new ReadCache({store});
+      let resolveFetch!: (val: string) => void;
+      const pending = cache.get(
+        'key',
+        () =>
+          new Promise<string>((resolve) => {
+            resolveFetch = resolve;
+          })
+      );
+      // Wait for `fill()` to reach `fetchMany()`, then clear before it
+      // resolves.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await cache.clear();
+      resolveFetch('stale');
+      expect(await pending).toBe('stale');
+
+      // The cleared store should not contain the pre-clear value.
+      const fresh = await cache.get('key', async () => 'fresh');
+      expect(fresh).toBe('fresh');
+    } finally {
+      await new FileSystemReadCacheStore({dir}).clear();
+    }
+  });
 });

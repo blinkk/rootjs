@@ -23,6 +23,7 @@
  * export const {getStaticProps, getStaticPaths} = createRoute({collection: 'BlogPosts'});
  * ```
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   GetStaticPaths,
@@ -71,6 +72,9 @@ let sharedReadCache: ReadCache | undefined;
  */
 let sharedBuildReadCache: ReadCache | undefined;
 
+/** The filesystem store backing `sharedBuildReadCache`. */
+let sharedBuildReadCacheStore: FileSystemReadCacheStore | undefined;
+
 /** The `ROOT_BUILD_CACHE_DIR` that `sharedBuildReadCache` was created for. */
 let sharedBuildReadCacheDir: string | undefined;
 
@@ -82,17 +86,31 @@ function getSharedReadCache(): ReadCache {
   // `root build` sets `ROOT_BUILD_CACHE_DIR` while rendering SSG pages.
   const buildCacheDir = process.env.ROOT_BUILD_CACHE_DIR;
   if (buildCacheDir) {
-    if (!sharedBuildReadCache || sharedBuildReadCacheDir !== buildCacheDir) {
+    const storeDir = path.join(buildCacheDir, 'root-cms');
+    // If `build.ts` wiped `buildCacheDir` between sequential builds in the
+    // same process, recreate the cache so in-memory entries from the previous
+    // build aren't served. Checking `hasCreatedDir()` ensures cold concurrent
+    // calls before the initial `mkdir` completes still share one cache.
+    const dirRemoved =
+      Boolean(sharedBuildReadCacheStore?.hasCreatedDir()) &&
+      !fs.existsSync(storeDir);
+    if (
+      !sharedBuildReadCache ||
+      sharedBuildReadCacheDir !== buildCacheDir ||
+      dirRemoved
+    ) {
       sharedBuildReadCacheDir = buildCacheDir;
+      sharedBuildReadCacheStore = new FileSystemReadCacheStore({dir: storeDir});
       sharedBuildReadCache = new ReadCache({
         ttl: BUILD_CACHE_TTL,
-        store: new FileSystemReadCacheStore({
-          dir: path.join(buildCacheDir, 'root-cms'),
-        }),
+        store: sharedBuildReadCacheStore,
       });
     }
     return sharedBuildReadCache;
   }
+  sharedBuildReadCache = undefined;
+  sharedBuildReadCacheStore = undefined;
+  sharedBuildReadCacheDir = undefined;
   sharedReadCache ??= new ReadCache();
   return sharedReadCache;
 }
@@ -585,6 +603,7 @@ export function createRoute(options: CreateRouteOptions): Route {
   // (when `options.cache` is enabled), so most renders skip the Firestore
   // round trips.
   let cachedCmsClient: RootCMSClient | undefined;
+  let cachedCmsClientCache: ReadCache | undefined;
   let dependencyGraphService: DependencyGraphService | undefined;
 
   function getReadCache(): ReadCache | undefined {
@@ -622,7 +641,10 @@ export function createRoute(options: CreateRouteOptions): Route {
   function getCmsClient(rootConfig: RootConfig, mode: DocMode) {
     const cache = mode === 'published' ? getReadCache() : undefined;
     if (cache) {
-      cachedCmsClient ??= newCmsClient(rootConfig, {cache});
+      if (!cachedCmsClient || cachedCmsClientCache !== cache) {
+        cachedCmsClientCache = cache;
+        cachedCmsClient = newCmsClient(rootConfig, {cache});
+      }
       return cachedCmsClient;
     }
     cmsClient ??= newCmsClient(rootConfig, {});

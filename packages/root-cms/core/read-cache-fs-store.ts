@@ -47,6 +47,9 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   private readonly lockTimeout: number;
   private readonly pollInterval: number;
   private dirReady?: Promise<void>;
+  private dirCreated = false;
+  private generation = 0;
+  private clearPromise?: Promise<void>;
 
   constructor(options: FileSystemReadCacheStoreOptions) {
     this.dir = options.dir;
@@ -54,15 +57,40 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
     this.pollInterval = options.pollInterval ?? 20;
   }
 
+  /**
+   * Returns whether this store has created its cache directory since the last
+   * `clear()`.
+   */
+  hasCreatedDir(): boolean {
+    return this.dirCreated;
+  }
+
   private ensureDir(): Promise<void> {
     if (!this.dirReady) {
-      this.dirReady = fs
-        .mkdir(this.dir, {recursive: true})
-        .then(() => undefined)
-        .catch((err) => {
+      const gen = this.generation;
+      const ready = (async () => {
+        if (this.clearPromise) {
+          await this.clearPromise;
+        }
+        if (this.generation !== gen) {
+          if (this.dirReady === ready) {
+            this.dirReady = undefined;
+          }
+          return;
+        }
+        await fs.mkdir(this.dir, {recursive: true});
+        if (this.generation === gen) {
+          this.dirCreated = true;
+        } else if (this.dirReady === ready) {
           this.dirReady = undefined;
-          throw err;
-        });
+        }
+      })().catch((err) => {
+        if (this.dirReady === ready) {
+          this.dirReady = undefined;
+        }
+        throw err;
+      });
+      this.dirReady = ready;
     }
     return this.dirReady;
   }
@@ -71,25 +99,55 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
     const filePath = this.filePath(key);
     const lockPath = `${filePath}.lock`;
     const deadline = Date.now() + this.lockTimeout;
+    const gen = this.generation;
     for (;;) {
+      if (this.generation !== gen) {
+        return undefined;
+      }
       const entry = await readEntry(filePath);
+      if (this.generation !== gen) {
+        return undefined;
+      }
       if (entry && entry.expiresAt > Date.now()) {
         return entry;
       }
       // Claim the key so that other processes wait for this process to fetch
       // it (the lock is removed by `set()` or `delete()`).
-      try {
-        await this.ensureDir();
-        await fs.writeFile(lockPath, '', {flag: 'wx'});
-        return undefined;
-      } catch (err: any) {
-        if (err?.code !== 'EEXIST') {
+      let retriedEnoent = false;
+      for (;;) {
+        if (this.generation !== gen) {
           return undefined;
+        }
+        try {
+          await this.ensureDir();
+          if (this.generation !== gen) {
+            return undefined;
+          }
+          await fs.writeFile(lockPath, '', {flag: 'wx'});
+          if (this.generation !== gen) {
+            await fs.rm(lockPath, {force: true});
+          }
+          return undefined;
+        } catch (err: any) {
+          if (
+            err?.code === 'ENOENT' &&
+            !retriedEnoent &&
+            this.generation === gen
+          ) {
+            retriedEnoent = true;
+            this.dirReady = undefined;
+            this.dirCreated = false;
+            continue;
+          }
+          if (err?.code !== 'EEXIST') {
+            return undefined;
+          }
+          break;
         }
       }
       // Another process is fetching the key. If it takes too long (e.g. the
       // process crashed), fetch it again.
-      if (Date.now() > deadline) {
+      if (Date.now() > deadline || this.generation !== gen) {
         return undefined;
       }
       await sleep(this.pollInterval);
@@ -98,12 +156,49 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
 
   async set(key: string, entry: ReadCacheStoreEntry): Promise<void> {
     const filePath = this.filePath(key);
+    const gen = this.generation;
     await this.ensureDir();
+    if (this.generation !== gen) {
+      return;
+    }
+    const payload = JSON.stringify(encodeData(entry));
     // Write to a temp file and rename it so that readers never see a
     // partially written file.
-    const tmpPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(encodeData(entry)));
-    await fs.rename(tmpPath, filePath);
+    const writeAndRename = async () => {
+      const tmpPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(tmpPath, payload);
+        if (this.generation !== gen) {
+          await fs.rm(tmpPath, {force: true});
+          return;
+        }
+        await fs.rename(tmpPath, filePath);
+      } catch (err) {
+        await fs.rm(tmpPath, {force: true});
+        throw err;
+      }
+    };
+    try {
+      await writeAndRename();
+    } catch (err: any) {
+      if (this.generation !== gen) {
+        return;
+      }
+      if (err?.code === 'ENOENT') {
+        this.dirReady = undefined;
+        this.dirCreated = false;
+        await this.ensureDir();
+        if (this.generation !== gen) {
+          return;
+        }
+        await writeAndRename();
+      } else {
+        throw err;
+      }
+    }
+    if (this.generation !== gen) {
+      await fs.rm(filePath, {force: true});
+    }
     await fs.rm(`${filePath}.lock`, {force: true});
   }
 
@@ -114,9 +209,21 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   }
 
   async clear(): Promise<void> {
+    this.generation += 1;
     this.dirReady = undefined;
-    await fs.rm(this.dir, {recursive: true, force: true});
-    this.dirReady = undefined;
+    this.dirCreated = false;
+    const prev = this.clearPromise ?? Promise.resolve();
+    const rm = prev
+      .catch(() => {})
+      .then(() => fs.rm(this.dir, {recursive: true, force: true}));
+    this.clearPromise = rm;
+    try {
+      await rm;
+    } finally {
+      if (this.clearPromise === rm) {
+        this.clearPromise = undefined;
+      }
+    }
   }
 
   private filePath(key: string) {
