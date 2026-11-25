@@ -1,7 +1,9 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {expect, test} from 'vitest';
 import {ElementTagNameMatcher, RootConfig} from '../src/core/config.js';
-import {getElements} from '../src/node/element-graph.js';
+import {getElements, getElementsDirs} from '../src/node/element-graph.js';
 
 const rootDir = path.resolve(__dirname, './fixtures/elements');
 
@@ -73,4 +75,37 @@ test('elements.exclude applies to every command', async () => {
 
   const ssgGraph = await getElements(rootConfig, undefined, {isSsgBuild: true});
   expect(ssgGraph.sourceFiles).not.toHaveProperty('root-exclude');
+});
+
+test('getElementsDirs allows symlinked elements.include resolving outside workspace', () => {
+  const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'root-el-dirs-'));
+  try {
+    const workspaceDir = path.join(tmpBase, 'workspace');
+    const siteDir = path.join(workspaceDir, 'site');
+    const externalPkgDir = path.join(tmpBase, 'external-pkg', 'elements');
+    const linkedPkgDir = path.join(siteDir, 'node_modules', 'linked-pkg');
+
+    fs.mkdirSync(path.join(siteDir, 'node_modules'), {recursive: true});
+    fs.mkdirSync(externalPkgDir, {recursive: true});
+    fs.writeFileSync(path.join(workspaceDir, 'pnpm-workspace.yaml'), '');
+    fs.symlinkSync(path.dirname(externalPkgDir), linkedPkgDir);
+
+    const dirs = getElementsDirs({
+      rootDir: siteDir,
+      elements: {include: ['node_modules/linked-pkg/elements']},
+    } as RootConfig);
+    expect(dirs).toEqual([
+      path.join(siteDir, 'elements'),
+      path.join(siteDir, 'node_modules/linked-pkg/elements'),
+    ]);
+
+    expect(() =>
+      getElementsDirs({
+        rootDir: siteDir,
+        elements: {include: ['../../external-pkg/elements']},
+      } as RootConfig)
+    ).toThrow("should be within the project's workspace");
+  } finally {
+    fs.rmSync(tmpBase, {recursive: true, force: true});
+  }
 });

@@ -236,16 +236,30 @@ export function resolveRealPathSync(targetPath: string): string {
 }
 
 /**
- * Returns true when `target` is inside (or equal to) `dir`, resolving symlinks
- * consistently even when `target` does not yet exist on disk.
+ * Returns true when `target` is lexically inside (or equal to) `dir`.
  */
-function directoryContainsSync(dir: string, target: string): boolean {
-  const outer = resolveRealPathSync(dir);
-  const inner = resolveRealPathSync(target);
-  const rel = path.relative(outer, inner);
+function isPathInside(dir: string, target: string): boolean {
+  const rel = path.relative(dir, target);
   return (
     rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
   );
+}
+
+/**
+ * Returns true when `target` is inside (or equal to) `dir`, checking lexical
+ * containment first (so symlinked packages under `node_modules` whose realpath
+ * resolves outside the workspace are allowed) and falling back to realpath
+ * containment for symlinked workspace roots.
+ */
+function directoryContainsSync(dir: string, target: string): boolean {
+  const resolvedDir = path.resolve(dir);
+  const resolvedTarget = path.resolve(target);
+  if (isPathInside(resolvedDir, resolvedTarget)) {
+    return true;
+  }
+  const outer = resolveRealPathSync(resolvedDir);
+  const inner = resolveRealPathSync(resolvedTarget);
+  return isPathInside(outer, inner);
 }
 
 /**

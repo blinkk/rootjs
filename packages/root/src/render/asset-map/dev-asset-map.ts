@@ -3,7 +3,7 @@ import {ModuleGraph, ModuleNode, searchForWorkspaceRoot} from 'vite';
 import {RootConfig} from '../../core/config.js';
 import {Asset, AssetMap} from './asset-map.js';
 
-const EMPTY_DEPS: string[] = [];
+const EMPTY_DEPS = Object.freeze([] as string[]) as string[];
 const JS_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 
 export class DevServerAssetMap implements AssetMap {
@@ -141,38 +141,38 @@ export class DevServerAsset implements Asset {
 
   async getCssDeps(): Promise<string[]> {
     if (this.cachedCssDeps) {
-      return this.cachedCssDeps;
+      return this.cachedCssDeps.slice();
     }
     if (this.cyclicRootCssDeps) {
-      return this.cyclicRootCssDeps;
+      return this.cyclicRootCssDeps.slice();
     }
     const acyclic = this.collectCssAcyclic(new Set());
     if (acyclic !== null) {
-      return acyclic;
+      return acyclic.slice();
     }
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectCss(this, deps, visited);
     this.cyclicRootCssDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
-    return this.cyclicRootCssDeps;
+    return this.cyclicRootCssDeps.slice();
   }
 
   async getJsDeps(): Promise<string[]> {
     if (this.cachedJsDeps) {
-      return this.cachedJsDeps;
+      return this.cachedJsDeps.slice();
     }
     if (this.cyclicRootJsDeps) {
-      return this.cyclicRootJsDeps;
+      return this.cyclicRootJsDeps.slice();
     }
     const acyclic = this.collectJsAcyclic(new Set());
     if (acyclic !== null) {
-      return acyclic;
+      return acyclic.slice();
     }
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectJs(this, deps, visited);
     this.cyclicRootJsDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
-    return this.cyclicRootJsDeps;
+    return this.cyclicRootJsDeps.slice();
   }
 
   /**
