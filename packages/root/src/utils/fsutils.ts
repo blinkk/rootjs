@@ -8,7 +8,10 @@ export function isJsFile(filename: string) {
   return !!filename.match(/\.(j|t)sx?$/);
 }
 
-export async function writeFile(filepath: string, content: string) {
+export async function writeFile(
+  filepath: string,
+  content: string | Uint8Array
+) {
   const dirPath = path.dirname(filepath);
   await makeDir(dirPath);
   await fs.promises.writeFile(filepath, content);
@@ -39,7 +42,7 @@ export async function copyGlob(
   srcdir: string,
   dstdir: string
 ) {
-  const files = await glob(pattern, {cwd: srcdir});
+  const files = await glob(pattern, {cwd: srcdir, filesOnly: true});
   if (files.length > 0) {
     await makeDir(dstdir);
   }

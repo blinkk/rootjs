@@ -77,11 +77,13 @@ class BuildWorker {
   private concurrency: number;
   private inFlight = new Map<number, PendingTask>();
   private isReady = false;
+  private isTerminating = false;
+  isDead = false;
   ready: Promise<void>;
 
   constructor(pool: BuildWorkerPool, options: BuildWorkerPoolOptions) {
     this.pool = pool;
-    this.concurrency = options.workerConcurrency;
+    this.concurrency = Math.max(1, options.workerConcurrency || 1);
     this.worker = new Worker(path.resolve(__dirname, './build-worker.js'), {
       workerData: {rootDir: options.rootDir, mode: options.mode},
       resourceLimits: {maxOldGenerationSizeMb: WORKER_HEAP_LIMIT_MB},
@@ -94,6 +96,9 @@ class BuildWorker {
     });
     this.worker.on('message', (msg: BuildWorkerResponse) => {
       if (msg.type === 'ready') {
+        if (this.isDead || this.isTerminating) {
+          return;
+        }
         this.isReady = true;
         onReady();
         this.next();
@@ -110,17 +115,23 @@ class BuildWorker {
         );
         this.next();
       } else if (msg.type === 'fatal') {
+        if (this.isTerminating) {
+          return;
+        }
         const err = new Error(`build worker failed: ${msg.error}`);
         onFailed(err);
         this.failAll(err);
       }
     });
     this.worker.on('error', (err) => {
+      if (this.isTerminating) {
+        return;
+      }
       onFailed(err);
       this.failAll(err);
     });
     this.worker.on('exit', (code) => {
-      if (code !== 0) {
+      if (code !== 0 && !this.isTerminating) {
         const err = new Error(`build worker exited with code ${code}`);
         onFailed(err);
         this.failAll(err);
@@ -140,6 +151,10 @@ class BuildWorker {
    * is cumulative), which is why the message says "while rendering".
    */
   private failAll(err: Error) {
+    if (this.isDead) {
+      return;
+    }
+    this.isDead = true;
     this.isReady = false;
     this.pool.markBusy(this);
     const pendingTasks = Array.from(this.inFlight.values());
@@ -156,11 +171,12 @@ class BuildWorker {
         )
       )
     );
+    this.pool.onWorkerFailed(err);
   }
 
   /** Pulls tasks off the pool's queue until at max concurrency. */
   next() {
-    if (!this.isReady) {
+    if (!this.isReady || this.isDead || this.isTerminating) {
       return;
     }
     while (this.inFlight.size < this.concurrency) {
@@ -180,6 +196,15 @@ class BuildWorker {
   }
 
   async terminate() {
+    this.isTerminating = true;
+    this.isReady = false;
+    this.pool.markBusy(this);
+    const pendingTasks = Array.from(this.inFlight.values());
+    this.inFlight.clear();
+    if (pendingTasks.length > 0) {
+      const err = new Error('build worker pool terminated');
+      pendingTasks.forEach((pending) => pending.reject(err));
+    }
     await this.worker.terminate();
   }
 }
@@ -195,6 +220,8 @@ export class BuildWorkerPool {
   private queue: Array<PendingTask | undefined> = [];
   private queueHead = 0;
   private nextTaskId = 0;
+  private fatalError?: Error;
+  private isTerminated = false;
 
   constructor(options: BuildWorkerPoolOptions) {
     for (let i = 0; i < options.numWorkers; i++) {
@@ -209,6 +236,12 @@ export class BuildWorkerPool {
 
   /** Schedules a page build and resolves when the page finishes. */
   run(task: BuildPageTask): Promise<BuildPageResult> {
+    if (this.isTerminated) {
+      return Promise.reject(new Error('build worker pool terminated'));
+    }
+    if (this.fatalError) {
+      return Promise.reject(this.fatalError);
+    }
     return new Promise<BuildPageResult>((resolve, reject) => {
       this.queue.push({id: this.nextTaskId++, task, resolve, reject});
       this.wakeWorker();
@@ -223,6 +256,25 @@ export class BuildWorkerPool {
   /** Removes a worker from the idle set (e.g. after a worker failure). */
   markBusy(worker: BuildWorker) {
     this.idleWorkers.delete(worker);
+  }
+
+  /**
+   * Handles a worker failure. If all workers in the pool have died, rejects
+   * all remaining queued tasks so callers do not hang.
+   */
+  onWorkerFailed(err: Error) {
+    if (this.workers.every((worker) => worker.isDead)) {
+      this.fatalError = err;
+      this.drainQueueWithError(err);
+    }
+  }
+
+  /** Rejects all remaining queued tasks with the given error. */
+  private drainQueueWithError(err: Error) {
+    while (this.queueHead < this.queue.length) {
+      const pending = this.dequeue();
+      pending?.reject(err);
+    }
   }
 
   /** Wakes a worker with spare capacity to pick up queued tasks. */
@@ -260,6 +312,9 @@ export class BuildWorkerPool {
   }
 
   async terminate() {
+    this.isTerminated = true;
+    this.idleWorkers.clear();
+    this.drainQueueWithError(new Error('build worker pool terminated'));
     await Promise.all(this.workers.map((worker) => worker.terminate()));
   }
 }

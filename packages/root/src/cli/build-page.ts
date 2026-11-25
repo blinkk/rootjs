@@ -82,22 +82,24 @@ export async function buildPage(
       props = {rootConfig, params};
     }
     const result = await routeModule.getStaticContent(props);
-    let body: string;
-    if (typeof result === 'string') {
+    let body: string | Buffer;
+    if (typeof result === 'string' || Buffer.isBuffer(result)) {
       body = result;
     } else if (result && typeof result === 'object') {
-      body = result.body;
+      body = result.body ?? '';
     } else {
       body = '';
     }
     const outFilePath = urlPath.slice(1);
     const outPath = path.join(buildDir, outFilePath);
-    const output = normalizeLineEndings(body);
+    const output = Buffer.isBuffer(body) ? body : normalizeLineEndings(body);
     await writeFile(outPath, output);
     return {
       urlPath,
       outFilePath,
-      sizeBytes: Buffer.byteLength(output, 'utf8'),
+      sizeBytes: Buffer.isBuffer(output)
+        ? output.byteLength
+        : Buffer.byteLength(output, 'utf8'),
       staticContent: true,
     };
   }
