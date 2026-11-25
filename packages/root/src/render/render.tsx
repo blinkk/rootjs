@@ -850,9 +850,28 @@ export class Renderer {
   }
 
   async renderDevServer404(req: Request) {
-    const sitemap = await this.getSitemap();
+    const trailingSlash = this.rootConfig.server?.trailingSlash;
+    const routes: Record<string, {route: Route}> = {};
+    // Walk registered route patterns directly instead of calling `getSitemap()`
+    // so rendering a dev 404 page does not execute `getStaticPaths()` queries.
+    await this.router.walk((urlPath: string, route: Route) => {
+      const routeModule = route.module;
+      // Treat unloaded lazy routes as routable without invoking `loadModule()`.
+      const isUnloadedLazyRoute =
+        typeof (route as {loadModule?: unknown}).loadModule === 'function' &&
+        (!routeModule || Object.keys(routeModule).length === 0);
+      if (
+        !isUnloadedLazyRoute &&
+        !routeModule?.default &&
+        !routeModule?.getStaticContent
+      ) {
+        return;
+      }
+      const normalizedPath = normalizeUrlPath(urlPath, {trailingSlash});
+      routes[normalizedPath] = {route};
+    });
     const mainHtml = await this.renderJsx(
-      <DevNotFoundPage req={req} sitemap={sitemap} />
+      <DevNotFoundPage req={req} sitemap={routes} />
     );
     const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>404 Not found | Root.js</title>],

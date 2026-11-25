@@ -3,7 +3,7 @@ import {ErrorPage} from './ErrorPage.js';
 
 interface DevNotFoundPageProps {
   req: Request;
-  sitemap: Record<string, {route: Route; params: Record<string, string>}>;
+  sitemap: Record<string, {route: Route; params?: Record<string, string>}>;
 }
 
 interface RoutesListMap {
@@ -41,11 +41,6 @@ export function DevNotFoundPage(props: DevNotFoundPageProps) {
     });
   });
   const routesListString = lines.join('\n');
-  // const routesListString = routesList
-  //   .map((route) => {
-  //     return `${route.urlPath.padEnd(srcMaxLength, ' ')}  =>  ${route.src}`;
-  //   })
-  //   .join('\n');
   return (
     <ErrorPage code={404} title="Not found">
       <h2>Routes</h2>
