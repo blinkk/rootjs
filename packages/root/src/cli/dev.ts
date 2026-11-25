@@ -41,9 +41,14 @@ import {runStartupTasks} from './startup/startup-tasks.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type RenderModule = typeof import('../render/render.js');
+const RENDERER_LOAD_FAILED = Symbol('root.dev.rendererLoadFailed');
 const DEV_SERVER_404_LOG_IGNORE_PATHS = new Set([
   '/.well-known/appspecific/com.chrome.devtools.json',
 ]);
+
+interface DevRequest extends Request {
+  [RENDERER_LOAD_FAILED]?: boolean;
+}
 
 export interface DevOptions {
   host?: string;
@@ -173,9 +178,7 @@ export async function createDevServer(options?: {
         return;
       }
       try {
-        if (!req.renderer) {
-          req.renderer = await getRenderer();
-        }
+        await loadRequestRenderer(req, getRenderer);
         next();
       } catch (err: any) {
         req.viteServer?.ssrFixStacktrace(err);
@@ -479,12 +482,33 @@ function rootPublicDirMiddleware(options: {
   };
 }
 
+/**
+ * Populates `req.renderer` from `getRenderer()`, marking the request if
+ * loading fails so the 500 error middleware avoids retrying the same failed
+ * SSR load.
+ */
+async function loadRequestRenderer(
+  req: Request,
+  getRenderer: () => Promise<Renderer>
+): Promise<Renderer> {
+  if (req.renderer) {
+    return req.renderer;
+  }
+  try {
+    const renderer = await getRenderer();
+    req.renderer = renderer;
+    return renderer;
+  } catch (err) {
+    (req as DevRequest)[RENDERER_LOAD_FAILED] = true;
+    throw err;
+  }
+}
+
 function rootDevServerMiddleware(getRenderer: () => Promise<Renderer>) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const viteServer = req.viteServer!;
     try {
-      const renderer = req.renderer || (await getRenderer());
-      req.renderer = renderer;
+      const renderer = await loadRequestRenderer(req, getRenderer);
       await renderer.handle(req, res, next);
     } catch (err) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
@@ -504,8 +528,7 @@ function rootDevServer404Middleware(getRenderer: () => Promise<Renderer>) {
     const ext = path.extname(url);
     if (!ext) {
       try {
-        const renderer = req.renderer || (await getRenderer());
-        req.renderer = renderer;
+        const renderer = await loadRequestRenderer(req, getRenderer);
         const data = await renderer.renderDevServer404(req);
         const html = data.html || '';
         res.status(404).set({'Content-Type': 'text/html'}).end(html);
@@ -528,10 +551,9 @@ function rootDevServer500Middleware(getRenderer: () => Promise<Renderer>) {
     const ext = path.extname(url);
     if (!ext) {
       let renderer = req.renderer;
-      if (!renderer) {
+      if (!renderer && !(req as DevRequest)[RENDERER_LOAD_FAILED]) {
         try {
-          renderer = await getRenderer();
-          req.renderer = renderer;
+          renderer = await loadRequestRenderer(req, getRenderer);
         } catch {
           // If loading the renderer itself failed, fall through to Express's
           // default error handler.

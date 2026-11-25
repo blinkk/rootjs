@@ -78,61 +78,65 @@ test('dev server defers SSR renderer for Vite and public assets, caches it, and 
   const viteServer = app.get('viteServer');
   const ssrLoadSpy = vi.spyOn(viteServer, 'ssrLoadModule');
 
-  // Vite client assets and public/ files must not trigger ssrLoadModule().
-  const viteClient = await fetchPath('/@vite/client');
-  expect(viteClient.status).toBe(200);
-  const publicAsset = await fetchPath('/hello.txt');
-  expect(publicAsset.status).toBe(200);
-  expect(publicAsset.body).toBe('hello from public');
-  expect(ssrLoadSpy).toHaveBeenCalledTimes(0);
+  try {
+    // Vite client assets and public/ files must not trigger ssrLoadModule().
+    const viteClient = await fetchPath('/@vite/client');
+    expect(viteClient.status).toBe(200);
+    const publicAsset = await fetchPath('/hello.txt');
+    expect(publicAsset.status).toBe(200);
+    expect(publicAsset.body).toBe('hello from public');
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(0);
 
-  // Concurrent cold-start HTML requests coalesce into a single ssrLoadModule().
-  const concurrentResults = await Promise.all([
-    fetchPath('/'),
-    fetchPath('/'),
-    fetchPath('/'),
-    fetchPath('/'),
-    fetchPath('/'),
-  ]);
-  for (const result of concurrentResults) {
-    expect(result.status).toBe(200);
-    expect(result.body).toContain('<h1>Version 1</h1>');
-  }
-  expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
-
-  // Subsequent warm HTML requests reuse the cached Renderer without reloading.
-  const secondHtml = await fetchPath('/');
-  expect(secondHtml.status).toBe(200);
-  expect(secondHtml.body).toContain('<h1>Version 1</h1>');
-  expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
-
-  // Editing a route file invalidates the SSR module and updates rendered HTML.
-  await fs.writeFile(
-    path.join(tempDir, 'routes/index.tsx'),
-    'export default function Home() {\n  return <html><body><h1>Version 2</h1></body></html>;\n}\n'
-  );
-  // Wait for Vite's file watcher to propagate SSR module invalidation.
-  let updatedBody = '';
-  for (let i = 0; i < 20; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const res = await fetchPath('/');
-    updatedBody = res.body;
-    if (updatedBody.includes('<h1>Version 2</h1>')) {
-      break;
+    // Concurrent cold-start HTML requests coalesce into a single ssrLoadModule().
+    const concurrentResults = await Promise.all([
+      fetchPath('/'),
+      fetchPath('/'),
+      fetchPath('/'),
+      fetchPath('/'),
+      fetchPath('/'),
+    ]);
+    for (const result of concurrentResults) {
+      expect(result.status).toBe(200);
+      expect(result.body).toContain('<h1>Version 1</h1>');
     }
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+
+    // Subsequent warm HTML requests reuse the cached Renderer without reloading.
+    const secondHtml = await fetchPath('/');
+    expect(secondHtml.status).toBe(200);
+    expect(secondHtml.body).toContain('<h1>Version 1</h1>');
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+
+    // Editing a route file invalidates the SSR module and updates rendered HTML.
+    await fs.writeFile(
+      path.join(tempDir, 'routes/index.tsx'),
+      'export default function Home() {\n  return <html><body><h1>Version 2</h1></body></html>;\n}\n'
+    );
+    // Wait for Vite's file watcher to propagate SSR module invalidation.
+    let updatedBody = '';
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const res = await fetchPath('/');
+      updatedBody = res.body;
+      if (updatedBody.includes('<h1>Version 2</h1>')) {
+        break;
+      }
+    }
+    expect(updatedBody).toContain('<h1>Version 2</h1>');
+    expect(ssrLoadSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    // Missing HTML route still renders the dev 404 page.
+    const missingHtml = await fetchPath('/does-not-exist');
+    expect(missingHtml.status).toBe(404);
+    expect(missingHtml.body).toContain('404');
+
+    // Missing file with extension returns plain 404.
+    const missingAsset = await fetchPath('/missing.png');
+    expect(missingAsset.status).toBe(404);
+    expect(missingAsset.body).toBe('404');
+  } finally {
+    ssrLoadSpy.mockRestore();
   }
-  expect(updatedBody).toContain('<h1>Version 2</h1>');
-  expect(ssrLoadSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
-
-  // Missing HTML route still renders the dev 404 page.
-  const missingHtml = await fetchPath('/does-not-exist');
-  expect(missingHtml.status).toBe(404);
-  expect(missingHtml.body).toContain('404');
-
-  // Missing file with extension returns plain 404.
-  const missingAsset = await fetchPath('/missing.png');
-  expect(missingAsset.status).toBe(404);
-  expect(missingAsset.body).toBe('404');
 });
 
 test('request made after an invalidation does not join a stale in-flight renderer load', async () => {
@@ -277,6 +281,7 @@ export default defineConfig({
     expect(mwRes.status).toBe(200);
     expect(await mwRes.text()).toBe('middleware-has-renderer');
     expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+    ssrLoadSpy.mockRestore();
   } finally {
     if (customHttpServer) {
       customHttpServer.close();
@@ -288,5 +293,44 @@ export default defineConfig({
       }
     }
     await fs.rm(customDir, {recursive: true, force: true});
+  }
+});
+
+test('dev 500 handler does not retry a failed renderer load and recovers once fixed', async () => {
+  const viteServer = app.get('viteServer');
+  const ssrGraph = viteServer.environments.ssr.moduleGraph;
+  const routeFile = path.join(tempDir, 'routes/index.tsx');
+  const invalidateRoute = () => {
+    const mods = ssrGraph.getModulesByFile(routeFile);
+    mods?.forEach((mod: any) => ssrGraph.invalidateModule(mod));
+  };
+
+  const ssrLoadSpy = vi.spyOn(viteServer, 'ssrLoadModule');
+  try {
+    // Introduce a syntax error so loading render.js fails.
+    await fs.writeFile(
+      routeFile,
+      'export default function Home( { return <div>broken</div>; }\n'
+    );
+    invalidateRoute();
+
+    const failedRes = await fetchPath('/');
+    expect(failedRes.status).toBe(500);
+    // The 500 handler must not call getRenderer() a second time after
+    // rootDevServerMiddleware already failed to load the renderer.
+    expect(ssrLoadSpy).toHaveBeenCalledTimes(1);
+
+    // Fix the route and verify the server recovers to 200.
+    await fs.writeFile(
+      routeFile,
+      'export default function Home() {\n  return <html><body><h1>Recovered</h1></body></html>;\n}\n'
+    );
+    invalidateRoute();
+
+    const recoveredRes = await fetchPath('/');
+    expect(recoveredRes.status).toBe(200);
+    expect(recoveredRes.body).toContain('<h1>Recovered</h1>');
+  } finally {
+    ssrLoadSpy.mockRestore();
   }
 });
