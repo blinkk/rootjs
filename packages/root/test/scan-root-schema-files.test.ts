@@ -27,6 +27,7 @@ describe('scanRootSchemaFiles', () => {
   it('discovers nested schema files without traversing excluded directories', async () => {
     await Promise.all([
       writeSchema('templates/Hero/Hero.schema.ts'),
+      writeSchema('templates/Hero-Alt/HeroAlt.schema.ts'),
       writeSchema('templates/Section/Nested/Item.schema.ts'),
       writeSchema('blocks/Copy/Copy.schema.ts'),
       writeSchema('root.schema.ts'),
@@ -45,10 +46,13 @@ describe('scanRootSchemaFiles', () => {
     const readdirSpy = vi.spyOn(fs.promises, 'readdir');
     const files = await scanRootSchemaFiles(tmpDir);
 
+    // Depth-first, ordered by name within each directory (`Hero` sorts before
+    // `Hero-Alt`), matching the order of the previous glob-based scan.
     expect(files).toEqual([
       'blocks/Copy/Copy.schema.ts',
       'root.schema.ts',
       'templates/Hero/Hero.schema.ts',
+      'templates/Hero-Alt/HeroAlt.schema.ts',
       'templates/Section/Nested/Item.schema.ts',
     ]);
 

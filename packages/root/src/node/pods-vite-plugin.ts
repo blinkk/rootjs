@@ -232,18 +232,21 @@ const ROOT_SCHEMA_EXCLUDE_DIRS = new Set([
 /**
  * Recursively scans a Root.js project directory for `*.schema.ts` files,
  * pruning excluded and hidden directories before descending into them.
+ *
+ * Results are returned depth-first with each directory's entries ordered by
+ * name (the order the previous glob-based scan produced), since the order of
+ * `SCHEMA_MODULES` determines the order of pattern-matched `oneOf` types.
  */
 export async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
-  const results: string[] = [];
-
-  async function walk(dir: string, relDir: string): Promise<void> {
+  async function walk(dir: string, relDir: string): Promise<string[]> {
     let entries: fs.Dirent[];
     try {
       entries = await fs.promises.readdir(dir, {withFileTypes: true});
     } catch {
-      return;
+      return [];
     }
-    const subdirs: Array<{fullPath: string; relPath: string}> = [];
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    const pending: Array<string | Promise<string[]>> = [];
     for (const entry of entries) {
       const name = entry.name;
       // Skip hidden files and directories (matching tiny-glob's default).
@@ -258,19 +261,15 @@ export async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
         ) {
           continue;
         }
-        subdirs.push({fullPath: path.join(dir, name), relPath});
+        pending.push(walk(path.join(dir, name), relPath));
       } else if (name.endsWith('.schema.ts')) {
-        results.push(relPath);
+        pending.push(relPath);
       }
     }
-    if (subdirs.length > 0) {
-      await Promise.all(subdirs.map((sub) => walk(sub.fullPath, sub.relPath)));
-    }
+    return (await Promise.all(pending)).flat();
   }
 
-  await walk(rootDir, '');
-  results.sort();
-  return results;
+  return walk(rootDir, '');
 }
 
 async function buildTranslationsModule(
