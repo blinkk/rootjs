@@ -3,6 +3,7 @@
  * translations-manager.test.ts for details on the emulator setup).
  */
 
+import {promises as fs} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {getApps, initializeApp} from 'firebase-admin/app';
@@ -1046,5 +1047,142 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('createRoute', () => {
       {params: {slug: 'about'}},
       {params: {slug: 'blog/hello'}},
     ]);
+  });
+
+  it('enables shared build cache by default during root build', async () => {
+    const dir = path.join(
+      os.tmpdir(),
+      `root-cms-build-cache-test-${Date.now()}-${Math.random()}`
+    );
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
+    try {
+      await seedDoc(cmsClient, 'Pages/about', {locales: ['en', 'de']});
+      await seedDoc(cmsClient, 'Global/header', {locales: ['en', 'de']});
+      const getAll = vi.spyOn(cmsClient.db, 'getAll');
+
+      // Default `createRoute()` (without `cache: true`) shares reads across
+      // locales during `root build`.
+      const route = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const headerReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(headerReads).toHaveLength(1);
+
+      // Passing `{cache: false}` opts out of the default build cache.
+      getAll.mockClear();
+      const uncachedRoute = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: false,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await uncachedRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await uncachedRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const uncachedHeaderReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(uncachedHeaderReads).toHaveLength(2);
+
+      // Setting `ROOT_DISABLE_BUILD_CACHE=1` disables the default build cache
+      // globally.
+      getAll.mockClear();
+      vi.stubEnv('ROOT_DISABLE_BUILD_CACHE', '1');
+      const envDisabledRoute = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        batchRequest: (req) => req.addDoc('Global/header'),
+      });
+      await envDisabledRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      await envDisabledRoute.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'de'},
+      } as any);
+
+      const envDisabledHeaderReads = (getAll.mock.calls as any[][])
+        .flat()
+        .filter((ref) => ref.path.endsWith('/Global/Published/header'));
+      expect(envDisabledHeaderReads).toHaveLength(2);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      await new FileSystemReadCacheStore({
+        dir: path.join(dir, 'root-cms'),
+      }).clear();
+    }
+  });
+
+  it('resets build cache across sequential builds in the same process', async () => {
+    const dir = path.join(
+      os.tmpdir(),
+      `root-cms-build-cache-reset-${Date.now()}-${Math.random()}`
+    );
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      await seedDoc(cmsClient, 'Pages/about', {locales: ['en']});
+
+      // Simulate `getStaticPaths()` running before `ROOT_BUILD_CACHE_DIR` is
+      // set (with `{cache: true}`), then `getStaticProps()` running after
+      // `ROOT_BUILD_CACHE_DIR` is set.
+      const route = createRoute({
+        collection: 'Pages',
+        ssg: true,
+        cache: true,
+      });
+      await route.getStaticPaths!({rootConfig});
+
+      vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
+      const first: any = await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      expect(first.props.doc.fields.title).toBe('Title for Pages/about');
+
+      // Simulate `build.ts`'s `finally` block cleaning up after Build #1 and
+      // Build #2 starting with `getStaticPaths()` before re-setting the same
+      // `ROOT_BUILD_CACHE_DIR`.
+      delete process.env.ROOT_BUILD_CACHE_DIR;
+      await fs.rm(dir, {recursive: true, force: true});
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/Pages/Published/about`
+        )
+        .update({'fields.title': 'Updated for build 2'});
+
+      await route.getStaticPaths!({rootConfig});
+      vi.stubEnv('ROOT_BUILD_CACHE_DIR', dir);
+      const second: any = await route.getStaticProps!({
+        rootConfig,
+        params: {slug: 'about', $locale: 'en'},
+      } as any);
+      expect(second.props.doc.fields.title).toBe('Updated for build 2');
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      await fs.rm(dir, {recursive: true, force: true});
+    }
   });
 });

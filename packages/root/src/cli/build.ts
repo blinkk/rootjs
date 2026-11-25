@@ -538,12 +538,17 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         `  ${dim(`threads: ${threadsDesc} (${resolvedThreads.source})`)}`
       );
     }
-    // Routes can cache reads (e.g. root-cms `createRoute({cache: true})`)
-    // in this dir, which is shared by the render workers and only lives for
-    // the duration of the SSG build.
+    const disableBuildCache =
+      process.env.ROOT_DISABLE_BUILD_CACHE === '1' ||
+      process.env.ROOT_DISABLE_BUILD_CACHE === 'true';
+    // Routes cache reads in this dir by default during `root build`, which is
+    // shared by the render workers and only lives for the duration of the SSG
+    // build. Set `ROOT_DISABLE_BUILD_CACHE=1` to opt out globally.
     const buildCacheDir = path.join(distDir, '.cache');
     await rmDir(buildCacheDir);
-    process.env.ROOT_BUILD_CACHE_DIR = buildCacheDir;
+    if (!disableBuildCache) {
+      process.env.ROOT_BUILD_CACHE_DIR = buildCacheDir;
+    }
     const progress = new BuildProgress({
       total: sitemapEntries.length,
       mode: activeLogMode,

@@ -39,14 +39,16 @@ export interface FileSystemReadCacheStoreOptions {
  * });
  * ```
  *
- * During `root build`, `createRoute({cache: true})` uses this store
- * automatically (under `dist/.cache/`, which is deleted at the start and end
- * of each build).
+ * During `root build`, `createRoute()` uses this store automatically (under
+ * `dist/.cache/`, which is deleted at the start and end of each build).
  */
 export class FileSystemReadCacheStore implements ReadCacheStore {
   private readonly dir: string;
   private readonly lockTimeout: number;
   private readonly pollInterval: number;
+  private dirReady?: Promise<void>;
+  private generation = 0;
+  private clearPromise?: Promise<void>;
 
   constructor(options: FileSystemReadCacheStoreOptions) {
     this.dir = options.dir;
@@ -54,29 +56,134 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
     this.pollInterval = options.pollInterval ?? 20;
   }
 
+  private ensureDir(): Promise<void> {
+    if (!this.dirReady) {
+      const gen = this.generation;
+      const ready = (async () => {
+        if (this.clearPromise) {
+          await this.clearPromise;
+        }
+        if (this.generation !== gen) {
+          if (this.dirReady === ready) {
+            this.dirReady = undefined;
+          }
+          return;
+        }
+        await fs.mkdir(this.dir, {recursive: true});
+        if (this.generation !== gen && this.dirReady === ready) {
+          this.dirReady = undefined;
+        }
+      })().catch((err) => {
+        if (this.dirReady === ready) {
+          this.dirReady = undefined;
+        }
+        throw err;
+      });
+      this.dirReady = ready;
+    }
+    return this.dirReady;
+  }
+
   async get(key: string): Promise<ReadCacheStoreEntry | undefined> {
+    return this.getUntil(key, Date.now() + this.lockTimeout);
+  }
+
+  /**
+   * Like `get()`, but for multiple keys. Missing keys are claimed one at a
+   * time in sorted order, so that two processes that miss overlapping keys
+   * can't each claim one and then wait on the other until `lockTimeout`.
+   */
+  async getMany(
+    keys: string[]
+  ): Promise<Array<ReadCacheStoreEntry | undefined>> {
+    const deadline = Date.now() + this.lockTimeout;
+    const gen = this.generation;
+    const now = Date.now();
+    const results = new Map<string, ReadCacheStoreEntry | undefined>();
+    const uniqueKeys = Array.from(new Set(keys));
+    const entries = await Promise.all(
+      uniqueKeys.map((key) => readEntry(this.filePath(key)))
+    );
+    const misses: string[] = [];
+    uniqueKeys.forEach((key, i) => {
+      const entry = entries[i];
+      if (entry && entry.expiresAt > now && this.generation === gen) {
+        results.set(key, entry);
+      } else {
+        misses.push(key);
+      }
+    });
+    for (const key of misses.sort()) {
+      results.set(
+        key,
+        await this.getUntil(key, deadline).catch(() => undefined)
+      );
+    }
+    return keys.map((key) => results.get(key));
+  }
+
+  private async getUntil(
+    key: string,
+    deadline: number
+  ): Promise<ReadCacheStoreEntry | undefined> {
     const filePath = this.filePath(key);
     const lockPath = `${filePath}.lock`;
-    const deadline = Date.now() + this.lockTimeout;
+    const gen = this.generation;
     for (;;) {
+      if (this.generation !== gen) {
+        return undefined;
+      }
       const entry = await readEntry(filePath);
+      if (this.generation !== gen) {
+        return undefined;
+      }
       if (entry && entry.expiresAt > Date.now()) {
         return entry;
       }
       // Claim the key so that other processes wait for this process to fetch
       // it (the lock is removed by `set()` or `delete()`).
-      try {
-        await fs.mkdir(this.dir, {recursive: true});
-        await fs.writeFile(lockPath, '', {flag: 'wx'});
-        return undefined;
-      } catch (err: any) {
-        if (err?.code !== 'EEXIST') {
+      let retriedEnoent = false;
+      for (;;) {
+        if (this.generation !== gen) {
           return undefined;
+        }
+        try {
+          await this.ensureDir();
+          if (this.generation !== gen) {
+            return undefined;
+          }
+          await fs.writeFile(lockPath, '', {flag: 'wx'});
+          if (this.generation !== gen) {
+            await fs.rm(lockPath, {force: true});
+            return undefined;
+          }
+          // Another process may have stored the key (and released its lock)
+          // between the read above and the claim.
+          const stored = await readEntry(filePath);
+          if (stored && stored.expiresAt > Date.now()) {
+            await fs.rm(lockPath, {force: true});
+            return this.generation === gen ? stored : undefined;
+          }
+          return undefined;
+        } catch (err: any) {
+          if (
+            err?.code === 'ENOENT' &&
+            !retriedEnoent &&
+            this.generation === gen
+          ) {
+            retriedEnoent = true;
+            this.dirReady = undefined;
+            continue;
+          }
+          if (err?.code !== 'EEXIST') {
+            return undefined;
+          }
+          break;
         }
       }
       // Another process is fetching the key. If it takes too long (e.g. the
       // process crashed), fetch it again.
-      if (Date.now() > deadline) {
+      if (Date.now() > deadline || this.generation !== gen) {
         return undefined;
       }
       await sleep(this.pollInterval);
@@ -85,12 +192,48 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
 
   async set(key: string, entry: ReadCacheStoreEntry): Promise<void> {
     const filePath = this.filePath(key);
-    await fs.mkdir(this.dir, {recursive: true});
+    const gen = this.generation;
+    await this.ensureDir();
+    if (this.generation !== gen) {
+      return;
+    }
+    const payload = JSON.stringify(encodeData(entry));
     // Write to a temp file and rename it so that readers never see a
     // partially written file.
-    const tmpPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(encodeData(entry)));
-    await fs.rename(tmpPath, filePath);
+    const writeAndRename = async () => {
+      const tmpPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(tmpPath, payload);
+        if (this.generation !== gen) {
+          await fs.rm(tmpPath, {force: true});
+          return;
+        }
+        await fs.rename(tmpPath, filePath);
+      } catch (err) {
+        await fs.rm(tmpPath, {force: true});
+        throw err;
+      }
+    };
+    try {
+      await writeAndRename();
+    } catch (err: any) {
+      if (this.generation !== gen) {
+        return;
+      }
+      if (err?.code === 'ENOENT') {
+        this.dirReady = undefined;
+        await this.ensureDir();
+        if (this.generation !== gen) {
+          return;
+        }
+        await writeAndRename();
+      } else {
+        throw err;
+      }
+    }
+    if (this.generation !== gen) {
+      await fs.rm(filePath, {force: true});
+    }
     await fs.rm(`${filePath}.lock`, {force: true});
   }
 
@@ -101,7 +244,20 @@ export class FileSystemReadCacheStore implements ReadCacheStore {
   }
 
   async clear(): Promise<void> {
-    await fs.rm(this.dir, {recursive: true, force: true});
+    this.generation += 1;
+    this.dirReady = undefined;
+    const prev = this.clearPromise ?? Promise.resolve();
+    const rm = prev
+      .catch(() => {})
+      .then(() => fs.rm(this.dir, {recursive: true, force: true}));
+    this.clearPromise = rm;
+    try {
+      await rm;
+    } finally {
+      if (this.clearPromise === rm) {
+        this.clearPromise = undefined;
+      }
+    }
   }
 
   private filePath(key: string) {

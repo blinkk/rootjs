@@ -910,4 +910,113 @@ describe('RootCMSClient Validation', () => {
       expect(mockGetCollectionSchema).not.toHaveBeenCalled();
     });
   });
+
+  describe('ReadCache key scoping', () => {
+    it('isolates cached reads by Firebase projectId and Firestore databaseId', async () => {
+      const {ReadCache, RootCMSClient} = await import('./client.js');
+      const storeEntries = new Map<string, any>();
+      const sharedStore = {
+        async get(key: string) {
+          return storeEntries.get(key);
+        },
+        async set(key: string, entry: any) {
+          storeEntries.set(key, entry);
+        },
+        async delete(key: string) {
+          storeEntries.delete(key);
+        },
+        async clear() {
+          storeEntries.clear();
+        },
+      };
+
+      const makeClient = (
+        gcpProjectId: string,
+        databaseId: string,
+        title: string
+      ) => {
+        const docData = {
+          id: 'Pages/about',
+          collection: 'Pages',
+          slug: 'about',
+          sys: {},
+          fields: {title},
+        };
+        const db: any = {
+          databaseId,
+          doc: vi.fn((docPath: string) => ({
+            path: docPath,
+            get: vi.fn(async () => ({exists: true, data: () => docData})),
+          })),
+          getAll: vi.fn(async () => [{exists: true, data: () => docData}]),
+        };
+        const rootConfig: any = {
+          rootDir: '/test',
+          plugins: [
+            {
+              name: 'root-cms',
+              getConfig: () => ({
+                id: 'shared-root-id',
+                firebaseConfig: {
+                  apiKey: 'test',
+                  authDomain: 'test',
+                  projectId: gcpProjectId,
+                  storageBucket: 'test',
+                },
+              }),
+              getFirebaseApp: () => ({options: {projectId: gcpProjectId}}),
+              getFirestore: () => db,
+            },
+          ],
+        };
+        return new RootCMSClient(rootConfig, {
+          cache: new ReadCache({store: sharedStore}),
+        });
+      };
+
+      const clientA = makeClient('gcp-project-a', '(default)', 'Title A');
+      const clientB = makeClient('gcp-project-b', '(default)', 'Title B');
+      const clientC = makeClient('gcp-project-a', 'secondary-db', 'Title C');
+
+      // Direct `getDoc()` reads must not collide across project/database.
+      const docA = await clientA.getDoc('Pages', 'about', {mode: 'published'});
+      const docB = await clientB.getDoc('Pages', 'about', {mode: 'published'});
+      const docC = await clientC.getDoc('Pages', 'about', {mode: 'published'});
+      expect(docA?.fields.title).toBe('Title A');
+      expect(docB?.fields.title).toBe('Title B');
+      expect(docC?.fields.title).toBe('Title C');
+
+      // `getAllData()` reads must also stay isolated and match `getDoc()`.
+      const [allA] = await clientA.getAllData(
+        [
+          {
+            path: 'Projects/shared-root-id/Collections/Pages/Published/about',
+          } as any,
+        ],
+        {mode: 'published'}
+      );
+      const [allB] = await clientB.getAllData(
+        [
+          {
+            path: 'Projects/shared-root-id/Collections/Pages/Published/about',
+          } as any,
+        ],
+        {mode: 'published'}
+      );
+      const [allC] = await clientC.getAllData(
+        [
+          {
+            path: 'Projects/shared-root-id/Collections/Pages/Published/about',
+          } as any,
+        ],
+        {mode: 'published'}
+      );
+      expect(allA.fields.title).toBe('Title A');
+      expect(allB.fields.title).toBe('Title B');
+      expect(allC.fields.title).toBe('Title C');
+      expect((clientA.db as any).getAll).not.toHaveBeenCalled();
+      expect((clientB.db as any).getAll).not.toHaveBeenCalled();
+      expect((clientC.db as any).getAll).not.toHaveBeenCalled();
+    });
+  });
 });
