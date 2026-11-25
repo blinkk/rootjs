@@ -211,7 +211,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           minify: false,
           modulePreload: {polyfill: false},
           reportCompressedSize: false,
-          sourcemap: true,
+          sourcemap: viteConfig?.build?.sourcemap ?? true,
         },
         ssr: {
           ...viteConfig.ssr,

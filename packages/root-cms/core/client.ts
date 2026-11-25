@@ -1127,8 +1127,9 @@ export class RootCMSClient {
    * scripts and the `root-cms` CLI.
    *
    * Reads the schema file through vite when there's one, or otherwise the JSON
-   * written by the build (see `preBuild()` in `plugin.ts`). In production only
-   * the JSON is used, since a deployed site shouldn't be starting vite.
+   * written during the `root build` server bundle step (see `plugin.ts`). In
+   * production only the JSON is used, since a deployed site shouldn't be
+   * starting vite.
    */
   private async loadCollectionOutsideVite(
     collectionId: string

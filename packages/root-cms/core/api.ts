@@ -267,8 +267,8 @@ export function api(server: Server, options: ApiOptions) {
       return await app.getCollection(collectionId);
     }
     // On prod, read the collection's schema from
-    // `dist/collections/<id>.schema.json`. This file is built in the
-    // `preBuild()` hook within `plugin.ts`.
+    // `dist/collections/<id>.schema.json`. This file is emitted during the
+    // `root build` server bundle step in `plugin.ts`.
     try {
       const schemaPath = path.join(
         req.rootConfig!.rootDir,

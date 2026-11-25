@@ -156,12 +156,12 @@ interface DevViteServer {
   ssrLoadModule: (url: string) => Promise<Record<string, any>>;
 }
 
-/** Monotonic counter for cache-busting dynamic imports of `dist/server/project.js`. */
+/** Monotonic counter for cache-busting dynamic imports of `dist/server/cms-project.js`. */
 let schemaBundleImportId = 0;
 
 /**
  * Writes collection schema JSON files to `dist/collections/*.schema.json`
- * from the already-bundled `dist/server/project.js` module, avoiding a
+ * from the already-bundled `dist/server/cms-project.js` module, avoiding a
  * throwaway Vite dev server boot during `root build`.
  */
 async function writeCollectionSchemasToJson(
@@ -1306,9 +1306,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   }
 
   // Captured in `preBuild` and consumed by the `writeBundle` vite plugin hook
-  // once `dist/server/project.js` is written, so schemas and v2 translations
-  // migration finish before SSG renders pages without booting a throwaway
-  // Vite dev server.
+  // once `dist/server/cms-project.js` is written, so schemas and v2
+  // translations migration finish before SSG renders pages without booting a
+  // throwaway Vite dev server.
   let buildRootConfig: RootConfig | null = null;
 
   const plugin: CMSPlugin = {
@@ -1368,7 +1368,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       /**
        * Captures `rootConfig` so the `writeBundle` vite plugin hook can emit
        * `dist/collections/*.schema.json` and run any build-time migrations
-       * once `dist/server/project.js` is bundled.
+       * once `dist/server/cms-project.js` is bundled.
        */
       preBuild: async (rootConfig: RootConfig) => {
         buildRootConfig = rootConfig;
@@ -1376,10 +1376,16 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       /**
        * Saves build metadata to `dist/.root-cms/build.json` so that prebuilt
-       * servers can report when they were built.
+       * servers can report when they were built, and verifies that the server
+       * bundle emitted collection schemas when `preBuild` ran.
        */
       postBuild: async (rootConfig: RootConfig) => {
-        buildRootConfig = null;
+        if (buildRootConfig !== null) {
+          buildRootConfig = null;
+          throw new Error(
+            '[root-cms] collection schemas were not emitted during the server build (expected dist/server/cms-project.js).'
+          );
+        }
         await writeBuildInfo(rootConfig.rootDir);
       },
     },
@@ -1390,7 +1396,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     ssrInput: () => {
       return {
         cms: path.resolve(__dirname, './app.js'),
-        project: path.resolve(__dirname, './project.js'),
+        'cms-project': path.resolve(__dirname, './project.js'),
       };
     },
 
@@ -1399,7 +1405,16 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         name: 'root-cms:write-collection-schemas',
         apply: 'build',
         async writeBundle(outputOptions, bundle) {
-          if (!buildRootConfig || !('project.js' in bundle)) {
+          if (!buildRootConfig) {
+            return;
+          }
+          const projectChunk = Object.values(bundle).find(
+            (item) =>
+              item.type === 'chunk' &&
+              item.isEntry &&
+              item.name === 'cms-project'
+          );
+          if (!projectChunk) {
             return;
           }
           const outDir = outputOptions.dir;
@@ -1415,7 +1430,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           buildRootConfig = null;
           await writeCollectionSchemasToJson(
             rootConfig,
-            path.join(outDir, 'project.js')
+            path.join(outDir, projectChunk.fileName)
           );
 
           // When the v2 translations manager is enabled, migrate v1
@@ -1504,9 +1519,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
 
       // When the v2 translations manager is enabled, migrate v1
-      // translations on dev server startup. Fire-and-forget so dev startup isn't blocked;
-      // prod servers never migrate (the migration runs at build time via the
-      // preBuild hook). Projects not yet connected to Firebase are skipped.
+      // translations on dev server startup. Fire-and-forget so dev startup
+      // isn't blocked; prod servers never migrate (the migration runs at build
+      // time during the `root build` server bundle step). Projects not yet
+      // connected to Firebase are skipped.
       if (
         options.experiments?.v2TranslationsManager &&
         !isPlaceholderFirebaseProject(options.firebaseConfig) &&
