@@ -863,8 +863,7 @@ export class Renderer {
       if (
         !isUnloadedLazyRoute &&
         !routeModule?.default &&
-        !routeModule?.getStaticContent &&
-        !routeModule?.handle
+        !routeModule?.getStaticContent
       ) {
         return;
       }

@@ -25,6 +25,9 @@ vi.mock('virtual:root/routes', () => ({
     '/routes/api/health.ts': {
       handle: () => {},
     },
+    '/routes/robots.txt.ts': {
+      getStaticContent: () => 'User-agent: *',
+    },
     '/routes/helper.ts': {},
   },
   POD_ROUTE_MODULES: {},
@@ -63,8 +66,10 @@ describe('renderDevServer404', () => {
     expect(html).toContain('/fr/blog/[slug]/');
     expect(html).toContain('routes/docs/[...slug].tsx');
     expect(html).toContain('/docs/[...slug]');
-    expect(html).toContain('routes/api/health.ts');
-    expect(html).toContain('/api/health/');
+    expect(html).toContain('routes/robots.txt.ts');
+    expect(html).toContain('/robots.txt');
+    expect(html).not.toContain('routes/api/health.ts');
+    expect(html).not.toContain('/api/health');
     expect(html).not.toContain('routes/helper.ts');
     expect(html).toContain('url: /missing-page');
   });
