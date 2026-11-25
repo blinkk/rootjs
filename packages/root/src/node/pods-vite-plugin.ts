@@ -21,11 +21,12 @@ const RESOLVED_VIRTUAL_TRANSLATIONS = '\0' + VIRTUAL_TRANSLATIONS_ID;
  * `Router.initRouteTrie()` can read `routeModule.config?.locales` synchronously.
  */
 const ROUTE_CONFIG_EXPORT_RE =
-  /\bexport\s+(?:(?:const|let|var)\s+config\b|\{[^}]*\bconfig\b[^}]*\}|\*\s+from\b)/;
+  /\bexport\s*(?:(?:const|let|var)\s+(?:config\b|\{[^}]*\bconfig\b)|\{[^}]*\bconfig\b[^}]*\}|\*(?:\s+as\s+config\b|\s*from\b))/;
 
 export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
   let podsPromise: Promise<ResolvedPod[]> | null = null;
   let isDev = false;
+  const routeEagerState = new Map<string, boolean>();
 
   const getPods = () => {
     if (!podsPromise) {
@@ -51,7 +52,12 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
 
     async load(id) {
       if (id === RESOLVED_VIRTUAL_ROUTES) {
-        return buildRoutesModule(rootConfig, await getPods(), isDev);
+        return buildRoutesModule(
+          rootConfig,
+          await getPods(),
+          isDev,
+          routeEagerState
+        );
       }
       if (id === RESOLVED_VIRTUAL_SCHEMAS) {
         return buildSchemasModule(rootConfig, await getPods());
@@ -63,10 +69,15 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
     },
 
     configureServer(server) {
+      const userRoutesDir = path.resolve(rootConfig.rootDir, 'routes');
+      const podRouteDirs: string[] = [];
       const watchDirs: string[] = [];
       getPods().then((pods) => {
         for (const pod of pods) {
-          if (pod.routesDir) watchDirs.push(pod.routesDir);
+          if (pod.routesDir) {
+            watchDirs.push(pod.routesDir);
+            podRouteDirs.push(path.resolve(pod.routesDir));
+          }
           if (pod.collectionsDir) watchDirs.push(pod.collectionsDir);
           if (pod.translationsDir) watchDirs.push(pod.translationsDir);
           if (pod.bundlesDir) watchDirs.push(pod.bundlesDir);
@@ -78,6 +89,14 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
           server.watcher.add(dir);
         }
       });
+
+      const invalidateRoutesModule = () => {
+        const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ROUTES);
+        if (mod) {
+          server.moduleGraph.invalidateModule(mod);
+        }
+        server.ws.send({type: 'full-reload'});
+      };
 
       const invalidateVirtualModules = () => {
         invalidatePodCache();
@@ -99,15 +118,47 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
       server.watcher.on('add', (filePath) => {
         if (isInPodDir(filePath, watchDirs)) {
           invalidateVirtualModules();
+        } else if (isRouteFileInDir(filePath, userRoutesDir)) {
+          invalidateRoutesModule();
         }
       });
       server.watcher.on('unlink', (filePath) => {
+        const resolvedPath = path.resolve(filePath);
         if (isInPodDir(filePath, watchDirs)) {
+          routeEagerState.delete(resolvedPath);
           invalidateVirtualModules();
+        } else if (isRouteFileInDir(filePath, userRoutesDir)) {
+          routeEagerState.delete(resolvedPath);
+          invalidateRoutesModule();
+        }
+      });
+      server.watcher.on('change', async (filePath) => {
+        const isWatchedRoute =
+          isRouteFileInDir(filePath, userRoutesDir) ||
+          podRouteDirs.some((dir) => isRouteFileInDir(filePath, dir));
+        if (!isWatchedRoute) {
+          return;
+        }
+        const resolvedPath = path.resolve(filePath);
+        if (!routeEagerState.has(resolvedPath)) {
+          return;
+        }
+        const nextEager = await hasRouteConfigExport(resolvedPath);
+        if (routeEagerState.get(resolvedPath) !== nextEager) {
+          invalidateRoutesModule();
         }
       });
     },
   };
+}
+
+function isRouteFileInDir(filePath: string, dir: string): boolean {
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(dir + path.sep)) {
+    return false;
+  }
+  const parts = path.parse(resolved);
+  return !parts.name.startsWith('_') && isJsFile(parts.base);
 }
 
 function isInPodDir(filePath: string, watchDirs: string[]): boolean {
@@ -135,13 +186,18 @@ async function hasRouteConfigExport(filePath: string): Promise<boolean> {
 async function buildRoutesModule(
   rootConfig: RootConfig,
   pods: ResolvedPod[],
-  isDev: boolean
+  isDev: boolean,
+  routeEagerState: Map<string, boolean>
 ): Promise<string> {
   const rootDir = rootConfig.rootDir;
   const imports: string[] = [];
   const userEntries: string[] = [];
   const podEntries: string[] = [];
   let idx = 0;
+
+  if (isDev) {
+    routeEagerState.clear();
+  }
 
   // User project routes.
   const routesDir = path.join(rootDir, 'routes');
@@ -160,6 +216,9 @@ async function buildRoutesModule(
       : routeFiles.map(() => true);
     for (let i = 0; i < routeFiles.length; i++) {
       const file = routeFiles[i];
+      if (isDev) {
+        routeEagerState.set(path.resolve(routesDir, file), eagerFlags[i]);
+      }
       const modulePath = `/routes/${file.replace(/\\/g, '/')}`;
       if (eagerFlags[i]) {
         const varName = `_r${idx++}`;
@@ -182,6 +241,9 @@ async function buildRoutesModule(
     : podRouteItems.map(() => true);
   for (let i = 0; i < podRouteItems.length; i++) {
     const {pod, route} = podRouteItems[i];
+    if (isDev) {
+      routeEagerState.set(path.resolve(route.filePath), podEagerFlags[i]);
+    }
     const meta = `podName: ${JSON.stringify(pod.name)}, routePath: ${JSON.stringify(route.routePath)}, src: ${JSON.stringify(`pod/${pod.name}/${route.relPath}`)}`;
     if (podEagerFlags[i]) {
       const varName = `_r${idx++}`;

@@ -1,5 +1,7 @@
+import fs from 'node:fs/promises';
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import {afterAll, beforeAll, expect, test} from 'vitest';
 import {createDevServer} from '../dist/cli.js';
@@ -113,4 +115,164 @@ test('lazy route loader is retained for HMR updates across reused Route instance
   version = 2;
   const res2 = await renderer.renderRoute(route, {routeParams: {}});
   expect(res2.html).toContain('v2');
+});
+
+async function waitFor(
+  check: () => Promise<boolean>,
+  timeoutMs = 5000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await check()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition.`);
+}
+
+test('dev mode handles live HMR edits, syntax error recovery, and adding config.locales on lazy routes', async () => {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'root-lazy-hmr-'));
+  let tmpHttpServer: http.Server | undefined;
+  let tmpApp: any;
+  try {
+    await fs.symlink(
+      path.resolve(__dirname, '../node_modules'),
+      path.join(tmpDir, 'node_modules')
+    );
+    await fs.mkdir(path.join(tmpDir, 'routes'), {recursive: true});
+    await fs.writeFile(
+      path.join(tmpDir, 'package.json'),
+      JSON.stringify({name: 'lazy-hmr-test', type: 'module'})
+    );
+    await fs.writeFile(
+      path.join(tmpDir, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          jsx: 'react-jsx',
+          jsxImportSource: 'preact',
+        },
+      })
+    );
+    await fs.writeFile(
+      path.join(tmpDir, 'root.config.ts'),
+      `export default {
+  i18n: {
+    locales: ['en', 'fr', 'de'],
+    urlFormat: '/intl/[locale]/[path]',
+  },
+};
+`
+    );
+
+    const routeFile = path.join(tmpDir, 'routes/foo.tsx');
+    await fs.writeFile(
+      routeFile,
+      `export default function FooPage() {
+  return <h1>Foo v1</h1>;
+}
+`
+    );
+
+    tmpApp = await createDevServer({rootDir: tmpDir, port: 14589});
+    let tmpPort = 0;
+    await new Promise<void>((resolve) => {
+      tmpHttpServer = tmpApp.listen(0, () => {
+        tmpPort = (tmpHttpServer!.address() as AddressInfo).port;
+        resolve();
+      });
+    });
+
+    const viteServer = tmpApp.get('viteServer');
+    const writeAndWaitForChange = async (content: string) => {
+      // Wait for chokidar to observe the file change before fetching.
+      const changed = new Promise<void>((resolve) => {
+        const onChange = (changedPath: string) => {
+          if (path.resolve(changedPath) === path.resolve(routeFile)) {
+            viteServer.watcher.off('change', onChange);
+            resolve();
+          }
+        };
+        viteServer.watcher.on('change', onChange);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await fs.writeFile(routeFile, content);
+      await changed;
+    };
+
+    const fetchTmp = async (urlPath: string) => {
+      const res = await fetch(`http://localhost:${tmpPort}${urlPath}`);
+      return {status: res.status, body: await res.text()};
+    };
+
+    // Initial render of lazy route.
+    const r1 = await fetchTmp('/foo');
+    expect(r1.status).toBe(200);
+    expect(r1.body).toContain('Foo v1');
+    expect((await fetchTmp('/intl/fr/foo')).status).toBe(200);
+
+    // (a) Live HMR edit to the lazy route file on disk.
+    await writeAndWaitForChange(
+      `export default function FooPage() {
+  return <h1>Foo v2</h1>;
+}
+`
+    );
+    await waitFor(async () => {
+      const r = await fetchTmp('/foo');
+      return r.status === 200 && r.body.includes('Foo v2');
+    });
+
+    // (b) Syntax error -> 500 -> fix -> 200 recovery on the lazy route.
+    await writeAndWaitForChange(
+      `export default function FooPage( {
+  return <h1>Broken</h1>;
+}
+`
+    );
+    await waitFor(async () => {
+      const r = await fetchTmp('/foo');
+      return r.status === 500;
+    });
+
+    await writeAndWaitForChange(
+      `export default function FooPage() {
+  return <h1>Foo recovered</h1>;
+}
+`
+    );
+    await waitFor(async () => {
+      const r = await fetchTmp('/foo');
+      return r.status === 200 && r.body.includes('Foo recovered');
+    });
+
+    // (c) Adding `export const config = {locales: ['de']}` to an existing lazy
+    // route during `root dev` hard-invalidates `virtual:root/routes`.
+    await writeAndWaitForChange(
+      `export const config = {locales: ['de']};
+export default function FooPage() {
+  return <h1>Foo de only</h1>;
+}
+`
+    );
+    await waitFor(async () => {
+      const frRes = await fetchTmp('/intl/fr/foo');
+      return frRes.status === 404;
+    });
+    const deRes = await fetchTmp('/intl/de/foo');
+    expect(deRes.status).toBe(200);
+    expect(deRes.body).toContain('Foo de only');
+    expect((await fetchTmp('/intl/en/foo')).status).toBe(404);
+  } finally {
+    if (tmpHttpServer) {
+      tmpHttpServer.close();
+    }
+    if (tmpApp) {
+      const viteServer = tmpApp.get('viteServer');
+      if (viteServer) {
+        await viteServer.close();
+      }
+    }
+    await fs.rm(tmpDir, {recursive: true, force: true});
+  }
 });
