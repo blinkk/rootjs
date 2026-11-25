@@ -59,8 +59,9 @@ export class RouteTrie<T> {
    * URL.
    */
   get(path: string): [T | undefined, Record<string, string>] {
-    const params = {};
-    const route = this.getRoute(path, params);
+    const params: Record<string, string> = {};
+    const segments = splitSegments(path);
+    const route = this.getRoute(segments, 0, params);
     return [route, params];
   }
 
@@ -69,7 +70,8 @@ export class RouteTrie<T> {
    */
   matchAll(path: string): Array<[T, Record<string, string>]> {
     const matches: Array<[T, Record<string, string>]> = [];
-    this.collectRoutes(path, {}, matches);
+    const segments = splitSegments(path);
+    this.collectRoutes(segments, 0, {}, matches);
     return matches;
   }
 
@@ -83,16 +85,18 @@ export class RouteTrie<T> {
         promises.push(promise);
       }
     };
-    if (this.route) {
+    if (this.route !== undefined) {
       addPromise(cb('/', this.route));
     }
     if (this.paramNodes) {
       this.paramNodes.forEach((paramChild) => {
         const param = `[${paramChild.name}]`;
-        paramChild.trie.walk((childPath: string, route: T) => {
-          const paramUrlPath = `/${param}${childPath}`;
-          addPromise(cb(paramUrlPath, route));
-        });
+        addPromise(
+          paramChild.trie.walk((childPath: string, route: T) => {
+            const paramUrlPath = `/${param}${childPath}`;
+            return cb(paramUrlPath, route);
+          })
+        );
       });
     }
     if (this.catchAllNodes) {
@@ -104,9 +108,11 @@ export class RouteTrie<T> {
       addPromise(cb(wildcardUrlPath, this.optCatchAllNodes.route));
     }
     this.children.forEach((childTrie, subpath) => {
-      childTrie.walk((childPath: string, childRoute: T) => {
-        addPromise(cb(`/${subpath}${childPath}`, childRoute));
-      });
+      addPromise(
+        childTrie.walk((childPath: string, childRoute: T) => {
+          return cb(`/${subpath}${childPath}`, childRoute);
+        })
+      );
     });
     return Promise.all(promises).then(() => {});
   }
@@ -123,37 +129,35 @@ export class RouteTrie<T> {
   }
 
   private getRoute(
-    urlPath: string,
+    segments: string[],
+    index: number,
     params: Record<string, string>
   ): T | undefined {
-    urlPath = this.normalizePath(urlPath);
-    if (urlPath === '') {
-      if (this.route) {
+    if (index === segments.length) {
+      if (this.route !== undefined) {
         return this.route;
       }
       if (this.optCatchAllNodes) {
-        if (urlPath) {
-          params[this.optCatchAllNodes.name] = urlPath;
-        }
         return this.optCatchAllNodes.route;
       }
       return undefined;
     }
 
-    const [head, tail] = this.splitPath(urlPath);
+    const head = segments[index];
+    const nextIndex = index + 1;
 
     const child = this.children.get(head);
     if (child) {
-      const route = child.getRoute(tail, params);
-      if (route) {
+      const route = child.getRoute(segments, nextIndex, params);
+      if (route !== undefined) {
         return route;
       }
     }
 
     if (this.paramNodes) {
       for (const paramChild of this.paramNodes.values()) {
-        const route = paramChild.trie.getRoute(tail, params);
-        if (route) {
+        const route = paramChild.trie.getRoute(segments, nextIndex, params);
+        if (route !== undefined) {
           params[paramChild.name] = head;
           return route;
         }
@@ -161,12 +165,14 @@ export class RouteTrie<T> {
     }
 
     if (this.catchAllNodes) {
-      params[this.catchAllNodes.name] = urlPath;
+      params[this.catchAllNodes.name] =
+        nextIndex === segments.length ? head : segments.slice(index).join('/');
       return this.catchAllNodes.route;
     }
 
     if (this.optCatchAllNodes) {
-      params[this.optCatchAllNodes.name] = urlPath;
+      params[this.optCatchAllNodes.name] =
+        nextIndex === segments.length ? head : segments.slice(index).join('/');
       return this.optCatchAllNodes.route;
     }
 
@@ -174,49 +180,52 @@ export class RouteTrie<T> {
   }
 
   private collectRoutes(
-    urlPath: string,
+    segments: string[],
+    index: number,
     params: Record<string, string>,
     results: Array<[T, Record<string, string>]>
   ) {
-    urlPath = this.normalizePath(urlPath);
-    if (urlPath === '') {
-      if (this.route) {
+    if (index === segments.length) {
+      if (this.route !== undefined) {
         results.push([this.route, {...params}]);
       }
       if (this.optCatchAllNodes) {
-        const optParams = {...params};
-        if (urlPath) {
-          optParams[this.optCatchAllNodes.name] = urlPath;
-        }
-        results.push([this.optCatchAllNodes.route, optParams]);
+        results.push([this.optCatchAllNodes.route, {...params}]);
       }
       return;
     }
 
-    const [head, tail] = this.splitPath(urlPath);
+    const head = segments[index];
+    const nextIndex = index + 1;
 
     const child = this.children.get(head);
     if (child) {
-      child.collectRoutes(tail, {...params}, results);
+      child.collectRoutes(segments, nextIndex, params, results);
     }
 
     if (this.paramNodes) {
       for (const paramChild of this.paramNodes.values()) {
         const paramParams = {...params, [paramChild.name]: head};
-        paramChild.trie.collectRoutes(tail, paramParams, results);
+        paramChild.trie.collectRoutes(
+          segments,
+          nextIndex,
+          paramParams,
+          results
+        );
       }
     }
 
     if (this.catchAllNodes) {
-      const caParams = {...params, [this.catchAllNodes.name]: urlPath};
+      const rest =
+        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      const caParams = {...params, [this.catchAllNodes.name]: rest};
       results.push([this.catchAllNodes.route, caParams]);
     }
 
     if (this.optCatchAllNodes) {
-      const ocParams = {...params};
-      if (urlPath) {
-        ocParams[this.optCatchAllNodes.name] = urlPath;
-      }
+      const rest =
+        nextIndex === segments.length ? head : segments.slice(index).join('/');
+      const ocParams = {...params, [this.optCatchAllNodes.name]: rest};
       results.push([this.optCatchAllNodes.route, ocParams]);
     }
   }
@@ -241,6 +250,33 @@ export class RouteTrie<T> {
     }
     return [path.slice(0, i), path.slice(i + 1)];
   }
+}
+
+const SLASH_CHAR_CODE = 47;
+
+/**
+ * Splits a URL path into non-empty path segments, stripping leading, trailing,
+ * and repeated slashes without regex allocations.
+ */
+function splitSegments(urlPath: string): string[] {
+  const segments: string[] = [];
+  const len = urlPath.length;
+  let start = 0;
+  while (start < len) {
+    while (start < len && urlPath.charCodeAt(start) === SLASH_CHAR_CODE) {
+      start++;
+    }
+    if (start >= len) {
+      break;
+    }
+    let end = urlPath.indexOf('/', start);
+    if (end === -1) {
+      end = len;
+    }
+    segments.push(urlPath.slice(start, end));
+    start = end + 1;
+  }
+  return segments;
 }
 
 /**

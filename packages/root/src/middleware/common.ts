@@ -46,24 +46,39 @@ export function securityHeadersMiddleware(options: {rootConfig: RootConfig}) {
  */
 export function headersMiddleware(options: {rootConfig: RootConfig}) {
   const headersUserConfig = options.rootConfig.server?.headers || [];
-  // Filter header config values that are invalid.
-  const headersConfig = headersUserConfig.filter((headerConfig) => {
-    return (
-      headerConfig.source &&
-      headerConfig.headers &&
-      headerConfig.headers.length > 0
-    );
-  });
-  return (req: Request, res: Response, next: NextFunction) => {
-    headersConfig.forEach((headerConfig) => {
-      if (micromatch.isMatch(req.path, headerConfig.source)) {
-        headerConfig.headers.forEach((header) => {
-          if (header.key) {
-            res.setHeader(String(header.key), String(header.value));
-          }
-        });
+  // Filter invalid rules and precompile glob matchers once at initialization.
+  const compiledRules: Array<{
+    isMatch: (input: string) => boolean;
+    headers: Array<[string, string]>;
+  }> = [];
+  for (const headerConfig of headersUserConfig) {
+    if (!headerConfig.source || !headerConfig.headers?.length) {
+      continue;
+    }
+    const headers: Array<[string, string]> = [];
+    for (const header of headerConfig.headers) {
+      if (header.key) {
+        headers.push([String(header.key), String(header.value)]);
       }
-    });
+    }
+    if (headers.length > 0) {
+      compiledRules.push({
+        isMatch: micromatch.matcher(headerConfig.source),
+        headers,
+      });
+    }
+  }
+  return (req: Request, res: Response, next: NextFunction) => {
+    const reqPath = req.path;
+    for (let i = 0; i < compiledRules.length; i++) {
+      const rule = compiledRules[i];
+      if (rule.isMatch(reqPath)) {
+        const headers = rule.headers;
+        for (let j = 0; j < headers.length; j++) {
+          res.setHeader(headers[j][0], headers[j][1]);
+        }
+      }
+    }
     next();
   };
 }
