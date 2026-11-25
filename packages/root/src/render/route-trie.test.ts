@@ -162,3 +162,58 @@ test('matchAll handles paths with Object.prototype property names', () => {
   assert.deepEqual(routeTrie.matchAll('/__proto__'), []);
   assert.deepEqual(routeTrie.matchAll('/toString'), []);
 });
+
+test('walk awaits async callbacks on nested static and param routes', async () => {
+  routeTrie.add('/', 'root');
+  routeTrie.add('/foo/bar', 'static-nested');
+  routeTrie.add('/[locale]/blog/[slug]', 'param-nested');
+
+  const completed: string[] = [];
+  await routeTrie.walk(async (urlPath, route) => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    completed.push(`${urlPath}:${route}`);
+  });
+
+  assert.deepEqual(completed.sort(), [
+    '/:root',
+    '/[locale]/blog/[slug]/:param-nested',
+    '/foo/bar/:static-nested',
+  ]);
+});
+
+test('supports falsy route values without corrupting params on backtrack', async () => {
+  routeTrie.add('/a/[...sub]', '');
+  routeTrie.add('/[...all]', 'fallback');
+
+  assert.deepEqual(routeTrie.get('/a/b'), ['', {sub: 'b'}]);
+  assert.deepEqual(routeTrie.matchAll('/a/b'), [
+    ['', {sub: 'b'}],
+    ['fallback', {all: 'a/b'}],
+  ]);
+
+  const visited: Array<[string, string]> = [];
+  await routeTrie.walk((urlPath, route) => {
+    visited.push([urlPath, route]);
+  });
+  assert.deepEqual(
+    visited.sort((a, b) => a[0].localeCompare(b[0])),
+    [
+      ['/[...all]', 'fallback'],
+      ['/a/[...sub]', ''],
+    ]
+  );
+});
+
+test('catch-all params preserve repeated slashes', () => {
+  routeTrie.add('/[locale]/[...path]', 'catchall');
+  routeTrie.add('/docs/[[...slug]]', 'docs');
+
+  assert.deepEqual(routeTrie.get('//en//a//b//'), [
+    'catchall',
+    {locale: 'en', path: 'a//b'},
+  ]);
+  assert.deepEqual(routeTrie.matchAll('/docs/a//b/'), [
+    ['docs', {slug: 'a//b'}],
+    ['catchall', {locale: 'docs', path: 'a//b'}],
+  ]);
+});

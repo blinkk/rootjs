@@ -1044,23 +1044,31 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * the URL path starts with /cms or if ?preview=true is in the URL.
    */
   function loginRequired(req: Request): boolean {
-    const urlPath = String(req.originalUrl).split('?')[0].toLowerCase();
-    // Allow the cron to run unauthenticated. The cron job is responsible
-    // for saving version history.
-    if (urlPath === '/cms/api/cron.run') {
-      return false;
-    }
-    // Allow non-confidential static files to be rendered without auth.
-    if (NONCONF_STATIC_PATHS.includes(urlPath)) {
-      return false;
-    }
-    // Require login on all `/cms/` paths.
+    const rawUrl = String(req.originalUrl);
+    const qIndex = rawUrl.indexOf('?');
+    const urlPath = (
+      qIndex === -1 ? rawUrl : rawUrl.slice(0, qIndex)
+    ).toLowerCase();
+    // Require login on all `/cms/` paths except cron and non-confidential
+    // static assets.
     if (urlPath.startsWith('/cms')) {
+      // Allow the cron to run unauthenticated. The cron job is responsible
+      // for saving version history.
+      if (urlPath === '/cms/api/cron.run') {
+        return false;
+      }
+      // Allow non-confidential static files to be rendered without auth.
+      if (NONCONF_STATIC_PATHS.includes(urlPath)) {
+        return false;
+      }
       return true;
     }
     // Require login on all paths that have `?preview=true`, which is used by
     // the preview iframe to render the preview for a page.
-    if (String(req.query.preview) === 'true') {
+    if (
+      req.query.preview !== undefined &&
+      String(req.query.preview) === 'true'
+    ) {
       return true;
     }
     if (options.isLoginRequired && options.isLoginRequired(req)) {
@@ -1165,17 +1173,32 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   }
 
   /**
-   * Returns the current user based on the request's session cookie. The
-   * session cookie is checked for validity through Firebase Auth and the user's
-   * email is verified to have access to Root CMS, otherwise returns `null`.
+   * Returns the raw session cookie from the request, falling back to the
+   * shared local dev auth cookie when enabled.
    */
-  async function getCurrentUser(req: Request): Promise<CMSUser | null> {
+  function getSessionCookie(req: Request): string | null {
     let sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie && isDevSharedAuthEnabled()) {
       // Fall back to the login shared between local Root projects so that
       // switching sites during development doesn't require signing in again.
       sessionCookie = getDevAuthCookie(req);
     }
+    return sessionCookie || null;
+  }
+
+  /**
+   * Returns the current user based on the request's session cookie. The
+   * session cookie is checked for validity through Firebase Auth and the user's
+   * email is verified to have access to Root CMS, otherwise returns `null`.
+   */
+  async function getCurrentUser(
+    req: Request,
+    existingSessionCookie?: string | null
+  ): Promise<CMSUser | null> {
+    const sessionCookie =
+      existingSessionCookie !== undefined
+        ? existingSessionCookie
+        : getSessionCookie(req);
     if (!sessionCookie) {
       if (logLevel === 'debug') {
         console.log('no login session cookie');
@@ -1737,55 +1760,99 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       // Inject the current user into the req object and check if login is
       // required, sending unauthenticated users to the login page.
-      server.use(async (req: Request, res: Response, next: NextFunction) => {
-        let user: CMSUser | null;
+      function handleAuthError(
+        err: unknown,
+        req: Request,
+        res: Response,
+        next: NextFunction
+      ) {
+        // A failure here is an infra error (e.g. a stuck Firestore channel
+        // or expired server credentials), not an invalid session. Respond
+        // with an explicit 503 on paths that require login so the request
+        // fails fast and visibly. Without this, the rejected middleware
+        // promise would leave the request hanging forever and the CMS stuck
+        // on its loading screen until the server restarts.
+        console.error('failed to fetch the current user:');
+        console.error(err);
+        if (isGcloudReauthError(err)) {
+          logGcloudReauthHint();
+        }
+        if (loginRequired(req)) {
+          res.setHeader('cache-control', 'no-store');
+          if (String(req.originalUrl).toLowerCase().startsWith('/cms/api')) {
+            res.status(503).json({success: false, error: 'AUTH_UNAVAILABLE'});
+          } else {
+            res
+              .status(503)
+              .send(
+                'Root.js was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
+              );
+          }
+          return;
+        }
+        // Public paths that don't require login proceed without a user.
+        next();
+      }
+
+      server.use((req: Request, res: Response, next: NextFunction) => {
+        // Fast path: when there is no session cookie, skip `getCurrentUser()`
+        // and `withTimeout()` completely to avoid Promise and timer
+        // allocations on unauthenticated public requests.
+        let sessionCookie: string | null;
         try {
-          user = await withTimeout(
-            getCurrentUser(req),
-            GET_CURRENT_USER_TIMEOUT_MS,
-            'getCurrentUser()'
-          );
+          sessionCookie = getSessionCookie(req);
         } catch (err) {
-          // A failure here is an infra error (e.g. a stuck Firestore channel
-          // or expired server credentials), not an invalid session. Respond
-          // with an explicit 503 on paths that require login so the request
-          // fails fast and visibly. Without this, the rejected middleware
-          // promise would leave the request hanging forever and the CMS stuck
-          // on its loading screen until the server restarts.
-          console.error('failed to fetch the current user:');
-          console.error(err);
-          if (isGcloudReauthError(err)) {
-            logGcloudReauthHint();
+          handleAuthError(err, req, res, next);
+          return;
+        }
+        if (!sessionCookie) {
+          if (logLevel === 'debug') {
+            console.log('no login session cookie');
           }
           if (loginRequired(req)) {
-            res.setHeader('cache-control', 'no-store');
-            if (String(req.originalUrl).toLowerCase().startsWith('/cms/api')) {
-              res.status(503).json({success: false, error: 'AUTH_UNAVAILABLE'});
-            } else {
-              res
-                .status(503)
-                .send(
-                  'Root.js was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
-                );
-            }
+            redirectToLogin(req, res);
             return;
           }
-          // Public paths that don't require login proceed without a user.
           next();
           return;
         }
-        if (user) {
-          req.user = user;
-        }
 
-        // If no user and login is required for the given path, redirect to the
-        // login page.
-        if (!user && loginRequired(req)) {
-          redirectToLogin(req, res);
+        // Skip auth lookup for explicitly unauthenticated CMS endpoints such
+        // as cron jobs and non-confidential static assets.
+        const rawUrl = String(req.originalUrl);
+        const qIndex = rawUrl.indexOf('?');
+        const urlPath = (
+          qIndex === -1 ? rawUrl : rawUrl.slice(0, qIndex)
+        ).toLowerCase();
+        if (
+          urlPath === '/cms/api/cron.run' ||
+          NONCONF_STATIC_PATHS.includes(urlPath)
+        ) {
+          next();
           return;
         }
 
-        next();
+        return withTimeout(
+          getCurrentUser(req, sessionCookie),
+          GET_CURRENT_USER_TIMEOUT_MS,
+          'getCurrentUser()'
+        ).then(
+          (user) => {
+            if (user) {
+              req.user = user;
+            }
+            // If no user and login is required for the given path, redirect to
+            // the login page.
+            if (!user && loginRequired(req)) {
+              redirectToLogin(req, res);
+              return;
+            }
+            next();
+          },
+          (err) => {
+            handleAuthError(err, req, res, next);
+          }
+        );
       });
 
       // Register server-sent events (SSE) endpoints.
