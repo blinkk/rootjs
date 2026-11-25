@@ -214,6 +214,12 @@ async function buildSchemasModule(
   ].join('\n');
 }
 
+/**
+ * Top-level directories skipped by `scanRootSchemaFiles()`.
+ * `collections` is excluded because `buildSchemasModule()` scans top-level
+ * `collections/` separately to track `userCollectionIds` for pod precedence,
+ * avoiding scanning `collections/` twice.
+ */
 const ROOT_SCHEMA_EXCLUDE_DIRS = new Set([
   'appengine',
   'collections',
