@@ -70,24 +70,19 @@ export function RichText(props: RichTextProps) {
   }
 
   const richTextContext = useRichTextContext();
-  const componentMap: Record<string, RichTextBlockComponent> = {
-    heading: RichText.HeadingBlock,
-    html: RichText.HtmlBlock,
-    image: RichText.ImageBlock,
-    orderedList: RichText.ListBlock,
-    paragraph: RichText.ParagraphBlock,
-    table: RichText.TableBlock,
-    unorderedList: RichText.ListBlock,
-    ...richTextContext.components,
-    ...props.components,
-  };
+  const componentMap: RichTextComponentMap =
+    !richTextContext.components && !props.components
+      ? DEFAULT_COMPONENT_MAP
+      : {
+          ...DEFAULT_COMPONENT_MAP,
+          ...richTextContext.components,
+          ...props.components,
+        };
   return (
     <RichTextComponentMapContext.Provider value={componentMap}>
-      {blocks
-        .map((block) => {
-          return <RichText.Block {...block} />;
-        })
-        .filter((value) => !!value)}
+      {blocks.map((block) => (
+        <RichText.Block {...block} />
+      ))}
     </RichTextComponentMapContext.Provider>
   );
 }
@@ -103,6 +98,9 @@ RichText.Block = (props: RichTextBlock) => {
   if (!BlockComponent) {
     console.warn(`[RichText] ignoring unknown richtext type: "${blockType}"`);
     return null;
+  }
+  if (!hasInlineComponents(block)) {
+    return <BlockComponent {...block} />;
   }
   return (
     <InlineComponentRenderer
@@ -323,6 +321,32 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
     </table>
   );
 };
+
+const DEFAULT_COMPONENT_MAP: RichTextComponentMap = {
+  heading: RichText.HeadingBlock,
+  html: RichText.HtmlBlock,
+  image: RichText.ImageBlock,
+  orderedList: RichText.ListBlock,
+  paragraph: RichText.ParagraphBlock,
+  table: RichText.TableBlock,
+  unorderedList: RichText.ListBlock,
+};
+
+/**
+ * Returns true if the block defines at least one inline component entry.
+ */
+function hasInlineComponents(block: RichTextBlock): boolean {
+  const components = block?.data?.components;
+  if (!components || typeof components !== 'object') {
+    return false;
+  }
+  for (const key in components) {
+    if (Object.prototype.hasOwnProperty.call(components, key)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function toNumber(input?: string | number): number {
   if (input === undefined) {
