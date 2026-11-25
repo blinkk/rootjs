@@ -239,3 +239,45 @@ test('clears memoized assets across event-loop turns when ModuleNode mutates', a
     '/elements/added-el/added-el.ts',
   ]);
 });
+
+test('keeps dep order independent of earlier lookups in cyclic graphs', async () => {
+  const elA = createModuleNode(
+    path.join(rootDir, 'elements/el-a/el-a.ts'),
+    '/elements/el-a/el-a.ts'
+  );
+  const elB = createModuleNode(
+    path.join(rootDir, 'elements/el-b/el-b.ts'),
+    '/elements/el-b/el-b.ts'
+  );
+  const utilA = createModuleNode(
+    path.join(rootDir, 'utils/a.ts'),
+    '/utils/a.ts'
+  );
+  const utilB = createModuleNode(
+    path.join(rootDir, 'utils/b.ts'),
+    '/utils/b.ts',
+    [utilA, elB]
+  );
+  utilA.importedModules.add(utilB);
+  utilA.importedModules.add(elA);
+
+  const byFile = new Map<string, Set<ModuleNode>>([
+    [utilA.file!, new Set([utilA])],
+    [utilB.file!, new Set([utilB])],
+  ]);
+  const graph = {
+    getModulesByFile: (file: string) => byFile.get(file),
+  } as unknown as ModuleGraph;
+  const map = new DevServerAssetMap({rootDir} as RootConfig, graph);
+
+  // Looking up `utils/b.ts` first must not change the order of the deps
+  // returned for `utils/a.ts`.
+  expect(await map.get('utils/b.ts')!.getJsDeps()).toEqual([
+    '/elements/el-a/el-a.ts',
+    '/elements/el-b/el-b.ts',
+  ]);
+  expect(await map.get('utils/a.ts')!.getJsDeps()).toEqual([
+    '/elements/el-b/el-b.ts',
+    '/elements/el-a/el-a.ts',
+  ]);
+});

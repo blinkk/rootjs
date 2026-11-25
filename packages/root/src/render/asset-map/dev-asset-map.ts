@@ -117,6 +117,13 @@ export class DevServerAsset implements Asset {
   private viteModule: ModuleNode;
   private cachedCssDeps?: string[];
   private cachedJsDeps?: string[];
+  /**
+   * Deps collected by the cycle fallback. The order of these depends on this
+   * asset being the traversal root, so they are only reused when this asset is
+   * requested directly and are never merged into another asset's deps.
+   */
+  private cyclicRootCssDeps?: string[];
+  private cyclicRootJsDeps?: string[];
 
   constructor(
     src: string,
@@ -136,6 +143,9 @@ export class DevServerAsset implements Asset {
     if (this.cachedCssDeps) {
       return this.cachedCssDeps;
     }
+    if (this.cyclicRootCssDeps) {
+      return this.cyclicRootCssDeps;
+    }
     const acyclic = this.collectCssAcyclic(new Set());
     if (acyclic !== null) {
       return acyclic;
@@ -143,13 +153,16 @@ export class DevServerAsset implements Asset {
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectCss(this, deps, visited);
-    this.cachedCssDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
-    return this.cachedCssDeps;
+    this.cyclicRootCssDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
+    return this.cyclicRootCssDeps;
   }
 
   async getJsDeps(): Promise<string[]> {
     if (this.cachedJsDeps) {
       return this.cachedJsDeps;
+    }
+    if (this.cyclicRootJsDeps) {
+      return this.cyclicRootJsDeps;
     }
     const acyclic = this.collectJsAcyclic(new Set());
     if (acyclic !== null) {
@@ -158,8 +171,8 @@ export class DevServerAsset implements Asset {
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectJs(this, deps, visited);
-    this.cachedJsDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
-    return this.cachedJsDeps;
+    this.cyclicRootJsDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
+    return this.cyclicRootJsDeps;
   }
 
   /**
