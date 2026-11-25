@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'preact/hooks';
@@ -102,7 +103,10 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
     setValue(newValue);
   }, []);
 
-  const deeplinkCtx = {value, setValue, setUrlValue};
+  const deeplinkCtx = useMemo(
+    () => ({value, setValue, setUrlValue}),
+    [value, setUrlValue]
+  );
 
   // Apply deeplinks that arrive via a client-side URL change, e.g. a sidebar
   // tool or global search linking to a field on a doc.

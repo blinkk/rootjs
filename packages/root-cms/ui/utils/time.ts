@@ -13,17 +13,36 @@ export const TIME_UNITS = {
   second: 1000,
 };
 
+const DEFAULT_RELATIVE_TIME_FORMAT = new Intl.RelativeTimeFormat('en', {
+  numeric: 'auto',
+});
+
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('en', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
+
+const FULL_DATE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
 export function getTimeAgo(
   millis: number,
   options?: Intl.RelativeTimeFormatOptions
 ) {
-  const elapsed = Math.abs(millis - new Date().getTime());
+  const elapsed = Math.abs(millis - Date.now());
   if (elapsed < TIME_UNITS.second) {
     return 'just now';
   }
 
-  const rtfOptions = options || {numeric: 'auto'};
-  const rtf = new Intl.RelativeTimeFormat('en', rtfOptions);
+  const rtf = options
+    ? new Intl.RelativeTimeFormat('en', options)
+    : DEFAULT_RELATIVE_TIME_FORMAT;
   if (elapsed < TIME_UNITS.minute) {
     return rtf.format(Math.round(-elapsed / TIME_UNITS.second), 'second');
   }
@@ -36,12 +55,7 @@ export function getTimeAgo(
   if (elapsed < TIME_UNITS.week) {
     return rtf.format(Math.round(-elapsed / TIME_UNITS.day), 'day');
   }
-  const d = new Date(millis);
-  return d.toLocaleDateString('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return SHORT_DATE_FORMAT.format(millis);
 }
 
 export function timestamp(): number {
@@ -81,13 +95,7 @@ export function timestampToMillis(ts: unknown): number {
  * 1:30 PM". This is the format for date/time tooltips across the CMS.
  */
 export function formatDateTime(ts: TimestampLike | unknown): string {
-  return new Date(timestampToMillis(ts)).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return FULL_DATE_TIME_FORMAT.format(timestampToMillis(ts));
 }
 
 export function getLocalISOString() {

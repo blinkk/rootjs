@@ -1,6 +1,6 @@
 import type {ComponentChildren, JSX} from 'preact';
 import {createContext} from 'preact';
-import {useContext, useId, useState} from 'preact/hooks';
+import {useCallback, useContext, useId, useMemo, useState} from 'preact/hooks';
 import {cn} from '../../utils/classes.js';
 
 interface TabsContextValue {
@@ -74,17 +74,25 @@ export function Tabs(props: TabsProps) {
   const value =
     controlledValue !== undefined ? controlledValue : uncontrolledValue;
 
-  const select = (next: string) => {
-    if (controlledValue === undefined) {
-      setUncontrolledValue(next);
-    }
-    if (next !== value) {
-      onChange?.(next);
-    }
-  };
+  const select = useCallback(
+    (next: string) => {
+      if (controlledValue === undefined) {
+        setUncontrolledValue(next);
+      }
+      if (next !== value) {
+        onChange?.(next);
+      }
+    },
+    [controlledValue, onChange, value]
+  );
+
+  const contextValue = useMemo<TabsContextValue>(
+    () => ({baseId, value, select, grow}),
+    [baseId, grow, select, value]
+  );
 
   return (
-    <TabsContext.Provider value={{baseId, value, select, grow}}>
+    <TabsContext.Provider value={contextValue}>
       <div {...rest} className={cn('Tabs', grow && 'Tabs--grow', className)}>
         {children}
       </div>

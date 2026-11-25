@@ -33,44 +33,60 @@ export function SplitPanel(props: SplitPanelProps) {
     350
   );
   const [isDragging, setIsDragging] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const offsetRef = useRef(0);
+  const dragSizeRef = useRef<number | null>(null);
   const resizeCallbacks = useMemo(() => new Set<() => void>(), []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
 
-  const contextValue: SplitPanelContextValue = {
-    onResize: (callback: () => void) => {
-      resizeCallbacks.add(callback);
-      return () => {
-        resizeCallbacks.delete(callback);
-      };
-    },
-  };
+  const contextValue = useMemo<SplitPanelContextValue>(
+    () => ({
+      onResize: (callback: () => void) => {
+        resizeCallbacks.add(callback);
+        return () => {
+          resizeCallbacks.delete(callback);
+        };
+      },
+    }),
+    [resizeCallbacks]
+  );
 
   useEffect(() => {
-    const onMouseUp = () => setIsDragging(false);
-    window.addEventListener('mouseup', onMouseUp);
-
     const container = containerRef.current;
     if (container) {
-      setOffset(container.getBoundingClientRect().left);
+      offsetRef.current = container.getBoundingClientRect().left;
     }
-    return () => window.removeEventListener('mouseup', onMouseUp);
   }, []);
 
   useEffect(() => {
+    if (!isDragging) {
+      return;
+    }
     const onMouseMove = (e: MouseEvent) => {
-      const newPanelWidth = e.clientX - offset;
-      setPanelSize(newPanelWidth);
-      // Trigger all registered resize callbacks
+      const newPanelWidth = e.clientX - offsetRef.current;
+      dragSizeRef.current = newPanelWidth;
+      containerRef.current?.style.setProperty(
+        '--panel-size',
+        `${newPanelWidth}px`
+      );
+      // Trigger all registered resize callbacks.
       resizeCallbacks.forEach((callback) => callback());
     };
-    if (isDragging) {
-      window.addEventListener('mousemove', onMouseMove);
-    }
-    return () => window.removeEventListener('mousemove', onMouseMove);
-  }, [isDragging]);
+    const onMouseUp = () => {
+      if (dragSizeRef.current !== null) {
+        setPanelSize(dragSizeRef.current);
+        dragSizeRef.current = null;
+      }
+      setIsDragging(false);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDragging, resizeCallbacks, setPanelSize]);
 
   if (children?.length !== 2) {
     throw new Error('SplitPanel should have two <SplitPanel.Item> children.');
@@ -95,7 +111,13 @@ export function SplitPanel(props: SplitPanelProps) {
         <div
           className="SplitPanel__divider"
           ref={dividerRef}
-          onMouseDown={() => setIsDragging(true)}
+          onMouseDown={() => {
+            if (containerRef.current) {
+              offsetRef.current =
+                containerRef.current.getBoundingClientRect().left;
+            }
+            setIsDragging(true);
+          }}
         ></div>
         {children[1]}
       </div>

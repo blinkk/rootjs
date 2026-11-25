@@ -66,7 +66,6 @@ import {
 import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataLoadError} from '../../../../components/DataLoadError/DataLoadError.js';
 import {Text} from '../../../../components/Text/Text.js';
-import {useMediaQuery} from '../../../../hooks/useMediaQuery.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
@@ -1225,7 +1224,14 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const collection = useDocCollectionSchema();
   const pinnedThreads = usePinnedCommentThreads();
   const [opened, setOpened] = useState(false);
-  const isDesktop = useMediaQuery('(width >= 48rem)');
+  // Evaluated only when the popover opens to avoid registering a matchMedia
+  // listener for every field in the document.
+  const isDesktop =
+    opened &&
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(width >= 48rem)').matches
+      : true;
   const popoverRef = useRef<HTMLDivElement>(null);
   const count = thread ? countThreadComments(thread) : 0;
   const pinned = Boolean(
@@ -1236,12 +1242,14 @@ DocEditor.FieldHeaderCommentActionIconInner = (
   const canOpen = Boolean(thread) || comments.canComment;
 
   // The label depends on the doc value (array positions, one-of types), so
-  // it's recomputed each time the popover opens.
+  // it's computed lazily when the popover opens.
   const fieldLabel = useMemo(
     () =>
-      formatFieldPath(collection, props.deepKey, (deepKey) =>
-        draft.controller?.getValue(deepKey)
-      ),
+      opened
+        ? formatFieldPath(collection, props.deepKey, (deepKey) =>
+            draft.controller?.getValue(deepKey)
+          )
+        : '',
     [collection, props.deepKey, draft.controller, opened]
   );
 
@@ -1402,19 +1410,14 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
   const field = props.field;
   const editTranslationsModal = useEditTranslationsModal();
   const draft = useDraftDoc();
-  const [value, setValue] = useState<any>(() =>
-    draft.controller.getValue(props.deepKey)
-  );
-
-  useDraftDocField(props.deepKey, (value: any) => {
-    setValue(value);
-  });
-
   const types = useCollectionSchemaTypes();
-  const actionIconDisabled = useMemo(
-    () => testFieldEmpty(field, value, types),
-    [field, types, value]
+  const [actionIconDisabled, setActionIconDisabled] = useState<boolean>(() =>
+    testFieldEmpty(field, draft.controller.getValue(props.deepKey), types)
   );
+
+  useDraftDocField(props.deepKey, (nextValue: any) => {
+    setActionIconDisabled(testFieldEmpty(field, nextValue, types));
+  });
 
   const [doNotTranslate, setDoNotTranslate] = useState(false);
 
@@ -1438,7 +1441,8 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
       return;
     }
     const strings = new Set<string>();
-    extractField(strings, field, value, types);
+    const currentValue = draft.controller.getValue(props.deepKey);
+    extractField(strings, field, currentValue, types);
     editTranslationsModal.open({
       docId: draft.controller.docId,
       strings: Array.from(strings),

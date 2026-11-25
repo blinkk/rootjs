@@ -155,57 +155,52 @@ export function ActionLogs(props: ActionLogsProps) {
 
   // Filter actions based on search, action type, user, and time.
   const filteredActions = useMemo(() => {
-    const now = Date.now();
+    const query = debouncedSearch ? debouncedSearch.toLowerCase() : '';
+    const actionFilterSet =
+      actionFilters.length > 0 ? new Set(actionFilters) : null;
+    const userFilterSet = userFilters.length > 0 ? new Set(userFilters) : null;
+    let cutoff: number | null = null;
+    if (timeFilter && timeFilter !== 'all') {
+      const now = Date.now();
+      switch (timeFilter) {
+        case '1h':
+          cutoff = now - 60 * 60 * 1000;
+          break;
+        case '24h':
+          cutoff = now - 24 * 60 * 60 * 1000;
+          break;
+        case '7d':
+          cutoff = now - 7 * 24 * 60 * 60 * 1000;
+          break;
+        case '30d':
+          cutoff = now - 30 * 24 * 60 * 60 * 1000;
+          break;
+      }
+    }
+
     return actions.filter((action) => {
-      // Filter by search query.
-      if (debouncedSearch) {
-        const query = debouncedSearch.toLowerCase();
-        const matchesAction = action.action.toLowerCase().includes(query);
-        const matchesUser = action.by?.toLowerCase().includes(query);
-        const matchesMetadata = stringifyObj(action.metadata)
-          .toLowerCase()
-          .includes(query);
-        if (!matchesAction && !matchesUser && !matchesMetadata) {
-          return false;
-        }
-      }
-
-      // Filter by action types.
-      if (actionFilters.length > 0 && !actionFilters.includes(action.action)) {
+      // Check cheap filters before stringifying metadata for search.
+      if (actionFilterSet && !actionFilterSet.has(action.action)) {
         return false;
       }
 
-      // Filter by users.
-      if (
-        userFilters.length > 0 &&
-        (!action.by || !userFilters.includes(action.by))
-      ) {
+      if (userFilterSet && (!action.by || !userFilterSet.has(action.by))) {
         return false;
       }
 
-      // Filter by time.
-      if (timeFilter && timeFilter !== 'all') {
+      if (cutoff !== null) {
         const validTs = toTimestamp(action.timestamp);
-        if (!validTs) {
+        if (!validTs || validTs.toMillis() < cutoff) {
           return false;
         }
-        const actionTime = validTs.toMillis();
-        let cutoff = 0;
-        switch (timeFilter) {
-          case '1h':
-            cutoff = now - 60 * 60 * 1000;
-            break;
-          case '24h':
-            cutoff = now - 24 * 60 * 60 * 1000;
-            break;
-          case '7d':
-            cutoff = now - 7 * 24 * 60 * 60 * 1000;
-            break;
-          case '30d':
-            cutoff = now - 30 * 24 * 60 * 60 * 1000;
-            break;
-        }
-        if (actionTime < cutoff) {
+      }
+
+      if (query) {
+        const matches =
+          action.action.toLowerCase().includes(query) ||
+          Boolean(action.by?.toLowerCase().includes(query)) ||
+          stringifyObj(action.metadata).toLowerCase().includes(query);
+        if (!matches) {
           return false;
         }
       }

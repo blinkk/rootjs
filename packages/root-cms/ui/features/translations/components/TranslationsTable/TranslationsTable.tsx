@@ -76,22 +76,23 @@ export function TranslationsTable() {
 }
 
 function TranslationsGrid() {
-  const [rowData, setRowData] = useState<TableRowData[]>([]);
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
 
-  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   // Columns are "translation languages", which may be shared by multiple
   // root locales (per the `i18n.translationLanguages` config).
-  const allLocales = [
-    'en',
-    ...toTranslationLanguages(
-      locales.filter(
-        (l: string) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
+  const allLocales = useMemo(() => {
+    const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
+    return [
+      'en',
+      ...toTranslationLanguages(
+        locales.filter(
+          (l: string) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
+        )
       )
-    )
-      .filter((lang: string) => lang !== 'en')
-      .sort(),
-  ];
+        .filter((lang: string) => lang !== 'en')
+        .sort(),
+    ];
+  }, []);
 
   // URL State.
   const [searchQuery, setSearchQuery] = useStringParam('q', '');
@@ -232,53 +233,46 @@ function TranslationsGrid() {
     updateTranslationsMap();
   }, []);
 
-  useEffect(() => {
+  const rowData = useMemo<TableRowData[]>(() => {
     const data: TableRowData[] = [];
+    const selectedTagSet =
+      selectedTags.length > 0 ? new Set(selectedTags) : null;
+    const query = searchQuery ? searchQuery.toLowerCase() : '';
+
     Object.entries(translationsMap).forEach(([hash, translations]) => {
-      // Filter by tags if any are selected.
-      const rowTags = normalizeTags(translations.tags);
-      if (selectedTags.length > 0) {
-        const hasTag = selectedTags.some((tag: string) =>
-          rowTags.includes(tag)
-        );
-        if (!hasTag) {
-          return;
-        }
+      // Defensive check for translations object.
+      if (!translations) {
+        return;
       }
 
-      // Filter by search query.
-      if (searchQuery) {
-        const query = (searchQuery || '').toLowerCase();
+      // Filter by tags if any are selected.
+      const rowTags = normalizeTags(translations.tags);
+      if (selectedTagSet && !rowTags.some((tag) => selectedTagSet.has(tag))) {
+        return;
+      }
 
-        // Defensive checks for translations object.
-        if (!translations) {
-          return;
-        }
-
-        const source = translations.source || '';
-        const hashStr = hash || '';
-
-        let matchesSource: boolean;
-        let matchesHash: boolean;
-        let matchesTranslation: boolean;
-
-        if (exactMatchesOnly) {
-          matchesSource = source.toLowerCase() === query;
-          matchesHash = hashStr.toLowerCase() === query;
-          matchesTranslation = allLocales.some((locale) => {
-            const translation = getTranslationForLanguage(translations, locale);
-            return translation.toLowerCase() === query;
-          });
-        } else {
-          matchesSource = source.toLowerCase().includes(query);
-          matchesHash = hashStr.toLowerCase().includes(query);
-          matchesTranslation = allLocales.some((locale) => {
-            const translation = getTranslationForLanguage(translations, locale);
-            return translation.toLowerCase().includes(query);
-          });
-        }
-
-        if (!matchesSource && !matchesHash && !matchesTranslation) {
+      // Filter by search query (short-circuiting before checking all locales).
+      if (query) {
+        const source = (translations.source || '').toLowerCase();
+        const hashStr = (hash || '').toLowerCase();
+        const matches = exactMatchesOnly
+          ? source === query ||
+            hashStr === query ||
+            allLocales.some(
+              (locale) =>
+                getTranslationForLanguage(
+                  translations,
+                  locale
+                ).toLowerCase() === query
+            )
+          : source.includes(query) ||
+            hashStr.includes(query) ||
+            allLocales.some((locale) =>
+              getTranslationForLanguage(translations, locale)
+                .toLowerCase()
+                .includes(query)
+            );
+        if (!matches) {
           return;
         }
       }
@@ -293,12 +287,12 @@ function TranslationsGrid() {
       });
       data.push(row);
     });
-    setRowData(data);
+    return data;
   }, [
+    allLocales,
     translationsMap,
     searchQuery,
     selectedTags,
-    selectedLocales,
     exactMatchesOnly,
   ]);
 

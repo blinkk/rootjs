@@ -146,27 +146,8 @@ export interface TaskManagerProps {
   variant?: TaskManagerVariant;
 }
 
-/** Renders the task composer and task list for CMS pages. */
-export function TaskManager(props: TaskManagerProps) {
-  const currentUserEmail = window.firebase.user.email || '';
-  const variant = props.variant || 'compact';
-  const showPageLayout = variant === 'page';
-  const {tasks, loading, error} = useTasks(showPageLayout ? 'all' : 'open');
-  const [filter, setFilter] = useState<TaskFilter>('all');
-  const [showClosed, setShowClosed] = useLocalStorage<boolean>(
-    'root-cms-task-manager-show-closed',
-    false
-  );
-  // The compact list only loads open tasks, so the toggle is page-only.
-  const includeClosed = showPageLayout && showClosed;
-  const [layout, setLayout] = useLocalStorage<TaskLayout>(
-    'root-cms-task-manager-layout-v3',
-    'board'
-  );
-  const [sort, setSort] = useLocalStorage<TaskSort>(
-    'root-cms-task-manager-sort',
-    'created'
-  );
+/** Self-contained task composer so typing doesn't re-render the task list. */
+function TaskComposer() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeEmail, setAssigneeEmail] = useState('');
@@ -179,30 +160,6 @@ export function TaskManager(props: TaskManagerProps) {
   const [targetDatePopoverOpen, setTargetDatePopoverOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const filterOptions = showPageLayout
-    ? TASK_PAGE_FILTER_OPTIONS
-    : TASK_COMPACT_FILTER_OPTIONS;
-  const visibleTasks = useMemo(() => {
-    const filteredTasks = filterTasks(
-      tasks,
-      filter,
-      currentUserEmail,
-      includeClosed
-    );
-    return sortTasks(filteredTasks, showPageLayout ? sort : 'created');
-  }, [tasks, filter, currentUserEmail, includeClosed, showPageLayout, sort]);
-  const filterCounts = useMemo(() => {
-    const counts: Partial<Record<TaskFilter, number>> = {};
-    filterOptions.forEach((option) => {
-      counts[option.value] = filterTasks(
-        tasks,
-        option.value,
-        currentUserEmail,
-        includeClosed
-      ).length;
-    });
-    return counts;
-  }, [tasks, filterOptions, currentUserEmail, includeClosed]);
   const canCreate = Boolean(title.trim()) && !creating;
   const descriptionOpen = Boolean(title.trim() || description);
 
@@ -264,6 +221,206 @@ export function TaskManager(props: TaskManagerProps) {
   }
 
   return (
+    <form
+      className="TaskManager__composer grid items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface py-2 pr-2 pl-4 shadow-sm focus-within:border-border-strong md:gap-y-0 md:py-1"
+      onSubmit={(e) => onSubmit(e)}
+    >
+      <IconPlus
+        className="TaskManager__composer__icon size-4.5 text-subtle"
+        strokeWidth="2"
+      />
+      <input
+        className="TaskManager__composer__title m-0 h-control-md min-w-0 appearance-none border-0 bg-transparent p-0 font-sans text-base font-medium text-fg outline-none placeholder:font-normal placeholder:text-subtle"
+        type="text"
+        aria-label="Task title"
+        value={title}
+        placeholder="Add a task…"
+        onInput={(e) => {
+          setTitle((e.currentTarget as HTMLInputElement).value);
+        }}
+      />
+      <div
+        className={joinClassNames(
+          'TaskManager__composer__drawer grid',
+          descriptionOpen && 'TaskManager__composer__drawer--open'
+        )}
+        aria-hidden={!descriptionOpen}
+      >
+        <div className="TaskManager__composer__drawer__inner min-h-0 overflow-hidden pr-2 pl-7.5">
+          <textarea
+            className="TaskManager__composer__description my-1 box-border block max-h-60 min-h-15 w-full resize-none appearance-none border-0 bg-transparent p-0 font-sans text-base leading-5 text-fg outline-none field-sizing-content placeholder:text-subtle"
+            aria-label="Task description"
+            value={description}
+            rows={3}
+            tabIndex={descriptionOpen ? 0 : -1}
+            placeholder="Add a description. Specify scope, collection, and acceptance criteria."
+            onInput={(e) => {
+              setDescription((e.currentTarget as HTMLTextAreaElement).value);
+            }}
+          />
+        </div>
+      </div>
+      <div className="TaskManager__composer__controls flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        <Popover
+          withArrow
+          label="Assign task"
+          open={assignPopoverOpen}
+          onOpenChange={setAssignPopoverOpen}
+          placement="bottom"
+          width={280}
+          trigger={
+            <button
+              className={composerControlClasses(Boolean(assigneeEmail))}
+              type="button"
+            >
+              {assigneeEmail ? (
+                <UserAvatar
+                  email={assigneeEmail}
+                  size={16}
+                  withTooltip={false}
+                />
+              ) : (
+                <IconUser className="size-3.5 shrink-0" strokeWidth="2" />
+              )}
+              <span>
+                {assigneeEmail ? <UserTag email={assigneeEmail} /> : 'Assignee'}
+              </span>
+            </button>
+          }
+        >
+          <UserSelect
+            autoFocus
+            initiallyOpened
+            value={assigneeEmail}
+            onChange={(email: string) => {
+              setAssigneeEmail(email);
+              setAssignPopoverOpen(false);
+            }}
+          />
+        </Popover>
+        <Menu
+          placement="bottom"
+          trigger={
+            <button
+              className={composerControlClasses(priority !== 'normal')}
+              type="button"
+            >
+              <IconFlag className="size-3.5 shrink-0" strokeWidth="2" />
+              <span>
+                {priority === 'normal'
+                  ? 'Priority'
+                  : formatTaskPriorityLabel(priority)}
+              </span>
+            </button>
+          }
+        >
+          {(['high', 'medium', 'normal'] as TaskPriority[]).map((option) => (
+            <MenuItem
+              key={option}
+              className={joinClassNames(
+                priority === option &&
+                  'TaskManager__composer__menuItem--active font-bold'
+              )}
+              onClick={() => setPriority(option)}
+            >
+              {formatTaskPriorityLabel(option)}
+            </MenuItem>
+          ))}
+        </Menu>
+        <Popover
+          withArrow
+          label="Target date"
+          open={targetDatePopoverOpen}
+          onOpenChange={(open) =>
+            open ? openTargetDatePopover() : closeTargetDatePopover()
+          }
+          placement="bottom"
+          width={300}
+          trigger={
+            <button
+              className={composerControlClasses(Boolean(targetLaunch))}
+              type="button"
+            >
+              <IconCalendar className="size-3.5 shrink-0" strokeWidth="2" />
+              <span>
+                {targetLaunch
+                  ? formatTaskTargetLaunch(toDisplayLaunch(targetLaunch), {
+                      short: true,
+                    })
+                  : 'Target date'}
+              </span>
+            </button>
+          }
+        >
+          <TaskTargetLaunchPicker
+            value={targetLaunchDraft}
+            onChange={setTargetLaunchDraft}
+            onClear={() => closeTargetDatePopover({clear: true})}
+            onDone={() => closeTargetDatePopover()}
+          />
+        </Popover>
+      </div>
+      <Button
+        className="TaskManager__composer__submit rounded-lg"
+        type="submit"
+        variant="primary"
+        loading={creating}
+        disabled={!canCreate}
+      >
+        Create
+      </Button>
+    </form>
+  );
+}
+
+/** Renders the task composer and task list for CMS pages. */
+export function TaskManager(props: TaskManagerProps) {
+  const currentUserEmail = window.firebase.user.email || '';
+  const variant = props.variant || 'compact';
+  const showPageLayout = variant === 'page';
+  const {tasks, loading, error} = useTasks(showPageLayout ? 'all' : 'open');
+  const [filter, setFilter] = useState<TaskFilter>('all');
+  const [showClosed, setShowClosed] = useLocalStorage<boolean>(
+    'root-cms-task-manager-show-closed',
+    false
+  );
+  // The compact list only loads open tasks, so the toggle is page-only.
+  const includeClosed = showPageLayout && showClosed;
+  const [layout, setLayout] = useLocalStorage<TaskLayout>(
+    'root-cms-task-manager-layout-v3',
+    'board'
+  );
+  const [sort, setSort] = useLocalStorage<TaskSort>(
+    'root-cms-task-manager-sort',
+    'created'
+  );
+
+  const filterOptions = showPageLayout
+    ? TASK_PAGE_FILTER_OPTIONS
+    : TASK_COMPACT_FILTER_OPTIONS;
+  const visibleTasks = useMemo(() => {
+    const filteredTasks = filterTasks(
+      tasks,
+      filter,
+      currentUserEmail,
+      includeClosed
+    );
+    return sortTasks(filteredTasks, showPageLayout ? sort : 'created');
+  }, [tasks, filter, currentUserEmail, includeClosed, showPageLayout, sort]);
+  const filterCounts = useMemo(() => {
+    const counts: Partial<Record<TaskFilter, number>> = {};
+    filterOptions.forEach((option) => {
+      counts[option.value] = filterTasks(
+        tasks,
+        option.value,
+        currentUserEmail,
+        includeClosed
+      ).length;
+    });
+    return counts;
+  }, [tasks, filterOptions, currentUserEmail, includeClosed]);
+
+  return (
     <div
       className={cn(
         'TaskManager',
@@ -272,159 +429,7 @@ export function TaskManager(props: TaskManagerProps) {
         props.className
       )}
     >
-      <form
-        className="TaskManager__composer grid items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-surface py-2 pr-2 pl-4 shadow-sm focus-within:border-border-strong md:gap-y-0 md:py-1"
-        onSubmit={(e) => onSubmit(e)}
-      >
-        <IconPlus
-          className="TaskManager__composer__icon size-4.5 text-subtle"
-          strokeWidth="2"
-        />
-        <input
-          className="TaskManager__composer__title m-0 h-control-md min-w-0 appearance-none border-0 bg-transparent p-0 font-sans text-base font-medium text-fg outline-none placeholder:font-normal placeholder:text-subtle"
-          type="text"
-          aria-label="Task title"
-          value={title}
-          placeholder="Add a task…"
-          onInput={(e) => {
-            setTitle((e.currentTarget as HTMLInputElement).value);
-          }}
-        />
-        <div
-          className={joinClassNames(
-            'TaskManager__composer__drawer grid',
-            descriptionOpen && 'TaskManager__composer__drawer--open'
-          )}
-          aria-hidden={!descriptionOpen}
-        >
-          <div className="TaskManager__composer__drawer__inner min-h-0 overflow-hidden pr-2 pl-7.5">
-            <textarea
-              className="TaskManager__composer__description my-1 box-border block max-h-60 min-h-15 w-full resize-none appearance-none border-0 bg-transparent p-0 font-sans text-base leading-5 text-fg outline-none field-sizing-content placeholder:text-subtle"
-              aria-label="Task description"
-              value={description}
-              rows={3}
-              tabIndex={descriptionOpen ? 0 : -1}
-              placeholder="Add a description. Specify scope, collection, and acceptance criteria."
-              onInput={(e) => {
-                setDescription((e.currentTarget as HTMLTextAreaElement).value);
-              }}
-            />
-          </div>
-        </div>
-        <div className="TaskManager__composer__controls flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <Popover
-            withArrow
-            label="Assign task"
-            open={assignPopoverOpen}
-            onOpenChange={setAssignPopoverOpen}
-            placement="bottom"
-            width={280}
-            trigger={
-              <button
-                className={composerControlClasses(Boolean(assigneeEmail))}
-                type="button"
-              >
-                {assigneeEmail ? (
-                  <UserAvatar
-                    email={assigneeEmail}
-                    size={16}
-                    withTooltip={false}
-                  />
-                ) : (
-                  <IconUser className="size-3.5 shrink-0" strokeWidth="2" />
-                )}
-                <span>
-                  {assigneeEmail ? (
-                    <UserTag email={assigneeEmail} />
-                  ) : (
-                    'Assignee'
-                  )}
-                </span>
-              </button>
-            }
-          >
-            <UserSelect
-              autoFocus
-              initiallyOpened
-              value={assigneeEmail}
-              onChange={(email: string) => {
-                setAssigneeEmail(email);
-                setAssignPopoverOpen(false);
-              }}
-            />
-          </Popover>
-          <Menu
-            placement="bottom"
-            trigger={
-              <button
-                className={composerControlClasses(priority !== 'normal')}
-                type="button"
-              >
-                <IconFlag className="size-3.5 shrink-0" strokeWidth="2" />
-                <span>
-                  {priority === 'normal'
-                    ? 'Priority'
-                    : formatTaskPriorityLabel(priority)}
-                </span>
-              </button>
-            }
-          >
-            {(['high', 'medium', 'normal'] as TaskPriority[]).map((option) => (
-              <MenuItem
-                key={option}
-                className={joinClassNames(
-                  priority === option &&
-                    'TaskManager__composer__menuItem--active font-bold'
-                )}
-                onClick={() => setPriority(option)}
-              >
-                {formatTaskPriorityLabel(option)}
-              </MenuItem>
-            ))}
-          </Menu>
-          <Popover
-            withArrow
-            label="Target date"
-            open={targetDatePopoverOpen}
-            onOpenChange={(open) =>
-              open ? openTargetDatePopover() : closeTargetDatePopover()
-            }
-            placement="bottom"
-            width={300}
-            trigger={
-              <button
-                className={composerControlClasses(Boolean(targetLaunch))}
-                type="button"
-              >
-                <IconCalendar className="size-3.5 shrink-0" strokeWidth="2" />
-                <span>
-                  {targetLaunch
-                    ? formatTaskTargetLaunch(toDisplayLaunch(targetLaunch), {
-                        short: true,
-                      })
-                    : 'Target date'}
-                </span>
-              </button>
-            }
-          >
-            <TaskTargetLaunchPicker
-              value={targetLaunchDraft}
-              onChange={setTargetLaunchDraft}
-              onClear={() => closeTargetDatePopover({clear: true})}
-              onDone={() => closeTargetDatePopover()}
-            />
-          </Popover>
-        </div>
-        <Button
-          className="TaskManager__composer__submit rounded-lg"
-          type="submit"
-          variant="primary"
-          loading={creating}
-          disabled={!canCreate}
-        >
-          Create
-        </Button>
-      </form>
+      <TaskComposer />
 
       <div className="TaskManager__listHeader mt-6 mb-6 flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl

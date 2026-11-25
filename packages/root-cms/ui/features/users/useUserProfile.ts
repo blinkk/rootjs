@@ -48,8 +48,12 @@ export function useUserProfile(email?: string | null): UseUserProfileResult {
       });
     }
 
-    const unsubscribe = subscribeToUserProfileCache(() => {
-      if (cancelled || !email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const unsubscribe = subscribeToUserProfileCache((updatedEmail) => {
+      if (
+        cancelled ||
+        (updatedEmail !== null && updatedEmail !== normalizedEmail)
+      ) {
         return;
       }
       const next = getCachedUserProfile(email);
@@ -137,10 +141,15 @@ export function useUserProfiles(
       }
     });
 
-    const unsubscribe = subscribeToUserProfileCache(() => {
-      if (!cancelled) {
-        syncFromCache();
+    const watchedEmails = new Set(filtered.map((e) => e.trim()));
+    const unsubscribe = subscribeToUserProfileCache((updatedEmail) => {
+      if (
+        cancelled ||
+        (updatedEmail !== null && !watchedEmails.has(updatedEmail))
+      ) {
+        return;
       }
+      syncFromCache();
     });
     return () => {
       cancelled = true;

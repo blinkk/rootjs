@@ -27,7 +27,9 @@ interface CacheEntry {
 
 const profileCache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<UserProfile | null>>();
-const subscribers = new Set<() => void>();
+/** Callback receives the normalized email that changed, or `null` on bulk load. */
+type ProfileCacheSubscriber = (updatedEmail: string | null) => void;
+const subscribers = new Set<ProfileCacheSubscriber>();
 
 /** Cached result of `listUserProfiles()`, shared by all callers. */
 let listCache: {value: UserProfile[]; fetchedAt: number} | null = null;
@@ -50,8 +52,8 @@ function getCachedEntry(email: string): CacheEntry | undefined {
   return entry;
 }
 
-function notifySubscribers() {
-  subscribers.forEach((cb) => cb());
+function notifySubscribers(updatedEmail: string | null) {
+  subscribers.forEach((cb) => cb(updatedEmail));
 }
 
 function userProfilesCollectionRef() {
@@ -104,7 +106,7 @@ export async function fetchUserProfile(
       const snapshot = await getDoc(userProfileDocRef(key));
       const value = snapshot.exists() ? (snapshot.data() as UserProfile) : null;
       profileCache.set(key, {value, fetchedAt: Date.now()});
-      notifySubscribers();
+      notifySubscribers(key);
       return value;
     } catch (err) {
       console.error('failed to fetch user profile:', email, err);
@@ -171,7 +173,7 @@ export async function listUserProfiles(options?: {
         }
       });
       listCache = {value: profiles, fetchedAt: Date.now()};
-      notifySubscribers();
+      notifySubscribers(null);
       return profiles;
     } finally {
       listInflight = null;
@@ -182,7 +184,9 @@ export async function listUserProfiles(options?: {
 }
 
 /** Subscribes to cache updates. Returns an unsubscribe function. */
-export function subscribeToUserProfileCache(cb: () => void): () => void {
+export function subscribeToUserProfileCache(
+  cb: ProfileCacheSubscriber
+): () => void {
   subscribers.add(cb);
   return () => {
     subscribers.delete(cb);

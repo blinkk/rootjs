@@ -2,9 +2,11 @@ import {IconChevronDown, IconChevronRight} from '@tabler/icons-preact';
 import type {ComponentChildren, JSX} from 'preact';
 import {createContext} from 'preact';
 import {
+  useCallback,
   useContext,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'preact/hooks';
@@ -70,23 +72,29 @@ export function Accordion(props: AccordionProps) {
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const open = controlledValue ?? uncontrolledValue;
 
-  const toggle = (item: string) => {
-    let next: string[];
-    if (open.includes(item)) {
-      next = open.filter((v) => v !== item);
-    } else {
-      next = multiple ? [...open, item] : [item];
-    }
-    if (controlledValue === undefined) {
-      setUncontrolledValue(next);
-    }
-    onChange?.(next);
-  };
+  const toggle = useCallback(
+    (item: string) => {
+      let next: string[];
+      if (open.includes(item)) {
+        next = open.filter((v) => v !== item);
+      } else {
+        next = multiple ? [...open, item] : [item];
+      }
+      if (controlledValue === undefined) {
+        setUncontrolledValue(next);
+      }
+      onChange?.(next);
+    },
+    [controlledValue, multiple, onChange, open]
+  );
+
+  const contextValue = useMemo<AccordionContextValue>(
+    () => ({isOpen: (v) => open.includes(v), toggle, chevronPosition}),
+    [chevronPosition, open, toggle]
+  );
 
   return (
-    <AccordionContext.Provider
-      value={{isOpen: (v) => open.includes(v), toggle, chevronPosition}}
-    >
+    <AccordionContext.Provider value={contextValue}>
       <div
         {...rest}
         className={cn(
