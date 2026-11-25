@@ -576,4 +576,85 @@ describe('PrototypeBoardPage', () => {
     fireEvent.click(desktopBtn);
     expect(iframe.style.width).toBe('100%');
   });
+
+  it('allows dragging a single selected frame by its body after marquee-selecting it', async () => {
+    vi.mocked(apiSavePrototypeFrame).mockImplementation(async (input) => ({
+      id: input.frame.id || 'frame-a',
+      boardId: input.boardId,
+      pageId: input.frame.pageId || 'page-1',
+      title: input.frame.title || 'Pricing A',
+      width: input.frame.width || 400,
+      x: input.frame.x ?? 100,
+      y: input.frame.y ?? 100,
+      cachedHeight: 300,
+      blocks: input.frame.blocks || {_array: []},
+      createdAt: 1700000000000,
+      createdBy: 'editor@example.com',
+      updatedAt: 1700000009000,
+      updatedBy: 'editor@example.com',
+    }));
+
+    const view = render(
+      <ModalsProvider>
+        <PrototypeBoardPage boardId="pricing-board" />
+      </ModalsProvider>
+    );
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector('[data-frame-id="frame-a"]')
+      ).not.toBeNull();
+    });
+
+    const canvas = view.container.querySelector(
+      '.PrototypeCanvas'
+    ) as HTMLElement;
+
+    // Select only frame-a (middle-left band, avoiding label-1 above and note-1 below).
+    fireEvent.pointerDown(canvas, {button: 0, clientX: 5, clientY: 280});
+    fireEvent.pointerMove(window, {clientX: 280, clientY: 320});
+    fireEvent.pointerUp(window, {clientX: 280, clientY: 320});
+
+    const frameA = view.container.querySelector(
+      '[data-frame-id="frame-a"]'
+    ) as HTMLElement;
+    const frameB = view.container.querySelector(
+      '[data-frame-id="frame-b"]'
+    ) as HTMLElement;
+    const noteBtn = view.container.querySelector(
+      '[data-annotation-id="note-1"] button'
+    ) as HTMLElement;
+    const labelBtn = view.container.querySelector(
+      '[data-annotation-id="label-1"] button'
+    ) as HTMLElement;
+    expect(frameA.classList.contains('PrototypeFrame--selected')).toBe(true);
+    expect(frameB.classList.contains('PrototypeFrame--selected')).toBe(false);
+    expect(noteBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(labelBtn.getAttribute('aria-pressed')).toBe('false');
+
+    // Drag frame-a by its body shield.
+    const shield = frameA.querySelector(
+      '.PrototypeFrame__shield'
+    ) as HTMLElement;
+    expect(shield.classList.contains('cursor-grab')).toBe(true);
+    fireEvent.pointerDown(shield, {button: 0, clientX: 250, clientY: 220});
+    fireEvent.pointerMove(window, {clientX: 350, clientY: 270});
+    fireEvent.pointerUp(window, {clientX: 350, clientY: 270});
+
+    await waitFor(() => {
+      expect(apiSavePrototypeFrame).toHaveBeenCalledWith(
+        expect.objectContaining({
+          boardId: 'pricing-board',
+          frame: expect.objectContaining({
+            id: 'frame-a',
+            x: expect.any(Number),
+            y: expect.any(Number),
+          }),
+        })
+      );
+    });
+    const saved = vi.mocked(apiSavePrototypeFrame).mock.calls[0][0].frame;
+    expect(saved.x).toBeGreaterThan(150);
+    expect(saved.y).toBeGreaterThan(120);
+  });
 });

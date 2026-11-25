@@ -921,7 +921,7 @@ export function PrototypeFrameView(props: PrototypeFrameProps) {
                   ? 'pointer-events-none'
                   : isDraggingGroup
                     ? 'cursor-grabbing'
-                    : isMultiSelected && canEdit
+                    : isSelected && canEdit
                       ? 'cursor-grab'
                       : 'cursor-default'
             )}
