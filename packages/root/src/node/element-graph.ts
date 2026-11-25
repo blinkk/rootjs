@@ -4,7 +4,7 @@ import glob from 'tiny-glob';
 import {searchForWorkspaceRoot} from 'vite';
 import {ElementTagNameMatcher, RootConfig} from '../core/config.js';
 import {isValidTagName, parseTagNames} from '../utils/elements.js';
-import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils.js';
+import {isDirectory, isJsFile} from '../utils/fsutils.js';
 import type {ResolvedPod} from './pod-collector.js';
 
 interface ElementSourceFile {
@@ -84,6 +84,38 @@ export class ElementGraph {
       }
     }
     return Array.from(deps);
+  }
+
+  /**
+   * Clears cached dependencies for the element matching `filePath`, if any.
+   */
+  invalidateFile(filePath: string): boolean {
+    const resolved = path.resolve(filePath);
+    for (const tagName in this.sourceFiles) {
+      if (path.resolve(this.sourceFiles[tagName].filePath) === resolved) {
+        this.invalidateTagName(tagName);
+        return true;
+      }
+    }
+    const realTarget = resolveRealPathSync(resolved);
+    for (const tagName in this.sourceFiles) {
+      if (
+        resolveRealPathSync(this.sourceFiles[tagName].filePath) === realTarget
+      ) {
+        this.invalidateTagName(tagName);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Clears the element's direct deps and the whole transitive deps memo, since
+   * any element that (transitively) depends on it may now be stale.
+   */
+  private invalidateTagName(tagName: string) {
+    delete this.deps[tagName];
+    this.transitiveDeps = Object.create(null);
   }
 
   /**
@@ -189,23 +221,76 @@ export async function getElements(
 }
 
 /**
+ * Resolves symlinks for `targetPath` when it exists, or resolves its nearest
+ * existing ancestor and appends the remaining relative segments so non-existent
+ * paths under symlinked roots compare consistently.
+ */
+export function resolveRealPathSync(targetPath: string): string {
+  const resolved = path.resolve(targetPath);
+  const tail: string[] = [];
+  let current = resolved;
+  while (true) {
+    try {
+      const real = fs.realpathSync(current);
+      return tail.length > 0 ? path.join(real, ...tail.reverse()) : real;
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        return resolved;
+      }
+      tail.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+/**
+ * Returns true when `target` is lexically inside (or equal to) `dir`.
+ */
+function isPathInside(dir: string, target: string): boolean {
+  const rel = path.relative(dir, target);
+  return (
+    rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
+  );
+}
+
+/**
+ * Returns true when `target` is inside (or equal to) `dir`, checking lexical
+ * containment first (so symlinked packages under `node_modules` whose realpath
+ * resolves outside the workspace are allowed) and falling back to realpath
+ * containment for symlinked workspace roots.
+ */
+function directoryContainsSync(dir: string, target: string): boolean {
+  const resolvedDir = path.resolve(dir);
+  const resolvedTarget = path.resolve(target);
+  if (isPathInside(resolvedDir, resolvedTarget)) {
+    return true;
+  }
+  const outer = resolveRealPathSync(resolvedDir);
+  const inner = resolveRealPathSync(resolvedTarget);
+  return isPathInside(outer, inner);
+}
+
+/**
  * Get all element dirs.
  */
 export function getElementsDirs(rootConfig: RootConfig, pods?: ResolvedPod[]) {
   const rootDir = rootConfig.rootDir;
-  const workspaceRoot = searchForWorkspaceRoot(rootDir);
 
   const elementsDirs = [path.join(rootDir, 'elements')];
   const elementsInclude = rootConfig.elements?.include || [];
 
-  for (const dirPath of elementsInclude) {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!directoryContains(rootDir, elementsDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
-      );
+  if (elementsInclude.length > 0) {
+    const workspaceRoot = searchForWorkspaceRoot(rootDir);
+    for (const dirPath of elementsInclude) {
+      const elementsDir = path.resolve(rootDir, dirPath);
+      if (!directoryContainsSync(workspaceRoot, elementsDir)) {
+        throw new Error(
+          `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
+        );
+      }
+      elementsDirs.push(elementsDir);
     }
-    elementsDirs.push(elementsDir);
   }
 
   // Pod-contributed element dirs bypass the workspace containment check

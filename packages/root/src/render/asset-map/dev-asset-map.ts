@@ -3,9 +3,15 @@ import {ModuleGraph, ModuleNode, searchForWorkspaceRoot} from 'vite';
 import {RootConfig} from '../../core/config.js';
 import {Asset, AssetMap} from './asset-map.js';
 
+const EMPTY_DEPS = Object.freeze([] as string[]) as string[];
+const JS_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx']);
+
 export class DevServerAssetMap implements AssetMap {
   private rootConfig: RootConfig;
   private moduleGraph: ModuleGraph;
+  private workspaceRoot?: string;
+  private assets = new Map<ModuleNode, DevServerAsset>();
+  private clearScheduled = false;
 
   constructor(rootConfig: RootConfig, moduleGraph: ModuleGraph) {
     this.rootConfig = rootConfig;
@@ -18,10 +24,7 @@ export class DevServerAssetMap implements AssetMap {
     const viteModules = this.moduleGraph.getModulesByFile(file);
     if (viteModules && viteModules.size > 0) {
       const [viteModule] = viteModules;
-      return new DevServerAsset(src, {
-        assetMap: this,
-        viteModule: viteModule,
-      });
+      return this.getOrCreateAsset(viteModule, src);
     }
 
     // On dev, in some cases the module doesn't make it into the module graph
@@ -36,7 +39,7 @@ export class DevServerAssetMap implements AssetMap {
         getModulePreloadDeps: async () => [],
       };
     }
-    const workspaceRoot = searchForWorkspaceRoot(this.rootConfig.rootDir);
+    const workspaceRoot = this.getWorkspaceRoot();
     if (directoryContains(workspaceRoot, file)) {
       const assetUrl = `/@fs/${file}`;
       return {
@@ -52,15 +55,58 @@ export class DevServerAssetMap implements AssetMap {
     return null;
   }
 
+  /**
+   * Returns the memoized `DevServerAsset` for a Vite `ModuleNode`, creating it
+   * on first access. Entries are cleared at the end of the event-loop turn so
+   * HMR edits or late-transformed modules are never served stale if this map
+   * is reused across requests.
+   */
+  getOrCreateAsset(viteModule: ModuleNode, src?: string): DevServerAsset {
+    let asset = this.assets.get(viteModule);
+    if (!asset) {
+      const assetSrc =
+        src ?? (viteModule.file ? this.filePathToSrc(viteModule.file) : '');
+      asset = new DevServerAsset(assetSrc, {
+        assetMap: this,
+        viteModule: viteModule,
+      });
+      this.assets.set(viteModule, asset);
+      if (!this.clearScheduled) {
+        this.clearScheduled = true;
+        setImmediate(() => {
+          this.clearScheduled = false;
+          this.assets.clear();
+        }).unref();
+      }
+    }
+    return asset;
+  }
+
+  /**
+   * Clears memoized `DevServerAsset` instances.
+   */
+  clear(): void {
+    this.assets.clear();
+  }
+
   filePathToSrc(file: string) {
     return path.relative(this.rootConfig.rootDir, file);
+  }
+
+  private getWorkspaceRoot(): string {
+    this.workspaceRoot ??= searchForWorkspaceRoot(this.rootConfig.rootDir);
+    return this.workspaceRoot;
   }
 }
 
 /** Returns true when a path is contained by a directory. */
 function directoryContains(dir: string, file: string): boolean {
   const relativePath = path.relative(dir, file);
-  return relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`);
+  return (
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
 }
 
 export class DevServerAsset implements Asset {
@@ -69,6 +115,15 @@ export class DevServerAsset implements Asset {
   assetUrl: string;
   private assetMap: DevServerAssetMap;
   private viteModule: ModuleNode;
+  private cachedCssDeps?: string[];
+  private cachedJsDeps?: string[];
+  /**
+   * Deps collected by the cycle fallback. The order of these depends on this
+   * asset being the traversal root, so they are only reused when this asset is
+   * requested directly and are never merged into another asset's deps.
+   */
+  private cyclicRootCssDeps?: string[];
+  private cyclicRootJsDeps?: string[];
 
   constructor(
     src: string,
@@ -85,17 +140,39 @@ export class DevServerAsset implements Asset {
   }
 
   async getCssDeps(): Promise<string[]> {
+    if (this.cachedCssDeps) {
+      return this.cachedCssDeps.slice();
+    }
+    if (this.cyclicRootCssDeps) {
+      return this.cyclicRootCssDeps.slice();
+    }
+    const acyclic = this.collectCssAcyclic(new Set());
+    if (acyclic !== null) {
+      return acyclic.slice();
+    }
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectCss(this, deps, visited);
-    return Array.from(deps);
+    this.cyclicRootCssDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
+    return this.cyclicRootCssDeps.slice();
   }
 
   async getJsDeps(): Promise<string[]> {
+    if (this.cachedJsDeps) {
+      return this.cachedJsDeps.slice();
+    }
+    if (this.cyclicRootJsDeps) {
+      return this.cyclicRootJsDeps.slice();
+    }
+    const acyclic = this.collectJsAcyclic(new Set());
+    if (acyclic !== null) {
+      return acyclic.slice();
+    }
     const visited = new Set<string>();
     const deps = new Set<string>();
     this.collectJs(this, deps, visited);
-    return Array.from(deps);
+    this.cyclicRootJsDeps = deps.size > 0 ? Array.from(deps) : EMPTY_DEPS;
+    return this.cyclicRootJsDeps.slice();
   }
 
   /**
@@ -111,35 +188,181 @@ export class DevServerAsset implements Asset {
     return this.viteModule.importedModules;
   }
 
+  private isElementJs(): boolean {
+    if (!this.moduleId.includes('/elements/')) {
+      return false;
+    }
+    const parts = path.parse(this.assetUrl);
+    return JS_EXTS.has(parts.ext);
+  }
+
+  private isCssEntry(): boolean {
+    if (!this.src.endsWith('.scss')) {
+      return false;
+    }
+    const parts = path.parse(this.src);
+    return !parts.name.startsWith('_');
+  }
+
+  /**
+   * Collects JS deps bottom-up while memoizing each acyclic node's result on
+   * its `DevServerAsset`. Returns `null` if a cycle is encountered so the
+   * caller can fall back to the `visited`-set traversal.
+   */
+  private collectJsAcyclic(visiting: Set<DevServerAsset>): string[] | null {
+    if (this.cachedJsDeps) {
+      return this.cachedJsDeps;
+    }
+    if (!this.moduleId) {
+      return EMPTY_DEPS;
+    }
+    if (visiting.has(this)) {
+      return null;
+    }
+    visiting.add(this);
+    const ownUrl = this.isElementJs() ? this.assetUrl : null;
+    let deps: Set<string> | null = null;
+    let singleChildDeps: string[] | null = null;
+    let hasCycle = false;
+    for (const viteModule of this.viteModule.importedModules) {
+      if (!viteModule.file) {
+        continue;
+      }
+      const importedAsset = this.assetMap.getOrCreateAsset(viteModule);
+      const childDeps = importedAsset.collectJsAcyclic(visiting);
+      if (childDeps === null) {
+        hasCycle = true;
+        break;
+      }
+      if (childDeps.length === 0) {
+        continue;
+      }
+      if (!deps && !ownUrl && !singleChildDeps) {
+        singleChildDeps = childDeps;
+      } else {
+        if (!deps) {
+          deps = new Set<string>();
+          if (ownUrl) {
+            deps.add(ownUrl);
+          }
+          if (singleChildDeps) {
+            for (const url of singleChildDeps) {
+              deps.add(url);
+            }
+            singleChildDeps = null;
+          }
+        }
+        for (const url of childDeps) {
+          deps.add(url);
+        }
+      }
+    }
+    visiting.delete(this);
+    if (hasCycle) {
+      return null;
+    }
+    if (deps) {
+      this.cachedJsDeps = Array.from(deps);
+    } else if (singleChildDeps) {
+      this.cachedJsDeps = singleChildDeps;
+    } else if (ownUrl) {
+      this.cachedJsDeps = [ownUrl];
+    } else {
+      this.cachedJsDeps = EMPTY_DEPS;
+    }
+    return this.cachedJsDeps;
+  }
+
+  /**
+   * Collects CSS deps bottom-up while memoizing each acyclic node's result on
+   * its `DevServerAsset`. Returns `null` if a cycle is encountered so the
+   * caller can fall back to the `visited`-set traversal.
+   */
+  private collectCssAcyclic(visiting: Set<DevServerAsset>): string[] | null {
+    if (this.cachedCssDeps) {
+      return this.cachedCssDeps;
+    }
+    if (!this.assetUrl) {
+      return EMPTY_DEPS;
+    }
+    if (visiting.has(this)) {
+      return null;
+    }
+    visiting.add(this);
+    const ownUrl = this.isCssEntry() ? this.assetUrl : null;
+    let deps: Set<string> | null = null;
+    let singleChildDeps: string[] | null = null;
+    let hasCycle = false;
+    for (const viteModule of this.viteModule.importedModules) {
+      if (!viteModule.file) {
+        continue;
+      }
+      const importedAsset = this.assetMap.getOrCreateAsset(viteModule);
+      const childDeps = importedAsset.collectCssAcyclic(visiting);
+      if (childDeps === null) {
+        hasCycle = true;
+        break;
+      }
+      if (childDeps.length === 0) {
+        continue;
+      }
+      if (!deps && !ownUrl && !singleChildDeps) {
+        singleChildDeps = childDeps;
+      } else {
+        if (!deps) {
+          deps = new Set<string>();
+          if (ownUrl) {
+            deps.add(ownUrl);
+          }
+          if (singleChildDeps) {
+            for (const url of singleChildDeps) {
+              deps.add(url);
+            }
+            singleChildDeps = null;
+          }
+        }
+        for (const url of childDeps) {
+          deps.add(url);
+        }
+      }
+    }
+    visiting.delete(this);
+    if (hasCycle) {
+      return null;
+    }
+    if (deps) {
+      this.cachedCssDeps = Array.from(deps);
+    } else if (singleChildDeps) {
+      this.cachedCssDeps = singleChildDeps;
+    } else if (ownUrl) {
+      this.cachedCssDeps = [ownUrl];
+    } else {
+      this.cachedCssDeps = EMPTY_DEPS;
+    }
+    return this.cachedCssDeps;
+  }
+
   private collectJs(
     asset: DevServerAsset | null,
     urls: Set<string>,
     visited: Set<string>
   ) {
-    if (!asset) {
-      return;
-    }
-    if (!asset.moduleId) {
-      return;
-    }
-    if (visited.has(asset.moduleId)) {
+    if (!asset || !asset.moduleId || visited.has(asset.moduleId)) {
       return;
     }
     visited.add(asset.moduleId);
-    const parts = path.parse(asset.assetUrl);
-    if (
-      ['.js', '.jsx', '.ts', '.tsx'].includes(parts.ext) &&
-      asset.moduleId.includes('/elements/')
-    ) {
+    if (asset.cachedJsDeps) {
+      for (const url of asset.cachedJsDeps) {
+        urls.add(url);
+      }
+      return;
+    }
+    if (asset.isElementJs()) {
       urls.add(asset.assetUrl);
     }
     asset.getImportedModules().forEach((viteModule) => {
-      if (viteModule.file) {
-        const src = this.assetMap.filePathToSrc(viteModule.file);
-        const importedAsset = new DevServerAsset(src, {
-          assetMap: this.assetMap,
-          viteModule: viteModule,
-        });
+      if (viteModule.file && viteModule.id && !visited.has(viteModule.id)) {
+        const importedAsset = this.assetMap.getOrCreateAsset(viteModule);
         this.collectJs(importedAsset, urls, visited);
       }
     });
@@ -150,29 +373,22 @@ export class DevServerAsset implements Asset {
     urls: Set<string>,
     visited: Set<string>
   ) {
-    if (!asset) {
-      return;
-    }
-    if (!asset.assetUrl) {
-      return;
-    }
-    if (visited.has(asset.assetUrl)) {
+    if (!asset || !asset.assetUrl || visited.has(asset.assetUrl)) {
       return;
     }
     visited.add(asset.assetUrl);
-    if (asset.src.endsWith('.scss')) {
-      const parts = path.parse(asset.src);
-      if (!parts.name.startsWith('_')) {
-        urls.add(asset.assetUrl);
+    if (asset.cachedCssDeps) {
+      for (const url of asset.cachedCssDeps) {
+        urls.add(url);
       }
+      return;
+    }
+    if (asset.isCssEntry()) {
+      urls.add(asset.assetUrl);
     }
     asset.getImportedModules().forEach((viteModule) => {
-      if (viteModule.file) {
-        const src = this.assetMap.filePathToSrc(viteModule.file);
-        const importedAsset = new DevServerAsset(src, {
-          assetMap: this.assetMap,
-          viteModule: viteModule,
-        });
+      if (viteModule.file && viteModule.url && !visited.has(viteModule.url)) {
+        const importedAsset = this.assetMap.getOrCreateAsset(viteModule);
         this.collectCss(importedAsset, urls, visited);
       }
     });
