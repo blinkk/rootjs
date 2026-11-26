@@ -1,5 +1,6 @@
 import {describe, it, expect} from 'vitest';
 import {
+  deepEqual,
   deepMerge,
   getNestedValue,
   sortObjectKeysDeep,
@@ -182,5 +183,18 @@ describe('deepMerge', () => {
     expect(deepMerge(target, source)).toEqual({
       items: {_array: ['b', 'c'], b: {title: 'new1'}, c: {title: 'new2'}},
     });
+  });
+});
+
+describe('deepEqual', () => {
+  it('compares nested objects and arrays by value', () => {
+    expect(deepEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 2}]}})).toBe(true);
+    expect(deepEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(false);
+  });
+
+  it('requires both objects to have the same keys', () => {
+    expect(deepEqual({a: undefined}, {b: 1})).toBe(false);
+    expect(deepEqual({a: undefined}, {b: undefined})).toBe(false);
+    expect(deepEqual({a: undefined}, {a: undefined})).toBe(true);
   });
 });
