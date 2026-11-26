@@ -1,5 +1,29 @@
 # @blinkk/root
 
+## 4.5.3
+
+### Patch Changes
+
+- b78fabb: feat: memoize BuildAsset and ElementGraph dependency lookups (also fixes missing-await truncation of deep transitive CSS/JS dependencies)
+- 6251c60: fix: avoid invoking getStaticPaths when rendering dev server 404 page
+- 4427bb7: fix: memoize dev asset graph traversal, fix elements dir watcher (enforcing `elements.include` workspace boundary), and deduplicate monorepo scans
+- 1be9dda: feat: defer and cache SSR renderer in dev server middleware
+
+  In `root dev`, `/cms` and `/cms/*` routes skip eager `req.renderer` loading so the CMS SPA opens without compiling site routes on cold start, while projects with custom `server.middlewares` or non-`root-cms` `configureServer` plugins continue to resolve `req.renderer` eagerly on non-`/cms` requests so auth and route-protection middlewares work unchanged.
+
+- 251b2b9: feat: lazy-load route modules on demand in root dev
+
+  In `root dev`, `Route.module` is lazily loaded on demand for routes without a `config` export; custom middleware inspecting `Route.module` directly can call `ensureRouteModule(route)` exported from `@blinkk/root/render`.
+
+- 5f53f5d: fix: prune excluded directories when scanning root schema files (excluding `node_modules` at any directory depth)
+- cc4763d: feat: optimize translation loading, normalizeString, and BatchResponse.getTranslations
+- a3476c9: feat: optimize request middlewares and route trie matching
+- dc8423e: feat: cache renderer config and optimize custom element tag scanning
+- c8f95cd: feat: enable shared read cache by default during root build
+- 37bc90a: feat: deduplicate getStaticPaths across locales and use slug-only Firestore projections
+- 0c017e7: feat: optimize build bundling, sourcemaps, and schema emission
+- 5f374a0: feat: optimize SSG worker pool queueing, concurrency, and per-page I/O
+
 ## 4.5.2
 
 ## 4.5.1

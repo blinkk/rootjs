@@ -1,5 +1,31 @@
 # @blinkk/root-cms
 
+## 4.5.3
+
+### Patch Changes
+
+- 7b8266d: feat: cache dependency graph metadata reads and coalesce in-flight loads
+- cc4763d: feat: optimize translation loading, normalizeString, and BatchResponse.getTranslations
+- a3476c9: feat: optimize request middlewares and route trie matching
+- 594822c: feat: fast-path RichText HTML sanitization and inline component rendering
+- c8f95cd: feat: enable shared read cache by default during root build
+- 37bc90a: feat: deduplicate getStaticPaths across locales and use slug-only Firestore projections
+- 0c017e7: feat: optimize build bundling, sourcemaps, and schema emission
+- Updated dependencies [b78fabb]
+- Updated dependencies [6251c60]
+- Updated dependencies [4427bb7]
+- Updated dependencies [1be9dda]
+- Updated dependencies [251b2b9]
+- Updated dependencies [5f53f5d]
+- Updated dependencies [cc4763d]
+- Updated dependencies [a3476c9]
+- Updated dependencies [dc8423e]
+- Updated dependencies [c8f95cd]
+- Updated dependencies [37bc90a]
+- Updated dependencies [0c017e7]
+- Updated dependencies [5f374a0]
+  - @blinkk/root@4.5.3
+
 ## 4.5.2
 
 ### Patch Changes
