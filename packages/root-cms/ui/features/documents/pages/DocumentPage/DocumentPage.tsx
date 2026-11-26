@@ -36,8 +36,7 @@ import {
   TOGGLE_COMMENTS_EVENT,
 } from '../../../comments/useFieldComments.js';
 import {ChecksPanel} from '../../../releases/components/ChecksPanel/ChecksPanel.js';
-import {testCanEdit} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {DocIdBadge} from '../../components/DocIdBadge/DocIdBadge.js';
 import {
@@ -199,9 +198,7 @@ export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
+  const {canEdit} = useCurrentUserPermissions();
   return (
     <DraftDocProvider docId={docId} readOnly={!canEdit}>
       <FieldCommentsProvider docId={docId}>

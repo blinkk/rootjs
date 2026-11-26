@@ -35,10 +35,6 @@ vi.mock('../../../users/useProjectRoles.js', () => ({
   useProjectRoles: () => ({roles: {'test@example.com': 'ADMIN'}}),
 }));
 
-vi.mock('../../../users/permissions.js', () => ({
-  testCanPublish: () => true,
-}));
-
 vi.mock('../../release.js', async (importOriginal) => {
   const actual: any = await importOriginal();
   return {

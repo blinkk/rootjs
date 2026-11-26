@@ -114,8 +114,7 @@ import {
   testLocalizedValuesEnabled,
 } from '../../../translations/components/LocalizedValues/LocalizedValues.js';
 import {extractField} from '../../../translations/extract.js';
-import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserAvatarGroup} from '../../../users/UserAvatar/UserAvatar.js';
 import {CMSDoc, testIsScheduled, testPublishingLocked} from '../../doc.js';
 import {formatFieldPath} from '../../field-labels.js';
@@ -315,10 +314,7 @@ type StatusBarProps = DocEditorProps & {
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
   const {route, query} = useLocation();
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
-  const canEdit = testCanEdit(roles, currentUserEmail);
+  const {canEdit, canPublish} = useCurrentUserPermissions();
 
   const draft = props.draft;
   const [data, setData] = useState<Partial<CMSDoc> | null>(

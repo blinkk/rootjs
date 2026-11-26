@@ -48,8 +48,7 @@ import {
 } from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
 import {testTimestamp, toMillis} from '../../../documents/doc-changes.js';
 import {CMSDoc} from '../../../documents/doc.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../../users/UserTag/UserTag.js';
@@ -371,9 +370,7 @@ ReleasePage.Actions = (props: {
   release: Release;
   onAction: (action: string) => void;
 }) => {
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canPublish} = useCurrentUserPermissions();
 
   const release = props.release;
   const [publishLoading, setPublishLoading] = useState(false);

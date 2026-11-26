@@ -4,6 +4,7 @@ import {
   IconDeviceFloppy,
 } from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import {useCopyToClipboard} from '../../../../hooks/useCopyToClipboard.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {JsonInput} from '../../../../primitives/JsonInput/JsonInput.js';
 import type {ContextModalProps} from '../../../../primitives/modals/ModalsProvider.js';
@@ -24,12 +25,11 @@ export function EditJsonModal(
   const initialValue = JSON.stringify(props.data || {}, null, 2);
   const [value, setValue] = useState(initialValue);
   const [valid, setValid] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const {copied, copy} = useCopyToClipboard();
   const [changed, setChanged] = useState(false);
 
   function onChange(s: string) {
     setValue(s);
-    setCopied(false);
     try {
       JSON.parse(s);
       setValid(true);
@@ -40,7 +40,7 @@ export function EditJsonModal(
   }
 
   function copyToClipboard() {
-    navigator.clipboard.writeText(value).then(() => setCopied(true));
+    void copy(value);
   }
 
   function onSave() {

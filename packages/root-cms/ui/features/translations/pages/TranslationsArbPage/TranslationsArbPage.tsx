@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '../../../../primitives/Table/Table.js';
 import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
+import {downloadBlob} from '../../../../utils/download.js';
 import {getDraftDocs} from '../../../documents/doc.js';
 import {Arb} from '../../arb.js';
 import {extractStringsWithMetadataForDoc} from '../../extract.js';
@@ -118,16 +119,7 @@ TranslationsArbPage.RequestForm = () => {
       const arb = await buildArbFile(docIds);
 
       const arbContent = arb.toString();
-      const res = new Response(arbContent);
-      const blob = await res.blob();
-
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = buildArbFilename(docIds);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(link.href);
+      downloadBlob(arbContent, buildArbFilename(docIds));
 
       setLoading(false);
     } catch (err) {

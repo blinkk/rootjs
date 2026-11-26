@@ -8,6 +8,7 @@ import {
   getOrderedBlocks,
   sanitizePrototypeThemeValue,
 } from '../../../shared/prototypes.js';
+import {downloadBlob} from '../../utils/download.js';
 
 /** Export payload returned by a live `prototype-runtime.js` iframe. */
 export interface PrototypeExportPayload {
@@ -203,18 +204,6 @@ function slugifyFilename(value: string): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'prototype'
   );
-}
-
-/** Triggers a browser download for a rendered canvas blob. */
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**

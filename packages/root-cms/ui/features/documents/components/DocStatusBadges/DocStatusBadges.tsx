@@ -1,4 +1,3 @@
-import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren, FunctionComponent, JSX, Ref} from 'preact';
 import {forwardRef} from 'preact/compat';
 import {useState} from 'preact/hooks';
@@ -6,11 +5,7 @@ import {Badge, type BadgeGradient} from '../../../../primitives/Badge/Badge.js';
 import {Popover} from '../../../../primitives/Popover/Popover.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {cn} from '../../../../utils/classes.js';
-import {
-  formatDateTime,
-  getTimeAgo,
-  timestampToMillis,
-} from '../../../../utils/time.js';
+import {formatDateTime, formatTimeAgo} from '../../../../utils/time.js';
 import {Release} from '../../../releases/release.js';
 import {usePendingReleases} from '../../../releases/usePendingReleases.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
@@ -161,7 +156,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         sys.modifiedAt > sys.publishedAt) && (
         <UserActionTooltip
           heading={hasUnpublishedChanges ? 'Unpublished changes' : undefined}
-          message={`Modified ${timeDiff(sys.modifiedAt)}`}
+          message={`Modified ${formatTimeAgo(sys.modifiedAt)}`}
           user={sys.modifiedBy}
         >
           <StatusBadge tone="draft" {...clickableProps(onDraftClick)}>
@@ -171,7 +166,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
       {!!sys.publishedAt && (
         <UserActionTooltip
-          message={`Published ${timeDiff(sys.publishedAt ?? null)}`}
+          message={`Published ${formatTimeAgo(sys.publishedAt ?? null)}`}
           user={sys.publishedBy}
         >
           <StatusBadge
@@ -204,7 +199,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
       {!!sys.archivedAt && (
         <UserActionTooltip
-          message={`Archived ${timeDiff(sys.archivedAt)}`}
+          message={`Archived ${formatTimeAgo(sys.archivedAt)}`}
           user={sys.archivedBy}
         >
           <StatusBadge tone="archived">Archived</StatusBadge>
@@ -363,15 +358,4 @@ function MultiReleaseBadge(props: {releases: Release[]}) {
       ))}
     </Popover>
   );
-}
-
-function timeDiff(ts: Timestamp | null) {
-  // Since we're using server timestamps, firestore doesn't always return the
-  // timestamp right away since the db save is happening asynchronously. In
-  // these cases, assume that the update happened very recently.
-  const millis = timestampToMillis(ts);
-  if (!millis) {
-    return getTimeAgo(new Date().getTime());
-  }
-  return getTimeAgo(millis);
 }

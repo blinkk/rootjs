@@ -7,8 +7,7 @@ import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {getTimeAgo} from '../../../../utils/time.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {
   DataSource,
   DataSourceData,
@@ -56,8 +55,7 @@ export function DataSourceChangesModal(props: DataSourceChangesModalProps) {
   const [draft, setDraft] = useState<DataSourceData | null>(null);
   const [published, setPublished] = useState<DataSourceData | null>(null);
   const publish = useDataSourceAction(dataSource, 'publish', props.onPublish);
-  const {roles} = useProjectRoles();
-  const canPublish = testCanPublish(roles, window.firebase.user.email || '');
+  const {canPublish} = useCurrentUserPermissions();
 
   useEffect(() => {
     notifyErrors(async () => {

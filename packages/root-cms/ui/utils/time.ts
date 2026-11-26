@@ -100,6 +100,21 @@ export function timestampToMillis(ts: unknown): number {
 }
 
 /**
+ * Returns a relative time string for any timestamp-like value. When a
+ * Firestore server timestamp hasn't resolved yet, falls back to "just now".
+ */
+export function formatTimeAgo(
+  ts: TimestampLike | unknown,
+  options?: Intl.RelativeTimeFormatOptions
+): string {
+  const millis = timestampToMillis(ts);
+  if (!millis) {
+    return getTimeAgo(Date.now(), options);
+  }
+  return getTimeAgo(millis, options);
+}
+
+/**
  * Formats a timestamp as a full local date and time, e.g. "Oct 26, 2026,
  * 1:30 PM". This is the format for date/time tooltips across the CMS.
  */

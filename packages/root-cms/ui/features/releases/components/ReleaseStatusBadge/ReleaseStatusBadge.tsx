@@ -1,7 +1,10 @@
-import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
-import {formatDateTime, getTimeAgo} from '../../../../utils/time.js';
+import {
+  formatDateTime,
+  formatTimeAgo,
+  timestampToMillis,
+} from '../../../../utils/time.js';
 import {StatusBadge} from '../../../documents/components/DocStatusBadges/DocStatusBadges.js';
 import {Release} from '../../release.js';
 
@@ -11,10 +14,10 @@ export interface ReleaseStatusBadgeProps {
 
 export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   const release = props.release;
-  if (testIsValidTimestamp(release.archivedAt)) {
+  if (timestampToMillis(release.archivedAt) > 0) {
     return (
       <StatusTooltip
-        label={`Archived ${timeDiff(release.archivedAt)} by ${
+        label={`Archived ${formatTimeAgo(release.archivedAt)} by ${
           release.archivedBy
         }`}
       >
@@ -22,7 +25,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
       </StatusTooltip>
     );
   }
-  if (testIsValidTimestamp(release.scheduledAt)) {
+  if (timestampToMillis(release.scheduledAt) > 0) {
     return (
       <StatusTooltip
         label={`Scheduled ${formatDateTime(release.scheduledAt)} by ${
@@ -33,10 +36,10 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
       </StatusTooltip>
     );
   }
-  if (testIsValidTimestamp(release.publishedAt)) {
+  if (timestampToMillis(release.publishedAt) > 0) {
     return (
       <StatusTooltip
-        label={`Published ${timeDiff(release.publishedAt)} by ${
+        label={`Published ${formatTimeAgo(release.publishedAt)} by ${
           release.publishedBy
         }`}
       >
@@ -44,10 +47,10 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
       </StatusTooltip>
     );
   }
-  if (testIsValidTimestamp(release.rolledBackAt)) {
+  if (timestampToMillis(release.rolledBackAt) > 0) {
     return (
       <StatusTooltip
-        label={`Rolled back ${timeDiff(release.rolledBackAt)} by ${
+        label={`Rolled back ${formatTimeAgo(release.rolledBackAt)} by ${
           release.rolledBackBy
         }`}
       >
@@ -73,18 +76,4 @@ function StatusTooltip(props: {label: string; children: ComponentChildren}) {
       {props.children}
     </Tooltip>
   );
-}
-
-function testIsValidTimestamp(ts: any): ts is Timestamp {
-  return Boolean(ts && ts.toMillis);
-}
-
-function timeDiff(ts: Timestamp | null) {
-  // Since we're using server timestamps, firestore doesn't always return the
-  // timestamp right away since the db save is happening asynchronously. In
-  // these cases, assume that the update happened very recently.
-  if (!ts?.toMillis) {
-    return getTimeAgo(new Date().getTime());
-  }
-  return getTimeAgo(ts.toMillis());
 }

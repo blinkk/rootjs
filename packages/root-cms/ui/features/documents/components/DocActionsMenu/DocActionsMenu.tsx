@@ -16,20 +16,18 @@ import {
   IconTrash,
 } from '@tabler/icons-preact';
 import {Text} from '../../../../components/Text/Text.js';
+import {useConfirmAction} from '../../../../hooks/useConfirmAction.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {Menu, MenuItem} from '../../../../primitives/Menu/Menu.js';
-import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {
   showNotification,
   updateNotification,
 } from '../../../../primitives/Toast/toastStore.js';
-import {errorMessage} from '../../../../utils/notifications.js';
 import {useCopyDocModal} from '../../../collections/components/CopyDocModal/useCopyDocModal.js';
 import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/useAddToReleaseModal.js';
 import {useLockPublishingModal} from '../../../releases/components/LockPublishingModal/useLockPublishingModal.js';
 import {usePublishDocModal} from '../../../releases/components/PublishDocModal/usePublishDocModal.js';
-import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {
   CMSDoc,
   cmsArchiveDoc,
@@ -81,16 +79,13 @@ export interface DocActionsMenuProps {
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canEdit, canPublish} = useCurrentUserPermissions();
 
   const docId = props.docId;
   const data = (props.data || {}) as CMSDoc;
   const sys = data.sys || {};
   const isArchived = testIsArchived(data);
-  const modals = useModals();
+  const confirmAction = useConfirmAction();
   const copyDocModal = useCopyDocModal({
     fromDocId: docId,
     onSuccess: (newDocId: string) => {
@@ -114,10 +109,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   });
 
   const onRevertDraft = () => {
-    const notificationId = `revert-draft-${docId}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: `Discard draft edits for ${docId}`,
-      children: (
+      body: (
         <>
           <Text
             size="body-sm"
@@ -131,43 +125,30 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <DocIdBadge docId={docId} />
         </>
       ),
-      labels: {confirm: 'Discard draft edits', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Discard draft edits',
+      danger: true,
+      toast: {
+        id: `revert-draft-${docId}`,
+        loading: {
           title: 'Discarding draft edits',
           message: `Discarding draft edits of ${docId}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await cmsRevertDraft(docId);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Discarded draft edits',
           message: `Successfully reverted ${docId} back to its published version`,
           color: 'green',
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        if (props.onAction) {
-          props.onAction({
-            action: 'revert-draft',
-          });
-        }
+        },
+        errorTitle: 'Discard draft edits failed',
       },
+      action: () => cmsRevertDraft(docId),
+      onSuccess: () => props.onAction?.({action: 'revert-draft'}),
     });
   };
 
   const onUnpublishDoc = () => {
-    const notificationId = `unpublish-doc-${docId}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: `Unpublish ${docId}`,
-      children: (
+      body: (
         <>
           <Text
             size="body-sm"
@@ -180,49 +161,23 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <DocIdBadge docId={docId} />
         </>
       ),
-      labels: {confirm: 'Unpublish', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Unpublish',
+      danger: true,
+      toast: {
+        id: `unpublish-doc-${docId}`,
+        loading: {
           title: 'Unpublishing doc',
           message: `Requesting unpublish of ${docId}...`,
-          loading: true,
-          autoClose: false,
-        });
-        try {
-          await cmsUnpublishDoc(docId);
-        } catch (err) {
-          console.error(err);
-          updateNotification({
-            id: notificationId,
-            title: 'Unpublish failed',
-            message: `Failed to unpublish ${docId}: ${errorMessage(err)}`,
-            color: 'red',
-            loading: false,
-            autoClose: false,
-          });
-          modals.closeModal(modalId);
-          return;
-        }
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Unpublished!',
           message: `Successfully unpublished ${docId}!`,
           color: 'green',
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        if (props.onAction) {
-          props.onAction({
-            action: 'unpublish',
-          });
-        }
+        },
+        errorTitle: 'Unpublish failed',
       },
+      action: () => cmsUnpublishDoc(docId),
+      onSuccess: () => props.onAction?.({action: 'unpublish'}),
     });
   };
 
@@ -233,10 +188,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   };
 
   const onUnscheduleDoc = () => {
-    const notificationId = `unschedule-doc-${docId}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: `Unschedule ${docId}`,
-      children: (
+      body: (
         <>
           <Text
             size="body-sm"
@@ -248,43 +202,30 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <DocIdBadge docId={docId} />
         </>
       ),
-      labels: {confirm: 'Unschedule', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Unschedule',
+      danger: true,
+      toast: {
+        id: `unschedule-doc-${docId}`,
+        loading: {
           title: 'Unschedule doc',
           message: `Requesting unschedule of ${docId}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await cmsUnscheduleDoc(docId);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Unscheduled!',
           message: `Successfully unscheduled ${docId}!`,
           color: 'green',
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        if (props.onAction) {
-          props.onAction({
-            action: 'unschedule',
-          });
-        }
+        },
+        errorTitle: 'Unschedule failed',
       },
+      action: () => cmsUnscheduleDoc(docId),
+      onSuccess: () => props.onAction?.({action: 'unschedule'}),
     });
   };
 
   const onArchiveDoc = () => {
-    const notificationId = `archive-doc-${docId}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: `Archive ${docId}`,
-      children: (
+      body: (
         <>
           <Text
             size="body-sm"
@@ -298,33 +239,23 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <DocIdBadge docId={docId} />
         </>
       ),
-      labels: {confirm: 'Archive', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Archive',
+      danger: true,
+      toast: {
+        id: `archive-doc-${docId}`,
+        loading: {
           title: 'Archiving doc',
           message: `Requesting archive of ${docId}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await cmsArchiveDoc(docId);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Archived!',
           message: `Successfully archived ${docId}!`,
           color: 'green',
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        if (props.onAction) {
-          props.onAction({action: 'archive'});
-        }
+        },
+        errorTitle: 'Archive failed',
       },
+      action: () => cmsArchiveDoc(docId),
+      onSuccess: () => props.onAction?.({action: 'archive'}),
     });
   };
 
@@ -352,10 +283,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   };
 
   const onDeleteDoc = () => {
-    const notificationId = `delete-doc-${docId}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Delete doc',
-      children: (
+      body: (
         <>
           <Text
             size="body-sm"
@@ -367,35 +297,25 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <DocIdBadge docId={docId} />
         </>
       ),
-      labels: {confirm: 'Delete', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Delete',
+      danger: true,
+      toast: {
+        id: `delete-doc-${docId}`,
+        loading: {
           title: 'Deleting doc',
           message: `Requesting deletion of ${docId}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await cmsDeleteDoc(docId);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Deleted!',
           message: `Successfully deleted ${docId}!`,
           color: 'green',
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        if (props.onDelete) {
-          props.onDelete();
-        }
-        if (props.onAction) {
-          props.onAction({action: 'delete'});
-        }
+        },
+        errorTitle: 'Delete failed',
+      },
+      action: () => cmsDeleteDoc(docId),
+      onSuccess: () => {
+        props.onDelete?.();
+        props.onAction?.({action: 'delete'});
       },
     });
   };

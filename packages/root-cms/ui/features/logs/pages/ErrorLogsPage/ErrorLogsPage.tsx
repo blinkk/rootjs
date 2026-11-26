@@ -12,6 +12,7 @@ import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
+import {useCopyToClipboard} from '../../../../hooks/useCopyToClipboard.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {useStringParam} from '../../../../hooks/useQueryParam.js';
 import {Button} from '../../../../primitives/Button/Button.js';
@@ -106,12 +107,12 @@ export function ErrorLogsPage() {
 
 function ErrorLogItem(props: {report: ErrorReport; open?: boolean}) {
   const report = props.report;
-  const [copied, setCopied] = useState(false);
+  const {copied, copy} = useCopyToClipboard({
+    errorTitle: 'Failed to copy error details',
+  });
 
-  async function copyDetails() {
-    await navigator.clipboard.writeText(formatErrorReport(report));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
+  function copyDetails() {
+    void copy(formatErrorReport(report));
   }
 
   return (
@@ -145,7 +146,7 @@ function ErrorLogItem(props: {report: ErrorReport; open?: boolean}) {
           variant="default"
           size="sm"
           icon={copied ? <IconCheck /> : <IconCopy />}
-          onClick={() => notifyErrors(copyDetails)}
+          onClick={copyDetails}
         >
           {copied ? 'Copied' : 'Copy error details'}
         </Button>

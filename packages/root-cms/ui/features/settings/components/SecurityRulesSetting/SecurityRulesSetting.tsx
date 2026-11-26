@@ -12,6 +12,7 @@ import {
   getFirestoreConsoleRulesUrl,
 } from '../../../../../shared/security-rules.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {useCopyToClipboard} from '../../../../hooks/useCopyToClipboard.js';
 import {Badge} from '../../../../primitives/Badge/Badge.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
@@ -28,8 +29,8 @@ const CLI_COMMAND = 'npx root-cms update-firebase-security-rules';
 export function SecurityRulesSetting() {
   const {status, loading, applying, refresh, apply} = useSecurityRulesStatus();
   const [applyError, setApplyError] = useState<string | null>(null);
-  const [copiedCommand, setCopiedCommand] = useState(false);
-  const [copiedRules, setCopiedRules] = useState(false);
+  const {copied: copiedCommand, copy: copyCommand} = useCopyToClipboard();
+  const {copied: copiedRules, copy: copyRules} = useCopyToClipboard();
 
   useEffect(() => {
     if (window.location.hash === '#security-rules') {
@@ -73,16 +74,12 @@ export function SecurityRulesSetting() {
     await refresh();
   }
 
-  async function onCopyCommand() {
-    await navigator.clipboard.writeText(CLI_COMMAND);
-    setCopiedCommand(true);
-    window.setTimeout(() => setCopiedCommand(false), 2000);
+  function onCopyCommand() {
+    void copyCommand(CLI_COMMAND);
   }
 
-  async function onCopyRules() {
-    await navigator.clipboard.writeText(FIRESTORE_RULES);
-    setCopiedRules(true);
-    window.setTimeout(() => setCopiedRules(false), 2000);
+  function onCopyRules() {
+    void copyRules(FIRESTORE_RULES);
   }
 
   let badge = null;

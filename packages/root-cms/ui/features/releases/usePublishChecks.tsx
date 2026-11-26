@@ -4,8 +4,7 @@ import {
   type PublishCheckResult,
 } from '../../../shared/publish-checks.js';
 import {useModals} from '../../primitives/modals/ModalsProvider.js';
-import {testIsAdmin} from '../users/permissions.js';
-import {useProjectRoles} from '../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../users/useCurrentUserPermissions.js';
 import {
   buildPublishChecksAudit,
   runPublishChecks,
@@ -70,11 +69,9 @@ export interface RunPublishChecksOptions {
  */
 export function usePublishChecks() {
   const modals = useModals();
-  const {roles, loading: rolesLoading} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
   // Treat an unresolved roles fetch as "not an admin" so checks can't be
   // skipped or bypassed before permissions are known.
-  const isAdmin = !rolesLoading && testIsAdmin(roles, currentUserEmail);
+  const {isAdmin} = useCurrentUserPermissions();
 
   const run = useCallback(
     async (

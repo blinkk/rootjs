@@ -5,8 +5,7 @@ import {
   isOpenThread,
   sortThreads,
 } from '../../../shared/comments.js';
-import {testCanEdit} from '../users/permissions.js';
-import {useProjectRoles} from '../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../users/useCurrentUserPermissions.js';
 import {subscribeFieldCommentThreads} from './comments.js';
 
 /** Dispatched to toggle the comments panel on the document page. */
@@ -67,9 +66,7 @@ export function FieldCommentsProvider(props: FieldCommentsProviderProps) {
   const [threads, setThreads] = useState<FieldCommentThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canComment = testCanEdit(roles, currentUserEmail);
+  const {canEdit: canComment} = useCurrentUserPermissions();
 
   useEffect(() => {
     setLoading(true);

@@ -1,8 +1,7 @@
 import {useCallback, useEffect, useState} from 'preact/hooks';
 import {FIRESTORE_RULES_VERSION} from '../../../shared/security-rules.js';
 import {useSiteSettings} from '../../hooks/useSiteSettings.js';
-import {testIsAdmin} from '../users/permissions.js';
-import {useProjectRoles} from '../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../users/useCurrentUserPermissions.js';
 
 /** Status returned by `GET /cms/api/security.rules_status`. */
 export interface ClientSecurityRulesStatus {
@@ -93,10 +92,8 @@ async function fetchSecurityRulesStatus(
  * stored version is missing or older than `FIRESTORE_RULES_VERSION`.
  */
 export function useSecurityRulesStatus() {
-  const {roles, loading: rolesLoading} = useProjectRoles();
+  const {isAdmin} = useCurrentUserPermissions();
   const {securityRulesVersion, loaded: siteLoaded} = useSiteSettings();
-  const email = window.firebase?.user?.email || '';
-  const isAdmin = !rolesLoading && testIsAdmin(roles, email);
 
   const storedFirestoreVersion = securityRulesVersion?.firestore;
   const isUpToDateFromDoc =

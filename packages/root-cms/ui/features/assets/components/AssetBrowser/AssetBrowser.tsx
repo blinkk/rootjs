@@ -63,8 +63,7 @@ import {cn} from '../../../../utils/classes.js';
 import {errorMessage, notifyErrors} from '../../../../utils/notifications.js';
 import {getTimeAgo} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {getSyncProvider} from '../../asset-sync/registry.js';
 import {
@@ -220,10 +219,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
     useState<AssetFolder | null>(null);
   const [syncRunTarget, setSyncRunTarget] = useState<AssetFolder | null>(null);
 
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
   // Writes to the Assets db collection require publish-level permissions.
-  const canManage = testCanPublish(roles, currentUserEmail);
+  const {canPublish: canManage} = useCurrentUserPermissions();
 
   const searching = filter.trim().length > 0;
 
