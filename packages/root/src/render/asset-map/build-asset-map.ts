@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {Manifest} from 'vite';
+import type {Manifest} from 'vite';
 import {RootConfig} from '../../core/config.js';
-import {ElementGraph} from '../../node/element-graph.js';
+import type {ElementGraph} from '../../node/element-graph-runtime.js';
 import {isJsFile} from '../../utils/fsutils.js';
 import {Asset, AssetMap} from './asset-map.js';
 

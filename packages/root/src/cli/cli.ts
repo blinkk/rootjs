@@ -1,13 +1,73 @@
 import {Command, InvalidArgumentError, Option} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {build, BuildOptions} from './build.js';
-import {codegen} from './codegen.js';
-import {createPackage} from './create-package.js';
-import {dev, createDevServer} from './dev.js';
-import {gaeDeploy} from './gae-deploy.js';
-import {preview, createPreviewServer} from './preview.js';
+import type {BuildOptions} from './build.js';
 import {registerSecretsCommands} from './secrets.js';
-import {start, createProdServer} from './start.js';
+
+type BuildModule = typeof import('./build.js');
+type CodegenModule = typeof import('./codegen.js');
+type CreatePackageModule = typeof import('./create-package.js');
+type DevModule = typeof import('./dev.js');
+type GaeDeployModule = typeof import('./gae-deploy.js');
+type PreviewModule = typeof import('./preview.js');
+type StartModule = typeof import('./start.js');
+
+async function build(...args: Parameters<BuildModule['build']>) {
+  const mod = await import('./build.js');
+  return mod.build(...args);
+}
+
+async function codegen(...args: Parameters<CodegenModule['codegen']>) {
+  const mod = await import('./codegen.js');
+  return mod.codegen(...args);
+}
+
+async function createPackage(
+  ...args: Parameters<CreatePackageModule['createPackage']>
+) {
+  const mod = await import('./create-package.js');
+  return mod.createPackage(...args);
+}
+
+async function dev(...args: Parameters<DevModule['dev']>) {
+  const mod = await import('./dev.js');
+  return mod.dev(...args);
+}
+
+async function createDevServer(
+  ...args: Parameters<DevModule['createDevServer']>
+) {
+  const mod = await import('./dev.js');
+  return mod.createDevServer(...args);
+}
+
+async function gaeDeploy(...args: Parameters<GaeDeployModule['gaeDeploy']>) {
+  const mod = await import('./gae-deploy.js');
+  return mod.gaeDeploy(...args);
+}
+
+async function preview(...args: Parameters<PreviewModule['preview']>) {
+  const mod = await import('./preview.js');
+  return mod.preview(...args);
+}
+
+async function createPreviewServer(
+  ...args: Parameters<PreviewModule['createPreviewServer']>
+) {
+  const mod = await import('./preview.js');
+  return mod.createPreviewServer(...args);
+}
+
+async function start(...args: Parameters<StartModule['start']>) {
+  const mod = await import('./start.js');
+  return mod.start(...args);
+}
+
+async function createProdServer(
+  ...args: Parameters<StartModule['createProdServer']>
+) {
+  const mod = await import('./start.js');
+  return mod.createProdServer(...args);
+}
 
 class CliRunner {
   private name: string;
@@ -147,7 +207,6 @@ function numberFlag(value: string) {
 export {
   CliRunner,
   build,
-  BuildOptions,
   createPackage,
   dev,
   createDevServer,
@@ -156,3 +215,4 @@ export {
   start,
   createProdServer,
 };
+export type {BuildOptions};

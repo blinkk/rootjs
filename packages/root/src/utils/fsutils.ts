@@ -1,9 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import fsExtra from 'fs-extra';
-import glob from 'tiny-glob';
-
 export function isJsFile(filename: string) {
   return !!filename.match(/\.(j|t)sx?$/);
 }
@@ -22,9 +19,10 @@ export async function makeDir(dirpath: string) {
 }
 
 export async function copyDir(srcdir: string, dstdir: string) {
-  if (!fsExtra.existsSync(srcdir)) {
+  if (!fs.existsSync(srcdir)) {
     return;
   }
+  const {default: fsExtra} = await import('fs-extra');
   fsExtra.copySync(srcdir, dstdir, {overwrite: true});
 }
 
@@ -42,6 +40,10 @@ export async function copyGlob(
   srcdir: string,
   dstdir: string
 ) {
+  const [{default: glob}, {default: fsExtra}] = await Promise.all([
+    import('tiny-glob'),
+    import('fs-extra'),
+  ]);
   const files = await glob(pattern, {cwd: srcdir, filesOnly: true});
   if (files.length > 0) {
     await makeDir(dstdir);

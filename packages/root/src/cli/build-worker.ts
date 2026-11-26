@@ -2,8 +2,8 @@ import path from 'node:path';
 import {parentPort, workerData} from 'node:worker_threads';
 
 import {Route} from '../core/types.js';
-import {ElementGraph} from '../node/element-graph.js';
-import {loadBundledConfig} from '../node/load-config.js';
+import {ElementGraph} from '../node/element-graph-runtime.js';
+import {loadBundledConfig} from '../node/load-bundled-config.js';
 import {
   BuildAssetManifest,
   BuildAssetMap,
