@@ -4,9 +4,19 @@ import {
   RichTextParagraphSizeOption,
 } from '../../../../../shared/richtext.js';
 import {lazyComponent} from '../../../../app/lazy-component.js';
+import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 
-const LazyLexicalEditor = lazyComponent<RichTextEditorProps>(() =>
-  import('./lexical/LexicalEditor.js').then((m) => m.LexicalEditor)
+const LazyLexicalEditor = lazyComponent<RichTextEditorProps>(
+  () => import('./lexical/LexicalEditor.js').then((m) => m.LexicalEditor),
+  {
+    // Match the toolbar + editor minimum height (~176px) to avoid layout shift
+    // while the Lexical chunk loads.
+    fallback: (
+      <div className="RichTextEditor__loading flex min-h-44 items-center justify-center rounded-sm border border-solid border-input-border bg-surface">
+        <Spinner size="md" />
+      </div>
+    ),
+  }
 );
 
 export interface RichTextEditorProps {

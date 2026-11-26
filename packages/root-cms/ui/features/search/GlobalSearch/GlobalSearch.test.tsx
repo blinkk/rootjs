@@ -40,9 +40,8 @@ vi.mock('../../data-sources/data-source.js', () => ({
 function renderSearch() {
   return render(
     <LocationProvider>
-      <GlobalSearch>
-        <div>app</div>
-      </GlobalSearch>
+      <GlobalSearch />
+      <div>app</div>
     </LocationProvider>
   );
 }

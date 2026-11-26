@@ -170,8 +170,8 @@ function canTakeRef(child: ComponentChildren): child is VNode<any> {
 /**
  * A short label shown next to its trigger on hover and keyboard focus,
  * after a short delay. It hides on Escape, blur, pointer leave and press, and
- * never shows on tap. The trigger gets `aria-describedby` pointing at it.
- * Replaces Mantine's `Tooltip` and the old `ConditionalTooltip`.
+ * never shows on tap. While open, the trigger gets `aria-describedby` pointing
+ * at it. Replaces Mantine's `Tooltip` and the old `ConditionalTooltip`.
  *
  * The tooltip attaches to the trigger directly, so the trigger keeps its own
  * layout (`absolute`, `float-right`, `w-full`, …). Disabled triggers, which
@@ -240,19 +240,31 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   const wrapped = !refable || refFailed;
   const triggerElRef = useRef<Element | null>(null);
   const wrapperElRef = useRef<HTMLElement | null>(null);
+  const mountedRef = useRef(false);
+  // Bumped only if the trigger/wrapper DOM node swaps after initial mount so
+  // effects re-attach to the new node without adding an extra render on mount.
+  const [triggerVersion, setTriggerVersion] = useState(0);
   const setTriggerDom = useCallback(
     (el: unknown) => {
       const domEl = el instanceof Element ? el : null;
+      const changed = triggerElRef.current !== domEl;
       triggerElRef.current = domEl;
       setReference(domEl ?? wrapperElRef.current);
+      if (mountedRef.current && changed) {
+        setTriggerVersion((v) => v + 1);
+      }
     },
     [setReference]
   );
   const setWrapperDom = useCallback(
     (el: HTMLElement | null) => {
+      const changed = wrapperElRef.current !== el;
       wrapperElRef.current = el;
       if (!triggerElRef.current) {
         setReference(el);
+      }
+      if (mountedRef.current && changed) {
+        setTriggerVersion((v) => v + 1);
       }
     },
     [setReference]
@@ -264,6 +276,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   );
 
   useLayoutEffect(() => {
+    mountedRef.current = true;
     if (refable && !refFailed && !triggerElRef.current) {
       setRefFailed(true);
     }
@@ -398,7 +411,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
       listeners.forEach(([type, fn]) =>
         hoverTarget.removeEventListener(type, fn)
       );
-  }, [wrapped]);
+  }, [wrapped, triggerVersion]);
 
   // A disabled trigger gets no pointer events (browsers drop them, and
   // `Button` sets `pointer-events: none`), so while it's disabled, hit-test
@@ -445,7 +458,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
         el.style.pointerEvents = '';
       }
     };
-  }, [wrapped, disabled]);
+  }, [wrapped, disabled, triggerVersion]);
 
   // Skip `aria-describedby` when the tooltip just repeats the trigger's
   // accessible name (e.g. an IconButton labeled "Delete" with a "Delete"

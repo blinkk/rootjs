@@ -1,4 +1,5 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
+import {forwardRef} from 'preact/compat';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {Tooltip} from './Tooltip.js';
 
@@ -82,5 +83,38 @@ describe('Tooltip', () => {
     expect(
       screen.getByRole('tooltip', {hidden: true}).parentElement!.hidden
     ).toBe(false);
+  });
+
+  it('keeps working when a forwardRef trigger swaps its DOM element', () => {
+    const PolymorphicTrigger = forwardRef<HTMLElement, {href?: string}>(
+      ({href, ...rest}, ref) =>
+        href ? (
+          <a ref={ref as any} href={href} {...rest}>
+            Action
+          </a>
+        ) : (
+          <button ref={ref as any} type="button" {...rest}>
+            Action
+          </button>
+        )
+    );
+    const {rerender} = render(
+      <Tooltip label="Open link">
+        <PolymorphicTrigger />
+      </Tooltip>
+    );
+
+    rerender(
+      <Tooltip label="Open link">
+        <PolymorphicTrigger href="/docs" />
+      </Tooltip>
+    );
+
+    const link = screen.getByRole('link', {name: 'Action'});
+    fireEvent.pointerEnter(link);
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(screen.getByRole('tooltip').textContent).toBe('Open link');
   });
 });

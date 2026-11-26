@@ -1,4 +1,3 @@
-import {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {lazyComponent} from '../../../app/lazy-component.js';
@@ -16,7 +15,7 @@ const LazyGlobalSearchDialog = lazyComponent<GlobalSearchDialogProps>(
   {fallback: null}
 );
 
-/** Preloads the global search dialog chunk (used in tests). */
+/** Preloads the global search dialog chunk without mounting it. */
 export function preloadGlobalSearch(): Promise<void> {
   return LazyGlobalSearchDialog.preload();
 }
@@ -76,15 +75,52 @@ function clearSearchUrlState() {
  * the startup bundle; the dialog UI and its Firestore/search queries load and
  * mount lazily on first open.
  */
-export function GlobalSearch(props: {children?: ComponentChildren}) {
+export function GlobalSearch() {
   const [opened, setOpened] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
+  const [chunkLoaded, setChunkLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<GlobalSearchFilter>('all');
   const openedRef = useRef(opened);
   openedRef.current = opened;
   const clearTimerRef = useRef(0);
   const urlTimerRef = useRef(0);
+
+  // Warm the dialog chunk while the browser is idle so first Cmd+K opens
+  // immediately without mounting or running Firestore queries ahead of time.
+  useEffect(() => {
+    let cancelled = false;
+    const warm = () => {
+      preloadGlobalSearch()
+        .then(() => {
+          if (!cancelled) {
+            setChunkLoaded(true);
+          }
+        })
+        .catch(() => {
+          // Ignore idle preload failures; opening retries on demand.
+        });
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (
+        cb: () => void,
+        opts?: {timeout: number}
+      ) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(warm, {timeout: 2000});
+      return () => {
+        cancelled = true;
+        w.cancelIdleCallback?.(id);
+      };
+    }
+    const timer = window.setTimeout(warm, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const open = useCallback((options: OpenGlobalSearchOptions = {}) => {
     window.clearTimeout(clearTimerRef.current);
@@ -199,19 +235,21 @@ export function GlobalSearch(props: {children?: ComponentChildren}) {
     // Only runs when the modal opens; edits move the caret themselves.
   }, [opened]);
 
+  // Keep the dialog mounted after first open once loaded so close transitions
+  // finish smoothly; if loading fails before opening, closing unmounts the
+  // fallback error UI instead of leaving it at the bottom of the page.
+  if (!hasOpened || (!opened && !chunkLoaded)) {
+    return null;
+  }
+
   return (
-    <>
-      {hasOpened && (
-        <LazyGlobalSearchDialog
-          opened={opened}
-          query={query}
-          filter={filter}
-          onQueryChange={setQuery}
-          onFilterChange={setFilter}
-          onClose={close}
-        />
-      )}
-      {props.children}
-    </>
+    <LazyGlobalSearchDialog
+      opened={opened}
+      query={query}
+      filter={filter}
+      onQueryChange={setQuery}
+      onFilterChange={setFilter}
+      onClose={close}
+    />
   );
 }
