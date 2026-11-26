@@ -1,4 +1,3 @@
-import {IconExternalLink} from '@tabler/icons-preact';
 import {doc, onSnapshot, updateDoc, FieldPath} from 'firebase/firestore';
 import {ComponentChildren, createContext} from 'preact';
 import {
@@ -9,12 +8,10 @@ import {
   useState,
 } from 'preact/hooks';
 import type {SecurityRulesVersionDoc} from '../../shared/security-rules.js';
-import {buildGoogleDriveFolderUrl} from '../integrations/gsheets.js';
-import {Button} from '../primitives/Button/Button.js';
 import {useFirebase} from './useFirebase.js';
 
 /** Project level settings. Keys are stored in the database. */
-interface SiteSettings {
+export interface SiteSettings {
   /** The Google Drive folder where files created by Root.js are stored. If unspecified, files will be created in your "My Drive". */
   googleDriveFolder?: string;
   /** The default assignee for new tasks created within the CMS. */
@@ -25,44 +22,6 @@ interface SiteSettings {
    */
   customCss?: string;
 }
-
-interface Setting {
-  /** The name of the setting (appears in the CMS UI). */
-  name: string;
-  /** The key of the setting stored in the database. */
-  key: keyof SiteSettings;
-  /** A description of the setting (appears in the CMS UI). */
-  description: string;
-  placeholder?: string;
-  /** Additional UI to show adjacent to the settings field. */
-  ui?: (value: string | undefined) => preact.JSX.Element;
-}
-
-export const SITE_SETTINGS: Setting[] = [
-  {
-    name: 'Google Drive Folder',
-    key: 'googleDriveFolder',
-    placeholder: 'https://drive.google.com/drive/folders/...',
-    description:
-      'Where Google Sheets created by Root.js\'s localization process are stored. If unspecified, they will be created in your "My Drive".',
-    ui: (value) => {
-      return (
-        <Button
-          disabled={!value}
-          size="xs"
-          iconRight={<IconExternalLink />}
-          onClick={() => {
-            if (value) {
-              window.open(value, buildGoogleDriveFolderUrl(value));
-            }
-          }}
-        >
-          Open
-        </Button>
-      );
-    },
-  },
-];
 
 export interface SiteSettingsContextValue {
   settings: SiteSettings;

@@ -3,7 +3,11 @@ import {
   RichTextData,
   RichTextParagraphSizeOption,
 } from '../../../../../shared/richtext.js';
-import {LexicalEditor} from './lexical/LexicalEditor.js';
+import {lazyComponent} from '../../../../app/lazy-component.js';
+
+const LazyLexicalEditor = lazyComponent<RichTextEditorProps>(() =>
+  import('./lexical/LexicalEditor.js').then((m) => m.LexicalEditor)
+);
 
 export interface RichTextEditorProps {
   className?: string;
@@ -27,5 +31,5 @@ export interface RichTextEditorProps {
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-  return <LexicalEditor {...props} />;
+  return <LazyLexicalEditor {...props} />;
 }

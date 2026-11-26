@@ -36,6 +36,60 @@ const FORWARD_REF = Symbol.for('react.forward_ref');
 /** Matches a trigger that can't take pointer events or focus. */
 const DISABLED_SELECTOR = ':disabled, [aria-disabled="true"]';
 
+interface DisabledTriggerEntry {
+  el: HTMLElement;
+  inside: boolean;
+  onEnter: (e: PointerEvent) => void;
+  onLeave: (e: PointerEvent) => void;
+}
+
+/**
+ * Shared registry for disabled tooltip triggers so a single document
+ * `pointermove` listener hit-tests all of them instead of attaching one
+ * listener per disabled button on the page.
+ */
+const disabledTriggers = new Set<DisabledTriggerEntry>();
+
+function onSharedDisabledPointerMove(e: PointerEvent) {
+  if (e.pointerType === 'touch') {
+    return;
+  }
+  const {clientX, clientY} = e;
+  disabledTriggers.forEach((entry) => {
+    const r = entry.el.getBoundingClientRect();
+    const now =
+      clientX >= r.left &&
+      clientX < r.right &&
+      clientY >= r.top &&
+      clientY < r.bottom;
+    if (now !== entry.inside) {
+      entry.inside = now;
+      if (now) {
+        entry.onEnter(e);
+      } else {
+        entry.onLeave(e);
+      }
+    }
+  });
+}
+
+function registerDisabledTrigger(entry: DisabledTriggerEntry) {
+  if (disabledTriggers.size === 0) {
+    document.addEventListener('pointermove', onSharedDisabledPointerMove, {
+      passive: true,
+    });
+  }
+  disabledTriggers.add(entry);
+}
+
+function unregisterDisabledTrigger(entry: DisabledTriggerEntry) {
+  disabledTriggers.delete(entry);
+  entry.inside = false;
+  if (disabledTriggers.size === 0) {
+    document.removeEventListener('pointermove', onSharedDisabledPointerMove);
+  }
+}
+
 export interface TooltipProps {
   /**
    * The tooltip's text (or content). It supplements the trigger's own label
@@ -185,13 +239,24 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   const [refFailed, setRefFailed] = useState(false);
   const wrapped = !refable || refFailed;
   const triggerElRef = useRef<Element | null>(null);
-  const [triggerEl, setTriggerEl] = useState<Element | null>(null);
-  const [wrapperEl, setWrapperEl] = useState<HTMLElement | null>(null);
-  const setTriggerDom = useCallback((el: unknown) => {
-    const domEl = el instanceof Element ? el : null;
-    triggerElRef.current = domEl;
-    setTriggerEl(domEl);
-  }, []);
+  const wrapperElRef = useRef<HTMLElement | null>(null);
+  const setTriggerDom = useCallback(
+    (el: unknown) => {
+      const domEl = el instanceof Element ? el : null;
+      triggerElRef.current = domEl;
+      setReference(domEl ?? wrapperElRef.current);
+    },
+    [setReference]
+  );
+  const setWrapperDom = useCallback(
+    (el: HTMLElement | null) => {
+      wrapperElRef.current = el;
+      if (!triggerElRef.current) {
+        setReference(el);
+      }
+    },
+    [setReference]
+  );
   const triggerRef = useMergedRef<Element>(
     refable ? getElementRef(children) : undefined,
     ref as Ref<Element>,
@@ -204,13 +269,13 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     }
   }, [refable, refFailed]);
 
-  // What the tooltip points at, and what takes the hover and focus events.
-  const anchor = wrapped ? (triggerEl ?? wrapperEl) : triggerEl;
-  const hoverTarget = wrapped ? wrapperEl : triggerEl;
-
   useLayoutEffect(() => {
-    setReference(anchor);
-  }, [anchor]);
+    setReference(
+      wrapped
+        ? (triggerElRef.current ?? wrapperElRef.current)
+        : triggerElRef.current
+    );
+  }, [wrapped, setReference]);
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
@@ -273,11 +338,19 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     window.clearTimeout(timerRef.current);
     if (wait <= 0) {
       if (openState) {
+        if (canAnimate(floatingRef.current)) {
+          setClosing(true);
+        }
         setOpen(false);
       }
       return;
     }
-    timerRef.current = window.setTimeout(() => setOpen(false), wait);
+    timerRef.current = window.setTimeout(() => {
+      if (canAnimate(floatingRef.current)) {
+        setClosing(true);
+      }
+      setOpen(false);
+    }, wait);
   }
 
   const onEnter = (e: PointerEvent) => {
@@ -308,6 +381,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   handlersRef.current = {onEnter, onLeave, onFocusIn, onFocusOut, hide};
 
   useEffect(() => {
+    const hoverTarget = wrapped ? wrapperElRef.current : triggerElRef.current;
     if (!hoverTarget) {
       return undefined;
     }
@@ -324,36 +398,22 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
       listeners.forEach(([type, fn]) =>
         hoverTarget.removeEventListener(type, fn)
       );
-  }, [hoverTarget]);
+  }, [wrapped]);
 
   // A disabled trigger gets no pointer events (browsers drop them, and
   // `Button` sets `pointer-events: none`), so while it's disabled, hit-test
-  // it from the document instead.
+  // it from the shared document listener instead.
   useEffect(() => {
-    if (wrapped || !triggerEl || disabled) {
+    const el = triggerElRef.current as HTMLElement | null;
+    if (wrapped || !el || disabled) {
       return undefined;
     }
-    const el = triggerEl as HTMLElement;
-    let inside = false;
     let setPointerEvents = false;
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') {
-        return;
-      }
-      const r = el.getBoundingClientRect();
-      const now =
-        e.clientX >= r.left &&
-        e.clientX < r.right &&
-        e.clientY >= r.top &&
-        e.clientY < r.bottom;
-      if (now !== inside) {
-        inside = now;
-        if (now) {
-          handlersRef.current.onEnter(e);
-        } else {
-          handlersRef.current.onLeave(e);
-        }
-      }
+    const entry: DisabledTriggerEntry = {
+      el,
+      inside: false,
+      onEnter: (e) => handlersRef.current.onEnter(e),
+      onLeave: (e) => handlersRef.current.onLeave(e),
     };
     const sync = () => {
       const isDisabled = el.matches(DISABLED_SELECTOR);
@@ -363,14 +423,13 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
           el.style.pointerEvents = 'none';
           setPointerEvents = true;
         }
-        document.addEventListener('pointermove', onMove, {passive: true});
+        registerDisabledTrigger(entry);
       } else {
         if (setPointerEvents) {
           el.style.pointerEvents = '';
           setPointerEvents = false;
         }
-        document.removeEventListener('pointermove', onMove);
-        inside = false;
+        unregisterDisabledTrigger(entry);
       }
     };
     sync();
@@ -381,16 +440,17 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     });
     return () => {
       observer.disconnect();
-      document.removeEventListener('pointermove', onMove);
+      unregisterDisabledTrigger(entry);
       if (setPointerEvents) {
         el.style.pointerEvents = '';
       }
     };
-  }, [wrapped, triggerEl, disabled]);
+  }, [wrapped, disabled]);
 
   // Skip `aria-describedby` when the tooltip just repeats the trigger's
   // accessible name (e.g. an IconButton labeled "Delete" with a "Delete"
-  // tooltip), so screen readers don't say it twice.
+  // tooltip), so screen readers don't say it twice. Only attach it while the
+  // tooltip is open so closed tooltips don't need a portaled DOM node.
   const childProps = (
     isValidElement(children) ? (children as VNode<any>).props : {}
   ) as Record<string, unknown>;
@@ -399,7 +459,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     (childProps['aria-label'] === label || childProps.label === label);
   const describedBy = [
     childProps['aria-describedby'] as string | undefined,
-    !disabled && !repeatsName ? id : undefined,
+    open && !disabled && !repeatsName ? id : undefined,
   ]
     .filter(Boolean)
     .join(' ');
@@ -415,7 +475,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
       })
     : children;
 
-  const bubble = !disabled && (
+  const bubble = !disabled && (open || closing) && (
     <Portal>
       <div
         ref={setFloatingEl}
@@ -460,7 +520,7 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   }
   return (
     <span
-      ref={setWrapperEl}
+      ref={setWrapperDom}
       className={cn(
         'Tooltip inline-flex max-w-full *:disabled:pointer-events-none',
         className

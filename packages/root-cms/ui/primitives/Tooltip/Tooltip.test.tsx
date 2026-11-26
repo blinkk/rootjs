@@ -16,28 +16,31 @@ describe('Tooltip', () => {
       </Tooltip>
     );
     const trigger = screen.getByRole('button', {name: 'Preview'});
-    const tooltip = screen.getByRole('tooltip', {hidden: true});
-    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id);
-    expect(tooltip.parentElement!.hidden).toBe(true);
+    expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
+    expect(trigger.hasAttribute('aria-describedby')).toBe(false);
     // The tooltip attaches to the trigger itself, without a wrapper.
     expect(trigger.closest('.Tooltip')).toBeNull();
 
     fireEvent.pointerEnter(trigger);
-    expect(tooltip.parentElement!.hidden).toBe(true);
+    expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
     act(() => {
       vi.advanceTimersByTime(300);
     });
+    const tooltip = screen.getByRole('tooltip');
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id);
     expect(tooltip.parentElement!.hidden).toBe(false);
 
     fireEvent.pointerLeave(trigger);
-    expect(tooltip.parentElement!.hidden).toBe(true);
+    expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
+    expect(trigger.hasAttribute('aria-describedby')).toBe(false);
 
     fireEvent.pointerEnter(trigger);
     act(() => {
       vi.advanceTimersByTime(300);
     });
+    expect(screen.getByRole('tooltip')).toBeTruthy();
     fireEvent.keyDown(trigger, {key: 'Escape'});
-    expect(tooltip.parentElement!.hidden).toBe(true);
+    expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
   });
 
   it('never shows on touch, and renders only the trigger when disabled', () => {
@@ -50,9 +53,7 @@ describe('Tooltip', () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(
-      screen.getByRole('tooltip', {hidden: true}).parentElement!.hidden
-    ).toBe(true);
+    expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
 
     rerender(
       <Tooltip label="Opens the preview" disabled>
