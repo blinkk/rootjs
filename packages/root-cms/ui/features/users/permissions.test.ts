@@ -26,6 +26,21 @@ describe('permissions', () => {
       expect(getRole(roles, 'guest@rootjs.dev')).toBe('VIEWER');
     });
 
+    it('matches emails and role keys case-insensitively', () => {
+      expect(getRole(roles, 'Admin@Example.COM')).toBe('ADMIN');
+      expect(getRole(roles, 'FOO@RootJS.DEV')).toBe('ADMIN');
+      expect(getRole(roles, 'Guest@RootJS.DEV')).toBe('VIEWER');
+      expect(
+        getRole(
+          {'Mixed@Example.com': 'EDITOR', '*@Example.com': 'VIEWER'},
+          'mixed@example.com'
+        )
+      ).toBe('EDITOR');
+      expect(getRole({'*@Example.com': 'EDITOR'}, 'someone@example.com')).toBe(
+        'EDITOR'
+      );
+    });
+
     it('returns null if no match found', () => {
       expect(getRole(roles, 'stranger@other.com')).toBe(null);
     });

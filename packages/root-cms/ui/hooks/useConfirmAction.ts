@@ -95,8 +95,10 @@ export function useConfirmAction() {
               autoClose: false,
             });
           }
+          let succeeded = false;
           try {
             await action();
+            succeeded = true;
             if (toast) {
               updateNotification({
                 id: toast.id,
@@ -108,7 +110,6 @@ export function useConfirmAction() {
               });
             }
             modals.closeModal(modalId);
-            onSuccess?.();
           } catch (err) {
             console.error(err);
             const message = errorMessage(err);
@@ -130,6 +131,9 @@ export function useConfirmAction() {
               });
             }
             modals.closeModal(modalId);
+          }
+          if (succeeded) {
+            onSuccess?.();
           }
         },
       });

@@ -1,7 +1,7 @@
 import {UserRole} from '../../../core/client.js';
 
 /**
- * Returns the role for a specific user email.
+ * Returns the role for a specific user email (case-insensitive).
  *
  * This function checks for a direct match first (e.g. "user@example.com").
  * If no direct match is found, it checks for a domain wildcard match
@@ -11,15 +11,33 @@ export function getRole(
   roles: Record<string, UserRole>,
   email: string
 ): UserRole | null {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return null;
+  }
+  if (normalizedEmail in roles) {
+    return roles[normalizedEmail];
+  }
   if (email in roles) {
     return roles[email];
   }
-  const domain = email.split('@').at(-1);
-  const domainEmail = `*@${domain}`;
-  if (domainEmail in roles) {
-    return roles[domainEmail];
+  const domain = normalizedEmail.split('@').at(-1);
+  const domainEmail = domain ? `*@${domain}` : '';
+
+  // Fall back to a case-insensitive scan so mixed-case role keys also match,
+  // still preferring a direct email match over a domain wildcard.
+  let wildcardMatch: UserRole | null =
+    domainEmail && domainEmail in roles ? roles[domainEmail] : null;
+  for (const [key, role] of Object.entries(roles)) {
+    const normalizedKey = key.trim().toLowerCase();
+    if (normalizedKey === normalizedEmail) {
+      return role;
+    }
+    if (domainEmail && !wildcardMatch && normalizedKey === domainEmail) {
+      wildcardMatch = role;
+    }
   }
-  return null;
+  return wildcardMatch;
 }
 
 /**
