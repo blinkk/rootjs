@@ -1,6 +1,5 @@
 import path from 'node:path';
 import {HttpsOptions, onRequest} from 'firebase-functions/v2/https';
-import {createPreviewServer, createProdServer} from '../cli/cli.js';
 import {Server} from '../core/types.js';
 
 export interface ProdServerOptions {
@@ -21,9 +20,13 @@ export function server(options?: ProdServerOptions) {
   // A failed startup is cleared so that the next request retries it.
   function getRootServer(): Promise<Server> {
     if (!rootServerPromise) {
-      const createServer =
-        options?.mode === 'preview' ? createPreviewServer : createProdServer;
-      rootServerPromise = createServer({rootDir}).catch((err) => {
+      rootServerPromise = (
+        options?.mode === 'preview'
+          ? import('../cli/preview.js').then((m) =>
+              m.createPreviewServer({rootDir})
+            )
+          : import('../cli/start.js').then((m) => m.createProdServer({rootDir}))
+      ).catch((err) => {
         rootServerPromise = null;
         throw err;
       });

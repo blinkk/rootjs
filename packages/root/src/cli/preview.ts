@@ -18,8 +18,8 @@ import {
 } from '../middleware/middleware.js';
 import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
-import {ElementGraph} from '../node/element-graph.js';
-import {loadBundledConfig} from '../node/load-config.js';
+import {ElementGraph} from '../node/element-graph-runtime.js';
+import {loadBundledConfig} from '../node/load-bundled-config.js';
 import {
   BuildAssetManifest,
   BuildAssetMap,
