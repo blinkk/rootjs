@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback, useRef} from 'preact/hooks';
+import {useCallback, useMemo, useRef} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 
 interface UseQueryParamOptions<T> {
@@ -37,26 +37,20 @@ export function useQueryParam<T = string>(
   serializeRef.current = serialize;
   deserializeRef.current = deserialize;
 
-  // Get value from URL query params.
-  const getValueFromQuery = useCallback((): T => {
-    const paramValue = query[paramName] as string | undefined;
-    return paramValue !== undefined
-      ? deserializeRef.current(paramValue)
-      : defaultValueRef.current;
-  }, [query, paramName]);
+  // Derive value directly from URL query params so unrelated query param
+  // updates don't trigger a redundant state sync render pass.
+  const paramValue = query[paramName] as string | undefined;
+  const value = useMemo<T>(
+    () =>
+      paramValue !== undefined
+        ? deserializeRef.current(paramValue)
+        : defaultValueRef.current,
+    [paramName, paramValue]
+  );
 
-  const [value, setValue] = useState(getValueFromQuery);
-
-  // Update state when URL changes (via useLocation's query object).
-  useEffect(() => {
-    setValue(getValueFromQuery());
-  }, [getValueFromQuery]);
-
-  // Function to update both state and URL.
+  // Function to update the URL (which updates LocationProvider's query).
   const updateParam = useCallback(
     (newValue: T) => {
-      setValue(newValue);
-
       const url = new URL(window.location.href);
       const serializedValue = serializeRef.current(newValue);
 

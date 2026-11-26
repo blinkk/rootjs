@@ -18,7 +18,7 @@ import {
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
-import {useEffect, useId, useState} from 'preact/hooks';
+import {useEffect, useId, useMemo, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {
   generateKeyBetween,
@@ -787,16 +787,20 @@ CollectionPage.DocsList = (props: {
   // Widen the Status column to fit the row with the most status badges (a
   // published doc with newer edits + a scheduled publish + a lock + a release
   // can stack several pills, which overflow the default width).
-  const maxStatusBadges = compact
-    ? docs.reduce(
-        (max, doc) =>
-          Math.max(
-            max,
-            countStatusBadges(doc, getReleasesForDoc(doc.id).length)
-          ),
-        1
-      )
-    : 1;
+  const maxStatusBadges = useMemo(
+    () =>
+      compact
+        ? docs.reduce(
+            (max, doc) =>
+              Math.max(
+                max,
+                countStatusBadges(doc, getReleasesForDoc(doc.id).length)
+              ),
+            1
+          )
+        : 1,
+    [compact, docs, getReleasesForDoc]
+  );
   const statusColumnWidth =
     maxStatusBadges <= 1 ? 80 : maxStatusBadges === 2 ? 150 : 215;
   function getLiveUrl(slug: string): string {

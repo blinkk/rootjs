@@ -1,7 +1,13 @@
 import {IconExternalLink} from '@tabler/icons-preact';
 import {doc, onSnapshot, updateDoc, FieldPath} from 'firebase/firestore';
 import {ComponentChildren, createContext} from 'preact';
-import {useContext, useEffect, useCallback, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'preact/hooks';
 import type {SecurityRulesVersionDoc} from '../../shared/security-rules.js';
 import {buildGoogleDriveFolderUrl} from '../integrations/gsheets.js';
 import {Button} from '../primitives/Button/Button.js';
@@ -115,15 +121,18 @@ export function SiteSettingsProvider(props: {children?: ComponentChildren}) {
     [db, projectId, user.uid]
   );
 
+  const value = useMemo(
+    () => ({
+      settings,
+      setSettings: setSetting,
+      securityRulesVersion,
+      loaded,
+    }),
+    [settings, setSetting, securityRulesVersion, loaded]
+  );
+
   return (
-    <SiteSettingsContext.Provider
-      value={{
-        settings: settings,
-        setSettings: setSetting,
-        securityRulesVersion,
-        loaded,
-      }}
-    >
+    <SiteSettingsContext.Provider value={value}>
       {props.children}
     </SiteSettingsContext.Provider>
   );

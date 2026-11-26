@@ -1,7 +1,7 @@
 import type {ComponentChildren, JSX} from 'preact';
 import {createContext} from 'preact';
-import {useContext} from 'preact/hooks';
-import {type ClassNames, cn} from '../../utils/classes.js';
+import {useContext, useMemo} from 'preact/hooks';
+import {type ClassNames, cn, joinClassNames} from '../../utils/classes.js';
 
 interface TableOptions {
   dense: boolean;
@@ -9,7 +9,11 @@ interface TableOptions {
   hover: boolean;
   stickyFirstColumn: boolean;
   withColumnBorders: boolean;
+  cellClasses: string;
 }
+
+const DEFAULT_CELL_CLASSES =
+  'border-0 border-b border-solid border-border text-left align-middle px-2.5 py-2.5';
 
 const TableContext = createContext<TableOptions>({
   dense: false,
@@ -17,6 +21,7 @@ const TableContext = createContext<TableOptions>({
   hover: false,
   stickyFirstColumn: false,
   withColumnBorders: false,
+  cellClasses: DEFAULT_CELL_CLASSES,
 });
 
 /** Whether rows are in the `<thead>` or `<tbody>`. */
@@ -89,10 +94,27 @@ export function Table(props: TableProps) {
     ...rest
   } = props;
 
+  const tableOptions = useMemo<TableOptions>(() => {
+    const cellClasses =
+      joinClassNames(
+        'border-0 border-b border-solid border-border text-left align-middle',
+        withColumnBorders && 'not-last:border-r',
+        dense ? 'px-2 py-1.5' : 'px-2.5 py-2.5',
+        stickyFirstColumn &&
+          'first:sticky first:left-0 first:z-(--cms-z-sticky) first:bg-inherit'
+      ) || '';
+    return {
+      dense,
+      striped,
+      hover,
+      stickyFirstColumn,
+      withColumnBorders,
+      cellClasses,
+    };
+  }, [dense, striped, hover, stickyFirstColumn, withColumnBorders]);
+
   return (
-    <TableContext.Provider
-      value={{dense, striped, hover, stickyFirstColumn, withColumnBorders}}
-    >
+    <TableContext.Provider value={tableOptions}>
       <div
         role={label ? 'region' : undefined}
         aria-label={label}
@@ -177,19 +199,6 @@ export function TableRow(props: TableRowProps) {
   );
 }
 
-/** Cell classes shared by header and body cells. */
-function useCellClasses() {
-  const {dense, stickyFirstColumn, withColumnBorders} =
-    useContext(TableContext);
-  return cn(
-    'border-0 border-b border-solid border-border text-left align-middle',
-    withColumnBorders && 'not-last:border-r',
-    dense ? 'px-2 py-1.5' : 'px-2.5 py-2.5',
-    stickyFirstColumn &&
-      'first:sticky first:left-0 first:z-(--cms-z-sticky) first:bg-inherit'
-  );
-}
-
 export interface TableHeaderCellProps extends JSX.ThHTMLAttributes<HTMLTableCellElement> {
   className?: string;
   children?: ComponentChildren;
@@ -198,17 +207,18 @@ export interface TableHeaderCellProps extends JSX.ThHTMLAttributes<HTMLTableCell
 /** A `<th>`. Defaults `scope` to `col` in the head and `row` in the body. */
 export function TableHeaderCell(props: TableHeaderCellProps) {
   const {className, scope, ...rest} = props;
+  const {cellClasses} = useContext(TableContext);
   const section = useContext(SectionContext);
+  const baseClasses = joinClassNames(
+    'Table__headerCell',
+    cellClasses,
+    'whitespace-nowrap font-bold text-muted'
+  );
   return (
     <th
       {...rest}
       scope={scope ?? (section === 'head' ? 'col' : 'row')}
-      className={cn(
-        'Table__headerCell',
-        useCellClasses(),
-        'whitespace-nowrap font-bold text-muted',
-        className
-      )}
+      className={className ? cn(baseClasses, className) : baseClasses}
     />
   );
 }
@@ -221,7 +231,12 @@ export interface TableCellProps extends JSX.TdHTMLAttributes<HTMLTableCellElemen
 /** A `<td>`. */
 export function TableCell(props: TableCellProps) {
   const {className, ...rest} = props;
+  const {cellClasses} = useContext(TableContext);
+  const baseClasses = joinClassNames('Table__cell', cellClasses);
   return (
-    <td {...rest} className={cn('Table__cell', useCellClasses(), className)} />
+    <td
+      {...rest}
+      className={className ? cn(baseClasses, className) : baseClasses}
+    />
   );
 }

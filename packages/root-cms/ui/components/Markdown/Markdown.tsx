@@ -1,4 +1,5 @@
 import {marked} from 'marked';
+import {useMemo} from 'preact/hooks';
 
 import {
   sanitizeBlockHtml,
@@ -14,13 +15,14 @@ interface MarkdownProps {
 
 export function Markdown(props: MarkdownProps) {
   const code = props.code || '';
-  const rawHtml = props.inline ? marked.parseInline(code) : marked.parse(code);
-  const html =
-    typeof rawHtml === 'string'
-      ? props.inline
-        ? sanitizeInlineHtml(rawHtml)
-        : sanitizeBlockHtml(rawHtml)
-      : '';
+  const inline = Boolean(props.inline);
+  const html = useMemo(() => {
+    const rawHtml = inline ? marked.parseInline(code) : marked.parse(code);
+    if (typeof rawHtml !== 'string') {
+      return '';
+    }
+    return inline ? sanitizeInlineHtml(rawHtml) : sanitizeBlockHtml(rawHtml);
+  }, [code, inline]);
   return (
     <div
       className={joinClassNames('Markdown Prose', props.className)}

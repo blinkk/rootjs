@@ -5,6 +5,8 @@ import {withTimeout} from '../../utils/with-timeout.js';
 
 /** Module-level cache so the Firestore fetch happens at most once. */
 let cachedRolesPromise: Promise<Record<string, UserRole>> | null = null;
+/** Synchronously readable once resolved so later mounts skip an extra render. */
+let cachedRoles: Record<string, UserRole> | null = null;
 
 /**
  * Fetches the roles defined for the current project, sharing the same cached
@@ -23,7 +25,9 @@ export function fetchProjectRoles(): Promise<Record<string, UserRole>> {
         'loading project roles'
       );
       const data = snapshot.data() || {};
-      return (data.roles || {}) as Record<string, UserRole>;
+      const roles = (data.roles || {}) as Record<string, UserRole>;
+      cachedRoles = roles;
+      return roles;
     })();
     // Don't cache failures; the next caller retries the fetch.
     cachedRolesPromise.catch(() => {
@@ -40,20 +44,33 @@ export function fetchProjectRoles(): Promise<Record<string, UserRole>> {
  * of the app. Subsequent calls across any component share the cached result.
  */
 export function useProjectRoles() {
-  const [roles, setRoles] = useState<Record<string, UserRole>>({});
-  const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<Record<string, UserRole>>(
+    () => cachedRoles ?? {}
+  );
+  const [loading, setLoading] = useState(() => cachedRoles === null);
 
   useEffect(() => {
+    if (cachedRoles !== null) {
+      return;
+    }
+    let cancelled = false;
     fetchProjectRoles()
-      .then((roles) => {
-        setRoles(roles);
+      .then((resolvedRoles) => {
+        if (!cancelled) {
+          setRoles(resolvedRoles);
+        }
       })
       .catch((err) => {
         console.error('failed to load project roles:', err);
       })
       .finally(() => {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return {roles, loading};

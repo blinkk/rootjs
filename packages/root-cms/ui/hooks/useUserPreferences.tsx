@@ -1,6 +1,12 @@
 import {doc, onSnapshot, setDoc} from 'firebase/firestore';
 import {ComponentChildren, createContext} from 'preact';
-import {useContext, useEffect, useCallback, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'preact/hooks';
 import {useFirebase} from './useFirebase.js';
 
 export interface UserPreferencesContextValue {
@@ -50,10 +56,13 @@ export function UserPreferencesProvider(props: {children?: ComponentChildren}) {
     [db, projectId, user.uid]
   );
 
+  const value = useMemo(
+    () => ({preferences, loaded, setPreference}),
+    [preferences, loaded, setPreference]
+  );
+
   return (
-    <UserPreferencesContext.Provider
-      value={{preferences, loaded, setPreference}}
-    >
+    <UserPreferencesContext.Provider value={value}>
       {props.children}
     </UserPreferencesContext.Provider>
   );

@@ -1,6 +1,6 @@
 import type {ComponentChildren, JSX, VNode} from 'preact';
 import {createContext} from 'preact';
-import {useContext, useEffect, useId, useRef} from 'preact/hooks';
+import {useContext, useEffect, useId, useMemo, useRef} from 'preact/hooks';
 import {useMergedRef} from '../../hooks/useMergedRef.js';
 import {cn} from '../../utils/classes.js';
 import {useOverlayFocus} from '../floating/focus.js';
@@ -271,8 +271,13 @@ export function Menu(props: MenuProps) {
     }
   }
 
+  const menuContextValue = useMemo(
+    () => ({close: () => setOpen(false, 'select')}),
+    [setOpen]
+  );
+
   return (
-    <MenuContext.Provider value={{close: () => setOpen(false, 'select')}}>
+    <MenuContext.Provider value={menuContextValue}>
       {cloneTrigger(trigger, {
         ref: triggerRef,
         id: triggerId,

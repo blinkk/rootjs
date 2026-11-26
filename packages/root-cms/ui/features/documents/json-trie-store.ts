@@ -146,7 +146,7 @@ export class JsonTrieStore extends EventListener {
   public setData(newData: Record<string, any>) {
     const oldData = this.data;
     // Use the deep comparison notifier for total data replacement.
-    this.notifyOnUpdate(this.root, '', oldData, newData);
+    this.notifyOnUpdate(this.root, oldData, newData);
     this.data = newData;
     // Notify subscribers on the root that data has changed.
     this.dispatch(JsonTrieStoreEventType.CHANGE, this.data);
@@ -223,21 +223,33 @@ export class JsonTrieStore extends EventListener {
    * Recursively traverses trie, compares old/new data, and fires callbacks.
    * Used only by setData for total state replacement.
    */
-  private notifyOnUpdate(
-    node: TrieNode,
-    path: string,
-    oldData: Record<string, any>,
-    newData: Record<string, any>
-  ) {
-    const oldValue = this.getValueFromPath(path, oldData);
-    const newValue = this.getValueFromPath(path, newData);
-    if (!deepEqual(oldValue, newValue)) {
+  private notifyOnUpdate(node: TrieNode, oldValue: any, newValue: any) {
+    if (oldValue === newValue) {
+      return;
+    }
+    const hasSubscribers =
+      node.subscribers.size > 0 || node.subtreeSubscribers.size > 0;
+    if (hasSubscribers) {
+      if (deepEqual(oldValue, newValue)) {
+        return;
+      }
       node.subscribers.forEach((callback) => callback(newValue));
       node.subtreeSubscribers.forEach((callback) => callback(newValue));
     }
     node.children.forEach((childNode, key) => {
-      const newPath = path ? `${path}.${key}` : key;
-      this.notifyOnUpdate(childNode, newPath, oldData, newData);
+      const childOldValue =
+        oldValue !== null &&
+        oldValue !== undefined &&
+        typeof oldValue === 'object'
+          ? oldValue[key]
+          : undefined;
+      const childNewValue =
+        newValue !== null &&
+        newValue !== undefined &&
+        typeof newValue === 'object'
+          ? newValue[key]
+          : undefined;
+      this.notifyOnUpdate(childNode, childOldValue, childNewValue);
     });
   }
 

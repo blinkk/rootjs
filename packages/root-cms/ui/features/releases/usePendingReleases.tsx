@@ -1,5 +1,12 @@
 import {ComponentChildren, createContext} from 'preact';
-import {useContext, useEffect, useRef, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {
   Release,
   getCachedReleases,
@@ -17,6 +24,8 @@ export interface PendingReleasesContextValue {
 }
 
 const PendingReleasesContext = createContext<InternalContextValue | null>(null);
+
+const EMPTY_RELEASES: Release[] = [];
 
 interface InternalContextValue extends PendingReleasesContextValue {
   fetchReleases: () => void;
@@ -38,7 +47,7 @@ export function PendingReleasesProvider(props: {children?: ComponentChildren}) {
     });
   }, []);
 
-  function fetchReleases() {
+  const fetchReleases = useCallback(() => {
     if (fetchState.current !== 'idle') {
       return;
     }
@@ -55,21 +64,43 @@ export function PendingReleasesProvider(props: {children?: ComponentChildren}) {
         fetchState.current = 'done';
         setLoading(false);
       });
-  }
+  }, []);
 
-  function getReleasesForDoc(docId: string): Release[] {
-    return releases.filter((r) => r.docIds?.includes(docId));
-  }
+  const releasesByDocId = useMemo(() => {
+    const map = new Map<string, Release[]>();
+    for (const release of releases) {
+      if (!release.docIds) {
+        continue;
+      }
+      for (const docId of release.docIds) {
+        let list = map.get(docId);
+        if (!list) {
+          list = [];
+          map.set(docId, list);
+        }
+        list.push(release);
+      }
+    }
+    return map;
+  }, [releases]);
+
+  const getReleasesForDoc = useCallback(
+    (docId: string): Release[] => releasesByDocId.get(docId) ?? EMPTY_RELEASES,
+    [releasesByDocId]
+  );
+
+  const contextValue = useMemo<InternalContextValue>(
+    () => ({
+      releases,
+      getReleasesForDoc,
+      loading,
+      fetchReleases,
+    }),
+    [releases, getReleasesForDoc, loading, fetchReleases]
+  );
 
   return (
-    <PendingReleasesContext.Provider
-      value={{
-        releases,
-        getReleasesForDoc,
-        loading,
-        fetchReleases,
-      }}
-    >
+    <PendingReleasesContext.Provider value={contextValue}>
       {props.children}
     </PendingReleasesContext.Provider>
   );
