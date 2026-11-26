@@ -43,8 +43,7 @@ import {DocIdBadge} from '../../../documents/components/DocIdBadge/DocIdBadge.js
 import {getDocFromCacheOrFetch} from '../../../documents/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../../documents/doc.js';
 import {extractReferenceDocIds} from '../../../documents/references.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {
   getCollectionPublishChecks,
   runPublishChecks,
@@ -99,9 +98,7 @@ export function PublishDocModal(
     ? [props.docId, ...refDocs.docIds]
     : [props.docId];
 
-  const {roles, loading: rolesLoading} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canPublish, loading: rolesLoading} = useCurrentUserPermissions();
 
   const publishChecks = usePublishChecks();
   const collectionId = props.docId.split('/')[0];

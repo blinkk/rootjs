@@ -42,8 +42,7 @@ import {isEditableTarget} from '../../../../utils/keyboard.js';
 import {errorMessage} from '../../../../utils/notifications.js';
 import {autokey} from '../../../../utils/rand.js';
 import {testAiEnabled} from '../../../ai/ai.js';
-import {testCanEdit} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {PrototypeAiCard} from '../../components/PrototypeAiCard/PrototypeAiCard.js';
 import {PrototypeCanvas} from '../../components/PrototypeCanvas/PrototypeCanvas.js';
 import {
@@ -157,12 +156,8 @@ function PrototypeBoardWorkspace(props: {boardId: string}) {
     setBoardAiChatId,
   } = usePrototypeBoard(boardId);
 
-  const {roles} = useProjectRoles();
-  const currentUserEmail = (window.firebase?.user?.email || '').toLowerCase();
-  const canEdit = useMemo(
-    () => testCanEdit(roles, currentUserEmail),
-    [roles, currentUserEmail]
-  );
+  const {canEdit, email} = useCurrentUserPermissions();
+  const currentUserEmail = email.toLowerCase();
   // Root AI only edits the board, so it is offered to editing roles only.
   const aiAvailable = testAiEnabled() && canEdit;
 

@@ -4,8 +4,7 @@ import {IconDeviceFloppy} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {Button} from '../../../../primitives/Button/Button.js';
-import {testCanEdit} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {CMSDoc} from '../../doc.js';
 import {postToParent} from '../../embed-bridge.js';
@@ -36,9 +35,7 @@ interface EmbeddedDocumentPageProps {
  */
 export function EmbeddedDocumentPage(props: EmbeddedDocumentPageProps) {
   const docId = `${props.collection}/${props.slug}`;
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
+  const {canEdit} = useCurrentUserPermissions();
   return (
     <DraftDocProvider
       docId={docId}

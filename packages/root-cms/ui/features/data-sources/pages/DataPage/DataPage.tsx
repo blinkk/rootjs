@@ -14,8 +14,7 @@ import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {DataSourceActivity} from '../../components/DataSourceActivity/DataSourceActivity.js';
 import {useDataSourceChangesModal} from '../../components/DataSourceChangesModal/DataSourceChangesModal.js';
 import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
@@ -39,9 +38,7 @@ const FILTER_OPTIONS: Array<{label: string; value: DataSourceListFilter}> = [
 
 export function DataPage() {
   usePageTitle('Data Sources');
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canPublish} = useCurrentUserPermissions();
 
   return (
     <Layout>

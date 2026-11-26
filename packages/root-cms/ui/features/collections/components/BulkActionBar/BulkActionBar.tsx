@@ -43,8 +43,7 @@ import {
 import {useAddToRelease} from '../../../releases/components/AddToReleaseModal/AddToReleaseModal.js';
 import {useAddToReleaseModal} from '../../../releases/components/AddToReleaseModal/useAddToReleaseModal.js';
 import {usePublishChecks} from '../../../releases/usePublishChecks.js';
-import {testCanEdit, testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 
 /** How many docs a bulk action writes at once. */
 const BULK_CONCURRENCY = 10;
@@ -84,10 +83,7 @@ export interface BulkActionBarProps {
  * Escape clears the selection.
  */
 export function BulkActionBar(props: BulkActionBarProps) {
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canEdit, canPublish} = useCurrentUserPermissions();
   const publishChecks = usePublishChecks();
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);

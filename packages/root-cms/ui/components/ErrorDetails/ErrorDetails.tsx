@@ -5,6 +5,7 @@ import {
   formatErrorReport,
   onErrorReportUpdate,
 } from '../../features/logs/error-reports.js';
+import {useCopyToClipboard} from '../../hooks/useCopyToClipboard.js';
 import {Button} from '../../primitives/Button/Button.js';
 import {cn} from '../../utils/classes.js';
 
@@ -20,16 +21,10 @@ export interface ErrorDetailsProps {
  */
 export function ErrorDetails(props: ErrorDetailsProps) {
   const report = useErrorReport(props.report);
-  const [copied, setCopied] = useState(false);
+  const {copied, copy} = useCopyToClipboard();
 
-  async function copyDetails() {
-    try {
-      await navigator.clipboard.writeText(formatErrorReport(report));
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('failed to copy error details:', err);
-    }
+  function copyDetails() {
+    void copy(formatErrorReport(report));
   }
 
   return (

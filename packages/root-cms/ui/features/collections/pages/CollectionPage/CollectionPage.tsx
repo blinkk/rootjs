@@ -50,8 +50,7 @@ import {
   testPublishingLocked,
 } from '../../../documents/doc.js';
 import {usePendingReleases} from '../../../releases/usePendingReleases.js';
-import {testCanEdit} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserActionTooltip} from '../../../users/UserActionTooltip/UserActionTooltip.js';
 import {BulkActionBar} from '../../components/BulkActionBar/BulkActionBar.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
@@ -179,9 +178,7 @@ interface CollectionProps {
 }
 
 CollectionPage.Collection = (props: CollectionProps) => {
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
+  const {canEdit} = useCurrentUserPermissions();
 
   const collection = window.__ROOT_CTX.collections[props.collection];
   const customSortingEnabled = Boolean(collection?.customSorting);

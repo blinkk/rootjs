@@ -21,8 +21,7 @@ import {Textarea} from '../../../../primitives/Textarea/Textarea.js';
 import {Tooltip} from '../../../../primitives/Tooltip/Tooltip.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {DataSourceActivity} from '../../components/DataSourceActivity/DataSourceActivity.js';
 import {DataSourceDiff} from '../../components/DataSourceDiff/DataSourceDiff.js';
 import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
@@ -126,8 +125,7 @@ DataSourcePage.Header = (props: {
   const dataSource = props.dataSource;
   const isArchived = Boolean(dataSource.archivedAt);
   const hasChanges = !isArchived && testHasUnpublishedChanges(dataSource);
-  const {roles} = useProjectRoles();
-  const canPublish = testCanPublish(roles, window.firebase.user.email || '');
+  const {canPublish} = useCurrentUserPermissions();
   const publishDisabledReason = getPublishDisabledReason(
     dataSource,
     canPublish

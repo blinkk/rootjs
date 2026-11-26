@@ -10,19 +10,14 @@ import {useLocation} from 'preact-iso';
 import {Layout} from '../../../../app/layout/Layout.js';
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {useConfirmAction} from '../../../../hooks/useConfirmAction.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
 import {Menu, MenuDivider, MenuItem} from '../../../../primitives/Menu/Menu.js';
-import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
 import {Spinner} from '../../../../primitives/Spinner/Spinner.js';
-import {
-  showNotification,
-  updateNotification,
-} from '../../../../primitives/Toast/toastStore.js';
 import {notifyErrors} from '../../../../utils/notifications.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
 import {
@@ -39,10 +34,8 @@ export function EditDataSourcePage(props: {id: string}) {
   const {route} = useLocation();
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
-  const modals = useModals();
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const confirmAction = useConfirmAction();
+  const {canPublish} = useCurrentUserPermissions();
 
   useEffect(() => {
     setLoading(true);
@@ -52,48 +45,38 @@ export function EditDataSourcePage(props: {id: string}) {
   }, [props.id]);
 
   function onDeleteClicked() {
-    const notificationId = `delete-data-source-${props.id}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Delete data source',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to delete data source <code>{props.id}</code>?
           All previously synced data will be deleted. There is no undo.
         </Text>
       ),
-      labels: {confirm: 'Delete', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Delete',
+      danger: true,
+      toast: {
+        id: `delete-data-source-${props.id}`,
+        loading: {
           title: 'Deleting data source',
           message: `Deleting ${props.id} and synced data...`,
-          loading: true,
-          autoClose: false,
-        });
-        await deleteDataSource(props.id);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Deleted data source',
           message: `Successfully deleted ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        route('/cms/data');
+        },
+        errorTitle: 'Delete failed',
       },
+      action: () => deleteDataSource(props.id),
+      onSuccess: () => route('/cms/data'),
     });
   }
 
   function onArchiveClicked() {
-    const notificationId = `archive-data-source-${props.id}`;
     const isPublished = Boolean(dataSource?.publishedAt);
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Archive data source',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to archive data source <code>{props.id}</code>?
           Archived data sources cannot be synced or published.
@@ -106,109 +89,85 @@ export function EditDataSourcePage(props: {id: string}) {
           )}
         </Text>
       ),
-      labels: {confirm: 'Archive', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Archive',
+      danger: true,
+      toast: {
+        id: `archive-data-source-${props.id}`,
+        loading: {
           title: 'Archiving data source',
           message: `Archiving ${props.id}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await archiveDataSource(props.id);
-        const newDataSource = await getDataSource(props.id);
-        setDataSource(newDataSource);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Archived data source',
           message: `Successfully archived ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        route('/cms/data');
+        },
+        errorTitle: 'Archive failed',
       },
+      action: async () => {
+        await archiveDataSource(props.id);
+        setDataSource(await getDataSource(props.id));
+      },
+      onSuccess: () => route('/cms/data'),
     });
   }
 
   function onUnarchiveClicked() {
-    const notificationId = `unarchive-data-source-${props.id}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Unarchive data source',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to unarchive data source <code>{props.id}</code>
           ?
         </Text>
       ),
-      labels: {confirm: 'Unarchive', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'dark', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Unarchive',
+      toast: {
+        id: `unarchive-data-source-${props.id}`,
+        loading: {
           title: 'Unarchiving data source',
           message: `Unarchiving ${props.id}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await unarchiveDataSource(props.id);
-        const newDataSource = await getDataSource(props.id);
-        setDataSource(newDataSource);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Unarchived data source',
           message: `Successfully unarchived ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        route(`/cms/data/${props.id}`);
+        },
+        errorTitle: 'Unarchive failed',
       },
+      action: async () => {
+        await unarchiveDataSource(props.id);
+        setDataSource(await getDataSource(props.id));
+      },
+      onSuccess: () => route(`/cms/data/${props.id}`),
     });
   }
 
   function onUnpublishClicked() {
-    const notificationId = `unpublish-data-source-${props.id}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Unpublish data source',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to unpublish data source <code>{props.id}</code>
           ? The published data will be removed and will no longer be available
           to production. There is no undo.
         </Text>
       ),
-      labels: {confirm: 'Unpublish', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Unpublish',
+      danger: true,
+      toast: {
+        id: `unpublish-data-source-${props.id}`,
+        loading: {
           title: 'Unpublishing data source',
           message: `Unpublishing ${props.id}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await unpublishDataSource(props.id);
-        const newDataSource = await getDataSource(props.id);
-        setDataSource(newDataSource);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Unpublished data source',
           message: `Successfully unpublished ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
+        },
+        errorTitle: 'Unpublish failed',
+      },
+      action: async () => {
+        await unpublishDataSource(props.id);
+        setDataSource(await getDataSource(props.id));
       },
     });
   }

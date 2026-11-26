@@ -29,8 +29,7 @@ import {notifyErrors} from '../../../../utils/notifications.js';
 import {formatDateTime} from '../../../../utils/time.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
 import {testTimestamp, toMillis} from '../../../documents/doc-changes.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {UserTag} from '../../../users/UserTag/UserTag.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
@@ -40,9 +39,7 @@ type ReleaseListFilter = 'active' | 'unpublished' | 'published' | 'archived';
 
 export function ReleasesPage() {
   usePageTitle('Releases');
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canPublish} = useCurrentUserPermissions();
 
   return (
     <Layout>

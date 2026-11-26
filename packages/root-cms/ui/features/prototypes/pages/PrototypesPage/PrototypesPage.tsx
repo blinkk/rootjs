@@ -47,8 +47,7 @@ import {
   showErrorNotification,
 } from '../../../../utils/notifications.js';
 import {withTimeout} from '../../../../utils/with-timeout.js';
-import {testCanEdit} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {UserAvatar} from '../../../users/UserAvatar/UserAvatar.js';
 import {useUserProfiles} from '../../../users/useUserProfile.js';
 import {NewPrototypeModal} from '../../components/NewPrototypeModal/NewPrototypeModal.js';
@@ -87,9 +86,7 @@ function pluralize(count: number, singular: string, plural?: string): string {
  */
 export function PrototypesPage() {
   usePageTitle('Design Prototypes');
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase?.user?.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
+  const {canEdit} = useCurrentUserPermissions();
   const modals = useModals();
 
   const [loading, setLoading] = useState(true);

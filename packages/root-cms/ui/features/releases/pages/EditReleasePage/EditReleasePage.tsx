@@ -6,16 +6,11 @@ import {ConditionalTooltip} from '../../../../components/ConditionalTooltip/Cond
 import {Heading} from '../../../../components/Heading/Heading.js';
 import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
+import {useConfirmAction} from '../../../../hooks/useConfirmAction.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {Breadcrumbs} from '../../../../primitives/Breadcrumbs/Breadcrumbs.js';
 import {IconButton} from '../../../../primitives/IconButton/IconButton.js';
-import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
-import {
-  showNotification,
-  updateNotification,
-} from '../../../../primitives/Toast/toastStore.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
 import {
   Release,
@@ -28,10 +23,8 @@ export function EditReleasePage(props: {id: string}) {
   usePageTitle(`Edit release: ${props.id}`);
   const {route} = useLocation();
   const [release, setRelease] = useState<Release | null>(null);
-  const modals = useModals();
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const confirmAction = useConfirmAction();
+  const {canPublish, loading: rolesLoading} = useCurrentUserPermissions();
 
   useEffect(() => {
     getRelease(props.id).then((release) => {
@@ -40,78 +33,61 @@ export function EditReleasePage(props: {id: string}) {
   }, [props.id]);
 
   function onArchiveClicked() {
-    const notificationId = `archive-release-${props.id}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Archive release',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to archive release <code>{props.id}</code>?
         </Text>
       ),
-      labels: {confirm: 'Archive', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'red', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Archive',
+      danger: true,
+      toast: {
+        id: `archive-release-${props.id}`,
+        loading: {
           title: 'Archiving release',
           message: `Archiving ${props.id}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await archiveRelease(props.id);
-        const newRelease = await getRelease(props.id);
-        setRelease(newRelease);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Archived release',
           message: `Successfully archived ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        route('/cms/releases');
+        },
+        errorTitle: 'Archive failed',
       },
+      action: async () => {
+        await archiveRelease(props.id);
+        setRelease(await getRelease(props.id));
+      },
+      onSuccess: () => route('/cms/releases'),
     });
   }
 
   function onUnarchiveClicked() {
-    const notificationId = `unarchive-release-${props.id}`;
-    const modalId = modals.openConfirmModal({
+    confirmAction({
       title: 'Unarchive release',
-      children: (
+      body: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to unarchive release <code>{props.id}</code>?
         </Text>
       ),
-      labels: {confirm: 'Unarchive', cancel: 'Cancel'},
-      cancelProps: {size: 'xs'},
-      confirmProps: {color: 'dark', size: 'xs'},
-      onCancel: () => console.log('Cancel'),
-      closeOnConfirm: false,
-      onConfirm: async () => {
-        showNotification({
-          id: notificationId,
+      confirmLabel: 'Unarchive',
+      toast: {
+        id: `unarchive-release-${props.id}`,
+        loading: {
           title: 'Unarchiving release',
           message: `Unarchiving ${props.id}...`,
-          loading: true,
-          autoClose: false,
-        });
-        await unarchiveRelease(props.id);
-        const newRelease = await getRelease(props.id);
-        setRelease(newRelease);
-        updateNotification({
-          id: notificationId,
+        },
+        success: {
           title: 'Unarchived release',
           message: `Successfully unarchived ${props.id}`,
-          loading: false,
-          autoClose: 5000,
-        });
-        modals.closeModal(modalId);
-        route(`/cms/releases/${props.id}`);
+        },
+        errorTitle: 'Unarchive failed',
       },
+      action: async () => {
+        await unarchiveRelease(props.id);
+        setRelease(await getRelease(props.id));
+      },
+      onSuccess: () => route(`/cms/releases/${props.id}`),
     });
   }
 
@@ -142,7 +118,7 @@ export function EditReleasePage(props: {id: string}) {
                   label={archived ? 'Unarchive' : 'Archive'}
                   tooltip={canPublish}
                   onClick={archived ? onUnarchiveClicked : onArchiveClicked}
-                  loading={!roles}
+                  loading={rolesLoading}
                   disabled={!canPublish}
                 >
                   {archived ? (

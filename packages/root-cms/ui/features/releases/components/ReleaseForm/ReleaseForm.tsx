@@ -17,8 +17,7 @@ import {DocPreviewCard} from '../../../collections/components/DocPreviewCard/Doc
 import {DataSourceIcon} from '../../../data-sources/components/DataSourceIcon/DataSourceIcon.js';
 import {useDataSourceSelectModal} from '../../../data-sources/components/DataSourceSelectModal/useDataSourceSelectModal.js';
 import {DataSource, getDataSource} from '../../../data-sources/data-source.js';
-import {testCanPublish} from '../../../users/permissions.js';
-import {useProjectRoles} from '../../../users/useProjectRoles.js';
+import {useCurrentUserPermissions} from '../../../users/useCurrentUserPermissions.js';
 import {
   Release,
   addRelease,
@@ -49,9 +48,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
   const docPickerModal = useDocPickerModal();
   const dataSourceSelectModal = useDataSourceSelectModal();
 
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canPublish = testCanPublish(roles, currentUserEmail);
+  const {canPublish} = useCurrentUserPermissions();
 
   async function fetchRelease(releaseId: string) {
     console.log(releaseId);
