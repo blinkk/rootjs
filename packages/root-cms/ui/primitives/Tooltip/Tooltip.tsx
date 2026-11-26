@@ -214,14 +214,21 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   const timerRef = useRef<number | undefined>(undefined);
   // Stays set while the hide transition plays, so the bubble stays shown.
   const [closing, setClosing] = useState(false);
+  const wasOpenRef = useRef(open);
   const floatingRef = useRef<HTMLDivElement | null>(null);
+  // Keep the bubble mounted on the single render where `open` flips false so
+  // the layout effect below can start the exit animation (for both controlled
+  // and uncontrolled tooltips).
+  const isClosingFrame =
+    !disabled && !open && wasOpenRef.current && canAnimate(floatingRef.current);
+  const showBubble = !disabled && (open || closing || isClosingFrame);
   const {
     setReference,
     setFloating,
     setArrow,
     placement: side,
   } = useFloating({
-    open: open || closing,
+    open: showBubble,
     placement,
     offset: withArrow ? 8 : 6,
   });
@@ -293,7 +300,6 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
   // Fades and slides the bubble in and out (skipped for reduced motion).
-  const wasOpenRef = useRef(open);
   useLayoutEffect(() => {
     const wasOpen = wasOpenRef.current;
     wasOpenRef.current = open;
@@ -351,19 +357,11 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
     window.clearTimeout(timerRef.current);
     if (wait <= 0) {
       if (openState) {
-        if (canAnimate(floatingRef.current)) {
-          setClosing(true);
-        }
         setOpen(false);
       }
       return;
     }
-    timerRef.current = window.setTimeout(() => {
-      if (canAnimate(floatingRef.current)) {
-        setClosing(true);
-      }
-      setOpen(false);
-    }, wait);
+    timerRef.current = window.setTimeout(() => setOpen(false), wait);
   }
 
   const onEnter = (e: PointerEvent) => {
@@ -488,11 +486,11 @@ export const Tooltip = forwardRef<Element, TooltipProps>((props, ref) => {
       })
     : children;
 
-  const bubble = !disabled && (open || closing) && (
+  const bubble = showBubble && (
     <Portal>
       <div
         ref={setFloatingEl}
-        hidden={!open && !closing}
+        hidden={!showBubble}
         className={cn(
           'Tooltip__floating z-(--cms-z-tooltip) w-max',
           !interactive && 'pointer-events-none'

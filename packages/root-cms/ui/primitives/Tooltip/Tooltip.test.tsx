@@ -117,4 +117,41 @@ describe('Tooltip', () => {
     });
     expect(screen.getByRole('tooltip').textContent).toBe('Open link');
   });
+
+  it('plays the exit animation before unmounting for controlled tooltips', () => {
+    const animations: Array<{onfinish?: () => void; cancel: () => void}> = [];
+    const origAnimate = HTMLElement.prototype.animate;
+    HTMLElement.prototype.animate = vi.fn(() => {
+      const anim = {
+        onfinish: undefined as (() => void) | undefined,
+        cancel: vi.fn(),
+      };
+      animations.push(anim);
+      return anim as unknown as Animation;
+    });
+    try {
+      const {rerender} = render(
+        <Tooltip label="Controlled" open>
+          <button type="button">Trigger</button>
+        </Tooltip>
+      );
+      expect(screen.getByRole('tooltip')).toBeTruthy();
+
+      rerender(
+        <Tooltip label="Controlled" open={false}>
+          <button type="button">Trigger</button>
+        </Tooltip>
+      );
+      // Still mounted while the exit animation runs.
+      expect(screen.getByRole('tooltip')).toBeTruthy();
+      expect(animations.length).toBeGreaterThan(0);
+
+      act(() => {
+        animations[animations.length - 1].onfinish?.();
+      });
+      expect(screen.queryByRole('tooltip', {hidden: true})).toBeNull();
+    } finally {
+      HTMLElement.prototype.animate = origAnimate;
+    }
+  });
 });
