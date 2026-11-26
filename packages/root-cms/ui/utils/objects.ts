@@ -172,7 +172,9 @@ export function deepEqual(obj1: any, obj2: any) {
   }
 
   for (const key of keys1) {
-    if (!deepEqual(obj1[key], obj2[key])) {
+    // The key must exist on both objects, otherwise `{a: undefined}` would
+    // equal `{b: 1}`.
+    if (!Object.hasOwn(obj2, key) || !deepEqual(obj1[key], obj2[key])) {
       return false;
     }
   }

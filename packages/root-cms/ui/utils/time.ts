@@ -31,10 +31,19 @@ const FULL_DATE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
 });
 
+/**
+ * Shown for a missing or invalid timestamp. `Intl.DateTimeFormat` throws on an
+ * invalid date and formats `undefined` as the current time.
+ */
+const INVALID_DATE = 'Invalid Date';
+
 export function getTimeAgo(
   millis: number,
   options?: Intl.RelativeTimeFormatOptions
 ) {
+  if (!Number.isFinite(millis)) {
+    return INVALID_DATE;
+  }
   const elapsed = Math.abs(millis - Date.now());
   if (elapsed < TIME_UNITS.second) {
     return 'just now';
@@ -95,7 +104,11 @@ export function timestampToMillis(ts: unknown): number {
  * 1:30 PM". This is the format for date/time tooltips across the CMS.
  */
 export function formatDateTime(ts: TimestampLike | unknown): string {
-  return FULL_DATE_TIME_FORMAT.format(timestampToMillis(ts));
+  const millis = timestampToMillis(ts);
+  if (!Number.isFinite(millis)) {
+    return INVALID_DATE;
+  }
+  return FULL_DATE_TIME_FORMAT.format(millis);
 }
 
 export function getLocalISOString() {
