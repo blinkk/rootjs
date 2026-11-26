@@ -10,7 +10,7 @@ import {
   type Placement,
   type ReferenceElement,
 } from '@floating-ui/dom';
-import {useCallback, useLayoutEffect, useState} from 'preact/hooks';
+import {useCallback, useLayoutEffect, useRef, useState} from 'preact/hooks';
 
 export type {Placement, ReferenceElement};
 
@@ -106,9 +106,12 @@ export function useFloating(options: UseFloatingOptions): UseFloatingResult {
     matchReferenceWidth = false,
     maxHeight,
   } = options;
-  const [reference, setReferenceState] = useState<ReferenceElement | null>(
-    null
-  );
+  // Store the trigger element in a ref so mounting a closed floating primitive
+  // doesn't trigger an extra state update on every instance.
+  const referenceRef = useRef<ReferenceElement | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
+  const [, bumpReference] = useState(0);
   const [floating, setFloating] = useState<HTMLElement | null>(null);
   const [arrowEl, setArrow] = useState<HTMLElement | null>(null);
   const [resolvedPlacement, setResolvedPlacement] =
@@ -117,10 +120,18 @@ export function useFloating(options: UseFloatingOptions): UseFloatingResult {
   // Refs to non-DOM values (e.g. a component instance, when a trigger
   // doesn't forward its ref) are ignored.
   const setReference = useCallback((el: ReferenceElement | null) => {
-    setReferenceState(
-      el && typeof el.getBoundingClientRect === 'function' ? el : null
-    );
+    const next =
+      el && typeof el.getBoundingClientRect === 'function' ? el : null;
+    if (referenceRef.current === next) {
+      return;
+    }
+    referenceRef.current = next;
+    if (openRef.current) {
+      bumpReference((n) => n + 1);
+    }
   }, []);
+
+  const reference = referenceRef.current;
 
   const update = useCallback(() => {
     if (!reference || !floating) {

@@ -1,8 +1,20 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/preact';
 import {LocationProvider} from 'preact-iso';
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import type {DocSlugHit, GlobalSearchHit} from '../useGlobalSearch.js';
-import {GlobalSearch, openGlobalSearch} from './GlobalSearch.js';
+import {
+  GlobalSearch,
+  openGlobalSearch,
+  preloadGlobalSearch,
+} from './GlobalSearch.js';
 
 const fieldHits: GlobalSearchHit[] = [];
 const docSlugHits: DocSlugHit[] = [];
@@ -28,9 +40,8 @@ vi.mock('../../data-sources/data-source.js', () => ({
 function renderSearch() {
   return render(
     <LocationProvider>
-      <GlobalSearch>
-        <div>app</div>
-      </GlobalSearch>
+      <GlobalSearch />
+      <div>app</div>
     </LocationProvider>
   );
 }
@@ -78,6 +89,10 @@ async function flush() {
 }
 
 describe('GlobalSearch', () => {
+  beforeAll(async () => {
+    await preloadGlobalSearch();
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     window.localStorage.clear();

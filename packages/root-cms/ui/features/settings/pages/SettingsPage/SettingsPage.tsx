@@ -1,4 +1,4 @@
-import {IconCheck} from '@tabler/icons-preact';
+import {IconCheck, IconExternalLink} from '@tabler/icons-preact';
 import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {UserRole} from '../../../../../core/client.js';
@@ -8,7 +8,7 @@ import {Surface} from '../../../../components/Surface/Surface.js';
 import {Text} from '../../../../components/Text/Text.js';
 import {usePageTitle} from '../../../../hooks/usePageTitle.js';
 import {
-  SITE_SETTINGS,
+  type SiteSettings,
   useSiteSettings,
 } from '../../../../hooks/useSiteSettings.js';
 import {
@@ -19,6 +19,7 @@ import {
 } from '../../../../hooks/useTheme.js';
 import {useUnsavedChangesWarning} from '../../../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../../../hooks/useUserPreferences.js';
+import {buildGoogleDriveFolderUrl} from '../../../../integrations/gsheets.js';
 import {Button} from '../../../../primitives/Button/Button.js';
 import {LoadingOverlay} from '../../../../primitives/LoadingOverlay/LoadingOverlay.js';
 import {useModals} from '../../../../primitives/modals/ModalsProvider.js';
@@ -45,6 +46,44 @@ import {
   derivedRolesFromGroups,
   describeShareChanges,
 } from '../../permissionGroups.js';
+
+interface Setting {
+  /** The name of the setting (appears in the CMS UI). */
+  name: string;
+  /** The key of the setting stored in the database. */
+  key: keyof SiteSettings;
+  /** A description of the setting (appears in the CMS UI). */
+  description: string;
+  placeholder?: string;
+  /** Additional UI to show adjacent to the settings field. */
+  ui?: (value: string | undefined) => preact.JSX.Element;
+}
+
+const SITE_SETTINGS: Setting[] = [
+  {
+    name: 'Google Drive Folder',
+    key: 'googleDriveFolder',
+    placeholder: 'https://drive.google.com/drive/folders/...',
+    description:
+      'Where Google Sheets created by Root.js\'s localization process are stored. If unspecified, they will be created in your "My Drive".',
+    ui: (value) => {
+      return (
+        <Button
+          disabled={!value}
+          size="xs"
+          iconRight={<IconExternalLink />}
+          onClick={() => {
+            if (value) {
+              window.open(value, buildGoogleDriveFolderUrl(value));
+            }
+          }}
+        >
+          Open
+        </Button>
+      );
+    },
+  },
+];
 
 /** Classes for each two-column section (description left, card right). */
 const SECTION_CLASSES =

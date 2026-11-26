@@ -55,10 +55,9 @@ export function AppProviders(props: {children: ComponentChildren}) {
                 <LocationProvider>
                   <PinnedCommentThreadsProvider>
                     <ModalsProvider modals={APP_MODALS}>
-                      <GlobalSearch>
-                        {props.children}
-                        <PinnedComments />
-                      </GlobalSearch>
+                      {props.children}
+                      <GlobalSearch />
+                      <PinnedComments />
                     </ModalsProvider>
                   </PinnedCommentThreadsProvider>
                 </LocationProvider>

@@ -2,7 +2,10 @@ import {IconSearch} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Kbd} from '../../../primitives/Kbd/Kbd.js';
 import {cn} from '../../../utils/classes.js';
-import {openGlobalSearch} from '../GlobalSearch/GlobalSearch.js';
+import {
+  openGlobalSearch,
+  preloadGlobalSearch,
+} from '../GlobalSearch/GlobalSearch.js';
 
 interface SearchBarProps {
   className?: string;
@@ -33,6 +36,8 @@ export function SearchBar(props: SearchBarProps) {
         'md:h-8 md:w-60 md:justify-start md:border md:border-solid md:border-border md:bg-surface md:pl-3 md:pr-2',
         props.className
       )}
+      onPointerEnter={() => void preloadGlobalSearch().catch(() => {})}
+      onFocus={() => void preloadGlobalSearch().catch(() => {})}
       onClick={() => openGlobalSearch()}
       aria-label="Open search"
     >
